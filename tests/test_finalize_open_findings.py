@@ -72,7 +72,7 @@ def _report_check(area: Path) -> tuple[int, str]:
         mock.patch.object(report_check, "check_analysis_script", return_value=None),
         contextlib.redirect_stdout(buf),
     ):
-        code = report_check.report_check(area)
+        code = report_check.protocol_verdict(area).exit
     return code, buf.getvalue()
 
 

@@ -171,9 +171,9 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     files.write_atomic(pending, before)
     files.write_atomic(protocol, after)
     try:
-        rc = report_check.report_check(
+        rc = report_check.protocol_verdict(
             protocol.parent, protocol, state=area_state.PROPOSED, text=after
-        )
+        ).exit
     except BaseException:
         files.write_atomic(protocol, before)
         pending.unlink(missing_ok=True)

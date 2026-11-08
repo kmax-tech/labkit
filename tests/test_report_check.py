@@ -145,7 +145,7 @@ class ReportCheck(unittest.TestCase):
             ),
             contextlib.redirect_stdout(out),
         ):
-            code = report_check.report_check(area)
+            code = report_check.protocol_verdict(area).exit
         return code, out.getvalue()
 
     def test_the_twin_every_station_holds_is_clean(self):
@@ -247,7 +247,7 @@ class ReportCheck(unittest.TestCase):
             mock.patch.object(report_check, "check_analysis_script", return_value=None),
             contextlib.redirect_stdout(out),
         ):
-            code = report_check.report_check(area)
+            code = report_check.protocol_verdict(area).exit
         self.assertEqual(code, 1)
         self.assertIn(f"the answering run is none — {ctx.why}", out.getvalue())
 
@@ -300,7 +300,7 @@ class ReportCheck(unittest.TestCase):
             mock.patch.object(report_check, "check_analysis_script", return_value=None),
             contextlib.redirect_stdout(out),
         ):
-            code = report_check.report_check(area)
+            code = report_check.protocol_verdict(area).exit
         self.assertEqual(code, 1, out.getvalue())
         self.assertIn(
             "finalize: PROTOCOL-x.md: Unit written 2 times (lines 1 and 2)",
@@ -365,7 +365,7 @@ class ReportCheck(unittest.TestCase):
             mock.patch.object(report_check, "check_analysis_script", return_value=None),
             contextlib.redirect_stdout(out),
         ):
-            code = report_check.report_check(area)
+            code = report_check.protocol_verdict(area).exit
         self.assertEqual(code, 1, out.getvalue())
         self.assertIn("BLOCKER: finalize: no completed run bound to", out.getvalue())
         self.assertNotIn("run it to see", out.getvalue())
@@ -408,7 +408,7 @@ class ReportCheck(unittest.TestCase):
             mock.patch.object(report_check, "check_analysis_script", return_value=None),
             contextlib.redirect_stdout(out),
         ):
-            code = report_check.report_check(area)
+            code = report_check.protocol_verdict(area).exit
         self.assertEqual(code, 1, out.getvalue())
         self.assertEqual(seen, {"stdout_untouched": True, "silent": True})
         # the nested gate's way out reaches the line
@@ -439,7 +439,7 @@ class ReportCheck(unittest.TestCase):
         ):
             ctx = report_context.checked(area, area / "PROTOCOL-x.md")
             found = report_check.chain_gaps(ctx).found
-            report_check.report_check(area)
+            report_check.protocol_verdict(area).exit
         warned = [f.text for f in found if f.grade == "WARNING"]
         self.assertIn("finalize: one draw only", warned)
         self.assertIn("WARNING: finalize: one draw only", out.getvalue())
@@ -749,7 +749,7 @@ class IfReported(unittest.TestCase):
         """The pre-commit's form of the gate over PATHS in the repo ROOT."""
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = report_check.if_reported(list(paths), root, staged=True)
+            code = report_check.hold_reported(list(paths), root, staged=True).exit
         return code, buf.getvalue()
 
     def test_staged_reads_the_answer_as_the_index_holds_it(self):
@@ -1130,7 +1130,7 @@ class RegisteredReport(unittest.TestCase):
     def _gate(self, root: Path, *paths: Path, staged: bool = False) -> tuple[int, str]:
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = report_check.if_reported(list(paths), root, staged=staged)
+            code = report_check.hold_reported(list(paths), root, staged=staged).exit
         return code, buf.getvalue()
 
     OWED = "carries neither"

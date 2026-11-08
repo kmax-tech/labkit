@@ -67,7 +67,7 @@ def _report_check(area: Path) -> tuple[int, str]:
         mock.patch.object(report_check, "check_analysis_script", return_value=None),
         contextlib.redirect_stdout(buf),
     ):
-        code = report_check.report_check(area)
+        code = report_check.protocol_verdict(area).exit
     return code, buf.getvalue()
 
 
@@ -1255,7 +1255,7 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
     def _if_reported(self, paths: list[Path]) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            code = report_check.if_reported(paths, self.root, staged=True)
+            code = report_check.hold_reported(paths, self.root, staged=True).exit
         return code, out.getvalue()
 
 

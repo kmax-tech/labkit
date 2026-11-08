@@ -117,6 +117,9 @@ pins (`requirements.txt` / `requirements.lock`).
   `report_reviews.CLAIM_KINDS` (result, contradiction);
   the measurement script's path has one home, `runs.MEASURE_SCRIPT`
   (`params` and `standard_contract` each kept a copy).
+  `report_check.report_check` and `report_check.if_reported`, which
+  only returned `.exit`, are gone: callers read
+  `protocol_verdict(...).exit` and `hold_reported(...).exit`.
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

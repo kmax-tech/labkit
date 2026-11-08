@@ -170,7 +170,7 @@ def gate(area: Path) -> tuple[int, str]:
         mock.patch.object(report_check, "registration_gaps", return_value=[]),
         contextlib.redirect_stdout(buf),
     ):
-        code = report_check.report_check(area)
+        code = report_check.protocol_verdict(area).exit
     return code, buf.getvalue()
 
 

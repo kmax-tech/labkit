@@ -53,7 +53,7 @@ def main(argv: list[str]) -> int:
     if not a.area.is_dir():
         console.refuse("report-check", no_such_area(a.area))
         return 2
-    return report_check.report_check(a.area.resolve(), a.protocol)
+    return report_check.protocol_verdict(a.area.resolve(), a.protocol).exit
 
 
 def cli() -> None:

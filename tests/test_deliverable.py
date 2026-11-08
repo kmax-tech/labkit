@@ -299,7 +299,7 @@ class CountDelivers(unittest.TestCase):
             )
             checked = io.StringIO()
             with contextlib.redirect_stdout(checked):
-                self.assertEqual(report_check.report_check(self.area), 1)
+                self.assertEqual(report_check.protocol_verdict(self.area).exit, 1)
             self.assertIn(
                 f"finalize: {entry.path}: not the file run", checked.getvalue()
             )

@@ -1,7 +1,7 @@
 """A report outside the protocol: generated result blocks, cited run ids,
 numbers without an assigned source (`checks/report_blocks`), and the gate
 that holds a changed report at the stop and the commit
-(`report_check.if_reported`).
+(`report_check.hold_reported`).
 
 Why: the protocol's Answer is held exactly, and a REPORT.md at the
 repository root can state counts and a median no run produced unless a
@@ -340,7 +340,7 @@ class ReportFiles(unittest.TestCase):
     def _gate(self, root: Path, *paths: Path, staged: bool = False) -> tuple[int, str]:
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = report_check.if_reported(list(paths), root, staged=staged)
+            code = report_check.hold_reported(list(paths), root, staged=staged).exit
         return code, buf.getvalue()
 
     def _reported(self, git: bool = False) -> tuple[Path, Path]:

@@ -509,19 +509,6 @@ class ProtocolVerdict:
     chain: ReleaseChain | None
 
 
-def report_check(
-    area: Path,
-    protocol: Path | None = None,
-    *,
-    state: str = TREE,
-    text: str | None = None,
-    review: bool = True,
-) -> int:
-    """`protocol_verdict`'s exit code — the command's and the adoption's form:
-    0 clean or warnings, 1 blocked, 2 no context."""
-    return protocol_verdict(area, protocol, state=state, text=text, review=review).exit
-
-
 def protocol_verdict(
     area: Path,
     protocol: Path | None = None,
@@ -1101,11 +1088,6 @@ class HoldVerdict:
 
     exit: int
     chains: dict[Path, ReleaseChain]
-
-
-def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
-    """`hold_reported`'s worst exit code, its lines on stdout."""
-    return hold_reported(paths, repo, staged=staged).exit
 
 
 def hold_reported(

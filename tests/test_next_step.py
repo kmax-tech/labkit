@@ -579,9 +579,9 @@ class ProgressAccount(unittest.TestCase):
         self.lab.git("add", "-A")
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            rc = report_check.if_reported(
+            rc = report_check.hold_reported(
                 [self.report, self.protocol], self.lab.root, staged=True
-            )
+            ).exit
         self.assertEqual(rc, 0, out.getvalue())
         self.lab.commit("progress")
         self.assertIsNone(protocol_block.declared_run(self.protocol.read_text("utf-8")))
@@ -780,7 +780,9 @@ class DiscussingReport(unittest.TestCase):
     def gate(self, *, staged: bool) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.chdir(self.lab.root), contextlib.redirect_stdout(out):
-            rc = report_check.if_reported([self.report], self.lab.root, staged=staged)
+            rc = report_check.hold_reported(
+                [self.report], self.lab.root, staged=staged
+            ).exit
         return rc, out.getvalue()
 
     def finding(self, *, staged: bool) -> GateFinding:

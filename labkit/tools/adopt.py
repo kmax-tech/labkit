@@ -91,7 +91,7 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
     print("labkit-adopt: 3. check")
     # the registered report's review reads the final text, which the agent
     # writes after this: the stop and the commit owe it, not this check
-    rc = report_check.report_check(area, protocol, review=False)
+    rc = report_check.protocol_verdict(area, protocol, review=False).exit
     if rc != 0:
         _resumes(adopted, 3, again)
         return rc

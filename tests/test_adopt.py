@@ -12,6 +12,7 @@ import io
 import os
 import sys
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -110,7 +111,7 @@ class Adopt(unittest.TestCase):
             f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
             "from labkit.gates import report_check\n"
             "from labkit.tools import adopt\n"
-            "report_check.report_check = lambda *a, **k: os.kill(os.getpid(), signal.SIGKILL)\n"
+            "report_check.protocol_verdict = lambda *a, **k: os.kill(os.getpid(), signal.SIGKILL)\n"
             f"os.chdir({str(self.lab.root)!r})\n"
             f"adopt.main([{str(area)!r}, {run_id!r}])\n"
         )
@@ -128,7 +129,7 @@ class Adopt(unittest.TestCase):
 
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_check.report_check(area, protocol)
+            rc = report_check.protocol_verdict(area, protocol).exit
         self.assertEqual(rc, 1, out.getvalue())
         self.assertIn("an adoption was cut off during its check", out.getvalue())
 
@@ -199,16 +200,16 @@ class Adopt(unittest.TestCase):
         area, protocol, run_id = self.measured("REPORT.md")
         self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
         report = self.lab.root / "REPORT.md"
-        real = report_check.report_check
+        real = report_check.protocol_verdict
         calls: list[str] = []
 
         def refusing_on_the_tree(*args, **kw):
             if kw.get("state", area_state.TREE) == area_state.TREE:
                 calls.append("tree")
-                return 1
+                return SimpleNamespace(exit=1)
             return real(*args, **kw)
 
-        with mock.patch.object(report_check, "report_check", refusing_on_the_tree):
+        with mock.patch.object(report_check, "protocol_verdict", refusing_on_the_tree):
             rc, out = self.labkit_adopt(area, run_id)
         self.assertEqual((rc, calls), (1, ["tree"]), out)
         self.assertIn(f"step 3 refused; {run_id} stays adopted", out)

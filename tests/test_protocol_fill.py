@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest import mock
 
@@ -910,7 +911,7 @@ class Adopt(unittest.TestCase):
         with (
             mock.patch.object(
                 protocol_fill.report_check,
-                "report_check",
+                "protocol_verdict",
                 side_effect=RuntimeError("x"),
             ),
             self.assertRaises(RuntimeError),
@@ -939,10 +940,10 @@ class Adopt(unittest.TestCase):
         def check(area_, protocol, *, state, text):
             seen.update(state=state, text=text)
             self.assertEqual(protocol.read_text(encoding="utf-8"), text)
-            return 0
+            return SimpleNamespace(exit=0)
 
         with (
-            mock.patch.object(protocol_fill.report_check, "report_check", check),
+            mock.patch.object(protocol_fill.report_check, "protocol_verdict", check),
             mock.patch.object(
                 protocol_fill.files,
                 "write_atomic",
