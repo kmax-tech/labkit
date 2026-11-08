@@ -118,17 +118,17 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     except (AuditError, FileNotFoundError, ValueError):
         return []  # ValueError: FindingsError — analysis_audit_gap names them
     out: list[GateFinding] = []
-    try:
-        found = reviews.area_reviews(ctx.area)
-    except reviews.ReviewError as exc:
+    found = list(ctx.evidence.reviews)
+    if ctx.evidence.reviews_unread:
         # named, and the decisions are judged as unreviewed: a file nobody
         # can read must not hide a BLOCKER's unupheld `stands`
         out.append(
             GateFinding(
-                WARNING, f"a review nobody can read: {exc}", evidence_kind=GUARANTEED
+                WARNING,
+                f"a review nobody can read: {ctx.evidence.reviews_unread}",
+                evidence_kind=GUARANTEED,
             )
         )
-        found = []
     for r in records:
         for n, f in r.limits():
             if f.effect != findings.EFFECT_STANDS or reviews.upholding(
@@ -282,10 +282,8 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         )
         for h in held
     ]
-    try:
-        found = reviews.area_reviews(ctx.area)
-    except reviews.ReviewError:
-        found = []  # review_findings names the file; unreviewed holds here
+    # review_findings names a file that does not read; unreviewed holds here
+    found = list(ctx.evidence.reviews)
     for r in covering:
         for n, f in enumerate(r.findings, 1):
             if findings.carried_and_closed(f) and not reviews.upholding(

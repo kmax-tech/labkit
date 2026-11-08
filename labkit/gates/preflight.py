@@ -81,6 +81,7 @@ from labkit.formats import (
 )
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
+from labkit.formats import evidence
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     choose_protocol,
@@ -486,11 +487,10 @@ def check_handed_over_elsewhere(
     told = 0
     for other, r, f in elsewhere:
         if other not in handed:
-            try:
-                handed[other] = handovers.handed_over(other)
-            except handovers.HandoverError as exc:
-                findings.warn(str(exc), evidence_kind=GUARANTEED)
-                handed[other] = set()
+            kept = evidence.read_evidence(other, staged=False)
+            if kept.handovers_unread:
+                findings.warn(kept.handovers_unread, evidence_kind=GUARANTEED)
+            handed[other] = set(kept.handed_over_entries)
         if handovers.entry(r, audit_findings.number_of(r, f)) not in handed[other]:
             continue
         told += 1

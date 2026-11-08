@@ -228,6 +228,9 @@ FIELD_READERS = {
     "record_status",  # findings, the audit records and their errors
     "evidence_gaps",  # attempts, the records and attempts gone
     "change_findings",  # evidence, the committed evidence changed
+    "area_reviews",  # reviews, the decision reviews
+    "area_report_reviews",  # report_reviews, the report reviews
+    "handed_over",  # handovers, the findings the records list as left over
 }
 
 

@@ -831,7 +831,10 @@ def review_gap(
         pieces = review_pieces(area, path, text, protocol, protocol_text, discussed)
         whole, parts = review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, path, protocol)
-        found = report_reviews.area_report_reviews(area)
+        held = evidence.read_evidence(area, staged=staged)
+        if held.report_reviews_unread:
+            raise report_reviews.ReportReviewError(held.report_reviews_unread)
+        found = list(held.report_reviews)
         if staged:
             carried = set(indexed_files(repo))
             found = [r for r in found if r.path.resolve() in carried]

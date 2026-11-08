@@ -51,7 +51,7 @@ from datetime import datetime
 from pathlib import Path
 
 from labkit.formats.commands import checkout_command
-from labkit.formats import findings
+from labkit.formats import findings, handovers, report_reviews, reviews
 from labkit.formats.attempts import evidence_gaps
 from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import GateFinding, blocker, with_way_out
@@ -668,6 +668,18 @@ class AreaEvidence:
             `change_sentences` and `change_blockers` render them.
         ignored: Every file labkit wrote that git ignores, with its way out
             (`evidence.ignored`).
+        reviews: The area's decision reviews, oldest first
+            (`reviews.area_reviews`, the tree's), () when one does not read.
+        reviews_unread: Why the decision reviews could not be read
+            (`reviews.ReviewError`'s sentence), "" when they could.
+        report_reviews: The area's report reviews, oldest first
+            (`report_reviews.area_report_reviews`, the tree's), () when one
+            does not read.
+        report_reviews_unread: Why the report reviews could not be read, "".
+        handed_over_entries: The findings any handover record of the area lists as
+            left over (`handovers.handed_over`, as `handovers.entry` spells
+            them), frozenset() when a record does not read.
+        handovers_unread: Why the handover records could not be read, "".
     """
 
     records: tuple[findings.Record, ...]
@@ -675,6 +687,12 @@ class AreaEvidence:
     unreadable: tuple[str, ...]
     changes: tuple[tuple[str, str], ...]
     ignored: tuple[str, ...]
+    reviews: tuple[reviews.Review, ...] = ()
+    reviews_unread: str = ""
+    report_reviews: tuple[report_reviews.ReportReview, ...] = ()
+    report_reviews_unread: str = ""
+    handed_over_entries: frozenset[str] = frozenset()
+    handovers_unread: str = ""
 
     @property
     def problems(self) -> tuple[str, ...]:
@@ -698,13 +716,40 @@ class AreaEvidence:
 
 
 def read_evidence(area: Path, staged: bool) -> AreaEvidence:
-    """AREA's audit evidence (`Evidence`) as the tree or, STAGED, the index
-    holds it, each reader called once. Raises RuntimeError when git fails."""
+    """AREA's audit evidence (`AreaEvidence`) as the tree or, STAGED, the
+    index holds it, each reader called once; the reviews and the handover
+    records are the tree's in either state (their readers know no index),
+    and a file that does not read is carried as its sentence, never
+    raised. Raises RuntimeError when git fails."""
     status = findings.record_status(area, staged=staged)
+    found_reviews: tuple[reviews.Review, ...] = ()
+    reviews_unread = ""
+    try:
+        found_reviews = tuple(reviews.area_reviews(area))
+    except reviews.ReviewError as exc:
+        reviews_unread = str(exc)
+    found_report_reviews: tuple[report_reviews.ReportReview, ...] = ()
+    report_reviews_unread = ""
+    try:
+        found_report_reviews = tuple(report_reviews.area_report_reviews(area))
+    except report_reviews.ReportReviewError as exc:
+        report_reviews_unread = str(exc)
+    handed: frozenset[str] = frozenset()
+    handovers_unread = ""
+    try:
+        handed = frozenset(handovers.handed_over(area))
+    except handovers.HandoverError as exc:
+        handovers_unread = str(exc)
     return AreaEvidence(
         tuple(status.records),
         tuple(evidence_gaps(area, staged=staged)),
         tuple(status.errors),
         tuple(change_findings(area, staged=staged)),
         tuple(ignored(area)),
+        found_reviews,
+        reviews_unread,
+        found_report_reviews,
+        report_reviews_unread,
+        handed,
+        handovers_unread,
     )

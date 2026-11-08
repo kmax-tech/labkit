@@ -86,21 +86,21 @@ def undecided_state(
         held = evidence.read_evidence(area, staged=staged)
         # Only a current handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
-        handed_over = handovers.acknowledgement(area, state, staged=staged)
-        if handed_over.valid and held.problems:
+        acknowledged_by = handovers.acknowledgement(area, state, staged=staged)
+        if acknowledged_by.valid and held.problems:
             acknowledged.append(
                 f"{shown}: a handover acknowledges this loss — not restored, and "
                 f"no audit or adoption passes on it: " + "; ".join(held.problems)
             )
-        if not handed_over.valid and held.problems:
+        if not acknowledged_by.valid and held.problems:
             out += [f"{shown}: {problem}" for problem in held.problems]
             # a handover written for this area that no longer counts says why
             out += [
                 f"{shown}: the handover {name} no longer acknowledges this: {why}"
-                for name, why in handed_over.refused.items()
+                for name, why in acknowledged_by.refused.items()
             ]
         open_lines = [f"{shown}: {u.line}" for u in held.open_blockers]
-        if handed_over.valid and open_lines:
+        if acknowledged_by.valid and open_lines:
             acknowledged.append(
                 f"{shown}: a handover records these open BLOCKERs — the protocol "
                 f"ends without a result: " + "; ".join(open_lines)

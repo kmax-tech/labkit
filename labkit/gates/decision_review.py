@@ -66,7 +66,7 @@ from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.run_record_check import script_as_run
 from labkit.checks.result_render import rendering
-from labkit.formats import attempts, console, findings, reviews
+from labkit.formats import attempts, console, evidence, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import conclusion_written
 from labkit.formats.repo import layout_root, shown, the_protocol
@@ -255,13 +255,23 @@ class Evidence(NamedTuple):
     numbers: list[int]
 
 
+def decided_reviews(area: Path) -> list[reviews.Review]:
+    """AREA's decision reviews from its audit evidence read once
+    (`evidence.read_evidence`); raises `reviews.ReviewError` with the
+    sentence when one does not read, as the reader did."""
+    held = evidence.read_evidence(area, staged=False)
+    if held.reviews_unread:
+        raise reviews.ReviewError(held.reviews_unread)
+    return list(held.reviews)
+
+
 def gather_review(area: Path, protocol: Path, record: findings.Record) -> Evidence:
     """The prompt for RECORD's `stands` decisions, from one reading: the
     area snapshot must stamp what the record names and the run must show
     what the record's auditor saw, else AuditError — the decisions were
     made on that state. AuditError too when the record holds nothing to
     review, or names a run that is gone."""
-    found = reviews.area_reviews(area)
+    found = decided_reviews(area)
     decided = reviewable(record, found)
     if not decided:
         raise AuditError(
@@ -384,7 +394,7 @@ def contested_gap(
     already said `rejected` or `insufficient` (`reviews.contested`). Its way
     out is deciding again, not another call."""
     text = protocol.read_text(encoding="utf-8")
-    found = reviews.area_reviews(area)
+    found = decided_reviews(area)
     held = [
         n
         for n, _ in reviewable(record, found)
@@ -531,5 +541,5 @@ def held_after(
     now) — every draw on the state counted, an `--again` draw releasing
     nothing."""
     text = protocol.read_text(encoding="utf-8")
-    found = reviews.area_reviews(area)
+    found = decided_reviews(area)
     return [n for n in numbers if not reviews.upholding(record, n, found, text)]

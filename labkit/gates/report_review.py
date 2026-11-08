@@ -64,7 +64,7 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
-from labkit.formats import attempts, console, findings, report_reviews
+from labkit.formats import attempts, console, evidence, findings, report_reviews
 from labkit.formats.report_reviews import ReportClaim, held_by
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.repo import layout_root, shown, the_protocol
@@ -211,7 +211,7 @@ def review_report(
         whole, parts = report_hold.review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, report, chosen)
         standing = report_reviews.standing(
-            report_reviews.area_report_reviews(area), report_key, protocol_key, whole
+            report_reviews_of(area), report_key, protocol_key, whole
         )
         if not again and standing.claims:
             raise AuditError(
@@ -295,8 +295,18 @@ def state_after(
     record of AREA (`report_reviews.standing`) — what the command's exit
     code and its state line say, not the draw alone."""
     return report_reviews.standing(
-        report_reviews.area_report_reviews(area), report_key, protocol_key, whole
+        report_reviews_of(area), report_key, protocol_key, whole
     )
+
+
+def report_reviews_of(area: Path) -> list[report_reviews.ReportReview]:
+    """AREA's report reviews from its audit evidence read once
+    (`evidence.read_evidence`); raises `report_reviews.ReportReviewError`
+    with the sentence when one does not read, as the reader did."""
+    held = evidence.read_evidence(area, staged=False)
+    if held.report_reviews_unread:
+        raise report_reviews.ReportReviewError(held.report_reviews_unread)
+    return list(held.report_reviews)
 
 
 def state_line(

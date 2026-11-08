@@ -190,7 +190,9 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
         if theirs.unreadable:
             raise findings.FindingsError("; ".join(theirs.unreadable))
         held = theirs.open_blockers
-        recorded = handovers.handed_over(pred.parent) if held else set()
+        if held and theirs.handovers_unread:
+            raise handovers.HandoverError(theirs.handovers_unread)
+        recorded = set(theirs.handed_over_entries) if held else set()
     except (findings.FindingsError, handovers.HandoverError) as exc:
         return [
             blocker(
