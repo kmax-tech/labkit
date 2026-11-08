@@ -90,8 +90,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats import evidence
-from labkit.formats.area_state import AreaState, state_of
-from labkit.formats.commands import checkout_command
+from labkit.formats.area_state import AreaState, gone_run_restore, state_of
 from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
@@ -120,7 +119,6 @@ from labkit.formats.runs import (
     read_outputs,
     unreportable,
     read_run_config,
-    run_path,
 )
 from labkit.formats.answering_run import (
     adopted_run,
@@ -199,7 +197,7 @@ def choose_answering_run(
         )
         return None
     choice = state.measured_of(pid).answering(adopted_run(text))
-    blocker, lines = choice.explain(_registers(text))
+    blocker, lines = choice.explain(promises.registers_promises(text))
     if choice.run_dir is None:
         assert blocker is not None, "explain() names a blocker whenever no run stands"
         looked_at = "".join(f"; {line}" for line in lines)
@@ -314,16 +312,21 @@ def unreportable_warnings(answering_run: Path) -> list[str]:
 def gone_run_way(area: Path, run_id: str, state: AreaState) -> tuple[str, Command]:
     """The way out of an audit record whose run RUN_ID is gone from AREA,
     and the handover it names as the finding's step: put it back where
-    git holds it, else hand the area over naming the loss, or register
-    anew. Measuring again lifts nothing — the record
+    git holds it (STATE's `deleted`: the commit that held it last,
+    `area_state.gone_run_restore`), else hand the area over naming the
+    loss, or register anew. Measuring again lifts nothing — the record
     stays and names the gone run —, so the way out never offers it."""
     protocols = state.protocols
     protocol = protocols[0] if len(protocols) == 1 else area / "PROTOCOL-<name>.md"
     handover = handover_command(protocol)
+    held_back = next((rd for rd in state.deleted if rd.dir.name == run_id), None)
+    put_back = (
+        f"put it back where git holds it ({gone_run_restore(held_back)}); else"
+        if held_back is not None
+        else "no commit holds it:"
+    )
     return (
-        f"put it back where git holds it "
-        f"(`{checkout_command(shown(run_path(area, run_id), Path.cwd()))}`); "
-        f"else it is lost, and a new run "
+        f"{put_back} it is lost, and a new run "
         f"does not lift this — hand the area over naming the loss "
         f"(`{handover}`), or {register_anew()}"
     ), handover
@@ -375,17 +378,6 @@ def check_open_audit_findings(
         )
 
 
-def _registers(text: str) -> bool:
-    """Does the protocol register a promise id, in its prose or its block
-    (`promises.registered_ids`)? A malformed block counts as registered:
-    intent-check then refuses it by name — a blocker — where this question
-    would otherwise read "nothing to check"."""
-    try:
-        return bool(promises.registered_ids(text))
-    except promises.PromiseError:
-        return True
-
-
 def check_intent_keys_in_metrics(
     findings: Findings,
     protocol: Path,
@@ -397,7 +389,7 @@ def check_intent_keys_in_metrics(
     run's metrics.json, a branch as one of its registered outcomes
     (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
-    if not _registers(text):
+    if not promises.registers_promises(text):
         findings.note("  no intent ids registered — nothing to check")
         return
     try:
@@ -465,7 +457,7 @@ def check_declared_scopes(
     or the block was added after the run."""
     cfg = read_run_config(answering_run)
     recorded = cfg.promises if cfg else None
-    if recorded is None and text and not _registers(text):
+    if recorded is None and text and not promises.registers_promises(text):
         findings.note(
             "  n/a — the protocol registers no promise id (a computation), nothing to hold"
         )

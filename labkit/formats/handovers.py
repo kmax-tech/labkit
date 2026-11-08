@@ -61,11 +61,8 @@ from labkit.formats.comment_blocks import (
     with_comment_block,
 )
 from labkit.formats.repo import (
-    rel_posix,
-    PROTOCOL_NAME,
-    REPORT_SUFFIX,
-    SKIP_DIRS,
     GitError,
+    REPORT_SUFFIX,
     area_protocols,
     blobs_now,
     git_root,
@@ -73,6 +70,8 @@ from labkit.formats.repo import (
     indexed_protocols,
     own_path,
     protocol_links,
+    rel_posix,
+    report_place_problem,
     state_text,
     text_at,
     text_blob,
@@ -448,11 +447,9 @@ def report_destination(root: Path, path: Path) -> Path:
         raise HandoverError(
             "handover report must be a regular Markdown file inside the repository"
         )
-    protected = SKIP_DIRS | {findings.DIR}
-    if protected & set(report.relative_to(root).parts) or PROTOCOL_NAME.match(
-        report.name
-    ):
-        raise HandoverError("handover report must not replace a protocol or evidence")
+    problem = report_place_problem(PurePosixPath(report.relative_to(root).as_posix()))
+    if problem is not None:
+        raise HandoverError(f"handover report: {problem}")
     return report
 
 

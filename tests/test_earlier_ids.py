@@ -44,7 +44,7 @@ class EarlierIds(unittest.TestCase):
                     + f"Criterion [{pid}] accuracy >= 0.8\n"
                 )
                 self.assertEqual(promises.earlier_ids(text), [pid])
-                self.assertTrue(promises.registers_ids(text))
+                self.assertTrue(promises.prose_names_ids(text))
                 missing = protocol_check.check_fields(text).missing_must
                 self.assertTrue(any("intent ids" in m for m in missing), missing)
                 self.assertTrue(

@@ -93,9 +93,11 @@ def kind_of(pid: str) -> str:
     return pid.rpartition("-")[0]
 
 
-def registers_ids(text: str) -> bool:
-    """Does the protocol's prose name any promise id? A computation at low repeat cost
-    names none and owes no [[promise]] table."""
+def prose_names_ids(text: str) -> bool:
+    """Does the protocol's prose name any promise id? The condition under
+    which a computation owes its [[promise]] tables
+    (`protocol_check.kind_registers`); whether the protocol registers ids
+    at all is `registers_promises`."""
     return (
         ID_IN_PROTOCOL.search(text) is not None or EARLIER_ID.search(text) is not None
     )
@@ -519,6 +521,19 @@ def registered_ids(text: str) -> set[str]:
     block = parse_block(text)
     declared = {p.id for p in block.promises} if block is not None else set()
     return ids_in_prose(text) | declared
+
+
+def registers_promises(text: str) -> bool:
+    """Does the protocol register a promise id, in its prose or as a
+    [[promise]] table (`registered_ids`)? A malformed block counts as
+    registered: intent-check refuses it by name — a blocker — where this
+    question would otherwise read "nothing to check". The one answer the
+    answering run's telling asks (`AnsweringRun.explain`): finalize,
+    intent-check, recheck, params and the audit hold a probe run alike."""
+    try:
+        return bool(registered_ids(text))
+    except PromiseError:
+        return True
 
 
 def table_ids(text: str) -> set[str]:

@@ -659,7 +659,8 @@ class HandoverRecovery(cases._Chain):
                 rc, out = self.handover()
                 self.report = previous
                 self.assertEqual(rc, 2, out)
-                self.assertIn("must not replace", out)
+                # repo.report_place_problem's sentence
+                self.assertIn("handover report: a ", out)
                 self.assertEqual(target.read_bytes(), original)
         self.assertEqual(handovers.record_paths(self.area), [])
 

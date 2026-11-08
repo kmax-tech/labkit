@@ -274,6 +274,9 @@ PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
 #: file of the lab — a protocol copied into `runs/<id>/` or shipped in
 #: `.venv/` is a record or a package, not a second protocol
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
+#: an area's audit evidence directory (`findings.DIR` reads it): records,
+#: the attempt journal, reviews — no report stands there
+EVIDENCE_DIR = "audits"
 #: directories that hold no code of the lab: SKIP_DIRS and an area's
 #: `output/` — what a search for an area's scripts and the copy of a run's
 #: untracked code pass over
@@ -365,17 +368,21 @@ def report_place_problem(rel: PurePosixPath) -> str | None:
     """Why REL, a path relative to the repository root, is no place a
     report may stand — or None when it is: a protocol file is no report, a
     file that is not Markdown (REPORT_SUFFIX) takes no result or handover
-    block, and under one of SKIP_DIRS (`runs/`, `data/`, …) no gate holds a
-    report. The one rule for the head's `report` field
+    block, under one of SKIP_DIRS (`runs/`, `data/`, …) no gate holds a
+    report, and under EVIDENCE_DIR (`audits/`) it would stand among the
+    evidence. The one rule for the head's `report` field
     (`protocol_block.report_field`), the gates' held places
     (`report_hold.held_place`, `report_files`) and the reports a former
-    registration named (`registered_report.formerly_registering`)."""
+    registration named (`registered_report.formerly_registering`) and the
+    handover's report (`handovers.report_destination`)."""
     if PROTOCOL_NAME.match(rel.name):
         return "a protocol is no report; the report is the file that carries this protocol's result block"
     if rel.suffix != REPORT_SUFFIX:
         return f"a Markdown file ({REPORT_SUFFIX}); only such a file takes a result or a handover block"
     if SKIP_DIRS & set(rel.parts):
         return f"a place no gate holds a report at: under {', '.join(sorted(SKIP_DIRS & set(rel.parts)))}/"
+    if EVIDENCE_DIR in rel.parts[:-1]:
+        return f"a place among the audit evidence: under {EVIDENCE_DIR}/"
     return None
 
 
@@ -810,10 +817,10 @@ def areas_of(
 ) -> list[Path]:
     """The areas PATHS touch, each once, in path order: the nearest area
     above each path (`find_area`, the walk ends at STOP without leaving it);
-    a path under no area contributes nothing. The one answer for every gate
-    that holds "the areas this session worked in" — the stop's reported
-    numbers and the commit's undecided findings — so the two cannot drift
-    apart in what they call an area. PROTOCOLS as in `find_area`."""
+    a path under no area contributes nothing. The first step of
+    `scope_sha.areas_touched`, which is the one answer the gates ask (it
+    adds the areas a declared scope, a validation or a shared import
+    reaches); PROTOCOLS as in `find_area`."""
     out: list[Path] = []
     for path in paths:
         area = find_area(path, stop=stop, protocols=protocols)

@@ -83,7 +83,7 @@ def audited_run(state: AreaState, protocol: Path, text: str) -> tuple[Path | Non
     if pid is None:
         return None, "the protocol id is still a placeholder"
     choice = state.measured_of(pid).answering(adopted_run(text))
-    blocker, _ = choice.explain(promises.registers_ids(text))
+    blocker, _ = choice.explain(promises.registers_promises(text))
     if blocker or choice.run_dir is None:
         return None, blocker.text if blocker else "no completed bound run"
     return choice.run_dir, ""

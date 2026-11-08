@@ -426,3 +426,63 @@ class ARecordGitHolds(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RoundTwoFileStates(_Repository):
+    """The audit of 2026-11-08, round 2: R1, R4, R5."""
+
+    def test_the_commit_reaches_an_area_whose_protocol_is_deleted_only_in_the_tree(
+        self,
+    ):
+        from labkit.formats.scope_sha import areas_touched
+
+        self.proto.unlink()  # in the tree only; the index still holds it
+        self.assertEqual(
+            areas_touched([self.proto], self.root, staged=True), [self.area.resolve()]
+        )
+        self.assertEqual(areas_touched([self.proto], self.root, staged=False), [])
+
+    def test_the_undecided_gate_asks_the_areas_in_its_file_state(self):
+        from unittest import mock
+
+        from labkit.gates import undecided
+
+        seen: list[bool] = []
+
+        def touched(paths, repo, *, staged):
+            seen.append(staged)
+            return []
+
+        with mock.patch.object(undecided, "areas_touched", touched):
+            undecided.undecided_state(self.root, [self.proto], staged=True)
+            undecided.undecided_state(self.root, [self.proto], staged=False)
+        self.assertEqual(seen, [True, False])
+
+    def test_a_gone_run_git_holds_is_put_back_from_the_commit_that_held_it(self):
+        from labkit.gates import finalize
+
+        run = self._run(RUN)
+        held = _git(self.root, "rev-parse", "HEAD")
+        _git(self.root, "rm", "-rq", str(run))
+        _git(self.root, "commit", "-qm", "deleted")
+        way, _ = finalize.gone_run_way(self.area, RUN, state_of(self.area))
+        self.assertIn(held[:7], way)
+        self.assertNotIn("checkout HEAD", way)
+        # the twin: a run no commit held has no restore to offer
+        way, _ = finalize.gone_run_way(self.area, "never-held", state_of(self.area))
+        self.assertIn("no commit holds it", way)
+        self.assertNotIn("git checkout", way)
+
+    def test_a_report_under_the_evidence_directory_is_refused_by_both_rules(self):
+        from pathlib import PurePosixPath
+
+        from labkit.formats import handovers, repo
+
+        rel = PurePosixPath("experiments/01-x/audits/REPORT.md")
+        self.assertIsNotNone(repo.report_place_problem(rel))
+        with self.assertRaisesRegex(handovers.HandoverError, "audit evidence"):
+            handovers.report_destination(self.root.resolve(), self.root / rel)
+        # the twin: the area's own report stands
+        self.assertIsNone(
+            repo.report_place_problem(PurePosixPath("experiments/01-x/REPORT.md"))
+        )

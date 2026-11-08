@@ -434,7 +434,7 @@ def session_evidence(
     holds there itself."""
     out: list[str] = []
     if session.since is not None:
-        for area in areas_touched(paths, repo):
+        for area in areas_touched(paths, repo, staged=False):
             shown_area = rel_posix(area, repo)
             out += [
                 f"{shown_area}: {line}"

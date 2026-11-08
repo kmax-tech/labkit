@@ -47,6 +47,23 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **The commit judges the areas its index holds, and every way out
+  restores what it names** (the audit of 2026-11-08, round 2).
+  `scope_sha.areas_touched(paths, repo, *, staged)` takes the file state
+  (was an optional protocol list): the commit's undecided gate and its
+  discussing reports reach an area whose protocol is deleted only in the
+  tree. `promises.registers_promises` is the one answer to "does the
+  protocol register a promise id" (prose or table; a malformed block
+  counts) for every telling of the answering run — finalize, intent-check,
+  recheck, params and the audit hold a probe run alike;
+  `promises.registers_ids` is now `prose_names_ids` and answers only
+  whether a computation owes its tables. A cut attempt journal is restored
+  from HEAD (the index may hold the cut), finalize's way out for a gone run
+  names the commit that held it (`area_state.gone_run_restore`) or says
+  that none does. A report under an area's `audits/` is refused by the one
+  place rule (`repo.report_place_problem`, `repo.EVIDENCE_DIR`), which
+  the handover's report now asks too.
+
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and
   `EFFECT_GRADES` read them; 17 literals gone); `repo.protocols_in(repo,

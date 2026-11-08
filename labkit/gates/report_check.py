@@ -1033,11 +1033,11 @@ def affected_protocols(
     if not staged:
         return [
             p
-            for area in sorted(areas_touched(paths, repo))
+            for area in sorted(areas_touched(paths, repo, staged=False))
             for p in area_protocols(area)
         ]
     indexed = indexed_protocols(repo)
-    areas = areas_touched(paths, repo, indexed)
+    areas = areas_touched(paths, repo, staged=True)
     return [p for area in sorted(areas) for p in indexed if p.parent == area]
 
 

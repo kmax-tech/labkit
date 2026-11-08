@@ -265,3 +265,20 @@ class KeysInImportedCode(unittest.TestCase):
             )
             keys = intent_check.code_keys(area)
         self.assertEqual(keys["criterion_1_pass"], ["src/measure/comparison.py:2"])
+
+
+class OneAnswerToRegistersPromises(unittest.TestCase):
+    """The audit of 2026-11-08, round 2, R2: a [[promise]] table the prose
+    does not name still registers its id — every telling of the answering
+    run holds a probe run alike."""
+
+    def test_a_table_alone_registers_and_a_protocol_without_ids_does_not(self):
+        from labkit.formats import promises
+
+        table_only = (
+            '# P\n\n```toml\n[[promise]]\nid = "criterion-1"\n'
+            'sentence = "the f1 holds"\nkeys = ["f1"]\n```\n'
+        )
+        self.assertFalse(promises.prose_names_ids(table_only))
+        self.assertTrue(promises.registers_promises(table_only))
+        self.assertFalse(promises.registers_promises("# P\n\nno ids here\n"))

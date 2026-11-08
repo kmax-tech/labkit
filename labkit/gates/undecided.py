@@ -72,7 +72,7 @@ def undecided_state(
     handover acknowledges it: a restore from git undoes it."""
     out: list[str] = []
     acknowledged: list[str] = []
-    areas = areas_touched(paths, repo)
+    areas = areas_touched(paths, repo, staged=staged)
     changed = {p.resolve() for p in paths}
     # an area removed with its protocol is found by no protocol walk; its
     # journal copy is the one thing left that names what it held

@@ -49,15 +49,21 @@ class DeclaredScope(unittest.TestCase):
         return area
 
     def test_a_declared_file_touches_the_area_that_declares_it(self) -> None:
-        self.assertEqual(areas_touched([self.rubric], self.root), [self.a])
-        self.assertEqual(areas_touched([self.labels], self.root), [self.a])
+        self.assertEqual(
+            areas_touched([self.rubric], self.root, staged=False), [self.a]
+        )
+        self.assertEqual(
+            areas_touched([self.labels], self.root, staged=False), [self.a]
+        )
         self.rubric.unlink()  # a deleted declared file is still one the number rests on
-        self.assertEqual(areas_touched([self.rubric], self.root), [self.a])
+        self.assertEqual(
+            areas_touched([self.rubric], self.root, staged=False), [self.a]
+        )
 
     def test_a_file_nobody_declares_or_imports_touches_no_area(self) -> None:
         stray = self.root / "lib" / "notes.md"
         stray.write_text("x\n", encoding="utf-8")
-        self.assertEqual(areas_touched([stray], self.root), [])
+        self.assertEqual(areas_touched([stray], self.root, staged=False), [])
 
     def test_a_damaged_block_touches_its_own_area_and_no_other(self) -> None:
         """Whether area c declares the file cannot be told, so it counts as
@@ -67,9 +73,11 @@ class DeclaredScope(unittest.TestCase):
         (c / "PROTOCOL-x.md").write_text(
             head(promises='[[promise]]\nid = "criterion-1"\n'), encoding="utf-8"
         )
-        self.assertEqual(sorted(areas_touched([self.rubric], self.root)), [self.a, c])
+        self.assertEqual(
+            sorted(areas_touched([self.rubric], self.root, staged=False)), [self.a, c]
+        )
         stray = self.root / "lib" / "notes.md"
-        self.assertEqual(areas_touched([stray], self.root), [c])
+        self.assertEqual(areas_touched([stray], self.root, staged=False), [c])
 
 
 if __name__ == "__main__":

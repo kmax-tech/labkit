@@ -104,6 +104,7 @@ from labkit.formats.protocol_check import (
     field_or_none,
 )
 from labkit.formats.repo import (
+    EVIDENCE_DIR,
     INDEX_REV,
     PROTOCOL_NAME,
     files_at,
@@ -116,7 +117,7 @@ from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.digests import digest
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
-DIR = "audits"
+DIR = EVIDENCE_DIR
 #: the attempt journal under DIR (`attempts`)
 JOURNAL = "attempts.jsonl"
 #: the folder under DIR that keeps each answer, named by its attempt

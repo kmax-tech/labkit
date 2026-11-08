@@ -415,7 +415,8 @@ def gaps(
         blockers.append(
             f"{DIR}/{JOURNAL} no longer starts with the lines HEAD holds — the "
             f"journal is appended to, never cut; restore it "
-            f"(`git checkout -- {DIR}/{JOURNAL}`)"
+            f"(`{checkout_command(f'{DIR}/{JOURNAL}')}` in the area: HEAD holds "
+            f"the lines; the index may hold the cut)"
         )
     return Gaps(blockers, notes)
 

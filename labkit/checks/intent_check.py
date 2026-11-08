@@ -453,7 +453,7 @@ def choose_bound(
     them when the protocol registers ids (its metrics would read every
     promise as unimplemented)."""
     choice = state.measured_of(pid).answering(adopted_run(text))
-    blocker, lines = choice.explain(promises.registers_ids(text))
+    blocker, lines = choice.explain(promises.registers_promises(text))
     if blocker:
         why = [
             with_way_out(

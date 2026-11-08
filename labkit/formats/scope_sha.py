@@ -42,12 +42,13 @@ from labkit.formats import console, protocol_block
 from pathlib import Path
 
 from labkit.formats.repo import (
-    rel_posix,
     SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
     layout_root,
     no_such_area,
+    protocols_in,
+    rel_posix,
     repo_protocols,
     requirement_lines,
 )
@@ -347,9 +348,7 @@ def import_reach(area: Path, repo: Path) -> set[Path]:
     return reach
 
 
-def areas_touched(
-    paths: list[Path], repo: Path, protocols: list[Path] | None = None
-) -> list[Path]:
+def areas_touched(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
     """The areas PATHS touch: the area each path lies in (`repo.areas_of`),
     every area whose promises declare a path in their scope
     (`declared_scope_files`) — a rubric or a label file read at run time
@@ -359,14 +358,16 @@ def areas_touched(
     computation resting on it), and for a path under
     a LOCAL_ROOT every area whose code imports it (`import_reach`): a
     shared helper changed or deleted reopens the numbers that rest on it as
-    a script in the area does. PROTOCOLS as in `repo.find_area` (the
-    index's at the commit), else the working tree's; their text is read
-    from the working tree, as the area's code is. An area whose protocol
+    a script in the area does. The protocols are the file state's
+    (`repo.protocols_in`): the index's when STAGED — a protocol deleted
+    only in the tree is still in the commit —, else the tree's; their text
+    is read from the working tree, as the area's code is. An area whose protocol
     or code cannot be read counts as touched: whether it rests on the path
     cannot be told, and the gate is the safer answer; the other areas
     answer as if it were not there. The one answer for the stop, the
     commit's undecided gate and report-check."""
     root = repo.resolve()
+    protocols = protocols_in(root, staged=True) if staged else None
     out = areas_of(paths, root, protocols)
     changed = {p.resolve() for p in paths}
     shared = [p for p in changed if any((root / r) in p.parents for r in LOCAL_ROOTS)]

@@ -346,7 +346,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
             )
             return 2
         choice = state_of(area).measured_of(pid).answering(adopted_run(text))
-        blocker, lines = choice.explain(promises.registers_ids(text))
+        blocker, lines = choice.explain(promises.registers_promises(text))
         if blocker or choice.run_dir is None:
             console.refuse(
                 "labkit-params",

@@ -896,9 +896,9 @@ def kind_registers(kind: str | None, text: str) -> bool:
     """Does a protocol of KIND register promises — the one condition under
     which its [[promise]] tables are owed (`promises.promise_tables_owed`):
     a fit or an apply registers by its kind, a computation only when its
-    prose names an id (`promises.registers_ids`); an
+    prose names an id (`promises.prose_names_ids`); an
     undecided kind registers, the most a kind owes."""
-    return kind != standard_contract.COMPUTE_KIND or promises.registers_ids(text)
+    return kind != standard_contract.COMPUTE_KIND or promises.prose_names_ids(text)
 
 
 def reference_gap(text: str, head: protocol_block.Head) -> str | None:

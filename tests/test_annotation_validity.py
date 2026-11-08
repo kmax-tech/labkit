@@ -540,7 +540,7 @@ class AffectedByEvidence(StaleEvidence):
             root = Path(d)
             for what, path in self._changed(val, root).items():
                 with self.subTest(what=what):
-                    touched = scope_sha.areas_touched([path], root)
+                    touched = scope_sha.areas_touched([path], root, staged=False)
                     self.assertIn(share.resolve(), [a.resolve() for a in touched])
 
     def test_a_doi_ties_the_area_to_no_file(self):
@@ -552,7 +552,7 @@ class AffectedByEvidence(StaleEvidence):
             root = Path(d)
             for what, path in self._changed(val, root).items():
                 with self.subTest(what=what):
-                    touched = scope_sha.areas_touched([path], root)
+                    touched = scope_sha.areas_touched([path], root, staged=False)
                     self.assertNotIn(share.resolve(), [a.resolve() for a in touched])
 
     def test_the_staged_gate_reopens_the_computation(self):

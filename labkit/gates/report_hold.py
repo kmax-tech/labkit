@@ -1194,7 +1194,9 @@ def discussing_reports(
     blocks do not read is held too — the gate names the block. Empty
     outside a repository."""
     areas = (
-        {a.resolve() for a in areas_touched(paths, repo)} if git_root(repo) else set()
+        {a.resolve() for a in areas_touched(paths, repo, staged=staged)}
+        if git_root(repo)
+        else set()
     )
     if not areas:
         return []
