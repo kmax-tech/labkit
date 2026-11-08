@@ -424,7 +424,7 @@ def _handed_over(
     report for its review."""
     from labkit.gates.registered_report import report_owed
 
-    if not handovers.protocol_handed_over(area, protocol, state):
+    if not handovers.protocol_handed_over(area, protocol, state, staged=staged):
         return None
 
     owed = report_owed(

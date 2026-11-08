@@ -231,6 +231,17 @@ class TheFileStateNamedIsTheOneRead(_Repository):
         (gap,) = report_hold.discussion_sources(report, found, staged=False)
         self.assertIn(f"has no runs/{RUN}/", gap.text)
 
+    def test_the_runs_a_report_may_cite_follow_the_file_state(self):
+        """`repo_sources(staged=True)` knows the runs the index holds: a run
+        deleted only in the tree is cited rightly at the commit, and a gap
+        at the stop."""
+        from labkit.gates import report_hold
+
+        run = self._run(RUN)
+        shutil.rmtree(run)
+        self.assertIn(RUN, report_hold.repo_sources(self.root, staged=True).known)
+        self.assertNotIn(RUN, report_hold.repo_sources(self.root, staged=False).known)
+
 
 class OneRuleForAReportsPlace(unittest.TestCase):
     """Where a report may stand is one rule (`repo.report_place_problem`):

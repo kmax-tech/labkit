@@ -21,7 +21,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
-from labkit.formats.runs import run_dirs, run_path
+from labkit.formats.runs import run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
 from labkit.formats import (
     attempts,
@@ -34,7 +34,7 @@ from labkit.checks.audit_binding import (
     AuditError,
     audited_run,
 )
-from labkit.formats.area_state import INDEX, TREE, AreaState, state_of
+from labkit.formats.area_state import INDEX, TREE, AreaState, present_run_dirs, state_of
 from labkit.formats import evidence
 from labkit.checks import report_blocks
 from labkit.checks.result_render import rendering
@@ -385,17 +385,19 @@ def reports_citing(run_id: str, repo: Path) -> list[Path]:
 
 @dataclass(frozen=True)
 class Sources:
-    """What the repo holds for a report to cite: the repo's root (REPO,
-    resolved), every run directory's id (KNOWN), and per protocol its text as the state holds it (TEXTS) and
-    the run its head declares (DECLARED: None for none; a head that does
-    not read is in UNREADABLE with the reason instead)."""
+    """What the repo holds for a report to cite, as the file state holds it
+    (STAGED: the index, what the commit carries; else the tree): the repo's
+    root (REPO, resolved), every run directory's id (KNOWN), and per
+    protocol its text (TEXTS) and the run its head declares (DECLARED: None
+    for none; a head that does not read is in UNREADABLE with the reason
+    instead)."""
 
     repo: Path
     known: set[str]
     texts: dict[Path, str]
     declared: dict[Path, str | None]
     unreadable: dict[Path, str]
-    staged: bool = False
+    staged: bool = False  # the file state the sources were read from
 
     def declaring(self, run_id: str) -> list[Path]:
         """The protocols declaring RUN_ID as their result."""
@@ -404,12 +406,17 @@ class Sources:
 
 def repo_sources(repo: Path, *, staged: bool) -> Sources:
     """The runs, texts and declarations of every protocol of REPO — the
-    index's protocols and texts when STAGED."""
+    index's protocols, texts and runs when STAGED (what the commit
+    carries), the tree's otherwise (`area_state.present_run_dirs`)."""
     protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
     out = Sources(repo.resolve(), set(), {}, {}, {}, staged)
     out.unreadable.update(protocol_links(repo, protocols, staged=staged))
+    file_state = INDEX if staged else TREE
     for p in protocols:
-        out.known.update(rd.dir.name for rd in run_dirs(p.parent))
+        out.known.update(
+            rd.dir.name
+            for rd in present_run_dirs(p.parent, repo=repo, file_state=file_state)
+        )
         if p in out.unreadable:
             continue  # a link: no text to read, the refusal stands
         try:
@@ -713,11 +720,12 @@ def replacement_hints(
 
 def _run_protocols(sources: Sources) -> dict[str, Path]:
     """Every run id of the repo's protocols, mapped to the protocol its
-    record binds it to (`protocol.id`)."""
+    record binds it to (`protocol.id`), in the file state SOURCES hold."""
     out: dict[str, Path] = {}
+    file_state = INDEX if sources.staged else TREE
     for p, text in sources.texts.items():
         pid = protocol_block.id_of(text)
-        for rd in run_dirs(p.parent):
+        for rd in present_run_dirs(p.parent, repo=sources.repo, file_state=file_state):
             if rd.config is not None and rd.config.protocol.id == pid:
                 out[rd.dir.name] = p
     return out

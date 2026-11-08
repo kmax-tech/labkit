@@ -320,10 +320,9 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
     RuntimeError when git fails."""
     repo = git_root(area)
     staged = file_state == INDEX
+    runs = present_run_dirs(area, repo=repo, file_state=file_state)
     if staged:
-        if repo is None:
-            raise ValueError(f"{area}: the index of no repository cannot be read")
-        runs = indexed_run_dirs(repo, area)
+        assert repo is not None  # present_run_dirs refused the index without one
         protocols = sorted(
             p for p in indexed_protocols(repo) if p.parent == area.resolve()
         )
@@ -331,7 +330,6 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
             p.resolve(): t for p in protocols if (t := text_at(repo, p)) is not None
         }
     else:
-        runs = run_dirs(area)
         protocols = area_protocols(area)
         texts = {p.resolve(): p.read_text(encoding="utf-8") for p in protocols}
     pending = [p for p in protocols if pending_adoption(p).is_file()]
@@ -363,6 +361,19 @@ def index_names_gone_runs(area: Path) -> bool:
 class HistoryUnread(RuntimeError):
     """Git could not list or read the runs a commit holds
     (`committed_runs`): its words, for `AreaState.history_unread`."""
+
+
+def present_run_dirs(area: Path, *, repo: Path | None, file_state: str) -> list[RunDir]:
+    """AREA's present runs as FILE_STATE holds them: the index's
+    (`indexed_run_dirs`, REPO the repository) for INDEX, the tree's
+    (`runs.run_dirs`) otherwise — the one reader every gate asks, so the
+    runs a commit carries are the ones its gate judges. Raises ValueError
+    for INDEX outside a repository, GitError when git fails."""
+    if file_state == INDEX:
+        if repo is None:
+            raise ValueError(f"{area}: the index of no repository cannot be read")
+        return indexed_run_dirs(repo, area)
+    return run_dirs(area)
 
 
 def indexed_run_dirs(repo: Path, area: Path) -> list[RunDir]:

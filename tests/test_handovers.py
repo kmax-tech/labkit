@@ -554,6 +554,34 @@ class HandoverRecovery(cases._Chain):
             handovers.protocol_handed_over(self.area, other, state_of(self.area))
         )
 
+    def test_a_handover_record_deleted_only_in_the_tree_ends_the_protocol_at_the_commit(
+        self,
+    ):
+        """The commit judges the index: a committed handover record removed
+        from the tree but not staged still ends the protocol there, and
+        does not in the tree's reading (the file-state twin of
+        `_handed_over`)."""
+        from labkit.gates import next_step
+
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("handed over")
+        (record,) = handovers.record_paths(self.area)
+        record.unlink()
+        text = self.protocol.read_text(encoding="utf-8")
+        staged = next_step._handed_over(
+            self.area,
+            self.protocol,
+            text,
+            state_of(self.area, file_state=INDEX),
+            staged=True,
+        )
+        self.assertIsNotNone(staged)
+        tree = next_step._handed_over(
+            self.area, self.protocol, text, state_of(self.area), staged=False
+        )
+        self.assertIsNone(tree)
+
     def test_a_handover_withdraws_the_earlier_report_result_block(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
