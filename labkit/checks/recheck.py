@@ -36,7 +36,7 @@ from labkit.formats import (
     answering_run,
 )
 from labkit.formats.area_state import state_of
-from labkit.formats.repo import path_kind
+from labkit.formats.repo import file_text, path_kind
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
 
@@ -279,7 +279,10 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
     A Recorded results line still holding the stamp's placeholder is named as such —
     "numbers not in PROTOCOL" before the write-back would read as a failed
     check; the cure is one command."""
-    text = note.read_text(encoding="utf-8").replace("−", "-").replace(",", ".")
+    found = file_text(note)
+    if found is None:
+        raise SystemExit(f"recheck: {note}: no such note")
+    text = found.replace("−", "-").replace(",", ".")
     missing = sorted({n for n in numbers if not _present(n, text)})
     if missing and ANSWER_OPEN.search(text):
         raise SystemExit(

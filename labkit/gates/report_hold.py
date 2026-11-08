@@ -43,6 +43,7 @@ from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
     PROTOCOL_NAME,
     REPORT_SUFFIX,
+    file_text,
     git_root,
     indexed_files,
     indexed_links,
@@ -185,7 +186,7 @@ def report_entry(
     if held_place(repo, end):
         return None, None
     if not staged or not under_root(repo, end):
-        return link_target, end.read_text(encoding="utf-8") if end.is_file() else None
+        return link_target, file_text(end)
     return link_target, text_at(repo, end)
 
 

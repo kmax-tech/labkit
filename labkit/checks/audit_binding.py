@@ -193,7 +193,7 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
                 )
             )
             continue
-        data = path.read_bytes()
+        data = digests.file_bytes(path)
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:

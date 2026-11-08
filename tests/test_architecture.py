@@ -274,6 +274,113 @@ class OneAnswerPerStateQuestion(unittest.TestCase):
         )
 
 
+#: the file accesses a gate or check may not make itself (plan Phase 4, M2):
+#: every one is a format's to make, and the state hands the result down
+FILE_ACCESS = {
+    "read_text",
+    "read_bytes",
+    "iterdir",
+    "glob",
+    "rglob",
+    "is_dir",
+    "is_file",
+    "exists",
+    "open",
+}
+#: modules of gates and checks that open files by their nature, named here
+#: so a new one cannot pass unseen: the hooks and the installer (they read
+#: the harness's event, the session log, the hook files), the audit
+#: commands (they read the prompt's pieces and write records), the notes
+#: command (it runs over the notes it is given)
+FILE_ACCESS_MODULES = {
+    "hook_session",
+    "hook_post_change",
+    "agent_hooks",
+    "hook_pre_run",
+    "install_hooks",
+    "audit",
+    "audit_prompt",
+    "audit_decisions",
+    "decision_review",
+    "report_review",
+    "notes_check",
+}
+#: functions that run a program or read a command-line argument, which no
+#: state can hand them: the area's tests, the analysis script's --check,
+#: and the arguments a command checks before any state exists
+FILE_ACCESS_FUNCTIONS = {
+    ("preflight", "area_test_python"),
+    ("preflight", "area_tests"),
+    ("report_check", "check_analysis_script"),
+    ("code_check", "_arguments"),
+    ("intent_check", "_named"),
+    ("intent_check", "choose_explicit"),
+}
+
+
+def file_accesses(source: str) -> list[tuple[str, int, str]]:
+    """(function, line, access) for every call in SOURCE that opens, reads
+    or lists a file — a method of FILE_ACCESS, a bare `open`, `subprocess`,
+    `git_run` or `git` — with the top-level function it stands in ("" at
+    module level)."""
+    out: list[tuple[str, int, str]] = []
+    tree = ast.parse(source)
+    for node in tree.body:
+        name = node.name if isinstance(node, (ast.FunctionDef, ast.ClassDef)) else ""
+        for n in ast.walk(node):
+            if not isinstance(n, ast.Call):
+                continue
+            f = n.func
+            if isinstance(f, ast.Attribute) and f.attr in FILE_ACCESS:
+                out.append((name, n.lineno, f.attr))
+            elif (
+                isinstance(f, ast.Attribute)
+                and isinstance(f.value, ast.Name)
+                and f.value.id == "subprocess"
+            ):
+                out.append((name, n.lineno, "subprocess." + f.attr))
+            elif isinstance(f, ast.Name) and f.id in ("open", "git_run", "git"):
+                out.append((name, n.lineno, f.id))
+    return out
+
+
+class NoFileAccessInGates(unittest.TestCase):
+    """M2 of the plan's Phase 4: a gate or check reads the area through the
+    state and the formats, never a file itself — but for the modules and
+    functions named above, each with its reason."""
+
+    def test_gates_and_checks_open_no_file(self):
+        paths = module_paths()
+        offenders = {}
+        for m, p in sorted(paths.items()):
+            if p.parent.name not in ("gates", "checks") or m in FILE_ACCESS_MODULES:
+                continue
+            hits = [
+                f"{fn or '<module>'}:{line}: {what}"
+                for fn, line, what in file_accesses(p.read_text(encoding="utf-8"))
+                if (m, fn) not in FILE_ACCESS_FUNCTIONS
+            ]
+            if hits:
+                offenders[m] = hits
+        self.assertEqual(offenders, {})
+
+    def test_every_named_exception_still_opens_a_file(self):
+        paths = module_paths()
+        for m in FILE_ACCESS_MODULES:
+            self.assertTrue(file_accesses(paths[m].read_text(encoding="utf-8")), m)
+        for m, fn in FILE_ACCESS_FUNCTIONS:
+            found = file_accesses(paths[m].read_text(encoding="utf-8"))
+            self.assertTrue(any(f == fn for f, _, _ in found), (m, fn))
+
+    def test_the_check_bites(self):
+        found = file_accesses(
+            "def f(p):\n    return p.read_text()\n\ndef g(p):\n    with open(p) as fh:\n        return fh.read()\n"
+        )
+        self.assertEqual(
+            [(fn, what) for fn, _, what in found], [("f", "read_text"), ("g", "open")]
+        )
+
+
 class Packaging(unittest.TestCase):
     def test_every_package_ships(self):
         """pyproject names every folder holding an `__init__.py`: a package

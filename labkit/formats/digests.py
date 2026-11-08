@@ -23,6 +23,12 @@ def digest(data: bytes, chars: int | None = DIGEST_CHARS) -> str:
     return h if chars is None else h[:chars]
 
 
+def file_bytes(path: Path) -> bytes:
+    """The bytes of the file at PATH — the one reader a check calls when it
+    shows a dependency's content beside its digest. Raises OSError."""
+    return path.read_bytes()
+
+
 def file_digest(path: Path) -> str:
     """sha256 of a file's bytes, full hex, read in chunks. The one file
     digest: the stamp, the run record, the hooks and recheck read it; a

@@ -65,7 +65,7 @@ from labkit.formats.repo import (
     blobs_then,
     commit_known,
     git_root,
-    git_run,
+    ignoring_rules,
     own_path,
     path_kind,
     resolves_under,
@@ -560,7 +560,7 @@ def _source_finding(
     beyond = repo is not None and not resolves_under(repo, source)
     # a directory: file by file; ignored files are among the untracked
     untracked = [] if repo is None or beyond else _untracked_files(repo, source)
-    rules = {} if repo is None else _ignoring_rules(repo, untracked)
+    rules = {} if repo is None else ignoring_rules(repo, untracked)
     loose = [f for f in untracked if own_path(f) not in rules]
     if loose:
         return _untracked_source(source, loose, sha), None
@@ -664,34 +664,6 @@ def _untracked_source(source: Path, loose: list[Path], sha: str) -> GateFinding:
         f"route and version in the protocol's Data / scope — finalize then holds "
         f"it to the checksum this run recorded, `sha256 {sha}`",
     )
-
-
-def _ignoring_rules(repo: Path, paths: list[Path]) -> dict[Path, str]:
-    """Each of PATHS in REPO that git ignores, as `own_path` gives it, with
-    the rule that ignores it as `git check-ignore -v` names it
-    (`<file>:<line>:<pattern>`); {} when no rule ignores one. A path outside
-    REPO is left out: no rule of REPO's applies, and check-ignore refuses
-    it. Raises GitError when git fails."""
-    inside = [p for p in (own_path(p) for p in paths) if repo in p.parents]
-    if not inside:
-        return {}
-    r = git_run(
-        ["check-ignore", "-v", "-z", "--stdin"],
-        repo,
-        stdin="".join(f"{p}\0" for p in inside),
-    )
-    if r.returncode not in (0, 1):  # 1: no path is ignored
-        raise GitError(f"git check-ignore in {repo}: {r.stderr.strip()}")
-    # -z -v: four fields per matched path — rule file, line, pattern, path;
-    # a pattern starting with `!` matched to un-ignore the path, so it is no
-    # rule that ignores it
-    fields = r.stdout.split("\0")
-    records = [fields[i : i + 4] for i in range(0, len(fields) - 3, 4)]
-    return {
-        own_path(repo / rec[3]): ":".join(rec[:3])
-        for rec in records
-        if not rec[2].startswith("!")
-    }
 
 
 def output_drift(entry: OutputEntry) -> str | None:

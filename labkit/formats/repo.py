@@ -493,6 +493,42 @@ def path_kind(path: Path) -> str | None:
     return None
 
 
+def file_text(path: Path) -> str | None:
+    """The text of the file at PATH in the working tree, None when no file
+    stands there — for a file a gate reaches outside every area or every
+    repository (a link's end, a results note named on the command line).
+    Raises UnicodeDecodeError when its bytes are not UTF-8."""
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def ignoring_rules(repo: Path, paths: list[Path]) -> dict[Path, str]:
+    """Each of PATHS in REPO that git ignores, as `own_path` gives it, with
+    the rule that ignores it as `git check-ignore -v` names it
+    (`<file>:<line>:<pattern>`); {} when no rule ignores one. A path outside
+    REPO is left out: no rule of REPO's applies, and check-ignore refuses
+    it. Raises GitError when git fails."""
+    inside = [p for p in (own_path(p) for p in paths) if repo in p.parents]
+    if not inside:
+        return {}
+    r = git_run(
+        ["check-ignore", "-v", "-z", "--stdin"],
+        repo,
+        stdin="".join(f"{p}\0" for p in inside),
+    )
+    if r.returncode not in (0, 1):  # 1: no path is ignored
+        raise GitError(f"git check-ignore in {repo}: {r.stderr.strip()}")
+    # -z -v: four fields per matched path — rule file, line, pattern, path;
+    # a pattern starting with `!` matched to un-ignore the path, so it is no
+    # rule that ignores it
+    fields = r.stdout.split("\0")
+    records = [fields[i : i + 4] for i in range(0, len(fields) - 3, 4)]
+    return {
+        own_path(repo / rec[3]): ":".join(rec[:3])
+        for rec in records
+        if not rec[2].startswith("!")
+    }
+
+
 def markdown_files(root: Path) -> list[Path]:
     """Every Markdown file under ROOT in the working tree, sorted — the
     walk behind the reports a state holds (`report_hold.state_reports`);
