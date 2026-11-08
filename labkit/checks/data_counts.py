@@ -20,6 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 from labkit.formats import runs
+from labkit.formats.area_state import AreaState
 from labkit.formats.protocol_block import COUNTS, is_stamp_placeholder
 
 #: the label of the field the counts stand in
@@ -101,7 +102,7 @@ def with_counts(value: str, counts: str) -> str:
     return f"{flat.rstrip(' .;')} · {counts}"
 
 
-def counts_gap(area: Path, value: str) -> tuple[str, str] | None:
+def counts_gap(area: Path, value: str, state: AreaState) -> tuple[str, str] | None:
     """Why the generated counts in Data / scope VALUE do not hold, with the
     command that writes them again: (sentence, run id) — the run the part
     names is not a completed preparation run of AREA, or the part differs
@@ -112,7 +113,7 @@ def counts_gap(area: Path, value: str) -> tuple[str, str] | None:
         return None
     run_id = m.group("run")
     run_dir = runs.run_path(area, run_id)
-    if not run_dir.is_dir():
+    if run_id not in {rd.dir.name for rd in state.runs}:
         return (
             f"{FIELD} names prepare run {run_id}, which the area does not have",
             run_id,

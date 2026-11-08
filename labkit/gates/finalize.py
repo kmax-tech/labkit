@@ -491,7 +491,11 @@ def check_declared_scopes(
 
 
 def check_open_fields(
-    findings: Findings, protocol: Path, text: str, head: protocol_block.Head
+    findings: Findings,
+    protocol: Path,
+    text: str,
+    head: protocol_block.Head,
+    state: AreaState,
 ) -> None:
     """Station 4: fields of the protocol still empty or a placeholder, and
     the README's route block (CODE-016)."""
@@ -519,12 +523,14 @@ def check_open_fields(
     else:
         for line in route:
             findings.warn(line, evidence_kind=GUARANTEED)
-    counted = check_data_counts(findings, protocol, text)
+    counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")
 
 
-def check_data_counts(findings: Findings, protocol: Path, text: str) -> bool:
+def check_data_counts(
+    findings: Findings, protocol: Path, text: str, state: AreaState
+) -> bool:
     """Station 4, the generated counts of Data / scope: where the field
     holds them (`counts (prepare run <id>): …`), they are what that run
     recorded (`data_counts.counts_gap`) — a part typed by hand or left
@@ -532,7 +538,7 @@ def check_data_counts(findings: Findings, protocol: Path, text: str) -> bool:
     hold or there are none."""
     # one copy or none: a Data / scope written twice is refused at station 4
     hit = named_field(text, data_counts.FIELD)
-    gap = data_counts.counts_gap(protocol.parent, hit.value if hit else "")
+    gap = data_counts.counts_gap(protocol.parent, hit.value if hit else "", state)
     if gap is None:
         return True
     why, run_id = gap
@@ -898,7 +904,7 @@ def finalize_area(
 
     # 4. open fields — always
     findings.header(f"open fields: {chosen.name}")
-    check_open_fields(findings, chosen, text, head)
+    check_open_fields(findings, chosen, text, head, state)
 
     # 5. provenance — at low repeat cost, and only with a run
     findings.header("provenance")

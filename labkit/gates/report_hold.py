@@ -34,7 +34,7 @@ from labkit.checks.audit_binding import (
     AuditError,
     audited_run,
 )
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats import evidence
 from labkit.checks import report_blocks
 from labkit.checks.result_render import rendering
@@ -42,6 +42,7 @@ from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
     REPORT_SUFFIX,
+    markdown_files,
     report_place,
     git_root,
     under_root,
@@ -526,10 +527,12 @@ def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
         if declared is not None:
             continue
         area = protocol.parent.resolve()
-        mine = [r for r in run_ids if run_path(area, r).is_dir()]
+        state = state_of(area)
+        present = {rd.dir.name for rd in state.runs}
+        mine = [r for r in run_ids if r in present]
         if not mine:
             continue
-        run, _ = audited_run(state_of(area), protocol, sources.texts[protocol])
+        run, _ = audited_run(state, protocol, sources.texts[protocol])
         if run is None or run.name not in mine:
             continue
         cfg = read_run_config(run)
@@ -642,17 +645,22 @@ def discussion_sources(
     area. Exact."""
     gaps: list[GateFinding] = []
     again = "write the block again with `protocol-fill <PROTOCOL> --discuss <run> --why … --into <FILE>`"
+    states: dict[Path, AreaState] = {}
     for d in found:
         protocol = (path.parent / d.protocol).resolve()
         at = f"line {d.first}: the discussion of run {d.run_id}"
-        if not protocol.is_file():
+        area = protocol.parent
+        if area not in states and area.is_dir():
+            states[area] = state_of(area)
+        state = states.get(area)
+        if state is None or protocol not in state.protocols:
             gaps.append(
                 blocker(
                     f"{at} names {d.protocol}, and there is no such protocol",
                     fix=f"{again}, the protocol named from the report",
                 )
             )
-        elif not run_path(protocol.parent, d.run_id).is_dir():
+        elif d.run_id not in {rd.dir.name for rd in state.runs}:
             gaps.append(
                 blocker(
                     f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
@@ -768,7 +776,8 @@ def report_review_owed(
         protocol_text = sources.texts.get(protocol)
         if protocol in registering or protocol_text is None:
             continue
-        if not all(run_path(protocol.parent, d.run_id).is_dir() for d in mine):
+        held_runs = {rd.dir.name for rd in state_of(protocol.parent).runs}
+        if not all(d.run_id in held_runs for d in mine):
             continue
         runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
         gap = review_gap(
@@ -1069,7 +1078,7 @@ def state_reports(repo: Path, *, staged: bool) -> list[tuple[Path, str]]:
         candidates = [own_path(c) for c in indexed_files(repo)]
         links = indexed_links(repo)
     else:
-        candidates = sorted(root.rglob(f"*{REPORT_SUFFIX}"))
+        candidates = markdown_files(root)
         links = None
     out: list[tuple[Path, str]] = []
     for full in dict.fromkeys(candidates):

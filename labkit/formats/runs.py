@@ -539,6 +539,14 @@ def as_stored(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
+def metrics_text(run_dir: Path) -> str | None:
+    """The run's metrics.json as text, for a prompt that shows it as the
+    file stands; None without one. Raises OSError when the file cannot be
+    read."""
+    path = metrics_path(run_dir)
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
 def read_metrics(path: Path) -> dict[str, object]:
     """A run's metrics.json as a JSON object. Raises MetricsError naming the
     file when it is unreadable, not JSON, or not an object — a list such as

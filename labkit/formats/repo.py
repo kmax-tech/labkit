@@ -459,6 +459,20 @@ def unreadable_at(repo: Path, path: Path, rev: str) -> str:
     return " ".join(shown.stderr.split()) or f"git show exits {shown.returncode}"
 
 
+def state_holds(repo: Path, path: Path, *, staged: bool) -> bool:
+    """Does the state hold PATH — the index (`text_at`) when STAGED, else
+    the working tree (the file exists)? The one test a gate makes before
+    it holds a file's absence against a registration."""
+    return (text_at(repo, path) is not None) if staged else path.exists()
+
+
+def markdown_files(root: Path) -> list[Path]:
+    """Every Markdown file under ROOT in the working tree, sorted — the
+    walk behind the reports a state holds (`report_hold.state_reports`);
+    which of them is a report's place is `report_place`'s question."""
+    return sorted(root.rglob(f"*{REPORT_SUFFIX}"))
+
+
 def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
     """PATH's own entry as a gate's state holds it: the index when STAGED
     (`text_at`), else the working tree — in both a file's content, and for

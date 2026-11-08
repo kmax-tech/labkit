@@ -11,6 +11,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
+from labkit.formats.area_state import state_of
+from labkit.formats.runs import metrics_text
 from labkit.checks.report_blocks import Discussion, cited_run_ids
 from labkit.formats import protocol_block
 from labkit.formats import findings
@@ -106,9 +108,10 @@ def review_pieces(
         ),
         (f"FILE: {shown(protocol, repo)}", protocol_text),
     ]
+    present = {rd.dir.name for rd in state_of(area).runs}
     for d in discussed:
         run_dir = run_path(area, d.run_id)
-        if not run_dir.is_dir():
+        if d.run_id not in present:
             raise AuditError(
                 f"{report.name} discusses run {d.run_id}, and there is no "
                 f"{run_dir.relative_to(area)}/ in {shown(area, repo)}",
@@ -118,7 +121,7 @@ def review_pieces(
     said = {d.run_id for d in discussed}
     runs = [adopted] if adopted is not None else []
     runs += [d.run_id for d in discussed]
-    runs += [r for _, r in cited_run_ids(text) if run_path(area, r).is_dir()]
+    runs += [r for _, r in cited_run_ids(text) if r in present]
     for run_id in dict.fromkeys(runs):
         what = (
             "adopted"
@@ -129,13 +132,14 @@ def review_pieces(
         )
         run_dir = run_path(area, run_id)
         metrics = metrics_path(run_dir)
+        shown_metrics = metrics_text(run_dir) if run_id in present else None
         pieces.append(
             (
                 f"FILE: {shown(metrics, repo)} ({what})",
-                metrics.read_text(encoding="utf-8")
-                if metrics.is_file()
+                shown_metrics
+                if shown_metrics is not None
                 else "no metrics.json in this run"
-                if run_dir.is_dir()
+                if run_id in present
                 else f"no {run_dir.relative_to(area)}/ — the run's directory is gone",
             )
         )

@@ -16,6 +16,8 @@ interrupted write is cut, not refused.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import json
 
 
@@ -41,6 +43,13 @@ def objects(text: str, where: str) -> list[tuple[int, object]]:
                 f"repair the line"
             ) from exc
     return out
+
+
+def data_rows_of(path: Path) -> list[dict]:
+    """`data_rows` of the file at PATH, read here (the one reader of a JSONL
+    file for the recomputation and the record check). Raises OSError when
+    it cannot be read, ValueError on a line that is not a row."""
+    return data_rows(path.read_text(encoding="utf-8"), str(path))
 
 
 def data_rows(text: str, where: str) -> list[dict]:

@@ -36,6 +36,7 @@ import sys
 from pathlib import Path
 
 from labkit.gates.hook_session import keep_stop_base
+from labkit.formats.area_state import state_of
 from labkit.gates.hook_session import session_repo
 from labkit.gates.hook_session import tell_context
 from labkit.formats import (
@@ -47,7 +48,6 @@ from labkit.formats.gate import Findings, with_way_out
 from labkit.formats.shell import segments
 from labkit.gates import preflight
 from labkit.formats.repo import (
-    area_protocols,
     find_area,
 )
 
@@ -117,10 +117,8 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
             "measure with the script stamped there",
         )
     protocol = protocol_named_in(script, area)
-    texts = [
-        p.read_text(encoding="utf-8")
-        for p in ([protocol] if protocol else area_protocols(area))
-    ]
+    state = state_of(area)
+    texts = [state.text_of(p) for p in ([protocol] if protocol else state.protocols)]
     head = f"preflight {area.name}" + (
         f" --protocol {protocol.name}" if protocol else ""
     )

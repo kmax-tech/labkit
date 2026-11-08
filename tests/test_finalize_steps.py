@@ -201,7 +201,13 @@ class ReadmePlaceholders(unittest.TestCase):
             protocol = area / "PROTOCOL-a.md"
             protocol.write_text(text, encoding="utf-8")
             found = Findings(tell=None)
-            finalize.check_open_fields(found, protocol, text, protocol_block.head(text))
+            finalize.check_open_fields(
+                found,
+                protocol,
+                text,
+                protocol_block.head(text),
+                state_of(protocol.parent),
+            )
             (blank,) = [f for f in found.found if "stamped placeholder" in f.text]
             self.assertEqual(blank.evidence_kind, STATIC_EVIDENCE)
 
@@ -304,7 +310,11 @@ class ReadmeRoute(unittest.TestCase):
                 protocol.write_text(text, encoding="utf-8")
                 found = Findings(tell=None)
                 finalize.check_open_fields(
-                    found, protocol, text, protocol_block.head(text)
+                    found,
+                    protocol,
+                    text,
+                    protocol_block.head(text),
+                    state_of(protocol.parent),
                 )
                 self.assertEqual(len(found.blocked), len(blockers))
                 for message, name in zip(found.blocked, blockers):

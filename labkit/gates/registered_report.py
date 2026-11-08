@@ -28,6 +28,7 @@ from labkit.checks.audit_binding import (
 from labkit.checks import report_blocks
 from labkit.formats.repo import (
     report_place,
+    state_holds,
     git_root,
     indexed_protocols,
     own_path,
@@ -414,7 +415,7 @@ def missing_report(
     if head.report is None or not head.id:
         return None
     report = own_path(repo.resolve() / head.report)
-    if (text_at(repo, report) is not None) if staged else report.exists():
+    if state_holds(repo, report, staged=staged):
         return None
     if not measured.has_measured:
         return None

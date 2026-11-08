@@ -14,6 +14,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record  # noqa: E402
 from labkit.checks import data_counts
+from labkit.formats.area_state import state_of
 
 RUN = "2026-01-01T00-00-00_0001"
 
@@ -92,15 +93,21 @@ class HeldToTheRun(unittest.TestCase):
 
     def test_written_counts_hold_and_typed_ones_do_not(self):
         written = "data/raw/x.csv · " + data_counts.counts_text(self.run_dir)
-        self.assertIsNone(data_counts.counts_gap(self.area, written))
-        self.assertIsNone(data_counts.counts_gap(self.area, "data/raw/x.csv, 4 items"))
+        self.assertIsNone(
+            data_counts.counts_gap(self.area, written, state_of(self.area))
+        )
+        self.assertIsNone(
+            data_counts.counts_gap(
+                self.area, "data/raw/x.csv, 4 items", state_of(self.area)
+            )
+        )
         typed = written.replace("3 labelled", "4 labelled")
-        gap = data_counts.counts_gap(self.area, typed)
+        gap = data_counts.counts_gap(self.area, typed, state_of(self.area))
         assert gap is not None
         self.assertIn("the counts differ", gap[0])
         self.assertEqual(gap[1], RUN)
         gone = written.replace(RUN, "2026-01-01T00-00-00_0009")
-        gap = data_counts.counts_gap(self.area, gone)
+        gap = data_counts.counts_gap(self.area, gone, state_of(self.area))
         assert gap is not None
         self.assertIn("which the area does not have", gap[0])
 

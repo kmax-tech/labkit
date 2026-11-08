@@ -277,7 +277,7 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
     pred = hits[0]
     where = f"replaces {rep.protocol} ({pred.parent.name}/{pred.name})"
     try:
-        pred_text = pred.read_text(encoding="utf-8")
+        pred_text = state_of(pred.parent).text_of(pred)
         declared = protocol_block.declared_run(pred_text)
         earlier = predecessor_verdict(pred.parent, pred_text, {*seen, rep.protocol})
         if declared is None:

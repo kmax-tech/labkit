@@ -226,10 +226,10 @@ def _replacement_circle(start: str, pred: Path) -> str:
     current: Path | None = pred
     while current is not None:
         try:
-            text = current.read_text(encoding="utf-8")
+            text = state_of(current.parent).text_of(current)
             pid = protocol_block.head(text).id
             nxt = protocol_block.replaces(text)
-        except (OSError, protocol_block.BlockError):
+        except (OSError, ValueError, protocol_block.BlockError):
             return ""
         if pid in seen:
             return " → ".join([*seen, str(pid)])

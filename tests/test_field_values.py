@@ -273,7 +273,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         found = Findings(tell=None)
         text = self.protocol.read_text(encoding="utf-8")
         finalize.check_open_fields(
-            found, self.protocol, text, protocol_block.head(text)
+            found, self.protocol, text, protocol_block.head(text), state_of(self.area)
         )
         (line,) = [f.line for f in found.found if "written 2 times" in f.line]
         self.assertIn(WAY_OUT, line)
@@ -301,7 +301,11 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         self.assertFalse(any("written 2 times" in p for p in problems), problems)
         found = Findings(tell=None)
         finalize.check_open_fields(
-            found, self.protocol, self.clean, protocol_block.head(self.clean)
+            found,
+            self.protocol,
+            self.clean,
+            protocol_block.head(self.clean),
+            state_of(self.area),
         )
         self.assertFalse([f for f in found.found if "written" in f.line])
         self.assertEqual(protocol_check.check_fields(self.clean).repeated, [])

@@ -651,10 +651,7 @@ def _progress_step(ctx: "Checked") -> Step | None:
     report = _registered_report(ctx)
     if report is None or ctx.declared is not None or ctx.run is None:
         return None
-    if ctx.state == INDEX:
-        written = state_text(ctx.repo, report, staged=True) or ""
-    else:
-        written = report.read_text(encoding="utf-8") if report.is_file() else ""
+    written = state_text(ctx.repo, report, staged=ctx.state == INDEX) or ""
     owner = report_blocks.path_from_report(ctx.protocol, report)
     if progress_account(written, owner, ctx.run.name):
         return None

@@ -114,8 +114,8 @@ def _named_run(d: Path, pid: str) -> Path:
 
 
 def run_dir(area: Path, protocol: Path, run_id: str | None = None) -> Path:
-    """`chosen_run` for a protocol on disk."""
-    return chosen_run(area, protocol.read_text(encoding="utf-8"), run_id)
+    """`chosen_run` for a protocol the area's state holds."""
+    return chosen_run(area, state_of(area).text_of(protocol), run_id)
 
 
 def pin(run: Path, out: Path) -> None:
@@ -167,7 +167,7 @@ def block_unchanged(run: Path, area: Path) -> None:
     pid = cfg.protocol.id
     try:
         protocol = protocol_block.find_by_id(area, pid)  # by id; the path goes stale
-        block = promises.parse_block(protocol.read_text(encoding="utf-8"))
+        block = promises.parse_block(state_of(area).text_of(protocol))
     except (protocol_block.BlockError, promises.PromiseError) as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     drift = promises.block_drift(cfg.promises, block)
@@ -177,8 +177,8 @@ def block_unchanged(run: Path, area: Path) -> None:
 
 def rows_of(out: Path) -> list[dict]:
     """One JSON object per line; a leading `_meta` header line is skipped
-    (`jsonl.data_rows`)."""
-    return jsonl.data_rows(out.read_text(encoding="utf-8"), str(out))
+    (`jsonl.data_rows_of`)."""
+    return jsonl.data_rows_of(out)
 
 
 def agree(
