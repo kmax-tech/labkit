@@ -121,6 +121,7 @@ from labkit.formats.runs import (
     read_run_config,
 )
 from labkit.formats.repo import (
+    only_protocol,
     layout_root,
     ProtocolChoiceError,
     shown,
@@ -313,8 +314,7 @@ def gone_run_way(area: Path, run_id: str, state: AreaState) -> tuple[str, Comman
     `area_state.gone_run_restore`), else hand the area over naming the
     loss, or register anew. Measuring again lifts nothing — the record
     stays and names the gone run —, so the way out never offers it."""
-    protocols = state.protocols
-    protocol = protocols[0] if len(protocols) == 1 else area / "PROTOCOL-<name>.md"
+    protocol = only_protocol(state.protocols) or area / "PROTOCOL-<name>.md"
     handover = handover_command(protocol)
     held_back = next((rd for rd in state.deleted if rd.dir.name == run_id), None)
     put_back = (

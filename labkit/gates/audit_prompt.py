@@ -48,6 +48,7 @@ from labkit.formats.protocol_history import (
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_protocols,
+    only_protocol,
     git_root,
     layout_root,
     no_such_area,
@@ -598,7 +599,7 @@ def earlier_of(
     protocols no correction is shown, and the field's change stays held."""
     records = findings.area_records(area)
     protocols = area_protocols(area)
-    protocol = protocols[0] if len(protocols) == 1 else None
+    protocol = only_protocol(protocols)
     text = protocol.read_text(encoding="utf-8") if protocol is not None else ""
 
     def field_of(f: findings.Finding) -> str | None:

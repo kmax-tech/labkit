@@ -107,6 +107,12 @@ pins (`requirements.txt` / `requirements.lock`).
   place rule (`repo.report_place_problem`, `repo.EVIDENCE_DIR`), which
   the handover's report now asks too.
 
+- **The rest of the audit of 2026-11-08.** `repo.only_protocol(protocols)`
+  is the one answer to "the area's one protocol, else none" (finalize's
+  way out for a gone run, the audit's earlier findings, the follow-up's
+  awaited corrections; held by test); `repo.the_protocol` stays the form
+  that refuses.
+
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and
   `EFFECT_GRADES` read them; 17 literals gone); `repo.protocols_in(repo,

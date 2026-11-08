@@ -20,7 +20,7 @@ import os
 import re
 import subprocess
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
@@ -317,6 +317,14 @@ def area_protocols(area: Path) -> list[Path]:
     protocol is worse than no check, so the caller must choose.
     """
     return sorted(area.glob(PROTOCOL_GLOB))
+
+
+def only_protocol(protocols: Sequence[Path]) -> Path | None:
+    """The one protocol of PROTOCOLS (an area's, in whichever file state
+    the caller read them), None when there are none or several — for a
+    caller that then shows or checks nothing. A command that must hold the
+    area to one asks `the_protocol`, which refuses instead."""
+    return protocols[0] if len(protocols) == 1 else None
 
 
 def indexed_files(repo: Path) -> list[Path]:

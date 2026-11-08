@@ -767,3 +767,26 @@ class EveryBuilderIsACommand(unittest.TestCase):
             commands.render_command(from_run=True).line,
             "protocol-fill <PROTOCOL> --from-run",
         )
+
+
+class OnlyProtocol(unittest.TestCase):
+    """`repo.only_protocol` is the one answer to "the area's one protocol,
+    else none" (the audit of 2026-11-08, H8: three hand copies)."""
+
+    def test_the_one_protocol_else_none(self):
+        one, two = Path("a/PROTOCOL-x.md"), Path("a/PROTOCOL-y.md")
+        self.assertEqual(repo.only_protocol([one]), one)
+        self.assertIsNone(repo.only_protocol([]))
+        self.assertIsNone(repo.only_protocol([one, two]))
+
+    def test_no_reader_spells_it_by_hand(self):
+        import labkit
+
+        root = Path(labkit.__file__).parent
+        spelled = re.compile(r"protocols\[0\] if len\(\w*protocols\) == 1")
+        by_hand = [
+            str(f.relative_to(root))
+            for f in root.rglob("*.py")
+            if f.name != "repo.py" and spelled.search(f.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(by_hand, [])

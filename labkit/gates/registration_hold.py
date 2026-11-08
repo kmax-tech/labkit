@@ -38,6 +38,7 @@ from labkit.formats import protocol_history
 from labkit.formats.repo import (
     rel_posix,
     area_protocols,
+    only_protocol,
     git_root,
 )
 from labkit.formats.commands import (
@@ -626,7 +627,7 @@ def awaiting_followup(
     RUN was audited in cannot be computed, as `resolved_corrections` does:
     the two read the same state, so neither answers where the other
     cannot. HELD is the area's audit evidence: its records, read once."""
-    if len(area_protocols(area)) != 1:
+    if only_protocol(area_protocols(area)) is None:
         return {}
     if held.unreadable:
         return {}
