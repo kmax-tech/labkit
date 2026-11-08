@@ -42,6 +42,7 @@ from labkit.formats import console, protocol_block
 from pathlib import Path
 
 from labkit.formats.repo import (
+    rel_posix,
     SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
@@ -429,7 +430,7 @@ def _key(f: Path, root: Path) -> str:
     outside the root keeps its absolute path."""
     f = f.resolve()
     try:
-        return f.relative_to(root.resolve()).as_posix()
+        return rel_posix(f, root)
     except ValueError:
         return f.as_posix()
 

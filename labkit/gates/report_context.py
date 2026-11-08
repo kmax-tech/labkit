@@ -47,11 +47,13 @@ class Checked:
             protocol to), or None.
         why: Why there is no answering run, when RUN is None.
         area_state: The area as STATE holds it (`area_state.state_of`): its
-            runs, the runs git holds back, what each protocol measured, its
-            handed to every station and to finalize — the index's runs for
-            INDEX, the tree's otherwise.
+            runs (the index's for INDEX, the tree's otherwise), the runs git
+            holds back, what each protocol measured, its protocols and their
+            texts — built once and handed to every station and to finalize.
         evidence: The area's audit evidence as STATE holds it
-            (`evidence.AreaEvidence`): records, gaps, changes, ignored files.
+            (`evidence.AreaEvidence`): records, gaps, changes, ignored files;
+            the reviews and handover records are the tree's in either state
+            (`evidence.read_evidence`).
     """
 
     area: Path

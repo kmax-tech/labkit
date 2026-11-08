@@ -28,14 +28,14 @@ pins (`requirements.txt` / `requirements.lock`).
   `report_check.adoption_state`, `answering_run.first_measurements` — the
   stamped measure script of an `apply` area imported it for its band check
   and now reads `area_state.state_of`: a lab's stamped `01_measure.py`
-  from before this release fails at import until `labkit-init exp
-  --restamp` renews it (the repo keeps no forwarder: one home per answer);
+  from before this release fails at import until its import line reads
+  as the new template's does (`templates/measure-estimator-script.py.template`;
+  `labkit-init exp NAME --kind KIND --change-kind` stamps an area that has
+  not measured again, a measured one is edited by hand — the repo keeps no
+  forwarder: one home per answer);
   `answering_run.first_measurement_groups(records, pid, repo)` and
   `first_registrations(groups)` take the records instead of walking the
-  area; `answering_run.is_measurement` takes a `RunDir`. The file-state
-  names `TREE`, `INDEX`, `PROPOSED` live in `area_state` (`report_context`
-  still names them). `report_context.Checked` carries the state
-  (`area_state`).
+  area; `answering_run.is_measurement` takes a `RunDir`. `report_context.Checked` carries the state (`area_state`).
 
 - **A deleted first measurement binds as it did when present.** Its record
   is read back from the last commit that held it (`RunDir.from_commit`,
@@ -46,6 +46,16 @@ pins (`requirements.txt` / `requirements.lock`).
   the same files judged differently on the machine that ran and in a
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
+
+- **`labkit-hooks` refuses with exit 2**, as every command does
+  (`console.Refused`): a malformed `hooks.json` or a foreign pre-commit
+  ended it with exit 1 before. The run layer and `recheck` keep ending a
+  measure script with `SystemExit` and the sentence — no main of labkit's
+  is around them there (`console.Refused` says so). `protocol_check.result_due`
+  is gone; `answering_run.adopted_run` is the one declared-run-or-None.
+  `repo.rel_posix(path, base)` is the one repo-relative path (resolved,
+  `/`-separated, loud when the path lies outside); 22 hand-written
+  `relative_to(…).as_posix()` sites read it.
 
 - **The file-state names `TREE`, `INDEX` and `PROPOSED` have one home,
   `labkit.formats.area_state`.** `report_context` no longer re-exports

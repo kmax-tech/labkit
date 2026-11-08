@@ -51,6 +51,7 @@ from labkit.formats.commands import checkout_command
 from labkit.formats.run_index import RunIndexError
 from labkit.formats.runs import RUNS_DIR
 from labkit.formats.repo import (
+    rel_posix,
     EXPERIMENTS,
     PROTOCOL_NAME,
     find_area,
@@ -153,7 +154,7 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
         if cache.get(key) == digest:
             continue
         cache[key] = digest
-        shown_area = area.resolve().relative_to(repo.resolve()).as_posix()
+        shown_area = rel_posix(area, repo)
         if held:
             out.append(
                 f"evidence of {shown_area} is gone or changed — restore it now; the "
@@ -212,7 +213,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
     link_target = report_hold.refused_link(repo, path, staged=False)
     if link_target is not None:
         # named where it lies: `shown` resolves, which follows the link
-        rel = path.relative_to(root).as_posix()
+        rel = rel_posix(path, root)
         return report_hold.link_gap(rel, path, link_target, repo, staged=False).message
     try:
         discussed = report_blocks.discussions(text)
@@ -227,7 +228,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
         if p.is_file() and not p.is_symlink()
     }
     sources = report_hold.Sources(root, set(), texts, {}, {})
-    rel = path.relative_to(root).as_posix()
+    rel = rel_posix(path, root)
     gaps = report_hold.report_review_owed(path, rel, text, discussed, sources)
     return "; ".join(g.message for g in gaps) or None
 

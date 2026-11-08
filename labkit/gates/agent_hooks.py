@@ -115,6 +115,7 @@ from labkit.gates.next_step import next_step, steps_for
 from labkit.gates.undecided import undecided_state
 from labkit.formats.run_index import RunIndexError
 from labkit.formats.repo import (
+    rel_posix,
     PROTOCOL_GLOB,
     git_root,
     indexed_changes,
@@ -434,7 +435,7 @@ def session_evidence(
     out: list[str] = []
     if session.since is not None:
         for area in areas_touched(paths, repo):
-            shown_area = area.relative_to(repo.resolve()).as_posix()
+            shown_area = rel_posix(area, repo)
             out += [
                 f"{shown_area}: {line}"
                 for line in evidence.commit_changes(area, session.since)

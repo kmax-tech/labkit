@@ -35,6 +35,7 @@ from labkit.formats import (
     runs,
 )
 from labkit.formats.repo import (
+    rel_posix,
     repo_protocols,
     fork_point,
     git_dir_path,
@@ -93,7 +94,7 @@ def read_sessions(log: Path) -> list[dict]:
     try:
         return jsonl.data_rows(log.read_text(encoding="utf-8"), str(log))
     except ValueError as exc:
-        raise SystemExit(str(exc)) from exc
+        raise console.Refused("claude-hook", str(exc)) from exc
 
 
 def _transcript_start(transcript: str | None) -> datetime | None:
@@ -216,7 +217,7 @@ def state_fingerprint(repo: Path) -> str:
     lines = [head_sha(repo)]
     for p in sorted(set(touched_paths(repo))):
         digest = file_digest(p) if p.is_file() else "gone"
-        lines.append(f"{p.resolve().relative_to(repo.resolve()).as_posix()} {digest}")
+        lines.append(f"{rel_posix(p, repo)} {digest}")
     return scope_digest("\n".join(lines).encode("utf-8"), None)
 
 

@@ -1498,7 +1498,7 @@ def stamped_head(
     kept: protocol_block.Kept | None = None,
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
-    protocol id (PID when given), COST when asked, KIND always, with MODEL a `[model]`
+    protocol id (PID when given), REPEAT_COST when asked, KIND always, with MODEL a `[model]`
     table after `preflight_audit` — the alias when --model named one, else
     its placeholder for `protocol-fill "model alias=…"`,
     and for a computation the claim keys (`COMPUTE_CLAIM`) —, with
@@ -1559,7 +1559,7 @@ def check_stamped_head(
     kept: protocol_block.Kept | None = None,
 ) -> None:
     """Raise ValueError unless the stamped protocol's head carries a real
-    id, the KIND asked, when COST was asked for that tier, when MODEL was
+    id, the KIND asked, when REPEAT_COST was asked for that tier, when MODEL was
     asked a `[model]` table, REPORT_FILE as its `report` (None: none) and,
     for a computation, REFERENCE as its `[reference]` (None: none) and KEPT
     as its `[kept]` (None: both placeholders); another kind carries no

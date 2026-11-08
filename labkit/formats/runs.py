@@ -22,7 +22,7 @@ from typing import Any, Final, Literal, cast
 
 from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.formats.files import write_atomic
-from labkit.formats.repo import layout_root
+from labkit.formats.repo import layout_root, rel_posix
 
 
 def _command_of(pid: int) -> str | None:
@@ -446,7 +446,7 @@ def recorded_path(path: Path, inside: Path) -> str:
     root = layout_root(inside).resolve()
     resolved = path.resolve()
     if resolved.is_relative_to(root):
-        return resolved.relative_to(root).as_posix()
+        return rel_posix(resolved, root)
     return str(resolved)
 
 

@@ -56,6 +56,7 @@ from labkit.formats.attempts import evidence_gaps
 from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import GateFinding, blocker, with_way_out
 from labkit.formats.repo import (
+    rel_posix,
     GitError,
     blobs_now,
     files_at,
@@ -233,7 +234,7 @@ def _repo_of(area: Path) -> Path | None:
 
 def _base(area: Path, root: Path) -> str:
     """AREA's path from ROOT, `/`-separated."""
-    return area.resolve().relative_to(root.resolve()).as_posix()
+    return rel_posix(area, root)
 
 
 def _specs(area: Path, root: Path) -> list[str]:
@@ -621,7 +622,7 @@ def ignored(area: Path) -> list[str]:
     root = _repo_of(area)
     if root is None:
         return []
-    base = area.resolve().relative_to(root.resolve()).as_posix()
+    base = rel_posix(area, root)
     args = ["ls-files", "-z", "--others", "--ignored", "--exclude-standard"]
     args += ["--", f"{base}/{findings.DIR}", f"{base}/{RUNS_DIR}"]
     r = git_run(args, root)

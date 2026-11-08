@@ -25,6 +25,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.formats import answering_run
 from labkit.formats import runs
 from labkit.formats.area_state import state_of
 from labkit import PACKAGE_DIR
@@ -66,7 +67,6 @@ from labkit.formats.protocol_check import (
     model_named,
     owed_fields,
     recorded_results_without_run,
-    result_due,
     template_text,
     written_before_run,
 )
@@ -691,7 +691,7 @@ def check_protocol(
     numbered = list(enumerate((ln.strip() for ln in text.splitlines()), 1))
     # Post-run: a declared result makes an empty result field a MUST gap —
     # pilot suppression does not apply (write back, don't go quiet).
-    declared = result_due(text)
+    declared = answering_run.adopted_run(text)
     return FileReport(
         path=path,
         head_error=None,

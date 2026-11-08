@@ -382,7 +382,7 @@ def repeat_cost_lines(
     repeat_cost: str | None, lane: "standard_contract.Lane"
 ) -> list[str]:
     """Station 2: what the lane owes before the freeze, in sentences — the
-    audit where LANE owes the freeze (an unfilled COST reads as high), the
+    audit where LANE owes the freeze (an unfilled REPEAT_COST reads as high), the
     cold reader always. Told by the caller, counted by nobody."""
     if not lane.freeze:
         audit = (

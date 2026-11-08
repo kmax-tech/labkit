@@ -18,6 +18,7 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats.repo import (
+    rel_posix,
     area_protocols,
     layout_root,
 )
@@ -322,7 +323,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
     root = layout_root(area)
     # home: sets compared to each other, not a display (repo.shown)
     stamped = {
-        f.resolve().relative_to(root.resolve()).as_posix()
+        rel_posix(f, root)
         for f in files
         # home: only the stamp's files below the root take part
         if f.resolve().is_relative_to(root.resolve())
@@ -332,7 +333,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
         q = Path(s)
         q = q if q.is_absolute() else root / q
         named.add(
-            q.resolve().relative_to(root.resolve()).as_posix()
+            rel_posix(q, root)
             # home: compared with `stamped`; outside the root, as the auditor wrote it
             if q.resolve().is_relative_to(root.resolve())
             else s
@@ -340,7 +341,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
     # the protocol is held by the registration and promise digests, not the
     # stamp: listed as read it is no gap
     protocols = {
-        p.resolve().relative_to(root.resolve()).as_posix()
+        rel_posix(p, root)
         for p in area_protocols(area)
         # home: compared with `named`, as the stamp's files are
         if p.resolve().is_relative_to(root.resolve())

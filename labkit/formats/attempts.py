@@ -97,6 +97,7 @@ from labkit.formats.files import lock_held, write_atomic, write_atomic_bytes
 from labkit.formats.findings import ANSWERS, DIR, JOURNAL
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
+    rel_posix,
     INDEX_REV,
     files_at,
     git_dir_path,
@@ -905,7 +906,7 @@ def journal_copy(area: Path) -> Path | None:
     base = git_dir_path(root, COPY_DIR, common=True)
     if branch.returncode != 0 or base is None:
         return None
-    rel = area.resolve().relative_to(root.resolve()).as_posix()
+    rel = rel_posix(area, root)
     return base / quote(branch.stdout.strip(), safe="") / f"{quote(rel, safe='')}.jsonl"
 
 

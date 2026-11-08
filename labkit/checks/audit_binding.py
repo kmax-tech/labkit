@@ -34,7 +34,7 @@ from labkit.formats import (
 from labkit.formats.answering_run import adopted_run
 from labkit.formats.area_state import AreaState
 from labkit.formats.gate import with_way_out
-from labkit.formats.repo import layout_root, path_kind, shown
+from labkit.formats.repo import layout_root, path_kind, shown, rel_posix
 from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
@@ -102,7 +102,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
         return [("ROWS", f"no rows: {why}")]
     registered = read_outputs(run_dir)
     out: list[tuple[str, str]] = []
-    rel_run = run_dir.resolve().relative_to(repo.resolve()).as_posix()
+    rel_run = rel_posix(run_dir, repo)
     if not registered:
         out.append((f"ROWS {rel_run}", "no rows: the run registered no output file"))
     for entry in registered or []:

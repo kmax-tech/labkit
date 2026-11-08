@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.formats import console
 from labkit.gates import install_hooks
 
 
@@ -94,7 +95,7 @@ class Install(unittest.TestCase):
                 path.parent.mkdir()
                 original = json.dumps(invalid)
                 path.write_text(original)
-                with self.assertRaisesRegex(SystemExit, "hooks.json"):
+                with self.assertRaisesRegex(console.Refused, "hooks.json"):
                     install_hooks.install(repo)
                 self.assertEqual(path.read_text(), original)
                 self.assertFalse((repo / ".githooks").exists())
@@ -281,7 +282,7 @@ class RepoOwnSteps(unittest.TestCase):
         hook.write_text("#!/bin/sh\necho one\n")
         install_hooks.install(repo)
         hook.write_text("#!/bin/sh\necho two\n")
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(console.Refused):
             install_hooks.install(repo)
 
     def test_the_pre_commit_runs_labkits_one_entry(self):

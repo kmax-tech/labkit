@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from labkit.formats.runs import RunDir
 
 from labkit.formats.repo import (
+    rel_posix,
     GitError,
     blob_text,
     blobs_then,
@@ -91,7 +92,7 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
     root = git_root(path)
     if root is None:
         return None
-    rel = path.resolve().relative_to(root).as_posix()
+    rel = rel_posix(path, root)
     log = git_run(["log", "--reverse", "--format=%H", "--", rel], root)
     if log.returncode != 0 or not log.stdout.strip():
         return None

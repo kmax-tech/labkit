@@ -149,11 +149,9 @@ The index is a local view, not a record: the versioned run directories
 under `runs/<run_id>/` are the truth, `runs.tsv` is git-ignored by the lab
 stamp, and `runlog reindex AREA` writes it back from them — the same rows;
 two runs started in the same second may come back in the other order,
-since no record holds a finer start time. No gate reads the index.
+since no record holds a finer start time. One thing only the index knows: a run deleted before any commit held it (`area_state.AreaState.lost`, read through `run_index.indexed_bindings`) — the gates name such a run as lost and never invent its record.
 
-The index is a derived view: the run directories are authoritative. The
-tools that search by protocol read the run directories, not the index; the
-`protocol_id` column serves people filtering by hand.
+The index is a derived view: the run directories are authoritative. The tools that search by protocol read the run directories, not the index; the `protocol_id` column serves people filtering by hand.
 
 ## Unbound runs
 

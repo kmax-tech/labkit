@@ -35,6 +35,7 @@ from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import AreaState, Measured
 from labkit.formats import protocol_history
 from labkit.formats.repo import (
+    rel_posix,
     area_protocols,
     git_root,
 )
@@ -143,7 +144,7 @@ def restore_step(protocol: Path, first: RunDir, root: Path | None) -> Command | 
     commit = recorded_commit(first.config) if first.config is not None else None
     if not commit or root is None:
         return None
-    rel = protocol.resolve().relative_to(root.resolve()).as_posix()
+    rel = rel_posix(protocol, root)
     return Command(RESTORE, f"git show {commit[:12]}:{rel}")
 
 
@@ -154,7 +155,7 @@ def shown_then(protocol: Path, first: RunDir, root: Path | None) -> str:
     commit = recorded_commit(first.config) if first.config is not None else None
     if not commit or root is None:
         return ""
-    rel = protocol.resolve().relative_to(root.resolve()).as_posix()
+    rel = rel_posix(protocol, root)
     return f" — `git show {commit[:12]}:{rel}` shows them as committed then" + (
         f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
         if patch_text(first.dir)

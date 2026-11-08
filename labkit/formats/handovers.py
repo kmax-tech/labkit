@@ -61,6 +61,7 @@ from labkit.formats.comment_blocks import (
     with_comment_block,
 )
 from labkit.formats.repo import (
+    rel_posix,
     PROTOCOL_NAME,
     REPORT_SUFFIX,
     SKIP_DIRS,
@@ -302,9 +303,9 @@ def build(
     HandoverError on a field the record cannot hold (`read_handover`)."""
     record = Handover(
         SCHEMA,
-        protocol.relative_to(root).as_posix(),
+        rel_posix(protocol, root),
         protocol_fingerprint(protocol_text),
-        report.relative_to(root).as_posix(),
+        rel_posix(report, root),
         why.strip(),
         tried.strip(),
         evidence(protocol.parent, omit=path),
@@ -699,7 +700,7 @@ def _protocol_mismatch(
         return f"{record.protocol} changed since the handover"
     declaring = declared_results(area, root, staged=staged)
     if declaring:
-        return f"{declaring[0].relative_to(root).as_posix()} has adopted a result"
+        return f"{rel_posix(declaring[0], root)} has adopted a result"
     pid = protocol_block.head(text).id
     later = runs_since(state.measured_of(pid), record.run) if pid else []
     if later:
@@ -836,7 +837,7 @@ def protocol_handed_over(
     root = git_root(area)
     if root is None:
         return False
-    rel = protocol.resolve().relative_to(root).as_posix()
+    rel = rel_posix(protocol, root)
     for path in record_paths(area, staged=staged):
         if mismatch(area, root, path, staged=staged, area_state=state) is not None:
             continue

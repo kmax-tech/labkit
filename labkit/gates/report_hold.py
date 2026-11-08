@@ -41,6 +41,7 @@ from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
+    rel_posix,
     PROTOCOL_NAME,
     REPORT_SUFFIX,
     file_text,
@@ -70,13 +71,6 @@ from labkit.formats.commands import (
 )
 from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
-
-#: which file state the declaration (the answer line) is read from — named
-#: in the output, so a reader knows what was held. The stations read the
-#: working tree in every case; the caller makes the tree that state: the
-#: pre-commit holds the area's tree equal to the index (`tree_differs`), the
-#: adoption writes the proposal into the tree and puts it back on refusal
-#: (`protocol_fill.adopt`)
 
 
 def state_link(
@@ -195,7 +189,7 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     tracked file modified or deleted and not staged, an untracked file —
     relative to REPO. Empty when the tree under AREA is what the commit
     would hold."""
-    rel = area.resolve().relative_to(repo.resolve()).as_posix()
+    rel = rel_posix(area, repo)
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
 
 
@@ -583,7 +577,7 @@ def hold_report(
     the commit carries its evidence). PATH is the report's own path
     (`repo.own_path`). HELD_AS says in the heading why this report is held.
     0 clean or warnings only, 1 a blocker."""
-    rel = path.relative_to(repo.resolve()).as_posix()
+    rel = rel_posix(path, repo)
     tell(f"═══ report-check {rel} ({held_as}) ═══")
     out = Findings(tell)
     link_target = refused_link(repo, path, staged=staged)
@@ -1162,7 +1156,7 @@ def discussion_review_findings(
         if not mine:
             continue
         sources = Sources(root, set(), {target: text}, {}, {}, staged)
-        rel = full.relative_to(root).as_posix()
+        rel = rel_posix(full, root)
         out += report_review_owed(full, rel, report_text, mine, sources, staged=staged)
     return out
 

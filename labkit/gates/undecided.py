@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import attempts, evidence, handovers
+from labkit.formats.repo import rel_posix
 from labkit.formats.area_state import INDEX, TREE, state_of
 from labkit.formats.scope_sha import areas_touched
 
@@ -81,7 +82,7 @@ def undecided_state(
         if area not in areas and any(area in p.parents for p in changed)
     ]
     for area in areas:
-        shown = area.relative_to(repo.resolve()).as_posix()
+        shown = rel_posix(area, repo)
         state = state_of(area, file_state=INDEX if staged else TREE)
         held = evidence.read_evidence(area, staged=staged)
         # Only a current handover can acknowledge integrity gaps.

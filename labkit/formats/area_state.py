@@ -36,6 +36,7 @@ from labkit.formats.answering_run import (
     is_measurement,
 )
 from labkit.formats.repo import (
+    rel_posix,
     INDEX_REV,
     area_protocols,
     indexed_protocols,
@@ -178,8 +179,6 @@ class AreaState:
         run_facts: The facts of every present run (`answering_run.facts_of`:
             state, binding, repeat), read once — what the answering-run
             choice runs over.
-        evidence: The area's audit evidence as the file state holds it
-            (`Evidence`): records, gaps, changes, ignored files.
         measured: Protocol id → what the area measured of it (`Measured`),
             for every id a run or the index names; `measured_of` answers
             for any id.
@@ -413,7 +412,7 @@ def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir
     says holds it; GitError when git cannot run."""
     if not head_sha(repo):
         return []
-    rel = runs_path(area).resolve().relative_to(repo.resolve()).as_posix()
+    rel = rel_posix(runs_path(area), repo)
     args = [
         "log",
         "--format=%x00%H",

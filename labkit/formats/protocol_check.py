@@ -22,7 +22,7 @@ What lives here, each stated as its current rule:
     `written_before_run`): what a run at low repeat cost owes first, and a report
     field filled while no run exists.
   * **The result section** (`recorded_results_field`, `recorded_results_without_run`,
-    `result_due`): the lines report-check and protocol-fill read; the
+    `answering_run.adopted_run`): the lines report-check and protocol-fill read; the
     declaration itself is the head's `[result] run`
     (`protocol_block.declared_run`), and it is what makes the result
     fields due.
@@ -848,7 +848,7 @@ def open_holes(
     errors in the commit hook. ADOPTING asks it of the state
     an adoption makes, where the result is declared (`owed`)."""
     lines = fields(text)
-    if result_due(text) is None and not adopting:
+    if answering_run.adopted_run(text) is None and not adopting:
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
     if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
@@ -880,7 +880,7 @@ def owed(
     owed_here = owed_fields(head.repeat_cost, head.kind, model_named(text))
     # a declared result, or one being adopted, makes the result fields due;
     # its answer, the Conclusion, joins the must on every branch below
-    due = adopting or result_due(text) is not None
+    due = adopting or answering_run.adopted_run(text) is not None
     answer = [f for f in owed_here if f.label == CONCLUSION_LABEL] if due else []
     if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
         return [f for f in owed_here if f.level in ("must", "should")] + answer, []
@@ -1272,17 +1272,6 @@ def field_label(name: str) -> str:
 
 
 DASHES_ONLY = re.compile(r"^[—–-]+$")
-
-
-def result_due(text: str) -> str | None:
-    """The run the head declares (`protocol_block.declared_run`) — from the
-    write-back on, the result fields are due (`RESULT_FIELDS`, the report
-    fields of a frozen protocol); None while nothing is declared, and for a
-    head that does not read (the head check names that)."""
-    try:
-        return protocol_block.declared_run(text)
-    except protocol_block.BlockError:
-        return None
 
 
 def adoption_owes(text: str) -> tuple[list[str], list[str]]:

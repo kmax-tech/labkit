@@ -53,7 +53,11 @@ class Refused(Exception):
     through `refuse` and exits 2; a main that runs as another gate's station
     catches it itself. A caller gets a result or this exception, never an
     exit code beside a result (`Path | int`) that means "already
-    printed"."""
+    printed". The run layer and `recheck` are the exception by their
+    nature: a measure script calls them with no main of labkit's around
+    it, so a refusal there is `SystemExit` with the sentence — the loud
+    end without a traceback that script needs (the audit of
+    2026-11-08, H1)."""
 
     def __init__(self, tool: str, why: str) -> None:
         super().__init__(f"{tool}: {why}")

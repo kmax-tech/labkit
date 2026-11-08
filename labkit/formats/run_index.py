@@ -102,7 +102,7 @@ def index_row(
     protocol_id: str,
 ) -> list[str]:
     """One row of the run index in RUN_INDEX_COLS order — the one layout
-    for a run's end (`runlog.Run.finish`) and `runlog.reindex`, which each
+    for a run's end (`runlog.Run._finalize`) and `runlog.reindex`, which each
     built it."""
     return [
         run_id,

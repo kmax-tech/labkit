@@ -297,26 +297,30 @@ def _hook_configs(repo: Path) -> dict[str, HookEntries]:
 def _validate_settings(value: object, path: Path) -> None:
     """Refuse malformed hook containers before an install changes files."""
     if not isinstance(value, dict):
-        raise SystemExit(f"labkit-hooks: {path} must be a JSON object")
+        raise console.Refused("labkit-hooks", f"{path} must be a JSON object")
     hooks = value.get("hooks", {})
     if not isinstance(hooks, dict):
-        raise SystemExit(f"labkit-hooks: {path}: hooks must be an object")
+        raise console.Refused("labkit-hooks", f"{path}: hooks must be an object")
     for event, entries in hooks.items():
         if not isinstance(entries, list):
-            raise SystemExit(f"labkit-hooks: {path}: hooks.{event} must be an array")
+            raise console.Refused(
+                "labkit-hooks", f"{path}: hooks.{event} must be an array"
+            )
         for entry in entries:
             if not isinstance(entry, dict) or not isinstance(entry.get("hooks"), list):
-                raise SystemExit(
-                    f"labkit-hooks: {path}: hooks.{event} entry needs a hooks array"
+                raise console.Refused(
+                    "labkit-hooks", f"{path}: hooks.{event} entry needs a hooks array"
                 )
             for hook in entry["hooks"]:
                 if not isinstance(hook, dict):
-                    raise SystemExit(
-                        f"labkit-hooks: {path}: hooks.{event} handler must be an object"
+                    raise console.Refused(
+                        "labkit-hooks",
+                        f"{path}: hooks.{event} handler must be an object",
                     )
                 if "command" in hook and not isinstance(hook["command"], str):
-                    raise SystemExit(
-                        f"labkit-hooks: {path}: hooks.{event} command must be a string"
+                    raise console.Refused(
+                        "labkit-hooks",
+                        f"{path}: hooks.{event} command must be a string",
                     )
 
 
@@ -329,8 +333,8 @@ def _settings(repo: Path, relative: str = ".claude/settings.json") -> tuple[Path
         _validate_settings(current, path)
         return path, current
     except json.JSONDecodeError as exc:
-        raise SystemExit(
-            f"labkit-hooks: {path} is not valid JSON ({exc}) — repair it first"
+        raise console.Refused(
+            "labkit-hooks", f"{path} is not valid JSON ({exc}) — repair it first"
         )
 
 
@@ -375,10 +379,11 @@ def install(repo: Path) -> list[str]:
             # kept beside, never erased in silence.
             kept = hook.with_name(f"{name}.before-labkit")
             if kept.exists():
-                raise SystemExit(
-                    f"labkit-hooks: {hook} was not written by labkit-hooks and "
+                raise console.Refused(
+                    "labkit-hooks",
+                    f"{hook} was not written by labkit-hooks and "
                     f"{kept.name} exists already — move the repo's own steps to "
-                    f"{HOOKS_DIR}/{name}.local, remove {kept.name}, run install again"
+                    f"{HOOKS_DIR}/{name}.local, remove {kept.name}, run install again",
                 )
             hook.rename(kept)
             done.append(
@@ -392,7 +397,7 @@ def install(repo: Path) -> list[str]:
     try:
         point_hooks_at(repo)
     except RuntimeError as exc:
-        raise SystemExit(f"labkit-hooks: {exc}") from exc
+        raise console.Refused("labkit-hooks", f"{exc}") from exc
     done.append("git core.hooksPath = .githooks")
     for path, current, desired in configs:
         wanted = merged_settings(

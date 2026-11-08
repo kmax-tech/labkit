@@ -106,6 +106,24 @@ def area_path(arg: str) -> Path:
     return hits.pop() if hits else given
 
 
+def rel_posix(path: Path, base: Path) -> str:
+    """PATH relative to BASE as git names it: `/`-separated, BASE resolved,
+    PATH's folders resolved when it does not lie below BASE as written (on
+    macOS /var is /private/var) — its last component never: a symbolic
+    link is named by its own name, not its target's (report-check names
+    the link it refuses). Raises ValueError naming both when PATH does not
+    lie below BASE — the caller claimed it does, and the sentence says
+    where it lies instead. For a line a person reads, where a path outside
+    BASE is shown absolute instead, `shown`."""
+    b = base.resolve()
+    p = path if path.is_absolute() else path.absolute()
+    if not p.is_relative_to(b):
+        p = p.parent.resolve() / p.name
+    if not p.is_relative_to(b):
+        raise ValueError(f"{p} does not lie below {b}")
+    return p.relative_to(b).as_posix()
+
+
 def shown(path: Path, base: Path) -> str:
     """PATH as a report line, a bundle header or a refusal names it: relative
     to BASE when it lies below it, else absolute; both resolved first (on
@@ -633,7 +651,7 @@ def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:
     shallow = git_run(["rev-parse", "--is-shallow-repository"], repo)
     if shallow.returncode != 0 or shallow.stdout.strip() != "false":
         return None
-    rel = path.resolve().relative_to(repo.resolve()).as_posix()
+    rel = rel_posix(path, repo)
     args = ["log", "--follow", "--name-status", "--format=%x00%H", "--", rel]
     r = git_run(args, repo)
     if r.returncode != 0:
@@ -699,7 +717,7 @@ def blobs_then(
     lacks: untracked when the run started, or not yet there. PATHS lie in
     REPO's own tree. Raises GitError when COMMIT is no commit of REPO or
     the part of PATCH for PATHS does not apply to it."""
-    rels = {p.resolve().relative_to(repo.resolve()).as_posix(): p for p in paths}
+    rels = {rel_posix(p, repo): p for p in paths}
     with tempfile.TemporaryDirectory() as tmp:
         env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
         steps: list[tuple[list[str], str | None]] = [(["read-tree", commit], None)]
@@ -944,7 +962,7 @@ def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
         != 0
     ):
         return None
-    rel = folder.resolve().relative_to(repo.resolve()).as_posix()
+    rel = rel_posix(folder, repo)
     args = (
         ["ls-files", "-z", "--cached", "--", rel]
         if rev == INDEX_REV
