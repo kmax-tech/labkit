@@ -47,6 +47,16 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **The file-state names `TREE`, `INDEX` and `PROPOSED` have one home,
+  `labkit.formats.area_state`.** `report_context` no longer re-exports
+  them; an import from there changes to `area_state`. With it, every gate
+  reads the file state its caller names: `report_hold.Sources` carries
+  `staged`, `discussion_sources` and `lost_evidence` take it, the
+  replacement reads its predecessor's area in the state the check judges,
+  and `review_pieces` and `review_gap` take the area's state instead of
+  building one when none was handed in (the entries build it: the
+  context, the commands, the hooks).
+
 - **A registered report under `runs/`, `data/` or another skipped
   directory is refused in the head.** Where a report may stand is one rule
   (`repo.report_place_problem`: a Markdown file, no protocol, under none of

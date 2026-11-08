@@ -15,7 +15,7 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import review_gap
-from labkit.formats.area_state import AreaState, Measured, state_of
+from labkit.formats.area_state import INDEX, TREE, AreaState, Measured, state_of
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -376,7 +376,9 @@ def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list
             continue
         if head is None or not head.id:
             continue
-        held = state_of(p.parent).measured_of(head.id)
+        held = state_of(p.parent, file_state=INDEX if staged else TREE).measured_of(
+            head.id
+        )
         for registered in bound_reports(p, held, gitroot).registered.values():
             if (
                 registered is not None

@@ -89,6 +89,7 @@ from datetime import date
 from pathlib import Path
 
 from labkit.formats.area_state import state_of
+from labkit.formats import area_state
 from labkit.formats.repo import pending_adoption
 from labkit.formats import evidence
 from labkit.gates import registered_report
@@ -111,7 +112,6 @@ from labkit.formats.commands import adopt_command, audit_command, measure_comman
 from labkit.checks import data_counts, recheck, report_blocks
 from labkit.checks.run_record_check import code_since_run
 from labkit.gates import report_check, report_hold
-from labkit.gates import report_context
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
     adoption_owes,
@@ -156,7 +156,7 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     Both writes
     go whole or not at all (`files.write_atomic`): a reader, or the next
     check, sees the protocol as it was or as proposed, never half of
-    either; the check is told it holds the proposal (`report_context.PROPOSED`).
+    either; the check is told it holds the proposal (`area_state.PROPOSED`).
     BEFORE is kept beside the protocol (`repo.pending_adoption`)
     until the check passed or BEFORE is back: a kill during the check skips
     both restores, and the file left behind is what report-check refuses on
@@ -166,7 +166,7 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     files.write_atomic(protocol, after)
     try:
         rc = report_check.report_check(
-            protocol.parent, protocol, state=report_context.PROPOSED, text=after
+            protocol.parent, protocol, state=area_state.PROPOSED, text=after
         )
     except BaseException:
         files.write_atomic(protocol, before)

@@ -22,13 +22,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import registered_report
+from labkit.formats.area_state import state_of
 from labkit.tools import report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
 from labkit.formats import protocol_block, report_reviews  # noqa: E402
 from labkit.formats import area_state  # noqa: E402
 from labkit.formats.gate import GateFinding  # noqa: E402
 from labkit.formats.repo import state_text  # noqa: E402
-from labkit.gates import report_check, report_context, report_hold  # noqa: E402
+from labkit.gates import report_check, report_hold  # noqa: E402
 from labkit.gates import undecided
 from labkit.gates.report_review import discussed_under  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
@@ -771,7 +772,7 @@ class DiscussingReport(unittest.TestCase):
         )
         self.assertEqual(rc, 0)
 
-    def step(self, state: str = report_context.TREE) -> next_step.Step:
+    def step(self, state: str = area_state.TREE) -> next_step.Step:
         with contextlib.chdir(self.lab.root):
             return next_step.next_step(self.area, self.protocol.resolve(), state=state)
 
@@ -807,6 +808,7 @@ class DiscussingReport(unittest.TestCase):
             self.protocol,
             proto_text,
             discussed_under(self.report, text, self.protocol),
+            state_of(self.area),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = review_keys(self.area, self.report, self.protocol)
@@ -842,7 +844,7 @@ class DiscussingReport(unittest.TestCase):
         after it, owes a review still: the two states apart."""
         self.lab.git("add", "-A")
         owed = self.finding(staged=True)
-        step = self.step(report_context.INDEX)
+        step = self.step(area_state.INDEX)
         self.assertEqual(step.where, owed.text)
         self.assertEqual(step.next, owed.fix)
         with contextlib.chdir(self.lab.root):
@@ -855,13 +857,13 @@ class DiscussingReport(unittest.TestCase):
         with contextlib.chdir(self.lab.root):
             rc, out = self.lab.pre_commit(self.report)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("--report-review", self.step(report_context.INDEX).next)
+        self.assertNotIn("--report-review", self.step(area_state.INDEX).next)
         # the tree moves on: it owes a review of its own state, the index not
         with self.report.open("a", encoding="utf-8") as f:
             f.write("\nmore prose\n")
         self.assertIn("--report-review", self.step().next)
         self.assertEqual(self.gate(staged=False)[0], 1)
-        self.assertNotIn("--report-review", self.step(report_context.INDEX).next)
+        self.assertNotIn("--report-review", self.step(area_state.INDEX).next)
         self.assertEqual(self.gate(staged=True)[0], 0)
 
     def test_the_counter_case_a_review_of_the_state_releases_all_three(self):
@@ -1044,7 +1046,7 @@ class ReportInTheIndexOnly(unittest.TestCase):
 
         with contextlib.chdir(self.lab.root):
             staged = next_step.next_step(
-                self.area, self.protocol.resolve(), state=report_context.INDEX
+                self.area, self.protocol.resolve(), state=area_state.INDEX
             )
             self.assertIn("without its generated block", staged.where)
             self.assertIn("--into REPORT.md", staged.next)

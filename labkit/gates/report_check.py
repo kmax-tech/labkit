@@ -108,7 +108,7 @@ from labkit.formats.answering_run import (
     adopted_run,
     is_measurement,
 )
-from labkit.formats.area_state import INDEX, TREE, AreaState, state_of
+from labkit.formats.area_state import INDEX, PROPOSED, TREE, AreaState, state_of
 from labkit.formats.repo import pending_adoption
 from labkit.formats import evidence
 from labkit.formats.protocol_history import (
@@ -185,7 +185,6 @@ from labkit.formats.standard_contract import (
 )
 from labkit.gates.report_context import (
     Checked,
-    PROPOSED,
     checked,
     declaration,
 )
@@ -1066,7 +1065,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     sources = (
         repo_sources(repo, staged=staged)
         if reports
-        else Sources(repo.resolve(), set(), {}, {}, {})
+        else Sources(repo.resolve(), set(), {}, {}, {}, staged)
     )
     for p in held_by_reports(reports, sources):
         if p not in protocols:

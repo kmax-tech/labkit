@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
-from labkit.formats.area_state import AreaState, state_of
+from labkit.formats.area_state import AreaState
 from labkit.formats.repo import path_kind
 from labkit.formats.runs import metrics_text
 from labkit.checks.report_blocks import Discussion, cited_run_ids
@@ -77,15 +77,15 @@ def review_pieces(
     protocol: Path,
     protocol_text: str,
     discussed: list[Discussion],
-    state: AreaState | None = None,
+    state: AreaState,
 ) -> list[tuple[str, str]]:
     """The (label, text) the reviewer reads of REPORT (its TEXT) under
     PROTOCOL (its PROTOCOL_TEXT) in AREA, in order: the report numbered,
     the run the protocol has adopted (or none), its DISCUSSED blocks (or
     none), the protocol, the `metrics.json` of every run of AREA the
     review concerns — the adopted one, each discussed one, each one the
-    report cites — labelled with what it is (STATE, the area's state, is
-    the caller's when it built one, else built here), every run of AREA in one line
+    report cites — labelled with what it is (STATE, the area's state as
+    the caller built it once), every run of AREA in one line
     each (`runs_text`), the audits (`audits_text`).
     The one home of what a review saw: the prompt is rendered from it,
     the record's fingerprint is taken over it, and the gate takes it again
@@ -111,8 +111,7 @@ def review_pieces(
         ),
         (f"FILE: {shown(protocol, repo)}", protocol_text),
     ]
-    held = state if state is not None else state_of(area)
-    present = {rd.dir.name for rd in held.runs}
+    present = {rd.dir.name for rd in state.runs}
     for d in discussed:
         run_dir = run_path(area, d.run_id)
         if d.run_id not in present:

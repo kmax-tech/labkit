@@ -16,6 +16,7 @@ cites a run.
 from __future__ import annotations
 
 from labkit.formats import run_index
+from labkit.formats.area_state import state_of
 from labkit.formats import area_state
 from labkit.gates import registered_report
 from labkit.tools import report_command
@@ -208,7 +209,7 @@ class ReportCheck(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         ctx = report_context.checked(area, proto)
         self.assertEqual(
-            (ctx.state, ctx.declared, ctx.run), (report_context.TREE, None, run)
+            (ctx.state, ctx.declared, ctx.run), (area_state.TREE, None, run)
         )
         self.assertEqual(ctx.text, proto.read_text(encoding="utf-8"))
         # the index's text, not the tree's: the declaration comes from there
@@ -218,12 +219,12 @@ class ReportCheck(unittest.TestCase):
         ctx = report_context.checked(
             area,
             proto,
-            state=report_context.INDEX,
+            state=area_state.INDEX,
             text=staged,
             area_state=ctx.area_state,
             area_evidence=ctx.evidence,
         )
-        self.assertEqual((ctx.state, ctx.declared), (report_context.INDEX, run.name))
+        self.assertEqual((ctx.state, ctx.declared), (area_state.INDEX, run.name))
         self.assertEqual(ctx.head.repeat_cost, "low")
         self._audited(area, run)
         code, out = self._run(area)
@@ -492,7 +493,7 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(len(twice), 1, blockers)
         # on the adoption's proposal finalize reads the tree, not this text:
         # the freeze station holds it there
-        proposed = dataclasses.replace(ctx, state=report_context.PROPOSED)
+        proposed = dataclasses.replace(ctx, state=area_state.PROPOSED)
         with mock.patch.object(
             report_check, "check_analysis_script", return_value=None
         ):
@@ -817,7 +818,7 @@ class IfReported(unittest.TestCase):
         (`report_hold.staged_area_gap`) and `next --staged` names its step,
         the whole area staged; in the tree `next` says nothing of it, and
         once staged neither does."""
-        from labkit.gates import next_step, report_context
+        from labkit.gates import next_step
 
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
@@ -839,8 +840,8 @@ class IfReported(unittest.TestCase):
         self._git(root, "commit", "-qam", "fields")
         (area / "scripts" / "new.py").write_text("x = 1\n", encoding="utf-8")
         with contextlib.chdir(root):
-            staged = next_step.next_step(area, proto, state=report_context.INDEX)
-            tree = next_step.next_step(area, proto, state=report_context.TREE)
+            staged = next_step.next_step(area, proto, state=area_state.INDEX)
+            tree = next_step.next_step(area, proto, state=area_state.TREE)
             code, out = self._staged_gate(root, proto)
         self.assertEqual(code, 1, out)
         self.assertEqual(
@@ -851,7 +852,7 @@ class IfReported(unittest.TestCase):
         self.assertNotIn("git add", tree.next)  # the tree is not the commit
         self._git(root, "add", "-A")
         with contextlib.chdir(root):
-            after = next_step.next_step(area, proto, state=report_context.INDEX)
+            after = next_step.next_step(area, proto, state=area_state.INDEX)
         self.assertNotIn("git add", after.next)
 
     def test_a_commit_without_the_adopted_runs_record_is_held(self):
@@ -1147,6 +1148,7 @@ class RegisteredReport(unittest.TestCase):
             proto,
             proto.read_text(encoding="utf-8"),
             report_review.discussed_under(report, text, proto),
+            state_of(area),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = report_review.review_keys(area, report, proto)
@@ -1224,7 +1226,7 @@ class RegisteredReport(unittest.TestCase):
             + text[text.index("- **Question") :]
         )
         ctx = report_context.checked(
-            area, proto, state=report_context.PROPOSED, text=declared
+            area, proto, state=area_state.PROPOSED, text=declared
         )
         self.assertEqual(report_check.report_findings(ctx), [])
         ctx = report_context.checked(area, proto)

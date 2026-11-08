@@ -193,6 +193,44 @@ class OneStateBuildPerCheckRun(_Repository):
             self._builds(lambda: next_step.next_step(self.area, self.proto)), 1
         )
 
+    def test_the_commits_gate_builds_the_state_once_per_protocol(self):
+        """`hold_reported` at the commit (STAGED): the one protocol the paths
+        touch, one build of its area's state."""
+        self._run(RUN)
+        lines: list[str] = []
+        self.assertEqual(
+            self._builds(
+                lambda: report_check.hold_reported(
+                    [self.proto], self.root, staged=True, tell=lines.append
+                )
+            ),
+            1,
+        )
+
+
+class TheFileStateNamedIsTheOneRead(_Repository):
+    """A gate reads the file state its caller names: the index at the
+    commit, the tree at the stop and the console. The twin that bit before
+    (the check note of 2026-11-08, point 7): a run deleted in the tree, the
+    deletion not staged — the commit carries the run, so a discussion of
+    it is no gap there; the tree's reading names the gap."""
+
+    def test_a_run_deleted_only_in_the_tree_stands_in_the_index(self):
+        from labkit.checks import report_blocks
+        from labkit.gates import report_hold
+
+        run = self._run(RUN)
+        shutil.rmtree(run)
+        report = self.root / "REPORT.md"
+        found = [
+            report_blocks.Discussion(
+                f"experiments/01-x/{self.proto.name}", RUN, "why", 1, 3, ""
+            )
+        ]
+        self.assertEqual(report_hold.discussion_sources(report, found, staged=True), [])
+        (gap,) = report_hold.discussion_sources(report, found, staged=False)
+        self.assertIn(f"has no runs/{RUN}/", gap.text)
+
 
 class OneRuleForAReportsPlace(unittest.TestCase):
     """Where a report may stand is one rule (`repo.report_place_problem`):

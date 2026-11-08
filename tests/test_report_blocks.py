@@ -20,6 +20,7 @@ import test_report_check
 from protocol_fixture import completed_run
 
 from labkit.checks import report_blocks
+from labkit.formats.area_state import state_of
 from labkit.formats import report_reviews
 from labkit.gates import report_check, report_hold, report_review
 from labkit.tools import protocol_fill
@@ -649,7 +650,13 @@ class ReportFiles(unittest.TestCase):
         text = text if text is not None else report.read_text(encoding="utf-8")
         discussed = report_review.discussed_under(report, text, proto)
         pieces = report_review.review_pieces(
-            area, report, text, proto, proto.read_text(encoding="utf-8"), discussed
+            area,
+            report,
+            text,
+            proto,
+            proto.read_text(encoding="utf-8"),
+            discussed,
+            state_of(area),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = report_review.review_keys(area, report, proto)

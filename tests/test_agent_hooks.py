@@ -12,6 +12,7 @@ tool wrote them (git status, not the tool name), once per content.
 from __future__ import annotations
 
 from labkit.gates import hook_post_change
+from labkit.formats.area_state import state_of
 from labkit.gates import hook_pre_run
 from labkit.gates import hook_session
 from labkit.formats.runs import RunKind
@@ -679,6 +680,7 @@ class PostChange(unittest.TestCase):
             proto,
             proto.read_text(encoding="utf-8"),
             discussed_under(report, text, proto),
+            state_of(area),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = review_keys(area, report, proto)

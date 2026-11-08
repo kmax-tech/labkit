@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import report_review_inputs
+from labkit.formats.area_state import state_of
 from protocol_fixture import (
     C1_BLOCK,
     C1_PROSE,
@@ -113,7 +114,13 @@ class RunsText(unittest.TestCase):
         report.write_text("# Report\n", encoding="utf-8")
         proto = area / "PROTOCOL-x.md"
         pieces = report_review_inputs.review_pieces(
-            area, report, "# Report\n", proto, proto.read_text(encoding="utf-8"), []
+            area,
+            report,
+            "# Report\n",
+            proto,
+            proto.read_text(encoding="utf-8"),
+            [],
+            state_of(area),
         )
         labels = [label for label, _ in pieces]
         self.assertEqual(labels[-2:], ["RUNS", "AUDITS"], labels)

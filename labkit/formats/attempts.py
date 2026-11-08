@@ -984,7 +984,7 @@ def copy_gaps(
     are the journal's own; each gone file names its restore (`restore_way`,
     AT_HEAD and KEPT as `gaps` takes them). Pure; a lost copy line that is
     not a JSON object raises AttemptError naming the copy and its line — the stop reports it
-    as a problem (`area_integrity`), it does not end in a traceback."""
+    as a problem (`evidence.AreaEvidence.problems`), it does not end in a traceback."""
     in_journal = set(journal_now.splitlines())
     lines = jsonl.record_lines(copy_text)
     try:

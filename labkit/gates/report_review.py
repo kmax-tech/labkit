@@ -65,6 +65,7 @@ from pathlib import Path
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
 from labkit.formats import attempts, console, evidence, findings, report_reviews
+from labkit.formats.area_state import state_of
 from labkit.formats.report_reviews import ReportClaim, held_by
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.repo import layout_root, shown, the_protocol
@@ -123,8 +124,9 @@ def gather_report(
             fix="restore the block's comment lines as `protocol-fill` wrote them "
             "(`--discuss … --into` writes the block again)",
         ) from exc
+    state = state_of(area)
     pieces = review_pieces(
-        area, report, text, protocol, protocol.read_text(encoding="utf-8"), discussed
+        area, report, text, protocol, state.text_of(protocol), discussed, state
     )
     repo = layout_root(area)
     _, rules = audit_prompt.review_brief()

@@ -464,7 +464,7 @@ def provenance_findings(
     data stay out of the repository, which holds their source or access
     route and version in Data / scope). OUTSIDE names each source kept out
     of git, by an ignore rule or by lying outside the repository. Raises GitError when git cannot list a directory source's tracked
-    files or say which are ignored (`_ignoring_rules`): finalize then ends
+    files or say which are ignored (`repo.ignoring_rules`): finalize then ends
     in that error, not in a blocker with a way out that may not lead out.
     A `data=` entry naming no path blocks. Outside a git repository every
     source is still held to its record; git's half is skipped with a
@@ -549,7 +549,7 @@ def _source_finding(
     lies outside REPO (its resolved path), where git can neither track nor
     ignore it — held by the checksum alone, its source or access route
     owed in Data / scope. REPO None (no repository): git's half is
-    skipped. Raises GitError as `_untracked_files` and `_ignoring_rules`
+    skipped. Raises GitError as `_untracked_files` and `repo.ignoring_rules`
     do."""
     if path_kind(source) is None:
         return _gone(source, area), None
@@ -615,7 +615,7 @@ NAMED_UNTRACKED = 3
 
 def _untracked_files(repo: Path, source: Path) -> list[Path]:
     """The files of SOURCE that git does not track in REPO — ignored ones
-    included, `_ignoring_rules` tells them apart —, [] when it tracks them
+    included, `repo.ignoring_rules` tells them apart —, [] when it tracks them
     all: SOURCE itself for a file; for a directory each visible file
     under it (`provenance.visible_files`) — the files the run's digest and
     row count covered, since the record keeps no list of them. A directory

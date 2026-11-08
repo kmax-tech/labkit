@@ -13,21 +13,13 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats import evidence
-from labkit.formats.area_state import INDEX, PROPOSED, TREE, AreaState, state_of
+from labkit.formats.area_state import INDEX, TREE, AreaState, state_of
 from labkit.checks.audit_binding import (
     audited_run,
 )
 from labkit.formats.repo import (
     layout_root,
 )
-
-#: which file state the declaration (the answer line) is read from
-#: (`area_state.TREE`, `INDEX`, `PROPOSED`), named in the output so a reader
-#: knows what was held. The stations read the working tree in every case;
-#: the caller makes the tree that state: the pre-commit holds the area's
-#: tree equal to the index (`tree_differs`), the adoption writes the
-#: proposal into the tree and puts it back on refusal (`protocol_fill.adopt`)
-__all__ = ["INDEX", "PROPOSED", "TREE", "Checked", "checked"]
 
 
 @dataclass(frozen=True)

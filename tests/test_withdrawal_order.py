@@ -20,6 +20,7 @@ from typing import Any, cast
 from unittest import mock
 
 from labkit.formats.gate import blocker, withdrawn_first
+from labkit.formats import area_state
 from labkit.formats.commands import withdraw_command
 from labkit.gates import report_check, report_context
 from test_end_to_end import CountCommands
@@ -28,7 +29,7 @@ RUN = "2026-01-02T00-00-00_b000"
 PREDECESSOR = "2026-01-01T00-00-00_a000"
 
 
-def context(protocol: Path, state: str = report_context.TREE) -> Any:
+def context(protocol: Path, state: str = area_state.TREE) -> Any:
     """What `held_declaration` reads of a `Checked`: the state, the answering
     run and the run the protocol declares — the same one."""
     return cast(
@@ -42,7 +43,7 @@ def context(protocol: Path, state: str = report_context.TREE) -> Any:
 class HeldDeclaration(unittest.TestCase):
     PROTOCOL = Path("experiments/01-x/PROTOCOL-x.md")
 
-    def held(self, *found, state: str = report_context.TREE) -> Path | None:
+    def held(self, *found, state: str = area_state.TREE) -> Path | None:
         return report_check.held_declaration(context(self.PROTOCOL, state), list(found))
 
     def changed(self, text: str, run: str = RUN):
@@ -78,7 +79,7 @@ class HeldDeclaration(unittest.TestCase):
 
     def test_the_adoptions_own_proposal_withdraws_nothing(self):
         found = self.changed("finalize: code changed")
-        self.assertIsNone(self.held(found, state=report_context.PROPOSED))
+        self.assertIsNone(self.held(found, state=area_state.PROPOSED))
 
 
 class RewordedInTheChain(CountCommands):

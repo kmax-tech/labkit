@@ -8,7 +8,7 @@ area and the protocol, reads the flags and prints. `--guide` prints the
 agent guide (`labkit/docs/agent-guide.md`): the workflow the stamped
 `AGENTS.md` keeps short, in full, with the reason for each rule. `--staged`
 reads the index, the state the commit carries and the pre-commit judges
-(`report_context.INDEX`); the working tree otherwise. Exit 0 when a step
+(`area_state.INDEX`); the working tree otherwise. Exit 0 when a step
 is named or nothing is owed; 2 on no such area, no protocol to choose, a
 protocol whose head does not read, or `--staged` on a protocol the index
 does not hold.

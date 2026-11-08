@@ -57,7 +57,7 @@ the step adds how to register one (`protocol-fill … report=REPORT.md`):
 labkit cannot tell whether the task asks for a report file, and after the
 first measurement the registration is refused.
 
-The step is read from a file state (`report_context.TREE` or `INDEX`), the
+The step is read from a file state (`area_state.TREE` or `INDEX`), the
 one the caller judges: the console and the stop the tree, the pre-commit
 the index. `Step.render` is the one spelling of a step, for `labkit-next`
 (`tools.next_command`) and for the hooks that print it. This module adds

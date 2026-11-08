@@ -10,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats.commands import gate_command
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import INDEX, state_of
 from labkit.formats import evidence
 from labkit.formats.gate import (
     GateFinding,
@@ -45,8 +45,10 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     declared change is one (`registration_differences`); the predecessor's
     open BLOCKERs are decided first, read from its area's records, so a
     change of that area's committed evidence against HEAD holds too
-    (`evidence.change_blockers`, in the tree the records are read from;
-    the replacement's own area is report-check's first station). Blockers,
+    (`evidence.change_blockers`). The predecessor's area is read in the
+    file state CTX judges, as every area the check touches is: the commit
+    judges the index it carries, the stop and the console the tree (the
+    replacement's own area is report-check's first station). Blockers,
     each with the line or command
     that clears it. Nothing without `[replaces]`: an undeclared successor is
     indicated at the report (`replacement_hints`), never held here."""
@@ -83,7 +85,9 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
         theirs = f"{name}: the predecessor's area {pred.parent.name}"
         out += [
             replace(f, text=f"{theirs}: {f.text}")
-            for f in evidence.read_evidence(pred.parent, staged=False).change_blockers()
+            for f in evidence.read_evidence(
+                pred.parent, staged=ctx.state == INDEX
+            ).change_blockers()
         ]
     out += [replace(f, text=f"{name}: {f.text}") for f in _predecessor_open(ctx, pred)]
     return out
@@ -107,7 +111,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             fix="name the one protocol of this repo it replaces, kept as it "
             f"is, then `{gate_command('report-check', ctx.area)}`",
         )
-    circle = _replacement_circle(str(ctx.head.id), hits[0])
+    circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.state)
     if circle:
         return blocker(
             f"the replacements run in a circle ({circle})",
@@ -125,7 +129,11 @@ def _undeclared_changes(
     as each of its first measurements saw it (several: the changes are owed
     against each), this protocol's as its first measurement saw it, or as
     it stands before one; or why they cannot be compared."""
-    theirs = state_of(pred.parent).measured_of(rep.protocol).first_groups
+    theirs = (
+        state_of(pred.parent, file_state=ctx.state)
+        .measured_of(rep.protocol)
+        .first_groups
+    )
     olds, missing = registrations_as_first_measured(pred, theirs, git_root(pred))
     news, own_missing = registrations_as_first_measured(
         ctx.protocol,
@@ -186,7 +194,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     decided, or the predecessor is handed over (its open BLOCKERs stay open
     in that record)."""
     try:
-        theirs = evidence.read_evidence(pred.parent, staged=False)
+        theirs = evidence.read_evidence(pred.parent, staged=ctx.state == INDEX)
         if theirs.unreadable:
             raise findings.FindingsError("; ".join(theirs.unreadable))
         held = theirs.open_blockers
@@ -218,15 +226,15 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     return out
 
 
-def _replacement_circle(start: str, pred: Path) -> str:
+def _replacement_circle(start: str, pred: Path, file_state: str) -> str:
     """The chain of `[replaces]` from PRED back, as ids joined by ` → `,
     when it returns to START or to an id it already passed; "" when it
-    ends."""
+    ends. Each predecessor is read as FILE_STATE holds it (`area_state`)."""
     seen = [start]
     current: Path | None = pred
     while current is not None:
         try:
-            text = state_of(current.parent).text_of(current)
+            text = state_of(current.parent, file_state=file_state).text_of(current)
             pid = protocol_block.head(text).id
             nxt = protocol_block.replaces(text)
         except (OSError, ValueError, protocol_block.BlockError):
