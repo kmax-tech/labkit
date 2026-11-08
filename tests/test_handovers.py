@@ -17,6 +17,8 @@ from pathlib import Path
 import test_counter_cases as cases
 import test_end_to_end as e2e
 from labkit.tools import report_command
+from labkit.formats.area_state import INDEX, state_of
+from labkit.formats import evidence
 from labkit.formats import attempts, findings, handovers, protocol_block, repo
 from labkit.checks import report_blocks
 from labkit.gates import audit
@@ -325,7 +327,7 @@ class HandoverRecovery(cases._Chain):
         self.assertTrue(attempts.area_gaps(self.area).blockers)
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
-        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
         self.assertEqual(self.lab.stop_hook()[0], 0)
         self.staged_release()
         self.lab.commit("unresolved handover with explicit evidence loss")
@@ -338,7 +340,7 @@ class HandoverRecovery(cases._Chain):
         self.assertIsNone(protocol_block.declared_run(self.protocol.read_text()))
         # A new or unstaged evidence change cannot borrow that acknowledgement.
         (self.area / "audits" / "new-evidence.txt").write_text("new evidence")
-        self.assertFalse(handovers.valid(self.area))
+        self.assertFalse(handovers.valid(self.area, state_of(self.area)))
         self.assertEqual(self.lab.stop_hook()[0], 2)
         self.lab.git("add", "-A")
         self.assertTrue(
@@ -372,14 +374,22 @@ class HandoverRecovery(cases._Chain):
         # Its block is part of the exact acknowledgement, including at the
         # index; prose beside the block is free.
         self.report.write_text(self.report.read_text() + "\nA sentence by hand.\n")
-        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
         self.report.write_text(
             self.report.read_text().replace("Tried: ", "Tried: also ")
         )
-        self.assertFalse(handovers.valid(self.area))
-        self.assertTrue(handovers.valid(self.area, staged=True))
+        self.assertFalse(handovers.valid(self.area, state_of(self.area)))
+        self.assertTrue(
+            handovers.valid(
+                self.area, state_of(self.area, file_state=INDEX), staged=True
+            )
+        )
         self.lab.git("add", "-A")
-        self.assertFalse(handovers.valid(self.area, staged=True))
+        self.assertFalse(
+            handovers.valid(
+                self.area, state_of(self.area, file_state=INDEX), staged=True
+            )
+        )
         self.assertTrue(
             undecided.undecided_blockers(self.lab.root, [self.protocol], staged=True)
         )
@@ -397,7 +407,7 @@ class HandoverRecovery(cases._Chain):
             attempts.area_gaps(self.area)
         # A later readable open finding is never waived by a handover.
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
-        self.assertFalse(handovers.valid(self.area))
+        self.assertFalse(handovers.valid(self.area, state_of(self.area)))
         self.assertEqual(self.lab.stop_hook()[0], 2)
 
     def test_an_existing_report_keeps_its_text_and_the_result_is_withdrawn(self):
@@ -416,12 +426,12 @@ class HandoverRecovery(cases._Chain):
         )
         self.assertIsNone(protocol_block.declared_run(self.protocol.read_text()))
         self.assertNotIn(self.run_id, self.report.read_text())
-        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
         # A second handover of the same protocol replaces its block in place.
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
         self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 1)
-        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
 
     def record_of_handover(self) -> handovers.Handover:
         (path,) = handovers.record_paths(self.area)
@@ -445,9 +455,9 @@ class HandoverRecovery(cases._Chain):
     def test_a_run_measured_after_the_handover_ends_its_acknowledgement(self):
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
-        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
         later = self.run_measure(e2e.Judge._model)
-        ack = handovers.acknowledgement(self.area)
+        ack = handovers.acknowledgement(self.area, state_of(self.area))
         self.assertFalse(ack.valid)
         self.assertIn(f"run {later} was measured after the handover", str(ack.refused))
 
@@ -529,14 +539,20 @@ class HandoverRecovery(cases._Chain):
 
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
-        self.assertTrue(handovers.valid(self.area))
-        self.assertTrue(handovers.protocol_handed_over(self.area, self.protocol))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
+        self.assertTrue(
+            handovers.protocol_handed_over(
+                self.area, self.protocol, state_of(self.area)
+            )
+        )
         step = next_step.next_step(self.area, self.protocol)
         self.assertIn("is handed over", step.where)
         # the twin: another protocol of the area, the area's handover current
         other = self.area / "PROTOCOL-s2-other.md"
         other.write_text(self.protocol.read_text(encoding="utf-8"), encoding="utf-8")
-        self.assertFalse(handovers.protocol_handed_over(self.area, other))
+        self.assertFalse(
+            handovers.protocol_handed_over(self.area, other, state_of(self.area))
+        )
 
     def test_a_handover_withdraws_the_earlier_report_result_block(self):
         rc, out = self.audit(cases.CLEAN)
@@ -557,7 +573,7 @@ class HandoverRecovery(cases._Chain):
         self.assertTrue(text.startswith(prefix), text)
         self.assertIn("A closing observation.", text)
         self.assertNotIn(self.run_id, text)
-        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
         self.staged_release()
 
     def test_other_reports_still_hold_a_withdrawn_result(self):
@@ -592,7 +608,7 @@ class HandoverRecovery(cases._Chain):
         data = json.loads(path.read_text())
         data["schema"] = True
         path.write_text(json.dumps(data))
-        self.assertFalse(handovers.valid(self.area))
+        self.assertFalse(handovers.valid(self.area, state_of(self.area)))
         with self.assertRaises(handovers.HandoverError):
             handovers.read_handover(path)
 
@@ -639,7 +655,11 @@ class HandoverRecovery(cases._Chain):
         self.staged_release()
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
         self.assertTrue(findings.record_status(self.area, staged=True).errors)
-        self.assertFalse(handovers.valid(self.area, staged=True))
+        self.assertFalse(
+            handovers.valid(
+                self.area, state_of(self.area, file_state=INDEX), staged=True
+            )
+        )
         self.assertTrue(
             undecided.undecided_blockers(
                 self.lab.root,
@@ -672,7 +692,7 @@ class HandoverRecovery(cases._Chain):
         broken = self.area / "audits" / "handovers" / "handover-broken.json"
         broken.parent.mkdir(parents=True)
         broken.write_text("{}", encoding="utf-8")
-        problems = attempts.area_integrity(self.area).problems
+        problems = evidence.read_evidence(self.area, staged=False).problems
         self.assertTrue(any(record.path.name in p for p in problems), problems)
         self.assertTrue(any(broken.name in p for p in problems), problems)
 
@@ -699,7 +719,7 @@ class HandoverRecovery(cases._Chain):
         (path,) = handovers.record_paths(self.area)
         self.assertIn("written before it", out)
         self.assertIn(path.name, out)
-        self.assertFalse(handovers.valid(self.area))
+        self.assertFalse(handovers.valid(self.area, state_of(self.area)))
 
     def test_the_handover_writes_only_where_report_check_looks(self):
         # REPORT.MD is refused: report-check never holds that file
@@ -753,8 +773,8 @@ class HandoverRecovery(cases._Chain):
             )
         self.assertEqual(rc, 0, out.getvalue())
         self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 2)
-        self.assertTrue(handovers.valid(self.area))
-        self.assertTrue(handovers.valid(other_area))
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
+        self.assertTrue(handovers.valid(other_area, state_of(other_area)))
 
     def test_the_block_names_each_unsettled_finding_by_record_and_number(self):
         rc, out = self.audit(BLOCKED)

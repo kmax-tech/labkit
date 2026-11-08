@@ -89,6 +89,7 @@ from datetime import date
 from pathlib import Path
 
 from labkit.formats.area_state import state_of
+from labkit.formats import evidence
 from labkit.gates import registered_report
 from labkit.formats import (
     attempts,
@@ -694,7 +695,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         if root is None:
             raise ValueError("handover requires a git repository")
         report = handovers.report_destination(root, args.into)
-        state = attempts.area_integrity(area)
+        held = evidence.read_evidence(area, staged=False)
         withdrawn = protocol_block.declared_run(text)
         new = without_result(text)
         others = [p for p in handovers.declared_results(area, root) if p != protocol]
@@ -714,9 +715,9 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             path,
             why=args.why,
             tried=args.tried,
-            records=state.records,
+            records=list(held.records),
             expected=expected,
-            problems=[*state.problems, *errors],
+            problems=[*held.problems, *errors],
             account=account,
         )
         before = state_text(root, report, staged=False) or ""

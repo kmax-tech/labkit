@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 
 from labkit.formats.area_state import AreaState, state_of
+from labkit.formats import evidence
 from labkit.formats.commands import checkout_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
@@ -284,7 +285,9 @@ def measurement_refusal(base_dir: Path, protocol: Path) -> tuple[list[str], str]
     return _freeze_findings(base_dir, bound, state), _first_step(base_dir, bound, state)
 
 
-def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
+def _undecided_findings(
+    base_dir: Path, held: evidence.AreaEvidence
+) -> tuple[list[str], list[str]]:
     """(blockers, lesser): every finding still `open` in a preflight audit
     record of the area, each as `<file>: <text>`, BLOCKERs apart from the
     WARNINGs and NOTEs. A record of any stamp counts — a finding nobody
@@ -295,13 +298,13 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
     The blockers refuse (`freeze_gate`); the lesser ones are told only with
     the run acknowledged — on a clean start the named record is decided
     whole (`audit_record_gap`), and an older record's open WARNING does not
-    hold a run. Raises SystemExit on a record nobody can read."""
-    try:
-        records = findings.area_records(base_dir)
-    except findings.FindingsError as exc:
+    hold a run. HELD is the area's audit evidence (`evidence.AreaEvidence`).
+    Raises SystemExit on a record nobody can read."""
+    if held.unreadable:
         raise SystemExit(
-            with_way_out(f"runlog: {exc}", findings.record_way(base_dir))
-        ) from exc
+            with_way_out(f"runlog: {held.unreadable[0]}", findings.record_way(base_dir))
+        )
+    records = held.records
     blockers, lesser = [], []
     for u in findings.open_findings(records, mode=PREFLIGHT_AUDIT):
         (blockers if u.grade == "BLOCKER" else lesser).append(u.line)
@@ -745,7 +748,10 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
     "pilot" — agents take the way a message offers. Why each rule:
     docs/notes/2026-10-19-gates-and-run-start.md."""
     declares = "this run declares run_kind='measurement'"
-    blockers, open_lesser = _undecided_findings(base_dir)
+    blockers, open_lesser = _undecided_findings(
+        base_dir, evidence.read_evidence(base_dir, staged=False)
+    )
+    state = state_of(base_dir)
     if blockers:
         raise SystemExit(
             with_way_out(
@@ -757,7 +763,6 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
                 f"`{commands.audit_command(base_dir, '--findings')}` prints per finding",
             )
         )
-    state = state_of(base_dir)
     gaps = _freeze_findings(base_dir, prepared.bound, state)
     if not gaps:
         return False, None

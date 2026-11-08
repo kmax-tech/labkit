@@ -80,7 +80,11 @@ KNOWN_CROSSINGS = {
     # the freeze gate at a run's start: audit coverage (LAB-015), the low lane's
     # registration and which lane owes the freeze, the audit or the foreground
     # — doctrine that refuses a run, sitting in the run writer's start check
-    ("start_check", "findings"),  # findings.open_findings, findings.area_records
+    ("start_check", "findings"),  # findings.open_findings
+    (
+        "start_check",
+        "evidence",
+    ),  # evidence.read_evidence: the records the freeze gate reads
     ("start_check", "audit_gaps"),  # audit_gaps.audit_record_gap
     ("start_check", "failed_attempts"),  # failed_attempts.audit_unavailable
     ("start_check", "protocol_check"),  # protocol_check.low_registration_missing
@@ -221,6 +225,9 @@ FIELD_READERS = {
     "bound_answering_run",  # answering_run, the choice over the run facts
     "bound_runs",  # answering_run, the completed bound runs and the rest
     "facts_of",  # answering_run, a record's state, binding and repeat
+    "record_status",  # findings, the audit records and their errors
+    "evidence_gaps",  # attempts, the records and attempts gone
+    "change_findings",  # evidence, the committed evidence changed
 }
 
 

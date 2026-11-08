@@ -10,6 +10,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats.commands import gate_command
+from labkit.formats.area_state import state_of
+from labkit.formats import evidence
 from labkit.formats.gate import (
     GateFinding,
     blocker,
@@ -19,7 +21,6 @@ from labkit.formats.protocol_history import (
     registrations_as_first_measured,
 )
 from labkit.formats import (
-    evidence,
     findings,
     handovers,
     protocol_block,
@@ -82,7 +83,7 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
         theirs = f"{name}: the predecessor's area {pred.parent.name}"
         out += [
             replace(f, text=f"{theirs}: {f.text}")
-            for f in evidence.change_blockers(pred.parent)
+            for f in evidence.read_evidence(pred.parent, staged=False).change_blockers()
         ]
     out += [replace(f, text=f"{name}: {f.text}") for f in _predecessor_open(ctx, pred)]
     return out
@@ -124,9 +125,12 @@ def _undeclared_changes(
     as each of its first measurements saw it (several: the changes are owed
     against each), this protocol's as its first measurement saw it, or as
     it stands before one; or why they cannot be compared."""
-    olds, missing = registrations_as_first_measured(pred, rep.protocol, git_root(pred))
+    theirs = state_of(pred.parent).measured_of(rep.protocol).first_groups
+    olds, missing = registrations_as_first_measured(pred, theirs, git_root(pred))
     news, own_missing = registrations_as_first_measured(
-        ctx.protocol, str(ctx.head.id), git_root(ctx.protocol)
+        ctx.protocol,
+        ctx.area_state.measured_of(ctx.head.id).first_groups,
+        git_root(ctx.protocol),
     )
     gaps = [
         f"{p.name}: {why}"
@@ -182,7 +186,10 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     decided, or the predecessor is handed over (its open BLOCKERs stay open
     in that record)."""
     try:
-        held = findings.open_blockers(findings.area_records(pred.parent))
+        theirs = evidence.read_evidence(pred.parent, staged=False)
+        if theirs.unreadable:
+            raise findings.FindingsError("; ".join(theirs.unreadable))
+        held = theirs.open_blockers
         recorded = handovers.handed_over(pred.parent) if held else set()
     except (findings.FindingsError, handovers.HandoverError) as exc:
         return [

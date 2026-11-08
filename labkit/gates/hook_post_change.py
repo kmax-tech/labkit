@@ -38,8 +38,6 @@ from labkit.gates.hook_session import project_dir
 from labkit.gates.hook_session import session_repo
 from labkit.gates.hook_session import tell_context
 from labkit.formats import (
-    attempts,
-    evidence,
     findings,
     runs,
 )
@@ -47,7 +45,8 @@ from labkit.checks import notes_check, protocol_report
 from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import report_hold
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, index_names_gone_runs, state_of
+from labkit.formats import evidence
 from labkit.formats.commands import checkout_command
 from labkit.formats.run_index import RunIndexError
 from labkit.formats.runs import RUNS_DIR
@@ -95,20 +94,15 @@ def gone_run_areas(repo: Path) -> list[Path]:
     return [
         area
         for area in sorted(p for p in base.iterdir() if p.is_dir())
-        if index_problems(area)
+        if index_names_gone_runs(area)
     ]
 
 
-def index_problems(area: Path) -> list[str]:
-    """What AREA's deleted runs tell the evidence check (`area_state`): each
-    run a commit holds whose directory is gone, with the checkout that
-    restores it; each run only the local run index lists, lost; or why the
-    index does not read — a damaged index hides those runs, so it is told,
-    never skipped."""
-    try:
-        state = state_of(area)
-    except RunIndexError as exc:
-        return [exc.why]
+def index_problems(state: AreaState) -> list[str]:
+    """What the deleted runs of an area (its STATE) tell the evidence check:
+    each run a commit holds whose directory is gone, with the checkout that
+    restores it; each run only the local run index lists, lost; or why git
+    could not list the runs it holds — told, never skipped."""
     return (
         ([state.history_unread] if state.history_unread else [])
         + [
@@ -134,19 +128,22 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
     """What happened to each of AREAS' evidence, told right after the tool
     that changed it, once per state (CACHE, updated in place), each line as
     `<area>: <sentence>` with its way out: what the stop and the commit
-    hold — every integrity problem (`attempts.area_integrity`) and every
-    change git can undo (`evidence.changes`, `evidence.ignored`) — and,
+    hold — every integrity problem (`evidence.AreaEvidence`) and every
+    change git can undo (`evidence.AreaEvidence.change_sentences`, `evidence.ignored`) — and,
     apart, what is only lost: a run the index lists whose directory is gone
     (`index_problems`), which neither holds. An area found clean forgets its
     state, so a later problem of the same text is told again."""
     out: list[str] = []
     for area in areas:
-        held = [
-            *attempts.area_integrity(area).problems,
-            *evidence.changes(area),
-            *evidence.ignored(area),
-        ]
-        lost = index_problems(area)
+        try:
+            state = state_of(area)
+        except RunIndexError as exc:
+            # the index does not read: told as a loss, held by nothing
+            state, lost = None, [exc.why]
+        else:
+            lost = index_problems(state)
+        kept = evidence.read_evidence(area, staged=False)
+        held = [*kept.problems, *kept.change_sentences(), *kept.ignored]
         lines = held + lost
         key = f"{EVIDENCE_KEY}{area}"
         if not lines:

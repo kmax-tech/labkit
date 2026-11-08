@@ -73,7 +73,6 @@ from typing import TYPE_CHECKING
 
 from labkit.formats.commands import contract_command
 from labkit.formats import (
-    evidence,
     findings,
     handovers,
     protocol_block,
@@ -92,6 +91,7 @@ from labkit.formats.commands import (
     withdraw_command,
 )
 from labkit.formats.area_state import INDEX, TREE, AreaState, Measured, state_of
+from labkit.formats import evidence
 from labkit.gates.undecided import undecided_state
 
 if TYPE_CHECKING:
@@ -158,11 +158,12 @@ def next_step(
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
     # the area's state once, for every step and for the chain
-    area_state = state_of(area)
+    area_state = state_of(area, file_state=state)
+    held = evidence.read_evidence(area, staged=staged)
     measured = area_state.measured_of(protocol_block.head(text).id)
     hint = _report_hint(protocol, text, measured)
     before = _before_the_chain(
-        area, protocol, text, report, hint, area_state, staged=staged
+        area, protocol, text, report, hint, area_state, held, staged=staged
     )
     if before is not None:
         return before
@@ -188,7 +189,12 @@ def next_step(
             "run has not opened",
         )
     ctx = report_context.checked(
-        area, protocol, state=state, text=text, area_state=area_state
+        area,
+        protocol,
+        state=state,
+        text=text,
+        area_state=area_state,
+        area_evidence=held,
     )
     account = _progress_step(ctx)
     if account is not None:
@@ -320,6 +326,7 @@ def _before_the_chain(
     report: protocol_check.FieldReport,
     hint: str,
     area_state: AreaState,
+    held: evidence.AreaEvidence,
     *,
     staged: bool,
 ) -> Step | None:
@@ -330,7 +337,7 @@ def _before_the_chain(
     return (
         _field_step(protocol, report, hint)
         or _staged_area_step(area, text, staged=staged)
-        or _restore_step(area, staged=staged)
+        or _restore_step(held)
         or _handed_over(area, protocol, text, area_state, staged=staged)
     )
 
@@ -368,13 +375,13 @@ def _protocol_text(area: Path, protocol: Path, *, staged: bool) -> str:
     return held
 
 
-def _restore_step(area: Path, *, staged: bool) -> Step | None:
-    """The restore of AREA's committed evidence changed against HEAD as the
-    step (`evidence.change_blockers`, report-check's first station; the
-    index's change when STAGED), or None. It comes before the handover: a handover's report is released by
-    the report reviews here, and a handover acknowledges no change git can
-    undo."""
-    changed = evidence.change_blockers(area, staged=staged)
+def _restore_step(held: evidence.AreaEvidence) -> Step | None:
+    """The restore of the area's committed evidence changed against HEAD as
+    the step (HELD's `change_blockers`, report-check's first station; the
+    index's change under INDEX), or None. It comes before the handover: a
+    handover's report is released by the report reviews here, and a
+    handover acknowledges no change git can undo."""
+    changed = held.change_blockers()
     if not changed:
         return None
     return Step(
@@ -429,7 +436,7 @@ def _handed_over(
     report for its review."""
     from labkit.gates.registered_report import report_owed
 
-    if not handovers.protocol_handed_over(area, protocol):
+    if not handovers.protocol_handed_over(area, protocol, state):
         return None
 
     owed = report_owed(

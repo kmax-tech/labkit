@@ -12,6 +12,7 @@ from pathlib import Path
 from labkit.formats import (
     protocol_block,
 )
+from labkit.formats import evidence
 from labkit.formats.area_state import INDEX, PROPOSED, TREE, AreaState, state_of
 from labkit.checks.audit_binding import (
     audited_run,
@@ -63,11 +64,12 @@ class Checked:
             `answering_run.bound_answering_run`: the one choice every gate holds the
             protocol to), or None.
         why: Why there is no answering run, when RUN is None.
-        area_state: The area as the working tree holds it
-            (`area_state.state_of`): its runs, the runs git holds back, what
-            each protocol measured — the tree in every state, as the
-            stations read it (the caller makes the tree that state). Built
-            once per check run and handed to every station and to finalize.
+        area_state: The area as STATE holds it (`area_state.state_of`): its
+            runs, the runs git holds back, what each protocol measured, its
+            handed to every station and to finalize — the index's runs for
+            INDEX, the tree's otherwise.
+        evidence: The area's audit evidence as STATE holds it
+            (`evidence.AreaEvidence`): records, gaps, changes, ignored files.
     """
 
     area: Path
@@ -81,6 +83,7 @@ class Checked:
     run: Path | None
     why: str
     area_state: AreaState
+    evidence: evidence.AreaEvidence
 
 
 def checked(
@@ -90,10 +93,12 @@ def checked(
     state: str = TREE,
     text: str | None = None,
     area_state: AreaState | None = None,
+    area_evidence: evidence.AreaEvidence | None = None,
 ) -> Checked:
     """The context of one check: TEXT is the protocol as STATE holds it
     (the working tree when None); AREA_STATE the area's state when the
-    caller built it already (one build per check run), else built here.
+    caller built it already (one build per check run), else built here;
+    AREA_EVIDENCE likewise (`evidence.read_evidence`, the index's for INDEX).
     Raises `protocol_block.BlockError` on an unreadable head, `AuditError`
     out of the run choice, `run_index.RunIndexError` on a run index that
     does not read."""
@@ -101,7 +106,7 @@ def checked(
         text = protocol.read_text(encoding="utf-8")
     head = protocol_block.head(text)
     declared, declaration_gap = declaration(text)
-    built = area_state if area_state is not None else state_of(area)
+    built = area_state if area_state is not None else state_of(area, file_state=state)
     run, why = audited_run(built, protocol, text)
     return Checked(
         area=area.resolve(),
@@ -115,6 +120,11 @@ def checked(
         run=run,
         why=why,
         area_state=built,
+        evidence=(
+            area_evidence
+            if area_evidence is not None
+            else evidence.read_evidence(area, staged=state == INDEX)
+        ),
     )
 
 

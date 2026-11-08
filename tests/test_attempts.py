@@ -21,6 +21,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.formats import attempts  # noqa: E402
+from labkit.formats import evidence  # noqa: E402
 from labkit.gates import undecided
 from labkit.formats import failed_attempts
 from labkit.formats.attempts import Attempt  # noqa: E402
@@ -387,7 +388,9 @@ class JournalCopy(unittest.TestCase):
         )
         attempts.journal_path(area).unlink()
         (problem,) = [
-            p for p in attempts.area_integrity(area).problems if str(copy) in p
+            p
+            for p in evidence.read_evidence(area, staged=False).problems
+            if str(copy) in p
         ]
         self.assertIn(f"{copy}:3: not JSON", problem)  # the copy's own line
 

@@ -35,6 +35,7 @@ from labkit.checks.audit_binding import (
     audited_run,
 )
 from labkit.formats.area_state import state_of
+from labkit.formats import evidence
 from labkit.checks import report_blocks
 from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
@@ -871,7 +872,7 @@ def lost_evidence(protocol: Path) -> LostEvidence | None:
     and protocol-fill's adoption and handover read. Raises RuntimeError
     when git fails."""
     area = protocol.parent
-    gaps = attempts.evidence_gaps(area)
+    gaps = list(evidence.read_evidence(area, staged=False).gaps)
     if not gaps:
         return None
     return LostEvidence(

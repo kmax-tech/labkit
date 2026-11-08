@@ -38,7 +38,7 @@ import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 from labkit.formats import digests
 from labkit import PACKAGE_DIR
@@ -48,9 +48,6 @@ from labkit.formats import (
     standard_contract,
     answering_run,
 )
-
-if TYPE_CHECKING:
-    from labkit.formats.area_state import Measured
 
 
 @dataclass(frozen=True)
@@ -1149,8 +1146,18 @@ BEFORE_RUN_CLAIMS = (
 _NA = re.compile(r"(?i)^n/a\b")
 
 
+class AnsweringChoice(Protocol):
+    """What this check reads of what the area measured of the protocol —
+    the shape of `area_state.Measured` it needs (`answering`), named here
+    so the state can import this module without a cycle."""
+
+    def answering(self, adopted: str | None) -> answering_run.AnsweringRun:
+        """The run every check holds the protocol to."""
+        ...
+
+
 def written_before_run(
-    measured: "Measured", text: str, head: protocol_block.Head
+    measured: AnsweringChoice, text: str, head: protocol_block.Head
 ) -> list[tuple[int, str]]:
     """(line, label) of every BEFORE_RUN_CLAIMS field that is filled while
     the head declares no `[result] run` and no completed run is bound to

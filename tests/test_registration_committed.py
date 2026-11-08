@@ -1179,7 +1179,11 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
                 ]
             )
         self.assertEqual(code, 0, out.getvalue())
-        self.assertTrue(handovers.protocol_handed_over(self.area, self.proto))
+        self.assertTrue(
+            handovers.protocol_handed_over(
+                self.area, self.proto, area_state.state_of(self.area)
+            )
+        )
         self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
         new_area = self.area.parent / "02-new"
         new_area.mkdir()
@@ -1194,7 +1198,11 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
                 successor, text, measured=_measured(successor, text), unread=True
             )
         )
-        self.assertTrue(handovers.protocol_handed_over(self.area, self.proto))
+        self.assertTrue(
+            handovers.protocol_handed_over(
+                self.area, self.proto, area_state.state_of(self.area)
+            )
+        )
 
     def test_a_handover_ends_a_changed_binding_without_releasing_a_result(self):
         from labkit.tools import protocol_fill

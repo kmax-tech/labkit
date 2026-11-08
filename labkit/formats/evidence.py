@@ -43,6 +43,8 @@ Why: docs/notes/2026-10-28-evidence-changes.md.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 import shlex
 from collections.abc import Callable, Iterable
 from datetime import datetime
@@ -50,6 +52,7 @@ from pathlib import Path
 
 from labkit.formats.commands import checkout_command
 from labkit.formats import findings
+from labkit.formats.attempts import evidence_gaps
 from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import GateFinding, blocker, with_way_out
 from labkit.formats.repo import (
@@ -357,17 +360,18 @@ def _undone_in(
     return undone
 
 
-def changes(area: Path, *, staged: bool = False) -> list[str]:
-    """`change_findings` as sentences, each with its way out."""
-    return [with_way_out(why, fix) for why, fix in change_findings(area, staged=staged)]
+def change_sentences(found: Sequence[tuple[str, str]]) -> list[str]:
+    """FOUND (`change_findings`, read once into the area state) as
+    sentences, each with its way out."""
+    return [with_way_out(why, fix) for why, fix in found]
 
 
-def change_blockers(area: Path, *, staged: bool = False) -> list[GateFinding]:
-    """`change_findings` as blockers, each with its restore as the way out —
-    what a gate that releases on AREA's records holds first: report-check
-    (its first station, and so `labkit-next`), a replacement for its
-    predecessor's area, an exploration's registered report."""
-    return [blocker(why, fix=fix) for why, fix in change_findings(area, staged=staged)]
+def change_blockers(found: Sequence[tuple[str, str]]) -> list[GateFinding]:
+    """FOUND (`change_findings`) as blockers, each with its restore as the
+    way out — what a gate that releases on an area's records holds first:
+    report-check (its first station, and so `labkit-next`), a replacement
+    for its predecessor's area, an exploration's registered report."""
+    return [blocker(why, fix=fix) for why, fix in found]
 
 
 def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]]:
@@ -644,3 +648,63 @@ def ignored(area: Path) -> list[str]:
                 )
             )
     return out
+
+
+@dataclass(frozen=True)
+class AreaEvidence:
+    """An area's audit evidence as one file state holds it — what the stop
+    and the commit hold beside report-check, what `labkit-audit --findings`
+    lists, what a handover records (`attempts`, `findings`, `evidence`
+    read once).
+
+    Attributes:
+        records: The audit records that read (`findings.record_status`).
+        gaps: Every record or attempt that is gone, or a journal that does
+            not read, each with its restore (`attempts.evidence_gaps`).
+        unreadable: Each record that does not read, its sentence
+            (`findings.record_status`) — a broken file hides no other.
+        changes: Every change of the committed evidence against HEAD that
+            breaks its rule, as (sentence, way out) (`evidence.change_findings`);
+            `change_sentences` and `change_blockers` render them.
+        ignored: Every file labkit wrote that git ignores, with its way out
+            (`evidence.ignored`).
+    """
+
+    records: tuple[findings.Record, ...]
+    gaps: tuple[str, ...]
+    unreadable: tuple[str, ...]
+    changes: tuple[tuple[str, str], ...]
+    ignored: tuple[str, ...]
+
+    @property
+    def problems(self) -> tuple[str, ...]:
+        """GAPS and UNREADABLE together: every problem that keeps the rest
+        from counting."""
+        return (*self.gaps, *self.unreadable)
+
+    @property
+    def open_blockers(self) -> list[findings.OpenFinding]:
+        """The findings still `open` in RECORDS graded BLOCKER
+        (`findings.open_blockers`): what the stop and the commit hold."""
+        return findings.open_blockers(self.records)
+
+    def change_sentences(self) -> list[str]:
+        """CHANGES as sentences with their way out (`change_sentences`)."""
+        return change_sentences(self.changes)
+
+    def change_blockers(self) -> list[GateFinding]:
+        """CHANGES as blockers with their restore (`change_blockers`)."""
+        return change_blockers(self.changes)
+
+
+def read_evidence(area: Path, staged: bool) -> AreaEvidence:
+    """AREA's audit evidence (`Evidence`) as the tree or, STAGED, the index
+    holds it, each reader called once. Raises RuntimeError when git fails."""
+    status = findings.record_status(area, staged=staged)
+    return AreaEvidence(
+        tuple(status.records),
+        tuple(evidence_gaps(area, staged=staged)),
+        tuple(status.errors),
+        tuple(change_findings(area, staged=staged)),
+        tuple(ignored(area)),
+    )

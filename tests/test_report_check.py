@@ -212,9 +212,16 @@ class ReportCheck(unittest.TestCase):
         )
         self.assertEqual(ctx.text, proto.read_text(encoding="utf-8"))
         # the index's text, not the tree's: the declaration comes from there
+        # (outside a repository the index has no runs: the tree's state is
+        # handed in, as a caller that built one does)
         staged = protocol_result.fill_result_run(ctx.text, run.name)
         ctx = report_context.checked(
-            area, proto, state=report_context.INDEX, text=staged
+            area,
+            proto,
+            state=report_context.INDEX,
+            text=staged,
+            area_state=ctx.area_state,
+            area_evidence=ctx.evidence,
         )
         self.assertEqual((ctx.state, ctx.declared), (report_context.INDEX, run.name))
         self.assertEqual(ctx.head.repeat_cost, "low")

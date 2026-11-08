@@ -1604,7 +1604,7 @@ def without_decisions(text: str) -> str | None:
     """TEXT, a record's, with every finding's decision lines removed —
     `status`, `reason` and `effect`, a multi-line value whole: what
     `write_decision` keeps byte for byte. Two versions of one record whose
-    results are equal differ in decisions alone (`evidence.changes`). None
+    results are equal differ in decisions alone (`evidence.AreaEvidence.change_sentences`). None
     when a finding lacks the status and reason lines labkit-audit writes,
     or a multi-line value never closes. Pure."""
     lines = text.splitlines(keepends=True)
@@ -1808,7 +1808,7 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
     Return readable records and errors separately for recovery guidance.
     `area_records` is the strict view, which refuses any error; the
     stop/commit, `--findings` and the handover read this one through
-    `attempts.area_integrity`, the errors kept beside. At the index,
+    `evidence.AreaEvidence`, the errors kept beside. At the index,
     an unstaged record is an error too; decisions are never read from the
     tree in place of the index. No writes or console output.
     """
@@ -1876,7 +1876,7 @@ def area_records(area: Path) -> list[Record]:
 
     Raise FindingsError on a malformed or unreadable record. The index's
     records and the readers that keep the errors beside the readable
-    records use `record_status` (`attempts.area_integrity`).
+    records use `record_status` (`evidence.AreaEvidence`).
     """
     status = record_status(area)
     if status.errors:

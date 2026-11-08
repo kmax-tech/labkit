@@ -842,28 +842,6 @@ def unstaged_losses(
     ]
 
 
-@dataclass(frozen=True)
-class Integrity:
-    """An area's audit evidence as one state holds it: the records that
-    read, and every problem that keeps the rest from counting."""
-
-    records: list[findings.Record]
-    problems: list[str]
-
-
-def area_integrity(area: Path, *, staged: bool = False) -> Integrity:
-    """AREA's readable audit records and its integrity problems in the tree
-    or, STAGED, the index: every record or attempt that is gone
-    (`area_gaps`), a journal that does not read, and each record that does
-    not read (`findings.record_status`) — a broken file hides no other
-    record. The one assembly the stop/commit, `labkit-audit --findings` and
-    the handover read. Raises RuntimeError when git fails."""
-    status = findings.record_status(area, staged=staged)
-    return Integrity(
-        status.records, [*evidence_gaps(area, staged=staged), *status.errors]
-    )
-
-
 def evidence_gaps(area: Path, *, staged: bool = False) -> list[str]:
     """Why AREA's audit evidence does not stand in the tree or, STAGED, the
     index, one sentence each with its restore: every file gone

@@ -137,30 +137,37 @@ class Committed(unittest.TestCase):
 
     def test_a_decision_through_decide_is_no_change_in_tree_or_index(self):
         findings.write_decision(self.record, 1, "limitation", "noted", "stands")
-        self.assertEqual(evidence.changes(self.area), [])
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area)), []
+        )
         _git(self.root, "add", "-A")
-        self.assertEqual(evidence.changes(self.area, staged=True), [])
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area, staged=True)),
+            [],
+        )
 
     def test_a_record_edited_beyond_its_decisions_names_its_restore(self):
         text = self.record.read_text(encoding="utf-8")
         self.record.write_text(text.replace("seed", "SEED"), encoding="utf-8")
-        (line,) = evidence.changes(self.area)
+        (line,) = evidence.change_sentences(evidence.change_findings(self.area))
         rel = f"experiments/01-x/audits/{self.record.name}"
         self.assertIn("changed beyond its findings' decision lines", line)
         self.assertIn(f"`git checkout HEAD -- {rel}`", line)
         self.assertIn(". Next: ", line)
         _git(self.root, "checkout", "HEAD", "--", rel)
-        self.assertEqual(evidence.changes(self.area), [])
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area)), []
+        )
 
     def test_a_kept_answer_changed_is_named(self):
         self.answer.write_text("FINDING rewritten\n", encoding="utf-8")
-        (line,) = evidence.changes(self.area)
+        (line,) = evidence.change_sentences(evidence.change_findings(self.area))
         self.assertIn("audits/answers/a1.txt: changed in the tree since HEAD", line)
 
     def test_a_closed_runs_files_changed_or_gone_are_one_line(self):
         (self.closed / "metrics.json").write_text('{"acc": 0.9}\n', encoding="utf-8")
         (self.closed / "config.json").unlink()
-        (line,) = evidence.changes(self.area)
+        (line,) = evidence.change_sentences(evidence.change_findings(self.area))
         self.assertIn(f"runs/{CLOSED}: the closed run's", line)
         self.assertIn("metrics.json (changed)", line)
         self.assertIn("config.json (deleted)", line)
@@ -169,7 +176,9 @@ class Committed(unittest.TestCase):
     def test_an_open_run_is_still_runlogs_to_write(self):
         (self.open / "metrics.json").write_text('{"acc": 0.9}\n', encoding="utf-8")
         (self.open / "completion.json").write_text("{}\n", encoding="utf-8")
-        self.assertEqual(evidence.changes(self.area), [])
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area)), []
+        )
 
     def test_the_index_is_what_the_commit_carries(self):
         _git(
@@ -179,8 +188,12 @@ class Committed(unittest.TestCase):
             "--cached",
             f"experiments/01-x/runs/{CLOSED}/metrics.json",
         )
-        self.assertEqual(evidence.changes(self.area), [])  # the tree still holds it
-        (line,) = evidence.changes(self.area, staged=True)
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area)), []
+        )  # the tree still holds it
+        (line,) = evidence.change_sentences(
+            evidence.change_findings(self.area, staged=True)
+        )
         self.assertIn("metrics.json (deleted) in the index since HEAD", line)
 
     def test_evidence_git_ignores_is_named_and_litter_is_not(self):
@@ -275,7 +288,10 @@ class Session(unittest.TestCase):
         _git(self.root, "checkout", parent[:12], "--", rel)
         rc, err = self._stop()
         self.assertEqual(rc, 0, err)
-        self.assertEqual(evidence.changes(self.area, staged=True), [])
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area, staged=True)),
+            [],
+        )
         self._commit("restore")
         rc, err = self._stop()
         self.assertEqual(rc, 0, err)

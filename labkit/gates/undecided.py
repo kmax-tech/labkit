@@ -11,7 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import attempts, evidence, findings, handovers
+from labkit.formats import attempts, evidence, handovers
+from labkit.formats.area_state import INDEX, TREE, state_of
 from labkit.formats.scope_sha import areas_touched
 
 
@@ -56,7 +57,7 @@ def undecided_state(
     the session worked in, not the whole repo
     (a repo's old areas must not block every stop).
     STAGED (the pre-commit): the audit records with their decisions and
-    the attempt journal as the index holds them (`attempts.area_integrity`)
+    the attempt journal as the index holds them (`evidence.AreaEvidence`)
     — what the commit carries, not the tree.
     A current handover acknowledges integrity gaps and the open BLOCKERs it
     records for this stop/commit alone (`handovers.acknowledgement`): it
@@ -66,7 +67,7 @@ def undecided_state(
     acknowledgement. Where the gaps stand and a handover record of the area
     does not count, a line per record says why (`handovers.mismatch`).
     Evidence changed against HEAD in that state, or ignored by git
-    (`evidence.changes`, `evidence.ignored`), holds as well, and no
+    (`evidence.AreaEvidence.change_sentences`, `evidence.ignored`), holds as well, and no
     handover acknowledges it: a restore from git undoes it."""
     out: list[str] = []
     acknowledged: list[str] = []
@@ -81,25 +82,24 @@ def undecided_state(
     ]
     for area in areas:
         shown = area.relative_to(repo.resolve()).as_posix()
+        state = state_of(area, file_state=INDEX if staged else TREE)
+        held = evidence.read_evidence(area, staged=staged)
         # Only a current handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
-        handed_over = handovers.acknowledgement(area, staged=staged)
-        state = attempts.area_integrity(area, staged=staged)
-        if handed_over.valid and state.problems:
+        handed_over = handovers.acknowledgement(area, state, staged=staged)
+        if handed_over.valid and held.problems:
             acknowledged.append(
                 f"{shown}: a handover acknowledges this loss — not restored, and "
-                f"no audit or adoption passes on it: " + "; ".join(state.problems)
+                f"no audit or adoption passes on it: " + "; ".join(held.problems)
             )
-        if not handed_over.valid and state.problems:
-            out += [f"{shown}: {problem}" for problem in state.problems]
+        if not handed_over.valid and held.problems:
+            out += [f"{shown}: {problem}" for problem in held.problems]
             # a handover written for this area that no longer counts says why
             out += [
                 f"{shown}: the handover {name} no longer acknowledges this: {why}"
                 for name, why in handed_over.refused.items()
             ]
-        open_lines = [
-            f"{shown}: {u.line}" for u in findings.open_blockers(state.records)
-        ]
+        open_lines = [f"{shown}: {u.line}" for u in held.open_blockers]
         if handed_over.valid and open_lines:
             acknowledged.append(
                 f"{shown}: a handover records these open BLOCKERs — the protocol "
@@ -108,6 +108,6 @@ def undecided_state(
         else:
             out += open_lines
         # undone from git, so never a handover's to acknowledge
-        changed = evidence.changes(area, staged=staged) + evidence.ignored(area)
+        changed = [*held.change_sentences(), *held.ignored]
         out += [f"{shown}: {line}" for line in changed]
     return Undecided(out, acknowledged)

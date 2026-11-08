@@ -108,7 +108,8 @@ from labkit.formats.answering_run import (
     adopted_run,
     is_measurement,
 )
-from labkit.formats.area_state import AreaState, state_of
+from labkit.formats.area_state import INDEX, TREE, AreaState, state_of
+from labkit.formats import evidence
 from labkit.formats.protocol_history import (
     NO_COMMIT,
     UNKNOWN_COMMIT,
@@ -120,7 +121,6 @@ from labkit.formats import (
     attempts,
     audit_gaps,
     console,
-    evidence,
     handovers,
     protocol_block,
     runs,
@@ -184,9 +184,7 @@ from labkit.formats.standard_contract import (
 )
 from labkit.gates.report_context import (
     Checked,
-    INDEX,
     PROPOSED,
-    TREE,
     checked,
     declaration,
     pending_adoption,
@@ -439,7 +437,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     # the way out is a new audit, and `attempts.begin` refuses every attempt
     # while one of these stands, so the blocker names the loss, never
     # "none has run yet" or `--mode analysis`
-    lost = attempts.evidence_gaps(ctx.area) if not covering else []
+    lost = list(ctx.evidence.gaps) if not covering else []
     if lost:
         findings_command = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
         return blocker(
@@ -780,7 +778,7 @@ def chain_gaps(
     same_text = ctx.state != PROPOSED
     # 0. evidence — an adoption cut off, then committed evidence changed
     out = cut_off_adoption_gaps(ctx)
-    out += evidence.change_blockers(ctx.area, staged=ctx.state == INDEX)
+    out += ctx.evidence.change_blockers()
     # 1. declaration
     out += declaration_gaps(ctx)
     # 2. registration — the freeze where the lane owes it, else the
@@ -1218,8 +1216,8 @@ def hold_registered(
     A current handover ends the report-path obligation without releasing
     a result; the report it delivers still owes its review. Raises `protocol_block.BlockError` on a head that does not read — the
     caller read the declaration off the same text first."""
-    changed = evidence.change_blockers(protocol.parent, staged=staged)
-    state = state_of(protocol.parent)
+    state = state_of(protocol.parent, file_state=INDEX if staged else TREE)
+    changed = evidence.read_evidence(protocol.parent, staged=staged).change_blockers()
     measured = state.measured_of(protocol_block.head(text).id)
     gaps = changed + [
         g
@@ -1227,7 +1225,7 @@ def hold_registered(
             (
                 report_binding_gap(protocol, text, measured=measured, unread=True)
                 if not handovers.protocol_handed_over(
-                    protocol.parent, protocol, staged=staged, state=state
+                    protocol.parent, protocol, state, staged=staged
                 )
                 else None
             ),

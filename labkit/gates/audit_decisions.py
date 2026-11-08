@@ -14,13 +14,13 @@ from pathlib import Path
 from labkit.formats import (
     attempts,
     console,
-    evidence,
     failed_attempts,
     findings,
     promises,
     protocol_check,
     protocol_history,
 )
+from labkit.formats import evidence
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_protocols,
@@ -360,7 +360,7 @@ class _Listing:
     journal ended without a record) that no later completed audit of their
     mode, protocol and promise block superseded, which of them are
     HISTORICAL, the calls a later audit SUPERSEDED, and the evidence CHANGED
-    against git (`evidence.changes`, `evidence.ignored`) — undone by a
+    against git (`evidence.AreaEvidence.change_sentences`, `evidence.ignored`) — undone by a
     restore, never by a handover."""
 
     records: list[findings.Record]
@@ -381,7 +381,7 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     """RECORD alone; else every readable record with an open finding of
     any grade — what a frozen preflight blocks on (`findings.open_findings`)
     — and the newest one, the others counted. Evidence and read errors of the
-    area are kept beside them (`attempts.area_integrity`). A failed audit
+    area are kept beside them (`evidence.AreaEvidence`). A failed audit
     call — a `-failed.toml`, or an audit attempt the journal ended without
     a record (outcome `none`: an answer that did not read, a call that
     raised) — remains recovery guidance until a later completed audit of
@@ -400,21 +400,22 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     (`attempts.begin`). This does not establish whether that audit covers
     the current run.
     """
-    state = attempts.area_integrity(area)
-    errors = list(state.problems)
-    changed = (*evidence.changes(area), *evidence.ignored(area))
+    held = evidence.read_evidence(area, staged=False)
+    errors = list(held.problems)
+    changed = (*held.change_sentences(), *held.ignored)
     if record is not None:
         try:
             read = findings.read(record_path(area, record))
             return _Listing([read], errors, 0, changed=changed)
         except findings.FindingsError as exc:
             return _Listing([], [*errors, str(exc)], 0, changed=changed)
-    calls = _open_calls(area, state.records, errors)
-    opened = {u.record.path for u in findings.open_findings(state.records)}
-    records = [r for r in state.records if r.path in opened]
-    if state.records and state.records[-1] not in records:
-        records.append(state.records[-1])
-    hidden = len(state.records) - len(records)
+    readable = list(held.records)
+    calls = _open_calls(area, readable, errors)
+    opened = {u.record.path for u in findings.open_findings(readable)}
+    records = [r for r in readable if r.path in opened]
+    if readable and readable[-1] not in records:
+        records.append(readable[-1])
+    hidden = len(readable) - len(records)
     return _Listing(
         records,
         errors,
@@ -545,7 +546,7 @@ def show_findings(area: Path, record: Path | None, protocol: Path | None = None)
         exit 2   no audit record and no attempt (refused, nothing to
                  decide); an evidence error of the area (also with
                  RECORD); a failed call no completed audit covers;
-                 evidence changed against git (`evidence.changes`,
+                 evidence changed against git (`evidence.AreaEvidence.change_sentences`,
                  `evidence.ignored`, shown first with its restore — a
                  handover does not settle it)
     """

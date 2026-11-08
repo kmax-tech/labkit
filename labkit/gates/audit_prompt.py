@@ -653,7 +653,8 @@ def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange
     pid = protocol_block.head(text).id
     if pid is None:
         return FieldChange(hit.label, None, "the protocol has no id", hit.value)
-    texts, why = registrations_as_first_measured(protocol, pid, git_root(protocol))
+    groups = state_of(protocol.parent).measured_of(pid).first_groups
+    texts, why = registrations_as_first_measured(protocol, groups, git_root(protocol))
     if not texts:
         return FieldChange(hit.label, None, why, hit.value)
     then, where = texts[0]

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from labkit.gates import hook_post_change
 from labkit.formats import run_index
+from labkit.formats.area_state import state_of
 from labkit.run import runlog
 from labkit.tools import scaffold
 from protocol_fixture import head
@@ -134,11 +135,12 @@ class IndexRead(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             header = "\t".join(run_index.RUN_INDEX_COLS)
             area = self.area_with(d, header, "2026-01-01T00-00-00_0002")
-            (line,) = hook_post_change.index_problems(area)
-            self.assertIn("runs.tsv:2", line)
+            with self.assertRaises(run_index.RunIndexError) as cm:
+                state_of(area)
+            self.assertIn("runs.tsv:2", cm.exception.why)
             # the twin: a whole row of a run whose folder is gone is told as gone
             self.area_with(d, header, self.row("2026-01-01T00-00-00_0001"))
-            (line,) = hook_post_change.index_problems(area)
+            (line,) = hook_post_change.index_problems(state_of(area))
             self.assertIn("2026-01-01T00-00-00_0001: its directory is gone", line)
 
     def test_a_run_does_not_start_on_a_short_row(self):

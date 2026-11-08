@@ -97,7 +97,7 @@ class ADeletedFirstMeasurementStillBinds(_Repository):
         self.assertEqual((account.run, account.state), (RUN, "unusable"))
         self.assertIn(f"git checkout {held} -- runs/{RUN}", account.why[0])
         # the evidence hook tells the restore, not a loss
-        (line,) = hook_post_change.index_problems(self.area)
+        (line,) = hook_post_change.index_problems(state_of(self.area))
         self.assertIn(f"run {RUN}: its directory is gone — `git checkout {held}", line)
 
     def test_deleted_in_the_tree_only_reads_from_head_and_the_index_holds_it(self):
@@ -151,7 +151,7 @@ class AHistoryGitCannotRead(_Repository):
         self.assertIn("git fsck", state.history_unread)
         self.assertEqual(state.deleted, ())
         self.assertFalse(state.measured_of(PID).has_measured)
-        (line,) = hook_post_change.index_problems(self.area)
+        (line,) = hook_post_change.index_problems(state)
         self.assertEqual(line, state.history_unread)
 
 
@@ -216,7 +216,7 @@ class ARunOnlyTheIndexKnows(unittest.TestCase):
             self.assertTrue(m.has_measured)
             self.assertEqual((m.firsts, m.lost), ((), (RUN,)))
             self.assertFalse(state.measured_of("p-other").has_measured)
-            (line,) = hook_post_change.index_problems(area)
+            (line,) = hook_post_change.index_problems(state_of(area))
             self.assertIn(f"run {RUN}: its directory is gone — runs.tsv lists it", line)
 
     def test_a_present_run_the_index_lists_is_not_lost(self):

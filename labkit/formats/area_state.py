@@ -44,7 +44,7 @@ from labkit.formats.repo import (
     head_sha,
     text_at,
 )
-from labkit.formats.run_index import indexed_bindings
+from labkit.formats.run_index import RunIndexError, indexed_bindings
 from labkit.formats.runs import (
     CONFIG_FILE,
     RunDir,
@@ -165,6 +165,8 @@ class AreaState:
         run_facts: The facts of every present run (`answering_run.facts_of`:
             state, binding, repeat), read once — what the answering-run
             choice runs over.
+        evidence: The area's audit evidence as the file state holds it
+            (`Evidence`): records, gaps, changes, ignored files.
         measured: Protocol id → what the area measured of it (`Measured`),
             for every id a run or the index names; `measured_of` answers
             for any id.
@@ -277,7 +279,8 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
     a deleted run was measured cannot be told then —, GitError or
     RuntimeError when git fails."""
     repo = git_root(area)
-    if file_state == INDEX:
+    staged = file_state == INDEX
+    if staged:
         if repo is None:
             raise ValueError(f"{area}: the index of no repository cannot be read")
         runs = indexed_run_dirs(repo, area)
@@ -294,6 +297,16 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
     gone = held | {rd.dir.name for rd in deleted}
     lost = {r: p for r, p in indexed_bindings(area).items() if r not in gone}
     return assemble(area, repo, file_state, runs, deleted, lost, unread)
+
+
+def index_names_gone_runs(area: Path) -> bool:
+    """Does AREA's local run index list a run whose directory is gone, or
+    does the index not read? The cheap question the post-change hook asks
+    of every area before it builds a state for the ones that say yes."""
+    try:
+        return any(not run_path(area, r).is_dir() for r in indexed_bindings(area))
+    except RunIndexError:
+        return True
 
 
 class HistoryUnread(RuntimeError):
