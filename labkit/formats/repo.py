@@ -128,8 +128,10 @@ def shown(path: Path, base: Path) -> str:
     """PATH as a report line, a bundle header or a refusal names it: relative
     to BASE when it lies below it, else absolute; both resolved first (on
     macOS /var is /private/var, and a comparison of one resolved and one
-    unresolved path finds nothing below), `/`-separated. The key a stamp
-    hashes is its own rule (`scope_sha._key`), not a display."""
+    unresolved path finds nothing below), `/`-separated. A key as git
+    names it — a link by its own name, loud outside BASE — is `rel_posix`;
+    the key a stamp hashes is its own rule (`scope_sha._key`), not a
+    display."""
     p, b = path.resolve(), base.resolve()
     return p.relative_to(b).as_posix() if p.is_relative_to(b) else p.as_posix()
 

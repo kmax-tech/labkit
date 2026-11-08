@@ -16,8 +16,9 @@ Three mechanics every area's `--check` needs, held here once:
 3. **cited** — the note carries every reported number (decimal comma and
    U+2212 minus normalised first) and the run_id.
 
-Any disagreement is a SystemExit with a sentence; the verdict names what
-was compared. Rules of the lab standard: LAB-041 Generate numbers, don't retype them, LAB-043 Runs go through `runlog`.
+Any disagreement is a SystemExit with a sentence — the area's `--check`
+calls this with no main of labkit's around it (the rule by caller stands
+at `console.Refused`); the verdict names what was compared. Rules of the lab standard: LAB-041 Generate numbers, don't retype them, LAB-043 Runs go through `runlog`.
 """
 
 from __future__ import annotations

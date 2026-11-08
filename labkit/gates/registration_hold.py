@@ -179,9 +179,9 @@ def scope_changes(
     pid: str,
     run: Path,
     root: Path | None,
-    held: Measured,
+    measured: Measured,
     state: AreaState,
-    held_evidence: evidence.AreaEvidence,
+    held: evidence.AreaEvidence,
 ) -> list[GateFinding]:
     """The answering RUN holds what its protocol's first measurement said the
     number is about (`protocol_history.scope_differences`: the question and
@@ -213,7 +213,7 @@ def scope_changes(
     (`unread_hold`): the comparison could not run, which is no "nothing
     changed" (docs/notes/2026-11-03-finalize-hold-missing-once.md).
     Raises RuntimeError when git fails."""
-    firsts = [rd for group in held.first_groups for rd in group]
+    firsts = [rd for group in measured.first_groups for rd in group]
     others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
     if root is not None:
         needed = [*firsts, *([read_run_dir(run)] if others else [])]
@@ -222,7 +222,7 @@ def scope_changes(
             return [unread_hold(area, pid, unread)]
     try:
         return _scope_held(
-            area, protocol, pid, run, root, others, held, state, held_evidence
+            area, protocol, pid, run, root, others, measured, state, held
         )
     except AuditError as exc:
         # whether a follow-up's release still covers the run cannot be told:
@@ -248,7 +248,7 @@ def _scope_held(
     others: list[RunDir],
     measured: Measured,
     state: AreaState,
-    held_evidence: evidence.AreaEvidence,
+    held: evidence.AreaEvidence,
 ) -> list[GateFinding]:
     """`scope_changes` once every text it compares reads: the hold of the
     answering run's text, then of the protocol as it stands. Raises
@@ -266,9 +266,7 @@ def _scope_held(
         if found is not None:
             first, all_diffs = found
             text = state.text_of(protocol)
-            diffs, _ = released_fields(
-                all_diffs, area, protocol, text, run, seen, held_evidence
-            )
+            diffs, _ = released_fields(all_diffs, area, protocol, text, run, seen, held)
             if diffs:
                 labels = _labels(diffs)
                 restore = (
@@ -276,7 +274,7 @@ def _scope_held(
                     f"{shown_then(protocol, first, root)}, and measure again, then "
                     f"audit that run (the earlier runs stay)"
                 ) + description_added(diffs)
-                waiting = awaiting_followup(area, protocol, text, run, held_evidence)
+                waiting = awaiting_followup(area, protocol, text, run, held)
                 moved = moved_fields(seen, text)
                 refs = [
                     None if what in moved else waiting.get(field_name(what))
@@ -307,19 +305,19 @@ def _scope_held(
                         step=restore_step(protocol, first, root),
                     )
                 ]
-    now = scope_now(area, protocol, pid, run, root, measured, state, held_evidence)
-    if now is None or not now.held:
+    now = scope_now(area, protocol, pid, run, root, measured, state, held)
+    if now is None or not now.kept:
         return []
     text = state.text_of(protocol)
-    waiting = awaiting_followup(area, protocol, text, run, held_evidence)
-    refs = [waiting.get(field_name(what)) for what, _, _ in now.held]
-    labels = _labels(now.held)
+    waiting = awaiting_followup(area, protocol, text, run, held)
+    refs = [waiting.get(field_name(what)) for what, _, _ in now.kept]
+    labels = _labels(now.kept)
     restore = (
         f"restore {labels} as {now.first.dir.name} registered them"
         f"{shown_then(protocol, now.first, root)} — the runs measured under them "
         f"stay; an audit that read the rewritten fields is owed again "
         f"(`labkit-next` names it)"
-    ) + description_added(now.held)
+    ) + description_added(now.kept)
     analysis = audit_command(area, "--mode", "analysis", protocol=protocol)
     declaring: Path | None = None
     if all(refs) and code_since_run(area, run)[0]:
@@ -350,17 +348,19 @@ def _scope_held(
             f"is no correction: {restore}; or, {anew_way(pid)}"
         )
     else:
-        fix = f"{restore}{correction_way(now.held)}; or, {anew_way(pid)}"
-    held = blocker(
+        fix = f"{restore}{correction_way(now.kept)}; or, {anew_way(pid)}"
+    finding = blocker(
         f"what the number is about changed after the first measurement "
-        f"{now.first.dir.name}: {quoted_changes(now.held)} (as the protocol stands "
+        f"{now.first.dir.name}: {quoted_changes(now.kept)} (as the protocol stands "
         f"now; no run measured under it yet) — a scope set after a result was seen "
         f"does not answer the registered question, and a new measurement would "
         f"carry the change",
         fix=fix,
         step=restore_step(protocol, now.first, root),
     )
-    return withdrawn_first([held], withdraw_command(declaring) if declaring else None)
+    return withdrawn_first(
+        [finding], withdraw_command(declaring) if declaring else None
+    )
 
 
 def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
@@ -473,12 +473,12 @@ def correction_way(diffs: list[tuple[str, str, str]]) -> str:
 @dataclass(frozen=True)
 class ScopeNow:
     """The protocol as it stands against its first measurement FIRST in
-    what the number is about: HELD the differences (what, from, to) no
+    what the number is about: KEPT the differences (what, from, to) no
     correction releases, CORRECTED those a follow-up's `resolved` on a
     correction of that field released (`Correction`)."""
 
     first: RunDir
-    held: list[tuple[str, str, str]]
+    kept: list[tuple[str, str, str]]
     corrected: list[tuple[tuple[str, str, str], Correction]]
 
 

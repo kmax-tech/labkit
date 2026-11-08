@@ -10,7 +10,8 @@ detach gate (`require_detached`, with `foreground_timeout`), and for a
 full run the freeze gate (`freeze_gate`: undecided blockers, the freeze
 or the registration, the acknowledgement over a failed audit). Each
 `require_*` raises SystemExit with the sentence a person acts on, and so
-does every other refusal here; a `*_refusal` (`_constants_refusal`)
+does every other refusal here — a measure script reaches it with no main
+of labkit's around it (the rule by caller stands at `console.Refused`); a `*_refusal` (`_constants_refusal`)
 returns the sentence for its caller to raise. Nothing here writes.
 """
 

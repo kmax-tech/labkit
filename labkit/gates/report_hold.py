@@ -863,7 +863,7 @@ def review_gap(
     protocol_text: str,
     discussed: list[report_blocks.Discussion],
     repo: Path,
-    held_for: str,
+    owed_because: str,
     *,
     staged: bool,
     state: AreaState,
@@ -874,7 +874,7 @@ def review_gap(
     blocks) when no report review of exactly this state names no claim —
     the inputs the reviewer reads (`report_review_inputs.review_pieces`),
     the report and the protocol as the state holds them
-    (`report_reviews.standing`); None when one does. HELD_FOR says why the
+    (`report_reviews.standing`); None when one does. OWED_BECAUSE says why the
     report owes it, for the sentence. Guaranteed: the records, their
     binding and their claim count are read exactly; whether a claim is
     right stays the reviewer's judgement. STAGED (the pre-commit): every
@@ -920,7 +920,7 @@ def review_gap(
     if stands.released:
         return None
     # lost audit evidence, then claims, then no clean review (`review_hold`)
-    return review_hold(rel, protocol, held_for, stands, parts, command, held)
+    return review_hold(rel, protocol, owed_because, stands, parts, command, held)
 
 
 @dataclass(frozen=True)
@@ -956,7 +956,7 @@ def lost_evidence(protocol: Path, held: evidence.AreaEvidence) -> LostEvidence |
 def review_hold(
     rel: str,
     protocol: Path,
-    held_for: str,
+    owed_because: str,
     stands: report_reviews.Standing,
     parts: dict[str, str],
     command: str,
@@ -976,13 +976,13 @@ def review_hold(
     lost = lost_evidence(protocol, held)
     if lost is not None:
         return blocker(
-            f"{rel}: {held_for} and has no clean report review of this "
+            f"{rel}: {owed_because} and has no clean report review of this "
             f"state — and none can run: {lost.cause}",
             fix=lost.fix,
         )
     if stands.claims:
         return blocker(
-            f"{rel}: the report review holds this state ({held_for}) — "
+            f"{rel}: the report review holds this state ({owed_because}) — "
             f"{held_by(stands)}",
             fix=f"change the report, or a source the reviewer read, so that "
             f"no claim holds, then review that state: {command} (another "
@@ -995,7 +995,7 @@ def review_hold(
         else ""
     )
     return blocker(
-        f"{rel}: {held_for} and has no clean report review of this state "
+        f"{rel}: {owed_because} and has no clean report review of this state "
         f"(one naming no claim){since} — a cold reader checks that it "
         f"presents nothing as a result the protocol has not adopted",
         fix=f"{command} (one model call) — last, after the report's text and "
