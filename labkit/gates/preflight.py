@@ -67,6 +67,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from labkit.formats.commands import contract_command, fill_command, gate_command
 from labkit.formats.repo import area_args
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
@@ -317,7 +318,7 @@ def check_protocol_fields(
         findings.block(
             f"REPEATED (must): {twice}",
             fix=f"{protocol_check.REPEATED_WAY_OUT}; then "
-            f"`protocol-check {shlex.quote(shown(protocol, Path.cwd()))}`",
+            f"`{gate_command('protocol-check', protocol)}`",
         )
     for n, label in report.must_holes:
         findings.block(
@@ -372,7 +373,7 @@ def check_promise_sentences(
             f"[[promise]] {', '.join(open_ids)} still carries the stamp's `<…>` "
             "sentence — frozen = true refuses it",
             fix="state each promise explicitly in one sentence in its table "
-            f'(`protocol-fill {protocol.name} "<id> sentence=<the promise>"`); '
+            f"(`{fill_command(protocol, '<id> sentence=<the promise>')}`); "
             f"{contract_hint(protocol)}",
             evidence_kind=GUARANTEED,
         )
@@ -407,8 +408,7 @@ def repeat_cost_lines(
 
 def contract_hint(protocol: Path) -> str:
     """Where a protocol's owed fields are told: its `--contract` line."""
-    shown_as = shlex.quote(shown(protocol, Path.cwd()))
-    return f"`protocol-check {shown_as} --contract` names what each field owes"
+    return f"`{contract_command(protocol)}` names what each field owes"
 
 
 def _owed(findings: Findings, frozen: bool) -> Callable[[str, str], None]:

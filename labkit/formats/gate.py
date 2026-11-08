@@ -49,6 +49,7 @@ if TYPE_CHECKING:
 
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
+NOTE = "NOTE"  # an auditor's grade below WARNING: printed, never held
 
 #: the exit contract of every mechanical gate, as its `--help` states it
 EXIT_CONTRACT = (

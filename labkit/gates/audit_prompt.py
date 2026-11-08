@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
+from labkit.formats.gate import BLOCKER
 from labkit import PACKAGE_DIR
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
 from labkit.formats.area_state import state_of
@@ -576,7 +577,7 @@ def carried_of(
     return [
         followup.carried_finding(by_ref[v.ref], v, shown.origins[v.ref])
         for v in fixes
-        if v.verdict != "resolved" and by_ref[v.ref].finding.grade == "BLOCKER"
+        if v.verdict != "resolved" and by_ref[v.ref].finding.grade == BLOCKER
     ]
 
 

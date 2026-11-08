@@ -87,6 +87,8 @@ from labkit.formats.commands import (
     adopt_command,
     audit_command,
     decide_command,
+    fill_command,
+    gate_command,
     report_fields_command,
     withdraw_command,
 )
@@ -204,7 +206,7 @@ def next_step(
     # caller's chain then held the adoption's own stations, this step
     # asks without them, so it runs the chain itself
     if chain is None or pending:
-        chain = report_check.chain_gaps(ctx, adoption_pending=pending)
+        chain = report_check.chain_gaps(ctx, undeclared=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
     filled = Findings(
         None,
@@ -212,9 +214,9 @@ def next_step(
         audit=audit_command(area, protocol=protocol).line,
     )
     filled.take_all(chain.blockers)
-    held = filled.found
-    if held:
-        return _held_step(ctx, held, chain.held_by, hint if ctx.run is None else "")
+    blocking = filled.found
+    if blocking:
+        return _held_step(ctx, blocking, chain.held_by, hint if ctx.run is None else "")
     # the stop's and the commit's own hold the chain carries no gap for
     undecided = _undecided_step(area, protocol, staged=staged)
     if undecided is not None:
@@ -589,20 +591,19 @@ def _field_step(
         return Step(
             f"{protocol.name} writes a field more than once: "
             + "; ".join(report.repeated),
-            f"{protocol_check.REPEATED_WAY_OUT}; then `protocol-check {named}`" + hint,
+            f"{protocol_check.REPEATED_WAY_OUT}; then `{gate_command('protocol-check', protocol)}`"
+            + hint,
             "every comparison and audit binding of the registration: which "
             "copy is registered cannot be told",
         )
     if report.missing_must:
-        fill = _fill_line(
-            named, report.missing_must[0], absent=True, area=protocol.parent
-        )
+        fill = _fill_line(protocol, report.missing_must[0], absent=True)
         return Step(
             f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
             + ", ".join(report.missing_must),
             (f"{fill}; " if fill else "")
             + f"`protocol-fill {named} --list` names every open field with its "
-            f"values, `protocol-check {named} --contract` what each one owes" + hint,
+            f"values, `{contract_command(protocol)}` what each one owes" + hint,
             "the first measurement: fill and commit the registration first, "
             "because it cannot change after that run",
         )
@@ -611,7 +612,7 @@ def _field_step(
         # (PLACEHOLDER ONLY), so the row names it — a should field is one
         # once frozen
         labels = [label for _, label in report.must_holes]
-        fill = _fill_line(named, labels[0], absent=False, area=protocol.parent)
+        fill = _fill_line(protocol, labels[0], absent=False)
         return Step(
             f"{protocol.name}: {len(labels)} MUST field(s) still a placeholder: "
             + ", ".join(labels),
@@ -681,9 +682,8 @@ def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
     absent, holes = protocol_check.adoption_owes(text)
     if not absent and not holes:
         return None
-    named = shown(protocol, Path.cwd())
     first = absent[0] if absent else holes[0]
-    fill = _fill_line(named, first, absent=bool(absent), area=protocol.parent)
+    fill = _fill_line(protocol, first, absent=bool(absent))
     return Step(
         f"adopting {run} would owe {len(absent) + len(holes)} field(s) still open: "
         + ", ".join(absent + holes),
@@ -695,7 +695,7 @@ def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
     )
 
 
-def _fill_line(protocol: str, missing: str, *, absent: bool, area: Path) -> str | None:
+def _fill_line(protocol: Path, missing: str, *, absent: bool) -> str | None:
     """The sentence with the command that closes MISSING, a MUST gap as
     `protocol_check.check_fields` names it: a head key as `[protocol] <key>`
     with its allowed values (`protocol_block.FILLABLE_HEAD_KEYS`), or a
@@ -705,17 +705,20 @@ def _fill_line(protocol: str, missing: str, *, absent: bool, area: Path) -> str 
     report), comes with `labkit-init exp AREA --report`, written as a
     Command; any other absent field is a line to write by hand. None for a
     gap no single step closes (a contradiction, a freeze key)."""
+    area = protocol.parent
     if missing.startswith("[protocol] "):
         key = missing.removeprefix("[protocol] ")
         for label, (head_key, choices) in protocol_block.FILLABLE_HEAD_KEYS.items():
             if head_key == key:
                 value = "|".join(choices) if choices else "value"
-                return f'`protocol-fill {protocol} "{label}=<{value}>"` fills the first'
+                return (
+                    f"`{fill_command(protocol, f'{label}=<{value}>')}` fills the first"
+                )
         return None
     if missing.startswith("[") or "(" in missing:
         return None
     if not absent:
-        return f'`protocol-fill {protocol} "{missing}=<value>"` fills the first'
+        return f"`{fill_command(protocol, f'{missing}=<value>')}` fills the first"
     field = next(
         (f for f in protocol_check.FIELDS if f.label.casefold() == missing.casefold()),
         None,

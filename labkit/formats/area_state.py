@@ -26,6 +26,8 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.runs import RUNS_DIR
+from labkit.formats.commands import checkout_command
 from labkit.formats.answering_run import (
     AnsweringRun,
     RunFacts,
@@ -360,6 +362,21 @@ def index_names_gone_runs(area: Path) -> bool:
 class HistoryUnread(RuntimeError):
     """Git could not list or read the runs a commit holds
     (`committed_runs`): its words, for `AreaState.history_unread`."""
+
+
+def gone_run_restore(rd: RunDir) -> str:
+    """How a run git holds back (RD, from `AreaState.deleted`) comes back:
+    its checkout command in the area — the one sentence every gate prints
+    for it (`checkout_command`)."""
+    return (
+        f"`{checkout_command(Path(RUNS_DIR) / rd.dir.name, rd.from_commit or '')}` "
+        "in the area restores it"
+    )
+
+
+#: what a run only the index lists (`AreaState.lost`) has left: nothing git
+#: holds — the one sentence every gate prints for it
+LOST_RUN_SENTENCE = "its rows are lost; only git, where it holds the run, restores them"
 
 
 def present_run_dirs(area: Path, *, repo: Path | None, file_state: str) -> list[RunDir]:

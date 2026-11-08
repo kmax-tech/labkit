@@ -49,6 +49,7 @@ MEASURE, AUDIT, DECIDE, REVIEW = "measure", "audit", "decide", "review"
 RESTORE, INIT = "restore", "init"
 STAGE = "stage"
 FREEZE = "freeze"
+FILL, NEXT = "fill", "next"
 COMMAND_KIND = {
     ADOPT: MECHANICAL,
     INTO: MECHANICAL,
@@ -66,6 +67,8 @@ COMMAND_KIND = {
     INIT: DESTRUCTIVE,
     STAGE: MECHANICAL,
     FREEZE: MECHANICAL,
+    FILL: MECHANICAL,
+    NEXT: MECHANICAL,
 }
 
 
@@ -182,6 +185,25 @@ def contract_command(protocol: Path) -> Command:
     return Command(
         CHECK, f"protocol-check {shlex.quote(shown(protocol, Path.cwd()))} --contract"
     )
+
+
+def fill_command(protocol: Path | None, assignment: str) -> Command:
+    """The `protocol-fill … "<label>=<value>"` line that writes one field
+    of PROTOCOL (named as the working directory reaches it, `shown`; None:
+    the `<PROTOCOL>` placeholder, for a sentence that knows no path), with
+    ASSIGNMENT as written, quoted once here."""
+    named = (
+        shlex.quote(shown(protocol, Path.cwd()))
+        if protocol is not None
+        else "<PROTOCOL>"
+    )
+    return Command(FILL, f'protocol-fill {named} "{assignment}"')
+
+
+def step_command(area: Path) -> Command:
+    """The `labkit-next …` line that names AREA's one next step, the area
+    named as the working directory reaches it (`shown`)."""
+    return Command(NEXT, f"labkit-next {shlex.quote(shown(area, Path.cwd()))}")
 
 
 def render_command(*, from_run: bool = False) -> Command:

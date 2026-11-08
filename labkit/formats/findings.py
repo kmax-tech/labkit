@@ -93,6 +93,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.gate import BLOCKER, NOTE, WARNING
 from labkit.formats.commands import checkout_command
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
@@ -143,12 +144,12 @@ CARRIED_CLOSING = ("false-positive",)
 #: a limit's effect on the verdicts: they stand with the limit, or the run
 #: judges the named promises not at all (`--not-assessable`)
 EFFECT_STANDS = "stands"
-EFFECT_GRADES = ("BLOCKER", "WARNING")
+EFFECT_GRADES = (BLOCKER, WARNING)
 _EFFECT_NOT = re.compile(r"^(\S+(?:\s*,\s*\S+)*)\s+not assessable$")
 EFFECT_FORM = (
     '`stands` or `<ID>[, <ID>] not assessable` (e.g. "criterion-1 not assessable")'
 )
-GRADES = ("BLOCKER", "WARNING", "NOTE")
+GRADES = (BLOCKER, WARNING, NOTE)
 #: the grammar of an answer line, one home for the audit and both
 #: reviewers: what may stand before its keyword
 #: (indentation, a quote, a bullet, a code mark, a heading's hashes) and the

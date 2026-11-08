@@ -41,19 +41,18 @@ from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
-    rel_posix,
     PROTOCOL_NAME,
     REPORT_SUFFIX,
     file_text,
     git_root,
     indexed_files,
     indexed_links,
-    indexed_protocols,
     markdown_files,
     own_path,
     path_kind,
     protocol_links,
-    repo_protocols,
+    protocols_in,
+    rel_posix,
     report_place,
     shown,
     state_text,
@@ -285,7 +284,7 @@ def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> lis
     }
     if not candidates:
         return []
-    protocols = indexed_protocols(repo) if staged else repo_protocols(root)
+    protocols = protocols_in(repo, staged=staged)
     out: list[Path] = []
     for p in protocols:
         try:
@@ -428,7 +427,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
     carries), the tree's otherwise. KNOWN is read cheaply for every area
     (`area_state.present_run_dirs`); the areas' states build lazily, for
     the areas a report touches (`held_state`)."""
-    protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
+    protocols = protocols_in(repo, staged=staged)
     out = Sources(repo.resolve(), set(), {}, {}, {}, staged)
     out.unreadable.update(protocol_links(repo, protocols, staged=staged))
     file_state = INDEX if staged else TREE

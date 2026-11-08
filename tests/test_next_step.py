@@ -446,27 +446,27 @@ class BeforeTheChain(unittest.TestCase):
         area = Path("experiments/01-x")
         line = next_step._fill_line
         self.assertEqual(
-            line("P.md", "Unit", absent=False, area=area),
-            '`protocol-fill P.md "Unit=<value>"` fills the first',
+            line(area / "P.md", "Unit", absent=False),
+            '`protocol-fill experiments/01-x/P.md "Unit=<value>"` fills the first',
         )
         self.assertEqual(
-            line("P.md", "[protocol] kind", absent=True, area=area),
-            '`protocol-fill P.md "kind=<compute|fit|apply>"` fills the first',
+            line(area / "P.md", "[protocol] kind", absent=True),
+            '`protocol-fill experiments/01-x/P.md "kind=<compute|fit|apply>"` fills the first',
         )
-        absent = line("P.md", "Why this design", absent=True, area=area)
+        absent = line(area / "P.md", "Why this design", absent=True)
         assert absent is not None
         self.assertTrue(
             absent.startswith("`labkit-init exp experiments/01-x --report` appends"),
             absent,
         )
-        absent = line("P.md", "Unit", absent=True, area=area)
+        absent = line(area / "P.md", "Unit", absent=True)
         assert absent is not None
         self.assertIn("write the line `- **Unit:** …`", absent)
         for gap in (
             "[protocol] preflight_audit (frozen = true without the record named)",
             "[protocol] frozen",
         ):
-            self.assertIsNone(line("P.md", gap, absent=True, area=area), gap)
+            self.assertIsNone(line(area / "P.md", gap, absent=True), gap)
 
     def test_the_adoption_names_the_fields_it_would_owe_before_adopt(self):
         """One mouth: `next` asks `check_fields` what the adoption's state

@@ -46,7 +46,6 @@ class Identity(unittest.TestCase):
         for name, (text, pid) in READABLE.items():
             with self.subTest(name):
                 self.assertEqual(protocol_block.head(text).id, pid)
-                self.assertEqual(intent_check.protocol_id_of(text), pid)
                 self.assertEqual(_bind(text)["id"], pid)
 
     def test_consumers_agree_on_rejecting(self):
@@ -54,8 +53,6 @@ class Identity(unittest.TestCase):
             with self.subTest(name):
                 with self.assertRaises(protocol_block.BlockError):
                     protocol_block.head(text)
-                with self.assertRaises(protocol_block.BlockError):
-                    intent_check.protocol_id_of(text)
                 with self.assertRaises(SystemExit):
                     _bind(text)
 

@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from labkit.formats.gate import BLOCKER
 from labkit.formats.findings import (
     DECIDED,
     Finding,
@@ -105,7 +106,7 @@ def chain(records: list[Record]) -> Chain:
             raise FindingsError(
                 f"{ref}: carries {target}, a finding of the same or a later record"
             )
-        if members[target].finding.grade != "BLOCKER":
+        if members[target].finding.grade != BLOCKER:
             raise FindingsError(f"{ref}: carries {target}, which is no BLOCKER")
     origin = {ref: _origin(ref, members) for ref in members}
     _once_per_record(members, origin)
@@ -152,7 +153,7 @@ def earlier_blockers(
     return [
         m
         for m in chain(records).heads()
-        if m.finding.grade == "BLOCKER"
+        if m.finding.grade == BLOCKER
         and m.finding.status in DECIDED
         and not current(m.record)
     ]
@@ -174,7 +175,7 @@ def earlier_corrections(
     return [
         m
         for m in chain(records).heads()
-        if m.finding.grade != "BLOCKER"
+        if m.finding.grade != BLOCKER
         and field_of(m.finding) is not None
         and not current(m.record)
     ]
@@ -191,7 +192,7 @@ def undecided_earlier(
     return [
         m
         for m in chain(records).heads()
-        if m.finding.grade == "BLOCKER"
+        if m.finding.grade == BLOCKER
         and m.finding.status == "open"
         and not current(m.record)
     ]
@@ -205,7 +206,7 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
     member's check and note, the subject VERDICT settled an undetermined
     finding to or else the member's, `carries` = its ref."""
     return Finding(
-        "BLOCKER",
+        BLOCKER,
         f"carried from {member.ref} ({verdict.verdict}"
         f"{f' as {verdict.subject}' if verdict.subject else ''}): {origin.text}",
         "open",
@@ -279,7 +280,7 @@ def release_holds(
     out: list[Hold] = []
     for m in c.heads():
         f = m.finding
-        if f.grade != "BLOCKER":
+        if f.grade != BLOCKER:
             continue
         if m.record.path.name in in_cover:
             # a repaired Conclusion is no follow-up's to see: the decision

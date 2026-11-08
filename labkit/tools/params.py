@@ -41,7 +41,6 @@ from pathlib import Path
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats import console, promises, protocol_block
-from labkit.checks.intent_check import protocol_id_of
 from labkit.formats.repo import (
     AmbiguousArea,
     area_path,
@@ -330,7 +329,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
         return 2
     text = protocol.read_text(encoding="utf-8")
     try:
-        pid = protocol_id_of(text)
+        pid = protocol_block.head(text).id
     except protocol_block.BlockError as exc:
         console.refuse("labkit-params", f"{protocol.name}: {exc}")
         return 2

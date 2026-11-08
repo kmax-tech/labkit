@@ -108,7 +108,15 @@ from labkit.formats.answering_run import (
     adopted_run,
     is_measurement,
 )
-from labkit.formats.area_state import INDEX, PROPOSED, TREE, AreaState, state_of
+from labkit.formats.area_state import (
+    AreaState,
+    INDEX,
+    LOST_RUN_SENTENCE,
+    PROPOSED,
+    TREE,
+    gone_run_restore,
+    state_of,
+)
 from labkit.formats.repo import pending_adoption
 from labkit.formats import evidence
 from labkit.formats.protocol_history import (
@@ -163,7 +171,6 @@ from labkit.formats.repo import (
     state_text,
 )
 from labkit.formats.commands import (
-    checkout_command,
     ADOPT,
     ADOPT_TOOL,
     RENDER,
@@ -174,7 +181,7 @@ from labkit.formats.commands import (
     measure_command,
     withdraw_command,
 )
-from labkit.formats.runs import RUNS_DIR, read_run_config, unreportable
+from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import area_files, areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
@@ -270,8 +277,7 @@ def repeated_gaps(ctx: Checked) -> list[GateFinding]:
     return [
         blocker(
             f"{ctx.protocol.name}: {twice}",
-            fix=f"{REPEATED_WAY_OUT}; then "
-            f"`protocol-check {shlex.quote(shown(ctx.protocol, Path.cwd()))}`",
+            fix=f"{REPEATED_WAY_OUT}; then `{gate_command('protocol-check', ctx.protocol)}`",
         )
         for twice in check_fields(ctx.text).repeated
     ]
@@ -736,7 +742,7 @@ class ReleaseChain:
 
 
 def chain_gaps(
-    ctx: Checked, *, adoption_pending: bool = False, review: bool = True
+    ctx: Checked, *, undeclared: bool = False, review: bool = True
 ) -> ReleaseChain:
     """Every finding report-check holds CTX to, in the order of the chain —
     the one list `report_check` prints and `next_step` reads (`ReleaseChain`):
@@ -820,20 +826,20 @@ def chain_gaps(
     # this text
     if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or not same_text):
         analysis = analysis_findings(
-            ctx, ln.analysis_rule, result_section=not adoption_pending
+            ctx, ln.analysis_rule, result_section=not undeclared
         )
         out += withdrawn_first(analysis, withdrawal)
-    # 6. recomputation — always, unless `adoption_pending`
-    if not adoption_pending:
+    # 6. recomputation — always, unless `undeclared`
+    if not undeclared:
         out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), withdrawal)
     # 7. decisions — where the lane owes the analysis
     if ANALYSIS_AUDIT in ln.audits:
         out += withdrawn_first(review_findings(ctx), withdrawal)
         out += withdrawn_first(followup_findings(ctx), withdrawal)
-    # 8. report — unless `adoption_pending`; its review not on the proposal:
+    # 8. report — unless `undeclared`; its review not on the proposal:
     # its text is in every review's fingerprint, so the adoption would hold
     # itself (`report_findings` says why)
-    if not adoption_pending:
+    if not undeclared:
         out += report_findings(ctx, review=review)
     if review and ctx.state != PROPOSED:
         out += discussion_review_findings(
@@ -875,13 +881,12 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
         # handover never says "no run of it was measured" over deleted runs
         gone = {
             rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
-            f"`{checkout_command(Path(RUNS_DIR) / rd.dir.name, rd.from_commit or '')}` "
-            f"in the area restores it"
+            f"{gone_run_restore(rd)}"
             for rd in held.deleted
             if is_measurement(rd)
         } | {
             r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
-            f"its rows are lost"
+            f"{LOST_RUN_SENTENCE}"
             for r in held.lost
         }
         if gone:
@@ -912,9 +917,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
         return handovers.RunAccount(run, handovers.HELD, (str(exc),))
     held = tuple(
         g.text
-        for g in chain_gaps(
-            ctx, adoption_pending=ctx.declared is None, review=False
-        ).blockers
+        for g in chain_gaps(ctx, undeclared=ctx.declared is None, review=False).blockers
     )
     state = handovers.HELD if held else handovers.ADOPTABLE
     return handovers.RunAccount(run, state, held)

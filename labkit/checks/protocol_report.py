@@ -40,7 +40,7 @@ from labkit.formats.repo import (
     shown,
     state_text,
 )
-from labkit.formats.commands import adopt_command
+from labkit.formats.commands import adopt_command, fill_command, step_command
 from labkit.formats.audit_gaps import RecordGap, audit_record_gap
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding, with_way_out
 from labkit.formats.protocol_history import (
@@ -345,7 +345,7 @@ RENDERED_EXAMPLE = (
 #: owed once frozen where the kind registers (`protocol_check.kind_registers`)
 PROMISE_SENTENCES = (
     "one explicit sentence per [[promise]] table (the stamp's `<…>` sentence "
-    'registers nothing; `protocol-fill PROTOCOL "<id> sentence=<the promise>"` '
+    f"registers nothing; `{fill_command(None, '<id> sentence=<the promise>')}` "
     "writes one)"
 )
 
@@ -429,8 +429,10 @@ def print_contract(protocol: Path | None = None) -> None:
             f" The fields {protocol.name} owes stand in the first lines of this output."
         )
         tail: list[str] = []
-        area = shlex.quote(shown(protocol.resolve().parent, Path.cwd()))
-        print(f"next: `labkit-next {area}` names the one next step, with its command")
+        print(
+            f"next: `{step_command(protocol.resolve().parent)}` names the one next "
+            "step, with its command"
+        )
     else:
         top = [low_cut_line()]
         rows_title = (
@@ -475,7 +477,7 @@ def print_contract(protocol: Path | None = None) -> None:
         "A computation also carries `[kept]` — `key`, the metrics.json key of the "
         'number it reports, and `unit` ("1" for a dimensionless number): the '
         "skeleton reads the key, finalize holds the run to it as a finite number "
-        '(`protocol-fill <PROTOCOL> "kept.key=…" "kept.unit=…"`); a fit or an apply '
+        f'(`{fill_command(None, "kept.key=…")} "kept.unit=…"`); a fit or an apply '
         "carries none."
     )
     print(

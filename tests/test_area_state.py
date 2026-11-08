@@ -181,7 +181,7 @@ class OneStateBuildPerCheckRun(_Repository):
 
         def chain() -> None:
             ctx = report_check.checked(self.area, self.proto)
-            report_check.chain_gaps(ctx, adoption_pending=True, review=False)
+            report_check.chain_gaps(ctx, undeclared=True, review=False)
 
         self.assertEqual(self._builds(chain), 1)
 

@@ -14,8 +14,8 @@ from pathlib import Path
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.gate import (
     BLOCKER,
-    WARNING,
     GateFinding,
+    WARNING,
     blocker,
 )
 from labkit.formats import (
@@ -137,7 +137,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                 continue
             out.append(
                 GateFinding(
-                    BLOCKER if f.grade == "BLOCKER" else WARNING,
+                    BLOCKER if f.grade == BLOCKER else WARNING,
                     f"{findings.limit_label(r, n)}: `stands` on a {f.grade} decided limitation "
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
                     f"upholds that the reported claim stands within this limit "
@@ -155,7 +155,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                 continue
             out.append(
                 GateFinding(
-                    BLOCKER if f.grade == "BLOCKER" else WARNING,
+                    BLOCKER if f.grade == BLOCKER else WARNING,
                     f"audit {r.path.stem} #{n}: `{f.status}` on a {f.grade} a "
                     f"review said {was.verdict} on ({was.why}) — closing a finding "
                     f"a reviewer did not uphold settles nothing by itself; the new "

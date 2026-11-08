@@ -319,3 +319,20 @@ class DataEntries(unittest.TestCase):
                     runs.ArtefactError, rf"config.json: data\['b'\].*{re.escape(says)}"
                 ):
                     runs.data_entries({"b": broken}, "config.json")
+
+
+class TheRunStateAlphabetHasOneHome(unittest.TestCase):
+    """`runs.RunState` is the alphabet; `FAILED_STATES`, `runlog.OPEN_STATES`
+    and the wait's reasons (`runlog_command._FAILED_WHY`) spell subsets of
+    it, never a state of their own (the audit of 2026-11-08, A12)."""
+
+    def test_the_subsets_cover_the_alphabet_once(self):
+        from typing import get_args
+
+        from labkit.run import runlog, runlog_command
+
+        states = set(get_args(runs.RunState))
+        self.assertEqual(
+            states, {"completed", *runlog.OPEN_STATES, *runs.FAILED_STATES}
+        )
+        self.assertEqual(set(runlog_command._FAILED_WHY), set(runs.FAILED_STATES))

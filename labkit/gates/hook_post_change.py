@@ -45,11 +45,15 @@ from labkit.checks import notes_check, protocol_report
 from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import report_hold
-from labkit.formats.area_state import AreaState, index_names_gone_runs, state_of
+from labkit.formats.area_state import (
+    AreaState,
+    LOST_RUN_SENTENCE,
+    gone_run_restore,
+    index_names_gone_runs,
+    state_of,
+)
 from labkit.formats import evidence
-from labkit.formats.commands import checkout_command
 from labkit.formats.run_index import RunIndexError
-from labkit.formats.runs import RUNS_DIR
 from labkit.formats.repo import (
     rel_posix,
     EXPERIMENTS,
@@ -107,15 +111,12 @@ def index_problems(state: AreaState) -> list[str]:
     return (
         ([state.history_unread] if state.history_unread else [])
         + [
-            f"run {rd.dir.name}: its directory is gone — "
-            f"`{checkout_command(Path(RUNS_DIR) / rd.dir.name, rd.from_commit or '')}` "
-            f"in the area restores it"
+            f"run {rd.dir.name}: its directory is gone — {gone_run_restore(rd)}"
             for rd in state.deleted
         ]
         + [
-            f"run {r}: its directory is gone — runs.tsv lists it as measured, and its "
-            f"rows are lost; only git, where it holds the run, restores them, and an "
-            f"audit that read it holds the adoption"
+            f"run {r}: its directory is gone — runs.tsv lists it as measured, and "
+            f"{LOST_RUN_SENTENCE}, and an audit that read it holds the adoption"
             for r in state.lost
         ]
     )

@@ -1509,7 +1509,7 @@ class RegisteredReport(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         self.assertIsNone(protocol_block.declared_run(proto.read_text("utf-8")))
         ctx = report_context.checked(area, proto)
-        gaps = report_check.chain_gaps(ctx, adoption_pending=True).found
+        gaps = report_check.chain_gaps(ctx, undeclared=True).found
         self.assertTrue(any("analysis" in g.text for g in gaps), gaps)
 
     def test_the_twin_a_discussion_of_another_run_is_no_progress_account(self):

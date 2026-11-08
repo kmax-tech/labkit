@@ -83,7 +83,13 @@ from labkit.formats.comment_blocks import (
 )
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
-from labkit.formats.commands import DISCUSS, Command, adopt_command, into_command
+from labkit.formats.commands import (
+    Command,
+    DISCUSS,
+    adopt_command,
+    fill_command,
+    into_command,
+)
 
 #: the block's opening and closing lines, each a line of its own
 OPEN = re.compile(
@@ -145,7 +151,7 @@ def _not_written(label: str) -> ReportBlockError:
     return ReportBlockError(
         f"the protocol's {label} is not written (missing, a placeholder or only "
         f"dashes) — the result block shows it verbatim beside the number: "
-        f'`protocol-fill <PROTOCOL> "{label}=<…>"` writes it, then the block again'
+        f"`{fill_command(None, f'{label}=<…>')}` writes it, then the block again"
     )
 
 

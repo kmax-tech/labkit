@@ -11,6 +11,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.formats.gate import BLOCKER, WARNING
+from labkit.formats.findings import EFFECT_GRADES
 from labkit.formats import (
     attempts,
     console,
@@ -123,7 +125,7 @@ def decision_lines(
                     area, n, "STATUS", "<why>", where, protocol=protocol, base=here
                 ).line
             )
-            if f.check and f.grade != "BLOCKER":
+            if f.check and f.grade != BLOCKER:
                 # a follow-up is shown decided BLOCKERs only: "the follow-up
                 # judges" would promise a check that never comes, and the
                 # WARNING would lapse undecided
@@ -180,10 +182,10 @@ def limitation_line(
     decisions it allows and the refusal's ways out in its place (so the
     list never offers what `--decide` refuses); "" for a NOTE."""
     refused = findings.subject_refusal(f, "limitation")
-    if refused is not None and f.grade in ("BLOCKER", "WARNING"):
+    if refused is not None and f.grade in EFFECT_GRADES:
         allowed = " / ".join(findings.allowed_decisions(f))
         return f"      {f.subject}: decide {allowed} — {refused}"
-    if f.grade == "BLOCKER":
+    if f.grade == BLOCKER:
         return (
             "      limitation: the verdicts hold, read within it; a second "
             f"auditor must uphold it before the number leaves, at every "
@@ -195,7 +197,7 @@ def limitation_line(
                 "a fault the claim cannot be read within: hand the protocol over"
             )
         )
-    if f.grade == "WARNING":
+    if f.grade == WARNING:
         return (
             "      limitation: the verdicts hold, read within it (its missing "
             "review warns)" + (f" | {unassessed}" if unassessed is not None else "")

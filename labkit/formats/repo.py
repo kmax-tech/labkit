@@ -330,6 +330,14 @@ def indexed_files(repo: Path) -> list[Path]:
     )
 
 
+def protocols_in(repo: Path, *, staged: bool) -> list[Path]:
+    """Every protocol of REPO as the file state holds it: the index's when
+    STAGED (`indexed_protocols`, what the commit carries), else the tree's
+    (`repo_protocols`) — the one reader a gate asks for the repo's
+    protocols, so the index and the tree are never mixed."""
+    return indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
+
+
 def indexed_protocols(repo: Path) -> list[Path]:
     """Every protocol git's index holds under REPO (`indexed_files`),
     sorted, as resolved paths — the commit's form of `repo_protocols`."""

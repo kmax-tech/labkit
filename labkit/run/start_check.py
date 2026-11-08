@@ -22,7 +22,7 @@ from pathlib import Path
 
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats import evidence
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, fill_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
@@ -31,7 +31,7 @@ from labkit.formats import findings, promises, protocol_block, protocol_check, r
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
-from labkit.formats.gate import with_way_out
+from labkit.formats.gate import BLOCKER, with_way_out
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
@@ -265,7 +265,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound, state: AreaState) -> list[st
         # what the number asserts is decided before it exists
         out.append(
             f"{path.name}: [protocol] kind is still a placeholder — compute, fit or "
-            f"apply (`protocol-fill {path.name} kind=…`)"
+            f"apply (`{fill_command(path, 'kind=…')}`)"
         )
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")
@@ -307,7 +307,7 @@ def _undecided_findings(
     records = held.records
     blockers, lesser = [], []
     for u in findings.open_findings(records, mode=PREFLIGHT_AUDIT):
-        (blockers if u.grade == "BLOCKER" else lesser).append(u.line)
+        (blockers if u.grade == BLOCKER else lesser).append(u.line)
     return blockers, lesser
 
 

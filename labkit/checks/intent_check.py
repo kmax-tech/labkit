@@ -71,12 +71,6 @@ ids_in_prose = promises.ids_in_prose
 reported_intent_ids = promises.reported_ids
 
 
-def protocol_id_of(text: str) -> str | None:
-    """The stamped id of the protocol's head, None while it is unstamped.
-    A missing or malformed head raises protocol_block.BlockError."""
-    return protocol_block.head(text).id
-
-
 #: the way out of a finding where protocol and run do not name the same
 #: promises — what intent-check's sentences leave to the author
 INTENT_FIX = (
@@ -204,7 +198,7 @@ def _read(
     """(text, stamped id or None, promise block or None) of PROTOCOL (its
     TEXT); a head or a block that does not read is a `console.Refused`."""
     try:
-        pid = protocol_id_of(text)
+        pid = protocol_block.head(text).id
     except protocol_block.BlockError as exc:
         raise console.Refused("intent-check", f"{protocol}: {exc}") from exc
     try:

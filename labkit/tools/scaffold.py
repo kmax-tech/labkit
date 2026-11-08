@@ -74,6 +74,7 @@ import os
 import re
 import shlex
 
+from labkit.formats.commands import step_command
 from labkit.formats import runs
 from labkit.formats import console
 from pathlib import Path, PurePosixPath
@@ -823,11 +824,10 @@ def stamp_area(
     # one line, not the route: `labkit-next` computes the next step from the
     # area's state, and AGENTS.md's loop starts there (printed steps would
     # be a second copy of the route, read once and then stale)
-    rel = area.relative_to(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
-        + f"\nnext: `labkit-next {rel}` names the one next step, with its command; "
+        + f"\nnext: `{step_command(area)}` names the one next step, with its command; "
         f"`labkit-next --guide` the whole route"
     )
 

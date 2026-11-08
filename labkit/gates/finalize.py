@@ -95,9 +95,11 @@ from labkit.formats.commands import checkout_command
 from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
+    BLOCKER,
     GUARANTEED,
-    STATIC_EVIDENCE,
     GateFinding,
+    STATIC_EVIDENCE,
+    WARNING,
     blocker,
     withdrawn_first,
 )
@@ -130,8 +132,9 @@ from labkit.formats.repo import (
     the_protocol,
 )
 from labkit.formats.commands import (
-    adopt_command,
     Command,
+    adopt_command,
+    fill_command,
     handover_command,
     measure_command,
     withdraw_command,
@@ -358,9 +361,9 @@ def check_open_audit_findings(
     for u in audit_findings.open_findings(records):
         seen += 1
         line = f"{u.line} — undecided (LAB-015 Preflight audit before freezing)"
-        if u.grade == "BLOCKER":
+        if u.grade == BLOCKER:
             findings.block(line, fix=audit_findings.decide_way(area, u))
-        elif u.grade == "WARNING":
+        elif u.grade == WARNING:
             findings.warn(line, evidence_kind=GUARANTEED)
         else:
             findings.note(f"  {line}")
@@ -717,7 +720,6 @@ def check_kept_number(
     the name, not the meaning: a wrong computation under the right key
     passes — the tests and the analysis audit judge that."""
     gaps = kept_gaps(text, head)
-    named = shlex.quote(shown(protocol, Path.cwd()))
     for gap in gaps:
         # an unfilled value is the stamp's placeholder, which protocol-fill
         # sets; every other gap is a table to add, drop or repair by hand
@@ -726,7 +728,7 @@ def check_kept_number(
             f"{protocol.name}: {gap}"
             + (" is still the placeholder" if unfilled else ""),
             fix=(
-                f'`protocol-fill {named} "kept.{gap.removeprefix("[kept] ")}=<value>"`'
+                f"`{fill_command(protocol, f'kept.{gap.removeprefix("[kept] ")}=<value>')}`"
                 if unfilled
                 else f"repair the head as the sentence says, then "
                 f"`{gate_command('finalize', protocol.parent)}`"

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises
-from labkit.formats.gate import with_way_out
+from labkit.formats.gate import BLOCKER, with_way_out
 from labkit.formats.protocol_check import (
     check_fields,
     registration_drift,
@@ -276,7 +276,7 @@ def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
     out += [
         f"open BLOCKER: {u.line}"
         for u in open_findings(area_records(area), mode=PREFLIGHT_AUDIT)
-        if u.grade == "BLOCKER" and u.record.path.name != record
+        if u.grade == BLOCKER and u.record.path.name != record
     ]
     return out
 

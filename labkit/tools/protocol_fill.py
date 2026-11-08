@@ -108,7 +108,13 @@ from labkit.formats.standard_contract import PREFLIGHT_AUDIT
 from labkit.checks.result_render import rendering
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import GitError, git_root, shown, state_text
-from labkit.formats.commands import adopt_command, audit_command, measure_command
+from labkit.formats.commands import (
+    adopt_command,
+    audit_command,
+    contract_command,
+    fill_command,
+    measure_command,
+)
 from labkit.checks import data_counts, recheck, report_blocks
 from labkit.checks.run_record_check import code_since_run
 from labkit.gates import report_check, report_hold
@@ -229,14 +235,13 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
     # cut off during its check) — the answer labkit-next names before it
     absent, holes = adoption_owes(text)
     if absent or holes:
-        named = shown(protocol, Path.cwd())
         console.refuse(
             "protocol-fill",
             with_way_out(
                 f"not adopted — the adoption owes {', '.join(absent + holes)}, "
                 f"still open; {protocol.name} is as it was",
-                f'write it (`protocol-fill {named} "{(absent + holes)[0]}=<…>"`; '
-                f"`protocol-check {named} --contract` names what the adoption "
+                f"write it (`{fill_command(protocol, f'{(absent + holes)[0]}=<…>')}`; "
+                f"`{contract_command(protocol)}` names what the adoption "
                 "owes), then adopt again",
             ),
         )
@@ -758,7 +763,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             + with_way_out(
                 f"nothing held the adoption of run {account.run}: a missed "
                 "criterion is a result, not a reason to hand over",
-                f"`labkit-adopt {shown(area, Path.cwd())} {account.run}` "
+                f"`{adopt_command(protocol, account.run or '<run_id>')}` "
                 "reports it (the adoption ends this handover)",
             )
         )

@@ -28,13 +28,12 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks import report_blocks
 from labkit.formats.repo import (
-    report_place,
-    state_holds,
     git_root,
-    indexed_protocols,
     own_path,
-    repo_protocols,
+    protocols_in,
+    report_place,
     shown,
+    state_holds,
     state_text,
     text_at,
 )
@@ -42,6 +41,7 @@ from labkit.formats.commands import (
     adopt_command,
     handover_command,
     into_command,
+    step_command,
 )
 
 
@@ -216,7 +216,7 @@ def progress_hold(
         f"{shown(protocol, here)}: {name_r} carries the progress account of run "
         f"{run_id} (its discussion block) and no result yet — the progress is "
         f"saved and may be committed; a result is released only by the adoption",
-        fix=f"take the next step `labkit-next {shown(protocol.parent, here)}` "
+        fix=f"take the next step `{step_command(protocol.parent)}` "
         f"names — the analysis audit and its decisions, then "
         f"`{adopt_command(protocol, run_id)}`; or end without a result: "
         f"`{handover_command(protocol, name_r)}`",
@@ -341,7 +341,7 @@ def report_binding_gap(
         if head.report is not None and not bound.unread and measured.has_measured:
             return blocker(
                 f"{name_p}: its first measurement is missing — the report binding cannot be read",
-                fix=f"restore the missing run evidence, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
+                fix=f"restore the missing run evidence, then `{step_command(protocol.parent)}`; or {anew}",
                 step=handover,
             )
         return None
@@ -360,7 +360,7 @@ def report_binding_gap(
         f"measurement {run}, and its head now registers "
         f"{head.report or 'none'} — the report a measurement stood under is bound, "
         f"a report cannot be registered, dropped or moved after measurement",
-        fix=f"{restore}, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
+        fix=f"{restore}, then `{step_command(protocol.parent)}`; or {anew}",
         step=handover,
     )
 
@@ -384,7 +384,7 @@ def formerly_registering(paths: list[Path], repo: Path, sources: Sources) -> lis
     if not candidates or gitroot is None:
         return []
     staged = sources.staged
-    protocols = indexed_protocols(repo) if staged else repo_protocols(root)
+    protocols = protocols_in(repo, staged=staged)
     out: list[Path] = []
     for p in protocols:
         try:
