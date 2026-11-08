@@ -138,6 +138,11 @@ pins (`requirements.txt` / `requirements.lock`).
   `fence_spans`, `fenced_blocks`, `fenced_lines`, `closes`, `FENCE`,
   `section_starts` and `section_end` moved there from `protocol_block`,
   which keeps the head, the promise block and the `## Runs` section.
+  The grammar of a requirements line has its own module,
+  `labkit.formats.requirements`: `VCS_REQUIREMENT`,
+  `EDITABLE_REQUIREMENT`, `EDITABLE_PATH_REQUIREMENT`,
+  `VERSION_REQUIREMENT`, `pip_name`, `requirement_name` and
+  `requirement_lines` moved there from `repo`.
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

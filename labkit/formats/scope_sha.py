@@ -50,8 +50,8 @@ from labkit.formats.repo import (
     protocols_in,
     rel_posix,
     repo_protocols,
-    requirement_lines,
 )
+from labkit.formats.requirements import requirement_lines
 
 
 class SourceError(ValueError):

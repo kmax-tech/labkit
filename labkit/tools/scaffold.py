@@ -98,12 +98,12 @@ from labkit.formats.repo import (
     branch_refs,
     git_root,
     lab_root,
-    requirement_lines,
     area_test_stem,
     split_area_name,
     text_at,
     worktree_roots,
 )
+from labkit.formats.requirements import requirement_lines
 from labkit.tools.repo_check import PIN_FILES, PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
     CUT_MARK,

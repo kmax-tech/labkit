@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import commands
+from labkit.formats import requirements
 from labkit.formats import repo  # noqa: E402
 from labkit.run import provenance, runlog  # noqa: E402
 
@@ -223,23 +224,23 @@ class RequirementLines(unittest.TestCase):
             ("pytest", None),
         ):
             with self.subTest(line):
-                self.assertEqual(repo.requirement_name(line), name)
+                self.assertEqual(requirements.requirement_name(line), name)
 
     def test_requirement_lines_filters_a_file(self):
         text = "pytest==8.0\nlabkit @ git+https://g/x/labkit@v1\n# labkit old\n"
         self.assertEqual(
-            repo.requirement_lines(text, "labkit"),
+            requirements.requirement_lines(text, "labkit"),
             ["labkit @ git+https://g/x/labkit@v1"],
         )
-        self.assertEqual(repo.requirement_lines(text, "numpy"), [])
+        self.assertEqual(requirements.requirement_lines(text, "numpy"), [])
 
     def test_the_vcs_grammar_reads_url_and_ref(self):
-        m = repo.VCS_REQUIREMENT.match("labkit @ git+https://g/x/labkit@v0.1.0")
+        m = requirements.VCS_REQUIREMENT.match("labkit @ git+https://g/x/labkit@v0.1.0")
         assert m is not None
         self.assertEqual(
             (m["name"], m["url"], m["ref"]), ("labkit", "https://g/x/labkit", "v0.1.0")
         )
-        unpinned = repo.VCS_REQUIREMENT.match("labkit @ git+https://g/x/labkit")
+        unpinned = requirements.VCS_REQUIREMENT.match("labkit @ git+https://g/x/labkit")
         assert unpinned is not None
         self.assertIsNone(
             unpinned["ref"]

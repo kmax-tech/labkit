@@ -46,10 +46,12 @@ from labkit.formats.repo import (
     file_url_path,
     commit_of,
     text_at,
-    VCS_REQUIREMENT,
-    VERSION_REQUIREMENT,
     git_run,
     repo_protocols,
+)
+from labkit.formats.requirements import (
+    VCS_REQUIREMENT,
+    VERSION_REQUIREMENT,
     requirement_lines,
 )
 

@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
+from labkit.formats import requirements
 from labkit.formats import jsonl, repo
 from labkit.formats.files import write_atomic_bytes
 from labkit.formats.gate import with_way_out
@@ -89,7 +90,7 @@ def parse_lock(lock: Path) -> dict[str, str | None]:
     out: dict[str, str | None] = {}
     for raw in lock.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
-        name = repo.requirement_name(line)  # the one grammar of a pin line
+        name = requirements.requirement_name(line)  # the one grammar of a pin line
         if name is None:
             continue
         if _EDITABLE_PIN.match(line) or "==" not in line:
@@ -102,14 +103,14 @@ def parse_lock(lock: Path) -> dict[str, str | None]:
 # A VCS pin names a ref, not a version — `labkit @ git+file:///...@v0.14.0`.
 # The version comparison in `lock_drift` cannot see it, and counting it as
 # pinned-any would hide exactly the package that changes most often.
-_VCS_PIN = repo.VCS_REQUIREMENT
+_VCS_PIN = requirements.VCS_REQUIREMENT
 
 
 # An editable install freezes as `-e git+<url>@<commit>#egg=<name>`: pip
 # reads the commit from the source checkout. Unread, it would count as
 # "installed but not in the lock" — a lock written by `pip freeze` seconds
 # earlier in the same venv would report drift on every run.
-_EDITABLE_PIN = repo.EDITABLE_REQUIREMENT
+_EDITABLE_PIN = requirements.EDITABLE_REQUIREMENT
 
 
 _HEX_REF = re.compile(r"^[0-9a-f]{7,40}$")
@@ -121,7 +122,7 @@ def parse_vcs_pins(lock: Path) -> dict[str, tuple[str, str]]:
     for raw in lock.read_text(encoding="utf-8").splitlines():
         m = _VCS_PIN.match(raw.strip()) or _EDITABLE_PIN.match(raw.strip())
         if m and m.group("ref"):
-            out[repo.pip_name(m.group("name"))] = (
+            out[requirements.pip_name(m.group("name"))] = (
                 m.group("url"),
                 m.group("ref"),
             )
@@ -219,7 +220,7 @@ def lock_drift(lock: Path) -> int:
     installed: dict[str, str] = {}
     vcs_commit: dict[str, str | None] = {}
     for dist in distributions():
-        name = repo.pip_name(dist.metadata["Name"] or "")
+        name = requirements.pip_name(dist.metadata["Name"] or "")
         if name and name not in FREEZE_OMITS:
             installed[name] = dist.version
             if name in vcs:

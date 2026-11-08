@@ -40,7 +40,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"repo"},
     ),
     ("a PROTOCOL-*.md scan", r"r?glob\(\s*\"PROTOCOL-", {"repo"}),
-    ("pip's name normalisation", r"\.lower\(\)\.replace\(\"_\", \"-\"\)", {"repo"}),
+    (
+        "pip's name normalisation",
+        r"\.lower\(\)\.replace\(\"_\", \"-\"\)",
+        {"requirements"},
+    ),
     ("a fence regex", r"re\.compile\([^\n]*(`\{3|```|~\{3)", {"markdown"}),
     ("a fence toggled by hand", r"startswith\(\(?\"(```|~~~)", {"markdown"}),
     ("the id letters", r"\[(?:[cab]{2,3}|[CAB]{2,3})\]|\^a\\d", {"promises"}),
