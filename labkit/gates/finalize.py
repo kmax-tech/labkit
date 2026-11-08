@@ -129,6 +129,7 @@ from labkit.formats.repo import (
 from labkit.formats.commands import (
     Command,
     adopt_command,
+    contract_command,
     fill_command,
     handover_command,
     measure_command,
@@ -754,7 +755,7 @@ def check_kept_number(
 
 
 def runs_metrics(answering_run: Path) -> dict:
-    """RUN's metrics.json (`runs.read_metrics`); raises MetricsError."""
+    """ANSWERING_RUN's metrics.json (`runs.read_metrics`); raises MetricsError."""
     return read_metrics(metrics_path(answering_run))
 
 
@@ -878,8 +879,8 @@ def finalize_area(
         else:
             findings.block(
                 f"{chosen.name}: {exc}",
-                fix=f"repair the head as the sentence says: `protocol-check "
-                f"{shlex.quote(shown(chosen, Path.cwd()))} --contract` shows its fields",
+                fix=f"repair the head as the sentence says: "
+                f"`{contract_command(chosen)}` shows its fields",
             )
         return 2
 

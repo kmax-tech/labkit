@@ -7,9 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.formats.commands import step_command
 from labkit.gates import audit_decisions, audit_reply
 from labkit.formats import findings, protocol_check
-from labkit.formats.repo import shown
 from labkit.formats import audit_gaps
 from protocol_fixture import registration_of  # noqa: E402
 
@@ -1005,9 +1005,7 @@ class DecisionList(unittest.TestCase):
         # an open BLOCKER is decided by its cause: the list prints the one
         # line that says so and where the ways out stand (the guide), with
         # the area as shown — not the routes themselves
-        self.assertIn(
-            audit_decisions.CAUSE_FIRST.format(area=shown(area, Path.cwd())), text
-        )
+        self.assertIn(audit_decisions.CAUSE_FIRST.format(step=step_command(area)), text)
         self.assertNotIn("an implementation error", text)
         commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
         self.assertEqual(len(commands), 2, text)

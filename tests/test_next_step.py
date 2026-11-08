@@ -205,7 +205,7 @@ class TheChain(unittest.TestCase):
         step = self.step()
         self.assertIn("01_measure.py", step.next, step)
         self.assertIn(
-            "report=REPORT.md` — before the first measurement only", step.next
+            '"report=REPORT.md"` — before the first measurement only', step.next
         )
         self.assertIn("blocker(s) stand, and this is the first", step.held)
         run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))

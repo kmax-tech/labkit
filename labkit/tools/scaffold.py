@@ -74,7 +74,7 @@ import os
 import re
 import shlex
 
-from labkit.formats.commands import step_command
+from labkit.formats.commands import report_fields_command, step_command
 from labkit.formats import runs
 from labkit.formats import console
 from pathlib import Path, PurePosixPath
@@ -788,12 +788,11 @@ def stamp_area(
         raise console.Refused("labkit-init", f"--reference: {gap}")
     existing = areas_named(experiments, slug)
     if existing:
-        which = slug if len(existing) == 1 else existing[0].name
         raise console.Refused(
             "labkit-init",
             f"experiment already exists: {_area_names(existing)} under "
-            f"{experiments} — add report fields with `labkit-init exp {which} "
-            f"--report`",
+            f"{experiments} — add report fields with "
+            f"`{report_fields_command(existing[0])}`",
         )
     here, elsewhere = area_dirs_on_disk(experiments), areas_elsewhere(experiments)
     nn = next_experiment_number(here, elsewhere)

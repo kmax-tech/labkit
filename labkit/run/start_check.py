@@ -22,7 +22,7 @@ from pathlib import Path
 
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats import evidence
-from labkit.formats.commands import checkout_command, fill_command
+from labkit.formats.commands import checkout_command, contract_command, fill_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
@@ -119,8 +119,8 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
         raise SystemExit(
             with_way_out(
                 f"runlog: {rel}: {exc}",
-                f"repair the head as the sentence says (`protocol-check "
-                f"{repo.shown(path, Path.cwd())} --contract` shows its fields)",
+                f"repair the head as the sentence says "
+                f"(`{contract_command(path)}` shows its fields)",
             )
         ) from exc
     if head.id is None:

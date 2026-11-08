@@ -89,6 +89,7 @@ from labkit.formats.commands import (
     decide_command,
     fill_command,
     gate_command,
+    into_command,
     report_fields_command,
     withdraw_command,
 )
@@ -240,7 +241,6 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
             "names its step",
             "the number in any report: report only an adopted number",
         )
-    from labkit.formats.commands import into_command
     from labkit.gates.report_hold import reports_without_block
 
     unblocked = reports_without_block(
@@ -260,8 +260,8 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
         f"nothing — the number may be reported in {shown(report, Path.cwd())}, "
         "the report registered in the head"
         if report is not None
-        else "nothing — the number may be reported (`protocol-fill "
-        f"{shown(protocol, Path.cwd())} --into REPORT.md` writes its result "
+        else "nothing — the number may be reported "
+        f"(`{into_command(protocol, protocol.parent / 'REPORT.md')}` writes its result "
         "block into a report the head does not register)"
     )
     return Step(
@@ -634,8 +634,8 @@ def _report_hint(protocol: Path, text: str, measured: Measured) -> str:
     if head.report is not None or not head.id or measured.has_measured:
         return ""
     return (
-        f"; if the task asks for a report file, register it now: `protocol-fill "
-        f"{shown(protocol, Path.cwd())} report=REPORT.md` — before the first "
+        f"; if the task asks for a report file, register it now: "
+        f"`{fill_command(protocol, 'report=REPORT.md')}` — before the first "
         f"measurement only"
     )
 
@@ -704,7 +704,9 @@ def _fill_line(protocol: Path, missing: str, *, absent: bool) -> str | None:
     cannot see): a † field, one `--report` stamps (`Field.level` should or
     report), comes with `labkit-init exp AREA --report`, written as a
     Command; any other absent field is a line to write by hand. None for a
-    gap no single step closes (a contradiction, a freeze key)."""
+    gap no single step closes (a contradiction, a freeze key).
+    PROTOCOL is the protocol's path; the line names it as the working
+    directory reaches it (`commands.fill_command`)."""
     area = protocol.parent
     if missing.startswith("[protocol] "):
         key = missing.removeprefix("[protocol] ")

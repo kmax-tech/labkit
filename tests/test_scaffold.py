@@ -415,7 +415,9 @@ class Exp(unittest.TestCase):
                 self.assertEqual(self._snapshot(), before)
         with self.assertRaises(console.Refused) as caught:
             quiet(scaffold.stamp_area, self.root, "x", kind="fit")
-        self.assertIn("`labkit-init exp 01-x --report`", caught.exception.why)
+        # the first area of the name, as the working directory reaches it
+        self.assertIn("--report`", caught.exception.why)
+        self.assertIn("01-x", caught.exception.why.split("add report fields with")[1])
 
     def test_a_typed_number_no_area_carries_is_refused(self) -> None:
         """`exp 02-x --change-kind` beside `01-x` alone never restamps

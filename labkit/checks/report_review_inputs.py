@@ -17,7 +17,7 @@ from labkit.checks.audit_binding import AuditError
 from labkit.formats.area_state import AreaState
 from labkit.formats.repo import path_kind
 from labkit.formats.runs import RunDir, metrics_text
-from labkit.checks.report_blocks import Discussion, cited_run_ids
+from labkit.checks.report_blocks import Discussion, cited_run_ids, discuss_command
 from labkit.formats import protocol_block
 from labkit.formats import findings
 from labkit.formats import failed_attempts
@@ -94,8 +94,9 @@ def review_pieces(
     each (`runs_text`), the audits (`audits_text`).
     The one home of what a review saw: the prompt is rendered from it,
     the record's fingerprint is taken over it, and the gate takes it again
-    to tell whether a review saw the state it holds. Raises AuditError
-    when a discussed run has no `runs/<id>/` in AREA; FindingsError on an
+    to tell whether a review saw the state it holds; HELD is the area's
+    audit evidence (`audits_text`). Raises AuditError when a discussed run
+    is not among STATE's runs (the index's at the commit); FindingsError on an
     unreadable audit file; BlockError on a head that does not read."""
     repo = layout_root(area)
     adopted = protocol_block.declared_run(protocol_text)
@@ -123,8 +124,8 @@ def review_pieces(
             raise AuditError(
                 f"{report.name} discusses run {d.run_id}, and there is no "
                 f"{run_dir.relative_to(area)}/ in {shown(area, repo)}",
-                fix="discuss a run the area holds: `protocol-fill <PROTOCOL> "
-                "--discuss <run> --why … --into <FILE>` writes the block again",
+                fix="discuss a run the area holds: "
+                f"`{discuss_command('<PROTOCOL>', '<run>', '<FILE>', '…')}` writes the block again",
             )
     said = {d.run_id for d in discussed}
     runs = [adopted] if adopted is not None else []

@@ -575,7 +575,8 @@ def resolved_corrections(
     finalize's audit station names that. Raises AuditError when the state
     RUN was audited in cannot be computed (a registered output gone): then
     whether a release covers RUN cannot be told, and the caller holds that
-    (`scope_changes`), never reads it as no correction."""
+    (`scope_changes`), never reads it as no correction.
+    HELD is the area's audit evidence: its records, read once."""
     if held.unreadable:
         return {}
     try:
@@ -624,7 +625,7 @@ def awaiting_followup(
     then) or its records cannot be read. Raises AuditError when the state
     RUN was audited in cannot be computed, as `resolved_corrections` does:
     the two read the same state, so neither answers where the other
-    cannot."""
+    cannot. HELD is the area's audit evidence: its records, read once."""
     if len(area_protocols(area)) != 1:
         return {}
     if held.unreadable:
@@ -792,7 +793,8 @@ def check_registration(
     (`registration_changes`: what the number is about, and the promise
     block, read from STATE, the area's state built once); a note when it
     holds, and one per field a correction released (`corrected_in_place`),
-    so the release names what changed and why."""
+    so the release names what changed and why.
+    HELD is the area's audit evidence, read once at the entry."""
     changes = registration_changes(area, protocol, pid, run, state, held)
     findings.take_all(changes)
     if not changes:

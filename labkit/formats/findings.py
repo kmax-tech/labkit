@@ -319,7 +319,7 @@ class Finding:
     @property
     def effect_owed(self) -> bool:
         """A BLOCKER decided `limitation` owes the effect it has on the verdicts."""
-        return self.grade == "BLOCKER" and self.status == "limitation"
+        return self.grade == BLOCKER and self.status == "limitation"
 
     @property
     def effect_allowed(self) -> bool:
@@ -486,7 +486,7 @@ def undetermined_finding_problem(
     what its value must show. One rule for the writer and the reader."""
     if subject != UNDETERMINED:
         return None
-    if grade != "BLOCKER":
+    if grade != BLOCKER:
         return (
             f"an {UNDETERMINED} finding is a BLOCKER, not a {grade}: only a "
             f"BLOCKER's check is judged by the follow-up"
@@ -632,7 +632,7 @@ def decision_entails(
         # adoption lets it through
         held = (
             "the number does not leave until a second auditor upholds it"
-            if f.grade == "BLOCKER"
+            if f.grade == BLOCKER
             else "a second auditor's review is owed; for a WARNING its absence "
             "does not hold the number, the adoption and report-check warn "
             "until a review upholds it"
@@ -915,7 +915,7 @@ def open_blockers(records: Iterable[Record]) -> list[OpenFinding]:
     the stop and the commit hold, what a handover owes decided first, what
     `labkit-audit --findings` opens its handover steps on (its listing
     shows every record with an open finding of any grade)."""
-    return [u for u in open_findings(records) if u.grade == "BLOCKER"]
+    return [u for u in open_findings(records) if u.grade == BLOCKER]
 
 
 def limit_label(record: Record, n: int) -> str:
@@ -950,10 +950,10 @@ def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | Non
     the files, so the reader holds the same line."""
     b, w, _ = verdict
     listed = {g: sum(1 for grade in grades if grade == g) for g in GRADES}
-    if b > listed["BLOCKER"] or w > listed["WARNING"]:
+    if b > listed[BLOCKER] or w > listed[WARNING]:
         return (
             f"the verdict counts {b} blocker(s) and {w} warning(s), the record "
-            f"carries {listed['BLOCKER']} BLOCKER and {listed['WARNING']} WARNING "
+            f"carries {listed[BLOCKER]} BLOCKER and {listed[WARNING]} WARNING "
             f"line(s)"
         )
     return None
@@ -977,10 +977,10 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
     auditor counts them loosely."""
     b, w, _ = verdict
     listed = {g: sum(1 for grade in grades if grade == g) for g in GRADES}
-    if b != listed["BLOCKER"] or w != listed["WARNING"]:
+    if b != listed[BLOCKER] or w != listed[WARNING]:
         return (
             f"the verdict counts {b} blocker(s) and {w} warning(s), the report "
-            f"lists {listed['BLOCKER']} BLOCKER and {listed['WARNING']} WARNING "
+            f"lists {listed[BLOCKER]} BLOCKER and {listed[WARNING]} WARNING "
             f"line(s)"
         )
     return None
@@ -994,7 +994,7 @@ def false_positive_blocker(f: Finding) -> bool:
     owes none (its missing review warns). The one rule the gate
     (`report_decisions.review_findings`) and the review
     (`decision_review.reviewable`) both read."""
-    return f.grade == "BLOCKER" and f.status == "false-positive"
+    return f.grade == BLOCKER and f.status == "false-positive"
 
 
 def fixed_claim(f: Finding) -> bool:
@@ -1010,7 +1010,7 @@ def fixed_claim(f: Finding) -> bool:
     Conclusion BLOCKER decided `fixed` has a release."""
     at = f.place
     return (
-        f.grade == "BLOCKER"
+        f.grade == BLOCKER
         and f.status == "fixed"
         and at is not None
         and PROTOCOL_NAME.match(at[0]) is not None
@@ -1163,7 +1163,7 @@ def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
         )
     lines: list[str] = []
     for f in carried:
-        if f.grade != "BLOCKER" or not CARRIES_REF.match(f.carries):
+        if f.grade != BLOCKER or not CARRIES_REF.match(f.carries):
             raise ValueError(
                 f"a carried finding is a BLOCKER naming `<record>#<n>`: "
                 f"{f.grade} carries {f.carries!r}"
@@ -1934,7 +1934,7 @@ def decide_way(
     )
     allowed = " / ".join(allowed_decisions(open_finding.finding))
     way = f"decide it ({allowed}): `{cmd}`"
-    if open_finding.grade != "BLOCKER":
+    if open_finding.grade != BLOCKER:
         return way
     return (
         f"{way} — `{audit_command(area, '--findings', protocol=protocol)}` "

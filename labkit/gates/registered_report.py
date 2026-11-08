@@ -373,7 +373,9 @@ def formerly_registering(paths: list[Path], repo: Path, sources: Sources) -> lis
     whose head still names it). Read only when PATHS hold a Markdown file
     that is not a protocol. A protocol whose head does not read registers
     nothing here: its own hold names that where it is among the paths.
-    Raises RuntimeError when git fails."""
+    Raises RuntimeError when git fails.
+    SOURCES give the file state and the measured runs
+    (`Sources.held_state`)."""
     root = repo.resolve()
     candidates = {
         own_path(p if p.is_absolute() else root / p)
@@ -489,7 +491,9 @@ def registered_review(
     state) of PROTOCOL (its TEXT) owes once its result or handover block
     stands (`review_gap`, with the report's discussion blocks of PROTOCOL);
     None when a review of this state names no claim. A discussion block
-    that does not read is a blocker of its own."""
+    that does not read is a blocker of its own.
+    STATE and HELD are the area's state and audit evidence, read once by
+    the caller."""
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
     try:

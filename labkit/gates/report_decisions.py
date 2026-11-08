@@ -8,9 +8,6 @@ follow-up of earlier decided BLOCKERs (`followup_findings`).
 from __future__ import annotations
 
 
-import shlex
-from pathlib import Path
-
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.gate import (
     BLOCKER,
@@ -32,8 +29,7 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.formats.protocol_check import conclusion_written
-from labkit.formats.repo import shown
-from labkit.formats.commands import audit_command, decide_command
+from labkit.formats.commands import audit_command, decide_command, render_command
 from labkit.gates.report_context import Checked
 
 
@@ -85,8 +81,7 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
             blocker(
                 f"the result cannot be rendered from {ctx.run.name}: {exc}",
                 fix=f"repair what the sentence names, then "
-                f"`protocol-fill {shlex.quote(shown(ctx.protocol, Path.cwd()))} "
-                f"--render` writes the result section",
+                f"`{render_command(ctx.protocol)}` writes the result section",
             )
         ]
     return gaps + render_gaps(ctx.text, expected)

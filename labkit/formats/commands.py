@@ -206,14 +206,19 @@ def step_command(area: Path) -> Command:
     return Command(NEXT, f"labkit-next {shlex.quote(shown(area, Path.cwd()))}")
 
 
-def render_command(*, from_run: bool = False) -> Command:
-    """The `protocol-fill <PROTOCOL> --render` line that writes the result
-    section's generated lines again (FROM_RUN: `--from-run`, the Recorded
-    results line from the run) — the projection of an adoption, named
-    with the protocol as a placeholder: the result section's checks know
-    no path (`result_render`)."""
+def render_command(protocol: Path | None = None, *, from_run: bool = False) -> Command:
+    """The `protocol-fill … --render` line that writes the result section's
+    generated lines again (FROM_RUN: `--from-run`, the Recorded results
+    line from the run) — the projection of an adoption; PROTOCOL named as
+    the working directory reaches it, or the `<PROTOCOL>` placeholder where
+    the check knows no path (`result_render`)."""
     flag = "--from-run" if from_run else "--render"
-    return Command(RENDER, f"protocol-fill <PROTOCOL> {flag}")
+    named = (
+        shlex.quote(shown(protocol, Path.cwd()))
+        if protocol is not None
+        else "<PROTOCOL>"
+    )
+    return Command(RENDER, f"protocol-fill {named} {flag}")
 
 
 def report_fields_step(protocol: Path) -> str:
@@ -298,12 +303,18 @@ def stage_command(area: Path) -> Command:
     return Command(STAGE, f"git add -- {shlex.quote(shown(area, Path.cwd()))}")
 
 
-def handover_command(protocol: Path, report: str = "REPORT.md") -> Command:
-    """The `protocol-fill … --handover` line for PROTOCOL into REPORT, its
-    why and tried as placeholders; it runs no model."""
+def handover_command(protocol: Path | None, report: str = "REPORT.md") -> Command:
+    """The `protocol-fill … --handover` line for PROTOCOL (None: the
+    `<PROTOCOL>` placeholder, for a sentence that knows no path) into
+    REPORT, its why and tried as placeholders; it runs no model."""
+    named = (
+        shlex.quote(shown(protocol, Path.cwd()))
+        if protocol is not None
+        else "<PROTOCOL>"
+    )
     return Command(
         HANDOVER,
-        f"protocol-fill {shlex.quote(shown(protocol, Path.cwd()))} --handover "
+        f"protocol-fill {named} --handover "
         f'--why "<what blocks>" --tried "<what you tried>" --into {shlex.quote(report)}',
     )
 

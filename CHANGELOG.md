@@ -47,6 +47,17 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **Ways out spelled by their builders.** `commands.render_command(protocol=None, *,
+  from_run=False)` and `commands.handover_command(protocol | None, …)` take
+  a path or the `<PROTOCOL>` placeholder; the fill, contract, into, step,
+  report-fields, render, handover and discuss lines of `next_step`,
+  `finalize`, `run.start_check`, `scaffold`, `audit_decisions`
+  (`CAUSE_FIRST` takes `step=`), `report_decisions`, `run_record_check`,
+  `report_hold` and `report_review_inputs` come from them (a fill line's
+  assignment is quoted now; `labkit-init exp` names the area as the working
+  directory reaches it). The grade literals left in `findings` read the
+  `gate` constants too.
+
 - **The per-hold cache has one form and one file state.**
   `report_hold.Sources.blank(repo, *, staged, texts=, states=, held=)` is
   the constructor for a hold that checks no report's citations (four hand
@@ -127,14 +138,14 @@ pins (`requirements.txt` / `requirements.lock`).
   is around them there (`console.Refused` says so). `protocol_check.result_due`
   is gone; `answering_run.adopted_run` is the one declared-run-or-None.
   `repo.rel_posix(path, base)` is the one repo-relative path (resolved,
-  `/`-separated, loud when the path lies outside); 22 hand-written
+  `/`-separated, loud when the path lies outside); 29 hand-written
   `relative_to(…).as_posix()` sites read it.
 
 - **The file-state names `TREE`, `INDEX` and `PROPOSED` have one home,
   `labkit.formats.area_state`.** `report_context` no longer re-exports
   them; an import from there changes to `area_state`. With it, every gate
   reads the file state its caller names: `report_hold.Sources` carries
-  `staged`, `discussion_sources` and `lost_evidence` take it, the
+  `staged` and `discussion_sources` takes the sources, the
   replacement reads its predecessor's area in the state the check judges,
   and `review_pieces` and `review_gap` take the area's state instead of
   building one when none was handed in (the entries build it: the

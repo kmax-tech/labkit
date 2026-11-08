@@ -20,6 +20,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
+from labkit.checks.report_blocks import discuss_command
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
@@ -578,7 +579,8 @@ def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
     with no chain held. A probe's or an acknowledged unfrozen run's
     citation is not one — nothing could be reported of it — nor is an older
     run's, or a run of a protocol that answers with another. Raises
-    AuditError on a head whose id does not read."""
+    AuditError on a head whose id does not read.
+    SOURCES give each area's state (`Sources.held_state`)."""
     out: list[tuple[str, Path]] = []
     for protocol, declared in sources.declared.items():
         if declared is not None:
@@ -702,7 +704,7 @@ def discussion_sources(
     area — in the file state SOURCES hold (the index at the commit, else
     the tree; `Sources.held_state`). Exact."""
     gaps: list[GateFinding] = []
-    again = "write the block again with `protocol-fill <PROTOCOL> --discuss <run> --why … --into <FILE>`"
+    again = f"write the block again with `{discuss_command('<PROTOCOL>', '<run>', '<FILE>', '…')}`"
     for d in found:
         protocol = (path.parent / d.protocol).resolve()
         at = f"line {d.first}: the discussion of run {d.run_id}"
@@ -877,10 +879,10 @@ def review_gap(
     binding and their claim count are read exactly; whether a claim is
     right stays the reviewer's judgement. STAGED (the pre-commit): every
     input comes from the state the commit carries — the report and
-    protocol from the index, and the area's tree must equal the index (its
-    runs' metrics, audit records and review records are read from the
-    tree), else a blocker; a review counts only when the index holds its
-    record. STATE and HELD are the area's state and audit evidence the
+    protocol from the index, the audit records and reviews from HELD (the
+    index's), and the area's tree must equal the index (the runs' metrics
+    and the review's failed attempts are read from the tree), else a
+    blocker; a review counts only when the index holds its record. STATE and HELD are the area's state and audit evidence the
     caller read once for this check run."""
     area = protocol.parent
     command = f"`{report_review_command(area, path, protocol)}`"
@@ -967,7 +969,8 @@ def review_hold(
     else that it has no clean review. REL is the report, HELD_FOR why it
     owes a review of PROTOCOL's area (its discussion, or the head
     registering it), STANDS where the report stands, PARTS the state's
-    fingerprint parts, COMMAND the review to run."""
+    fingerprint parts, COMMAND the review to run.
+    HELD is the area's audit evidence, read once by the caller."""
     # first: under a handover for a lost record the review `--discuss`
     # owes is refused, and this way out is the one that works
     lost = lost_evidence(protocol, held)

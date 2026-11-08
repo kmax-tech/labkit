@@ -547,8 +547,11 @@ def protocol_verdict(
     the index for the pre-commit, the written proposal for adoption. REVIEW
     false leaves the registered report's review out — `labkit-adopt`'s own
     check right after it wrote the block: the review reads the final text,
-    which comes after. The nested finalize gate and analysis script read
-    their own inputs. A refusal before the chain goes to stderr
+    which comes after. The nested finalize reads the context's state and
+    evidence (`finalize_findings`); the analysis script reads its own
+    inputs. AREA_STATE and AREA_EVIDENCE, when a hold over several paths
+    built them (`report_hold.Sources`), are the context's
+    (`report_context.checked`). A refusal before the chain goes to stderr
     (`console.refuse`), not through TELL.
     """
     # 0. protocol and context — the only early end
@@ -778,7 +781,7 @@ def chain_gaps(
     2), the marks that make a run unreportable (finalize's warning left out
     beside station 4's blocker). Finalize's own stations are named by what
     they check, never by number, here.
-    ADOPTION_PENDING (no run adopted yet, the one a next step asks about):
+    UNDECLARED (no run adopted yet, the one a next step asks about):
     the stations the adoption writes and holds on its proposal — the result
     section (`report_decisions.limit_gaps`), the recomputation, the report —
     are left out, since the tree cannot pass them before the adoption

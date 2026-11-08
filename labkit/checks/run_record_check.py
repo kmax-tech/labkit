@@ -21,7 +21,7 @@ from dataclasses import dataclass, replace
 import shlex
 from pathlib import Path
 
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, handover_command
 from labkit.formats.commands import register_anew
 from labkit.formats.runs import (
     NO_GIT,
@@ -603,10 +603,7 @@ def source_drift(source: Path, sha: str) -> str | None:
 #: the command that ends an area without a number while finalize stays
 #: blocked — the handover as the stamped AGENTS.md gives it (a test holds
 #: the two together); its <…> parts are the agent's to fill
-HANDOVER_COMMAND = (
-    'protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried '
-    '"<what you tried>" --into REPORT.md'
-)
+HANDOVER_COMMAND = handover_command(None).line
 
 
 #: how many untracked files under a directory source its blocker names
