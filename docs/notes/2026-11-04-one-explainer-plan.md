@@ -339,7 +339,7 @@ First item, and step 1 of the allow-list direction: one writer of the protocol h
 
 Inventory for this item (2026-11-07, read from the code at `391b6022`, not reproduced). The measure is one validation function for writer and reader, not fewer lines.
 
-- Already one implementation, nothing to merge: the report binding (`protocol_fill.report_bound` calls `report_hold.report_binding_gap`), the freeze (`audit_gaps.freeze_refusals`), the adoption (`protocol_check.adoption_owes`, then report-check), the low registration (`protocol_check.low_registration_missing`, read by `start_check`, `protocol_history` and the hooks), the head's choices (`protocol_block.FILLABLE_HEAD_KEYS`, `KINDS`).
+- Already one implementation, nothing to merge: the report binding (`protocol_fill.report_bound` calls `report_hold.report_binding_gap`), the freeze (`audit_gaps.freeze_refusals`), the adoption (`protocol_check.adoption_owes`, then report-check), the low registration (`protocol_check.low_registration_missing`, read by `start_check`, `protocol_history` and the hooks), the head's choices (`protocol_block.FILLABLE_HEAD_KEYS`, `PROTOCOL_KINDS`).
 - Writer and gate disagree:
   1. `labkit/tools/scaffold.py:1035` (`restampable_area`): "has measured" is `runs/` not empty; the gate's is `answering_run.first_measurements` (a run bound to the protocol that declared itself a measurement). `--change-kind` is refused after a probe or a pilot that binds nothing.
   2. `labkit/tools/protocol_edit.py:144` (`fill`): a bound field written twice gets `--line <n>`; the gates refuse the duplicate itself (`protocol_check.repeated_fields`, `REPEATED_WAY_OUT`: keep one copy). The writer's way out fills one copy and leaves the hold standing.

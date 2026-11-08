@@ -471,7 +471,7 @@ def print_contract(protocol: Path | None = None) -> None:
         + ", repeat_cost one of "
         + ", ".join(runs.REPEAT_COSTS)
         + ", kind one of "
-        + ", ".join(protocol_block.KINDS)
+        + ", ".join(protocol_block.PROTOCOL_KINDS)
         + " (what the kept number asserts: a computation judges no prediction, a fit "
         "judges a model trained or adjusted here, an apply a model used unchanged). "
         "A computation also carries `[kept]` — `key`, the metrics.json key of the "

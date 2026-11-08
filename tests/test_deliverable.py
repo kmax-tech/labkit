@@ -99,7 +99,7 @@ class Stamp(unittest.TestCase):
                 self.root, area, "01", "x", sk, False, (DELIVERABLE,), ("a", "b")
             )
             for path, text in stamps.items():
-                if path.name == standard_contract.MEASURE_SCRIPT.name:
+                if path.name == runs.MEASURE_SCRIPT.name:
                     self.assertIn(line, text, kind)
                     self.assertNotIn("DELIVERABLES: tuple[str, ...] = ()", text)
                     self.assertIn(

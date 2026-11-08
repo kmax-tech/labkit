@@ -2049,7 +2049,7 @@ class Exp(unittest.TestCase):
             printed,
             [
                 f"labkit-init exp foo-bar --kind {k} --repeat-cost low"
-                for k in protocol_block.KINDS
+                for k in protocol_block.PROTOCOL_KINDS
             ],
         )
         self.assertIn(scaffold.KIND_QUESTIONS, out.getvalue())

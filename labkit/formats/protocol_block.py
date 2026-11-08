@@ -62,7 +62,7 @@ TYPES = ("exploratory", "confirmatory")
 #: prediction; a fit judges a model trained or adjusted in this experiment;
 #: an apply judges a model used unchanged — the obligations follow
 #: (`standard_contract.registration_fields`), never the model technology
-KINDS = ("compute", "fit", "apply")
+PROTOCOL_KINDS = ("compute", "fit", "apply")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
@@ -109,7 +109,7 @@ class Head:
     id: str | None
     type: str | None
     repeat_cost: str | None
-    kind: str | None  # one of KINDS; None while the stamp's placeholder stands
+    kind: str | None  # one of PROTOCOL_KINDS; None while the stamp's placeholder stands
     frozen: bool
     preflight_audit: (
         str  # "" until the decided preflight record is named (its file name)
@@ -389,7 +389,7 @@ class Model:
 FILLABLE_HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     "type": ("type", TYPES),
     "repeat_cost": ("repeat_cost", REPEAT_COSTS),
-    "kind": ("kind", KINDS),
+    "kind": ("kind", PROTOCOL_KINDS),
     "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
     # [model] number_describes, a MUST of a computation with a model: listed
     # here so a fill can set it and `--list` names it
@@ -1010,7 +1010,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         id=pid,
         type=_choice(table, "type", TYPES),
         repeat_cost=_choice(table, "repeat_cost", REPEAT_COSTS),
-        kind=_choice(table, "kind", KINDS),
+        kind=_choice(table, "kind", PROTOCOL_KINDS),
         frozen=frozen,
         preflight_audit=audit.strip(),
         report=report_field(table.get("report")),

@@ -62,14 +62,14 @@ from labkit.formats import digests
 from labkit.formats import files, protocol_block, runs
 
 #: the kinds of promise — each one an id's stem: `criterion-1`
-KINDS = ("criterion", "quality-check", "branch")
+PROMISE_KINDS = ("criterion", "quality-check", "branch")
 #: A constant is named like the config key it is recorded under — lowercase
 #: snake_case, so the name IS the mapping between protocol and run record
 #: (any other naming would need a second table nobody checks).
 CONSTANT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
-_KIND = "|".join(re.escape(k) for k in KINDS)
+_KIND = "|".join(re.escape(k) for k in PROMISE_KINDS)
 #: the kinds as a metrics key spells them: `quality_check`
-_KEY_KIND = "|".join(k.replace("-", "_") for k in KINDS)
+_KEY_KIND = "|".join(k.replace("-", "_") for k in PROMISE_KINDS)
 #: an id anywhere in protocol prose: `[criterion-1]`
 ID_IN_PROTOCOL = re.compile(rf"\[((?:{_KIND})-\d+)\]")
 #: an id the stamp writes before a field's placeholder: `[criterion-1] <…>`
@@ -290,7 +290,7 @@ class Promise:
     """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
 
     id: str  # "criterion-1"
-    kind: str  # one of KINDS: "criterion" | "quality-check" | "branch"
+    kind: str  # one of PROMISE_KINDS: "criterion" | "quality-check" | "branch"
     key: str  # metrics key that reports it
     sentence: str  # the promise in one sentence
     scope: tuple[str, ...]  # declared implementation region
@@ -339,7 +339,7 @@ EARLIER_IDS_HELP = (
 
 
 def key_kind(key: str) -> str | None:
-    """The kind a metrics key belongs to — one of KINDS — or None outside
+    """The kind a metrics key belongs to — one of PROMISE_KINDS — or None outside
     the id namespace. The one way to ask "is this a quality-check key": a
     tool that re-spells the alphabet goes silent on its next change."""
     m = ID_KEY.match(key)

@@ -47,7 +47,7 @@ review of that state. Why: a review that is only a hint at the commit
 is passed over, and the discussed run's numbers stay in the report as
 results.
 
-Reading is loud: a file without its table, a kind outside KINDS, a count
+Reading is loud: a file without its table, a kind outside CLAIM_KINDS, a count
 that is not the claims' raise ReportReviewError naming the file and the
 field. The folder is beside the records, not among them: the readers of
 `audits/*.toml` (`findings.area_records`, `reviews.area_reviews`) do not
@@ -73,7 +73,7 @@ FOLDER = "report-reviews"
 ATTEMPT_MODE = "report-review"
 #: what a claim says of a report line: a discussed run's number stated as a
 #: result, or a statement the audit records contradict
-KINDS = ("result", "contradiction")
+CLAIM_KINDS = ("result", "contradiction")
 
 
 class ReportReviewError(ValueError):
@@ -83,7 +83,7 @@ class ReportReviewError(ValueError):
 
 @dataclass(frozen=True)
 class ReportClaim:
-    """One line the reader names: the report's LINE, the KIND (`KINDS`),
+    """One line the reader names: the report's LINE, the KIND (`CLAIM_KINDS`),
     WHY in its sentence."""
 
     line: int
@@ -136,10 +136,10 @@ def write_report_review(
     repo) into `AREA/audits/report-reviews/` and return its path
     (`<minute>-review[-n].toml`, the name `findings.written_order` sorts,
     never overwriting). Refuses (ValueError) a claim
-    of a kind outside KINDS."""
+    of a kind outside CLAIM_KINDS."""
     for c in claims:
-        if c.kind not in KINDS:
-            raise ValueError(f"claim kind {c.kind!r} — one of {', '.join(KINDS)}")
+        if c.kind not in CLAIM_KINDS:
+            raise ValueError(f"claim kind {c.kind!r} — one of {', '.join(CLAIM_KINDS)}")
     when = time.localtime(now)
     lines = [
         "# written by labkit-audit --report-review — a cold reader's claims on "
@@ -232,9 +232,9 @@ def _claim(path: Path, i: int, row: object) -> ReportClaim:
             raise ReportReviewError(
                 f"{path}: claim {i}: {key} is missing or not a string"
             )
-    if row["kind"] not in KINDS:
+    if row["kind"] not in CLAIM_KINDS:
         raise ReportReviewError(
-            f"{path}: claim {i}: kind {row['kind']!r} — one of {', '.join(KINDS)}"
+            f"{path}: claim {i}: kind {row['kind']!r} — one of {', '.join(CLAIM_KINDS)}"
         )
     return ReportClaim(line, row["kind"], row["why"].strip())
 

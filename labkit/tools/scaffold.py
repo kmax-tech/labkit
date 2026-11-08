@@ -587,7 +587,7 @@ def explore_next(slug: str) -> str:
     cost."""
     commands = "\n".join(
         f"  labkit-init exp {slug} --kind {kind} --repeat-cost low"
-        for kind in protocol_block.KINDS
+        for kind in protocol_block.PROTOCOL_KINDS
     )
     return (
         "\nNext: fill the cells, read the render, look at real output; when it "
@@ -698,7 +698,7 @@ def script_stamps(
             .replace("<name>", slug)
             .replace("<model>", alias)
         )
-        if deliverables and dest == standard_contract.MEASURE_SCRIPT.name:
+        if deliverables and dest == runs.MEASURE_SCRIPT.name:
             text = stamp_constant(text, "DELIVERABLES", deliverables)
             if deliverable_columns:
                 text = stamp_constant(text, "DELIVERABLE_COLUMNS", deliverable_columns)
@@ -728,7 +728,7 @@ def stamp_area(
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
     caller prints; `stamp_lab` returns its log the same way. KIND is what
-    the kept number asserts (`protocol_block.KINDS`); a new area without it
+    the kept number asserts (`protocol_block.PROTOCOL_KINDS`); a new area without it
     is refused — nothing falls back to a computation.
     REPORT_FILE registers the report file that owes the protocol's result
     (the head's `report`, relative to ROOT); a new area's stamp only.
@@ -1407,7 +1407,7 @@ def parse_kept_flags(key: str | None, unit: str | None) -> protocol_block.Kept |
 
 def asked_kind(kind: str | None) -> str:
     """The kind a new area is stamped with — the one asked, held to
-    `protocol_block.KINDS`; nothing falls back to a computation. A
+    `protocol_block.PROTOCOL_KINDS`; nothing falls back to a computation. A
     computation with `--model` is stamped, not refused: its head
     says what the number describes (`COMPUTE_CLAIM`). Raises
     `console.Refused` naming the choice."""
@@ -1417,9 +1417,10 @@ def asked_kind(kind: str | None) -> str:
             "--kind compute|fit|apply: what the kept number asserts; nothing is "
             f"stamped without it. {KIND_QUESTIONS}.",
         )
-    if kind not in protocol_block.KINDS:
+    if kind not in protocol_block.PROTOCOL_KINDS:
         raise console.Refused(
-            "labkit-init", f"--kind {kind!r}: one of {', '.join(protocol_block.KINDS)}"
+            "labkit-init",
+            f"--kind {kind!r}: one of {', '.join(protocol_block.PROTOCOL_KINDS)}",
         )
     return kind
 
@@ -1678,7 +1679,7 @@ def main(argv: list[str]) -> int:
     )
     exp.add_argument(
         "--kind",
-        choices=protocol_block.KINDS,
+        choices=protocol_block.PROTOCOL_KINDS,
         help="what the kept number asserts, required for a new area (the skeleton "
         f"and the registration follow it). {KIND_QUESTIONS}. A compute with "
         "--model also says what the number describes (number_describes; see the "

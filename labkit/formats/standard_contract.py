@@ -32,11 +32,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.protocol_block import KINDS
+from labkit.formats.protocol_block import PROTOCOL_KINDS
 from labkit.formats.runs import REPEAT_COSTS
 
 LOW, HIGH = REPEAT_COSTS
-COMPUTE_KIND, FIT_KIND, APPLY_KIND = KINDS
+COMPUTE_KIND, FIT_KIND, APPLY_KIND = PROTOCOL_KINDS
 
 #: the agent audits, by the mode `labkit-audit` and `findings` name them
 PREFLIGHT_AUDIT = "preflight"
@@ -152,7 +152,7 @@ def lane(repeat_cost: str | None) -> Lane:
 
 
 #: the fields a full run at low repeat cost owes written (not a placeholder) before
-#: it starts, by what the kept number asserts (`protocol_block.KINDS`): a
+#: it starts, by what the kept number asserts (`protocol_block.PROTOCOL_KINDS`): a
 #: computation registers its question — it judges no prediction, so it has no bar
 #: to clear; a fit or an apply registers the bar (criterion), what
 #: must hold before it is read (quality check) and what it is held against
@@ -174,8 +174,8 @@ def has_bar(kind: str) -> bool:
     """Does a number of KIND judge a prediction — so a trivial instrument
     could pass, and a bar is owed? Raises ValueError for a kind the head
     cannot carry: nothing falls back to a computation."""
-    if kind not in KINDS:
-        raise ValueError(f"kind {kind!r} is not one of {', '.join(KINDS)}")
+    if kind not in PROTOCOL_KINDS:
+        raise ValueError(f"kind {kind!r} is not one of {', '.join(PROTOCOL_KINDS)}")
     return kind != COMPUTE_KIND
 
 
@@ -196,9 +196,6 @@ def registration_fields(kind: str, model: bool) -> tuple[str, ...]:
 #: report-check runs it for recomputation.
 CHECK_SCRIPT = Path("scripts") / "02_analyze.py"
 CHECK_FLAG = "--check"
-#: the measurement script every skeleton stamps: the one script that opens
-#: the full run and carries the `DELIVERABLES` constant the stamp fills
-MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 
 
 def check_command(area: Path) -> list[str]:

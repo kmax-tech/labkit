@@ -50,9 +50,7 @@ from labkit.formats.repo import (
 from labkit.formats.runs import read_run_config
 from labkit.formats.scope_sha import parse_source
 from labkit.formats.area_state import state_of
-from labkit.formats.runs import lineage, model_provenance_run
-
-MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
+from labkit.formats.runs import MEASURE_SCRIPT, lineage, model_provenance_run
 
 
 @dataclass(frozen=True)

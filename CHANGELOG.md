@@ -111,7 +111,12 @@ pins (`requirements.txt` / `requirements.lock`).
   is the one answer to "the area's one protocol, else none" (finalize's
   way out for a gone run, the audit's earlier findings, the follow-up's
   awaited corrections; held by test); `repo.the_protocol` stays the form
-  that refuses.
+  that refuses. The three `KINDS` have their own names:
+  `protocol_block.PROTOCOL_KINDS` (compute, fit, apply),
+  `promises.PROMISE_KINDS` (criterion, quality-check, branch),
+  `report_reviews.CLAIM_KINDS` (result, contradiction);
+  the measurement script's path has one home, `runs.MEASURE_SCRIPT`
+  (`params` and `standard_contract` each kept a copy).
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and
