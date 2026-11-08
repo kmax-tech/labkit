@@ -1304,12 +1304,11 @@ def written_line(text: str, label: str) -> str | None:
 
 
 def conclusion_written(text: str) -> bool:
-    """Is the Conclusion written — present and no placeholder? The claim the
-    review binds to (`reviews.claim_digest`)."""
-    return any(
-        f.name == field_name(CONCLUSION_LABEL) and f.value.strip() and not f.placeholder
-        for f in fields(text)
-    )
+    """Is the Conclusion written — once, no placeholder, not only dashes
+    (`written_line`)? The claim the review binds to (`reviews.claim_digest`)
+    and the answer the result block shows, so a review never binds to a
+    Conclusion the block refuses."""
+    return written_line(text, CONCLUSION_LABEL) is not None
 
 
 #: a prompt line that shows an item's field: filled per item, so held to no

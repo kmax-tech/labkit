@@ -1525,3 +1525,26 @@ class RegistrationProse(unittest.TestCase):
         other = "## Läufe\n\n- r1 — a\n- r2 — b\n"
         self.assertEqual(protocol_report.registration_prose(base + runs), 3)
         self.assertEqual(protocol_report.registration_prose(base + other), 3 + 4)
+
+
+class OneRuleForAWrittenConclusion(unittest.TestCase):
+    """The review binds to the Conclusion (`conclusion_written`) and the
+    result block shows it (`written_line`): one answer, so a review never
+    binds to a Conclusion the block refuses."""
+
+    def test_dashes_a_placeholder_or_two_lines_are_not_written(self):
+        for value, written in [
+            ("Two lines per document.", True),
+            ("—", False),
+            ("<answer>", False),
+        ]:
+            text = f"## Summary\n\n- **Conclusion:** {value}\n"
+            self.assertEqual(protocol_check.conclusion_written(text), written, value)
+            self.assertEqual(
+                protocol_check.written_line(text, protocol_check.CONCLUSION_LABEL)
+                is not None,
+                written,
+                value,
+            )
+        twice = "## Summary\n\n- **Conclusion:** a\n- **Conclusion:** b\n"
+        self.assertFalse(protocol_check.conclusion_written(twice))
