@@ -15,7 +15,7 @@ from pathlib import Path
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import review_gap
-from labkit.formats.area_state import INDEX, TREE, Measured, state_of
+from labkit.formats.area_state import Measured, state_of
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -50,12 +50,14 @@ def report_owed(
     declared: str | None,
     repo: Path,
     *,
+    measured: Measured,
     staged: bool,
     review: bool = True,
     progress: bool = False,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
-    the three ways out — or None.
+    the three ways out — or None. MEASURED is what the area measured of
+    the protocol (`area_state.Measured`, built once by the caller).
 
     The head's `report` names the file (`protocol_block.report_field`,
     relative to REPO); none registered: None. The file is read as the
@@ -137,7 +139,7 @@ def report_owed(
         and run is None
         and not why
         and head.id is not None
-        and not measured(protocol, head.id, staged=staged).has_measured
+        and not measured.has_measured
     ):
         return None
     pending = None if declared is not None or run is None or why else run.name
@@ -215,18 +217,6 @@ def progress_account(written: str, owner: str, run_id: str) -> bool:
     )
 
 
-def measured(protocol: Path, pid: str, *, staged: bool = False) -> Measured:
-    """What PROTOCOL's area measured of PID (`area_state.Measured`) as the
-    state holds it: the working tree, or the index when STAGED. What a
-    registered report owes from (`missing_report`) and what binds the
-    report registered before it (`protocol_fill`). Raises
-    `run_index.RunIndexError` on a run index that does not read: whether a
-    deleted run was measured cannot be told."""
-    return state_of(protocol.parent, file_state=INDEX if staged else TREE).measured_of(
-        pid
-    )
-
-
 @dataclass(frozen=True)
 class BoundReports:
     """What the commits of a protocol's first measurements registered as its
@@ -248,15 +238,15 @@ _UNREAD = {
 }
 
 
-def bound_reports(protocol: Path, pid: str, root: Path) -> BoundReports:
-    """The reports PROTOCOL (stamped id PID) registered before its first
-    measurements (`area_state.Measured.firsts`), as each one's commit in
+def bound_reports(protocol: Path, measured: Measured, root: Path) -> BoundReports:
+    """The reports PROTOCOL registered before its first measurements
+    (MEASURED, `area_state.Measured.firsts`), as each one's commit in
     the repository ROOT holds it (`protocol_history.committed_at`), at
     both repeat costs. A committed head that does not read is unread.
     Raises RuntimeError when git fails."""
     registered: dict[str, str | None] = {}
     unread: list[tuple[str, str]] = []
-    for rd in measured(protocol, pid).firsts:
+    for rd in measured.firsts:
         then = protocol_history.committed_at(protocol, rd, root)
         if then.text is None:
             why = _UNREAD[then.cause or ""]
@@ -272,7 +262,7 @@ def bound_reports(protocol: Path, pid: str, root: Path) -> BoundReports:
 
 
 def report_binding_gap(
-    protocol: Path, text: str, *, unread: bool
+    protocol: Path, text: str, *, measured: Measured, unread: bool
 ) -> GateFinding | None:
     """Why the report PROTOCOL's head (its TEXT, as the state holds it)
     registers now is not the one its first measurements stood under — one
@@ -296,7 +286,7 @@ def report_binding_gap(
     root = git_root(protocol)
     if root is None or not head.id:
         return None
-    bound = bound_reports(protocol, head.id, root)
+    bound = bound_reports(protocol, measured, root)
     here = Path.cwd()
     name_p = shown(protocol, here)
     handover = handover_command(protocol, head.report or "REPORT.md")
@@ -326,11 +316,7 @@ def report_binding_gap(
             step=handover,
         )
     if not values:
-        if (
-            head.report is not None
-            and not bound.unread
-            and measured(protocol, head.id).has_measured
-        ):
+        if head.report is not None and not bound.unread and measured.has_measured:
             return blocker(
                 f"{name_p}: its first measurement is missing — the report binding cannot be read",
                 fix=f"restore the missing run evidence, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
@@ -385,7 +371,8 @@ def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list
             continue
         if head is None or not head.id:
             continue
-        for registered in bound_reports(p, head.id, gitroot).registered.values():
+        held = state_of(p.parent).measured_of(head.id)
+        for registered in bound_reports(p, held, gitroot).registered.values():
             if (
                 registered is not None
                 and registered != head.report
@@ -401,14 +388,16 @@ def missing_report(
     text: str,
     repo: Path,
     *,
+    measured: Measured,
     staged: bool = False,
     declared: str | None = None,
 ) -> GateFinding | None:
     """Why PROTOCOL (its TEXT) is delivered incomplete: its head registers
     a report (`[protocol] report`, relative to REPO) that the state lacks —
     the working tree, or the index when STAGED —, while its area holds a
-    measurement of it (`measured`: present, held by a commit, or only in
-    the local index). One blocker naming the two ways to write it:
+    measurement of it (MEASURED, `area_state.Measured`: present, held by a
+    commit, or only in the local index). One blocker naming the two ways to
+    write it:
     the adoption (its result block) and the handover (an end without a
     result). None when nothing is registered, the report is there, or
     nothing was measured — before a measurement a report owes nothing. At
@@ -420,14 +409,14 @@ def missing_report(
     a report deleted after the adoption would otherwise pass the commit,
     report-check and labkit-next. Raises
     `protocol_block.BlockError` on a head that does not read,
-    `run_index.RunIndexError` on a run index that does not read (`measured`)."""
+    `run_index.RunIndexError` on a run index that does not read."""
     head = protocol_block.head(text)
     if head.report is None or not head.id:
         return None
     report = own_path(repo.resolve() / head.report)
     if (text_at(repo, report) is not None) if staged else report.exists():
         return None
-    if not measured(protocol, head.id, staged=staged).has_measured:
+    if not measured.has_measured:
         return None
     if staged and declared is None and text_at(repo, report, "HEAD") is None:
         return None

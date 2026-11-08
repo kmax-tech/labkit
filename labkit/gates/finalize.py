@@ -89,6 +89,7 @@ import shlex
 from dataclasses import replace
 from pathlib import Path
 
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.commands import checkout_command
 from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
@@ -779,15 +780,27 @@ def report(findings: Findings) -> int:
 NO_RUN = "  no completed run to check"
 
 
+def _state(area: Path, given: AreaState | None) -> AreaState:
+    """The area's state for finalize's stations: GIVEN, the caller's (a
+    gate that built one for its check run), else built here once."""
+    return given if given is not None else state_of(area)
+
+
 def finalize_area(
-    area: Path, protocol: Path | None = None, findings: Findings | None = None
+    area: Path,
+    protocol: Path | None = None,
+    findings: Findings | None = None,
+    *,
+    state: AreaState | None = None,
 ) -> int:
     """Run finalize on an area. Returns 0 (clean or warnings only),
     1 (a blocker) or 2 (no protocol to hold the area to). FINDINGS, when
     given, collects what the stations found and is the channel every line
     goes through (`gate.Findings`): a gate that runs finalize as one of its
     stations (report-check) hands over a silent one (`Findings(tell=None)`)
-    and names the blockers instead of "run it to see them".
+    and names the blockers instead of "run it to see them". STATE, the
+    area's state (`area_state.state_of`), is the caller's when it built one
+    for its check run, else built here once.
 
     The flow — every condition that decides whether a step runs is in this
     function; one level down is how a step works, not whether it runs. A
@@ -852,7 +865,6 @@ def finalize_area(
                 f"{shlex.quote(shown(chosen, Path.cwd()))} --contract` shows its fields",
             )
         return 2
-
     # 1. answering run — the run every later step examines
     findings.header(f"answering run: {chosen.name}")
     answering_run = check_answering_run(findings, area, chosen, text, head.id)
@@ -862,7 +874,9 @@ def finalize_area(
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_registration(findings, area, chosen, head.id, answering_run)
+        check_registration(
+            findings, area, chosen, head.id, answering_run, _state(area, state)
+        )
 
     # 2. intent-check — always
     findings.header("intent-check")

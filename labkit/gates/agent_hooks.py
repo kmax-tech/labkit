@@ -92,6 +92,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import FrameType
 
+from labkit.formats.area_state import state_of
 from labkit.gates import registered_report
 from labkit.gates.hook_session import SessionCommits
 from labkit.gates.hook_session import write_stop_base
@@ -393,8 +394,13 @@ def missing_reports(
         area = protocol.parent.resolve()
         try:
             text = protocol.read_text(encoding="utf-8")
+            head = protocol_block.head(text)
             gap = registered_report.missing_report(
-                protocol, text, repo, declared=protocol_block.declared_run(text)
+                protocol,
+                text,
+                repo,
+                measured=state_of(area).measured_of(head.id),
+                declared=protocol_block.declared_run(text),
             )
         except (OSError, UnicodeError, protocol_block.BlockError):
             continue  # held as a protocol where it is touched

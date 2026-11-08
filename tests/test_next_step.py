@@ -25,6 +25,7 @@ from labkit.gates import registered_report
 from labkit.tools import report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
 from labkit.formats import protocol_block, report_reviews  # noqa: E402
+from labkit.formats import area_state  # noqa: E402
 from labkit.formats.gate import GateFinding  # noqa: E402
 from labkit.formats.repo import state_text  # noqa: E402
 from labkit.gates import report_check, report_context, report_hold  # noqa: E402
@@ -900,8 +901,14 @@ class MissingRegisteredReport(unittest.TestCase):
         from labkit.gates import agent_hooks
 
         with contextlib.chdir(self.lab.root):
+            text = self.protocol.read_text(encoding="utf-8")
             gap = registered_report.missing_report(
-                self.protocol, self.protocol.read_text(encoding="utf-8"), self.lab.root
+                self.protocol,
+                text,
+                self.lab.root,
+                measured=area_state.state_of(self.area).measured_of(
+                    protocol_block.head(text).id
+                ),
             )
             assert gap is not None
             step = next_step.next_step(self.area, self.protocol.resolve())

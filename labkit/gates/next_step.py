@@ -91,7 +91,7 @@ from labkit.formats.commands import (
     report_fields_command,
     withdraw_command,
 )
-from labkit.formats.area_state import INDEX, TREE
+from labkit.formats.area_state import INDEX, TREE, Measured, state_of
 from labkit.gates.undecided import undecided_state
 
 if TYPE_CHECKING:
@@ -157,8 +157,13 @@ def next_step(
     report = protocol_check.check_fields(text)
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
-    hint = _report_hint(area, protocol, text)
-    before = _before_the_chain(area, protocol, text, report, hint, staged=staged)
+    # the area's state once, for every step and for the chain
+    area_state = state_of(area)
+    measured = area_state.measured_of(protocol_block.head(text).id)
+    hint = _report_hint(protocol, text, measured)
+    before = _before_the_chain(
+        area, protocol, text, report, hint, measured, staged=staged
+    )
     if before is not None:
         return before
     # a run still going comes first, as `runlog --wait` sees it: read as
@@ -182,7 +187,9 @@ def next_step(
             "runlog refuses one beside an open run, not yet beside a start whose "
             "run has not opened",
         )
-    ctx = report_context.checked(area, protocol, state=state, text=text)
+    ctx = report_context.checked(
+        area, protocol, state=state, text=text, area_state=area_state
+    )
     account = _progress_step(ctx)
     if account is not None:
         return account
@@ -312,18 +319,19 @@ def _before_the_chain(
     text: str,
     report: protocol_check.FieldReport,
     hint: str,
+    measured: Measured,
     *,
     staged: bool,
 ) -> Step | None:
     """The steps before report-check's chain, the first that applies: a
     MUST field unfilled (`_field_step`), committed evidence changed against
-    HEAD (`_restore_step`), a current handover (`_handed_over`). None when
-    none applies."""
+    HEAD (`_restore_step`), a current handover (`_handed_over`, MEASURED
+    what the area measured of the protocol). None when none applies."""
     return (
         _field_step(protocol, report, hint)
         or _staged_area_step(area, text, staged=staged)
         or _restore_step(area, staged=staged)
-        or _handed_over(area, protocol, text, staged=staged)
+        or _handed_over(area, protocol, text, measured, staged=staged)
     )
 
 
@@ -410,7 +418,9 @@ def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
     )
 
 
-def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step | None:
+def _handed_over(
+    area: Path, protocol: Path, text: str, measured: Measured, *, staged: bool
+) -> Step | None:
     """The step of a PROTOCOL (its TEXT) a current handover ended
     (`handovers.protocol_handed_over`), else None: the review its
     registered report owes once the handover block stands
@@ -422,7 +432,9 @@ def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step
     if not handovers.protocol_handed_over(area, protocol):
         return None
 
-    owed = report_owed(protocol, text, None, layout_root(area), staged=staged)
+    owed = report_owed(
+        protocol, text, None, layout_root(area), measured=measured, staged=staged
+    )
     if owed is not None:
         return Step(
             f"{protocol.name} is handed over, and {owed.text}",
@@ -612,19 +624,13 @@ def _field_step(
     return None
 
 
-def _report_hint(area: Path, protocol: Path, text: str) -> str:
+def _report_hint(protocol: Path, text: str, measured: Measured) -> str:
     """The sentence a step before the first measurement adds when the head
     registers no report: how to register one — labkit cannot tell whether
-    the task asks for a report file, and once the area measured the
-    registration is refused (`protocol_fill.report_bound`). "" otherwise."""
-    from labkit.gates.registered_report import measured
-
+    the task asks for a report file, and once the area measured (MEASURED)
+    the registration is refused (`protocol_fill.report_bound`). "" otherwise."""
     head = protocol_block.head(text)
-    if (
-        head.report is not None
-        or not head.id
-        or measured(protocol, head.id).has_measured
-    ):
+    if head.report is not None or not head.id or measured.has_measured:
         return ""
     return (
         f"; if the task asks for a report file, register it now: `protocol-fill "

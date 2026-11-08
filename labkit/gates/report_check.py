@@ -110,7 +110,7 @@ from labkit.formats.answering_run import (
     bound_runs,
     is_measurement,
 )
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.protocol_history import (
     NO_COMMIT,
     UNKNOWN_COMMIT,
@@ -640,11 +640,18 @@ def report_binding_gaps(ctx: Checked, *, unread: bool) -> list[GateFinding]:
     """The report CTX's head registers against the one its first
     measurements stood under (`registered_report.report_binding_gap`, UNREAD
     passed on), as a list."""
-    gap = report_binding_gap(ctx.protocol, ctx.text, unread=unread)
+    gap = report_binding_gap(
+        ctx.protocol,
+        ctx.text,
+        measured=ctx.area_state.measured_of(ctx.head.id),
+        unread=unread,
+    )
     return [] if gap is None else [gap]
 
 
-def finalize_findings(area: Path, protocol: Path) -> list[GateFinding]:
+def finalize_findings(
+    area: Path, protocol: Path, state: AreaState
+) -> list[GateFinding]:
     """Finalize's blockers and warnings, each named here with its prefix
     (`FINALIZE`) — a hook that says "run it to see them" asks for a round
     trip the agent does not take, and a warning dropped here would reach
@@ -654,9 +661,10 @@ def finalize_findings(area: Path, protocol: Path) -> list[GateFinding]:
     into the finding itself (the runs it looked at, intent-check's lines,
     the test counts) and keeps its exit-2 reason (no protocol to hold) as a
     blocker too. A non-zero exit without a blocker is a bug in finalize,
-    not a state to report around."""
+    not a state to report around. STATE, the area's state the check built
+    once, is finalize's too."""
     collected = Findings(tell=None)  # the data, not the console
-    finalized = finalize_area(area, protocol, collected)
+    finalized = finalize_area(area, protocol, collected, state=state)
     if finalized != 0 and not collected.blocked:
         raise RuntimeError(
             f"finalize {area} exits {finalized} and kept no blocker — every "
@@ -792,7 +800,7 @@ def chain_gaps(
     # 3. finalize — always; the unreportable marks this chain's full-run
     # station holds as blockers are not told again as finalize's warnings
     # where it read this text
-    finalized = finalize_findings(ctx.area, ctx.protocol)
+    finalized = finalize_findings(ctx.area, ctx.protocol, ctx.area_state)
     if same_text:
         finalized = without_unreportable_warnings(finalized, ctx.run)
     out += finalized
@@ -855,7 +863,8 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     pid = protocol_block.head(text).id
     if not pid:
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
-    held = state_of(area).measured_of(pid)
+    state = state_of(area)
+    held = state.measured_of(pid)
     measured = [rd for rd in held.present if is_measurement(rd)]
     if not measured:
         # measured and deleted since: git or the index keeps them, so a
@@ -893,7 +902,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     except runs.MetricsError as exc:
         return handovers.RunAccount(run, handovers.UNUSABLE, (str(exc),))
     try:
-        ctx = checked(area, protocol, text=text)
+        ctx = checked(area, protocol, text=text, area_state=state)
     except AuditError as exc:
         # the audit cannot be held to the run: that holds the adoption too
         return handovers.RunAccount(run, handovers.HELD, (str(exc),))
@@ -929,7 +938,12 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     staged = ctx.state == INDEX
     gone = (
         missing_report(
-            ctx.protocol, ctx.text, ctx.repo, staged=staged, declared=ctx.declared
+            ctx.protocol,
+            ctx.text,
+            ctx.repo,
+            measured=ctx.area_state.measured_of(ctx.head.id),
+            staged=staged,
+            declared=ctx.declared,
         )
         if staged or ctx.declared is not None
         else None
@@ -941,6 +955,7 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
         ctx.text,
         ctx.declared,
         ctx.repo,
+        measured=ctx.area_state.measured_of(ctx.head.id),
         staged=ctx.state == INDEX,
         review=review,
     )
@@ -1206,18 +1221,32 @@ def hold_registered(
     a result; the report it delivers still owes its review. Raises `protocol_block.BlockError` on a head that does not read — the
     caller read the declaration off the same text first."""
     changed = evidence.change_blockers(protocol.parent, staged=staged)
+    state = state_of(protocol.parent)
+    measured = state.measured_of(protocol_block.head(text).id)
     gaps = changed + [
         g
         for g in (
             (
-                report_binding_gap(protocol, text, unread=True)
+                report_binding_gap(protocol, text, measured=measured, unread=True)
                 if not handovers.protocol_handed_over(
-                    protocol.parent, protocol, staged=staged
+                    protocol.parent, protocol, staged=staged, state=state
                 )
                 else None
             ),
-            (missing_report(protocol, text, repo, staged=True) if staged else None)
-            or report_owed(protocol, text, None, repo, staged=staged, progress=staged),
+            (
+                missing_report(protocol, text, repo, measured=measured, staged=True)
+                if staged
+                else None
+            )
+            or report_owed(
+                protocol,
+                text,
+                None,
+                repo,
+                measured=measured,
+                staged=staged,
+                progress=staged,
+            ),
         )
         if g is not None
     ]

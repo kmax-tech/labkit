@@ -155,6 +155,45 @@ class AHistoryGitCannotRead(_Repository):
         self.assertEqual(line, state.history_unread)
 
 
+class OneStateBuildPerCheckRun(_Repository):
+    """The state is built once per check run and handed down: report-check's
+    context carries it to every station and to finalize, `labkit-next`
+    builds it once for its steps and the chain (plan Phase 4, the first step
+    of the build-out). Counted at `committed_runs`, which every build in a
+    repository calls once."""
+
+    def _builds(self, action) -> int:
+        from unittest import mock
+
+        real = area_state.committed_runs
+        calls: list[int] = []
+
+        def counting(*args, **kwargs):
+            calls.append(1)
+            return real(*args, **kwargs)
+
+        with mock.patch.object(area_state, "committed_runs", counting):
+            action()
+        return len(calls)
+
+    def test_report_checks_chain_builds_the_state_once(self):
+        self._run(RUN)
+
+        def chain() -> None:
+            ctx = report_check.checked(self.area, self.proto)
+            report_check.chain_gaps(ctx, adoption_pending=True, review=False)
+
+        self.assertEqual(self._builds(chain), 1)
+
+    def test_next_step_builds_the_state_once(self):
+        from labkit.gates import next_step
+
+        self._run(RUN)
+        self.assertEqual(
+            self._builds(lambda: next_step.next_step(self.area, self.proto)), 1
+        )
+
+
 class ARunOnlyTheIndexKnows(unittest.TestCase):
     """Never committed and deleted: `runs.tsv` alone names it — measured,
     lost, never read back."""

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.commands import checkout_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
@@ -129,7 +130,9 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
     return _Bound({"id": head.id, "path": rel}, text, head)
 
 
-def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
+def _committed_registration(
+    base_dir: Path, bound: _Bound, state: AreaState
+) -> list[str]:
     """Refuse a first measurement whose report differs from HEAD, on both
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
@@ -137,14 +140,13 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     either. No commitment check outside Git or for an unbound protocol.
     Reads HEAD and the first measurements; writes nothing.
     """
-    from labkit.formats.area_state import state_of
     from labkit.formats.protocol_history import registration_in_commit
 
     head, rel = bound.head, bound.binding.get("path")
     root = repo.git_root(base_dir)
     if root is None or head is None or head.id is None or not isinstance(rel, str):
         return []
-    if state_of(base_dir).measured_of(head.id).firsts:
+    if state.measured_of(head.id).firsts:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")
@@ -188,7 +190,7 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     return []
 
 
-def _first_step(base_dir: Path, bound: _Bound) -> str:
+def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
     """The next action before a full run: low's registration, or high's
     report commitment when missing, otherwise its freeze. Reads the first
     measurement and HEAD at high cost through the shared commitment check;
@@ -212,7 +214,7 @@ def _first_step(base_dir: Path, bound: _Bound) -> str:
             "the registration the kind owes (`protocol-check --contract` names it), "
             "then start the run again."
         )
-    if _committed_registration(base_dir, bound):
+    if _committed_registration(base_dir, bound, state):
         return "Commit the registered report path as named above, then start the run again."
     return (
         "Freeze first: `preflight <AREA>` clean, the preflight audit decided, then "
@@ -220,7 +222,7 @@ def _first_step(base_dir: Path, bound: _Bound) -> str:
     )
 
 
-def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
+def _freeze_findings(base_dir: Path, bound: _Bound, state: AreaState) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.formats.protocol_check import low_registration_missing
 
@@ -247,7 +249,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
         if not missing:
             # the committed registration names the same copies again; the
             # tree's repair comes first, its commit is the next step
-            return twice or _committed_registration(base_dir, bound)
+            return twice or _committed_registration(base_dir, bound, state)
         return twice + [
             f'{path.name}: `repeat_cost = "{head.repeat_cost}"`, but the registration is not '
             f"written: {', '.join(missing)} (the commit also owes the other fields "
@@ -257,7 +259,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"model the data profile), not the freeze (LAB-003 No run without an "
             f"intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
-    out = twice + _committed_registration(base_dir, bound)
+    out = twice + _committed_registration(base_dir, bound, state)
     if head.kind is None:
         # what the number asserts is decided before it exists
         out.append(
@@ -278,7 +280,8 @@ def measurement_refusal(base_dir: Path, protocol: Path) -> tuple[list[str], str]
     the gaps, are not read here. Raises SystemExit as `protocol_binding`
     does; prints its warning for a protocol without a stamped id."""
     bound = protocol_binding(base_dir, protocol.resolve())
-    return _freeze_findings(base_dir, bound), _first_step(base_dir, bound)
+    state = state_of(base_dir)
+    return _freeze_findings(base_dir, bound, state), _first_step(base_dir, bound, state)
 
 
 def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
@@ -754,7 +757,8 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
                 f"`{commands.audit_command(base_dir, '--findings')}` prints per finding",
             )
         )
-    gaps = _freeze_findings(base_dir, prepared.bound)
+    state = state_of(base_dir)
+    gaps = _freeze_findings(base_dir, prepared.bound, state)
     if not gaps:
         return False, None
     if os.environ.get("LABKIT_UNFROZEN") != "1":  # "0" is no acknowledgement
@@ -762,7 +766,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             with_way_out(
                 f"runlog: {declares}, but its "
                 "protocol is not ready for one:\n  " + "\n  ".join(gaps),
-                f"{_first_step(base_dir, prepared.bound)} "
+                f"{_first_step(base_dir, prepared.bound, state)} "
                 "No other run yields a reported number: a probe (run_kind='probe') "
                 "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
                 "high repeat cost only over an audit the backend refused, "

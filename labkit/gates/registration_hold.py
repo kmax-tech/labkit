@@ -32,7 +32,7 @@ from labkit.formats.runs import (
     read_run_config,
 )
 from labkit.formats.answering_run import first_registrations
-from labkit.formats.area_state import Measured, state_of
+from labkit.formats.area_state import AreaState, Measured
 from labkit.formats import protocol_history
 from labkit.formats.repo import (
     area_protocols,
@@ -61,7 +61,7 @@ from labkit.formats.followup import chain, earlier_blockers, earlier_corrections
 
 
 def registration_changes(
-    area: Path, protocol: Path, pid: str | None, run: Path | None
+    area: Path, protocol: Path, pid: str | None, run: Path | None, state: AreaState
 ) -> list[GateFinding]:
     """The answering RUN holds the registration its protocol's first
     measurement recorded (K3, docs/notes/2026-10-27-new-registration-contracts.md):
@@ -86,7 +86,7 @@ def registration_changes(
     if pid is None or run is None:
         return []
     root = git_root(protocol)
-    held = state_of(area).measured_of(pid)
+    held = state.measured_of(pid)
     scope = scope_changes(area, protocol, pid, run, root, held)
     cfg = read_run_config(run)
     now = cfg.promises if cfg is not None else None
@@ -208,7 +208,7 @@ def scope_changes(
         if unread:
             return [unread_hold(area, pid, unread)]
     try:
-        return _scope_held(area, protocol, pid, run, root, others)
+        return _scope_held(area, protocol, pid, run, root, others, held)
     except AuditError as exc:
         # whether a follow-up's release still covers the run cannot be told:
         # held as that, never as an unreleased change whose way back would
@@ -231,6 +231,7 @@ def _scope_held(
     run: Path,
     root: Path | None,
     others: list[RunDir],
+    measured: Measured,
 ) -> list[GateFinding]:
     """`scope_changes` once every text it compares reads: the hold of the
     answering run's text, then of the protocol as it stands. Raises
@@ -287,7 +288,7 @@ def _scope_held(
                         step=restore_step(protocol, first, root),
                     )
                 ]
-    now = scope_now(area, protocol, pid, run, root)
+    now = scope_now(area, protocol, pid, run, root, measured)
     if now is None or not now.held:
         return []
     text = protocol.read_text(encoding="utf-8")
@@ -473,7 +474,12 @@ class Correction:
 
 
 def scope_now(
-    area: Path, protocol: Path, pid: str, run: Path, root: Path | None
+    area: Path,
+    protocol: Path,
+    pid: str,
+    run: Path,
+    root: Path | None,
+    measured: Measured,
 ) -> ScopeNow | None:
     """PROTOCOL as it stands against the first measurements in what the
     number is about (`protocol_history.first_measured_differences`,
@@ -485,9 +491,7 @@ def scope_now(
     `[reference]` never — they name no field a finding can place itself in
     (`protocol_history.correctable`). None without a difference. Raises RuntimeError when
     git fails."""
-    firsts = [
-        rd for group in state_of(area).measured_of(pid).first_groups for rd in group
-    ]
+    firsts = [rd for group in measured.first_groups for rd in group]
     text = protocol.read_text(encoding="utf-8")
     found = protocol_history.first_measured_differences(
         protocol, firsts, text, root, protocol_history.scope_differences
@@ -622,7 +626,7 @@ def awaiting_followup(
 
 
 def corrected_in_place(
-    area: Path, protocol: Path, pid: str | None, run: Path | None
+    area: Path, protocol: Path, pid: str | None, run: Path | None, state: AreaState
 ) -> list[str]:
     """One line per field of PROTOCOL changed since its first measurement
     that a correction released (`scope_now`): the field, its old and new
@@ -631,7 +635,9 @@ def corrected_in_place(
     stamped id or such a field. Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
-    now = scope_now(area, protocol, pid, run, git_root(protocol))
+    now = scope_now(
+        area, protocol, pid, run, git_root(protocol), state.measured_of(pid)
+    )
     if now is None:
         return []
     return [
@@ -732,16 +738,22 @@ def _restored(change: str) -> str:
 
 
 def check_registration(
-    findings: Findings, area: Path, protocol: Path, pid: str | None, run: Path
+    findings: Findings,
+    area: Path,
+    protocol: Path,
+    pid: str | None,
+    run: Path,
+    state: AreaState,
 ) -> None:
     """Hold the answering RUN to the registration of the first measurement
     (`registration_changes`: what the number is about, and the promise
-    block); a note when it holds, and one per field a correction released
-    (`corrected_in_place`), so the release names what changed and why."""
-    held = registration_changes(area, protocol, pid, run)
+    block, read from STATE, the area's state built once); a note when it
+    holds, and one per field a correction released (`corrected_in_place`),
+    so the release names what changed and why."""
+    held = registration_changes(area, protocol, pid, run, state)
     findings.take_all(held)
     if not held:
-        corrected = corrected_in_place(area, protocol, pid, run)
+        corrected = corrected_in_place(area, protocol, pid, run, state)
         findings.note(
             "  what the number is about and the promise block are the ones the first "
             "measurement registered"

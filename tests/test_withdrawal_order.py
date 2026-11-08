@@ -97,10 +97,10 @@ class RewordedInTheChain(CountCommands):
         self.assertEqual(self.held_by(), self.protocol)
         finalized = report_check.finalize_findings
 
-        def reworded(area: Path, protocol: Path):
+        def reworded(area: Path, protocol: Path, state):
             return [
                 replace(f, text=f.text.replace("changed since", "differs from"))
-                for f in finalized(area, protocol)
+                for f in finalized(area, protocol, state)
             ]
 
         with mock.patch.object(report_check, "finalize_findings", reworded):

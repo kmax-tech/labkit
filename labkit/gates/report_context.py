@@ -66,7 +66,8 @@ class Checked:
         area_state: The area as the working tree holds it
             (`area_state.state_of`): its runs, the runs git holds back, what
             each protocol measured — the tree in every state, as the
-            stations read it (the caller makes the tree that state).
+            stations read it (the caller makes the tree that state). Built
+            once per check run and handed to every station and to finalize.
     """
 
     area: Path
@@ -83,12 +84,19 @@ class Checked:
 
 
 def checked(
-    area: Path, protocol: Path, *, state: str = TREE, text: str | None = None
+    area: Path,
+    protocol: Path,
+    *,
+    state: str = TREE,
+    text: str | None = None,
+    area_state: AreaState | None = None,
 ) -> Checked:
     """The context of one check: TEXT is the protocol as STATE holds it
-    (the working tree when None). Raises `protocol_block.BlockError` on an
-    unreadable head, `AuditError` out of the run choice,
-    `run_index.RunIndexError` on a run index that does not read."""
+    (the working tree when None); AREA_STATE the area's state when the
+    caller built it already (one build per check run), else built here.
+    Raises `protocol_block.BlockError` on an unreadable head, `AuditError`
+    out of the run choice, `run_index.RunIndexError` on a run index that
+    does not read."""
     if text is None:
         text = protocol.read_text(encoding="utf-8")
     head = protocol_block.head(text)
@@ -105,7 +113,7 @@ def checked(
         declaration_gap=declaration_gap,
         run=run,
         why=why,
-        area_state=state_of(area),
+        area_state=area_state if area_state is not None else state_of(area),
     )
 
 

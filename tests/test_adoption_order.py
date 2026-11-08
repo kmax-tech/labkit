@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.formats import commands
 from labkit.gates.report_check import adoption_order_note  # noqa: E402
 from labkit.formats import protocol_block  # noqa: E402
+from labkit.formats.area_state import state_of  # noqa: E402
 from labkit.formats.gate import blocker  # noqa: E402
 from labkit.run import start_check  # noqa: E402
 
@@ -66,7 +67,7 @@ class FirstStepBeforeARun(unittest.TestCase):
             protocol_block.head(text),
         )
         with mock.patch.object(start_check, "_committed_registration", return_value=[]):
-            return start_check._first_step(Path.cwd(), bound)  # noqa: SLF001
+            return start_check._first_step(Path.cwd(), bound, state_of(Path.cwd()))  # noqa: SLF001
 
     def test_low_names_the_registration_not_the_freeze(self):
         step = self.first_step("low")

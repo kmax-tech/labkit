@@ -16,6 +16,7 @@ from pathlib import Path
 from labkit.gates import hook_pre_run
 from labkit.checks import protocol_report
 from labkit.formats import protocol_block, protocol_check, protocol_history
+from labkit.formats.area_state import state_of
 from labkit.formats.gate import Findings
 from labkit.gates import finalize, preflight
 from labkit.run import start_check
@@ -243,7 +244,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
 
     def test_the_start_check_refuses_it_and_names_the_way_out(self):
         bound = start_check.protocol_binding(self.area, self.protocol.name)
-        problems = start_check._freeze_findings(self.area, bound)
+        problems = start_check._freeze_findings(self.area, bound, state_of(self.area))
         self.assertTrue(any("Unit written 2 times" in p for p in problems), problems)
         self.assertFalse(any("not written" in p for p in problems), problems)
         _, way = start_check.measurement_refusal(self.area, self.protocol)
@@ -256,7 +257,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         self.commit_twice()
         self.protocol.write_text(self.clean, encoding="utf-8")
         bound = start_check.protocol_binding(self.area, self.protocol.name)
-        problems = start_check._freeze_findings(self.area, bound)
+        problems = start_check._freeze_findings(self.area, bound, state_of(self.area))
         self.assertTrue(
             any("one copy of Unit (written 2 times" in p for p in problems), problems
         )
@@ -264,7 +265,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
     def test_copies_in_the_tree_and_at_head_are_named_once(self):
         self.commit_twice()
         bound = start_check.protocol_binding(self.area, self.protocol.name)
-        problems = start_check._freeze_findings(self.area, bound)
+        problems = start_check._freeze_findings(self.area, bound, state_of(self.area))
         self.assertEqual(len([p for p in problems if "Unit" in p]), 1, problems)
 
     def test_finalize_refuses_it_at_the_field_station(self):
@@ -295,7 +296,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
     def test_the_clean_protocol_owes_no_such_step(self):
         self.protocol.write_text(self.clean, encoding="utf-8")
         bound = start_check.protocol_binding(self.area, self.protocol.name)
-        problems = start_check._freeze_findings(self.area, bound)
+        problems = start_check._freeze_findings(self.area, bound, state_of(self.area))
         self.assertFalse(any("written 2 times" in p for p in problems), problems)
         found = Findings(tell=None)
         finalize.check_open_fields(

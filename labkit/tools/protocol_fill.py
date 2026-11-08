@@ -88,6 +88,7 @@ import argparse
 from datetime import date
 from pathlib import Path
 
+from labkit.formats.area_state import state_of
 from labkit.gates import registered_report
 from labkit.formats import (
     attempts,
@@ -1028,7 +1029,10 @@ def report_bound(
     if not wanted:
         return None
     proposed = fill_many(text, wanted, force=True)
-    gap = registered_report.report_binding_gap(protocol, proposed, unread=True)
+    measured = state_of(protocol.parent).measured_of(protocol_block.head(proposed).id)
+    gap = registered_report.report_binding_gap(
+        protocol, proposed, measured=measured, unread=True
+    )
     return with_way_out(gap.text, gap.fix) if gap is not None else None
 
 

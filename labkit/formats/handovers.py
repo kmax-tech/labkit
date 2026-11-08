@@ -42,6 +42,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
 from labkit.formats import digests
+from labkit.formats.area_state import AreaState, Measured, state_of
 from labkit.formats import (
     answering_run,
     files,
@@ -679,7 +680,7 @@ def declared_results(area: Path, root: Path, *, staged: bool = False) -> list[Pa
 
 
 def _protocol_mismatch(
-    area: Path, root: Path, record: Handover, *, staged: bool
+    area: Path, root: Path, record: Handover, *, staged: bool, state: AreaState
 ) -> str | None:
     """Why RECORD's protocol no longer stands as handed over in the tree
     or, STAGED, the index — not one of AREA's, a symbolic link, changed
@@ -700,7 +701,7 @@ def _protocol_mismatch(
     if declaring:
         return f"{declaring[0].relative_to(root).as_posix()} has adopted a result"
     pid = protocol_block.head(text).id
-    later = runs_since(area, pid, record.run) if pid else []
+    later = runs_since(state.measured_of(pid), record.run) if pid else []
     if later:
         return (
             f"run {later[-1]} was measured after the handover — the record no "
@@ -709,22 +710,18 @@ def _protocol_mismatch(
     return None
 
 
-def runs_since(area: Path, pid: str, run: str | None) -> list[str]:
-    """The measurements of AREA bound to PID, or unreadable, as the tree
-    holds them (`area_state.Measured.present`), newer than RUN (all of them
-    when RUN is None), oldest first — a run id sorts by its start
-    (`answering_run.is_measurement`)."""
-    from labkit.formats.area_state import state_of
-
-    ours = [
-        rd.dir.name
-        for rd in state_of(area).measured_of(pid).present
-        if answering_run.is_measurement(rd)
-    ]
+def runs_since(held: Measured, run: str | None) -> list[str]:
+    """The measurements among HELD (what the area measured of one protocol,
+    `area_state.Measured.present`: bound to it, or unreadable, as the tree
+    holds them) newer than RUN (all of them when RUN is None), oldest
+    first — a run id sorts by its start (`answering_run.is_measurement`)."""
+    ours = [rd.dir.name for rd in held.present if answering_run.is_measurement(rd)]
     return sorted(r for r in ours if run is None or r > run)
 
 
-def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:
+def mismatch(
+    area: Path, root: Path, path: Path, *, staged: bool, area_state: AreaState
+) -> str | None:
     """Why the handover record at PATH does not acknowledge AREA as the tree
     or, STAGED, the index holds it — the first condition that fails, one
     sentence — or None when it does: its protocol unchanged since, no
@@ -734,7 +731,9 @@ def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:
     state = _state(staged)
     try:
         record = read_record(root, path, staged=staged)
-        changed = _protocol_mismatch(area, root, record, staged=staged)
+        changed = _protocol_mismatch(
+            area, root, record, staged=staged, state=area_state
+        )
         if changed:
             return changed
         report = report_destination(root, root / record.report)
@@ -793,26 +792,32 @@ def acknowledgement(area: Path, *, staged: bool = False) -> Acknowledgement:
         paths = record_paths(area, staged=staged)
     except HandoverError as exc:
         return Acknowledgement(False, {DIRECTORY: str(exc)})
+    state = state_of(area)
     for path in paths:
-        why = mismatch(area, root, path, staged=staged)
+        why = mismatch(area, root, path, staged=staged, area_state=state)
         if why is None:
             return Acknowledgement(True, {})
         refused[path.name] = why
     return Acknowledgement(False, refused)
 
 
-def protocol_handed_over(area: Path, protocol: Path, *, staged: bool = False) -> bool:
+def protocol_handed_over(
+    area: Path, protocol: Path, *, staged: bool = False, state: AreaState | None = None
+) -> bool:
     """Whether a current handover of AREA (`mismatch` None) in the tree
     or index (STAGED) ends PROTOCOL — the record names that protocol, not only one beside it
-    in the same area. False outside a git repository. Raises HandoverError
-    when the area's handover records cannot be listed."""
+    in the same area. STATE, the area's state, is the caller's when it
+    built one, else built here. False outside a git repository. Raises
+    HandoverError when the area's handover records cannot be listed."""
     area = area.resolve()
     root = git_root(area)
     if root is None:
         return False
     rel = protocol.resolve().relative_to(root).as_posix()
+    if state is None:
+        state = state_of(area)
     for path in record_paths(area, staged=staged):
-        if mismatch(area, root, path, staged=staged) is not None:
+        if mismatch(area, root, path, staged=staged, area_state=state) is not None:
             continue
         if read_record(root, path, staged=staged).protocol == rel:
             return True

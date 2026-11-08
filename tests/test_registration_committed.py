@@ -30,6 +30,7 @@ from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import report_command
 from labkit.formats import area_state, protocol_history, runs
+from labkit.formats import protocol_block
 from labkit.formats.gate import Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check
@@ -328,7 +329,14 @@ def _registration_changes(area: Path, proto: Path) -> list:
     chooses."""
     ctx = report_context.checked(area, proto)
     return registration_hold.registration_changes(
-        ctx.area, ctx.protocol, ctx.head.id, ctx.run
+        ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state
+    )
+
+
+def _measured(protocol: Path, text: str) -> area_state.Measured:
+    """What PROTOCOL's area measured of the protocol TEXT's head names."""
+    return area_state.state_of(protocol.parent).measured_of(
+        protocol_block.head(text).id
     )
 
 
@@ -921,7 +929,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
 
     def _gap(self, text: str, *, unread: bool = True) -> str | None:
 
-        gap = registered_report.report_binding_gap(self.proto, text, unread=unread)
+        gap = registered_report.report_binding_gap(
+            self.proto, text, measured=_measured(self.proto, text), unread=unread
+        )
         return None if gap is None else gap.text + " | " + (gap.fix or "")
 
     def test_the_twin_unchanged_passes(self):
@@ -1087,7 +1097,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._register(None)
         self._head_now("REPORT.md")  # registered in the tree, not committed
         bound = start_check.protocol_binding(self.area, "PROTOCOL-x.md")
-        problems = start_check._freeze_findings(self.area, bound)
+        problems = start_check._freeze_findings(
+            self.area, bound, area_state.state_of(self.area)
+        )
         self.assertTrue(any("HEAD registers none" in p for p in problems), problems)
         _, way = start_check.measurement_refusal(self.area, self.proto)
         self.assertIn("commit", way.casefold())
@@ -1097,7 +1109,12 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         _git(self.root, "commit", "-qm", "report registered")
         bound = start_check.protocol_binding(self.area, "PROTOCOL-x.md")
         with mock.patch.object(start_check, "_audit_line_findings", return_value=[]):
-            self.assertEqual(start_check._freeze_findings(self.area, bound), [])
+            self.assertEqual(
+                start_check._freeze_findings(
+                    self.area, bound, area_state.state_of(self.area)
+                ),
+                [],
+            )
 
     def test_the_setter_and_gate_share_the_refusal_and_allow_restoration(self):
         from labkit.tools import protocol_edit, protocol_fill
@@ -1105,7 +1122,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._run(self._register("REPORT.md"))
         before = self.proto.read_text(encoding="utf-8")
         proposed = protocol_edit.fill_many(before, [("report", "OTHER.md")], force=True)
-        gap = registered_report.report_binding_gap(self.proto, proposed, unread=True)
+        gap = registered_report.report_binding_gap(
+            self.proto, proposed, measured=_measured(self.proto, proposed), unread=True
+        )
         assert gap is not None
         assert gap.fix is not None
         for force in ([], ["--force"]):
@@ -1129,7 +1148,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._run(self._register(None))
         before = self.proto.read_text(encoding="utf-8")
         proposed = protocol_edit.fill_many(before, [("report", "REPORT.md")])
-        gap = registered_report.report_binding_gap(self.proto, proposed, unread=True)
+        gap = registered_report.report_binding_gap(
+            self.proto, proposed, measured=_measured(self.proto, proposed), unread=True
+        )
         assert gap is not None
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
@@ -1169,7 +1190,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         )
         successor.write_text(text, encoding="utf-8")
         self.assertIsNone(
-            registered_report.report_binding_gap(successor, text, unread=True)
+            registered_report.report_binding_gap(
+                successor, text, measured=_measured(successor, text), unread=True
+            )
         )
         self.assertTrue(handovers.protocol_handed_over(self.area, self.proto))
 

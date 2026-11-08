@@ -148,13 +148,13 @@ class AreaState:
     lost: Mapping[str, str]
     measured: Mapping[str, Measured]
 
-    def measured_of(self, pid: str) -> Measured:
+    def measured_of(self, pid: str | None) -> Measured:
         """What the area measured of protocol PID — an empty `Measured`
         (the unreadable runs still counted) for an id no run and no index
-        row names."""
-        if pid in self.measured:
+        row names, and for None (a head without a stamped id)."""
+        if pid is not None and pid in self.measured:
             return self.measured[pid]
-        return _measured(pid, [*self.runs, *self.deleted], (), self.repo)
+        return _measured(pid or "", [*self.runs, *self.deleted], (), self.repo)
 
 
 def assemble(

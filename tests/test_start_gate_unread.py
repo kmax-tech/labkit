@@ -20,6 +20,7 @@ from pathlib import Path
 
 import test_end_to_end as e2e
 from labkit.run import start_check
+from labkit.formats.area_state import state_of
 
 
 def git(root: Path, *args: str) -> str:
@@ -33,7 +34,7 @@ class UnreadHeadAtTheStart(e2e.CountCommands):
 
     def findings(self) -> list[str]:
         bound = start_check.protocol_binding(self.area, self.protocol.name)
-        return start_check._freeze_findings(self.area, bound)
+        return start_check._freeze_findings(self.area, bound, state_of(self.area))
 
     def remove_head_blob(self) -> tuple[Path, Path]:
         rel = self.protocol.relative_to(self.lab.root).as_posix()
@@ -73,11 +74,13 @@ class UnreadHeadForTheReportBinding(e2e.CountCommands):
         area, protocol = self.lab.exp("hi", repeat_cost="high", kind="compute")
         self.lab.commit("a high-cost protocol, registered")
         bound = start_check.protocol_binding(area, protocol.name)
-        self.assertEqual(start_check._committed_registration(area, bound), [])
+        self.assertEqual(
+            start_check._committed_registration(area, bound, state_of(area)), []
+        )
         rel = protocol.relative_to(self.lab.root).as_posix()
         blob = git(self.lab.root, "rev-parse", f"HEAD:{rel}")
         (self.lab.root / ".git" / "objects" / blob[:2] / blob[2:]).unlink()
-        (line,) = start_check._committed_registration(area, bound)
+        (line,) = start_check._committed_registration(area, bound, state_of(area))
         self.assertIn("cannot be read at HEAD", line)
 
 
