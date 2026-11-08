@@ -47,6 +47,24 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
+  `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and
+  `EFFECT_GRADES` read them; 17 literals gone); `repo.protocols_in(repo,
+  staged=)` is the one reader of a repo's protocols per file state;
+  `commands.fill_command(protocol, assignment)` and
+  `commands.step_command(area)` spell the `protocol-fill … "<label>=<value>"`
+  and `labkit-next …` lines every gate prints (the formats below `commands`
+  keep the `<PROTOCOL>` placeholder spelled out);
+  `intent_check.protocol_id_of` is gone — `protocol_block.head(text).id` is
+  the reader that raises, `id_of` the one that scans; a run git holds back
+  and a run only the index lists are each one sentence
+  (`area_state.gone_run_restore`, `LOST_RUN_SENTENCE`); the run-state
+  alphabet is bound by test (`runs.RunState` against `FAILED_STATES`,
+  `runlog.OPEN_STATES`, the wait's reasons). Named apart:
+  `report_check.chain_gaps(undeclared=)` (was `adoption_pending`, which
+  `AreaState.adoption_pending` means otherwise); `next_step._fill_line`
+  takes the protocol's path.
+
 - **One state and one evidence read per area and check run, on the
   report path too.** `report_hold.Sources` is the hold's cache: its
   `held_state(area)` and `held_evidence(area)` build once and every
