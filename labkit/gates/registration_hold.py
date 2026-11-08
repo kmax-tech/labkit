@@ -48,7 +48,6 @@ from labkit.formats.commands import (
 from labkit.gates.ways_out import unclear_correction, HANDOVER
 from labkit.formats.commands import register_anew
 from labkit.checks.audit_binding import AuditError, covering_analysis
-from labkit.gates.report_context import pending_adoption
 from labkit.formats.protocol_check import (
     FieldPlaceError,
     field_name,
@@ -87,7 +86,7 @@ def registration_changes(
         return []
     root = git_root(protocol)
     held = state.measured_of(pid)
-    scope = scope_changes(area, protocol, pid, run, root, held)
+    scope = scope_changes(area, protocol, pid, run, root, held, state)
     cfg = read_run_config(run)
     now = cfg.promises if cfg is not None else None
     if now is None:
@@ -168,7 +167,13 @@ SCOPE_QUOTE = 120
 
 
 def scope_changes(
-    area: Path, protocol: Path, pid: str, run: Path, root: Path | None, held: Measured
+    area: Path,
+    protocol: Path,
+    pid: str,
+    run: Path,
+    root: Path | None,
+    held: Measured,
+    state: AreaState,
 ) -> list[GateFinding]:
     """The answering RUN holds what its protocol's first measurement said the
     number is about (`protocol_history.scope_differences`: the question and
@@ -208,7 +213,7 @@ def scope_changes(
         if unread:
             return [unread_hold(area, pid, unread)]
     try:
-        return _scope_held(area, protocol, pid, run, root, others, held)
+        return _scope_held(area, protocol, pid, run, root, others, held, state)
     except AuditError as exc:
         # whether a follow-up's release still covers the run cannot be told:
         # held as that, never as an unreleased change whose way back would
@@ -232,6 +237,7 @@ def _scope_held(
     root: Path | None,
     others: list[RunDir],
     measured: Measured,
+    state: AreaState,
 ) -> list[GateFinding]:
     """`scope_changes` once every text it compares reads: the hold of the
     answering run's text, then of the protocol as it stands. Raises
@@ -248,7 +254,7 @@ def _scope_held(
         )
         if found is not None:
             first, all_diffs = found
-            text = protocol.read_text(encoding="utf-8")
+            text = state.text_of(protocol)
             diffs, _ = released_fields(all_diffs, area, protocol, text, run, seen)
             if diffs:
                 labels = _labels(diffs)
@@ -288,10 +294,10 @@ def _scope_held(
                         step=restore_step(protocol, first, root),
                     )
                 ]
-    now = scope_now(area, protocol, pid, run, root, measured)
+    now = scope_now(area, protocol, pid, run, root, measured, state)
     if now is None or not now.held:
         return []
-    text = protocol.read_text(encoding="utf-8")
+    text = state.text_of(protocol)
     waiting = awaiting_followup(area, protocol, text, run)
     refs = [waiting.get(field_name(what)) for what, _, _ in now.held]
     labels = _labels(now.held)
@@ -308,7 +314,7 @@ def _scope_held(
         # by other code, so a new run comes first and its follow-up judges the
         # correction on it — a follow-up of the old run would be held by the
         # changed code
-        declaring = declaring_protocol(protocol, text, run)
+        declaring = declaring_protocol(protocol, text, run, state)
         fix = (
             f"the measuring code changed since {run.name} ran: measure again "
             f"(`{measure_command(area)}`), then the follow-up analysis audit on that "
@@ -380,15 +386,16 @@ def moved_fields(seen: str, text: str) -> set[str]:
     return {what for what, _, _ in protocol_history.scope_differences(seen, text)}
 
 
-def declaring_protocol(protocol: Path, text: str, run: Path) -> Path | None:
+def declaring_protocol(
+    protocol: Path, text: str, run: Path, state: AreaState
+) -> Path | None:
     """PROTOCOL (TEXT its text) when it declares RUN as its result, so a
     hold on RUN withdraws first (`gate.withdrawn_first`); None otherwise,
     and while the declaration is an adoption's proposal under its own
-    check (`report_context.pending_adoption`): no adoption stands to
-    withdraw."""
+    check (STATE's `adoption_pending`): no adoption stands to withdraw."""
     if protocol_block.declared_run_shown(text) != run.name:
         return None
-    return None if pending_adoption(protocol).is_file() else protocol
+    return None if state.adoption_pending_for(protocol) else protocol
 
 
 #: the way a field corrected in place is released (`scope_now`)
@@ -480,6 +487,7 @@ def scope_now(
     run: Path,
     root: Path | None,
     measured: Measured,
+    state: AreaState,
 ) -> ScopeNow | None:
     """PROTOCOL as it stands against the first measurements in what the
     number is about (`protocol_history.first_measured_differences`,
@@ -492,7 +500,7 @@ def scope_now(
     (`protocol_history.correctable`). None without a difference. Raises RuntimeError when
     git fails."""
     firsts = [rd for group in measured.first_groups for rd in group]
-    text = protocol.read_text(encoding="utf-8")
+    text = state.text_of(protocol)
     found = protocol_history.first_measured_differences(
         protocol, firsts, text, root, protocol_history.scope_differences
     )
@@ -636,7 +644,7 @@ def corrected_in_place(
     if pid is None or run is None:
         return []
     now = scope_now(
-        area, protocol, pid, run, git_root(protocol), state.measured_of(pid)
+        area, protocol, pid, run, git_root(protocol), state.measured_of(pid), state
     )
     if now is None:
         return []

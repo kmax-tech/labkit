@@ -153,12 +153,12 @@ def next_step(
             "every run: a run needs a registered question",
         )
     staged = state == INDEX
-    text = _protocol_text(area, protocol, staged=staged)
+    # the area's state once, for every step and for the chain
+    area_state = state_of(area, file_state=state)
+    text = area_state.text_of(protocol)
     report = protocol_check.check_fields(text)
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
-    # the area's state once, for every step and for the chain
-    area_state = state_of(area, file_state=state)
     held = evidence.read_evidence(area, staged=staged)
     measured = area_state.measured_of(protocol_block.head(text).id)
     hint = _report_hint(protocol, text, measured)
@@ -361,18 +361,6 @@ def _staged_area_step(area: Path, text: str, *, staged: bool) -> Step | None:
         gap.fix or "the line above names what holds",
         "the commit: it holds the index, and the stations read the tree",
     )
-
-
-def _protocol_text(area: Path, protocol: Path, *, staged: bool) -> str:
-    """PROTOCOL of AREA as the state holds it: the index's text when STAGED
-    (`repo.state_text`), else the working tree's. Raises ValueError when
-    the index does not hold the protocol."""
-    if not staged:
-        return protocol.read_text(encoding="utf-8")
-    held = state_text(layout_root(area), protocol, staged=True)
-    if held is None:
-        raise ValueError(f"{protocol.name}: the index does not hold it")
-    return held
 
 
 def _restore_step(held: evidence.AreaEvidence) -> Step | None:

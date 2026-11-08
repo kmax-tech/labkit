@@ -6,6 +6,7 @@ ambiguity and silent overwrites, and leave every other byte alone.
 """
 
 from labkit.formats import run_index
+from labkit.formats.repo import pending_adoption
 from labkit.formats.runs import RunKind
 
 import contextlib
@@ -961,7 +962,7 @@ class Adopt(unittest.TestCase):
         self.assertEqual(
             written,
             [
-                protocol_fill.report_context.pending_adoption(proto.resolve()),
+                pending_adoption(proto.resolve()),
                 proto.resolve(),
             ],
         )

@@ -39,6 +39,7 @@ from labkit.formats.repo import (
     INDEX_REV,
     area_protocols,
     indexed_protocols,
+    pending_adoption,
     commit_of,
     files_at,
     git_root,
@@ -151,6 +152,13 @@ class AreaState:
         protocols: The area's protocol files as the file state holds them
             (`repo.area_protocols`; the index's under INDEX), sorted — a
             list, never a first hit: the caller chooses.
+        protocol_texts: Each protocol's text as the file state holds it
+            (`repo.text_at` under INDEX, the file otherwise); `text_of`
+            reads one.
+        adoption_pending: The protocols whose adoption was cut off during
+            its check and whose proposal stands unchecked in the tree
+            (`repo.pending_adoption`'s file exists); `adoption_pending_for`
+            asks for one.
         runs: Every run directory the file state holds (`runs.run_dirs`,
             the index's `runs/<id>/config.json` entries under INDEX),
             oldest first by name, each record read once.
@@ -181,12 +189,30 @@ class AreaState:
     repo: Path | None
     file_state: str
     protocols: tuple[Path, ...]
+    protocol_texts: Mapping[Path, str]
+    adoption_pending: frozenset[Path]
     runs: tuple[RunDir, ...]
     deleted: tuple[RunDir, ...]
     history_unread: str
     lost: Mapping[str, str]
     run_facts: tuple[RunFacts, ...]
     measured: Mapping[str, Measured]
+
+    def text_of(self, protocol: Path) -> str:
+        """PROTOCOL's text as the file state holds it. Raises ValueError
+        when the state does not hold PROTOCOL (not among `protocols`:
+        deleted, or not in the index under INDEX)."""
+        try:
+            return self.protocol_texts[protocol.resolve()]
+        except KeyError:
+            raise ValueError(
+                f"{protocol.name}: the {self.file_state} does not hold it"
+            ) from None
+
+    def adoption_pending_for(self, protocol: Path) -> bool:
+        """Does an adoption's proposal of PROTOCOL stand unchecked in the
+        tree (`repo.pending_adoption`)?"""
+        return protocol.resolve() in self.adoption_pending
 
     def measured_of(self, pid: str | None) -> Measured:
         """What the area measured of protocol PID — an empty `Measured`
@@ -213,12 +239,15 @@ def assemble(
     lost: Mapping[str, str],
     history_unread: str = "",
     protocols: Sequence[Path] = (),
+    protocol_texts: Mapping[Path, str] | None = None,
+    adoption_pending: Collection[Path] = (),
 ) -> AreaState:
     """The `AreaState` of AREA from what its readers found — RUNS the file
     state holds, DELETED the runs git holds back (HISTORY_UNREAD git's words
     when they could not be listed), LOST the index-only run ids with their
-    protocol ids, PROTOCOLS the area's protocol files —, every derived
-    field computed here once:
+    protocol ids, PROTOCOLS the area's protocol files with PROTOCOL_TEXTS
+    (resolved path → text) and ADOPTION_PENDING —, every derived field
+    computed here once:
     the one assembly for `state_of` and for a test that builds a state
     without files. Pure but for git's ancestry questions in the first
     measurements' order (REPO None: none asked)."""
@@ -250,6 +279,8 @@ def assemble(
         repo=repo,
         file_state=file_state,
         protocols=tuple(protocols),
+        protocol_texts=dict(protocol_texts or {}),
+        adoption_pending=frozenset(p.resolve() for p in adoption_pending),
         runs=tuple(sorted(runs, key=lambda rd: rd.dir.name)),
         deleted=tuple(sorted(deleted, key=lambda rd: rd.dir.name)),
         history_unread=history_unread,
@@ -296,9 +327,14 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
         protocols = sorted(
             p for p in indexed_protocols(repo) if p.parent == area.resolve()
         )
+        texts = {
+            p.resolve(): t for p in protocols if (t := text_at(repo, p)) is not None
+        }
     else:
         runs = run_dirs(area)
         protocols = area_protocols(area)
+        texts = {p.resolve(): p.read_text(encoding="utf-8") for p in protocols}
+    pending = [p for p in protocols if pending_adoption(p).is_file()]
     held = {rd.dir.name for rd in runs}
     deleted: list[RunDir] = []
     unread = ""
@@ -309,7 +345,9 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
             unread = str(exc)
     gone = held | {rd.dir.name for rd in deleted}
     lost = {r: p for r, p in indexed_bindings(area).items() if r not in gone}
-    return assemble(area, repo, file_state, runs, deleted, lost, unread, protocols)
+    return assemble(
+        area, repo, file_state, runs, deleted, lost, unread, protocols, texts, pending
+    )
 
 
 def index_names_gone_runs(area: Path) -> bool:

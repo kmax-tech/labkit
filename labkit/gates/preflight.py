@@ -82,6 +82,7 @@ from labkit.formats import (
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
 from labkit.formats import evidence
+from labkit.formats.area_state import state_of
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     choose_protocol,
@@ -228,7 +229,8 @@ def preflight_area(
     protocol = choose_protocol(area, protocol, "preflight")
     if protocol is None:
         return 2
-    text = protocol.read_text(encoding="utf-8")
+    state = state_of(area)
+    text = state.text_of(protocol)
 
     # 1. protocol-check — the one early end: a head nobody can read
     findings.header(f"protocol-check: {protocol.name}")
@@ -240,7 +242,7 @@ def preflight_area(
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
-    check_protocol_fields(findings, protocol, report, head)
+    check_protocol_fields(findings, protocol, text, report, head)
 
     # the facts every later station reads, read once
     lane = standard_contract.lane(head.repeat_cost)
@@ -294,6 +296,7 @@ def preflight_area(
 def check_protocol_fields(
     findings: Findings,
     protocol: Path,
+    text: str,
     report: "protocol_check.FieldReport",
     head: "protocol_block.Head",
 ) -> None:
@@ -306,7 +309,7 @@ def check_protocol_fields(
     warns, a doubled one blocks)."""
     ids = repo_protocol_ids(protocol)
     id_findings = check_protocol_id(protocol, head, ids) + check_annotation_validity(
-        protocol, protocol.read_text(encoding="utf-8"), ids
+        protocol, text, ids
     )
     lowered = repeat_cost_lowered(protocol, head)
     for label in report.missing_must:

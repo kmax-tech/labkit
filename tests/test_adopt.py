@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import report_context  # noqa: E402
+from labkit.formats.repo import pending_adoption
 from labkit.formats import protocol_block  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
@@ -117,7 +118,7 @@ class Adopt(unittest.TestCase):
             [sys.executable, "-c", child], capture_output=True, text=True
         )
         self.assertEqual(killed.returncode, -signal.SIGKILL, killed.stderr)
-        pending = report_context.pending_adoption(protocol)
+        pending = pending_adoption(protocol)
         self.assertEqual(pending.read_text(encoding="utf-8"), before)
         self.assertEqual(
             protocol_block.declared_run(protocol.read_text(encoding="utf-8")), run_id
@@ -148,7 +149,7 @@ class Adopt(unittest.TestCase):
         area, protocol, run_id = self.measured("REPORT.md")
         rc, _ = self.labkit_adopt(area, run_id)  # unaudited: refused
         self.assertEqual(rc, 1)
-        self.assertFalse(report_context.pending_adoption(protocol).exists())
+        self.assertFalse(pending_adoption(protocol).exists())
 
     def test_an_unaudited_run_is_refused_and_nothing_is_written(self):
         """The twin: the same run before its analysis audit stops at step 1,

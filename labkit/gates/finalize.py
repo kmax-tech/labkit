@@ -856,7 +856,8 @@ def finalize_area(
         else:
             findings.block(str(exc), fix=PROTOCOL_NAMED)
         return 2
-    text = chosen.read_text(encoding="utf-8")
+    state = _state(area, state)
+    text = state.text_of(chosen)
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
@@ -869,7 +870,6 @@ def finalize_area(
                 f"{shlex.quote(shown(chosen, Path.cwd()))} --contract` shows its fields",
             )
         return 2
-    state = _state(area, state)
 
     # 1. answering run — the run every later step examines
     findings.header(f"answering run: {chosen.name}")
@@ -892,7 +892,7 @@ def finalize_area(
         findings.note(NO_RUN)
     else:
         # the protocol that declares this very run: its holds withdraw first
-        held_by = declaring_protocol(chosen, text, answering_run)
+        held_by = declaring_protocol(chosen, text, answering_run, state)
         check_run_code(findings, area, answering_run, held_by)
         check_declared_scopes(findings, area, answering_run, text, held_by)
 

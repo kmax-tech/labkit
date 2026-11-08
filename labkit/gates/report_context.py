@@ -27,17 +27,7 @@ from labkit.formats.repo import (
 #: the caller makes the tree that state: the pre-commit holds the area's
 #: tree equal to the index (`tree_differs`), the adoption writes the
 #: proposal into the tree and puts it back on refusal (`protocol_fill.adopt`)
-__all__ = ["INDEX", "PROPOSED", "TREE", "Checked", "checked", "pending_adoption"]
-
-
-def pending_adoption(protocol: Path) -> Path:
-    """Where an adoption keeps PROTOCOL as it stood before, for as long as
-    its proposal stands unchecked in the tree (`protocol_fill.adopt`). The
-    file outlives only an adoption cut off during its check — a kill skips
-    every `finally`, and the proposal would stay in the tree as if it had
-    passed. While it stands, report-check refuses, and the next adoption
-    puts it back first."""
-    return protocol.with_name(f".{protocol.name}.before-adoption")
+__all__ = ["INDEX", "PROPOSED", "TREE", "Checked", "checked"]
 
 
 @dataclass(frozen=True)
@@ -96,17 +86,17 @@ def checked(
     area_evidence: evidence.AreaEvidence | None = None,
 ) -> Checked:
     """The context of one check: TEXT is the protocol as STATE holds it
-    (the working tree when None); AREA_STATE the area's state when the
+    (read off the area's state when None); AREA_STATE the area's state when the
     caller built it already (one build per check run), else built here;
     AREA_EVIDENCE likewise (`evidence.read_evidence`, the index's for INDEX).
     Raises `protocol_block.BlockError` on an unreadable head, `AuditError`
     out of the run choice, `run_index.RunIndexError` on a run index that
     does not read."""
+    built = area_state if area_state is not None else state_of(area, file_state=state)
     if text is None:
-        text = protocol.read_text(encoding="utf-8")
+        text = built.text_of(protocol)
     head = protocol_block.head(text)
     declared, declaration_gap = declaration(text)
-    built = area_state if area_state is not None else state_of(area, file_state=state)
     run, why = audited_run(built, protocol, text)
     return Checked(
         area=area.resolve(),

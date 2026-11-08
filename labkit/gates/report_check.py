@@ -109,6 +109,7 @@ from labkit.formats.answering_run import (
     is_measurement,
 )
 from labkit.formats.area_state import INDEX, TREE, AreaState, state_of
+from labkit.formats.repo import pending_adoption
 from labkit.formats import evidence
 from labkit.formats.protocol_history import (
     NO_COMMIT,
@@ -187,7 +188,6 @@ from labkit.gates.report_context import (
     PROPOSED,
     checked,
     declaration,
-    pending_adoption,
 )
 from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
 from labkit.gates.report_replacement import replacement_gaps
@@ -601,9 +601,9 @@ def without_unreportable_warnings(
 
 def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
     """A blocker while an adoption was cut off during its check: the head may
-    hold a proposal no check passed (`report_context.pending_adoption`);
+    hold a proposal no check passed (`repo.pending_adoption`);
     never on the proposal itself, which that adoption is checking."""
-    if ctx.state == PROPOSED or not pending_adoption(ctx.protocol).is_file():
+    if ctx.state == PROPOSED or not ctx.area_state.adoption_pending_for(ctx.protocol):
         return []
     return [
         blocker(

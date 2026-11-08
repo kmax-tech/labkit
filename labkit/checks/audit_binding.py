@@ -62,9 +62,7 @@ class AuditError(RuntimeError):
         self.fix = fix
 
 
-def audited_run(
-    state: AreaState, protocol: Path, text: str | None = None
-) -> tuple[Path | None, str]:
+def audited_run(state: AreaState, protocol: Path, text: str) -> tuple[Path | None, str]:
     """The run an analysis audit reads and its record is bound to — the
     answering run (`area_state.Measured.answering`, the one choice every
     gate holds the protocol to; STATE the area's state, built once by the
@@ -73,8 +71,6 @@ def audited_run(
     completed bound run, a blocker of the choice. Raises AuditError on a
     head it cannot read. report-check holds the record to the same choice
     (`report_context.checked`)."""
-    if text is None:
-        text = protocol.read_text(encoding="utf-8")
     try:
         pid = protocol_block.head(text).id
     except protocol_block.BlockError as exc:

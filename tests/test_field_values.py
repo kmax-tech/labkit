@@ -235,6 +235,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         preflight.check_protocol_fields(
             found,
             self.protocol,
+            text,
             protocol_check.check_fields(text),
             protocol_block.head(text),
         )

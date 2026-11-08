@@ -256,7 +256,10 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     out["params"] = m.group(1) if m else BLOCKED
 
     label = audit_binding.run_rows(
-        area, *audit_binding.audited_run(state_of(area), protocol)
+        area,
+        *audit_binding.audited_run(
+            state_of(area), protocol, protocol.read_text(encoding="utf-8")
+        ),
     )[0][0]
     out["audit"] = label.split("runs/", 1)[1] if "runs/" in label else BLOCKED
     return out

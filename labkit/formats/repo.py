@@ -324,6 +324,17 @@ def indexed_protocols(repo: Path) -> list[Path]:
 REPORT_SUFFIX = ".md"
 
 
+def pending_adoption(protocol: Path) -> Path:
+    """Where an adoption keeps PROTOCOL as it stood before, for as long as
+    its proposal stands unchecked in the tree (`protocol_fill.adopt`). The
+    file outlives only an adoption cut off during its check — a kill skips
+    every `finally`, and the proposal would stay in the tree as if it had
+    passed. While it stands, report-check refuses, and the next adoption
+    puts it back first; the area state says whether it stands
+    (`area_state.AreaState.adoption_pending`)."""
+    return protocol.with_name(f".{protocol.name}.before-adoption")
+
+
 def report_place_problem(rel: PurePosixPath) -> str | None:
     """Why REL, a path relative to the repository root, is no place a
     report may stand — or None when it is: a protocol file is no report, a

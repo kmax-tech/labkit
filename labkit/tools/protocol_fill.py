@@ -89,6 +89,7 @@ from datetime import date
 from pathlib import Path
 
 from labkit.formats.area_state import state_of
+from labkit.formats.repo import pending_adoption
 from labkit.formats import evidence
 from labkit.gates import registered_report
 from labkit.formats import (
@@ -156,11 +157,11 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     go whole or not at all (`files.write_atomic`): a reader, or the next
     check, sees the protocol as it was or as proposed, never half of
     either; the check is told it holds the proposal (`report_context.PROPOSED`).
-    BEFORE is kept beside the protocol (`report_context.pending_adoption`)
+    BEFORE is kept beside the protocol (`repo.pending_adoption`)
     until the check passed or BEFORE is back: a kill during the check skips
     both restores, and the file left behind is what report-check refuses on
     and the next adoption restores from (`restore_cut_adoption`)."""
-    pending = report_context.pending_adoption(protocol)
+    pending = pending_adoption(protocol)
     files.write_atomic(pending, before)
     files.write_atomic(protocol, after)
     try:
@@ -199,8 +200,8 @@ def adopt(protocol: Path, before: str, after: str) -> int:
 def restore_cut_adoption(protocol: Path) -> str | None:
     """PROTOCOL as it stood before an adoption cut off during its check —
     written back, the kept copy removed, and the text returned; None when no
-    adoption was cut off (`report_context.pending_adoption`)."""
-    pending = report_context.pending_adoption(protocol)
+    adoption was cut off (`repo.pending_adoption`)."""
+    pending = pending_adoption(protocol)
     if not pending.is_file():
         return None
     before = pending.read_text(encoding="utf-8")

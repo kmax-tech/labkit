@@ -169,10 +169,11 @@ class TestUniqueness(unittest.TestCase):
                 _protocol(d, name="PROTOCOL-copy.md")
                 code, out = _check([first])
                 self.assertEqual(code, 1, out)
-                report = protocol_check.check_fields(first.read_text())
+                text = first.read_text()
+                report = protocol_check.check_fields(text)
                 assert report.head is not None
                 found = Findings(tell=None)
-                preflight.check_protocol_fields(found, first, report, report.head)
+                preflight.check_protocol_fields(found, first, text, report, report.head)
                 grades = [f.grade for f in found.found if "DUPLICATE" in f.line]
                 self.assertEqual(grades, [BLOCKER], found.found)
 
