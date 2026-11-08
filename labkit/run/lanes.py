@@ -34,6 +34,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from labkit.formats.runs import MEASUREMENT
 from labkit.formats import protocol_block, protocol_check, runs, standard_contract
 from labkit.formats.commands import next_after_run
 from labkit.run import batch, llm, runlog
@@ -384,7 +385,7 @@ class Lanes:
         bound to the protocol; a repeat writes a file of its own."""
         with runlog.run(
             self.name, config=asdict(cfg), base_dir=self.protocol.parent,
-            data={"prepared": self.items}, run_kind="measurement",
+            data={"prepared": self.items}, run_kind=MEASUREMENT,
             protocol=self.protocol.name, repeat_of=repeat,
         ) as run:  # fmt: skip
             out = run.draw_output(self.out)

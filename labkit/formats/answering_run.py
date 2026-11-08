@@ -28,22 +28,23 @@ from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.commands import Command, measure_command
 from labkit.formats.digests import digest
 from labkit.formats.runs import (
-    as_stored,
-    binding_of,
-    data_entries,
     COMPLETED,
     JsonObject,
+    MEASUREMENT,
     ProtocolBinding,
-    RunState,
-    UNREADABLE,
     RECORD_TABLES,
     RunConfig,
     RunConfigError,
     RunDir,
-    read_run_dir,
+    RunState,
+    UNREADABLE,
+    as_stored,
+    binding_of,
     completed_runs,
+    data_entries,
     read_metrics,
     read_run_config,
+    read_run_dir,
     recorded_commit,
     run_dirs,
     run_state,
@@ -346,10 +347,13 @@ def _shown(cfg: JsonObject, key: str) -> str:
 
 def is_measurement(rd: RunDir) -> bool:
     """Is the run RD a measurement — `run_kind = "measurement"` in its
-    record, or a record that cannot be read (it may be one)? A preparation
-    or probe run measures nothing; a repeat is a measurement."""
+    record (`runs.MEASUREMENT`), or a record that cannot be read (it may be
+    one)? A preparation or probe run measures nothing; a repeat is a
+    measurement. A reader of a record that reads asks its `run_kind`
+    against `runs.MEASUREMENT`; this one is for the question "may this run
+    have measured", where an unreadable record counts."""
     return rd.error is not None or (
-        rd.config is not None and rd.config.run_kind == "measurement"
+        rd.config is not None and rd.config.run_kind == MEASUREMENT
     )
 
 
@@ -426,7 +430,7 @@ def first_measurement_groups(
         if (cfg := rd.config) is not None
         and cfg.protocol.id == pid
         and cfg.repeat_of is None
-        and cfg.run_kind == "measurement"
+        and cfg.run_kind == MEASUREMENT
     ]
     if repo is None:
         return [[rd] for rd, _ in sorted(measured, key=lambda m: m[0].dir.name)]

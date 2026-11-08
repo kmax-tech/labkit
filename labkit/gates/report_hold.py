@@ -766,7 +766,10 @@ def replacement_hints(
 
 def _run_protocols(sources: Sources) -> dict[str, Path]:
     """Every run id of the repo's protocols, mapped to the protocol its
-    record binds it to (`protocol.id`), in the file state SOURCES hold."""
+    record binds it to (`protocol.id`), in the file state SOURCES hold. A
+    run whose record does not read belongs to no protocol here —
+    `Measured.runs` counts it for every protocol, since it may have
+    measured any."""
     out: dict[str, Path] = {}
     for p, text in sources.texts.items():
         pid = protocol_block.id_of(text)

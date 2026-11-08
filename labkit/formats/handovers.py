@@ -275,7 +275,10 @@ def handed_over(area: Path) -> set[str]:
     over (`Handover.remaining`, as `entry` spells them) — the binding a
     reader uses to tell a finding handed over unresolved from one set
     aside for later. A handover settles nothing: the findings stay listed.
-    Raises HandoverError on a record that does not read."""
+    Every record counts, current or not — a finding once handed over was
+    handed over; whether a handover ends a protocol now is another
+    question, `protocol_handed_over` (current records only, in the file
+    state). Raises HandoverError on a record that does not read."""
     return {
         name for path in record_paths(area) for name in read_handover(path).remaining
     }

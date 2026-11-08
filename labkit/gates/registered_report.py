@@ -45,6 +45,13 @@ from labkit.formats.commands import (
 )
 
 
+def report_file(root: Path, registered: str) -> Path:
+    """The file the head's `report` field REGISTERED names, under the repo
+    ROOT, at its own path (`repo.own_path`: a link is the link) — the one
+    resolution every reader of the registered report asks."""
+    return own_path(root / registered)
+
+
 def report_owed(
     protocol: Path,
     text: str,
@@ -100,7 +107,7 @@ def report_owed(
     if head.report is None:
         return None
     root = repo.resolve()
-    report = own_path(root / head.report)
+    report = report_file(root, head.report)
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
     why: list[str] = []
@@ -438,7 +445,7 @@ def missing_report(
     head = protocol_block.head(text)
     if head.report is None or not head.id:
         return None
-    report = own_path(repo.resolve() / head.report)
+    report = report_file(repo.resolve(), head.report)
     if state_holds(repo, report, staged=staged):
         return None
     if not measured.has_measured:

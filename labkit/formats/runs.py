@@ -80,6 +80,9 @@ JsonObject = dict[str, Any]
 RUN_SCHEMA = 4
 
 RunKind = Literal["preparation", "probe", "measurement"]
+#: the run kind that measures the registered question — the one spelling
+#: every reader compares a readable record's `run_kind` with
+MEASUREMENT: RunKind = "measurement"
 
 
 def parse_run_kind(value: object) -> RunKind:
@@ -88,8 +91,8 @@ def parse_run_kind(value: object) -> RunKind:
         return "preparation"
     if value == "probe":
         return "probe"
-    if value == "measurement":
-        return "measurement"
+    if value == MEASUREMENT:
+        return MEASUREMENT
     raise ValueError(
         f"run_kind = {value!r}; expected 'preparation', 'probe' or 'measurement'"
     )
@@ -658,7 +661,7 @@ def unreportable(cfg: RunConfig) -> list[str]:
     the release gate checks completion, audits and recomputation separately.
     """
     marks: list[str] = []
-    if cfg.run_kind != "measurement":
+    if cfg.run_kind != MEASUREMENT:
         marks.append(f"a {cfg.run_kind} (run_kind={cfg.run_kind!r}), not a measurement")
     if cfg.unfrozen_ack:
         marks.append(

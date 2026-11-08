@@ -466,8 +466,8 @@ def model(text: str) -> Model | None:
     from models.toml>"`, stamped by `labkit-init exp --model`, with the
     compared arms as `[model.arms.<arm>]` tables (profile, fingerprint,
     alias) finalize holds to the run — or None without the table: no model,
-    a computation or an estimator. The one answer to "is a model named" for the
-    low cut, the registration and `--report`.
+    a computation or an estimator. The yes/no the low cut, the
+    registration and `--report` ask is `protocol_check.model_named`.
     `alias` is None while it is still the stamp's placeholder, so is
     `number_describes`. Whether the claim keys fit the kind is
     `protocol_check.kind_gap`'s answer. Raises BlockError on a non-table, an

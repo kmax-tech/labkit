@@ -165,8 +165,8 @@ from labkit.formats.repo import (
     area_protocols,
     choose_protocol,
     git_root,
-    indexed_protocols,
     protocol_links,
+    protocols_in,
     shown,
     state_text,
 )
@@ -1038,14 +1038,12 @@ def affected_protocols(
     the stop and the commit's undecided gate read the same answer). STAGED:
     areas and protocols are the index's (`repo.indexed_protocols`) — a
     protocol deleted only in the tree is still in the commit."""
+    areas = areas_touched(paths, repo, staged=staged)
     if not staged:
-        return [
-            p
-            for area in sorted(areas_touched(paths, repo, staged=False))
-            for p in area_protocols(area)
-        ]
-    indexed = indexed_protocols(repo)
-    areas = areas_touched(paths, repo, staged=True)
+        # the tree's protocols in the form the area was reached in: the
+        # stations compare them with the paths as given, not resolved
+        return [p for area in sorted(areas) for p in area_protocols(area)]
+    indexed = protocols_in(repo, staged=True)
     return [p for area in sorted(areas) for p in indexed if p.parent == area]
 
 

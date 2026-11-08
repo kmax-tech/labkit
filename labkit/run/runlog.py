@@ -108,29 +108,30 @@ from labkit.formats.files import write_atomic
 from labkit.formats.gate import with_way_out
 from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
+    COMPLETED,
     COMPLETION_FILE,
     CONFIG_FILE,
+    MEASUREMENT,
     OUTPUTS_FILE,
-    COMPLETED,
-    RunKind,
-    RUN_SCHEMA,
     RECORD_SHA_CHARS,
     RUN_ID_TIME,
-    UNREADABLE,
+    RUN_SCHEMA,
     RunConfig,
     RunConfigError,
+    RunKind,
     RunState,
+    UNREADABLE,
     completion_state,
     is_alive,
     next_output_name,
     now_stamp,
     read_completion,
-    write_failure,
     read_failure,
     read_metrics,
     recorded_path,
     run_dirs,
     run_state,
+    write_failure,
 )
 from labkit.formats.answering_run import (
     REPEAT_SEED_KEY,
@@ -400,23 +401,23 @@ class Run:
             prepared.bound,
             prepared.block,
             prepared.config,
-            prepared.run_kind == "measurement",
+            prepared.run_kind == MEASUREMENT,
         )
         require_valid_reseed(prepared, repeat_of, reseed)
         obligations = lane(prepared.repeat_cost)
-        if prepared.run_kind == "measurement" and not obligations.foreground:
+        if prepared.run_kind == MEASUREMENT and not obligations.foreground:
             limit = foreground_timeout()
             if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
                 require_detached(base_dir, limit)
         _check_run_index(base_dir)
-        if prepared.run_kind == "measurement":
+        if prepared.run_kind == MEASUREMENT:
             _require_no_open_twin(base_dir)
         described = describe_data(data, base_dir) if data else {}
         unfrozen_ack, audit_failed = False, None
-        if prepared.run_kind == "measurement":
+        if prepared.run_kind == MEASUREMENT:
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
         code = code_repos.read_code(tuple(sys.modules.values()))
-        if prepared.run_kind == "measurement":
+        if prepared.run_kind == MEASUREMENT:
             code_repos.require_recordable(code)
         # 3. creation — the record, whole or not at all; the id and the
         # directory are drawn together under the guard below

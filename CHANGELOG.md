@@ -47,6 +47,19 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **The rest of the ownership list.** `runs.MEASUREMENT` is the one
+  spelling of the measuring run kind (eleven literal comparisons gone);
+  `answering_run.is_measurement` says it is the "may have measured"
+  question, where an unreadable record counts.
+  `registered_report.report_file(root, registered)` resolves the
+  registered report once; `report_check.affected_protocols` reads the
+  index's protocols through `repo.protocols_in`. Said apart in their
+  docstrings: `handovers.handed_over` (every record, a finding once
+  handed over) against `protocol_handed_over` (a current handover ends a
+  protocol), `report_hold._run_protocols` against `Measured.runs`
+  (unreadable runs), `protocol_block.model` against
+  `protocol_check.model_named` (the yes/no).
+
 - **Ways out spelled by their builders.** `commands.render_command(protocol=None, *,
   from_run=False)` and `commands.handover_command(protocol | None, …)` take
   a path or the `<PROTOCOL>` placeholder; the fill, contract, into, step,

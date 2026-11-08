@@ -23,6 +23,7 @@ from labkit.formats import findings
 from labkit.formats import failed_attempts
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.runs import (
+    MEASUREMENT,
     MetricsError,
     RunConfig,
     as_stored,
@@ -193,7 +194,7 @@ def runs_text(
         for rd in dirs
         if rd.config
         and rd.config.protocol.id == pid
-        and rd.config.run_kind == "measurement"
+        and rd.config.run_kind == MEASUREMENT
     ]
     varying = sorted(
         k
@@ -239,7 +240,7 @@ def _run_line(
         parts.append(f"repeat of {cfg.repeat_of}")
     if cfg.derived_from is not None:
         parts.append(f"derived from {cfg.derived_from}")
-    if cfg.run_kind == "measurement":
+    if cfg.run_kind == MEASUREMENT:
         settings = ", ".join(
             f"{k}={as_stored(cfg.config[k]) if k in cfg.config else ABSENT}"
             for k in varying
