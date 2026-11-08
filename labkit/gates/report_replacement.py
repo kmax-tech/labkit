@@ -10,7 +10,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats.commands import gate_command
-from labkit.formats.area_state import INDEX, state_of
+from labkit.formats.area_state import state_of
+from labkit.formats.area_state import FileState
 from labkit.formats import evidence
 from labkit.formats.gate import (
     GateFinding,
@@ -86,7 +87,7 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
         out += [
             replace(f, text=f"{theirs}: {f.text}")
             for f in evidence.read_evidence(
-                pred.parent, staged=ctx.state == INDEX
+                pred.parent, staged=ctx.staged
             ).change_blockers()
         ]
     out += [replace(f, text=f"{name}: {f.text}") for f in _predecessor_open(ctx, pred)]
@@ -111,7 +112,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             fix="name the one protocol of this repo it replaces, kept as it "
             f"is, then `{gate_command('report-check', ctx.area)}`",
         )
-    circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.state)
+    circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.file_state)
     if circle:
         return blocker(
             f"the replacements run in a circle ({circle})",
@@ -130,7 +131,7 @@ def _undeclared_changes(
     against each), this protocol's as its first measurement saw it, or as
     it stands before one; or why they cannot be compared."""
     theirs = (
-        state_of(pred.parent, file_state=ctx.state)
+        state_of(pred.parent, file_state=ctx.file_state)
         .measured_of(rep.protocol)
         .first_groups
     )
@@ -194,7 +195,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     decided, or the predecessor is handed over (its open BLOCKERs stay open
     in that record)."""
     try:
-        theirs = evidence.read_evidence(pred.parent, staged=ctx.state == INDEX)
+        theirs = evidence.read_evidence(pred.parent, staged=ctx.staged)
         if theirs.unreadable:
             raise findings.FindingsError("; ".join(theirs.unreadable))
         held = theirs.open_blockers
@@ -226,7 +227,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     return out
 
 
-def _replacement_circle(start: str, pred: Path, file_state: str) -> str:
+def _replacement_circle(start: str, pred: Path, file_state: FileState) -> str:
     """The chain of `[replaces]` from PRED back, as ids joined by ` → `,
     when it returns to START or to an id it already passed; "" when it
     ends. Each predecessor is read as FILE_STATE holds it (`area_state`)."""

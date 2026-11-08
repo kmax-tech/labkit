@@ -144,7 +144,7 @@ class Undecided(unittest.TestCase):
             with contextlib.redirect_stdout(out):
                 rc = claude_hooks.main(["pre-commit"])
             self.assertEqual(rc, 1)
-            staged = next_step(self.area, protocol, state=INDEX).render(
+            staged = next_step(self.area, protocol, file_state=INDEX).render(
                 "experiments/01-x"
             )
             self.assertIn(staged, out.getvalue())

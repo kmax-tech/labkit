@@ -35,7 +35,7 @@ def context(protocol: Path, state: str = area_state.TREE) -> Any:
     return cast(
         Any,
         SimpleNamespace(
-            state=state, run=Path("runs") / RUN, declared=RUN, protocol=protocol
+            file_state=state, run=Path("runs") / RUN, declared=RUN, protocol=protocol
         ),
     )
 

@@ -20,6 +20,7 @@ import argparse
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
+from labkit.formats.area_state import file_state_of
 from labkit.formats import console, protocol_block
 from labkit.formats.repo import (
     area_path,
@@ -31,7 +32,6 @@ from labkit.formats.repo import (
     experiment_areas,
 )
 from labkit.gates.next_step import Step, next_step  # noqa: F401 — the tool's names
-from labkit.formats.area_state import INDEX, TREE
 
 #: the workflow in full, which `AGENTS.md` keeps short
 GUIDE = PACKAGE_DIR / "docs" / "agent-guide.md"
@@ -97,7 +97,7 @@ def main(argv: list[str]) -> int:
         if protocol is None:
             return 2
     try:
-        step = next_step(area, protocol, state=INDEX if args.staged else TREE)
+        step = next_step(area, protocol, file_state=file_state_of(staged=args.staged))
     except (protocol_block.BlockError, ValueError) as exc:
         console.refuse("labkit-next", f"{protocol.name if protocol else area}: {exc}")
         return 2

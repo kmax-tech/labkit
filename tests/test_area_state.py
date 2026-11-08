@@ -550,3 +550,34 @@ class TheAnsweringRunIsToldOnce(_Repository):
             and ".explain(promises.registers_promises(" in f.read_text(encoding="utf-8")
         ]
         self.assertEqual(by_hand, [])
+
+
+class OneTranslationOfTheFileState(unittest.TestCase):
+    """`staged_of` and `file_state_of` are the one translation between a
+    check's file state and a file reader's flag (the audit of 2026-11-08,
+    F7: 17 sites spelled it by hand)."""
+
+    def test_the_two_translations(self):
+        from labkit.formats import area_state
+
+        self.assertEqual(
+            [area_state.staged_of(s) for s in (TREE, INDEX, area_state.PROPOSED)],
+            [False, True, False],
+        )
+        self.assertEqual(area_state.file_state_of(staged=True), INDEX)
+        self.assertEqual(area_state.file_state_of(staged=False), TREE)
+
+    def test_no_reader_spells_it_by_hand(self):
+        import re
+
+        import labkit
+
+        root = Path(labkit.__file__).parent
+        spelled = re.compile(r"INDEX if [\w.]*staged else TREE|state == INDEX\b")
+        by_hand = [
+            str(f.relative_to(root))
+            for f in root.rglob("*.py")
+            if f.name != "area_state.py"
+            and spelled.search(f.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(by_hand, [])

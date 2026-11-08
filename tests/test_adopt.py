@@ -204,7 +204,7 @@ class Adopt(unittest.TestCase):
         calls: list[str] = []
 
         def refusing_on_the_tree(*args, **kw):
-            if kw.get("state", area_state.TREE) == area_state.TREE:
+            if kw.get("file_state", area_state.TREE) == area_state.TREE:
                 calls.append("tree")
                 return SimpleNamespace(exit=1)
             return real(*args, **kw)

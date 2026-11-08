@@ -22,6 +22,7 @@ what was held. Under `PROPOSED` the runs are the tree's.
 from __future__ import annotations
 
 import re
+from typing import Literal
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,9 +64,25 @@ from labkit.formats.runs import (
     runs_path,
 )
 
-TREE = "working tree"
-INDEX = "index"
-PROPOSED = "proposed protocol"
+#: which files a check judges: the working tree, git's index (what the
+#: next commit carries) or the tree with a proposed protocol text (an
+#: adoption's check); a file reader takes the flag `staged` instead
+#: (`staged_of`, `file_state_of`)
+FileState = Literal["working tree", "index", "proposed protocol"]
+TREE: FileState = "working tree"
+INDEX: FileState = "index"
+PROPOSED: FileState = "proposed protocol"
+
+
+def staged_of(file_state: FileState) -> bool:
+    """The flag a file reader takes for FILE_STATE: True (the index) for
+    INDEX, False (the tree) for TREE and PROPOSED."""
+    return file_state == INDEX
+
+
+def file_state_of(*, staged: bool) -> FileState:
+    """The file state a file reader's STAGED flag reads: INDEX or TREE."""
+    return INDEX if staged else TREE
 
 
 @dataclass(frozen=True)
@@ -203,7 +220,7 @@ class AreaState:
 
     area: Path
     repo: Path | None
-    file_state: str
+    file_state: FileState
     protocols: tuple[Path, ...]
     protocol_texts: Mapping[Path, str]
     adoption_pending: frozenset[Path]
@@ -249,7 +266,7 @@ class AreaState:
 def assemble(
     area: Path,
     repo: Path | None,
-    file_state: str,
+    file_state: FileState,
     runs: Sequence[RunDir],
     deleted: Sequence[RunDir],
     lost: Mapping[str, str],
@@ -327,7 +344,7 @@ def _measured(
     return Measured(area, pid, ours, lost, tuple(tuple(g) for g in groups), facts)
 
 
-def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
+def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
     """The state of AREA as FILE_STATE holds it (`AreaState`): the runs of
     the working tree (TREE, PROPOSED) or of git's index (INDEX), the runs a
     commit holds and that state lacks, the index-only ones. Raises
@@ -335,7 +352,7 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
     a deleted run was measured cannot be told then —, GitError or
     RuntimeError when git fails."""
     repo = git_root(area)
-    staged = file_state == INDEX
+    staged = staged_of(file_state)
     runs = present_run_dirs(area, repo=repo, file_state=file_state)
     if staged:
         assert repo is not None  # present_run_dirs refused the index without one
@@ -394,7 +411,9 @@ def gone_run_restore(rd: RunDir) -> str:
 LOST_RUN_SENTENCE = "its rows are lost; only git, where it holds the run, restores them"
 
 
-def present_run_dirs(area: Path, *, repo: Path | None, file_state: str) -> list[RunDir]:
+def present_run_dirs(
+    area: Path, *, repo: Path | None, file_state: FileState
+) -> list[RunDir]:
     """AREA's present runs as FILE_STATE holds them: the index's
     (`indexed_run_dirs`, REPO the repository) for INDEX, the tree's
     (`runs.run_dirs`) otherwise — the one reader every gate asks, so the

@@ -172,7 +172,7 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     files.write_atomic(protocol, after)
     try:
         rc = report_check.protocol_verdict(
-            protocol.parent, protocol, state=area_state.PROPOSED, text=after
+            protocol.parent, protocol, file_state=area_state.PROPOSED, text=after
         ).exit
     except BaseException:
         files.write_atomic(protocol, before)

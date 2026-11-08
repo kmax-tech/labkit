@@ -13,7 +13,8 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats import evidence
-from labkit.formats.area_state import INDEX, TREE, AreaState, state_of
+from labkit.formats.area_state import TREE, AreaState, state_of
+from labkit.formats.area_state import FileState, staged_of
 from labkit.checks.audit_binding import (
     audited_run,
 )
@@ -33,9 +34,9 @@ class Checked:
         area: The area, resolved.
         repo: Where the area's layout starts (`repo.layout_root`).
         protocol: The protocol file.
-        text: The protocol as STATE holds it — the declaration is read here.
+        text: The protocol as FILE_STATE holds it — the declaration is read here.
         head: Its TOML head.
-        state: TREE, INDEX or PROPOSED.
+        file_state: TREE, INDEX or PROPOSED (`area_state.FileState`).
         declared: The run the head declares as the reported result
             (`protocol_block.declared_run`, `[result] run`), None for an
             exploration — or for a `[result]` that does not read, which
@@ -46,11 +47,11 @@ class Checked:
             `answering_run.bound_answering_run`: the one choice every gate holds the
             protocol to), or None.
         why: Why there is no answering run, when RUN is None.
-        area_state: The area as STATE holds it (`area_state.state_of`): its
+        area_state: The area as FILE_STATE holds it (`area_state.state_of`): its
             runs (the index's for INDEX, the tree's otherwise), the runs git
             holds back, what each protocol measured, its protocols and their
             texts — built once and handed to every station and to finalize.
-        evidence: The area's audit evidence as STATE holds it
+        evidence: The area's audit evidence as FILE_STATE holds it
             (`evidence.AreaEvidence`): records, gaps, changes, ignored files;
             the reviews and handover records are the tree's in either state
             (`evidence.read_evidence`).
@@ -61,7 +62,7 @@ class Checked:
     protocol: Path
     text: str
     head: protocol_block.Head
-    state: str
+    file_state: FileState
     declared: str | None
     declaration_gap: str | None
     run: Path | None
@@ -69,24 +70,32 @@ class Checked:
     area_state: AreaState
     evidence: evidence.AreaEvidence
 
+    @property
+    def staged(self) -> bool:
+        """Whether a file reader reads the index for this check
+        (`area_state.staged_of`)."""
+        return staged_of(self.file_state)
+
 
 def checked(
     area: Path,
     protocol: Path,
     *,
-    state: str = TREE,
+    file_state: FileState = TREE,
     text: str | None = None,
     area_state: AreaState | None = None,
     area_evidence: evidence.AreaEvidence | None = None,
 ) -> Checked:
-    """The context of one check: TEXT is the protocol as STATE holds it
+    """The context of one check: TEXT is the protocol as FILE_STATE holds it
     (read off the area's state when None); AREA_STATE the area's state when the
     caller built it already (one build per check run), else built here;
     AREA_EVIDENCE likewise (`evidence.read_evidence`, the index's for INDEX).
     Raises `protocol_block.BlockError` on an unreadable head, `AuditError`
     out of the run choice, `run_index.RunIndexError` on a run index that
     does not read."""
-    built = area_state if area_state is not None else state_of(area, file_state=state)
+    built = (
+        area_state if area_state is not None else state_of(area, file_state=file_state)
+    )
     if text is None:
         text = built.text_of(protocol)
     head = protocol_block.head(text)
@@ -98,7 +107,7 @@ def checked(
         protocol=protocol,
         text=text,
         head=head,
-        state=state,
+        file_state=file_state,
         declared=declared,
         declaration_gap=declaration_gap,
         run=run,
@@ -107,7 +116,7 @@ def checked(
         evidence=(
             area_evidence
             if area_evidence is not None
-            else evidence.read_evidence(area, staged=state == INDEX)
+            else evidence.read_evidence(area, staged=staged_of(file_state))
         ),
     )
 

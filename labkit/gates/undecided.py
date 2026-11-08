@@ -13,7 +13,8 @@ from pathlib import Path
 
 from labkit.formats import attempts, evidence, handovers
 from labkit.formats.repo import rel_posix
-from labkit.formats.area_state import INDEX, TREE, state_of
+from labkit.formats.area_state import state_of
+from labkit.formats.area_state import file_state_of
 from labkit.formats.scope_sha import areas_touched
 
 
@@ -83,7 +84,7 @@ def undecided_state(
     ]
     for area in areas:
         shown = rel_posix(area, repo)
-        state = state_of(area, file_state=INDEX if staged else TREE)
+        state = state_of(area, file_state=file_state_of(staged=staged))
         held = evidence.read_evidence(area, staged=staged)
         # Only a current handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.

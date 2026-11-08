@@ -1033,7 +1033,7 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         out = io.StringIO()
         with contextlib.chdir(self.root), contextlib.redirect_stdout(out):
             code = report_command.main(["--if-reported", "--staged", rel])
-            step = next_step(self.area, self.proto, state=INDEX).render(
+            step = next_step(self.area, self.proto, file_state=INDEX).render(
                 self.area.relative_to(self.root).as_posix()
             )
         self.assertEqual(code, 1, out.getvalue())

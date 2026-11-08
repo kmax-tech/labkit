@@ -773,9 +773,11 @@ class DiscussingReport(unittest.TestCase):
         )
         self.assertEqual(rc, 0)
 
-    def step(self, state: str = area_state.TREE) -> next_step.Step:
+    def step(self, state: area_state.FileState = area_state.TREE) -> next_step.Step:
         with contextlib.chdir(self.lab.root):
-            return next_step.next_step(self.area, self.protocol.resolve(), state=state)
+            return next_step.next_step(
+                self.area, self.protocol.resolve(), file_state=state
+            )
 
     def gate(self, *, staged: bool) -> tuple[int, str]:
         out = io.StringIO()
@@ -1060,7 +1062,7 @@ class ReportInTheIndexOnly(unittest.TestCase):
 
         with contextlib.chdir(self.lab.root):
             staged = next_step.next_step(
-                self.area, self.protocol.resolve(), state=area_state.INDEX
+                self.area, self.protocol.resolve(), file_state=area_state.INDEX
             )
             self.assertIn("without its generated block", staged.where)
             self.assertIn("--into REPORT.md", staged.next)

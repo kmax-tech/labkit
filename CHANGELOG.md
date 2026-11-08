@@ -125,6 +125,15 @@ pins (`requirements.txt` / `requirements.lock`).
   state, the area's state and evidence) in place of four parameters each
   (`review_gap` 11 → 8); finalize's stations are numbered 0–9 (was 1b for
   the registration).
+  The file state a check judges is typed (`area_state.FileState`: TREE,
+  INDEX, PROPOSED) and named `file_state` everywhere: `Checked.state` is
+  `Checked.file_state` (with `Checked.staged`), and
+  `report_context.checked`, `report_check.protocol_verdict` and
+  `next_step.next_step` take `file_state=` (was `state=`, which also named
+  an `AreaState`). A file reader keeps its flag `staged`; the two
+  translations are `area_state.staged_of(file_state)` and
+  `area_state.file_state_of(staged=)` (17 hand spellings gone; held by
+  test).
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

@@ -937,8 +937,8 @@ class Adopt(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         seen: dict = {}
 
-        def check(area_, protocol, *, state, text):
-            seen.update(state=state, text=text)
+        def check(area_, protocol, *, file_state, text):
+            seen.update(file_state=file_state, text=text)
             self.assertEqual(protocol.read_text(encoding="utf-8"), text)
             return SimpleNamespace(exit=0)
 
@@ -953,7 +953,7 @@ class Adopt(unittest.TestCase):
         ):
             rc = protocol_fill.main([str(proto), "--from-run"])
         self.assertEqual(rc, 0)
-        self.assertEqual(seen["state"], protocol_fill.report_check.PROPOSED)
+        self.assertEqual(seen["file_state"], protocol_fill.report_check.PROPOSED)
         self.assertIn(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             seen["text"],

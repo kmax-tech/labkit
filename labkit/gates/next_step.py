@@ -93,7 +93,8 @@ from labkit.formats.commands import (
     report_fields_command,
     withdraw_command,
 )
-from labkit.formats.area_state import INDEX, TREE, AreaState, Measured, state_of
+from labkit.formats.area_state import TREE, AreaState, Measured, state_of
+from labkit.formats.area_state import FileState, staged_of, file_state_of
 from labkit.formats import evidence
 from labkit.gates.undecided import undecided_state
 
@@ -130,16 +131,16 @@ def next_step(
     area: Path,
     protocol: Path | None,
     *,
-    state: str = TREE,
+    file_state: FileState = TREE,
     chain: ReleaseChain | None = None,
 ) -> Step:
     """The next step of AREA under PROTOCOL (`Step`), in the module's order,
-    read from STATE — the working tree (TREE) or the index (INDEX), the
+    read from FILE_STATE — the working tree (TREE) or the index (INDEX), the
     state the caller judges: a hook that holds the index names a step from
     the index. PROTOCOL None and no protocol in AREA is the first step;
     PROTOCOL must otherwise be the one the caller chose
     (`repo.choose_protocol`). CHAIN, what report-check's chain found for
-    PROTOCOL in STATE when the caller ran it already
+    PROTOCOL in FILE_STATE when the caller ran it already
     (`report_check.hold_reported`), is read instead of running it again —
     not while no run is adopted, where the step asks the chain without the
     stations the adoption writes. Raises `protocol_block.BlockError` on a head
@@ -155,9 +156,9 @@ def next_step(
             "and its protocol; `labkit-init exp --help` names the options",
             "every run: a run needs a registered question",
         )
-    staged = state == INDEX
+    staged = staged_of(file_state)
     # the area's state once, for every step and for the chain
-    area_state = state_of(area, file_state=state)
+    area_state = state_of(area, file_state=file_state)
     text = area_state.text_of(protocol)
     report = protocol_check.check_fields(text)
     if report.head_error:
@@ -194,7 +195,7 @@ def next_step(
     ctx = report_context.checked(
         area,
         protocol,
-        state=state,
+        file_state=file_state,
         text=text,
         area_state=area_state,
         area_evidence=held,
@@ -244,7 +245,7 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
     from labkit.gates.report_hold import reports_without_block
 
     unblocked = reports_without_block(
-        ctx.repo, protocol, ctx.declared, staged=ctx.state == INDEX
+        ctx.repo, protocol, ctx.declared, staged=ctx.staged
     )
     if unblocked:
         first = unblocked[0]
@@ -307,7 +308,7 @@ def steps_for(
             step = next_step(
                 area,
                 protocol,
-                state=INDEX if staged else TREE,
+                file_state=file_state_of(staged=staged),
                 chain=(chains or {}).get(protocol),
             )
         except RunIndexError as exc:  # a ValueError too: before it
@@ -659,7 +660,7 @@ def _progress_step(ctx: "Checked") -> Step | None:
     report = _registered_report(ctx)
     if report is None or ctx.declared is not None or ctx.run is None:
         return None
-    written = state_text(ctx.repo, report, staged=ctx.state == INDEX) or ""
+    written = state_text(ctx.repo, report, staged=ctx.staged) or ""
     owner = report_blocks.path_from_report(ctx.protocol, report)
     if progress_account(written, owner, ctx.run.name):
         return None

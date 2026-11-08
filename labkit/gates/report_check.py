@@ -109,8 +109,9 @@ from labkit.formats.answering_run import (
     is_measurement,
 )
 from labkit.formats.area_state import (
+    FileState,
+    file_state_of,
     AreaState,
-    INDEX,
     LOST_RUN_SENTENCE,
     PROPOSED,
     TREE,
@@ -513,7 +514,7 @@ def protocol_verdict(
     area: Path,
     protocol: Path | None = None,
     *,
-    state: str = TREE,
+    file_state: FileState = TREE,
     text: str | None = None,
     review: bool = True,
     tell: Tell = print,
@@ -530,7 +531,7 @@ def protocol_verdict(
        as the last step (`tell_adoption_order`).
     2. Summary: 1 with any blocker, otherwise 0.
 
-    STATE and TEXT name the declaration's file state: the tree by default,
+    FILE_STATE and TEXT name the declaration's file state: the tree by default,
     the index for the pre-commit, the written proposal for adoption. REVIEW
     false leaves the registered report's review out — `labkit-adopt`'s own
     check right after it wrote the block: the review reads the final text,
@@ -549,7 +550,7 @@ def protocol_verdict(
         ctx = checked(
             area,
             chosen,
-            state=state,
+            file_state=file_state,
             text=text,
             area_state=area_state,
             area_evidence=area_evidence,
@@ -558,7 +559,7 @@ def protocol_verdict(
         console.refuse("report-check", f"{chosen.name}: {exc}")
         return ProtocolVerdict(2, None)
     tell(
-        f"  {chosen.name}: read from the {ctx.state}; the head has adopted "
+        f"  {chosen.name}: read from the {ctx.file_state}; the head has adopted "
         f"{ctx.declared or 'no run'}; the answering run is "
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
@@ -607,7 +608,9 @@ def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
     """A blocker while an adoption was cut off during its check: the head may
     hold a proposal no check passed (`repo.pending_adoption`);
     never on the proposal itself, which that adoption is checking."""
-    if ctx.state == PROPOSED or not ctx.area_state.adoption_pending_for(ctx.protocol):
+    if ctx.file_state == PROPOSED or not ctx.area_state.adoption_pending_for(
+        ctx.protocol
+    ):
         return []
     return [
         blocker(
@@ -779,7 +782,7 @@ def chain_gaps(
     # in every state but the proposal an adoption checks: for INDEX the
     # tree equals the index, since `hold_declared` and `next_step` hold an
     # area whose tree differs from it before the chain (`staged_area_gap`)
-    same_text = ctx.state != PROPOSED
+    same_text = ctx.file_state != PROPOSED
     # 0. evidence — an adoption cut off, then committed evidence changed
     out = cut_off_adoption_gaps(ctx)
     out += ctx.evidence.change_blockers()
@@ -831,12 +834,12 @@ def chain_gaps(
     # itself (`report_findings` says why)
     if not undeclared:
         out += report_findings(ctx, review=review)
-    if review and ctx.state != PROPOSED:
+    if review and ctx.file_state != PROPOSED:
         out += discussion_review_findings(
             ctx.protocol,
             ctx.text,
             ctx.repo,
-            staged=ctx.state == INDEX,
+            staged=ctx.staged,
             state=ctx.area_state,
             held=ctx.evidence,
         )
@@ -933,11 +936,11 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     hold the adoption against itself; the stop and the commit hold the
     delivered report. REVIEW: the released report
     owes a clean report review of its state too (`report_owed`)."""
-    if ctx.state == PROPOSED:
+    if ctx.file_state == PROPOSED:
         return []
     # before the adoption the tree's missing report is the stop's to name
     # (`agent_hooks.missing_reports`); a commit removing it is held here
-    staged = ctx.state == INDEX
+    staged = ctx.staged
     gone = (
         missing_report(
             ctx.protocol,
@@ -1003,7 +1006,7 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     run. Not on the PROPOSED state: the adoption's own check sees its
     proposal declare the run, and "withdraw the adoption first" would name
     an adoption that does not stand."""
-    if ctx.state == PROPOSED or ctx.run is None or ctx.declared != ctx.run.name:
+    if ctx.file_state == PROPOSED or ctx.run is None or ctx.declared != ctx.run.name:
         return None
     held = any(f.changed_since is not None for f in finalized)
     return ctx.protocol if held else None
@@ -1204,7 +1207,7 @@ def hold_declared(
     return protocol_verdict(
         area,
         protocol,
-        state=INDEX if staged else TREE,
+        file_state=file_state_of(staged=staged),
         text=text,
         tell=tell,
         area_state=sources.held_state(area),

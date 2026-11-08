@@ -35,7 +35,8 @@ from labkit.checks.audit_binding import (
     AuditError,
     audited_run,
 )
-from labkit.formats.area_state import INDEX, TREE, AreaState, present_run_dirs, state_of
+from labkit.formats.area_state import AreaState, present_run_dirs, state_of
+from labkit.formats.area_state import file_state_of
 from labkit.formats import evidence
 from labkit.checks import report_blocks
 from labkit.checks.result_render import rendering
@@ -438,7 +439,9 @@ class Sources:
         this check run read."""
         key = area.resolve()
         if key not in self._states:
-            self._states[key] = state_of(key, file_state=INDEX if self.staged else TREE)
+            self._states[key] = state_of(
+                key, file_state=file_state_of(staged=self.staged)
+            )
         return self._states[key]
 
     def held_evidence(self, area: Path) -> evidence.AreaEvidence:
@@ -459,7 +462,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
     protocols = protocols_in(repo, staged=staged)
     out = Sources.blank(repo, staged=staged)
     out.unreadable.update(protocol_links(repo, protocols, staged=staged))
-    file_state = INDEX if staged else TREE
+    file_state = file_state_of(staged=staged)
     for p in protocols:
         out.known.update(
             rd.dir.name
