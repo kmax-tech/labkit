@@ -445,7 +445,7 @@ class ConflictingRegistrations(_Areas):
     def test_different_first_registrations_hold_the_predecessor(self):
         ctx = report_context.checked(self.a, self.a / "PROTOCOL-x.md")
         (finding,) = registration_hold.registration_changes(
-            ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state
+            ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
         )
         self.assertEqual(finding.grade, report_check.BLOCKER)
         self.assertIn("recorded different registrations", finding.line)

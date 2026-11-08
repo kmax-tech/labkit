@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.formats.runs import run_dirs
+from labkit.formats.evidence import read_evidence
 from labkit.checks import report_review_inputs
 from labkit.formats.area_state import state_of
 from protocol_fixture import (
@@ -51,7 +53,9 @@ class RunsText(unittest.TestCase):
         _settings_of(a, estimator="rf", seed=0)
         _settings_of(b, estimator="lr", seed=0)
         _settings_of(c, estimator="lr", seed=0)
-        text = report_review_inputs.runs_text(area, PID, b.name, set(), {a.name})
+        text = report_review_inputs.runs_text(
+            run_dirs(area), PID, b.name, set(), {a.name}
+        )
         lines = text.split("\n")
         self.assertEqual(len(lines), 3, text)
         self.assertIn(
@@ -78,9 +82,9 @@ class RunsText(unittest.TestCase):
         b = completed_run(area, "2026-01-01T00-00-02_b")
         _settings_of(a)
         _settings_of(b, random_state=None)
-        lines = report_review_inputs.runs_text(area, PID, b.name, set(), set()).split(
-            "\n"
-        )
+        lines = report_review_inputs.runs_text(
+            run_dirs(area), PID, b.name, set(), set()
+        ).split("\n")
         self.assertIn("random_state=absent", lines[0])
         self.assertIn("random_state=null", lines[1])
 
@@ -89,7 +93,7 @@ class RunsText(unittest.TestCase):
         bad = completed_run(area, "2026-01-01T00-00-01_bad", metrics=None)
         (bad / "config.json").write_text("{not json", encoding="utf-8")
         none = completed_run(area, "2026-01-01T00-00-02_n", metrics=None)
-        text = report_review_inputs.runs_text(area, PID, None, set(), set())
+        text = report_review_inputs.runs_text(run_dirs(area), PID, None, set(), set())
         lines = text.split("\n")
         self.assertTrue(lines[0].startswith(f"{bad.name} · unreadable · "), lines[0])
         self.assertIn(
@@ -104,7 +108,8 @@ class RunsText(unittest.TestCase):
     def test_no_runs_directory_is_said(self):
         area = self._area()
         self.assertEqual(
-            report_review_inputs.runs_text(area, PID, None, set(), set()), "no runs"
+            report_review_inputs.runs_text(run_dirs(area), PID, None, set(), set()),
+            "no runs",
         )
 
     def test_the_bundle_carries_the_runs_before_the_audits(self):
@@ -121,6 +126,7 @@ class RunsText(unittest.TestCase):
             proto.read_text(encoding="utf-8"),
             [],
             state_of(area),
+            read_evidence(area, staged=False),
         )
         labels = [label for label, _ in pieces]
         self.assertEqual(labels[-2:], ["RUNS", "AUDITS"], labels)

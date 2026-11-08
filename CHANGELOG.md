@@ -47,6 +47,25 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **One state and one evidence read per area and check run, on the
+  report path too.** `report_hold.Sources` is the hold's cache: its
+  `held_state(area)` and `held_evidence(area)` build once and every
+  station of `hold_reported` reads them — the protocol's chain
+  (`hold_declared`, `hold_registered`, `protocol_verdict` take the
+  sources), the report's checks (`discussion_sources` takes the sources,
+  `promotions`, `report_review_owed`, `_run_protocols` ask them) and the
+  formerly registering protocols (`formerly_registering(paths, repo,
+  sources)`). The evidence travels where it was read again before:
+  `review_gap`, `review_hold`, `lost_evidence(protocol, held)`,
+  `review_pieces(…, state, held)`, `audits_text(area, held)`,
+  `report_owed`/`registered_review(…, held=)`, `finalize_area(…, held=)`,
+  `finalize_findings(area, protocol, state, held)`,
+  `check_registration` and the registration hold down to
+  `resolved_corrections` and `awaiting_followup`; `runs_text` takes the
+  runs; finalize's audit station and `gone_run_way` read the state. The
+  build count is held by test on the chain, `labkit-next`, the commit's
+  gate and the report path (`OneStateBuildPerCheckRun`).
+
 - **`labkit-hooks` refuses with exit 2**, as every command does
   (`console.Refused`): a malformed `hooks.json` or a foreign pre-commit
   ended it with exit 1 before. The run layer and `recheck` keep ending a

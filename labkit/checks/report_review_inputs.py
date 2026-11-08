@@ -8,12 +8,15 @@ backend.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from pathlib import Path
 
+from labkit.formats import evidence
 from labkit.checks.audit_binding import AuditError
 from labkit.formats.area_state import AreaState
 from labkit.formats.repo import path_kind
-from labkit.formats.runs import metrics_text
+from labkit.formats.runs import RunDir, metrics_text
 from labkit.checks.report_blocks import Discussion, cited_run_ids
 from labkit.formats import protocol_block
 from labkit.formats import findings
@@ -25,7 +28,6 @@ from labkit.formats.runs import (
     as_stored,
     metrics_path,
     read_metrics,
-    run_dirs,
     run_path,
     run_state,
 )
@@ -43,13 +45,15 @@ def numbered(text: str) -> str:
     return "\n".join(f"{n}: {line}" for n, line in enumerate(text.split("\n"), 1))
 
 
-def audits_text(area: Path) -> str:
-    """Every audit record of AREA with its findings and decisions, then every
-    failed attempt with the backend's words — what the reviewer holds the
-    report's statements against. Raises FindingsError on a file nobody can
-    read."""
+def audits_text(area: Path, held: evidence.AreaEvidence) -> str:
+    """Every audit record of AREA (HELD, its evidence read once) with its
+    findings and decisions, then every failed attempt with the backend's
+    words — what the reviewer holds the report's statements against.
+    Raises FindingsError on a record nobody can read."""
+    for why in held.unreadable:
+        raise findings.FindingsError(why)
     blocks: list[str] = []
-    for r in findings.area_records(area):
+    for r in held.records:
         lines = [f"{r.path.name} · {r.mode} · run {r.run_id or 'none'}"]
         for n, f in enumerate(r.findings, 1):
             lines.append(f"  #{n} · {f.grade} · {f.text}")
@@ -78,6 +82,7 @@ def review_pieces(
     protocol_text: str,
     discussed: list[Discussion],
     state: AreaState,
+    held: evidence.AreaEvidence,
 ) -> list[tuple[str, str]]:
     """The (label, text) the reviewer reads of REPORT (its TEXT) under
     PROTOCOL (its PROTOCOL_TEXT) in AREA, in order: the report numbered,
@@ -150,10 +155,12 @@ def review_pieces(
     pieces.append(
         (
             "RUNS",
-            runs_text(area, protocol_block.id_of(protocol_text), adopted, said, cited),
+            runs_text(
+                state.runs, protocol_block.id_of(protocol_text), adopted, said, cited
+            ),
         )
     )
-    pieces.append(("AUDITS", audits_text(area)))
+    pieces.append(("AUDITS", audits_text(area, held)))
     return pieces
 
 
@@ -163,13 +170,14 @@ ABSENT = "absent"
 
 
 def runs_text(
-    area: Path,
+    dirs: Sequence[RunDir],
     pid: str | None,
     adopted: str | None,
     discussed: set[str],
     cited: set[str],
 ) -> str:
-    """Every run under AREA's `runs/`, oldest first, one line each: its
+    """Every run of DIRS (the area's runs as the state holds them), oldest
+    first, one line each: its
     state, kind, the protocol it was bound to (PID: this one), what the
     report makes of it (ADOPTED, DISCUSSED, CITED, or nothing), its commit
     and script, a repeat's or a derived run's parent, for a measurement the
@@ -179,7 +187,6 @@ def runs_text(
     report does not name shows as runs of one protocol under varying
     settings, which a review that sees the adopted run alone lets pass. An
     unreadable run is a line saying so, never left out."""
-    dirs = run_dirs(area)
     bound = [
         rd.config.config
         for rd in dirs

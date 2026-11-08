@@ -21,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats.evidence import read_evidence
 from labkit.gates import registered_report
 from labkit.formats.area_state import state_of
 from labkit.tools import report_command
@@ -809,6 +810,7 @@ class DiscussingReport(unittest.TestCase):
             proto_text,
             discussed_under(self.report, text, self.protocol),
             state_of(self.area),
+            read_evidence(self.area, staged=False),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = review_keys(self.area, self.report, self.protocol)

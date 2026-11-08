@@ -13,9 +13,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from labkit.formats import evidence
 from labkit.formats.commands import checkout_command
-from labkit.gates.report_hold import review_gap
-from labkit.formats.area_state import INDEX, TREE, AreaState, Measured, state_of
+from labkit.gates.report_hold import Sources, review_gap
+from labkit.formats.area_state import AreaState, Measured
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -51,13 +52,15 @@ def report_owed(
     repo: Path,
     *,
     state: AreaState,
+    held: evidence.AreaEvidence,
     staged: bool,
     review: bool = True,
     progress: bool = False,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
     the three ways out — or None. STATE is the area's state
-    (`area_state.AreaState`, built once by the caller): what it measured of
+    (`area_state.AreaState`, built once by the caller) and HELD its audit
+    evidence (`evidence.AreaEvidence`, read once): what it measured of
     the protocol, and the run that answers.
 
     The head's `report` names the file (`protocol_block.report_field`,
@@ -121,7 +124,14 @@ def report_owed(
     ):
         return (
             registered_review(
-                report, written, protocol, text, repo, staged=staged, state=state
+                report,
+                written,
+                protocol,
+                text,
+                repo,
+                staged=staged,
+                state=state,
+                held=held,
             )
             if review
             else None
@@ -132,7 +142,14 @@ def report_owed(
         if gap is None:
             return (
                 registered_review(
-                    report, written, protocol, text, repo, staged=staged, state=state
+                    report,
+                    written,
+                    protocol,
+                    text,
+                    repo,
+                    staged=staged,
+                    state=state,
+                    held=held,
                 )
                 if review
                 else None
@@ -348,7 +365,7 @@ def report_binding_gap(
     )
 
 
-def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
+def formerly_registering(paths: list[Path], repo: Path, sources: Sources) -> list[Path]:
     """The protocols of REPO whose first measurements registered a file
     among PATHS as their report (`bound_reports`) while their head, as the
     state holds it, registers another or none — the protocols a change of
@@ -366,6 +383,7 @@ def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list
     gitroot = git_root(root)
     if not candidates or gitroot is None:
         return []
+    staged = sources.staged
     protocols = indexed_protocols(repo) if staged else repo_protocols(root)
     out: list[Path] = []
     for p in protocols:
@@ -376,9 +394,7 @@ def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list
             continue
         if head is None or not head.id:
             continue
-        held = state_of(p.parent, file_state=INDEX if staged else TREE).measured_of(
-            head.id
-        )
+        held = sources.held_state(p.parent).measured_of(head.id)
         for registered in bound_reports(p, held, gitroot).registered.values():
             if (
                 registered is not None
@@ -467,6 +483,7 @@ def registered_review(
     *,
     staged: bool,
     state: AreaState,
+    held: evidence.AreaEvidence,
 ) -> GateFinding | None:
     """The report review the registered REPORT (its WRITTEN text in the
     state) of PROTOCOL (its TEXT) owes once its result or handover block
@@ -498,4 +515,5 @@ def registered_review(
         f"is the report {name_p} registers",
         staged=staged,
         state=state,
+        held=held,
     )

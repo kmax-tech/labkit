@@ -338,7 +338,7 @@ def _before_the_chain(
         _field_step(protocol, report, hint)
         or _staged_area_step(area, text, staged=staged)
         or _restore_step(held)
-        or _handed_over(area, protocol, text, area_state, staged=staged)
+        or _handed_over(area, protocol, text, area_state, held, staged=staged)
     )
 
 
@@ -414,7 +414,13 @@ def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
 
 
 def _handed_over(
-    area: Path, protocol: Path, text: str, state: AreaState, *, staged: bool
+    area: Path,
+    protocol: Path,
+    text: str,
+    state: AreaState,
+    held: evidence.AreaEvidence,
+    *,
+    staged: bool,
 ) -> Step | None:
     """The step of a PROTOCOL (its TEXT) a current handover ended
     (`handovers.protocol_handed_over`), else None: the review its
@@ -428,7 +434,7 @@ def _handed_over(
         return None
 
     owed = report_owed(
-        protocol, text, None, layout_root(area), state=state, staged=staged
+        protocol, text, None, layout_root(area), state=state, held=held, staged=staged
     )
     if owed is not None:
         return Step(
@@ -501,10 +507,9 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
     the field again and again."""
     if first.step is None or first.step.name != RESTORE:
         return ""
-    try:
-        records = findings.area_records(ctx.area)
-    except findings.FindingsError:
+    if ctx.evidence.unreadable:
         return ""
+    records = list(ctx.evidence.records)
     for u in findings.open_findings(records, mode=ANALYSIS_AUDIT):
         place = u.finding.place
         if place is None or place[0] != ctx.protocol.name:

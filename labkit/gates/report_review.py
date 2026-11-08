@@ -125,8 +125,9 @@ def gather_report(
             "(`--discuss … --into` writes the block again)",
         ) from exc
     state = state_of(area)
+    held = evidence.read_evidence(area, staged=False)
     pieces = review_pieces(
-        area, report, text, protocol, state.text_of(protocol), discussed, state
+        area, report, text, protocol, state.text_of(protocol), discussed, state, held
     )
     repo = layout_root(area)
     _, rules = audit_prompt.review_brief()
@@ -233,7 +234,9 @@ def review_report(
         # `attempts.begin` refuses it all the same, but its refusal names
         # `--findings` and the handover, already written in that state, not
         # the removal that leads out
-        lost = report_hold.lost_evidence(chosen)
+        lost = report_hold.lost_evidence(
+            chosen, evidence.read_evidence(area, staged=False)
+        )
         if lost is not None:
             raise AuditError(
                 f"no report review of {report_key} — {lost.cause}", fix=lost.fix

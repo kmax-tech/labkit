@@ -193,6 +193,43 @@ class OneStateBuildPerCheckRun(_Repository):
             self._builds(lambda: next_step.next_step(self.area, self.proto)), 1
         )
 
+    def test_the_report_path_builds_the_state_and_the_evidence_once(self):
+        """`hold_reported` over a report discussing a run: the protocol's
+        chain and the report's checks share one state build and one
+        evidence read of the area (`report_hold.Sources.held_state`; the
+        audit of 2026-11-08, F4 and F5)."""
+        from unittest import mock
+
+        from labkit.checks import report_blocks
+        from labkit.formats import evidence
+
+        self._run(RUN)
+        report = self.root / "REPORT.md"
+        report.write_text(
+            report_blocks.with_discussion(
+                "# Report\n",
+                f"experiments/01-x/{self.proto.name}",
+                RUN,
+                "a probe of the setup, not the answer",
+            ),
+            encoding="utf-8",
+        )
+        lines: list[str] = []
+        reads: list[int] = []
+        real = evidence.read_evidence
+
+        def counting(*args, **kwargs):
+            reads.append(1)
+            return real(*args, **kwargs)
+
+        with mock.patch.object(evidence, "read_evidence", counting):
+            builds = self._builds(
+                lambda: report_check.hold_reported(
+                    [report], self.root, staged=False, tell=lines.append
+                )
+            )
+        self.assertEqual((builds, len(reads)), (1, 1), "\n".join(lines))
+
     def test_the_commits_gate_builds_the_state_once_per_protocol(self):
         """`hold_reported` at the commit (STAGED): the one protocol the paths
         touch, one build of its area's state."""
@@ -227,8 +264,10 @@ class TheFileStateNamedIsTheOneRead(_Repository):
                 f"experiments/01-x/{self.proto.name}", RUN, "why", 1, 3, ""
             )
         ]
-        self.assertEqual(report_hold.discussion_sources(report, found, staged=True), [])
-        (gap,) = report_hold.discussion_sources(report, found, staged=False)
+        staged = report_hold.repo_sources(self.root, staged=True)
+        self.assertEqual(report_hold.discussion_sources(report, found, staged), [])
+        tree = report_hold.repo_sources(self.root, staged=False)
+        (gap,) = report_hold.discussion_sources(report, found, tree)
         self.assertIn(f"has no runs/{RUN}/", gap.text)
 
     def test_the_runs_a_report_may_cite_follow_the_file_state(self):

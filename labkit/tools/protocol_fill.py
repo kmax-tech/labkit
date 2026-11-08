@@ -179,7 +179,9 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     pending.unlink()
     # the discussion owes a report review, which `attempts.begin` refuses
     # while the area's evidence is gone
-    lost = report_hold.lost_evidence(protocol)
+    lost = report_hold.lost_evidence(
+        protocol, evidence.read_evidence(protocol.parent, staged=False)
+    )
     mention = (
         f"a report cannot discuss this run now — {lost.fix}"
         if lost is not None
@@ -781,7 +783,9 @@ def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
     if not held:
         return
     here = Path.cwd()
-    lost = report_hold.lost_evidence(protocol)
+    lost = report_hold.lost_evidence(
+        protocol, evidence.read_evidence(protocol.parent, staged=False)
+    )
     if lost is not None:
         print(
             f"{len(held)} report(s) still cite the withdrawn run {run_id} and hold "

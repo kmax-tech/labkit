@@ -574,11 +574,17 @@ class HandoverRecovery(cases._Chain):
             self.protocol,
             text,
             state_of(self.area, file_state=INDEX),
+            evidence.read_evidence(self.area, staged=True),
             staged=True,
         )
         self.assertIsNotNone(staged)
         tree = next_step._handed_over(
-            self.area, self.protocol, text, state_of(self.area), staged=False
+            self.area,
+            self.protocol,
+            text,
+            state_of(self.area),
+            evidence.read_evidence(self.area, staged=False),
+            staged=False,
         )
         self.assertIsNone(tree)
 

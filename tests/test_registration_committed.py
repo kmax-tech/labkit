@@ -329,7 +329,7 @@ def _registration_changes(area: Path, proto: Path) -> list:
     chooses."""
     ctx = report_context.checked(area, proto)
     return registration_hold.registration_changes(
-        ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state
+        ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
     )
 
 

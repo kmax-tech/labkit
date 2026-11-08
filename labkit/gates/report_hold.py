@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import shlex
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -392,16 +392,42 @@ class Sources:
     declared: dict[Path, str | None]
     unreadable: dict[Path, str]
     staged: bool = False  # the file state the sources were read from
+    _states: dict[Path, AreaState] = field(
+        default_factory=dict, repr=False, compare=False
+    )
+    _evidence: dict[Path, evidence.AreaEvidence] = field(
+        default_factory=dict, repr=False, compare=False
+    )
 
     def declaring(self, run_id: str) -> list[Path]:
         """The protocols declaring RUN_ID as their result."""
         return [p for p, r in self.declared.items() if r == run_id]
 
+    def held_state(self, area: Path) -> AreaState:
+        """AREA's state as the sources' file state holds it
+        (`area_state.state_of`), built once per area for the whole hold:
+        the one build the protocol's chain and every report's checks of
+        this check run read."""
+        key = area.resolve()
+        if key not in self._states:
+            self._states[key] = state_of(key, file_state=INDEX if self.staged else TREE)
+        return self._states[key]
+
+    def held_evidence(self, area: Path) -> evidence.AreaEvidence:
+        """AREA's audit evidence in the sources' file state
+        (`evidence.read_evidence`), read once per area for the whole hold."""
+        key = area.resolve()
+        if key not in self._evidence:
+            self._evidence[key] = evidence.read_evidence(key, staged=self.staged)
+        return self._evidence[key]
+
 
 def repo_sources(repo: Path, *, staged: bool) -> Sources:
     """The runs, texts and declarations of every protocol of REPO — the
     index's protocols, texts and runs when STAGED (what the commit
-    carries), the tree's otherwise (`area_state.present_run_dirs`)."""
+    carries), the tree's otherwise. KNOWN is read cheaply for every area
+    (`area_state.present_run_dirs`); the areas' states build lazily, for
+    the areas a report touches (`held_state`)."""
     protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
     out = Sources(repo.resolve(), set(), {}, {}, {}, staged)
     out.unreadable.update(protocol_links(repo, protocols, staged=staged))
@@ -531,7 +557,7 @@ def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
         if declared is not None:
             continue
         area = protocol.parent.resolve()
-        state = state_of(area, file_state=INDEX if sources.staged else TREE)
+        state = sources.held_state(area)
         present = {rd.dir.name for rd in state.runs}
         mine = [r for r in run_ids if r in present]
         if not mine:
@@ -610,7 +636,7 @@ def hold_report(
     out.take_all(at_report(report_blocks.cited_gaps(cited, sources.known)))
     out.take_all(at_report(owed_blocks(path, text, found, sources)))
     out.take_all(at_report(report_blocks.discussion_gaps(discussed)))
-    out.take_all(at_report(discussion_sources(path, discussed, staged=staged)))
+    out.take_all(at_report(discussion_sources(path, discussed, sources)))
     out.take_all(report_review_owed(path, rel, text, discussed, sources, staged=staged))
     report_hints(out, rel, text, discussed)
     for line in replacement_hints(path, rel, text, repo, sources):
@@ -641,23 +667,20 @@ def link_gap(
 
 
 def discussion_sources(
-    path: Path, found: list[report_blocks.Discussion], *, staged: bool
+    path: Path, found: list[report_blocks.Discussion], sources: Sources
 ) -> list[GateFinding]:
     """Why a discussion block of FOUND, in the report at PATH, names no run
     it can discuss, one sentence each: its protocol (relative to the
     report) is no file, or the run is no `runs/<id>/` of that protocol's
-    area — in the index when STAGED (what the commit carries), else the
-    tree. Exact."""
+    area — in the file state SOURCES hold (the index at the commit, else
+    the tree; `Sources.held_state`). Exact."""
     gaps: list[GateFinding] = []
     again = "write the block again with `protocol-fill <PROTOCOL> --discuss <run> --why … --into <FILE>`"
-    states: dict[Path, AreaState] = {}
     for d in found:
         protocol = (path.parent / d.protocol).resolve()
         at = f"line {d.first}: the discussion of run {d.run_id}"
         area = protocol.parent
-        if area not in states and path_kind(area) == "dir":
-            states[area] = state_of(area, file_state=INDEX if staged else TREE)
-        state = states.get(area)
+        state = sources.held_state(area) if path_kind(area) == "dir" else None
         if state is None or protocol not in state.protocols:
             gaps.append(
                 blocker(
@@ -716,10 +739,9 @@ def _run_protocols(sources: Sources) -> dict[str, Path]:
     """Every run id of the repo's protocols, mapped to the protocol its
     record binds it to (`protocol.id`), in the file state SOURCES hold."""
     out: dict[str, Path] = {}
-    file_state = INDEX if sources.staged else TREE
     for p, text in sources.texts.items():
         pid = protocol_block.id_of(text)
-        for rd in present_run_dirs(p.parent, repo=sources.repo, file_state=file_state):
+        for rd in sources.held_state(p.parent).runs:
             if rd.config is not None and rd.config.protocol.id == pid:
                 out[rd.dir.name] = p
     return out
@@ -782,7 +804,7 @@ def report_review_owed(
         protocol_text = sources.texts.get(protocol)
         if protocol in registering or protocol_text is None:
             continue
-        area_state = state_of(protocol.parent, file_state=INDEX if staged else TREE)
+        area_state = sources.held_state(protocol.parent)
         held_runs = {rd.dir.name for rd in area_state.runs}
         if not all(d.run_id in held_runs for d in mine):
             continue
@@ -798,6 +820,7 @@ def report_review_owed(
             f"discusses {runs_named} as not reported",
             staged=staged,
             state=area_state,
+            held=sources.held_evidence(protocol.parent),
         )
         if gap is not None:
             out.append(gap)
@@ -816,6 +839,7 @@ def review_gap(
     *,
     staged: bool,
     state: AreaState,
+    held: evidence.AreaEvidence,
 ) -> GateFinding | None:
     """The BLOCKER of the report at PATH (REL to REPO, TEXT as the gate's
     state holds it) under PROTOCOL (its PROTOCOL_TEXT, its DISCUSSED
@@ -830,7 +854,8 @@ def review_gap(
     protocol from the index, and the area's tree must equal the index (its
     runs' metrics, audit records and review records are read from the
     tree), else a blocker; a review counts only when the index holds its
-    record."""
+    record. STATE and HELD are the area's state and audit evidence the
+    caller read once for this check run."""
     area = protocol.parent
     command = f"`{report_review_command(area, path, protocol)}`"
     if staged:
@@ -842,11 +867,10 @@ def review_gap(
             return gap
     try:
         pieces = review_pieces(
-            area, path, text, protocol, protocol_text, discussed, state
+            area, path, text, protocol, protocol_text, discussed, state, held
         )
         whole, parts = review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, path, protocol)
-        held = evidence.read_evidence(area, staged=staged)
         if held.report_reviews_unread:
             raise report_reviews.ReportReviewError(held.report_reviews_unread)
         found = list(held.report_reviews)
@@ -868,7 +892,7 @@ def review_gap(
     if stands.released:
         return None
     # lost audit evidence, then claims, then no clean review (`review_hold`)
-    return review_hold(rel, protocol, held_for, stands, parts, command, staged=staged)
+    return review_hold(rel, protocol, held_for, stands, parts, command, held)
 
 
 @dataclass(frozen=True)
@@ -881,16 +905,16 @@ class LostEvidence:
     fix: str
 
 
-def lost_evidence(protocol: Path, *, staged: bool = False) -> LostEvidence | None:
-    """While the audit evidence of PROTOCOL's area is gone
-    (`attempts.evidence_gaps`), the cause and the way out a report citing
-    its runs has — `attempts.begin` refuses every audit and review then, so
-    neither an adoption nor a discussion's review can pass; None while the
-    evidence stands. The one selection the report holds, `--report-review`
-    and protocol-fill's adoption and handover read. Raises RuntimeError
-    when git fails."""
+def lost_evidence(protocol: Path, held: evidence.AreaEvidence) -> LostEvidence | None:
+    """While the audit evidence of PROTOCOL's area is gone (HELD, the
+    area's evidence the caller read once: its `gaps`), the cause and the
+    way out a report citing its runs has — `attempts.begin` refuses every
+    audit and review then, so neither an adoption nor a discussion's
+    review can pass; None while the evidence stands. The one selection the
+    report holds, `--report-review` and protocol-fill's adoption and
+    handover read."""
     area = protocol.parent
-    gaps = list(evidence.read_evidence(area, staged=staged).gaps)
+    gaps = list(held.gaps)
     if not gaps:
         return None
     return LostEvidence(
@@ -908,8 +932,7 @@ def review_hold(
     stands: report_reviews.Standing,
     parts: dict[str, str],
     command: str,
-    *,
-    staged: bool = False,
+    held: evidence.AreaEvidence,
 ) -> GateFinding:
     """The BLOCKER of a report no review releases: first, while the area's
     audit evidence is gone, that no review can run and the way out that
@@ -921,7 +944,7 @@ def review_hold(
     fingerprint parts, COMMAND the review to run."""
     # first: under a handover for a lost record the review `--discuss`
     # owes is refused, and this way out is the one that works
-    lost = lost_evidence(protocol, staged=staged)
+    lost = lost_evidence(protocol, held)
     if lost is not None:
         return blocker(
             f"{rel}: {held_for} and has no clean report review of this "
@@ -1014,7 +1037,7 @@ def undeclared_findings(
         # adoption and discussion both owe an audit or a review, which no
         # lost evidence lets start: then the way out is the restore or the
         # removal, in place of the blocker below
-        lost = lost_evidence(protocol, staged=sources.staged)
+        lost = lost_evidence(protocol, sources.held_evidence(protocol.parent))
         if lost is not None:
             out.append(
                 blocker(

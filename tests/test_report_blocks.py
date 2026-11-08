@@ -19,6 +19,7 @@ from pathlib import Path
 import test_report_check
 from protocol_fixture import completed_run
 
+from labkit.formats.evidence import read_evidence
 from labkit.checks import report_blocks
 from labkit.formats.area_state import state_of
 from labkit.formats import report_reviews
@@ -657,6 +658,7 @@ class ReportFiles(unittest.TestCase):
             proto.read_text(encoding="utf-8"),
             discussed,
             state_of(area),
+            read_evidence(area, staged=False),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = report_review.review_keys(area, report, proto)

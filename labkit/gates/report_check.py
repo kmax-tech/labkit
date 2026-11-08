@@ -524,6 +524,8 @@ def protocol_verdict(
     text: str | None = None,
     review: bool = True,
     tell: Tell = print,
+    area_state: AreaState | None = None,
+    area_evidence: evidence.AreaEvidence | None = None,
 ) -> ProtocolVerdict:
     """Check AREA before reporting (`ProtocolVerdict`: the exit code and what the
     chain found), every line through TELL.
@@ -548,7 +550,14 @@ def protocol_verdict(
     if chosen is None:
         return ProtocolVerdict(2, None)
     try:
-        ctx = checked(area, chosen, state=state, text=text)
+        ctx = checked(
+            area,
+            chosen,
+            state=state,
+            text=text,
+            area_state=area_state,
+            area_evidence=area_evidence,
+        )
     except (protocol_block.BlockError, AuditError) as exc:
         console.refuse("report-check", f"{chosen.name}: {exc}")
         return ProtocolVerdict(2, None)
@@ -645,7 +654,7 @@ def report_binding_gaps(ctx: Checked, *, unread: bool) -> list[GateFinding]:
 
 
 def finalize_findings(
-    area: Path, protocol: Path, state: AreaState
+    area: Path, protocol: Path, state: AreaState, held: evidence.AreaEvidence
 ) -> list[GateFinding]:
     """Finalize's blockers and warnings, each named here with its prefix
     (`FINALIZE`) — a hook that says "run it to see them" asks for a round
@@ -656,10 +665,10 @@ def finalize_findings(
     into the finding itself (the runs it looked at, intent-check's lines,
     the test counts) and keeps its exit-2 reason (no protocol to hold) as a
     blocker too. A non-zero exit without a blocker is a bug in finalize,
-    not a state to report around. STATE, the area's state the check built
-    once, is finalize's too."""
+    not a state to report around. STATE and HELD, the area's state and
+    audit evidence the check built once, are finalize's too."""
     collected = Findings(tell=None)  # the data, not the console
-    finalized = finalize_area(area, protocol, collected, state=state)
+    finalized = finalize_area(area, protocol, collected, state=state, held=held)
     if finalized != 0 and not collected.blocked:
         raise RuntimeError(
             f"finalize {area} exits {finalized} and kept no blocker — every "
@@ -795,7 +804,7 @@ def chain_gaps(
     # 3. finalize — always; the unreportable marks this chain's full-run
     # station holds as blockers are not told again as finalize's warnings
     # where it read this text
-    finalized = finalize_findings(ctx.area, ctx.protocol, ctx.area_state)
+    finalized = finalize_findings(ctx.area, ctx.protocol, ctx.area_state, ctx.evidence)
     if same_text:
         finalized = without_unreportable_warnings(finalized, ctx.run)
     out += finalized
@@ -951,6 +960,7 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
         ctx.declared,
         ctx.repo,
         state=ctx.area_state,
+        held=ctx.evidence,
         staged=ctx.state == INDEX,
         review=review,
     )
@@ -1055,18 +1065,18 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     protocol the index holds and the tree deleted, or a report at the root
     citing an adopted run, would be held with no step beside it."""
     protocols = affected_protocols(paths, repo, staged=staged)
-    for p in [
-        *registering_protocols(paths, repo, staged=staged),
-        *formerly_registering(paths, repo, staged=staged),
-    ]:
-        if p not in protocols:
-            protocols.append(p)
     reports = report_files(paths, repo, staged=staged)
     sources = (
         repo_sources(repo, staged=staged)
         if reports
         else Sources(repo.resolve(), set(), {}, {}, {}, staged)
     )
+    for p in [
+        *registering_protocols(paths, repo, staged=staged),
+        *formerly_registering(paths, repo, sources),
+    ]:
+        if p not in protocols:
+            protocols.append(p)
     for p in held_by_reports(reports, sources):
         if p not in protocols:
             protocols.append(p)
@@ -1132,7 +1142,9 @@ def hold_reported(
     worst = 0
     chains: dict[Path, ReleaseChain] = {}
     for protocol in protocols:
-        released = hold_declared(protocol, repo, staged=staged, tell=tell)
+        released = hold_declared(
+            protocol, repo, staged=staged, tell=tell, sources=sources
+        )
         worst = max(worst, released.exit)
         if released.chain is not None:
             chains[protocol] = released.chain
@@ -1151,7 +1163,12 @@ def hold_reported(
 
 
 def hold_declared(
-    protocol: Path, repo: Path, *, staged: bool, tell: Tell = print
+    protocol: Path,
+    repo: Path,
+    *,
+    staged: bool,
+    tell: Tell = print,
+    sources: Sources | None = None,
 ) -> ProtocolVerdict:
     """`report-check` on PROTOCOL when its head declares a result, as the
     state holds it (the index when STAGED); for an exploration only its
@@ -1159,7 +1176,10 @@ def hold_declared(
     protocol the commit does not hold, 2 for one that cannot be read or is
     a symbolic link in that state (`repo.protocol_links`). Every line goes
     through TELL, a refusal to stderr. The chain is the declared branch's
-    (`protocol_verdict`), None on every other."""
+    (`protocol_verdict`), None on every other. SOURCES, when the hold of
+    several paths built them, carry the area's state and evidence the
+    chain reads too (`Sources.held_state`): one build per area and check
+    run."""
     link = protocol_links(repo, [protocol], staged=staged)
     if link:
         console.refuse("report-check", link[protocol])
@@ -1180,7 +1200,10 @@ def hold_declared(
         # delivered, is owed the handover or the result all the same
         try:
             return ProtocolVerdict(
-                hold_registered(protocol, text, repo, staged=staged, tell=tell), None
+                hold_registered(
+                    protocol, text, repo, staged=staged, tell=tell, sources=sources
+                ),
+                None,
             )
         except protocol_block.BlockError as exc:  # a refusal, never a traceback
             console.refuse("report-check", f"{protocol}: {exc}")
@@ -1197,12 +1220,24 @@ def hold_declared(
             tell(f"  {gap.line}")
             return ProtocolVerdict(1, None)
     return protocol_verdict(
-        area, protocol, state=INDEX if staged else TREE, text=text, tell=tell
+        area,
+        protocol,
+        state=INDEX if staged else TREE,
+        text=text,
+        tell=tell,
+        area_state=sources.held_state(area) if sources is not None else None,
+        area_evidence=sources.held_evidence(area) if sources is not None else None,
     )
 
 
 def hold_registered(
-    protocol: Path, text: str, repo: Path, *, staged: bool, tell: Tell = print
+    protocol: Path,
+    text: str,
+    repo: Path,
+    *,
+    staged: bool,
+    tell: Tell = print,
+    sources: Sources | None = None,
 ) -> int:
     """The registered report's obligation of PROTOCOL, a protocol that
     declares no result (`registered_report.report_owed` with no declared run):
@@ -1215,8 +1250,13 @@ def hold_registered(
     A current handover ends the report-path obligation without releasing
     a result; the report it delivers still owes its review. Raises `protocol_block.BlockError` on a head that does not read — the
     caller read the declaration off the same text first."""
-    state = state_of(protocol.parent, file_state=INDEX if staged else TREE)
-    changed = evidence.read_evidence(protocol.parent, staged=staged).change_blockers()
+    if sources is not None:
+        state = sources.held_state(protocol.parent)
+        held = sources.held_evidence(protocol.parent)
+    else:
+        state = state_of(protocol.parent, file_state=INDEX if staged else TREE)
+        held = evidence.read_evidence(protocol.parent, staged=staged)
+    changed = held.change_blockers()
     measured = state.measured_of(protocol_block.head(text).id)
     gaps = changed + [
         g
@@ -1239,6 +1279,7 @@ def hold_registered(
                 None,
                 repo,
                 state=state,
+                held=held,
                 staged=staged,
                 progress=staged,
             ),

@@ -15,6 +15,7 @@ cites a run.
 
 from __future__ import annotations
 
+from labkit.formats.evidence import read_evidence
 from labkit.formats import run_index
 from labkit.formats.area_state import state_of
 from labkit.formats import area_state
@@ -126,7 +127,7 @@ class ReportCheck(unittest.TestCase):
         no_gaps = SimpleNamespace(missing_must=[], must_holes=[], repeated=[])
 
         def fake_finalize(
-            area_: Path, protocol: Path | None, collected, *, state=None
+            area_: Path, protocol: Path | None, collected, *, state=None, held=None
         ) -> int:
             if finalize:  # finalize keeps every reason it has as a blocker
                 collected.block(
@@ -378,7 +379,10 @@ class ReportCheck(unittest.TestCase):
             self.assertRaises(RuntimeError) as caught,
         ):
             report_check.finalize_findings(
-                area, area / "PROTOCOL-x.md", area_state.state_of(area)
+                area,
+                area / "PROTOCOL-x.md",
+                area_state.state_of(area),
+                read_evidence(area, staged=False),
             )
         self.assertIn("kept no blocker", str(caught.exception))
 
@@ -391,7 +395,7 @@ class ReportCheck(unittest.TestCase):
         seen: dict[str, object] = {}
 
         def fake_finalize(
-            area_: Path, protocol: Path | None, collected, *, state=None
+            area_: Path, protocol: Path | None, collected, *, state=None, held=None
         ) -> int:
             seen["stdout_untouched"] = sys.stdout is out  # this test's, no other
             seen["silent"] = collected._tell is None
@@ -422,7 +426,7 @@ class ReportCheck(unittest.TestCase):
         self._audited(area)
 
         def warning_finalize(
-            area_: Path, protocol: Path | None, collected, *, state=None
+            area_: Path, protocol: Path | None, collected, *, state=None, held=None
         ) -> int:
             collected.warn("one draw only", evidence_kind="guaranteed")
             return 0
@@ -1149,6 +1153,7 @@ class RegisteredReport(unittest.TestCase):
             proto.read_text(encoding="utf-8"),
             report_review.discussed_under(report, text, proto),
             state_of(area),
+            read_evidence(area, staged=False),
         )
         whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = report_review.review_keys(area, report, proto)

@@ -89,6 +89,7 @@ import shlex
 from dataclasses import replace
 from pathlib import Path
 
+from labkit.formats import evidence
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.commands import checkout_command
 from labkit.formats.repo import area_args
@@ -115,7 +116,6 @@ from labkit.formats.runs import (
     ArtefactError,
     MetricsError,
     read_outputs,
-    run_dirs,
     unreportable,
     read_run_config,
     run_path,
@@ -124,7 +124,6 @@ from labkit.formats.answering_run import (
     adopted_run,
 )
 from labkit.formats.repo import (
-    area_protocols,
     layout_root,
     ProtocolChoiceError,
     shown,
@@ -309,13 +308,13 @@ def unreportable_warnings(answering_run: Path) -> list[str]:
     ]
 
 
-def gone_run_way(area: Path, run_id: str) -> tuple[str, Command]:
+def gone_run_way(area: Path, run_id: str, state: AreaState) -> tuple[str, Command]:
     """The way out of an audit record whose run RUN_ID is gone from AREA,
     and the handover it names as the finding's step: put it back where
     git holds it, else hand the area over naming the loss, or register
     anew. Measuring again lifts nothing — the record
     stays and names the gone run —, so the way out never offers it."""
-    protocols = area_protocols(area)
+    protocols = state.protocols
     protocol = protocols[0] if len(protocols) == 1 else area / "PROTOCOL-<name>.md"
     handover = handover_command(protocol)
     return (
@@ -327,24 +326,27 @@ def gone_run_way(area: Path, run_id: str) -> tuple[str, Command]:
     ), handover
 
 
-def check_open_audit_findings(findings: Findings, area: Path) -> None:
+def check_open_audit_findings(
+    findings: Findings, area: Path, state: AreaState, held: evidence.AreaEvidence
+) -> None:
     """Station 8: every finding still `open` in the area's audit records, any
     mode (`findings.open_findings`, with the table of the gates' rules) — a
     BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
     its file; and every analysis record names a run the area still holds
     (`audit_gaps.records_of_gone_runs`): a run an audit read is a kept run,
     and its deleted directory is a blocker where the record stands. A
-    record nobody can read is a blocker, not "no findings"."""
-    try:
-        records = audit_findings.area_records(area)
-    except audit_findings.FindingsError as exc:
-        findings.block(str(exc), fix=audit_findings.record_way(area))
+    record nobody can read is a blocker, not "no findings". STATE and HELD
+    are the area's state and audit evidence, read once at the entry."""
+    if held.unreadable:
+        for why in held.unreadable:
+            findings.block(why, fix=audit_findings.record_way(area))
         return
-    known = {rd.dir.name for rd in run_dirs(area)}
+    records = list(held.records)
+    known = {rd.dir.name for rd in state.runs}
     gone = audit_gaps.records_of_gone_runs(records, known)
     for rec in gone:
         assert rec.run_id is not None  # records_of_gone_runs keeps only named runs
-        way, handover = gone_run_way(area, rec.run_id)
+        way, handover = gone_run_way(area, rec.run_id, state)
         findings.block(
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
             f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run, "
@@ -796,10 +798,16 @@ def report(findings: Findings) -> int:
 NO_RUN = "  no completed run to check"
 
 
-def _state(area: Path, given: AreaState | None) -> AreaState:
-    """The area's state for finalize's stations: GIVEN, the caller's (a
-    gate that built one for its check run), else built here once."""
-    return given if given is not None else state_of(area)
+def _inputs(
+    area: Path, state: AreaState | None, held: evidence.AreaEvidence | None
+) -> tuple[AreaState, evidence.AreaEvidence]:
+    """The area's state and audit evidence for finalize's stations: the
+    caller's when it built them for its check run (report-check), else
+    built here once — finalize on the console is its own entry."""
+    return (
+        state if state is not None else state_of(area),
+        held if held is not None else evidence.read_evidence(area, staged=False),
+    )
 
 
 def finalize_area(
@@ -808,6 +816,7 @@ def finalize_area(
     findings: Findings | None = None,
     *,
     state: AreaState | None = None,
+    held: evidence.AreaEvidence | None = None,
 ) -> int:
     """Run finalize on an area. Returns 0 (clean or warnings only),
     1 (a blocker) or 2 (no protocol to hold the area to). FINDINGS, when
@@ -815,8 +824,9 @@ def finalize_area(
     goes through (`gate.Findings`): a gate that runs finalize as one of its
     stations (report-check) hands over a silent one (`Findings(tell=None)`)
     and names the blockers instead of "run it to see them". STATE, the
-    area's state (`area_state.state_of`), is the caller's when it built one
-    for its check run, else built here once.
+    area's state (`area_state.state_of`), and HELD, its audit evidence
+    (`evidence.read_evidence`), are the caller's when it built them for its
+    check run, else built here once.
 
     The flow — every condition that decides whether a step runs is in this
     function; one level down is how a step works, not whether it runs. A
@@ -868,7 +878,7 @@ def finalize_area(
         else:
             findings.block(str(exc), fix=PROTOCOL_NAMED)
         return 2
-    state = _state(area, state)
+    state, held = _inputs(area, state, held)
     text = state.text_of(chosen)
     try:
         head = protocol_block.head(text)
@@ -892,7 +902,7 @@ def finalize_area(
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_registration(findings, area, chosen, head.id, answering_run, state)
+        check_registration(findings, area, chosen, head.id, answering_run, state, held)
 
     # 2. intent-check — always
     findings.header("intent-check")
@@ -945,7 +955,7 @@ def finalize_area(
 
     # 8. audit findings — always
     findings.header("audit findings")
-    check_open_audit_findings(findings, area)
+    check_open_audit_findings(findings, area, state, held)
 
     return report(findings)  # 1 if any step found a blocker, else 0
 
