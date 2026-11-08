@@ -302,6 +302,15 @@ def _continues(line: str, own: int) -> bool:
 PROTOCOL_TEMPLATE = PACKAGE_DIR / "templates" / "experiment-protocol.md.template"
 
 
+def template_text(path: Path | None) -> str | None:
+    """The protocol template at PATH as text (the packaged one, or one
+    named), None when none stands there — what `protocol_report` compares
+    a written protocol against."""
+    if path is None or not path.is_file():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 @functools.lru_cache(maxsize=1)
 def stamp_placeholders() -> frozenset[str]:
     """Every `<…>` phrase of two or more words the protocol template writes

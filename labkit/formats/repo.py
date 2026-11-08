@@ -466,6 +466,33 @@ def state_holds(repo: Path, path: Path, *, staged: bool) -> bool:
     return (text_at(repo, path) is not None) if staged else path.exists()
 
 
+def tracked(repo: Path, path: Path) -> bool:
+    """Is PATH tracked in REPO (`git ls-files --error-unmatch`)? The exit
+    code is the answer — for a directory, yes once one file under it is
+    (`tracked_under` holds a directory file by file)."""
+    return git_run(["ls-files", "--error-unmatch", str(path)], repo).returncode == 0
+
+
+def tracked_under(repo: Path, base: Path) -> set[Path]:
+    """Every file git tracks under BASE (resolved) in REPO, as REPO joined
+    with git's path. Raises GitError when git fails."""
+    listed = git_run(["ls-files", "-z", "--", str(base)], repo)
+    if listed.returncode != 0:
+        raise GitError(f"git ls-files in {repo}: {listed.stderr.strip()}")
+    return {repo / p for p in listed.stdout.split("\0") if p}
+
+
+def path_kind(path: Path) -> str | None:
+    """What stands at PATH in the tree: "file", "dir", or None for nothing
+    — the one existence test a check makes of a source or an output it
+    names."""
+    if path.is_file():
+        return "file"
+    if path.is_dir():
+        return "dir"
+    return None
+
+
 def markdown_files(root: Path) -> list[Path]:
     """Every Markdown file under ROOT in the working tree, sorted — the
     walk behind the reports a state holds (`report_hold.state_reports`);

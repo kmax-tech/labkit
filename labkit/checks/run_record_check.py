@@ -23,15 +23,23 @@ from pathlib import Path
 
 from labkit.formats.commands import checkout_command
 from labkit.formats.commands import register_anew
-from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats.runs import (
     NO_GIT,
+    kept_script,
     metrics_path,
-    patch_path,
+    metrics_text,
+    output_file,
+    patch_text,
     script_copy_path,
+    untracked_copy_differs,
     untracked_copy_path,
 )
-from labkit.formats.scope_sha import SourceError, measured_code
+from labkit.formats.scope_sha import (
+    SourceError,
+    measured_code,
+    script_candidates,
+    scripts_named,
+)
 from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
@@ -59,17 +67,13 @@ from labkit.formats.repo import (
     git_root,
     git_run,
     own_path,
+    path_kind,
     resolves_under,
     shown,
+    tracked,
+    tracked_under,
 )
 from labkit.formats.commands import gate_command, measure_anew
-
-
-def _tracked(repo: Path, path: Path) -> bool:
-    """Is `path` tracked in `repo`? The exit code is the answer — for a
-    directory, yes once one file under it is (`_untracked_files` holds a
-    directory source file by file)."""
-    return git_run(["ls-files", "--error-unmatch", str(path)], repo).returncode == 0
 
 
 CRITERION_N = promises.CRITERION_N_KEY
@@ -184,16 +188,10 @@ def script_of(area: Path, cfg: RunConfig) -> Path | str:
     when several carry its name."""
     named = Path(cfg.command[0]) if cfg.command else Path(cfg.script)
     repo = git_root(area)
-    bases = [area, *([repo] if repo else []), area / "scripts"]
-    for p in [named] if named.is_absolute() else [b / named for b in bases]:
-        if p.is_file() and p.name == cfg.script:
-            return p.resolve()
-    found = [
-        p.resolve()
-        for p in area.rglob(cfg.script)
-        if p.is_file()
-        and not SKIP_DIRS_AND_OUTPUT.intersection(p.relative_to(area).parts)
-    ]
+    hit = script_candidates(area, repo, named, cfg.script)
+    if hit is not None:
+        return hit
+    found = scripts_named(area, cfg.script)
     if len(found) == 1:
         return found[0]
     here = Path.cwd()
@@ -229,8 +227,8 @@ def script_as_run(area: Path, run: Path) -> tuple[Path | None, str]:
         if isinstance(script, str)
         else f"{script.name} changed since {run.name} ran it"
     )
-    kept = script_copy_path(run, Path(cfg.script).suffix)
-    if kept.is_file() and file_digest(kept)[:DIGEST_CHARS] == cfg.script_sha:
+    kept = kept_script(run, Path(cfg.script).suffix, cfg.script_sha)
+    if kept is not None:
         return kept, f"the copy {run.name} kept as it ran it — {tree}"
     return None, (
         f"{tree}, and {run.name} keeps no copy whose digest is the "
@@ -257,7 +255,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         )
         if rel is not None and rel in copied:
             copy = untracked_copy_path(run_dir, rel)
-            if not copy.is_file() or copy.read_bytes() != f.read_bytes():
+            if untracked_copy_differs(run_dir, rel, f):
                 out.append(
                     replace(
                         blocker(
@@ -298,12 +296,11 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"{measure_anew(run_dir.parent.parent)}",
             ),
         ], warnings
-    patch = patch_path(run_dir)
     try:
         then = blobs_then(
             repo,
             cfg.git_full,
-            patch.read_text(encoding="utf-8") if patch.is_file() else "",
+            patch_text(run_dir),
             in_git,
         )
         now = blobs_now(repo, in_git)
@@ -396,9 +393,9 @@ def null_lane_findings(answering_run: Path) -> NullLanes:
     out: list[GateFinding] = []
     examined = 0
     for entry in read_outputs(answering_run) or []:
-        if entry.path.suffix != ".jsonl" or not entry.path.is_file():
+        if entry.path.suffix != ".jsonl" or output_file(entry) is None:
             continue
-        rows = jsonl.data_rows(entry.path.read_text(encoding="utf-8"), str(entry.path))
+        rows = jsonl.data_rows_of(entry.path)
         if not has_null_lanes(rows):
             continue
         examined += 1
@@ -421,10 +418,9 @@ def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
     """Warnings: a criterion's denominator (`criterion_<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
-    metrics_file = metrics_path(answering_run)
-    if not metrics_file.is_file():
+    if metrics_text(answering_run) is None:
         return []
-    metrics = read_metrics(metrics_file)
+    metrics = read_metrics(metrics_path(answering_run))
     ns = {
         k: v
         for k, v in metrics.items()
@@ -501,7 +497,7 @@ def provenance_findings(
     # blocker that sends the agent round the loop.
     # An output that is gone is `output_record_findings`' blocker, on every lane.
     for f in outputs:
-        if f.exists() and not _tracked(repo, f):
+        if path_kind(f) is not None and not tracked(repo, f):
             warnings.append(
                 f"output {f.name} is not yet tracked — `git add {f}` before "
                 f"the commit that cites the number"
@@ -555,7 +551,7 @@ def _source_finding(
     owed in Data / scope. REPO None (no repository): git's half is
     skipped. Raises GitError as `_untracked_files` and `_ignoring_rules`
     do."""
-    if not source.exists():
+    if path_kind(source) is None:
         return _gone(source, area), None
     # git's half only for bytes that lie in the repository: one outside it
     # (a model directory on scratch, reached directly or by a link) git can
@@ -630,17 +626,14 @@ def _untracked_files(repo: Path, source: Path) -> list[Path]:
     counts as tracked when git holds the link, not its target's content.
     The directory is resolved first and lies in REPO (`_source_finding`
     passes one outside it over). Raises GitError when git fails."""
-    if not source.is_dir():
-        return [] if _tracked(repo, source) else [source]
+    if path_kind(source) != "dir":
+        return [] if tracked(repo, source) else [source]
     base = source.resolve()
     files = visible_files(base)
     # both sides resolved: git lists paths under REPO (git_root resolves it)
     # and BASE is resolved, so a file is the same Path in either set
-    listed = git_run(["ls-files", "-z", "--", str(base)], repo)
-    if listed.returncode != 0:
-        raise GitError(f"git ls-files in {repo}: {listed.stderr.strip()}")
-    tracked = {repo / p for p in listed.stdout.split("\0") if p}
-    return [f for f in files if f not in tracked]
+    held = tracked_under(repo, base)
+    return [f for f in files if f not in held]
 
 
 def _untracked_source(source: Path, loose: list[Path], sha: str) -> GateFinding:
@@ -656,7 +649,7 @@ def _untracked_source(source: Path, loose: list[Path], sha: str) -> GateFinding:
     (`NAMED_UNTRACKED` of them), and its commit lists each of them, so no
     file the run did not read goes in."""
     what = f"source {source} is neither tracked in git nor ignored by a rule"
-    if source.is_dir():
+    if path_kind(source) == "dir":
         names = ", ".join(shown(f, source) for f in loose[:NAMED_UNTRACKED])
         more = ", …" if len(loose) > NAMED_UNTRACKED else ""
         what += f": {len(loose)} file(s) under it ({names}{more})"
@@ -708,7 +701,7 @@ def output_drift(entry: OutputEntry) -> str | None:
     The record is the run's, taken after the run (`runlog.Run._finalize`);
     the tree at check time is only compared, never trusted. Reads the file,
     writes nothing."""
-    if not entry.path.is_file():
+    if output_file(entry) is None:
         return "the file is gone"
     if entry.sha256 is None:
         return "the run ended without it (outputs.json records no sha256)"
@@ -830,7 +823,7 @@ def row_provenance_findings(
             )
         ], []
     for entry in read_outputs(answering_run) or []:
-        if entry.path.suffix != ".jsonl" or not entry.path.is_file():
+        if entry.path.suffix != ".jsonl" or output_file(entry) is None:
             continue
         try:
             rr = batch.row_runs(entry.path)
@@ -937,7 +930,7 @@ def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:
     recorded = json.dumps(cfg.as_record(), ensure_ascii=False)
     root = git_root(area) or area
     for arm, a in declared.arms.items():
-        if not (root / a.profile).is_file():
+        if path_kind(root / a.profile) != "file":
             out.append(
                 f"arm `{arm}`: the protocol names {a.profile}, no such file under {root}"
             )

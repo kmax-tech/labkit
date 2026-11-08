@@ -41,23 +41,24 @@ from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
+    PROTOCOL_NAME,
     REPORT_SUFFIX,
-    markdown_files,
-    report_place,
     git_root,
-    under_root,
     indexed_files,
-    touched_paths,
     indexed_links,
     indexed_protocols,
+    markdown_files,
     own_path,
+    path_kind,
     protocol_links,
-    PROTOCOL_NAME,
     repo_protocols,
+    report_place,
     shown,
     state_text,
     status_entries,
     text_at,
+    touched_paths,
+    under_root,
 )
 from labkit.formats.commands import (
     adopt_command,
@@ -650,7 +651,7 @@ def discussion_sources(
         protocol = (path.parent / d.protocol).resolve()
         at = f"line {d.first}: the discussion of run {d.run_id}"
         area = protocol.parent
-        if area not in states and area.is_dir():
+        if area not in states and path_kind(area) == "dir":
             states[area] = state_of(area)
         state = states.get(area)
         if state is None or protocol not in state.protocols:
@@ -776,7 +777,8 @@ def report_review_owed(
         protocol_text = sources.texts.get(protocol)
         if protocol in registering or protocol_text is None:
             continue
-        held_runs = {rd.dir.name for rd in state_of(protocol.parent).runs}
+        area_state = state_of(protocol.parent)
+        held_runs = {rd.dir.name for rd in area_state.runs}
         if not all(d.run_id in held_runs for d in mine):
             continue
         runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
@@ -790,6 +792,7 @@ def report_review_owed(
             sources.repo,
             f"discusses {runs_named} as not reported",
             staged=staged,
+            state=area_state,
         )
         if gap is not None:
             out.append(gap)
@@ -807,6 +810,7 @@ def review_gap(
     held_for: str,
     *,
     staged: bool,
+    state: AreaState | None = None,
 ) -> GateFinding | None:
     """The BLOCKER of the report at PATH (REL to REPO, TEXT as the gate's
     state holds it) under PROTOCOL (its PROTOCOL_TEXT, its DISCUSSED
@@ -832,7 +836,9 @@ def review_gap(
         if gap is not None:
             return gap
     try:
-        pieces = review_pieces(area, path, text, protocol, protocol_text, discussed)
+        pieces = review_pieces(
+            area, path, text, protocol, protocol_text, discussed, state
+        )
         whole, parts = review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, path, protocol)
         held = evidence.read_evidence(area, staged=staged)
@@ -1050,10 +1056,9 @@ def adoption_unstaged(protocol: Path, run_id: str, sources: Sources) -> bool:
     if sources.declared.get(protocol) == run_id:
         return False
     try:
-        return (
-            protocol_block.declared_run(protocol.read_text(encoding="utf-8")) == run_id
-        )
-    except (OSError, UnicodeError, protocol_block.BlockError):
+        text = state_text(sources.repo, protocol, staged=False)
+        return text is not None and protocol_block.declared_run(text) == run_id
+    except (OSError, UnicodeError, ValueError, protocol_block.BlockError):
         return False
 
 

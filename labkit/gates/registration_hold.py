@@ -26,7 +26,7 @@ from labkit.formats import (
 from labkit.formats.gate import Findings
 from labkit.formats.runs import (
     RunDir,
-    patch_path,
+    patch_text,
     read_run_dir,
     recorded_commit,
     read_run_config,
@@ -157,7 +157,7 @@ def shown_then(protocol: Path, first: RunDir, root: Path | None) -> str:
     rel = protocol.resolve().relative_to(root.resolve()).as_posix()
     return f" — `git show {commit[:12]}:{rel}` shows them as committed then" + (
         f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
-        if patch_path(first.dir).is_file()
+        if patch_text(first.dir)
         else ""
     )
 

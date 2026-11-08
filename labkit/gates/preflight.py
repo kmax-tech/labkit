@@ -83,6 +83,7 @@ from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
 from labkit.formats import evidence
 from labkit.formats.area_state import state_of
+from labkit.formats.scope_sha import area_test_files
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     choose_protocol,
@@ -142,12 +143,7 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     nn, name = split_area_name(area.name)
     stem = area_test_stem(nn, name)
     pattern = f"tests/{stem}.py"
-    tests_dir = repo / "tests"
-    files = (
-        sorted({*tests_dir.glob(f"{stem}.py"), *tests_dir.glob(f"{stem}_*.py")})
-        if tests_dir.is_dir()
-        else []
-    )
+    files = area_test_files(repo, stem)
     if not files:
         return AreaTests(pattern, [], "none", [])
     try:
@@ -268,7 +264,7 @@ def preflight_area(
 
     # 4. code-check — always
     findings.header("code-check: intent ids, stamp coverage")
-    check_code(findings, area, protocol, repo)
+    check_code(findings, area, protocol, repo, text)
 
     # 5. scope-sha — always; told
     findings.header("scope-sha")
@@ -513,11 +509,13 @@ def check_handed_over_elsewhere(
         findings.note(f"  all decided ({len(records)} audit(s) recorded)")
 
 
-def check_code(findings: Findings, area: Path, protocol: Path, repo: Path) -> None:
+def check_code(
+    findings: Findings, area: Path, protocol: Path, repo: Path, text: str
+) -> None:
     """Station 4: code-check's automated checks (`code_check.code_findings`:
     intent ids, parser fixtures, prompt drift, stamp coverage), each with
     its grade as data and counted once — here, not again by code-check."""
-    found = code_findings(area, protocol, repo)
+    found = code_findings(area, protocol, text, repo)
     for finding in found:
         findings.take(finding)
     if not found:

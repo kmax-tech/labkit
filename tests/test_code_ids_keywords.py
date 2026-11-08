@@ -40,7 +40,12 @@ class KeywordKeys(unittest.TestCase):
         for script in (LITERAL, KEYWORD):
             area, protocol = area_with(script)
             with self.subTest(script=script):
-                self.assertEqual(check_intent_ids(area, protocol), [])
+                self.assertEqual(
+                    check_intent_ids(
+                        area, protocol, protocol.read_text(encoding="utf-8")
+                    ),
+                    [],
+                )
 
     def test_keyword_hit_carries_its_line(self):
         area, _ = area_with(KEYWORD)
@@ -52,7 +57,12 @@ class KeywordKeys(unittest.TestCase):
         area, protocol = area_with(
             "criterion_1_pass = ok\nr.metrics(**{'quality_check_1_anchor_ok': a})\n"
         )
-        findings = [f.line for f in check_intent_ids(area, protocol)]
+        findings = [
+            f.line
+            for f in check_intent_ids(
+                area, protocol, protocol.read_text(encoding="utf-8")
+            )
+        ]
         self.assertEqual(len(findings), 1)
         self.assertIn(
             "[criterion-1] is registered, but no script mentions", findings[0]

@@ -36,6 +36,7 @@ from labkit.formats import (
     answering_run,
 )
 from labkit.formats.area_state import state_of
+from labkit.formats.repo import path_kind
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
 
@@ -91,7 +92,7 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
 def _named_run(d: Path, pid: str) -> Path:
     """RUN_ID as the explicit choice: completed, no repeat, bound to PID."""
     try:
-        state = runs.completion_state(d) if d.is_dir() else "missing"
+        state = runs.completion_state(d) if path_kind(d) == "dir" else "missing"
         if state != runs.COMPLETED:
             raise SystemExit(f"recheck: {d} is not a completed run ({state})")
         cfg = runs.read_run_config(d)

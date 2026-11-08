@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Final, Literal, cast
 
+from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.formats.files import write_atomic
 from labkit.formats.repo import layout_root
 
@@ -537,6 +538,36 @@ def as_stored(value: object) -> str:
     it would pass a recomputation of another type. Raises TypeError for a value
     JSON cannot hold."""
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def patch_text(run_dir: Path) -> str:
+    """The run's `uncommitted.patch` as text, "" when it kept none — the
+    tree's diff against the commit at the run's start (`patch_path`)."""
+    path = patch_path(run_dir)
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def kept_script(run_dir: Path, suffix: str, sha: str) -> Path | None:
+    """The script's copy the run kept (`script_copy_path`) when it stands
+    and its digest begins with SHA, the digest the run recorded; None
+    otherwise (no copy, or one whose bytes are not the run's)."""
+    kept = script_copy_path(run_dir, suffix)
+    if kept.is_file() and file_digest(kept)[:DIGEST_CHARS] == sha:
+        return kept
+    return None
+
+
+def untracked_copy_differs(run_dir: Path, rel: str, now: Path) -> bool:
+    """Do the bytes of NOW, an untracked source the run copied as REL
+    (`untracked_copy_path`), differ from the copy — or is the copy gone?"""
+    copy = untracked_copy_path(run_dir, rel)
+    return not copy.is_file() or copy.read_bytes() != now.read_bytes()
+
+
+def output_file(entry: OutputEntry) -> Path | None:
+    """The file ENTRY registered when it stands in the tree, None when it is
+    gone — the one test every reader of a registered output makes."""
+    return entry.path if entry.path.is_file() else None
 
 
 def metrics_text(run_dir: Path) -> str | None:

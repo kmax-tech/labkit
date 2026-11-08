@@ -45,6 +45,12 @@ def objects(text: str, where: str) -> list[tuple[int, object]]:
     return out
 
 
+def lines_of(path: Path) -> list[str]:
+    """The lines of the file at PATH, for an excerpt a prompt shows
+    (`audit_binding.rows_excerpt`). Raises OSError when it cannot be read."""
+    return path.read_text(encoding="utf-8").splitlines()
+
+
 def data_rows_of(path: Path) -> list[dict]:
     """`data_rows` of the file at PATH, read here (the one reader of a JSONL
     file for the recomputation and the record check). Raises OSError when

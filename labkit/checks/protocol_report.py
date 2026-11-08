@@ -30,11 +30,13 @@ from labkit.formats.area_state import state_of
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import (
-    shown,
     git_root,
+    layout_root,
+    path_kind,
     protocol_link,
     protocol_links,
     repo_protocols,
+    shown,
     state_text,
 )
 from labkit.formats.commands import adopt_command
@@ -49,22 +51,23 @@ from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_check import (
     BARE_REFERENCE,
     CONCLUSION_LABEL,
-    PROTOCOL_TEMPLATE,
+    DASHES_ONLY,
     FIELDS,
+    HTML_COMMENT,
+    PROTOCOL_TEMPLATE,
     REPEATED_WAY_OUT,
     RUNS_PLACEHOLDER,
-    DASHES_ONLY,
-    HTML_COMMENT,
     STAMPED_ITEM,
+    check_fields,
     example_owed,
     field_label,
+    fields,
     kind_registers,
     model_named,
     owed_fields,
     recorded_results_without_run,
-    check_fields,
-    fields,
     result_due,
+    template_text,
     written_before_run,
 )
 
@@ -194,12 +197,13 @@ def template_lines(path: Path | None) -> set[str]:
     template text": counted, it would flag every freshly stamped protocol
     and invite deleting the legend.
     """
-    if path is None or not path.exists():
+    text = template_text(path)
+    if text is None:
         return set()
     keep = set()
     in_body = False
     in_head = False  # `## Head`: the pointer and the toml block stay by design
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = text.splitlines()
     starts = set(protocol_block.section_starts(lines))
     for i, line in enumerate(lines):
         # The written protocol carries no cut markers; compared with them,
@@ -221,14 +225,13 @@ def find_template(explicit: str | None) -> Path | None:
     """The protocol template to check against: the one named, else the packaged one."""
     if explicit:
         return Path(explicit)
-    here = PROTOCOL_TEMPLATE
-    return here if here.exists() else None
+    return PROTOCOL_TEMPLATE if template_text(PROTOCOL_TEMPLATE) is not None else None
 
 
 def find_field_guide() -> Path | None:
     """The packaged protocol field guide, or None outside the package."""
     here = PACKAGE_DIR / "docs" / "protocol-field-guide.md"
-    return here if here.exists() else None
+    return here if path_kind(here) == "file" else None
 
 
 #: the tier table's rows `protocol-check --contract` prints without a
@@ -408,7 +411,9 @@ def print_contract(protocol: Path | None = None) -> None:
     Raises OSError, UnicodeError or protocol_block.BlockError when PROTOCOL
     does not read."""
     if protocol is not None:
-        text = protocol.read_text(encoding="utf-8")
+        text = state_text(layout_root(protocol), protocol, staged=False)
+        if text is None:
+            raise OSError(f"{protocol}: not in the working tree")
         head = protocol_block.head(text)
         model = model_named(text)
         top = owed_field_lines(
@@ -498,7 +503,7 @@ def collect_protocols(paths: list[str]) -> list[Path]:
     """The protocol files the arguments name: every `PROTOCOL-*.md` under a directory, or the files given."""
     files: list[Path] = []
     for p in map(Path, paths):
-        if p.is_dir():
+        if path_kind(p) == "dir":
             files.extend(repo_protocols(p))
         else:
             files.append(p)
@@ -847,6 +852,15 @@ def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  #
         )
 
 
+def tree_text(f: Path) -> str:
+    """Protocol F as the working tree holds it (`repo.state_text`), its own
+    entry. Raises OSError when the tree does not hold F."""
+    text = state_text(layout_root(f), f, staged=False)
+    if text is None:
+        raise OSError(f"{f}: not in the working tree")
+    return text
+
+
 def index_text(f: Path) -> str:
     """Protocol F as git's index holds it (`repo.state_text`), the state a
     commit carries — what `protocol-check --staged` reads. Raises
@@ -891,7 +905,7 @@ def check_files(
             failed = True
             continue
         try:
-            text = index_text(f) if staged else f.read_text(encoding="utf-8")
+            text = index_text(f) if staged else tree_text(f)
         except OSError as exc:
             tell(f"{f}: not readable ({exc})")
             failed = True

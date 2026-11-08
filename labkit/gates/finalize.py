@@ -382,7 +382,11 @@ def _registers(text: str) -> bool:
 
 
 def check_intent_keys_in_metrics(
-    findings: Findings, protocol: Path, text: str, answering_run: Path | None
+    findings: Findings,
+    protocol: Path,
+    text: str,
+    answering_run: Path | None,
+    state: AreaState,
 ) -> None:
     """Station 2: every registered intent id reports as a key of the answering
     run's metrics.json, a branch as one of its registered outcomes
@@ -393,7 +397,9 @@ def check_intent_keys_in_metrics(
         return
     try:
         held = intent_hold(
-            protocol, metrics_path(answering_run) if answering_run is not None else None
+            protocol,
+            metrics_path(answering_run) if answering_run is not None else None,
+            state,
         )
     except NoRunChosen:
         # without an answering run intent-check makes the same run choice
@@ -890,7 +896,7 @@ def finalize_area(
 
     # 2. intent-check — always
     findings.header("intent-check")
-    check_intent_keys_in_metrics(findings, chosen, text, answering_run)
+    check_intent_keys_in_metrics(findings, chosen, text, answering_run, state)
 
     # 3. the run's code and the declared scopes — only with a run
     findings.header("the run's code and declared scopes")

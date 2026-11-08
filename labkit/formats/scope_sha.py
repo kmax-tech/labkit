@@ -42,6 +42,7 @@ from labkit.formats import console, protocol_block
 from pathlib import Path
 
 from labkit.formats.repo import (
+    SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
     layout_root,
@@ -132,6 +133,40 @@ def readme_text(area: Path) -> str | None:
     """The area's README.md as text, None without one (`readme_check`)."""
     readme = area / "README.md"
     return readme.read_text(encoding="utf-8") if readme.is_file() else None
+
+
+def script_candidates(
+    area: Path, repo: Path | None, named: Path, script: str
+) -> Path | None:
+    """Where the run's script stands now: NAMED (the command's first word,
+    else the recorded SCRIPT name) under the area, the repo or the area's
+    scripts/, resolved, when a file of SCRIPT's name stands there; None
+    when none does (`scripts_named` then searches the area)."""
+    bases = [area, *([repo] if repo else []), area / "scripts"]
+    for p in [named] if named.is_absolute() else [b / named for b in bases]:
+        if p.is_file() and p.name == script:
+            return p.resolve()
+    return None
+
+
+def scripts_named(area: Path, script: str) -> list[Path]:
+    """Every file of SCRIPT's name under AREA outside `repo.SKIP_DIRS_AND_OUTPUT`,
+    resolved — the search behind a run whose script moved."""
+    return [
+        p.resolve()
+        for p in area.rglob(script)
+        if p.is_file()
+        and not SKIP_DIRS_AND_OUTPUT.intersection(p.relative_to(area).parts)
+    ]
+
+
+def area_test_files(repo: Path, stem: str) -> list[Path]:
+    """The repo's tests of one area: `tests/<stem>.py` and the split files
+    `tests/<stem>_<part>.py`, sorted; [] without a tests directory."""
+    tests_dir = repo / "tests"
+    if not tests_dir.is_dir():
+        return []
+    return sorted({*tests_dir.glob(f"{stem}.py"), *tests_dir.glob(f"{stem}_*.py")})
 
 
 def test_files(repo: Path) -> list[Path]:

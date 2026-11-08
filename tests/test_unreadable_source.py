@@ -43,7 +43,12 @@ class UnreadableSource(unittest.TestCase):
 
     def test_code_check_reports_one_blocker(self):
         for findings in (
-            [f.line for f in code_check.check_intent_ids(self.area, self.protocol)],
+            [
+                f.line
+                for f in code_check.check_intent_ids(
+                    self.area, self.protocol, self.protocol.read_text(encoding="utf-8")
+                )
+            ],
             [
                 f.line
                 for f in import_check.stamp_coverage_findings(self.area, self.repo)
@@ -66,7 +71,12 @@ class UnreadableSource(unittest.TestCase):
     def test_twin_a_readable_scope_is_clean_here(self):
         self.stale.write_text("def fine():\n    return 1\n", encoding="utf-8")
         for findings in (
-            [f.line for f in code_check.check_intent_ids(self.area, self.protocol)],
+            [
+                f.line
+                for f in code_check.check_intent_ids(
+                    self.area, self.protocol, self.protocol.read_text(encoding="utf-8")
+                )
+            ],
             [
                 f.line
                 for f in import_check.stamp_coverage_findings(self.area, self.repo)
@@ -106,7 +116,10 @@ class UnreadableSourceWithoutLib(unittest.TestCase):
 
     def test_one_blocker_not_a_traceback(self):
         findings = [
-            f.line for f in code_check.check_intent_ids(self.area, self.protocol)
+            f.line
+            for f in code_check.check_intent_ids(
+                self.area, self.protocol, self.protocol.read_text(encoding="utf-8")
+            )
         ]
         self.assertEqual(len(findings), 1, findings)
         self.assertTrue(findings[0].startswith("BLOCKER"))
@@ -118,7 +131,10 @@ class UnreadableSourceWithoutLib(unittest.TestCase):
             encoding="utf-8",
         )
         findings = [
-            f.line for f in code_check.check_intent_ids(self.area, self.protocol)
+            f.line
+            for f in code_check.check_intent_ids(
+                self.area, self.protocol, self.protocol.read_text(encoding="utf-8")
+            )
         ]
         self.assertEqual([f for f in findings if f.startswith("BLOCKER")], [])
 

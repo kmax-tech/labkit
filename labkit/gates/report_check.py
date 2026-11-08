@@ -175,7 +175,7 @@ from labkit.formats.commands import (
     withdraw_command,
 )
 from labkit.formats.runs import RUNS_DIR, read_run_config, unreportable
-from labkit.formats.scope_sha import areas_touched
+from labkit.formats.scope_sha import area_files, areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_FLAG,
@@ -202,7 +202,7 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     script's `--check`, stamped by every skeleton) does not pass, or None:
     no script, or a nonzero exit with the last lines it printed."""
     script = CHECK_SCRIPT
-    if not (area / script).is_file():
+    if area / script not in area_files(area):
         return (
             f"no {script} — the check that holds the note to the run is owed; "
             f"copy it from labkit/templates/: analyze-quick-script.py.template "

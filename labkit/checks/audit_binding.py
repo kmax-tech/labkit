@@ -25,6 +25,7 @@ from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
     findings,
+    jsonl,
     promises,
     protocol_block,
     protocol_check,
@@ -33,7 +34,7 @@ from labkit.formats import (
 from labkit.formats.answering_run import adopted_run
 from labkit.formats.area_state import AreaState
 from labkit.formats.gate import with_way_out
-from labkit.formats.repo import layout_root, shown
+from labkit.formats.repo import layout_root, path_kind, shown
 from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
@@ -107,18 +108,16 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     for entry in registered or []:
         path = Path(entry.path)
         path = path if path.is_absolute() else repo / path
-        if not path.is_file():
+        if path_kind(path) != "file":
             raise AuditError(
                 f"{run_dir.name} registered {entry.path}, which is gone",
                 fix=_METRICS_AS_WRITTEN,
             )
         name = shown(path, repo)
         out.append(rows_excerpt(path, name))
-    metrics = runs.metrics_path(run_dir)
-    if metrics.is_file():
-        out.append(
-            (f"FILE: {rel_run}/metrics.json", metrics.read_text(encoding="utf-8"))
-        )
+    shown_metrics = runs.metrics_text(run_dir)
+    if shown_metrics is not None:
+        out.append((f"FILE: {rel_run}/metrics.json", shown_metrics))
     out += dependency_pieces(run_dir)
     return out
 
@@ -179,8 +178,9 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
             f"{DEPENDENCY_LABEL}{recorded} ({entry.key}, the run recorded sha {digest})"
         )
         path = runs.resolve_recorded(recorded, run_dir)
-        if not path.is_file():
-            why = "a directory" if path.is_dir() else "gone from the tree"
+        kind = path_kind(path)
+        if kind != "file":
+            why = "a directory" if kind == "dir" else "gone from the tree"
             out.append((label, f"{NOT_SHOWN} {why}"))
             continue
         now = digests.file_digest(path)[: len(digest)]
@@ -293,7 +293,7 @@ def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
     """`(label, text)` of one output file: its first ROWS_HEAD and last
     ROWS_TAIL lines as `<line>: <row>`, a gap marked by its size, a row
     longer than ROW_WIDTH cut and marked — never silently dropped."""
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = jsonl.lines_of(path)
     n = len(lines)
     shown = (
         range(n)

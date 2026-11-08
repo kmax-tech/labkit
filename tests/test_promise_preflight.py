@@ -24,7 +24,10 @@ from protocol_fixture import head  # noqa: E402
 
 def intent_id_lines(area: Path, protocol: Path) -> list[str]:
     """`check_intent_ids` as the lines a gate tells."""
-    return [f.line for f in check_intent_ids(area, protocol)]
+    return [
+        f.line
+        for f in check_intent_ids(area, protocol, protocol.read_text(encoding="utf-8"))
+    ]
 
 
 SCRIPT = """def evaluate(rows):

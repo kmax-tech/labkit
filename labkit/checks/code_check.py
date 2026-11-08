@@ -87,6 +87,7 @@ import ast
 from pathlib import Path
 
 from labkit.formats.commands import gate_command
+from labkit.formats.area_state import state_of
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
@@ -138,7 +139,7 @@ ID_RULE = "LAB-004 Identifiers make the intent addressable"
 # --- gate-label extraction ------------------------------------------------
 
 
-def check_intent_ids(area: Path, protocol: Path) -> list[GateFinding]:
+def check_intent_ids(area: Path, protocol: Path, text: str) -> list[GateFinding]:
     """Registered promises against the code, before any run exists.
 
     `intent-check` asks the same question of the metrics at report time, when
@@ -146,27 +147,28 @@ def check_intent_ids(area: Path, protocol: Path) -> list[GateFinding]:
     the scope that does not parse is one blocker, not a traceback.
     """
     try:
-        return _intent_id_findings(area, protocol)
+        return _intent_id_findings(area, protocol, text)
     except SourceError as exc:
         return [unreadable_source(exc)]
 
 
-def code_findings(area: Path, protocol: Path, repo: Path) -> list[GateFinding]:
+def code_findings(
+    area: Path, protocol: Path, text: str, repo: Path
+) -> list[GateFinding]:
     """The automated checks 1–1d, in order, as finding lines: the promise
     block and the intent ids (with the quality-check key reads and constant copies),
     parser fixtures, prompt drift, stamp coverage. The one list both
     `code-check` and preflight's code station report, each finding with its
     grade and evidence kind as data."""
     return (
-        check_intent_ids(area, protocol)
+        check_intent_ids(area, protocol, text)
         + check_parser_fixtures(area, repo)
         + check_prompt_drift(area, protocol)
         + stamp_coverage_findings(area, repo)
     )
 
 
-def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
-    text = protocol.read_text(encoding="utf-8")
+def _intent_id_findings(area: Path, protocol: Path, text: str) -> list[GateFinding]:
     findings = promise_block_findings(area, protocol, text)
     registered = {m.group(1) for m in ID_IN_PROTOCOL.finditer(text)}
     if not registered:
@@ -552,13 +554,13 @@ def severity_legend() -> str:
     )
 
 
-def declared_labels_section(protocol: Path) -> str:
-    """The labels the protocol's head declares (`[gate] labels`), for the
-    agent to hold the extracted comparisons against — data, no judgement;
-    a head that does not read says so instead."""
+def declared_labels_section(text: str) -> str:
+    """The labels the protocol's head (its TEXT) declares (`[gate] labels`),
+    for the agent to hold the extracted comparisons against — data, no
+    judgement; a head that does not read says so instead."""
     try:
-        labels = protocol_block.declared_labels(protocol.read_text(encoding="utf-8"))
-    except (OSError, protocol_block.BlockError) as exc:
+        labels = protocol_block.declared_labels(text)
+    except protocol_block.BlockError as exc:
         return f"## Gate labels declared ([gate] labels)\n\nnot readable: {exc}\n"
     body = (
         "none declared — the protocol registers no label set"
@@ -569,7 +571,7 @@ def declared_labels_section(protocol: Path) -> str:
 
 
 def write_bundle(
-    area: Path, repo: Path, protocol: Path, out: Path
+    area: Path, repo: Path, protocol: Path, out: Path, text: str
 ) -> tuple[int, list[str]]:
     """Write the audit bundle to OUT, for an agent the lab runs on it (labkit
     ships none): the severity legend, schema facts, gate labels, the labels
@@ -585,7 +587,7 @@ def write_bundle(
         "\n",
         gate_labels(area),
         "\n",
-        declared_labels_section(protocol),
+        declared_labels_section(text),
         "\n",
     ]
     files = [protocol]
@@ -609,11 +611,12 @@ def write_bundle(
 # --- cli ------------------------------------------------------------------
 
 
-def _cost_of(protocol: Path) -> str | None:
-    """The protocol head's repeat cost, None when the head does not parse (the
-    checker reports that; this is only for the summary's wording)."""
+def _cost_of(text: str) -> str | None:
+    """The protocol head's repeat cost (TEXT the protocol), None when the
+    head does not parse (the checker reports that; this is only for the
+    summary's wording)."""
     try:
-        return protocol_block.head(protocol.read_text(encoding="utf-8")).repeat_cost
+        return protocol_block.head(text).repeat_cost
     except protocol_block.BlockError:
         return None
 
@@ -642,7 +645,9 @@ def _arguments(argv: list[str]) -> tuple[Path, Path | None, Path | None]:
     return area, protocol_arg, bundle_to
 
 
-def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> None:
+def _not_checked(
+    findings: Findings, protocol: Path, bundle_to: Path | None, text: str
+) -> None:
     """What this command did not check, told as a note before the gate's
     summary (the summary and the exit code are `Findings.report`'s, like
     every gate's)."""
@@ -651,7 +656,7 @@ def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> 
             "schema facts + gate labels extracted into the bundle, for an agent "
             "you run on it (labkit ships none)"
         )
-    elif standard_contract.lane(_cost_of(protocol)).registration:
+    elif standard_contract.lane(_cost_of(text)).registration:
         # only the agent's review is not owed here; the protocol's open
         # fields are, and the pre-commit holds them
         findings.note(
@@ -692,11 +697,12 @@ def main(argv: list[str]) -> int:
         return 2
 
     repo = layout_root(area)
+    text = state_of(area).text_of(protocol)
     findings = Findings()
-    for finding in code_findings(area, protocol, repo):
+    for finding in code_findings(area, protocol, text, repo):
         findings.take(finding)
     if bundle_to is not None:
-        n, unreadable = write_bundle(area, repo, protocol, bundle_to)
+        n, unreadable = write_bundle(area, repo, protocol, bundle_to, text)
         print(
             f"bundle: {n} file(s) -> {bundle_to} "
             f"({bundle_to.stat().st_size // 1024} KB)"
@@ -707,7 +713,7 @@ def main(argv: list[str]) -> int:
                 f"`not readable` in its place",
                 evidence_kind=GUARANTEED,
             )
-    _not_checked(findings, protocol, bundle_to)
+    _not_checked(findings, protocol, bundle_to, text)
     return findings.report("code-check", "the run")
 
 

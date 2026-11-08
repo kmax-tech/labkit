@@ -259,7 +259,11 @@ class TestBundle(unittest.TestCase):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"
             n, unreadable = code_check.write_bundle(
-                a.path, a.path, a.path / "PROTOCOL-fixture.md", out
+                a.path,
+                a.path,
+                a.path / "PROTOCOL-fixture.md",
+                out,
+                (a.path / "PROTOCOL-fixture.md").read_text(encoding="utf-8"),
             )
             text = out.read_text(encoding="utf-8")
         self.assertEqual((n, unreadable), (2, []))
@@ -275,7 +279,11 @@ class TestBundle(unittest.TestCase):
             bad.write_bytes(b"\xff\xfe not utf-8")
             out = a.path / "bundle.md"
             n, unreadable = code_check.write_bundle(
-                a.path, a.path, a.path / "PROTOCOL-fixture.md", out
+                a.path,
+                a.path,
+                a.path / "PROTOCOL-fixture.md",
+                out,
+                (a.path / "PROTOCOL-fixture.md").read_text(encoding="utf-8"),
             )
             text = out.read_text(encoding="utf-8")
         self.assertEqual(n, 2)  # the protocol and the readable script
@@ -287,7 +295,13 @@ class TestBundle(unittest.TestCase):
             PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE + 'if answer == "yes": pass\n'}
         ) as a:
             out = a.path / "bundle.md"
-            code_check.write_bundle(a.path, a.path, a.path / "PROTOCOL-fixture.md", out)
+            code_check.write_bundle(
+                a.path,
+                a.path,
+                a.path / "PROTOCOL-fixture.md",
+                out,
+                (a.path / "PROTOCOL-fixture.md").read_text(encoding="utf-8"),
+            )
             text = out.read_text(encoding="utf-8")
         self.assertIn("Gate labels", text)
         self.assertIn("Gate labels declared ([gate] labels)", text)
@@ -300,7 +314,13 @@ class TestBundle(unittest.TestCase):
         the facts."""
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"
-            code_check.write_bundle(a.path, a.path, a.path / "PROTOCOL-fixture.md", out)
+            code_check.write_bundle(
+                a.path,
+                a.path,
+                a.path / "PROTOCOL-fixture.md",
+                out,
+                (a.path / "PROTOCOL-fixture.md").read_text(encoding="utf-8"),
+            )
             text = out.read_text(encoding="utf-8")
         self.assertIn("Severity legend", text)
         self.assertIn(

@@ -120,7 +120,9 @@ def report_owed(
         b.protocol == block_owner and b.run_id == declared for b in blocks
     ):
         return (
-            registered_review(report, written, protocol, text, repo, staged=staged)
+            registered_review(
+                report, written, protocol, text, repo, staged=staged, state=state
+            )
             if review
             else None
         )
@@ -129,7 +131,9 @@ def report_owed(
         gap = handovers.block_mismatch(h, report, root, staged=staged)
         if gap is None:
             return (
-                registered_review(report, written, protocol, text, repo, staged=staged)
+                registered_review(
+                    report, written, protocol, text, repo, staged=staged, state=state
+                )
                 if review
                 else None
             )
@@ -453,7 +457,14 @@ def missing_report(
 
 
 def registered_review(
-    report: Path, written: str, protocol: Path, text: str, repo: Path, *, staged: bool
+    report: Path,
+    written: str,
+    protocol: Path,
+    text: str,
+    repo: Path,
+    *,
+    staged: bool,
+    state: AreaState,
 ) -> GateFinding | None:
     """The report review the registered REPORT (its WRITTEN text in the
     state) of PROTOCOL (its TEXT) owes once its result or handover block
@@ -484,4 +495,5 @@ def registered_review(
         repo,
         f"is the report {name_p} registers",
         staged=staged,
+        state=state,
     )

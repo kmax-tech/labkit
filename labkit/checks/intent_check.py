@@ -54,7 +54,7 @@ from labkit.formats import console, promises, protocol_block
 from labkit.formats.gate import EXIT_CONTRACT, GateFinding, blocker, with_way_out
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import adopted_run, run_facts
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.scope_sha import (
     SourceError,
@@ -147,7 +147,11 @@ def _prose_block_mismatch(
 
 
 def _metrics_file(
-    protocol: Path, text: str, pid: str | None, metrics_arg: Path | None
+    protocol: Path,
+    text: str,
+    pid: str | None,
+    metrics_arg: Path | None,
+    state: AreaState,
 ) -> tuple[Path, list[str]]:
     """The metrics.json to hold the protocol to, and the notes of its
     choice: the named one, else the answering run's; raises
@@ -155,7 +159,7 @@ def _metrics_file(
     if metrics_arg is not None:
         return choose_explicit(protocol, metrics_arg, pid)
     if pid is not None:
-        return choose_bound(protocol, pid, text)
+        return choose_bound(protocol, pid, text, state)
     raise NoRunChosen(
         "intent-check",
         f"{protocol.name} has no stamped id ([protocol] id) — no run is bound to it.",
@@ -194,10 +198,11 @@ def _named(argv: list[str]) -> tuple[Path, Path | None]:
     return protocol, metrics_arg
 
 
-def _read(protocol: Path) -> tuple[str, str | None, promises.PromiseTables | None]:
-    """(text, stamped id or None, promise block or None) of PROTOCOL; a head
-    or a block that does not read is a `console.Refused`."""
-    text = protocol.read_text(encoding="utf-8")
+def _read(
+    protocol: Path, text: str
+) -> tuple[str, str | None, promises.PromiseTables | None]:
+    """(text, stamped id or None, promise block or None) of PROTOCOL (its
+    TEXT); a head or a block that does not read is a `console.Refused`."""
     try:
         pid = protocol_id_of(text)
     except protocol_block.BlockError as exc:
@@ -236,16 +241,20 @@ def _main(argv: list[str]) -> int:
     return 0
 
 
-def hold(protocol: Path, metrics_arg: Path | None) -> Held:
+def hold(
+    protocol: Path, metrics_arg: Path | None, state: AreaState | None = None
+) -> Held:
     """Hold PROTOCOL's registered ids to a metrics.json: METRICS_ARG when
-    named, else the newest completed run bound to the stamped id. Reads
-    only. The prose and the promise block disagreeing is the first finding
+    named, else the newest completed run bound to the stamped id; STATE the
+    area's state, the caller's when it built one. Reads only. The prose and the promise block disagreeing is the first finding
     and the last; an unregistered protocol is a clean check with its reason
     as summary. Raises `console.Refused` when nothing can be held: no
     protocol or head or block that reads, earlier-form ids, no stamped id
     and no file named, no run that may answer, an unreadable metrics.json
     or run record."""
-    text, pid, block = _read(protocol)
+    if state is None:
+        state = state_of(protocol.parent)
+    text, pid, block = _read(protocol, state.text_of(protocol))
     earlier = promises.earlier_ids(text)
     if earlier:
         raise console.Refused(
@@ -266,7 +275,7 @@ def hold(protocol: Path, metrics_arg: Path | None) -> Held:
         )
 
     try:
-        mpath, notes = _metrics_file(protocol, text, pid, metrics_arg)
+        mpath, notes = _metrics_file(protocol, text, pid, metrics_arg, state)
         metrics = read_metrics(mpath)
     except ValueError as exc:  # MetricsError, RunConfigError
         raise console.Refused("intent-check", str(exc)) from exc
@@ -440,14 +449,16 @@ def choose_explicit(
     return metrics_arg, notes
 
 
-def choose_bound(protocol: Path, pid: str, text: str) -> tuple[Path, list[str]]:
+def choose_bound(
+    protocol: Path, pid: str, text: str, state: AreaState
+) -> tuple[Path, list[str]]:
     """The run that answers for `pid` under the protocol TEXT —
     `answering_run.bound_answering_run`: the adopted one, else the newest —
     and the lines of its choice to tell the operator (`AnsweringRun.explain`). Raises
     console.Refused when no choice stands, a probe or producer run among
     them when the protocol registers ids (its metrics would read every
     promise as unimplemented)."""
-    choice = state_of(protocol.parent).measured_of(pid).answering(adopted_run(text))
+    choice = state.measured_of(pid).answering(adopted_run(text))
     blocker, lines = choice.explain(promises.registers_ids(text))
     if blocker:
         why = [
