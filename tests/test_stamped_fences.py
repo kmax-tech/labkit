@@ -10,18 +10,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.formats import protocol_block
+from labkit.formats import markdown
 from labkit.tools import scaffold
 
 
 def open_fences(text: str) -> list[int]:
     """1-based lines of the fences in TEXT that are never closed."""
     lines = text.splitlines()
-    return [
-        start
-        for _, start, end in protocol_block.fence_spans(lines)
-        if end >= len(lines)
-    ]
+    return [start for _, start, end in markdown.fence_spans(lines) if end >= len(lines)]
 
 
 class StampedFences(unittest.TestCase):

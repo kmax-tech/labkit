@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from labkit.formats import markdown
 from labkit.formats import (
     findings,
     protocol_block,
@@ -124,7 +125,7 @@ def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
     heading = protocol_block.runs_section(lines)
     if heading is None:
         raise ValueError("no `## Runs` section to name the run in")
-    end = protocol_block.section_end(lines, heading)
+    end = markdown.section_end(lines, heading)
     section = range(heading + 1, end)
     if any(run_id in lines[i] for i in section):
         return text, False
@@ -316,15 +317,15 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
         body += constants[name].splitlines()
     start = end = f.last  # 0-based index just after the field's value
     for j in range(f.last, min(f.last + 3, len(lines))):
-        m = protocol_block.FENCE.match(lines[j])
+        m = markdown.FENCE.match(lines[j])
         if m:
-            # the one fence rule (protocol_block.closes): a line merely
+            # the one fence rule (markdown.closes): a line merely
             # starting with the marker does not close it
             k = next(
                 (
                     k
                     for k in range(j + 1, len(lines))
-                    if protocol_block.closes(lines[k], m.group(2))
+                    if markdown.closes(lines[k], m.group(2))
                 ),
                 None,
             )
@@ -371,7 +372,7 @@ def withdrawn_runs_entry(text: str, run_id: str, day: str, why: str) -> str:
     lines = text.split("\n")
     heading = protocol_block.runs_section(lines)
     assert heading is not None, "runs_line wrote the section's entry"
-    end = protocol_block.section_end(lines, heading)
+    end = markdown.section_end(lines, heading)
     at = next(i for i in range(heading + 1, end) if run_id in lines[i])
     lines[at] += mark
     return "\n".join(lines)

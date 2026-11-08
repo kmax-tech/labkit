@@ -13,9 +13,9 @@ import re
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
+from labkit.formats import markdown
 from labkit.formats import (
     findings,
-    protocol_block,
 )
 from labkit.formats.repo import (
     rel_posix,
@@ -156,7 +156,7 @@ def section_line(line: str) -> bool:
         or READ_HINT.match(line)
         or VERDICT_LINE.match(line)
         or line.strip().startswith("scope:")
-        or protocol_block.FENCE.match(line)
+        or markdown.FENCE.match(line)
     )
 
 
@@ -309,7 +309,7 @@ def scope_list(tail: str) -> list[str]:
             rest = [
                 ln.strip().lstrip("-*• ").removeprefix("scope:").strip().strip("`")
                 for ln in lines[i + 1 :]
-                if not protocol_block.FENCE.match(ln)  # a marker is no entry
+                if not markdown.FENCE.match(ln)  # a marker is no entry
             ]
             return [s for s in ([first.strip("`")] if first else []) + rest if s]
     return []

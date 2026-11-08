@@ -134,6 +134,10 @@ pins (`requirements.txt` / `requirements.lock`).
   translations are `area_state.staged_of(file_state)` and
   `area_state.file_state_of(staged=)` (17 hand spellings gone; held by
   test).
+  The Markdown structure has its own module, `labkit.formats.markdown`:
+  `fence_spans`, `fenced_blocks`, `fenced_lines`, `closes`, `FENCE`,
+  `section_starts` and `section_end` moved there from `protocol_block`,
+  which keeps the head, the promise block and the `## Runs` section.
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

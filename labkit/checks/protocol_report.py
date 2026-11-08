@@ -25,6 +25,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.formats import markdown
 from labkit.formats import answering_run
 from labkit.formats import runs
 from labkit.formats.area_state import state_of
@@ -139,8 +140,8 @@ def prose_lines(text: str) -> list[tuple[str | None, str]]:
     out: list[tuple[str | None, str]] = []
     section: str | None = None
     lines = text.splitlines()
-    fenced = protocol_block.fenced_lines(lines)
-    starts = set(protocol_block.section_starts(lines))
+    fenced = markdown.fenced_lines(lines)
+    starts = set(markdown.section_starts(lines))
     for i, line in enumerate(lines):
         stripped = line.strip()
         if i in fenced or stripped.startswith("|"):
@@ -204,7 +205,7 @@ def template_lines(path: Path | None) -> set[str]:
     in_body = False
     in_head = False  # `## Head`: the pointer and the toml block stay by design
     lines = text.splitlines()
-    starts = set(protocol_block.section_starts(lines))
+    starts = set(markdown.section_starts(lines))
     for i, line in enumerate(lines):
         # The written protocol carries no cut markers; compared with them,
         # the stamped Runs line `- <run_id> — <…> <!-- l -->` would never
@@ -498,7 +499,7 @@ def print_contract(protocol: Path | None = None) -> None:
 
 def code_blocks(text: str) -> int:
     """Top-level fenced blocks other than the TOML head — the rendered examples."""
-    return sum(1 for info, _ in protocol_block.fenced_blocks(text) if info != "toml")
+    return sum(1 for info, _ in markdown.fenced_blocks(text) if info != "toml")
 
 
 def collect_protocols(paths: list[str]) -> list[Path]:

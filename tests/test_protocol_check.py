@@ -1416,7 +1416,7 @@ class TestIntentBudgetCalibration(unittest.TestCase):
 
 class TestProseLinesReadFencesLikeTheParser(unittest.TestCase):
     """`prose_lines` reads fences through the one fence walker
-    (`protocol_block.fence_spans`): a `~~~` fence and a ``` nested in a
+    (`markdown.fence_spans`): a `~~~` fence and a ``` nested in a
     fence are code, not prose, which a toggle on ``` by hand would miss."""
 
     def test_tilde_fence_is_not_prose(self):

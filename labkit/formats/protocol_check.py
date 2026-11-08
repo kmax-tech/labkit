@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from labkit.formats import markdown
 from labkit.formats import digests
 from labkit import PACKAGE_DIR
 from labkit.formats import (
@@ -321,7 +322,7 @@ def stamp_placeholders() -> frozenset[str]:
     left out, since it also occurs in quoted commands as content
     (`PROTOCOL-<name>.md`). A `<…>` nested in another yields both phrases."""
     lines = PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
-    fenced = protocol_block.fenced_lines(lines)
+    fenced = markdown.fenced_lines(lines)
     prose = HTML_COMMENT.sub(
         "", "\n".join(ln for i, ln in enumerate(lines) if i not in fenced)
     )
@@ -353,7 +354,7 @@ def stamp_block_placeholders() -> frozenset[str]:
     lines = PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
     bodies = (
         " ".join(" ".join(lines[start:end]).split())
-        for _, start, end in protocol_block.fence_spans(lines)
+        for _, start, end in markdown.fence_spans(lines)
     )
     return frozenset(b for b in bodies if protocol_block.is_stamp_placeholder(b))
 
@@ -561,7 +562,7 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
     out: list[FieldLine] = []
     lines = text.splitlines()
     # opening line -> (first body line, line after the body), 0-based
-    spans = {s - 1: (s, e) for _, s, e in protocol_block.fence_spans(lines)}
+    spans = {s - 1: (s, e) for _, s, e in markdown.fence_spans(lines)}
     fence: str | None = None  # the open fence's marker; nested fences are body
     comment = False  # inside a multi-line <!-- … --> — not prose
     for i, line in enumerate(lines):
@@ -572,10 +573,10 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
             comment = True
             continue
         if fence is not None:
-            if protocol_block.closes(line, fence):
+            if markdown.closes(line, fence):
                 fence = None
             continue
-        opened = protocol_block.FENCE.match(line)
+        opened = markdown.FENCE.match(line)
         if opened:
             fence = opened.group(2)
             continue
@@ -605,7 +606,7 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
             nxt < len(lines)
             and lines[nxt].startswith((" ", "\t"))
             and lines[nxt].strip()
-            and not protocol_block.FENCE.match(lines[nxt])
+            and not markdown.FENCE.match(lines[nxt])
             and _continues(lines[nxt], own)
         ):
             parts.append(re.sub(_BULLET, "", lines[nxt]).strip())
@@ -625,7 +626,7 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
                 name=field_name(label),
                 label=label,
                 value=value,
-                block=bool(protocol_block.FENCE.match(below)) or deeper,
+                block=bool(markdown.FENCE.match(below)) or deeper,
                 last=nxt,
             )
         )
@@ -1321,7 +1322,7 @@ def prompt_blocks(protocol: Path) -> list[str]:
     same depth or the next heading — one block per variant is a written
     form, and reading only the first would make a null prompt in a second
     block look missing. The field is the one label parser's (`fields`), the
-    blocks the one fence walker's (`protocol_block.fence_spans`)."""
+    blocks the one fence walker's (`markdown.fence_spans`)."""
     text = protocol.read_text(encoding="utf-8")
     lines = text.splitlines()
     found = fields(text)
@@ -1341,9 +1342,7 @@ def prompt_blocks(protocol: Path) -> list[str]:
                 end = j
                 break
         region = lines[f.line : end]
-        blocks += [
-            "\n".join(region[s:e]) for _, s, e in protocol_block.fence_spans(region)
-        ]
+        blocks += ["\n".join(region[s:e]) for _, s, e in markdown.fence_spans(region)]
     return blocks
 
 

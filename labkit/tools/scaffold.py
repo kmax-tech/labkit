@@ -74,6 +74,7 @@ import os
 import re
 import shlex
 
+from labkit.formats import markdown
 from labkit.formats.commands import report_fields_command, step_command
 from labkit.formats import runs
 from labkit.formats import console
@@ -1440,9 +1441,9 @@ def blank_before_headings(text: str) -> str:
     """TEXT with a blank line before every `## ` heading that follows a
     non-blank line — a heading right after a cut item gets its blank line
     back. Lines inside a fenced block are no headings and stay as they are
-    (`protocol_block.fenced_lines`)."""
+    (`markdown.fenced_lines`)."""
     lines = text.split("\n")
-    starts = set(protocol_block.section_starts(lines))
+    starts = set(markdown.section_starts(lines))
     out: list[str] = []
     for i, line in enumerate(lines):
         if i in starts and out and out[-1].strip():

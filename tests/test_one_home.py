@@ -41,8 +41,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     ),
     ("a PROTOCOL-*.md scan", r"r?glob\(\s*\"PROTOCOL-", {"repo"}),
     ("pip's name normalisation", r"\.lower\(\)\.replace\(\"_\", \"-\"\)", {"repo"}),
-    ("a fence regex", r"re\.compile\([^\n]*(`\{3|```|~\{3)", {"protocol_block"}),
-    ("a fence toggled by hand", r"startswith\(\(?\"(```|~~~)", {"protocol_block"}),
+    ("a fence regex", r"re\.compile\([^\n]*(`\{3|```|~\{3)", {"markdown"}),
+    ("a fence toggled by hand", r"startswith\(\(?\"(```|~~~)", {"markdown"}),
     ("the id letters", r"\[(?:[cab]{2,3}|[CAB]{2,3})\]|\^a\\d", {"promises"}),
     ("the area name NN-slug", r"\^\(\\d\+\)-", {"repo"}),
     ("a temp-and-rename write", r"os\.replace\(", {"files"}),
@@ -202,11 +202,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"scope_sha"},
     ),
     # a protocol's `## ` headings are found by one reader, which skips
-    # fences; `protocol_block.section_starts`
+    # fences; `markdown.section_starts`
     (
         "a section heading found by hand",
         r"startswith\(\"## \"\)|\(\?=\^## ",
-        {"protocol_block"},
+        {"markdown"},
     ),
     # the decided statuses, and the rule that a carried finding closed as a
     # false positive owes a review, have one home: `findings.DECIDED_LIST`,

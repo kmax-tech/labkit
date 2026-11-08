@@ -37,6 +37,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from labkit.formats import markdown
 from labkit.formats.repo import (
     area_protocols,
     git_root,
@@ -67,7 +68,6 @@ PROTOCOL_KINDS = ("compute", "fit", "apply")
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
-FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
 _TOP_LEVEL = {
     "protocol",
     "promise",
@@ -186,32 +186,6 @@ def toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False).translate(_TOML_RAW_UNSAFE)
 
 
-def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
-    """(info string, first body line, line after the body) of every
-    top-level fenced block, as 0-based indexes into LINES — the one fence
-    walker; `fenced_blocks` is its text form, and the readers that need a
-    place (the head's line, the Prompt block to replace) use the spans.
-    A fence inside another fence is body, not a block: a verbatim prompt
-    that asks the model for ```toml output is no second head. A fence
-    closes with the same character, at least as long,
-    and nothing after it; an unclosed fence runs to the end."""
-    out: list[tuple[str, int, int]] = []
-    i = 0
-    while i < len(lines):
-        m = FENCE.match(lines[i])
-        if not m:
-            i += 1
-            continue
-        marker, info = m.group(2), m.group(3).lower()
-        start = i + 1
-        i = start
-        while i < len(lines) and not closes(lines[i], marker):
-            i += 1
-        out.append((info, start, i))
-        i += 1
-    return out
-
-
 #: the heading of the protocol's run list, one entry per run_id — written
 #: by `protocol-fill --from-run`, outside the prose budget (`protocol-check`)
 RUNS_HEADING = re.compile(r"^## Runs\b")
@@ -220,55 +194,20 @@ RUNS_HEADING = re.compile(r"^## Runs\b")
 def runs_section(lines: list[str]) -> int | None:
     """The line index of LINES' `## Runs` heading (`RUNS_HEADING`), or None."""
     return next(
-        (i for i in section_starts(lines) if RUNS_HEADING.match(lines[i])), None
+        (i for i in markdown.section_starts(lines) if RUNS_HEADING.match(lines[i])),
+        None,
     )
-
-
-def section_starts(lines: list[str]) -> list[int]:
-    """The 0-based indexes of the `## ` headings of a protocol — outside
-    every fence (`fenced_lines`), in order. The one cut into sections for
-    the prose count, the Runs list, the low cut and the stamp's blank-line
-    pass: a `## ` line inside a fence is no heading."""
-    fenced = fenced_lines(lines)
-    return [
-        i
-        for i, line in enumerate(lines)
-        if i not in fenced and line.lstrip().startswith("## ")
-    ]
-
-
-def section_end(lines: list[str], start: int) -> int:
-    """The index of the first line after the section opening at START: the
-    next heading's, or `len(lines)`."""
-    return next((i for i in section_starts(lines) if i > start), len(lines))
-
-
-def fenced_lines(lines: list[str]) -> set[int]:
-    """The 0-based indexes of every line a fence takes — its markers and its
-    body, by `fence_spans`. For a reader that walks lines and must skip the
-    fenced ones (a prose count, a label search, a rule scan). A flag
-    toggled on ``` by hand would turn prose into code at a `~~~` fence or a
-    ``` nested in a fence, where the protocol parser reads it right."""
-    out: set[int] = set()
-    for _, start, end in fence_spans(lines):
-        out.update(range(start - 1, min(end + 1, len(lines))))
-    return out
-
-
-def fenced_blocks(text: str) -> list[tuple[str, str]]:
-    """(info string, body) of every top-level fenced block (`fence_spans`)."""
-    lines = text.splitlines()
-    return [
-        (info, "\n".join(lines[start:end]) + "\n")
-        for info, start, end in fence_spans(lines)
-    ]
 
 
 def toml_block_span(text: str) -> tuple[int, int] | None:
     """(first body line, line after the body) of the protocol's one TOML
     block, 0-based, or None without one; raises BlockError when there are
     two — where a writer edits the head in place."""
-    spans = [(s, e) for info, s, e in fence_spans(text.splitlines()) if info == "toml"]
+    spans = [
+        (s, e)
+        for info, s, e in markdown.fence_spans(text.splitlines())
+        if info == "toml"
+    ]
     if len(spans) > 1:
         raise BlockError(
             f"{len(spans)} ```toml blocks — a protocol has exactly "
@@ -277,17 +216,11 @@ def toml_block_span(text: str) -> tuple[int, int] | None:
     return spans[0] if spans else None
 
 
-def closes(line: str, marker: str) -> bool:
-    """Does `line` close a fence opened with `marker`?"""
-    s = line.strip()
-    return bool(s) and set(s) == {marker[0]} and len(s) >= len(marker)
-
-
 def block_text(text: str) -> str | None:
     """The raw text of the protocol's TOML block, None if it has none.
 
     Raises BlockError when there are two: a protocol has exactly one."""
-    blocks = [body for info, body in fenced_blocks(text) if info == "toml"]
+    blocks = [body for info, body in markdown.fenced_blocks(text) if info == "toml"]
     if len(blocks) > 1:
         raise BlockError(
             f"{len(blocks)} ```toml blocks — a protocol has exactly "

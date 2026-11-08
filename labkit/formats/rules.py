@@ -42,7 +42,8 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console, protocol_block
+from labkit.formats import markdown
+from labkit.formats import console
 
 STANDARD = PACKAGE_DIR / "docs" / "standard.md"
 LEDGER = PACKAGE_DIR / "docs" / "rules.tsv"
@@ -70,7 +71,7 @@ WORD_RE = re.compile(r"[^\s.,:;!?()\[\]{}<>|\\/—–·…=+→#]+")
 #: comment leader, a string literal's opening quote with its prefix
 CONTINUATION_RE = re.compile(r"""^\s*(?:(?:#+|//|>)\s+)?(?:[rRbBfFuU]{0,2}["'])?""")
 #: a line that opens a new block instead: a list item, a table row, an
-#: HTML comment (a fence is `protocol_block.fenced_lines`')
+#: HTML comment (a fence is `markdown.fenced_lines`')
 NEW_BLOCK_RE = re.compile(r"^\s*(?:[-*+]\s|\d+\.\s|\||<!--)")
 LEGACY_EXAMPLE_MARK = (
     "rule-ref: legacy-example"  # a line that shows an old §-id as an example
@@ -127,7 +128,7 @@ def rule_heads(doc: str) -> list[RuleHead]:
     Lines inside a generated register block and inside fenced code are not heads.
     """
     lines = doc.splitlines()
-    fenced = protocol_block.fenced_lines(lines)
+    fenced = markdown.fenced_lines(lines)
     heads, register, i = [], False, 0
     while i < len(lines):
         line = lines[i]
@@ -403,7 +404,7 @@ def check_refs(
     citation wrapped mid-name is held like one on a single line.
     """
     lines = text.splitlines()
-    fenced = protocol_block.fenced_lines(lines)
+    fenced = markdown.fenced_lines(lines)
     problems, register = [], False
     for n, line in enumerate(lines, start=1):
         if n - 1 in fenced:

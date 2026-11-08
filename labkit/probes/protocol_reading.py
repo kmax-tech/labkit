@@ -33,7 +33,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit.formats import promises, protocol_block, runs
+from labkit.formats import markdown
+from labkit.formats import promises, runs
 from labkit.probes.cold_reader import (
     NEWCOMER,
     answer_contract,
@@ -72,12 +73,12 @@ class Form:
 
 def _section(text: str, name: str) -> str:
     """The `## NAME` section of TEXT, heading included, up to the next
-    heading (`protocol_block.section_starts`: fences are not headings); ""
+    heading (`markdown.section_starts`: fences are not headings); ""
     without one."""
     lines = text.splitlines()
-    for start in protocol_block.section_starts(lines):
+    for start in markdown.section_starts(lines):
         if re.match(rf"## {name}\b", lines[start].lstrip()):
-            return "\n".join(lines[start : protocol_block.section_end(lines, start)])
+            return "\n".join(lines[start : markdown.section_end(lines, start)])
     return ""
 
 
@@ -87,7 +88,7 @@ def form(text: str) -> Form:
     found = fields(text)
     first = found[0].line if found else len(lines) + 1
     before = 0
-    fenced = protocol_block.fenced_lines(lines)
+    fenced = markdown.fenced_lines(lines)
     for i, ln in enumerate(lines[: first - 1]):
         if (
             i not in fenced

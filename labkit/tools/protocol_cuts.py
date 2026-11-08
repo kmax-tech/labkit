@@ -14,6 +14,7 @@ import re
 
 import uuid
 from pathlib import Path
+from labkit.formats import markdown
 from labkit.formats import promises, protocol_block
 from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND, has_bar
 from labkit.formats.protocol_check import field_name, label_line, model_named, not_owed
@@ -71,7 +72,7 @@ def _segments(text: str) -> list[tuple[str, list[str]]]:
     """[(heading line or '', body lines)] — the preamble comes as heading ''."""
     segs: list[tuple[str, list[str]]] = [("", [])]
     lines = text.splitlines()
-    starts = set(protocol_block.section_starts(lines))
+    starts = set(markdown.section_starts(lines))
     for i, line in enumerate(lines):
         if i in starts:
             segs.append((line, []))
@@ -83,7 +84,7 @@ def _segments(text: str) -> list[tuple[str, list[str]]]:
 def _items(body: list[str]) -> list[list[str]]:
     """A section body as bullet items; continuation lines stay with their item."""
     items: list[list[str]] = []
-    fenced = protocol_block.fenced_lines(body)
+    fenced = markdown.fenced_lines(body)
     for i, line in enumerate(body):
         starts = line.startswith("- ") and i not in fenced
         if starts or not items:
@@ -255,7 +256,7 @@ def short_placeholders(text: str) -> str:
     Fenced blocks and the TOML head are untouched."""
     out: list[str] = []
     lines = text.split("\n")
-    fenced = protocol_block.fenced_lines(lines)
+    fenced = markdown.fenced_lines(lines)
     i = 0
     while i < len(lines):
         line = lines[i]
