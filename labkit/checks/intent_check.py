@@ -56,7 +56,12 @@ from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import adopted_run, run_facts
 from labkit.formats.area_state import state_of
 from labkit.formats.repo import layout_root, shown
-from labkit.formats.scope_sha import area_files, imported_repo_helpers
+from labkit.formats.scope_sha import (
+    SourceError,
+    area_files,
+    imported_repo_helpers,
+    read_source,
+)
 
 # The alphabet lives in `promises`; these names stay importable from here
 # because code_check and tools outside labkit (befundregister) use them.
@@ -544,8 +549,8 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     own = area_files(area)
     for path in own + imported_repo_helpers(area, root):
         try:
-            source = path.read_text(encoding="utf-8")
-        except OSError:
+            source = read_source(path)
+        except SourceError:
             continue
         for lineno, line in enumerate(source.splitlines(), 1):
             for m in ID_LITERAL.finditer(line):

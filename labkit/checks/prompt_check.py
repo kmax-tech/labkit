@@ -19,7 +19,14 @@ from pathlib import Path
 from labkit.formats.repo import shown
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import GUARANTEED
-from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
+from labkit.formats.scope_sha import (
+    SCRIPT_GLOB,
+    SourceError,
+    area_files,
+    parse_source,
+    read_source,
+    test_files,
+)
 from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
 from labkit.formats.protocol_check import registered_prompt_blocks, unheld_prompt_lines
 
@@ -39,18 +46,17 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     scripts = area_files(area, (SCRIPT_GLOB,))
     parsers: dict[str, Path] = {}
     for sp in scripts:
-        for m in PARSE_DEF.finditer(sp.read_text(encoding="utf-8")):
+        for m in PARSE_DEF.finditer(read_source(sp)):
             parsers.setdefault(m.group(1), sp)
     if not parsers:
         return []
-    tests_dir = repo / "tests"
-    test_files = sorted(tests_dir.glob("test_*.py")) if tests_dir.is_dir() else []
+    tests = test_files(repo)
     findings: list[GateFinding] = []
     called: set[str] = set()
-    for t in test_files:
+    for t in tests:
         try:
-            tree = ast.parse(t.read_text(encoding="utf-8"), filename=str(t))
-        except (SyntaxError, UnicodeDecodeError) as exc:
+            tree = parse_source(t)
+        except SourceError as exc:
             findings.append(
                 coded(
                     BLOCKER,
@@ -74,10 +80,10 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                 coded(
                     BLOCKER,
                     sp.name,
-                    f"{name}() has no test under {tests_dir.name}/ · a parser "
+                    f"{name}() has no test under tests/ · a parser "
                     f"fails silently into a wrong number",
                     rule="LAB-016 Resolution check before freezing",
-                    fix=f"give it a test with real raw answers under {tests_dir.name}/, "
+                    fix=f"give it a test with real raw answers under tests/, "
                     f"then `{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
                 )
@@ -185,8 +191,8 @@ def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
     unreadable: list[str] = []
     for sp in area_files(area, (SCRIPT_GLOB,)):
         try:
-            found, bad = _script_prompts(sp.read_text(encoding="utf-8"))
-        except SyntaxError:
+            found, bad = _script_prompts(read_source(sp))
+        except (SyntaxError, SourceError):
             continue
         out.update(found)
         unreadable += [f"{sp.name}:{n}" for n in bad]

@@ -31,6 +31,7 @@ stamp a later check recomputes.
 from __future__ import annotations
 
 import ast
+import json
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -77,14 +78,67 @@ def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
 LOCAL_ROOTS = ("lib", "src")
 
 
-def parse_source(path: Path) -> ast.Module:
-    """The syntax tree of a scope file, or SourceError naming the file. The
-    one parse behind every gate that reads code, so a broken script is a
-    blocker in each of them, never a traceback."""
+def read_source(path: Path) -> str:
+    """The text of a source file of the area or the repo — the one reader
+    behind every check that reads code (the scans, the bundle, the key
+    search, the prompt check), so a check opens no file itself. Raises
+    SourceError naming the file when it is gone or not UTF-8."""
     try:
-        return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError) as exc:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise SourceError(f"{path}: cannot be read ({exc})") from exc
+
+
+def parse_text(text: str, path: Path) -> ast.Module:
+    """The syntax tree of TEXT, a source file's content read from PATH, or
+    SourceError naming the file. The one parse behind every gate that reads
+    code, so a broken script is a blocker in each of them, never a
+    traceback."""
+    try:
+        return ast.parse(text, filename=str(path))
+    except SyntaxError as exc:
         raise SourceError(f"{path}: cannot be read as Python ({exc})") from exc
+
+
+def parse_source(path: Path) -> ast.Module:
+    """`parse_text` of `read_source`: the syntax tree of a scope file, or
+    SourceError naming the file."""
+    return parse_text(read_source(path), path)
+
+
+def import_target(name: str, area: Path, repo: Path) -> Path | None:
+    """The repo file an import of dotted NAME resolves to when it lies
+    outside LOCAL_ROOTS and outside the area's own scripts — None otherwise
+    (a stdlib or third-party name resolves to nothing in the repo, a
+    sibling in the area is stamped with it). A package without
+    `__init__.py` resolves to its directory (a namespace package, or a path
+    import). The import check's question of the repo's layout."""
+    seg = name.split(".")[0]
+    if not seg or seg in LOCAL_ROOTS:
+        return None
+    if (area / "scripts" / f"{seg}.py").is_file() or (
+        area / "analysis" / f"{seg}.py"
+    ).is_file():
+        return None
+    for candidate in (repo / f"{seg}.py", repo / seg / "__init__.py"):
+        if candidate.is_file():
+            return candidate
+    if (repo / seg).is_dir() and seg not in ("data", "tests", "notes", "docs", "runs"):
+        return repo / seg
+    return None
+
+
+def readme_text(area: Path) -> str | None:
+    """The area's README.md as text, None without one (`readme_check`)."""
+    readme = area / "README.md"
+    return readme.read_text(encoding="utf-8") if readme.is_file() else None
+
+
+def test_files(repo: Path) -> list[Path]:
+    """The repo's `tests/test_*.py`, sorted; [] without a tests directory
+    (`prompt_check`: which parsers a test calls)."""
+    tests_dir = repo / "tests"
+    return sorted(tests_dir.glob("test_*.py")) if tests_dir.is_dir() else []
 
 
 def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity baseline 2026-10-08
@@ -653,3 +707,64 @@ def cli() -> None:
 
 if __name__ == "__main__":
     cli()
+
+
+def _harvest(obj: object, out: set[str], depth: int = 0) -> None:
+    """Every dict key at every level, lists included.
+
+    A file may keep its fields inside a list (`pairs: [...]`); reading only
+    the outer keys would report them as unwritten.
+    Over-approximating the known set is the safe direction — a field too many
+    costs a missed finding the model still catches, a field too few costs a
+    false blocker that gets the whole check switched off.
+    """
+    if depth > 6:
+        return
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            out.add(str(k))
+            _harvest(v, out, depth + 1)
+    elif isinstance(obj, list):
+        for v in obj[:20]:
+            _harvest(v, out, depth + 1)
+
+
+def data_keys(area: Path) -> tuple[set[str], list[str]]:
+    """Keys of every data row the area has on disk, at every nesting level.
+
+    Every JSON(L) file, not just `data/prepared`: the pipeline is staged, so
+    `03_evaluate` legitimately reads fields that `01_generate` invented and
+    that never existed in the prepared data; holding a consumer against the
+    prepared file alone reports false blockers.
+
+    Several lines per file, not one: a producer may write a `_meta` header
+    line first, and harvesting only that reports every real field as missing.
+    """
+    keys: set[str] = set()
+    seen: list[str] = []
+    for pattern in (
+        "data/**/*.jsonl",
+        "data/**/*.json",
+        "output/**/*.jsonl",
+        "output/**/*.json",
+    ):
+        for f in sorted(area.glob(pattern)):
+            before = len(keys)
+            try:
+                with f.open(encoding="utf-8") as fh:
+                    if f.suffix == ".json":
+                        _harvest(json.load(fh), keys)
+                    else:
+                        for i, line in enumerate(fh):
+                            if i >= 5:
+                                break
+                            line = line.strip()
+                            if line:
+                                # a peek at the first five lines of a data
+                                # file, never the whole; home: jsonl.objects
+                                _harvest(json.loads(line), keys)
+            except (OSError, json.JSONDecodeError, RecursionError):
+                continue
+            if len(keys) > before:
+                seen.append(f.name)
+    return keys, seen

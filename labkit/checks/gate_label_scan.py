@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 from labkit.checks.code_scan import name_of, string_constants, split_stages
+from labkit.formats.scope_sha import SourceError, parse_text, read_source
 
 
 INFRA_VARS = frozenset(
@@ -186,9 +187,9 @@ def gate_labels(area: Path) -> str:
     all_filtered: list[str] = []
     for c in consumers:
         try:
-            source = c.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=c.name)
-        except (OSError, SyntaxError):
+            source = read_source(c)
+            tree = parse_text(source, c)
+        except SourceError:
             continue
         v = _ComparisonVisitor(c.name, source)
         v.visit(tree)

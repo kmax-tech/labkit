@@ -37,6 +37,7 @@ from pathlib import Path
 
 from labkit.gates.hook_session import keep_stop_base
 from labkit.formats.area_state import state_of
+from labkit.formats.scope_sha import SourceError, read_source
 from labkit.gates.hook_session import session_repo
 from labkit.gates.hook_session import tell_context
 from labkit.formats import (
@@ -253,12 +254,10 @@ def run_scripts(
                         "Next: rerun with an explicit cd to the absolute scripts "
                         "directory in the command, or an absolute script path"
                     )
-            if not p.is_file():
-                continue
             try:
-                text = p.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
+                text = read_source(p)
+            except SourceError:
+                continue  # no file, or none that reads: no run opens there
             if OPENS_RUN.search(text):
                 out.append(p.resolve())
     return out
@@ -268,7 +267,7 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
     """The single PROTOCOL-*.md the script names, if it names exactly one
     and it exists in the area — the series case where preflight would
     otherwise refuse to pick."""
-    names = sorted(set(PROTOCOL_IN_SCRIPT.findall(script.read_text(encoding="utf-8"))))
+    names = sorted(set(PROTOCOL_IN_SCRIPT.findall(read_source(script))))
     if len(names) != 1:
         return None
     p = area / names[0]

@@ -13,7 +13,7 @@ import ast
 import re
 from pathlib import Path
 
-from labkit.formats.scope_sha import parse_source
+from labkit.formats.scope_sha import SCRIPT_GLOB, area_files, readme_text, parse_source
 
 
 # the stamp's blanks may wrap lines; an HTML comment (`<!-- labkit:route -->`)
@@ -27,10 +27,9 @@ def readme_placeholders(area: Path) -> list[str]:
     looks as if it did. No README: nothing.
     Static evidence: the pattern also matches an `<…>` the author wrote in
     prose outside a code span."""
-    readme = area / "README.md"
-    if not readme.is_file():
+    text = readme_text(area)
+    if text is None:
         return []
-    text = readme.read_text(encoding="utf-8")
     # a `<path>/<id>` inside a code span or a fenced block is an example, not a
     # blank
     scan = re.sub(
@@ -76,10 +75,9 @@ def readme_route(area: Path, protocol_name: str) -> list[str]:
         SourceError: `scripts/01_measure.py` does not parse — the gate
             reports it as a blocker (`code_scan.unreadable_source`).
     """
-    readme = area / "README.md"
-    if not readme.is_file():
+    text = readme_text(area)
+    if text is None:
         return []
-    text = readme.read_text(encoding="utf-8")
     start, end = text.find(ROUTE_START), text.find(ROUTE_END)
     if start < 0 or end < start:
         return [
@@ -95,7 +93,7 @@ def readme_route(area: Path, protocol_name: str) -> list[str]:
         if station not in block:
             out.append(f"README.md route: does not name {station}")
     script = area / "scripts" / "01_measure.py"
-    if not script.is_file():
+    if script not in area_files(area, (SCRIPT_GLOB,)):
         out.append("README.md route: scripts/01_measure.py does not exist")
     elif not any(
         isinstance(n, ast.FunctionDef) and n.name == "evaluate_rows"

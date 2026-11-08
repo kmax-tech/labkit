@@ -110,14 +110,15 @@ from labkit.formats.repo import (
 from labkit.formats.scope_sha import (
     SourceError,
     area_files,
+    data_keys,
     imported_repo_helpers,
     parse_source,
+    read_source,
 )
 from labkit.checks.code_scan import (
     FIELDISH,
     name_of,
     string_constants,
-    data_keys,
     scan,
     split_stages,
     unreadable_source,
@@ -432,9 +433,14 @@ def constant_copies(
         return []
     out: list[GateFinding] = []
     for path in sorted({area / entry.partition(":")[0] for entry in p.scope}):
-        if path.suffix != ".py" or not path.is_file():
+        if path.suffix != ".py":
             continue
-        tree = parse_source(path)
+        try:
+            tree = parse_source(path)
+        except SourceError as exc:
+            if "cannot be read (" in str(exc):
+                continue  # a scope entry no file stands at: the stamp names it
+            raise
         for node in ast.walk(tree):
             targets = (
                 node.targets
@@ -590,8 +596,8 @@ def write_bundle(
     for f in files:
         label = shown(f, repo)
         try:
-            body = f.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as exc:
+            body = read_source(f)
+        except SourceError as exc:
             unreadable.append(label)
             body = f"not readable: {exc}"
         pieces.append((f"FILE: {label}", body))

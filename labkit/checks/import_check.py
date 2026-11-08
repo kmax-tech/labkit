@@ -21,7 +21,9 @@ from labkit.formats.scope_sha import (
     LOCAL_ROOTS,
     SourceError,
     area_files,
+    import_target,
     imported_repo_helpers,
+    parse_source,
 )
 from labkit.checks.code_scan import unreadable_source
 
@@ -54,27 +56,6 @@ def _is_sys_path(node: ast.AST | None) -> bool:
         and isinstance(node.value, ast.Name)
         and node.value.id == "sys"
     )
-
-
-def _outside_roots(name: str, area: Path, repo: Path) -> Path | None:
-    """The repo file an import of dotted NAME resolves to when it lies
-    outside LOCAL_ROOTS and outside the area's own scripts — None otherwise
-    (a stdlib or third-party name resolves to nothing in the repo)."""
-    seg = name.split(".")[0]
-    if not seg or seg in LOCAL_ROOTS:
-        return None
-    if (area / "scripts" / f"{seg}.py").is_file() or (
-        area / "analysis" / f"{seg}.py"
-    ).is_file():
-        return None  # a sibling in the area: stamped with it
-    for candidate in (repo / f"{seg}.py", repo / seg / "__init__.py"):
-        if candidate.is_file():
-            return candidate
-    if (repo / seg).is_dir() and seg not in ("data", "tests", "notes", "docs", "runs"):
-        return (
-            repo / seg
-        )  # a package without __init__ — a namespace package, or a path import
-    return None
 
 
 #: an area name inside a path string: `14-hotel`, `experiments/14-hotel/scripts/x.py`
@@ -124,7 +105,7 @@ def _import_findings(
     )
     out = []
     for name in names:
-        found = _outside_roots(name, area, repo)
+        found = import_target(name, area, repo)
         if found is not None:
             out.append(
                 (
@@ -186,8 +167,8 @@ def _coverage_in(
         "sees it) or copy it into the area"
     )
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+        tree = parse_source(path)
+    except SourceError:
         return []  # scope_sha raises on this file already; one loud place
     root = repo.resolve()
     where = shown(path, root)
