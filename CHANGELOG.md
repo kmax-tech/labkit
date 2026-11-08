@@ -324,6 +324,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A Conclusion of dashes or written twice is not written.**
+  `protocol_check.conclusion_written`, the claim a decision review binds
+  to, reads through `written_line`, the answer the result block shows; it
+  took `—` and a doubled field as written, so a review could bind to a
+  Conclusion the block refused (audit of 2026-11-07, S6).
+- **An adoption refused for an absent field names a way that works.**
+  `protocol-fill --from-run` offered `protocol-fill … "Conclusion=<…>"`
+  also for a Conclusion line the protocol lacks, which protocol-fill
+  refuses; it now names the step `labkit-next` names
+  (`next_step.fill_line`, before `_fill_line`): the line to write, the †
+  fields' `--report` stamp, or the fill of a placeholder (S7).
+- **The answer is written before the adoption, in every text.** The
+  README quickstart writes the Conclusion before `labkit-adopt`; the agent
+  guide says a Conclusion changed with `--force` leaves the adoption valid
+  but owes the report's block again (`--into`); the analysis auditor's
+  instruction says the author writes the Conclusion after its audit and
+  before the adoption (S8).
 - **Refusals say what to do now, not which labkit version changed it.**
   A run without a declared constant or without its promise block names
   the gap and the reproduction with the labkit version its repo pins; a

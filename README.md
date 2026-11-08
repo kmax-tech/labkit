@@ -91,9 +91,10 @@ The following paths assume the fresh area above. All commands run from the repo 
 
    Decide each finding with the command `labkit-audit experiments/01-document-count --findings` prints for it (`--decide N STATUS --why "REASON"`): `fixed`, `limitation` or `false-positive` — a BLOCKER nobody can settle stays `open`, and the handover records it; all but `fixed` owe a reason (`--why`); a `limitation` that leaves a promise unjudged names it with `--not-assessable`. The record is never edited by hand. labkit binds an audit or review record to the inputs it read (a changed input owes it again) and, once HEAD holds it, refuses at the commit and working-tree release checks a change — to an audit record beyond the decision lines `--decide` writes, to a review record at all — but it does not check that a record says what the model answered: one edited before its first commit passes every check ([limit](docs/notes/2026-11-02-review-record-forgery.md)). Fixes can invalidate the audit's binding; rerun the affected measurement or audit when the checks require it.
 
-5. **Adopt the result.** Replace `<run-id>` with the recorded run ID:
+5. **Write the answer, then adopt the result.** The Conclusion answers the question in at most two plain sentences; the adoption refuses without it. Replace `<run-id>` with the recorded run ID:
 
    ```bash
+   .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md "Conclusion=<answer>"
    .venv/bin/labkit-adopt experiments/01-document-count <run-id>
    ```
 
