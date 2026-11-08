@@ -444,7 +444,7 @@ class BeforeTheChain(unittest.TestCase):
         So `next` never names a fill protocol-fill answers with "no field
         labelled"."""
         area = Path("experiments/01-x")
-        line = next_step._fill_line
+        line = next_step.fill_line
         self.assertEqual(
             line(area / "P.md", "Unit", absent=False),
             '`protocol-fill experiments/01-x/P.md "Unit=<value>"` fills the first',

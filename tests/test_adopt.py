@@ -76,6 +76,25 @@ class Adopt(unittest.TestCase):
             text,
         )
 
+    def test_an_absent_conclusion_is_named_as_a_line_to_write(self):
+        """The refusal names a way that works: protocol-fill fills a field it
+        sees, so for a Conclusion line the protocol lacks it names the line
+        to write, not a fill protocol-fill would refuse. The twin: a
+        placeholder Conclusion names the fill."""
+        area, protocol, run_id = self.measured(None, concluded=False)
+        self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn('"Conclusion=<value>"', out)
+        text = protocol.read_text(encoding="utf-8")
+        lines = [ln for ln in text.splitlines(keepends=True) if "**Conclusion" in ln]
+        self.assertEqual(len(lines), 1, text)
+        protocol.write_text(text.replace(lines[0], ""), encoding="utf-8")
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("write the line `- **Conclusion:** …`", out)
+        self.assertNotIn("Conclusion=<", out)
+
     def test_an_audited_run_is_adopted_written_into_the_report_and_checked(self):
         area, protocol, run_id = self.measured("REPORT.md")
         self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)

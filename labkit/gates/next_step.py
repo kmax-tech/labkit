@@ -600,7 +600,7 @@ def _field_step(
             "copy is registered cannot be told",
         )
     if report.missing_must:
-        fill = _fill_line(protocol, report.missing_must[0], absent=True)
+        fill = fill_line(protocol, report.missing_must[0], absent=True)
         return Step(
             f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
             + ", ".join(report.missing_must),
@@ -615,7 +615,7 @@ def _field_step(
         # (PLACEHOLDER ONLY), so the row names it — a should field is one
         # once frozen
         labels = [label for _, label in report.must_holes]
-        fill = _fill_line(protocol, labels[0], absent=False)
+        fill = fill_line(protocol, labels[0], absent=False)
         return Step(
             f"{protocol.name}: {len(labels)} MUST field(s) still a placeholder: "
             + ", ".join(labels),
@@ -686,7 +686,7 @@ def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
     if not absent and not holes:
         return None
     first = absent[0] if absent else holes[0]
-    fill = _fill_line(protocol, first, absent=bool(absent))
+    fill = fill_line(protocol, first, absent=bool(absent))
     return Step(
         f"adopting {run} would owe {len(absent) + len(holes)} field(s) still open: "
         + ", ".join(absent + holes),
@@ -698,7 +698,7 @@ def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
     )
 
 
-def _fill_line(protocol: Path, missing: str, *, absent: bool) -> str | None:
+def fill_line(protocol: Path, missing: str, *, absent: bool) -> str | None:
     """The sentence with the command that closes MISSING, a MUST gap as
     `protocol_check.check_fields` names it: a head key as `[protocol] <key>`
     with its allowed values (`protocol_block.FILLABLE_HEAD_KEYS`), or a

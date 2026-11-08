@@ -112,12 +112,12 @@ from labkit.formats.commands import (
     adopt_command,
     audit_command,
     contract_command,
-    fill_command,
     measure_command,
 )
 from labkit.checks import data_counts, recheck, report_blocks
 from labkit.checks.run_record_check import code_since_run
 from labkit.gates import report_check, report_hold
+from labkit.gates.next_step import fill_line
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
     adoption_owes,
@@ -235,14 +235,16 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
     # cut off during its check) — the answer labkit-next names before it
     absent, holes = adoption_owes(text)
     if absent or holes:
+        # an absent field is a line to write, not one protocol-fill fills
+        fill = fill_line(protocol, (absent + holes)[0], absent=bool(absent))
         console.refuse(
             "protocol-fill",
             with_way_out(
                 f"not adopted — the adoption owes {', '.join(absent + holes)}, "
                 f"still open; {protocol.name} is as it was",
-                f"write it (`{fill_command(protocol, f'{(absent + holes)[0]}=<…>')}`; "
-                f"`{contract_command(protocol)}` names what the adoption "
-                "owes), then adopt again",
+                (f"{fill}; " if fill else "")
+                + f"`{contract_command(protocol)}` names what the adoption "
+                "owes; then adopt again",
             ),
         )
         return 2
