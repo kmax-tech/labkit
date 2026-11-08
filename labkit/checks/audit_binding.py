@@ -31,7 +31,6 @@ from labkit.formats import (
     protocol_check,
     runs,
 )
-from labkit.formats.answering_run import adopted_run
 from labkit.formats.area_state import AreaState
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import layout_root, path_kind, shown, rel_posix
@@ -82,8 +81,7 @@ def audited_run(state: AreaState, protocol: Path, text: str) -> tuple[Path | Non
         ) from exc
     if pid is None:
         return None, "the protocol id is still a placeholder"
-    choice = state.measured_of(pid).answering(adopted_run(text))
-    blocker, _ = choice.explain(promises.registers_promises(text))
+    choice, blocker, _ = state.measured_of(pid).told(text)
     if blocker or choice.run_dir is None:
         return None, blocker.text if blocker else "no completed bound run"
     return choice.run_dir, ""

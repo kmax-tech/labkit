@@ -47,6 +47,12 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **`area_state.Measured.told(text)`** is the answering run with its
+  telling — the choice, `AnsweringRun.explain` over
+  `promises.registers_promises`, the lines — the one place finalize,
+  intent-check, recheck, params and the audit ask (five hand copies
+  gone; a test holds that none comes back).
+
 - **The commit judges the areas its index holds, and every way out
   restores what it names** (the audit of 2026-11-08, round 2).
   `scope_sha.areas_touched(paths, repo, *, staged)` takes the file state

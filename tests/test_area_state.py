@@ -486,3 +486,32 @@ class RoundTwoFileStates(_Repository):
         self.assertIsNone(
             repo.report_place_problem(PurePosixPath("experiments/01-x/REPORT.md"))
         )
+
+
+class TheAnsweringRunIsToldOnce(_Repository):
+    """`Measured.told` is the choice with its telling; the five readers ask
+    it (the audit of 2026-11-08, round 2, the five hand copies)."""
+
+    def test_told_is_the_choice_and_its_explanation(self):
+        self._run(RUN)
+        text = self.proto.read_text(encoding="utf-8")
+        m = state_of(self.area).measured_of(PID)
+        choice, blocker, lines = m.told(text)
+        self.assertEqual(choice.run_dir, m.answering(None).run_dir)
+        from labkit.formats import promises
+
+        self.assertEqual(
+            (blocker, lines), choice.explain(promises.registers_promises(text))
+        )
+
+    def test_no_reader_spells_the_choice_and_its_telling_by_hand(self):
+        import labkit
+
+        root = Path(labkit.__file__).parent
+        by_hand = [
+            str(f.relative_to(root))
+            for f in root.rglob("*.py")
+            if f.name != "area_state.py"
+            and ".explain(promises.registers_promises(" in f.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(by_hand, [])

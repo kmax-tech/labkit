@@ -53,7 +53,7 @@ from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.gate import EXIT_CONTRACT, GateFinding, blocker, with_way_out
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
-from labkit.formats.answering_run import adopted_run, run_facts
+from labkit.formats.answering_run import run_facts
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.scope_sha import (
@@ -452,8 +452,7 @@ def choose_bound(
     console.Refused when no choice stands, a probe or producer run among
     them when the protocol registers ids (its metrics would read every
     promise as unimplemented)."""
-    choice = state.measured_of(pid).answering(adopted_run(text))
-    blocker, lines = choice.explain(promises.registers_promises(text))
+    choice, blocker, lines = state.measured_of(pid).told(text)
     if blocker:
         why = [
             with_way_out(

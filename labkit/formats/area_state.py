@@ -28,8 +28,11 @@ from pathlib import Path
 
 from labkit.formats.runs import RUNS_DIR
 from labkit.formats.commands import checkout_command
+from labkit.formats import promises
+from labkit.formats.gate import GateFinding
 from labkit.formats.answering_run import (
     AnsweringRun,
+    adopted_run,
     RunFacts,
     bound_answering_run,
     bound_runs,
@@ -106,6 +109,18 @@ class Measured:
         one call of the choice; the runs' metrics are read here for the
         intent keys."""
         return bound_answering_run(self.area, self.pid, adopted, self.run_facts)
+
+    def told(self, text: str) -> tuple[AnsweringRun, GateFinding | None, list[str]]:
+        """The answering run for the protocol TEXT and its telling: the
+        choice (`answering`, the adopted run read from TEXT,
+        `answering_run.adopted_run`) and `AnsweringRun.explain` over whether
+        TEXT registers promises (`promises.registers_promises`) — (the
+        choice, the blocker or None, the lines that say what was looked
+        at). The one place finalize, intent-check, recheck, params and the
+        audit ask, so none tells it its own way."""
+        choice = self.answering(adopted_run(text))
+        blocker, lines = choice.explain(promises.registers_promises(text))
+        return choice, blocker, lines
 
     def bound(self) -> tuple[list[RunFacts], list[RunFacts]]:
         """(the completed runs bound to PID, every other present run with

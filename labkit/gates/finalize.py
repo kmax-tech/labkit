@@ -120,9 +120,6 @@ from labkit.formats.runs import (
     unreportable,
     read_run_config,
 )
-from labkit.formats.answering_run import (
-    adopted_run,
-)
 from labkit.formats.repo import (
     layout_root,
     ProtocolChoiceError,
@@ -196,8 +193,7 @@ def choose_answering_run(
             "writes a fresh id, and carry the protocol's text over",
         )
         return None
-    choice = state.measured_of(pid).answering(adopted_run(text))
-    blocker, lines = choice.explain(promises.registers_promises(text))
+    choice, blocker, lines = state.measured_of(pid).told(text)
     if choice.run_dir is None:
         assert blocker is not None, "explain() names a blocker whenever no run stands"
         looked_at = "".join(f"; {line}" for line in lines)

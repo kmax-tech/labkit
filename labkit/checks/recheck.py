@@ -33,7 +33,6 @@ from labkit.formats import (
     promises,
     protocol_block,
     runs,
-    answering_run,
 )
 from labkit.formats.area_state import state_of
 from labkit.formats.repo import file_text, path_kind
@@ -77,12 +76,7 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
         )
     if run_id is not None:
         return _named_run(runs.run_path(area, run_id), pid)
-    choice = (
-        state_of(area)
-        .measured_of(pid)
-        .answering(answering_run.adopted_run(protocol_text))
-    )
-    blocker, lines = choice.explain(promises.registers_promises(protocol_text))
+    choice, blocker, lines = state_of(area).measured_of(pid).told(protocol_text)
     if blocker or choice.run_dir is None:
         why = blocker.message if blocker else "no run answers"
         raise SystemExit(f"recheck: {why}" + "".join(f"\n  {ln}" for ln in lines))
