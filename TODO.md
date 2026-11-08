@@ -35,6 +35,8 @@ Versuchsdesign, Bewertung und Start bleiben ein eigener Forschungsauftrag. Die b
 
 ## Notiert, nicht geplant
 
+- **Audit 2026-11-08** (nach Phase 4, 573bd340; Register `docs/notes/2026-11-08-repo-audit.md`): Hauptklasse doppelte Heimaten, keine Bugs in Tests; zwei Dateistand-Lücken in den Gates (F1 `next_step.py:427` Übergabe ohne `staged`, F2 `report_hold.py:412` Lauf-Ids aus dem Baum unter `staged`); 64 Verweigerungen per `SystemExit` mit Exit 1 statt `console.Refused`/2 (H1); 43 handgebaute Repo-Pfade neben `repo.shown` (H3); `Sources` ist ein handgebauter Repo-Zustand (F5); 9 Prosa-Befunde (D1–D8, F3). Offene Punkte in der Reihenfolge der Note: 1 Dateistand F1/F2 mit Zwillingstests, 2 Prosa in einem Commit, 3 H1–H3 mechanisch, 4 Report-Pfad und Restleser auf den Zustand, 5 der Rest nach der Nutzungsrunde.
+
 Diese Punkte haben keinen Platz vor den Aufgaben 1–6. Eine Bedingung nennt, wann sie wieder geprüft werden; sie ist kein Bauauftrag. Ältere Detailbefunde sind im verlinkten Anhang erhalten und dadurch weder bestätigt noch geschlossen.
 
 ### Audit 2026-11-07 — Struktur, Drift, doppelte Heimaten
