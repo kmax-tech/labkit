@@ -14,7 +14,6 @@ conditions — the protocols first, then every report — and calls into here.
 
 from __future__ import annotations
 
-import os
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
@@ -62,6 +61,9 @@ from labkit.formats.repo import (
     text_at,
     touched_paths,
     under_root,
+    link_end,
+    linked_file,
+    state_link,
 )
 from labkit.formats.commands import (
     adopt_command,
@@ -72,60 +74,6 @@ from labkit.formats.commands import (
 )
 from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
-
-
-def state_link(
-    repo: Path,
-    path: Path,
-    *,
-    staged: bool,
-    index_links: dict[Path, str] | None = None,
-) -> str | None:
-    """The target PATH (its own path, `repo.own_path`) stores when the
-    gate's state holds it as a symbolic link — the index's when STAGED
-    (`repo.indexed_links`; INDEX_LINKS when the caller listed them
-    already), else the working tree's — None for a regular file or none.
-    The gate's one answer to "is this report a link"."""
-    if staged:
-        links = index_links if index_links is not None else indexed_links(repo)
-        return links.get(path)
-    return os.readlink(path) if path.is_symlink() else None
-
-
-def linked_file(path: Path, link_target: str) -> Path:
-    """The file a symbolic link at PATH storing LINK_TARGET points to:
-    LINK_TARGET read against PATH's directory, `..` taken by its text — as
-    a checkout of the commit resolves it."""
-    return Path(os.path.normpath(path.parent / link_target))
-
-
-def link_end(
-    repo: Path,
-    path: Path,
-    *,
-    staged: bool,
-    index_links: dict[Path, str] | None = None,
-) -> Path | None:
-    """The file a chain of symbolic links starting at PATH ends at: in the
-    tree as the system follows it; STAGED, hop by hop through the index's
-    links (INDEX_LINKS, `repo.indexed_links`) while the chain stays in REPO,
-    then as the disk holds it. None when the chain runs in a circle."""
-    if not staged:
-        try:
-            return Path(os.path.realpath(path, strict=True))
-        except FileNotFoundError:  # a dangling link: where it points
-            return Path(os.path.realpath(path))
-        except OSError:  # a circle
-            return None
-    links = index_links if index_links is not None else indexed_links(repo)
-    seen = {path}
-    file = linked_file(path, links[path]) if path in links else path
-    while file not in seen:
-        if not under_root(repo, file) or file not in links:
-            return file
-        seen.add(file)
-        file = linked_file(file, links[file])
-    return None
 
 
 def held_place(repo: Path, path: Path) -> bool:

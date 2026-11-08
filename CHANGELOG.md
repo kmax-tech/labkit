@@ -143,6 +143,9 @@ pins (`requirements.txt` / `requirements.lock`).
   `EDITABLE_REQUIREMENT`, `EDITABLE_PATH_REQUIREMENT`,
   `VERSION_REQUIREMENT`, `pip_name`, `requirement_name` and
   `requirement_lines` moved there from `repo`.
+  A symbolic link as a file state holds it — `state_link`,
+  `linked_file`, `link_end` — is read in `repo` beside `indexed_links`
+  (was in `report_hold`, which keeps the report's place rules).
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

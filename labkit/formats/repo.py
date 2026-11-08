@@ -589,6 +589,60 @@ def indexed_links(repo: Path) -> dict[Path, str]:
     return out
 
 
+def state_link(
+    repo: Path,
+    path: Path,
+    *,
+    staged: bool,
+    index_links: dict[Path, str] | None = None,
+) -> str | None:
+    """The target PATH (its own path, `repo.own_path`) stores when the
+    gate's state holds it as a symbolic link — the index's when STAGED
+    (`indexed_links`; INDEX_LINKS when the caller listed them
+    already), else the working tree's — None for a regular file or none.
+    The one answer to "is this file a link" in a file state."""
+    if staged:
+        links = index_links if index_links is not None else indexed_links(repo)
+        return links.get(path)
+    return os.readlink(path) if path.is_symlink() else None
+
+
+def linked_file(path: Path, link_target: str) -> Path:
+    """The file a symbolic link at PATH storing LINK_TARGET points to:
+    LINK_TARGET read against PATH's directory, `..` taken by its text — as
+    a checkout of the commit resolves it."""
+    return Path(os.path.normpath(path.parent / link_target))
+
+
+def link_end(
+    repo: Path,
+    path: Path,
+    *,
+    staged: bool,
+    index_links: dict[Path, str] | None = None,
+) -> Path | None:
+    """The file a chain of symbolic links starting at PATH ends at: in the
+    tree as the system follows it; STAGED, hop by hop through the index's
+    links (INDEX_LINKS, `indexed_links`) while the chain stays in REPO,
+    then as the disk holds it. None when the chain runs in a circle."""
+    if not staged:
+        try:
+            return Path(os.path.realpath(path, strict=True))
+        except FileNotFoundError:  # a dangling link: where it points
+            return Path(os.path.realpath(path))
+        except OSError:  # a circle
+            return None
+    links = index_links if index_links is not None else indexed_links(repo)
+    seen = {path}
+    file = linked_file(path, links[path]) if path in links else path
+    while file not in seen:
+        if not under_root(repo, file) or file not in links:
+            return file
+        seen.add(file)
+        file = linked_file(file, links[file])
+    return None
+
+
 def indexed_blobs(repo: Path, folder: Path) -> dict[Path, str]:
     """Index files below FOLDER and their blob ids, without decoding bytes.
 
