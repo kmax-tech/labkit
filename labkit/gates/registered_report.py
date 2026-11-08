@@ -13,10 +13,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from labkit.formats import evidence
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
-from labkit.formats.area_state import AreaState, Measured
+from labkit.formats.area_state import Measured
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -56,23 +55,19 @@ def report_owed(
     protocol: Path,
     text: str,
     declared: str | None,
-    repo: Path,
+    sources: Sources,
     *,
-    state: AreaState,
-    held: evidence.AreaEvidence,
-    staged: bool,
     review: bool = True,
     progress: bool = False,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
-    the three ways out — or None. STATE is the area's state
-    (`area_state.AreaState`, built once by the caller) and HELD its audit
-    evidence (`evidence.AreaEvidence`, read once): what it measured of
-    the protocol, and the run that answers.
+    the three ways out — or None. SOURCES is the check run's cache: the
+    repo, the file state, and the area's state (what it measured of the
+    protocol, and the run that answers) and audit evidence, built once.
 
     The head's `report` names the file (`protocol_block.report_field`,
-    relative to REPO); none registered: None. The file is read as the
-    state holds it (`repo.state_text`: the index when STAGED, else the
+    relative to the repo); none registered: None. The file is read as the
+    state holds it (`repo.state_text`: the index when staged, else the
     tree); not there: None — the obligation is on what is delivered, a
     report not yet written owes nothing, and one the commit does not carry
     is not delivered (the stop names a missing one, `agent_hooks.missing_reports`).
@@ -106,6 +101,8 @@ def report_owed(
     head = protocol_block.head(text)
     if head.report is None:
         return None
+    repo, staged = sources.repo, sources.staged
+    state = sources.held_state(protocol.parent)
     root = repo.resolve()
     report = report_file(root, head.report)
     here = Path.cwd()
@@ -130,16 +127,7 @@ def report_owed(
         b.protocol == block_owner and b.run_id == declared for b in blocks
     ):
         return (
-            registered_review(
-                report,
-                written,
-                protocol,
-                text,
-                repo,
-                staged=staged,
-                state=state,
-                held=held,
-            )
+            registered_review(report, written, protocol, text, sources)
             if review
             else None
         )
@@ -148,16 +136,7 @@ def report_owed(
         gap = handovers.block_mismatch(h, report, root, staged=staged)
         if gap is None:
             return (
-                registered_review(
-                    report,
-                    written,
-                    protocol,
-                    text,
-                    repo,
-                    staged=staged,
-                    state=state,
-                    held=held,
-                )
+                registered_review(report, written, protocol, text, sources)
                 if review
                 else None
             )
@@ -484,23 +463,14 @@ def missing_report(
 
 
 def registered_review(
-    report: Path,
-    written: str,
-    protocol: Path,
-    text: str,
-    repo: Path,
-    *,
-    staged: bool,
-    state: AreaState,
-    held: evidence.AreaEvidence,
+    report: Path, written: str, protocol: Path, text: str, sources: Sources
 ) -> GateFinding | None:
     """The report review the registered REPORT (its WRITTEN text in the
     state) of PROTOCOL (its TEXT) owes once its result or handover block
     stands (`review_gap`, with the report's discussion blocks of PROTOCOL);
     None when a review of this state names no claim. A discussion block
-    that does not read is a blocker of its own.
-    STATE and HELD are the area's state and audit evidence, read once by
-    the caller."""
+    that does not read is a blocker of its own. SOURCES is the check
+    run's cache (`review_gap`)."""
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
     try:
@@ -522,9 +492,6 @@ def registered_review(
         protocol,
         text,
         mine,
-        repo,
         f"is the report {name_p} registers",
-        staged=staged,
-        state=state,
-        held=held,
+        sources,
     )

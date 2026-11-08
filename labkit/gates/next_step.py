@@ -431,13 +431,15 @@ def _handed_over(
     registration. The step never says "nothing" while the commit holds the
     report for its review."""
     from labkit.gates.registered_report import report_owed
+    from labkit.gates.report_hold import Sources
 
     if not handovers.protocol_handed_over(area, protocol, state, staged=staged):
         return None
 
-    owed = report_owed(
-        protocol, text, None, layout_root(area), state=state, held=held, staged=staged
+    sources = Sources.blank(
+        layout_root(area), staged=staged, states={area: state}, held={area: held}
     )
+    owed = report_owed(protocol, text, None, sources)
     if owed is not None:
         return Step(
             f"{protocol.name} is handed over, and {owed.text}",

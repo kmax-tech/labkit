@@ -1,5 +1,5 @@
 """registration_hold — whether the answering run holds what its protocol's
-first measurement registered, finalize's station 1b (and the declaring
+first measurement registered, finalize's station 2 (and the declaring
 protocol station 3 withdraws first): the promise block as the first measurement recorded it
 (`registration_changes`, `check_registration`), what the number is about
 as first measured (`scope_changes`), which change a correction in place

@@ -956,10 +956,12 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
         ctx.protocol,
         ctx.text,
         ctx.declared,
-        ctx.repo,
-        state=ctx.area_state,
-        held=ctx.evidence,
-        staged=ctx.state == INDEX,
+        Sources.blank(
+            ctx.repo,
+            staged=staged,
+            states={ctx.area: ctx.area_state},
+            held={ctx.area: ctx.evidence},
+        ),
         review=review,
     )
     return [] if gap is None else [gap]
@@ -1229,34 +1231,23 @@ def hold_registered(
     held = sources.held_evidence(protocol.parent)
     changed = held.change_blockers()
     measured = state.measured_of(protocol_block.head(text).id)
-    gaps = changed + [
-        g
-        for g in (
-            (
-                report_binding_gap(protocol, text, measured=measured, unread=True)
-                if not handovers.protocol_handed_over(
-                    protocol.parent, protocol, state, staged=staged
-                )
-                else None
-            ),
-            (
-                missing_report(protocol, text, repo, measured=measured, staged=True)
-                if staged
-                else None
-            )
-            or report_owed(
-                protocol,
-                text,
-                None,
-                repo,
-                state=state,
-                held=held,
-                staged=staged,
-                progress=staged,
-            ),
-        )
-        if g is not None
-    ]
+    ended = handovers.protocol_handed_over(
+        protocol.parent, protocol, state, staged=staged
+    )
+    binding = (
+        None
+        if ended
+        else report_binding_gap(protocol, text, measured=measured, unread=True)
+    )
+    # the commit lacks the registered report while the area measured: that
+    # is the finding, and report_owed finds no file to read
+    missing = (
+        missing_report(protocol, text, repo, measured=measured, staged=True)
+        if staged
+        else None
+    )
+    owed = missing or report_owed(protocol, text, None, sources, progress=staged)
+    gaps = changed + [g for g in (binding, owed) if g is not None]
     if not gaps:
         return 0
     why = (

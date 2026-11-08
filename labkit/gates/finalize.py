@@ -21,28 +21,28 @@ each step's condition):
                     in its lineage (warning), the arm lines match (warning),
                     it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
                     (warning here, `runs.unreportable`; report-check blocks)
-  1b. registration  the answering run's promise block is the one the first
+  2. registration   the answering run's promise block is the one the first
                     measurement registered — a blocker naming every change
                     (sentences, keys, constants, scopes) and the way back;
                     first measurements that recorded different blocks, a
                     blocker (`registration_changes`, LAB-003 No run without
                     an intent paragraph)
-  2. intent-check   every registered promise has a metrics key (and vice
+  3. intent-check   every registered promise has a metrics key (and vice
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id
-  3. declared scopes  every declared promise scope unchanged since the run
-  4. open fields    protocol fields still holding a placeholder
-  5. provenance     at protocol `repeat_cost = "low"` only: the run froze its source
+  4. declared scopes  every declared promise scope unchanged since the run
+  5. open fields    protocol fields still holding a placeholder
+  6. provenance     at protocol `repeat_cost = "low"` only: the run froze its source
                     (`data=` in config.json), each source matches its recorded
                     checksum and is tracked or ignored by a rule (a directory
                     source: each visible file under it); untracked outputs warn
                     — the two of the three questions the
                     agent audit asks that a machine can answer (LAB-017 The number of audits follows the cost tier);
                     the third, the counted unit, is the protocol's `Unit` field
-  6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
+  7. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
                     its resolution check), a missing one no finding here
-  7. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
+  8. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known
@@ -67,7 +67,7 @@ each step's condition):
                     without a registered reference, and a reference changed
                     after the run, block too (`reference.comparison_gaps`);
                     `not met` is a valid outcome, a note
-  8. audit findings every finding still `open` in `audits/` (any mode), with
+  9. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
                     (LAB-015 Preflight audit before freezing). And every
@@ -536,7 +536,7 @@ def check_data_counts(
     recorded (`data_counts.counts_gap`) — a part typed by hand or left
     stale blocks, with the command that writes it again. True when they
     hold or there are none."""
-    # one copy or none: a Data / scope written twice is refused at station 4
+    # one copy or none: a Data / scope written twice is refused at station 5
     hit = named_field(text, data_counts.FIELD)
     gap = data_counts.counts_gap(protocol.parent, hit.value if hit else "", state)
     if gap is None:
@@ -831,29 +831,29 @@ def finalize_area(
        console the reason is a refusal; in a passed collector it is kept as
        a blocker, so the caller (report-check) can name it.
     1. answering run — choose the run the later steps examine
-       (`answering_run`); none bound is a blocker, and steps 1b, 3, 5 and 7
+       (`answering_run`); none bound is a blocker, and steps 2, 4, 6 and 8
        then skip.
-    1b. registration — only with a run: its promise block as the first
+    2. registration — only with a run: its promise block as the first
        measurement registered it (`registration_changes`), a blocker
        naming every change.
-    2. intent-check — always; with an answering run it reads its metrics,
+    3. intent-check — always; with an answering run it reads its metrics,
        without one it holds the promise block alone (step 1 names the run).
-    3. the run's code and the declared scopes — only with a run: the code
+    4. the run's code and the declared scopes — only with a run: the code
        that produced the number is the code here now (`check_run_code`),
        each declared scope as the run saw it (`check_declared_scopes`).
-    4. open fields — always: protocol placeholders and stamped `<…>`
+    5. open fields — always: protocol placeholders and stamped `<…>`
        placeholders left in the area's README warn; a bound field written
        twice and data counts typed by hand or stale block.
-    5. provenance — only for repeat_cost = low, and only with a run.
-    6. area tests — always.
-    7. registered outputs, criterion n, the null lane, the kept number and
+    6. provenance — only for repeat_cost = low, and only with a run.
+    7. area tests — always.
+    8. registered outputs, criterion n, the null lane, the kept number and
        the reference comparison — only with a run; an output that is not
        the file the run recorded (gone, or another sha256 than outputs.json)
        blocks, criterion n warns, a null lane that did not move blocks, a
        computation's run without its `[kept] key` as a finite number blocks, a
        registered reference the run cannot compare (the key absent or no
        finite number) blocks — a missed one is a result.
-    8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
+    9. audit findings — always: an `open` BLOCKER in `audits/` blocks.
 
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
@@ -888,18 +888,18 @@ def finalize_area(
     findings.header(f"answering run: {chosen.name}")
     answering_run = check_answering_run(findings, area, chosen, text, head.id, state)
 
-    # 1b. the registration as the first measurement recorded it — with a run
+    # 2. the registration as the first measurement recorded it — with a run
     findings.header("registration since the first measurement")
     if answering_run is None:
         findings.note(NO_RUN)
     else:
         check_registration(findings, area, chosen, head.id, answering_run, state, held)
 
-    # 2. intent-check — always
+    # 3. intent-check — always
     findings.header("intent-check")
     check_intent_keys_in_metrics(findings, chosen, text, answering_run, state)
 
-    # 3. the run's code and the declared scopes — only with a run
+    # 4. the run's code and the declared scopes — only with a run
     findings.header("the run's code and declared scopes")
     if answering_run is None:
         findings.note(NO_RUN)
@@ -909,11 +909,11 @@ def finalize_area(
         check_run_code(findings, area, answering_run, held_by)
         check_declared_scopes(findings, area, answering_run, text, held_by)
 
-    # 4. open fields — always
+    # 5. open fields — always
     findings.header(f"open fields: {chosen.name}")
     check_open_fields(findings, chosen, text, head, state)
 
-    # 5. provenance — at low repeat cost, and only with a run
+    # 6. provenance — at low repeat cost, and only with a run
     findings.header("provenance")
     if not lane(head.repeat_cost).provenance:
         findings.note(
@@ -924,11 +924,11 @@ def finalize_area(
     else:
         check_provenance(findings, area, answering_run)
 
-    # 6. area tests — always
+    # 7. area tests — always
     findings.header("area tests")
     check_area_tests(findings, area)
 
-    # 7. registered outputs, criterion n, the null lane and the reference
+    # 8. registered outputs, criterion n, the null lane and the reference
     #    comparison — only with a run
     findings.header("registered outputs")
     if answering_run is None:
@@ -944,7 +944,7 @@ def finalize_area(
         findings.header("reference comparison")
         check_reference(findings, chosen, text, head, answering_run)
 
-    # 8. audit findings — always
+    # 9. audit findings — always
     findings.header("audit findings")
     check_open_audit_findings(findings, area, state, held)
 

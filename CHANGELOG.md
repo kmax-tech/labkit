@@ -120,6 +120,11 @@ pins (`requirements.txt` / `requirements.lock`).
   `report_check.report_check` and `report_check.if_reported`, which
   only returned `.exit`, are gone: callers read
   `protocol_verdict(...).exit` and `hold_reported(...).exit`.
+  `report_hold.review_gap`, `registered_report.registered_review` and
+  `registered_report.report_owed` take the hold's `Sources` (repo, file
+  state, the area's state and evidence) in place of four parameters each
+  (`review_gap` 11 → 8); finalize's stations are numbered 0–9 (was 1b for
+  the registration).
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

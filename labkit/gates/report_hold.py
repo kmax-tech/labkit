@@ -847,11 +847,8 @@ def report_review_owed(
             protocol,
             protocol_text,
             mine,
-            sources.repo,
             f"discusses {runs_named} as not reported",
-            staged=staged,
-            state=area_state,
-            held=sources.held_evidence(protocol.parent),
+            sources,
         )
         if gap is not None:
             out.append(gap)
@@ -865,12 +862,8 @@ def review_gap(
     protocol: Path,
     protocol_text: str,
     discussed: list[report_blocks.Discussion],
-    repo: Path,
     owed_because: str,
-    *,
-    staged: bool,
-    state: AreaState,
-    held: evidence.AreaEvidence,
+    sources: Sources,
 ) -> GateFinding | None:
     """The BLOCKER of the report at PATH (REL to REPO, TEXT as the gate's
     state holds it) under PROTOCOL (its PROTOCOL_TEXT, its DISCUSSED
@@ -880,14 +873,17 @@ def review_gap(
     (`report_reviews.standing`); None when one does. OWED_BECAUSE says why the
     report owes it, for the sentence. Guaranteed: the records, their
     binding and their claim count are read exactly; whether a claim is
-    right stays the reviewer's judgement. STAGED (the pre-commit): every
-    input comes from the state the commit carries — the report and
-    protocol from the index, the audit records and reviews from HELD (the
-    index's), and the area's tree must equal the index (the runs' metrics
-    and the review's failed attempts are read from the tree), else a
-    blocker; a review counts only when the index holds its record. STATE and HELD are the area's state and audit evidence the
-    caller read once for this check run."""
+    right stays the reviewer's judgement. SOURCES is the check run's cache:
+    the repo, the file state and the area's state and audit evidence, read
+    once. Staged (the pre-commit): every input comes from the state the
+    commit carries — the report and protocol from the index, the audit
+    records and reviews from the index's evidence, and the area's tree
+    must equal the index (the runs' metrics and the review's failed
+    attempts are read from the tree), else a blocker; a review counts only
+    when the index holds its record."""
     area = protocol.parent
+    repo, staged = sources.repo, sources.staged
+    state, held = sources.held_state(area), sources.held_evidence(area)
     command = f"`{report_review_command(area, path, protocol)}`"
     if staged:
         # the review reads the area's files (runs' metrics, audit records,

@@ -104,7 +104,7 @@ def scope_file(area: Path) -> Path:
 def script_sha_of(script: Path) -> str:
     """The `script_sha` a run of SCRIPT records (`provenance.snapshot_script`):
     a fixture run that names the script it ran, so the code-since-run check
-    (finalize station 3) finds it unchanged."""
+    (finalize station 4) finds it unchanged."""
     return digests.file_digest(script)[: digests.DIGEST_CHARS]
 
 

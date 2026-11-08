@@ -1,4 +1,4 @@
-"""finalize station 5: a c<i>_n that matches no recorded input
+"""finalize station 8: a c<i>_n that matches no recorded input
 count is a warning, never a blocker."""
 
 from __future__ import annotations

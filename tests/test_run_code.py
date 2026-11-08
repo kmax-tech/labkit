@@ -359,7 +359,7 @@ class CodeSinceRun(unittest.TestCase):
 
 
 class FinalizeStation(unittest.TestCase):
-    """finalize holds the number at station 3 for every kind — a
+    """finalize holds the number at station 4 for every kind — a
     computation registers no promise id, and its code is compared all the
     same."""
 
