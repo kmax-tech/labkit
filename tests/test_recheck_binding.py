@@ -18,8 +18,8 @@ from pathlib import Path
 from protocol_fixture import run_record, head
 
 from labkit.tools import protocol_result
+from labkit.formats.area_state import state_of
 from labkit.checks import recheck
-from labkit.formats import answering_run
 from labkit.formats.digests import file_digest
 
 PID_A = "p-aaaaaaaaaaaaaaaa"
@@ -81,7 +81,7 @@ class TwoProtocols(unittest.TestCase):
     def test_the_run_bound_to_the_protocol_answers_not_the_newest(self):
         self.assertEqual(recheck.run_dir(self.area, self.a).name, RUN_A)
         self.assertEqual(
-            answering_run.bound_answering_run(self.area, PID_A, None).run_dir,
+            state_of(self.area).measured_of(PID_A).answering(None).run_dir,
             self.area / "runs" / RUN_A,
         )
 

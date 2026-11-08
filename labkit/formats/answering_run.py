@@ -65,12 +65,15 @@ class RunFacts:
             unreadable run, whose binding is unknowable.
         why: The reason it cannot answer — the RunConfigError's sentence for
             an unreadable run, the exclusion `bound_runs` gives — or None.
+        repeat_of: The run this one repeats (`repeat_of` in its record), None
+            for a run of its own or an unreadable one.
     """
 
     dir: Path
     state: RunState
     binding: ProtocolBinding
     why: str | None = None
+    repeat_of: str | None = None
 
     @property
     def metrics(self) -> Path:
@@ -84,15 +87,24 @@ def run_facts(run_dir: Path) -> RunFacts | None:
     `unreadable` with the reason in `why`: it stays in the listing the
     operator reads instead of vanishing, and it is never chosen.
     `runlog.active` asks liveness."""
-    return _facts(read_run_dir(run_dir))
+    return facts_of(read_run_dir(run_dir))
 
 
-def _facts(rd: RunDir) -> RunFacts | None:
+def facts_of(rd: RunDir) -> RunFacts | None:
+    """The `RunFacts` of the record RD: its state read from the directory
+    (liveness not asked), its binding and its repeat; None for a directory
+    without a record. The area state reads every present run's facts once
+    (`area_state.AreaState.run_facts`), and the choice runs over them."""
     if rd.error is not None:
         return RunFacts(rd.dir, UNREADABLE, ProtocolBinding(None, None), rd.error)
     if rd.config is None:
         return None
-    return RunFacts(rd.dir, run_state(rd.dir, alive=False), rd.config.protocol)
+    return RunFacts(
+        rd.dir,
+        run_state(rd.dir, alive=False),
+        rd.config.protocol,
+        repeat_of=rd.config.repeat_of,
+    )
 
 
 def repeats_of(area: Path, run_id: str) -> list[Path]:
@@ -341,9 +353,12 @@ def is_measurement(rd: RunDir) -> bool:
     )
 
 
-def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
+def bound_runs(
+    facts: Sequence[RunFacts], pid: str
+) -> tuple[list[RunFacts], list[RunFacts]]:
     """(runs bound to `pid` and completed, everything else with its `why`),
-    oldest first.
+    in FACTS' order — the facts of every present run of the area, oldest
+    first (`area_state.Measured.bound`).
 
     Only the first list may feed an automatic choice. The second carries
     the reason it was left out, for the operator who has to look. The
@@ -352,24 +367,20 @@ def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
     """
     taken: list[RunFacts] = []
     left: list[RunFacts] = []
-    for rd in run_dirs(area):
-        facts = _facts(rd)
-        if facts is None:
-            continue
-        parent = rd.config.repeat_of if rd.config is not None else None
-        bound_to = facts.binding.id
-        if facts.state != COMPLETED:
-            why = facts.why or facts.state
-        elif parent is not None:
-            why = f"a repeat of {parent} — supporting evidence, never the answer"
+    for f in facts:
+        bound_to = f.binding.id
+        if f.state != COMPLETED:
+            why = f.why or f.state
+        elif f.repeat_of is not None:
+            why = f"a repeat of {f.repeat_of} — supporting evidence, never the answer"
         elif bound_to == pid:
-            taken.append(facts)
+            taken.append(f)
             continue
         elif bound_to:
             why = f"bound to {bound_to}"
         else:
             why = "unbound (no protocol id at run time)"
-        left.append(replace(facts, why=why))
+        left.append(replace(f, why=why))
     return taken, left
 
 
@@ -650,8 +661,12 @@ def adopted_run(text: str) -> str | None:
         return None
 
 
-def bound_answering_run(area: Path, pid: str, adopted: str | None) -> AnsweringRun:
-    """The run every check holds the protocol to.
+def bound_answering_run(
+    area: Path, pid: str, adopted: str | None, facts: Sequence[RunFacts]
+) -> AnsweringRun:
+    """The run every check holds the protocol to, chosen over FACTS — the
+    facts of every present run of AREA, read once by the area state, which
+    is the one caller (`area_state.Measured.answering`).
 
     Once the protocol has adopted a run (ADOPTED, its `[result] run`), that
     run: it answers if it is a COMPLETED run bound to `pid` and no repeat,
@@ -682,7 +697,7 @@ def bound_answering_run(area: Path, pid: str, adopted: str | None) -> AnsweringR
             way_out=measure,
             step=run,
         )
-    taken, rest = bound_runs(area, pid)
+    taken, rest = bound_runs(facts, pid)
     exclusions = tuple(RunExclusion(f.dir, f.why or f.state) for f in rest)
     if adopted is not None:
         return _adopted_choice(area, pid, adopted, taken, exclusions)

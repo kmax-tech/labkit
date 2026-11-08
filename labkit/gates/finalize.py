@@ -122,7 +122,6 @@ from labkit.formats.runs import (
 )
 from labkit.formats.answering_run import (
     adopted_run,
-    bound_answering_run,
 )
 from labkit.formats.repo import (
     area_protocols,
@@ -175,7 +174,7 @@ from labkit.formats.scope_sha import SourceError
 
 
 def choose_answering_run(
-    findings: Findings, protocol: Path, pid: str | None, text: str
+    findings: Findings, protocol: Path, pid: str | None, text: str, state: AreaState
 ) -> Path | None:
     """The run every station holds PROTOCOL (its TEXT) to —
     `answering_run.bound_answering_run`, ONE choice for every station: the
@@ -190,7 +189,6 @@ def choose_answering_run(
     local time without a zone, so the name orders the runs of one machine
     only — yet on one machine a newer run left out is what choosing among
     seeds looks like."""
-    area = protocol.parent
     if pid is None:
         findings.block(
             "no stamped protocol id ([protocol] id) — no run is bound to it",
@@ -198,7 +196,7 @@ def choose_answering_run(
             "writes a fresh id, and carry the protocol's text over",
         )
         return None
-    choice = bound_answering_run(area, pid, adopted_run(text))
+    choice = state.measured_of(pid).answering(adopted_run(text))
     blocker, lines = choice.explain(_registers(text))
     if choice.run_dir is None:
         assert blocker is not None, "explain() names a blocker whenever no run stands"
@@ -268,12 +266,18 @@ def _hold_declaration(
 
 
 def check_answering_run(
-    findings: Findings, area: Path, protocol: Path, text: str, pid: str | None
+    findings: Findings,
+    area: Path,
+    protocol: Path,
+    text: str,
+    pid: str | None,
+    state: AreaState,
 ) -> Path | None:
-    """Station 1: the run every later station holds the protocol to — chosen,
-    shown, and held to the run the head declares (`[result] run`). Returns
-    it, or None."""
-    answering_run = choose_answering_run(findings, protocol, pid, text)
+    """Station 1: the run every later station holds the protocol to — chosen
+    from STATE (the area's state, `area_state.Measured.answering`), shown,
+    and held to the run the head declares (`[result] run`). Returns it, or
+    None."""
+    answering_run = choose_answering_run(findings, protocol, pid, text, state)
     _hold_declaration(findings, protocol, text, answering_run)
     if answering_run is not None:
         for warning in (
@@ -865,18 +869,18 @@ def finalize_area(
                 f"{shlex.quote(shown(chosen, Path.cwd()))} --contract` shows its fields",
             )
         return 2
+    state = _state(area, state)
+
     # 1. answering run — the run every later step examines
     findings.header(f"answering run: {chosen.name}")
-    answering_run = check_answering_run(findings, area, chosen, text, head.id)
+    answering_run = check_answering_run(findings, area, chosen, text, head.id, state)
 
     # 1b. the registration as the first measurement recorded it — with a run
     findings.header("registration since the first measurement")
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_registration(
-            findings, area, chosen, head.id, answering_run, _state(area, state)
-        )
+        check_registration(findings, area, chosen, head.id, answering_run, state)
 
     # 2. intent-check — always
     findings.header("intent-check")

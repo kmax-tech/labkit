@@ -35,6 +35,7 @@ from labkit.formats import (
     runs,
     answering_run,
 )
+from labkit.formats.area_state import state_of
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
 
@@ -75,8 +76,10 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
         )
     if run_id is not None:
         return _named_run(runs.run_path(area, run_id), pid)
-    choice = answering_run.bound_answering_run(
-        area, pid, answering_run.adopted_run(protocol_text)
+    choice = (
+        state_of(area)
+        .measured_of(pid)
+        .answering(answering_run.adopted_run(protocol_text))
     )
     blocker, lines = choice.explain(promises.registers_ids(protocol_text))
     if blocker or choice.run_dir is None:

@@ -23,6 +23,7 @@ from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
+from labkit.formats.area_state import state_of
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import prompt_blocks
 from labkit.formats import (
@@ -715,7 +716,7 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     run_id: str | None = None
     shown: RunShown | None = None
     if mode == ANALYSIS:
-        run_dir, why = audited_run(area, protocol, text)
+        run_dir, why = audited_run(state_of(area), protocol, text)
         run_id = run_dir.name if run_dir is not None else findings.NO_RUN
         shown = run_shown(area, run_dir, why, text)
     state = findings.AuditedState(

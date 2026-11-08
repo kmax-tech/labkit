@@ -30,7 +30,8 @@ from labkit.formats import (
     protocol_check,
     runs,
 )
-from labkit.formats.answering_run import adopted_run, bound_answering_run
+from labkit.formats.answering_run import adopted_run
+from labkit.formats.area_state import AreaState
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.commands import contract_command
@@ -62,15 +63,16 @@ class AuditError(RuntimeError):
 
 
 def audited_run(
-    area: Path, protocol: Path, text: str | None = None
+    state: AreaState, protocol: Path, text: str | None = None
 ) -> tuple[Path | None, str]:
     """The run an analysis audit reads and its record is bound to — the
-    answering run (`answering_run.bound_answering_run`, the one choice every gate
-    holds the protocol to) read off the protocol file (or TEXT, the
-    protocol as the caller's file state holds it), or `(None, why)`: no
-    protocol id, no completed bound run, a blocker of the choice. Raises
-    AuditError on a head it cannot read. report-check holds the record to
-    the same choice (`report_context.checked`)."""
+    answering run (`area_state.Measured.answering`, the one choice every
+    gate holds the protocol to; STATE the area's state, built once by the
+    caller) read off the protocol file (or TEXT, the protocol as the
+    caller's file state holds it), or `(None, why)`: no protocol id, no
+    completed bound run, a blocker of the choice. Raises AuditError on a
+    head it cannot read. report-check holds the record to the same choice
+    (`report_context.checked`)."""
     if text is None:
         text = protocol.read_text(encoding="utf-8")
     try:
@@ -83,7 +85,7 @@ def audited_run(
         ) from exc
     if pid is None:
         return None, "the protocol id is still a placeholder"
-    choice = bound_answering_run(area, pid, adopted_run(text))
+    choice = state.measured_of(pid).answering(adopted_run(text))
     blocker, _ = choice.explain(promises.registers_ids(text))
     if blocker or choice.run_dir is None:
         return None, blocker.text if blocker else "no completed bound run"

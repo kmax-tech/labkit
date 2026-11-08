@@ -106,8 +106,6 @@ from labkit.formats.gate import (
 )
 from labkit.formats.answering_run import (
     adopted_run,
-    bound_answering_run,
-    bound_runs,
     is_measurement,
 )
 from labkit.formats.area_state import AreaState, state_of
@@ -885,10 +883,10 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
                 max(gone), handovers.UNUSABLE, tuple(gone[r] for r in sorted(gone))
             )
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
-    choice = bound_answering_run(area, pid, adopted_run(text))
+    choice = held.answering(adopted_run(text))
     if choice.run_dir is None or not any(rd.dir == choice.run_dir for rd in measured):
         # why each measurement was left out of the choice
-        _, left = bound_runs(area, pid)
+        _, left = held.bound()
         ours = {rd.dir for rd in measured}
         why = [f"{f.dir.name}: {f.why or f.state}" for f in left if f.dir in ours]
         why += [choice.blocker] if choice.blocker else []
@@ -955,7 +953,7 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
         ctx.text,
         ctx.declared,
         ctx.repo,
-        measured=ctx.area_state.measured_of(ctx.head.id),
+        state=ctx.area_state,
         staged=ctx.state == INDEX,
         review=review,
     )
@@ -1243,7 +1241,7 @@ def hold_registered(
                 text,
                 None,
                 repo,
-                measured=measured,
+                state=state,
                 staged=staged,
                 progress=staged,
             ),

@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from protocol_fixture import head, run_record  # noqa: E402
+from labkit.formats.area_state import state_of
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
 from labkit.formats import protocol_block, repo
@@ -36,7 +37,8 @@ class Steps(unittest.TestCase):
         text = protocol.read_text(encoding="utf-8")
         found = Findings(tell=None)
         pid = protocol_block.head(text).id
-        return finalize.choose_answering_run(found, protocol, pid, text), found
+        state = state_of(protocol.parent)
+        return finalize.choose_answering_run(found, protocol, pid, text, state), found
 
     def test_the_adopted_run_is_held_though_another_is_newer_by_name(self):
         with tempfile.TemporaryDirectory() as d:

@@ -34,6 +34,7 @@ from labkit.checks.audit_binding import (
     AuditError,
     audited_run,
 )
+from labkit.formats.area_state import state_of
 from labkit.checks import report_blocks
 from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
@@ -532,7 +533,7 @@ def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
         mine = [r for r in run_ids if run_path(area, r).is_dir()]
         if not mine:
             continue
-        run, _ = audited_run(area, protocol, sources.texts[protocol])
+        run, _ = audited_run(state_of(area), protocol, sources.texts[protocol])
         if run is None or run.name not in mine:
             continue
         cfg = read_run_config(run)

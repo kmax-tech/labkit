@@ -101,7 +101,8 @@ def checked(
         text = protocol.read_text(encoding="utf-8")
     head = protocol_block.head(text)
     declared, declaration_gap = declaration(text)
-    run, why = audited_run(area, protocol, text)
+    built = area_state if area_state is not None else state_of(area)
+    run, why = audited_run(built, protocol, text)
     return Checked(
         area=area.resolve(),
         repo=layout_root(area),
@@ -113,7 +114,7 @@ def checked(
         declaration_gap=declaration_gap,
         run=run,
         why=why,
-        area_state=area_state if area_state is not None else state_of(area),
+        area_state=built,
     )
 
 

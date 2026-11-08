@@ -21,6 +21,7 @@ from pathlib import Path
 from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head, scope_file
 
 from labkit.tools import protocol_result
+from labkit.formats.area_state import state_of
 from labkit.checks import recheck
 from labkit.run import runlog, provenance
 from labkit.formats import runs, answering_run
@@ -154,7 +155,7 @@ class Repeats(unittest.TestCase):
     def test_the_primary_keeps_answering_and_rechecking(self):
         first = self._run()
         self._run(repeat_of=first)
-        choice = answering_run.bound_answering_run(self.area, PID, None)
+        choice = state_of(self.area).measured_of(PID).answering(None)
         self.assertEqual(choice.run_dir.name if choice.run_dir else None, first)
         self.assertIn("a repeat of", " ".join(e.why for e in choice.exclusions))
         self.assertEqual(
@@ -480,7 +481,7 @@ class Reseed(unittest.TestCase):
             self._recorded(second)["seed"], self._recorded(third)["seed"]
         )
         self.assertEqual(self._recorded(first), self.CFG)
-        answering, _ = answering_run.bound_runs(self.area, PID)
+        answering, _ = state_of(self.area).measured_of(PID).bound()
         self.assertEqual([f.dir.name for f in answering], [first])
 
     def test_the_seed_passed_is_replaced_and_every_other_key_held(self):

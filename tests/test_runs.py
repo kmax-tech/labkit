@@ -14,6 +14,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record  # noqa: E402
 from labkit.formats import runs, answering_run
+from labkit.formats.area_state import state_of
 
 CONFIG = run_record(experiment="r", protocol={"id": "p-" + "0" * 16, "path": None})
 
@@ -67,7 +68,7 @@ class RunDirs(unittest.TestCase):
         self._run("2026-01-01T00-00-00_aaaa", done=True)
         self._run("2026-01-01T00-00-00_bbbb", config=None)
         self._run("2026-01-01T00-00-00_cccc", config="{not json")
-        taken, left = answering_run.bound_runs(self.area, CONFIG["protocol"]["id"])
+        taken, left = state_of(self.area).measured_of(CONFIG["protocol"]["id"]).bound()
         self.assertEqual([f.dir.name[-4:] for f in taken], ["aaaa"])
         self.assertEqual(
             [(f.dir.name[-4:], f.state) for f in left], [("cccc", "unreadable")]
@@ -117,7 +118,7 @@ class TypedRecords(unittest.TestCase):
             "2026-01-01T00-00-00_bbbb",
             {**CONFIG, "protocol": {"id": None, "path": None}},
         )
-        _, left = answering_run.bound_runs(self.area, CONFIG["protocol"]["id"])
+        _, left = state_of(self.area).measured_of(CONFIG["protocol"]["id"]).bound()
         # neither is completed: the state is the reason
         self.assertEqual([f.why for f in left], ["crashed", "crashed"])
 

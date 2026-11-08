@@ -218,6 +218,9 @@ FIELD_READERS = {
     "indexed_bindings",  # run_index, the index's run id → protocol id
     "committed_runs",  # area_state, the runs git holds back
     "indexed_run_dirs",  # area_state, the runs git's index holds
+    "bound_answering_run",  # answering_run, the choice over the run facts
+    "bound_runs",  # answering_run, the completed bound runs and the rest
+    "facts_of",  # answering_run, a record's state, binding and repeat
 }
 
 

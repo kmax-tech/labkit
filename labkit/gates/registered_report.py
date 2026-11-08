@@ -15,7 +15,7 @@ from pathlib import Path
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import review_gap
-from labkit.formats.area_state import Measured, state_of
+from labkit.formats.area_state import AreaState, Measured, state_of
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -50,14 +50,15 @@ def report_owed(
     declared: str | None,
     repo: Path,
     *,
-    measured: Measured,
+    state: AreaState,
     staged: bool,
     review: bool = True,
     progress: bool = False,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
-    the three ways out — or None. MEASURED is what the area measured of
-    the protocol (`area_state.Measured`, built once by the caller).
+    the three ways out — or None. STATE is the area's state
+    (`area_state.AreaState`, built once by the caller): what it measured of
+    the protocol, and the run that answers.
 
     The head's `report` names the file (`protocol_block.report_field`,
     relative to REPO); none registered: None. The file is read as the
@@ -133,13 +134,13 @@ def report_owed(
                 else None
             )
         why.append(f"its handover block at line {h.first} {gap}")
-    run, _ = audited_run(protocol.parent.resolve(), protocol, text)
+    run, _ = audited_run(state, protocol, text)
     if (
         declared is None
         and run is None
         and not why
         and head.id is not None
-        and not measured.has_measured
+        and not state.measured_of(head.id).has_measured
     ):
         return None
     pending = None if declared is not None or run is None or why else run.name

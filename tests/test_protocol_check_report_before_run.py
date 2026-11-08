@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
+from labkit.formats.area_state import state_of
 from labkit.checks import protocol_report  # noqa: E402
 from protocol_fixture import run_record, PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
@@ -63,7 +64,11 @@ def completed_run(area: Path) -> None:
 
 
 def before_run(text: str, area: Path) -> list[tuple[int, str]]:
-    return protocol_check.written_before_run(area, text, protocol_block.head(text))
+    return protocol_check.written_before_run(
+        state_of(area).measured_of(protocol_block.head(text).id),
+        text,
+        protocol_block.head(text),
+    )
 
 
 class WrittenBeforeRun(unittest.TestCase):

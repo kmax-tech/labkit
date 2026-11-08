@@ -26,7 +26,15 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.answering_run import first_measurement_groups, is_measurement
+from labkit.formats.answering_run import (
+    AnsweringRun,
+    RunFacts,
+    bound_answering_run,
+    bound_runs,
+    facts_of,
+    first_measurement_groups,
+    is_measurement,
+)
 from labkit.formats.repo import (
     INDEX_REV,
     commit_of,
@@ -58,6 +66,7 @@ class Measured:
     measurements were first".
 
     Attributes:
+        area: The area, as the caller spelled it.
         pid: The protocol's stamped id.
         runs: Every run bound to PID — of any kind, a repeat too, finished
             or not — and every run whose record does not read (its binding
@@ -71,12 +80,31 @@ class Measured:
         first_groups: The first measurements — every run at each first
             position (`answering_run.first_measurement_groups`): a
             measurement among RUNS, no repeat, its record readable.
+        run_facts: The facts of every present run of the area — not of PID
+            alone: the choice names the runs bound elsewhere among its
+            exclusions (`AreaState.run_facts`).
     """
 
+    area: Path
     pid: str
     runs: tuple[RunDir, ...]
     lost: tuple[str, ...]
     first_groups: tuple[tuple[RunDir, ...], ...]
+    run_facts: tuple[RunFacts, ...]
+
+    def answering(self, adopted: str | None) -> AnsweringRun:
+        """The run every check holds PID to (`answering_run.bound_answering_run`
+        over RUN_FACTS): the adopted one (ADOPTED, the head's `[result] run`),
+        else the newest completed bound run that reports an intent key —
+        with why every other run is left out, or why no choice stands. The
+        one call of the choice; the runs' metrics are read here for the
+        intent keys."""
+        return bound_answering_run(self.area, self.pid, adopted, self.run_facts)
+
+    def bound(self) -> tuple[list[RunFacts], list[RunFacts]]:
+        """(the completed runs bound to PID, every other present run with
+        why it is left out) — `answering_run.bound_runs` over RUN_FACTS."""
+        return bound_runs(self.run_facts, self.pid)
 
     @property
     def has_measured(self) -> bool:
@@ -134,6 +162,9 @@ class AreaState:
         lost: Run id → protocol id of the runs only the local run index
             lists (`run_index.indexed_bindings`): deleted and never
             committed.
+        run_facts: The facts of every present run (`answering_run.facts_of`:
+            state, binding, repeat), read once — what the answering-run
+            choice runs over.
         measured: Protocol id → what the area measured of it (`Measured`),
             for every id a run or the index names; `measured_of` answers
             for any id.
@@ -146,6 +177,7 @@ class AreaState:
     deleted: tuple[RunDir, ...]
     history_unread: str
     lost: Mapping[str, str]
+    run_facts: tuple[RunFacts, ...]
     measured: Mapping[str, Measured]
 
     def measured_of(self, pid: str | None) -> Measured:
@@ -154,7 +186,14 @@ class AreaState:
         row names, and for None (a head without a stamped id)."""
         if pid is not None and pid in self.measured:
             return self.measured[pid]
-        return _measured(pid or "", [*self.runs, *self.deleted], (), self.repo)
+        return _measured(
+            self.area,
+            pid or "",
+            [*self.runs, *self.deleted],
+            (),
+            self.repo,
+            self.run_facts,
+        )
 
 
 def assemble(
@@ -174,6 +213,9 @@ def assemble(
     without files. Pure but for git's ancestry questions in the first
     measurements' order (REPO None: none asked)."""
     records = sorted([*runs, *deleted], key=lambda rd: rd.dir.name)
+    facts = tuple(
+        f for rd in sorted(runs, key=lambda rd: rd.dir.name) if (f := facts_of(rd))
+    )
     pids = sorted(
         {
             rd.config.protocol.id
@@ -184,7 +226,12 @@ def assemble(
     )
     measured = {
         pid: _measured(
-            pid, records, tuple(r for r, p in lost.items() if p == pid), repo
+            area,
+            pid,
+            records,
+            tuple(r for r, p in lost.items() if p == pid),
+            repo,
+            facts,
         )
         for pid in pids
     }
@@ -196,16 +243,22 @@ def assemble(
         deleted=tuple(sorted(deleted, key=lambda rd: rd.dir.name)),
         history_unread=history_unread,
         lost=dict(lost),
+        run_facts=facts,
         measured=measured,
     )
 
 
 def _measured(
-    pid: str, records: Sequence[RunDir], lost: tuple[str, ...], repo: Path | None
+    area: Path,
+    pid: str,
+    records: Sequence[RunDir],
+    lost: tuple[str, ...],
+    repo: Path | None,
+    facts: tuple[RunFacts, ...],
 ) -> Measured:
     """`Measured` of PID over RECORDS (present and deleted runs together):
     the runs bound to PID and the unreadable ones, the first groups among
-    them."""
+    them, FACTS of every present run for the choice."""
     ours = tuple(
         rd
         for rd in records
@@ -213,7 +266,7 @@ def _measured(
         or (rd.config is not None and rd.config.protocol.id == pid)
     )
     groups = first_measurement_groups(ours, pid, repo)
-    return Measured(pid, ours, lost, tuple(tuple(g) for g in groups))
+    return Measured(area, pid, ours, lost, tuple(tuple(g) for g in groups), facts)
 
 
 def state_of(area: Path, *, file_state: str = TREE) -> AreaState:

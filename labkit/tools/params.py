@@ -50,7 +50,8 @@ from labkit.formats.repo import (
 )
 from labkit.formats.runs import read_run_config
 from labkit.formats.scope_sha import parse_source
-from labkit.formats.answering_run import adopted_run, bound_answering_run
+from labkit.formats.answering_run import adopted_run
+from labkit.formats.area_state import state_of
 from labkit.formats.runs import lineage, model_provenance_run
 
 MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
@@ -345,7 +346,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
                 "labkit-params", f"{protocol.name} is unstamped — name a run with --run"
             )
             return 2
-        choice = bound_answering_run(area, pid, adopted_run(text))
+        choice = state_of(area).measured_of(pid).answering(adopted_run(text))
         blocker, lines = choice.explain(promises.registers_ids(text))
         if blocker or choice.run_dir is None:
             console.refuse(

@@ -26,6 +26,7 @@ from pathlib import Path
 from protocol_fixture import run_record, head
 
 from labkit.formats import console
+from labkit.formats.area_state import state_of
 from labkit.gates import finalize
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import params
@@ -190,7 +191,7 @@ class EveryArrangement(unittest.TestCase):
                 (_write(area, _name(i, one_second), k), k) for i, k in enumerate(combo)
             ]
             want = oracle(placed)
-            got = answering_run.bound_answering_run(area, PID, None)
+            got = state_of(area).measured_of(PID).answering(None)
             self.assertEqual(got.run_dir, want.run_dir)
             self.assertEqual(got.skipped_newer, want.skipped_newer)
             self.assertEqual(got.reports_intent_keys, want.reports_intent_keys)
@@ -222,9 +223,8 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     quiet = contextlib.redirect_stdout(io.StringIO())
 
-    choice = answering_run.bound_answering_run(
-        area, PID, answering_run.adopted_run(text)
-    )
+    state = state_of(area)
+    choice = state.measured_of(PID).answering(answering_run.adopted_run(text))
     blocker, _ = choice.explain(promises_registered := True)
     assert promises_registered
     out["bound_answering_run"] = (
@@ -233,7 +233,7 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
 
     found = Findings()
     with quiet:
-        got = finalize.choose_answering_run(found, protocol, PID, text)
+        got = finalize.choose_answering_run(found, protocol, PID, text, state)
     out["finalize"] = BLOCKED if found.blocked or got is None else got.name
 
     try:
@@ -255,9 +255,9 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     m = re.search(r" · run (\S+) \(", printed.getvalue())
     out["params"] = m.group(1) if m else BLOCKED
 
-    label = audit_binding.run_rows(area, *audit_binding.audited_run(area, protocol))[0][
-        0
-    ]
+    label = audit_binding.run_rows(
+        area, *audit_binding.audited_run(state_of(area), protocol)
+    )[0][0]
     out["audit"] = label.split("runs/", 1)[1] if "runs/" in label else BLOCKED
     return out
 

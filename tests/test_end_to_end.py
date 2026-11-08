@@ -32,6 +32,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.tools import report_command
+from labkit.formats.area_state import state_of
 from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import (
@@ -2213,7 +2214,7 @@ class Estimator(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id
         assert pid is not None
-        chosen = answering_run.bound_answering_run(self.area, pid, None).run_dir
+        chosen = state_of(self.area).measured_of(pid).answering(None).run_dir
         self.assertEqual(chosen.name if chosen else None, run_id)  # still the answer
 
     def _the_class_counts_reach_the_report_block_and_are_held(self) -> None:

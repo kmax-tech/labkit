@@ -38,6 +38,7 @@ import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from labkit.formats import digests
 from labkit import PACKAGE_DIR
@@ -47,6 +48,9 @@ from labkit.formats import (
     standard_contract,
     answering_run,
 )
+
+if TYPE_CHECKING:
+    from labkit.formats.area_state import Measured
 
 
 @dataclass(frozen=True)
@@ -1146,7 +1150,7 @@ _NA = re.compile(r"(?i)^n/a\b")
 
 
 def written_before_run(
-    area: Path, text: str, head: protocol_block.Head
+    measured: "Measured", text: str, head: protocol_block.Head
 ) -> list[tuple[int, str]]:
     """(line, label) of every BEFORE_RUN_CLAIMS field that is filled while
     the head declares no `[result] run` and no completed run is bound to
@@ -1173,10 +1177,7 @@ def written_before_run(
         return filled
     return (
         filled
-        if answering_run.bound_answering_run(
-            area, head.id, answering_run.adopted_run(text)
-        ).run_dir
-        is None
+        if measured.answering(answering_run.adopted_run(text)).run_dir is None
         else []
     )
 

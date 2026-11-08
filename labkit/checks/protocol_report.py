@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit.formats import runs
+from labkit.formats.area_state import state_of
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import (
@@ -718,7 +719,9 @@ def check_protocol(
             for fl in field_lines
             if BARE_REFERENCE.search(fl.value) and "](" not in fl.value
         ],
-        before_run=written_before_run(path.parent, text, head),
+        before_run=written_before_run(
+            state_of(path.parent).measured_of(head.id), text, head
+        ),
         unmentioned_constants=constants_unmentioned(path.parent, text),
     )
 

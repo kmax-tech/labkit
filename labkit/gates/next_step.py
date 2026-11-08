@@ -91,7 +91,7 @@ from labkit.formats.commands import (
     report_fields_command,
     withdraw_command,
 )
-from labkit.formats.area_state import INDEX, TREE, Measured, state_of
+from labkit.formats.area_state import INDEX, TREE, AreaState, Measured, state_of
 from labkit.gates.undecided import undecided_state
 
 if TYPE_CHECKING:
@@ -162,7 +162,7 @@ def next_step(
     measured = area_state.measured_of(protocol_block.head(text).id)
     hint = _report_hint(protocol, text, measured)
     before = _before_the_chain(
-        area, protocol, text, report, hint, measured, staged=staged
+        area, protocol, text, report, hint, area_state, staged=staged
     )
     if before is not None:
         return before
@@ -319,19 +319,19 @@ def _before_the_chain(
     text: str,
     report: protocol_check.FieldReport,
     hint: str,
-    measured: Measured,
+    area_state: AreaState,
     *,
     staged: bool,
 ) -> Step | None:
     """The steps before report-check's chain, the first that applies: a
     MUST field unfilled (`_field_step`), committed evidence changed against
-    HEAD (`_restore_step`), a current handover (`_handed_over`, MEASURED
-    what the area measured of the protocol). None when none applies."""
+    HEAD (`_restore_step`), a current handover (`_handed_over`, AREA_STATE
+    the area's state built once). None when none applies."""
     return (
         _field_step(protocol, report, hint)
         or _staged_area_step(area, text, staged=staged)
         or _restore_step(area, staged=staged)
-        or _handed_over(area, protocol, text, measured, staged=staged)
+        or _handed_over(area, protocol, text, area_state, staged=staged)
     )
 
 
@@ -419,7 +419,7 @@ def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
 
 
 def _handed_over(
-    area: Path, protocol: Path, text: str, measured: Measured, *, staged: bool
+    area: Path, protocol: Path, text: str, state: AreaState, *, staged: bool
 ) -> Step | None:
     """The step of a PROTOCOL (its TEXT) a current handover ended
     (`handovers.protocol_handed_over`), else None: the review its
@@ -433,7 +433,7 @@ def _handed_over(
         return None
 
     owed = report_owed(
-        protocol, text, None, layout_root(area), measured=measured, staged=staged
+        protocol, text, None, layout_root(area), state=state, staged=staged
     )
     if owed is not None:
         return Step(

@@ -20,8 +20,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
+from labkit.formats.area_state import state_of
 from labkit.run import runlog, runlog_command  # noqa: E402
-from labkit.formats import runs, answering_run  # noqa: E402
+from labkit.formats import runs  # noqa: E402
 from protocol_fixture import run_record, PID, head  # noqa: E402
 
 OLD = "2026-10-06T10-00-00_aaaa"
@@ -97,7 +98,7 @@ class BrokenConfig(unittest.TestCase):
         self.assertIn(NEW, out)
 
     def test_intent_check_lists_it_and_never_chooses_it(self):
-        taken, left = answering_run.bound_runs(self.area, PID)
+        taken, left = state_of(self.area).measured_of(PID).bound()
         self.assertEqual([f.dir.name for f in taken], [OLD])
         self.assertEqual(left[0].state, "unreadable")
         self.assertIn("unreadable run metadata", (left[0].why or ""))
