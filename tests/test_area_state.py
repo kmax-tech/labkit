@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from protocol_fixture import PID, completed_run, head, run_record, scope_file
 
@@ -192,6 +192,41 @@ class OneStateBuildPerCheckRun(_Repository):
         self.assertEqual(
             self._builds(lambda: next_step.next_step(self.area, self.proto)), 1
         )
+
+
+class OneRuleForAReportsPlace(unittest.TestCase):
+    """Where a report may stand is one rule (`repo.report_place_problem`):
+    the head's `report` field, the gates' held places and the former
+    registrations read it — the third audit's H6, where `SKIP_DIRS` was
+    tested in two of five places."""
+
+    def test_the_head_refuses_a_report_under_a_skipped_directory(self):
+        from labkit.formats import protocol_block, repo
+
+        self.assertIsNone(repo.report_place_problem(PurePosixPath("REPORT.md")))
+        for value, words in [
+            ("data/REPORT.md", "no gate holds a report"),
+            ("runs/REPORT.md", "no gate holds a report"),
+            ("PROTOCOL-x.md", "a protocol is no report"),
+            ("REPORT.txt", "a Markdown file"),
+        ]:
+            with self.subTest(value=value):
+                with self.assertRaises(protocol_block.BlockError) as cm:
+                    protocol_block.report_field(value)
+                self.assertIn(words, str(cm.exception))
+        self.assertEqual(
+            protocol_block.report_field("notes/REPORT.md"), "notes/REPORT.md"
+        )
+
+    def test_the_gate_holds_the_same_places(self):
+        from labkit.gates import report_hold
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.assertTrue(report_hold.held_place(root, root / "REPORT.md"))
+            self.assertFalse(report_hold.held_place(root, root / "data" / "REPORT.md"))
+            self.assertFalse(report_hold.held_place(root, root / "PROTOCOL-x.md"))
+            self.assertFalse(report_hold.held_place(root, root.parent / "REPORT.md"))
 
 
 class ARunOnlyTheIndexKnows(unittest.TestCase):

@@ -18,7 +18,7 @@ import os
 import shlex
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_dirs, run_path
@@ -42,6 +42,7 @@ from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
     REPORT_SUFFIX,
+    report_place,
     git_root,
     under_root,
     indexed_files,
@@ -52,7 +53,6 @@ from labkit.formats.repo import (
     protocol_links,
     PROTOCOL_NAME,
     repo_protocols,
-    SKIP_DIRS,
     shown,
     state_text,
     status_entries,
@@ -133,11 +133,10 @@ def link_end(
 def held_place(repo: Path, path: Path) -> bool:
     """Is PATH a place the gate holds a report at: inside REPO, a Markdown
     file, no protocol, under none of SKIP_DIRS (`runs/`, `data/`, …)?"""
-    if path.suffix != REPORT_SUFFIX or PROTOCOL_NAME.match(path.name):
-        return False
     if not under_root(repo, path):
         return False
-    return not SKIP_DIRS & set(path.relative_to(repo.resolve()).parts)
+    rel = own_path(path).relative_to(repo.resolve())
+    return report_place(PurePosixPath(rel.as_posix()))
 
 
 def refused_link(repo: Path, path: Path, *, staged: bool) -> str | None:
@@ -263,12 +262,8 @@ def report_files(
     out: list[tuple[Path, str]] = []
     for path in paths:
         full = own_path(path if path.is_absolute() else root / path)
-        if full.suffix != REPORT_SUFFIX or PROTOCOL_NAME.match(full.name):
-            continue
-        if not under_root(root, full):
-            continue  # outside the repo: no commit and no stop holds it
-        if SKIP_DIRS & set(full.relative_to(root).parts):
-            continue
+        if not held_place(root, full):
+            continue  # outside the repo, or no place a report stands at
         _, text = report_entry(repo, full, staged=staged, index_links=links)
         if text is not None and report_blocks.cited_run_ids(text):
             out.append((full, text))

@@ -37,6 +37,8 @@ from labkit.formats.answering_run import (
 )
 from labkit.formats.repo import (
     INDEX_REV,
+    area_protocols,
+    indexed_protocols,
     commit_of,
     files_at,
     git_root,
@@ -146,6 +148,9 @@ class AreaState:
         repo: The repository the area lies in (`repo.git_root`), None
             outside one.
         file_state: TREE, INDEX or PROPOSED.
+        protocols: The area's protocol files as the file state holds them
+            (`repo.area_protocols`; the index's under INDEX), sorted — a
+            list, never a first hit: the caller chooses.
         runs: Every run directory the file state holds (`runs.run_dirs`,
             the index's `runs/<id>/config.json` entries under INDEX),
             oldest first by name, each record read once.
@@ -175,6 +180,7 @@ class AreaState:
     area: Path
     repo: Path | None
     file_state: str
+    protocols: tuple[Path, ...]
     runs: tuple[RunDir, ...]
     deleted: tuple[RunDir, ...]
     history_unread: str
@@ -206,11 +212,13 @@ def assemble(
     deleted: Sequence[RunDir],
     lost: Mapping[str, str],
     history_unread: str = "",
+    protocols: Sequence[Path] = (),
 ) -> AreaState:
     """The `AreaState` of AREA from what its readers found — RUNS the file
     state holds, DELETED the runs git holds back (HISTORY_UNREAD git's words
     when they could not be listed), LOST the index-only run ids with their
-    protocol ids —, every derived field computed here once:
+    protocol ids, PROTOCOLS the area's protocol files —, every derived
+    field computed here once:
     the one assembly for `state_of` and for a test that builds a state
     without files. Pure but for git's ancestry questions in the first
     measurements' order (REPO None: none asked)."""
@@ -241,6 +249,7 @@ def assemble(
         area=area,
         repo=repo,
         file_state=file_state,
+        protocols=tuple(protocols),
         runs=tuple(sorted(runs, key=lambda rd: rd.dir.name)),
         deleted=tuple(sorted(deleted, key=lambda rd: rd.dir.name)),
         history_unread=history_unread,
@@ -284,8 +293,12 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
         if repo is None:
             raise ValueError(f"{area}: the index of no repository cannot be read")
         runs = indexed_run_dirs(repo, area)
+        protocols = sorted(
+            p for p in indexed_protocols(repo) if p.parent == area.resolve()
+        )
     else:
         runs = run_dirs(area)
+        protocols = area_protocols(area)
     held = {rd.dir.name for rd in runs}
     deleted: list[RunDir] = []
     unread = ""
@@ -296,7 +309,7 @@ def state_of(area: Path, *, file_state: str = TREE) -> AreaState:
             unread = str(exc)
     gone = held | {rd.dir.name for rd in deleted}
     lost = {r: p for r, p in indexed_bindings(area).items() if r not in gone}
-    return assemble(area, repo, file_state, runs, deleted, lost, unread)
+    return assemble(area, repo, file_state, runs, deleted, lost, unread, protocols)
 
 
 def index_names_gone_runs(area: Path) -> bool:

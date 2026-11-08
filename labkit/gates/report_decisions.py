@@ -32,7 +32,7 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.formats.protocol_check import conclusion_written
-from labkit.formats.repo import area_protocols, shown
+from labkit.formats.repo import shown
 from labkit.formats.commands import audit_command, decide_command
 from labkit.gates.report_context import Checked
 
@@ -272,7 +272,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         ]
     # the follow-up refuses an area with several protocols (`audit_prompt.earlier_of`):
     # no step there may name it
-    several = len(area_protocols(ctx.area)) > 1
+    several = len(ctx.area_state.protocols) > 1
     out = [
         blocker(
             f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",

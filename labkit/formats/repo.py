@@ -22,7 +22,7 @@ import subprocess
 import tempfile
 from collections.abc import Mapping
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from labkit.formats import console
 
@@ -322,6 +322,30 @@ def indexed_protocols(repo: Path) -> list[Path]:
 #: a handover may write: exactly `.md`, so a handover never writes where
 #: report-check would not look
 REPORT_SUFFIX = ".md"
+
+
+def report_place_problem(rel: PurePosixPath) -> str | None:
+    """Why REL, a path relative to the repository root, is no place a
+    report may stand — or None when it is: a protocol file is no report, a
+    file that is not Markdown (REPORT_SUFFIX) takes no result or handover
+    block, and under one of SKIP_DIRS (`runs/`, `data/`, …) no gate holds a
+    report. The one rule for the head's `report` field
+    (`protocol_block.report_field`), the gates' held places
+    (`report_hold.held_place`, `report_files`) and the reports a former
+    registration named (`registered_report.formerly_registering`)."""
+    if PROTOCOL_NAME.match(rel.name):
+        return "a protocol is no report; the report is the file that carries this protocol's result block"
+    if rel.suffix != REPORT_SUFFIX:
+        return f"a Markdown file ({REPORT_SUFFIX}); only such a file takes a result or a handover block"
+    if SKIP_DIRS & set(rel.parts):
+        return f"a place no gate holds a report at: under {', '.join(sorted(SKIP_DIRS & set(rel.parts)))}/"
+    return None
+
+
+def report_place(rel: PurePosixPath) -> bool:
+    """Is REL (relative to the repository root) a place a report may stand
+    (`report_place_problem` None)?"""
+    return report_place_problem(rel) is None
 
 
 def protocol_link(path: Path, state: str) -> str:

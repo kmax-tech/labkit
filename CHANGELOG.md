@@ -47,6 +47,15 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **A registered report under `runs/`, `data/` or another skipped
+  directory is refused in the head.** Where a report may stand is one rule
+  (`repo.report_place_problem`: a Markdown file, no protocol, under none of
+  `repo.SKIP_DIRS`), read by the head's `report` field, the gates' held
+  places and the former registrations alike; before, the head accepted
+  `report = "data/REPORT.md"` while no gate ever held a report there. A
+  protocol registering such a path moves the report (`protocol-fill
+  <PROTOCOL> report=REPORT.md --force` before the first measurement).
+
 - **`llm._find_models_toml` is gone.** Deprecated in 0.108.0 (released),
   which named this removal; call `llm.find_models_toml`. A lab's stamped
   `test-shared-helpers` from before 0.108.0 calls the old name and fails:

@@ -39,10 +39,9 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats.repo import (
     area_protocols,
-    PROTOCOL_NAME,
-    REPORT_SUFFIX,
     git_root,
     repo_protocols,
+    report_place_problem,
 )
 from labkit.formats.runs import REPEAT_COSTS, RUN_ID
 
@@ -1039,16 +1038,9 @@ def report_field(value: object) -> str | None:
             f"[protocol] report = {value!r} — a path inside the repository, "
             f"relative to its root"
         )
-    if PROTOCOL_NAME.match(clean.name):
-        raise BlockError(
-            f"[protocol] report = {value!r} — a protocol is no report; the "
-            f"report is the file that carries this protocol's result block"
-        )
-    if clean.suffix != REPORT_SUFFIX:
-        raise BlockError(
-            f"[protocol] report = {value!r} — a Markdown file ({REPORT_SUFFIX}); "
-            f"only such a file takes a result or a handover block"
-        )
+    problem = report_place_problem(clean)
+    if problem is not None:
+        raise BlockError(f"[protocol] report = {value!r} — {problem}")
     return clean.as_posix()
 
 

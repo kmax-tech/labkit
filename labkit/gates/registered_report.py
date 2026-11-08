@@ -11,7 +11,7 @@ hold and name these. Reports outside the protocol: `report_hold`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import review_gap
@@ -27,11 +27,10 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks import report_blocks
 from labkit.formats.repo import (
-    REPORT_SUFFIX,
+    report_place,
     git_root,
     indexed_protocols,
     own_path,
-    PROTOCOL_NAME,
     repo_protocols,
     shown,
     state_text,
@@ -357,7 +356,7 @@ def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list
     candidates = {
         own_path(p if p.is_absolute() else root / p)
         for p in paths
-        if p.suffix == REPORT_SUFFIX and not PROTOCOL_NAME.match(p.name)
+        if report_place(PurePosixPath(p.name))
     }
     gitroot = git_root(root)
     if not candidates or gitroot is None:
