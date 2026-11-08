@@ -843,7 +843,12 @@ def chain_gaps(
         out += report_findings(ctx, review=review)
     if review and ctx.state != PROPOSED:
         out += discussion_review_findings(
-            ctx.protocol, ctx.text, ctx.repo, staged=ctx.state == INDEX
+            ctx.protocol,
+            ctx.text,
+            ctx.repo,
+            staged=ctx.state == INDEX,
+            state=ctx.area_state,
+            held=ctx.evidence,
         )
     return ReleaseChain(out, held_by)
 
@@ -1072,7 +1077,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     sources = (
         repo_sources(repo, staged=staged)
         if reports
-        else Sources(repo.resolve(), set(), {}, {}, {}, staged)
+        else Sources.blank(repo, staged=staged)
     )
     for p in [
         *registering_protocols(paths, repo, staged=staged),
@@ -1134,6 +1139,8 @@ def hold_reported(
     reached = reached_reports(protocols, reports, repo, staged=staged)
     held = {p for p, _ in reports} | {p for p, _, _ in reached}
     reached += discussing_reports(paths, held, repo, staged=staged)
+    # touched.sources is blank when no report is among PATHS (`reached_by`);
+    # the reports reached then need every protocol's citations read
     sources = (
         repo_sources(repo, staged=staged)
         if reached and not reports
@@ -1145,33 +1152,22 @@ def hold_reported(
     worst = 0
     chains: dict[Path, ReleaseChain] = {}
     for protocol in protocols:
-        released = hold_declared(
-            protocol, repo, staged=staged, tell=tell, sources=sources
-        )
+        released = hold_declared(protocol, repo, sources, tell=tell)
         worst = max(worst, released.exit)
         if released.chain is not None:
             chains[protocol] = released.chain
     for path, text in reports:
-        worst = max(
-            worst, hold_report(path, text, repo, sources, staged=staged, tell=tell)
-        )
+        worst = max(worst, hold_report(path, text, repo, sources, tell=tell))
     for path, text, held_as in reached:
         worst = max(
             worst,
-            hold_report(
-                path, text, repo, sources, held_as=held_as, staged=staged, tell=tell
-            ),
+            hold_report(path, text, repo, sources, held_as=held_as, tell=tell),
         )
     return HoldVerdict(worst, chains)
 
 
 def hold_declared(
-    protocol: Path,
-    repo: Path,
-    *,
-    staged: bool,
-    tell: Tell = print,
-    sources: Sources | None = None,
+    protocol: Path, repo: Path, sources: Sources, *, tell: Tell = print
 ) -> ProtocolVerdict:
     """`report-check` on PROTOCOL when its head declares a result, as the
     state holds it (the index when STAGED); for an exploration only its
@@ -1179,10 +1175,10 @@ def hold_declared(
     protocol the commit does not hold, 2 for one that cannot be read or is
     a symbolic link in that state (`repo.protocol_links`). Every line goes
     through TELL, a refusal to stderr. The chain is the declared branch's
-    (`protocol_verdict`), None on every other. SOURCES, when the hold of
-    several paths built them, carry the area's state and evidence the
-    chain reads too (`Sources.held_state`): one build per area and check
-    run."""
+    (`protocol_verdict`), None on every other. SOURCES carry the file
+    state (`Sources.staged`) and the area's state and evidence the chain
+    reads too (`Sources.held_state`): one build per area and check run."""
+    staged = sources.staged
     link = protocol_links(repo, [protocol], staged=staged)
     if link:
         console.refuse("report-check", link[protocol])
@@ -1203,9 +1199,7 @@ def hold_declared(
         # delivered, is owed the handover or the result all the same
         try:
             return ProtocolVerdict(
-                hold_registered(
-                    protocol, text, repo, staged=staged, tell=tell, sources=sources
-                ),
+                hold_registered(protocol, text, repo, sources, tell=tell),
                 None,
             )
         except protocol_block.BlockError as exc:  # a refusal, never a traceback
@@ -1228,19 +1222,13 @@ def hold_declared(
         state=INDEX if staged else TREE,
         text=text,
         tell=tell,
-        area_state=sources.held_state(area) if sources is not None else None,
-        area_evidence=sources.held_evidence(area) if sources is not None else None,
+        area_state=sources.held_state(area),
+        area_evidence=sources.held_evidence(area),
     )
 
 
 def hold_registered(
-    protocol: Path,
-    text: str,
-    repo: Path,
-    *,
-    staged: bool,
-    tell: Tell = print,
-    sources: Sources | None = None,
+    protocol: Path, text: str, repo: Path, sources: Sources, *, tell: Tell = print
 ) -> int:
     """The registered report's obligation of PROTOCOL, a protocol that
     declares no result (`registered_report.report_owed` with no declared run):
@@ -1253,12 +1241,9 @@ def hold_registered(
     A current handover ends the report-path obligation without releasing
     a result; the report it delivers still owes its review. Raises `protocol_block.BlockError` on a head that does not read — the
     caller read the declaration off the same text first."""
-    if sources is not None:
-        state = sources.held_state(protocol.parent)
-        held = sources.held_evidence(protocol.parent)
-    else:
-        state = state_of(protocol.parent, file_state=INDEX if staged else TREE)
-        held = evidence.read_evidence(protocol.parent, staged=staged)
+    staged = sources.staged
+    state = sources.held_state(protocol.parent)
+    held = sources.held_evidence(protocol.parent)
     changed = held.change_blockers()
     measured = state.measured_of(protocol_block.head(text).id)
     gaps = changed + [

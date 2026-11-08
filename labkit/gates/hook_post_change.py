@@ -228,7 +228,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
         for p in protocols
         if p.is_file() and not p.is_symlink()
     }
-    sources = report_hold.Sources(root, set(), texts, {}, {})
+    sources = report_hold.Sources.blank(root, staged=False, texts=texts)
     rel = rel_posix(path, root)
     gaps = report_hold.report_review_owed(path, rel, text, discussed, sources)
     return "; ".join(g.message for g in gaps) or None

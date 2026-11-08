@@ -791,8 +791,16 @@ class DiscussingReport(unittest.TestCase):
         )
         assert text is not None
         with contextlib.chdir(self.lab.root):
+            area = self.protocol.parent
             found = report_hold.discussion_review_findings(
-                self.protocol, text, self.lab.root, staged=staged
+                self.protocol,
+                text,
+                self.lab.root,
+                staged=staged,
+                state=state_of(
+                    area, file_state=area_state.INDEX if staged else area_state.TREE
+                ),
+                held=read_evidence(area, staged=staged),
             )
         self.assertEqual(len(found), 1, found)
         return found[0]
@@ -877,6 +885,8 @@ class DiscussingReport(unittest.TestCase):
                 self.protocol.read_text(encoding="utf-8"),
                 self.lab.root,
                 staged=False,
+                state=state_of(self.protocol.parent),
+                held=read_evidence(self.protocol.parent, staged=False),
             )
         self.assertEqual(found, [])
         step = self.step()

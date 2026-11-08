@@ -47,6 +47,19 @@ pins (`requirements.txt` / `requirements.lock`).
   fresh clone. `labkit-init --change-kind` refuses on a measurement of the
   area's protocol, no longer on any directory under `runs/`.
 
+- **The per-hold cache has one form and one file state.**
+  `report_hold.Sources.blank(repo, *, staged, texts=, states=, held=)` is
+  the constructor for a hold that checks no report's citations (four hand
+  builds gone); the file state a hold judges is `Sources.staged` alone —
+  `hold_report` and `report_review_owed` lost their `staged` flag,
+  `hold_declared(protocol, repo, sources, *, tell)` and
+  `hold_registered(protocol, text, repo, sources, *, tell)` take the
+  sources, their fallback builds are gone.
+  `discussion_review_findings(…, state=, held=)` seeds one cache with the
+  chain's state and evidence for every report that discusses the
+  protocol: the chain with its review on builds the area's state once
+  (held by test).
+
 - **`area_state.Measured.told(text)`** is the answering run with its
   telling — the choice, `AnsweringRun.explain` over
   `promises.registers_promises`, the lines — the one place finalize,

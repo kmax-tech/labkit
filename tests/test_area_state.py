@@ -185,6 +185,41 @@ class OneStateBuildPerCheckRun(_Repository):
 
         self.assertEqual(self._builds(chain), 1)
 
+    def test_the_chain_with_its_review_builds_the_state_once(self):
+        """The chain with the discussion reviews on: a report discussing a
+        run of the protocol reads the chain's state and evidence
+        (`discussion_review_findings`), no build of its own (the audit of
+        2026-11-08, round 2, C3)."""
+        from unittest import mock
+
+        from labkit.checks import report_blocks
+        from labkit.formats import evidence
+
+        self._run(RUN)
+        (self.root / "REPORT.md").write_text(
+            report_blocks.with_discussion(
+                "# Report\n",
+                f"experiments/01-x/{self.proto.name}",
+                RUN,
+                "a probe of the setup, not the answer",
+            ),
+            encoding="utf-8",
+        )
+        reads: list[int] = []
+        real = evidence.read_evidence
+
+        def counting(*args, **kwargs):
+            reads.append(1)
+            return real(*args, **kwargs)
+
+        def chain() -> None:
+            ctx = report_check.checked(self.area, self.proto)
+            report_check.chain_gaps(ctx, undeclared=True, review=True)
+
+        with mock.patch.object(evidence, "read_evidence", counting):
+            builds = self._builds(chain)
+        self.assertEqual((builds, len(reads)), (1, 1))
+
     def test_next_step_builds_the_state_once(self):
         from labkit.gates import next_step
 

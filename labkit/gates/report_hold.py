@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import shlex
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
@@ -378,12 +378,21 @@ def reports_citing(run_id: str, repo: Path) -> list[Path]:
 
 @dataclass(frozen=True)
 class Sources:
-    """What the repo holds for a report to cite, as the file state holds it
-    (STAGED: the index, what the commit carries; else the tree): the repo's
-    root (REPO, resolved), every run directory's id (KNOWN), and per
-    protocol its text (TEXTS) and the run its head declares (DECLARED: None
-    for none; a head that does not read is in UNREADABLE with the reason
-    instead)."""
+    """What the repo holds for a report to cite, as one file state holds it
+    (STAGED: the index, what the commit carries; else the tree), and the
+    cache of one check run: the repo's root (REPO, resolved), every run
+    directory's id (KNOWN), per protocol its text (TEXTS) and the run its
+    head declares (DECLARED: None for none; a head that does not read is in
+    UNREADABLE with the reason instead); `held_state` and `held_evidence`
+    build each area's state and audit evidence once, in STAGED's file state.
+
+    Two forms, named by their constructors: `repo_sources` reads every
+    protocol of the repo (KNOWN through `area_state.present_run_dirs`, the
+    reader `held_state`'s runs come from too, so the two agree); `blank`
+    carries the file state, the texts given and the cache alone — KNOWN,
+    DECLARED and UNREADABLE empty — for a hold that checks no report's
+    citations. The file state a hold judges is STAGED here, never a second
+    flag beside it."""
 
     repo: Path
     known: set[str]
@@ -401,6 +410,25 @@ class Sources:
     def declaring(self, run_id: str) -> list[Path]:
         """The protocols declaring RUN_ID as their result."""
         return [p for p, r in self.declared.items() if r == run_id]
+
+    @classmethod
+    def blank(
+        cls,
+        repo: Path,
+        *,
+        staged: bool,
+        texts: Mapping[Path, str] | None = None,
+        states: Mapping[Path, AreaState] | None = None,
+        held: Mapping[Path, evidence.AreaEvidence] | None = None,
+    ) -> "Sources":
+        """Sources of REPO in STAGED's file state with TEXTS and an empty
+        KNOWN, DECLARED and UNREADABLE; STATES and HELD, by area, are the
+        states and evidence a caller built already for this check run — the
+        cache's from the start, so nothing is read twice."""
+        out = cls(repo.resolve(), set(), dict(texts or {}), {}, {}, staged)
+        out._states.update({a.resolve(): s for a, s in (states or {}).items()})
+        out._evidence.update({a.resolve(): e for a, e in (held or {}).items()})
+        return out
 
     def held_state(self, area: Path) -> AreaState:
         """AREA's state as the sources' file state holds it
@@ -428,7 +456,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
     (`area_state.present_run_dirs`); the areas' states build lazily, for
     the areas a report touches (`held_state`)."""
     protocols = protocols_in(repo, staged=staged)
-    out = Sources(repo.resolve(), set(), {}, {}, {}, staged)
+    out = Sources.blank(repo, staged=staged)
     out.unreadable.update(protocol_links(repo, protocols, staged=staged))
     file_state = INDEX if staged else TREE
     for p in protocols:
@@ -578,7 +606,6 @@ def hold_report(
     sources: Sources,
     *,
     held_as: str = AMONG_PATHS,
-    staged: bool = False,
     tell: Callable[[str], None] = print,
 ) -> int:
     """Hold one report, every line through TELL.
@@ -602,6 +629,7 @@ def hold_report(
     the commit carries its evidence). PATH is the report's own path
     (`repo.own_path`). HELD_AS says in the heading why this report is held.
     0 clean or warnings only, 1 a blocker."""
+    staged = sources.staged
     rel = rel_posix(path, repo)
     tell(f"═══ report-check {rel} ({held_as}) ═══")
     out = Findings(tell)
@@ -636,7 +664,7 @@ def hold_report(
     out.take_all(at_report(owed_blocks(path, text, found, sources)))
     out.take_all(at_report(report_blocks.discussion_gaps(discussed)))
     out.take_all(at_report(discussion_sources(path, discussed, sources)))
-    out.take_all(report_review_owed(path, rel, text, discussed, sources, staged=staged))
+    out.take_all(report_review_owed(path, rel, text, discussed, sources))
     report_hints(out, rel, text, discussed)
     for line in replacement_hints(path, rel, text, repo, sources):
         out.warn(line, evidence_kind=STATIC_EVIDENCE)
@@ -783,8 +811,6 @@ def report_review_owed(
     text: str,
     discussed: list[report_blocks.Discussion],
     sources: Sources,
-    *,
-    staged: bool = False,
 ) -> list[GateFinding]:
     """The report review the report at PATH (REL to the repo, TEXT as the
     gate's state holds it) owes for its discussion blocks (DISCUSSED): per
@@ -794,6 +820,7 @@ def report_review_owed(
     report once the result or handover block stands (`report_owed`), and
     one blocker per protocol is enough. A discussion whose protocol or run
     is missing owes none here (`discussion_sources` names it)."""
+    staged = sources.staged
     out: list[GateFinding] = []
     by_protocol: dict[Path, list[report_blocks.Discussion]] = {}
     for d in discussed:
@@ -1156,7 +1183,13 @@ def review_fingerprint(pieces: list[tuple[str, str]]) -> tuple[str, dict[str, st
 
 
 def discussion_review_findings(
-    protocol: Path, text: str, repo: Path, *, staged: bool
+    protocol: Path,
+    text: str,
+    repo: Path,
+    *,
+    staged: bool,
+    state: AreaState,
+    held: evidence.AreaEvidence,
 ) -> list[GateFinding]:
     """The report reviews the reports of REPO owe for discussing a run of
     PROTOCOL (its TEXT as the state holds it): the findings `hold_report`
@@ -1167,9 +1200,18 @@ def discussion_review_findings(
     function for both. Only the discussion blocks naming PROTOCOL count; a
     report whose blocks do not read is left to its own hold (`hold_report`
     names the block). STAGED: the index's files and texts, [] outside a
-    repository. Raises RuntimeError when git fails on the index."""
+    repository. STATE and HELD are the area's state and evidence the chain
+    built once; every report's hold reads them (`Sources.blank`). Raises
+    RuntimeError when git fails on the index."""
     root = repo.resolve()
     target = protocol.resolve()
+    sources = Sources.blank(
+        root,
+        staged=staged,
+        texts={target: text},
+        states={target.parent: state},
+        held={target.parent: held},
+    )
     out: list[GateFinding] = []
     for full, report_text, found in discussing_candidates(repo, staged=staged):
         if found is None:
@@ -1177,9 +1219,8 @@ def discussion_review_findings(
         mine = [d for d in found if (full.parent / d.protocol).resolve() == target]
         if not mine:
             continue
-        sources = Sources(root, set(), {target: text}, {}, {}, staged)
         rel = rel_posix(full, root)
-        out += report_review_owed(full, rel, report_text, mine, sources, staged=staged)
+        out += report_review_owed(full, rel, report_text, mine, sources)
     return out
 
 
