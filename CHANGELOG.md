@@ -146,6 +146,10 @@ pins (`requirements.txt` / `requirements.lock`).
   A symbolic link as a file state holds it — `state_link`,
   `linked_file`, `link_end` — is read in `repo` beside `indexed_links`
   (was in `report_hold`, which keeps the report's place rules).
+  An area's number has its own module, `labkit.tools.area_numbers`
+  (`next_experiment_number`, `areas_elsewhere`, `shared_numbers`,
+  `number_check` and their helpers, from `scaffold`, which stamps with
+  them).
 
 - **Homes after the audit of 2026-11-08.** The grade names `BLOCKER`,
   `WARNING`, `NOTE` live in `gate` alone (`findings.GRADES` and

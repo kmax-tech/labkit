@@ -16,6 +16,7 @@ from unittest import mock
 
 from labkit.checks import readme_check
 from labkit.gates import next_step
+from labkit.tools import area_numbers
 from labkit.tools import protocol_cuts, protocol_edit, scaffold
 from labkit.formats import (
     console,
@@ -2124,10 +2125,10 @@ class AreaNumbers(unittest.TestCase):
             "_archiv/.gitkeep",
             "03-c",  # a file, no area
         ]
-        self.assertEqual(scaffold.area_dirs_in(paths), {"01-a", "_archiv/02-b"})
+        self.assertEqual(area_numbers.area_dirs_in(paths), {"01-a", "_archiv/02-b"})
 
     def test_the_next_number_is_one_above_every_place(self) -> None:
-        nxt = scaffold.next_experiment_number
+        nxt = area_numbers.next_experiment_number
         self.assertEqual(nxt(set(), {}), "01")
         self.assertEqual(nxt({"01-a", "_archiv/05-e"}, {}), "06")
         self.assertEqual(nxt({"11-a"}, {"branch side": {"12-b", "13-c"}}), "14")
@@ -2162,7 +2163,7 @@ class AreaNumbers(unittest.TestCase):
 
     def test_two_areas_of_one_number_are_named_in_the_tree_and_the_index(self) -> None:
         self._areas("12-a", "12-b")
-        code, report = scaffold.number_check(self.root, staged=False)
+        code, report = area_numbers.number_check(self.root, staged=False)
         self.assertEqual(code, 1)
         self.assertIn(
             "number 12 is carried by 2 areas in the working tree: "
@@ -2171,15 +2172,15 @@ class AreaNumbers(unittest.TestCase):
         )
         self.assertIn("move the other area to the next free number, 13", report)
         # nothing staged yet: the index holds neither area
-        self.assertEqual(scaffold.number_check(self.root, staged=True)[0], 0)
+        self.assertEqual(area_numbers.number_check(self.root, staged=True)[0], 0)
         self._git("add", "experiments")
-        code, report = scaffold.number_check(self.root, staged=True)
+        code, report = area_numbers.number_check(self.root, staged=True)
         self.assertEqual(code, 1)
         self.assertIn("in the index: experiments/12-a, experiments/12-b", report)
 
     def test_an_archived_area_keeps_its_number(self) -> None:
         self._areas("12-a", "_archiv/12-b")
-        code, report = scaffold.number_check(self.root, staged=False)
+        code, report = area_numbers.number_check(self.root, staged=False)
         self.assertEqual(code, 1)
         self.assertIn("experiments/12-a, experiments/_archiv/12-b", report)
 
@@ -2191,7 +2192,7 @@ class AreaNumbers(unittest.TestCase):
         self._git("commit", "-qm", "side")
         self._git("checkout", "-q", "main")
         self.assertEqual(
-            scaffold.number_check(self.root, staged=False),
+            area_numbers.number_check(self.root, staged=False),
             (
                 0,
                 "labkit-init numbers: 2 area(s) in the working tree, each with a "
@@ -2203,8 +2204,8 @@ class AreaNumbers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             scaffold.stamp_lab(Path(tmp), "lab")
             with self.assertRaisesRegex(console.Refused, "no index to read"):
-                scaffold.number_check(Path(tmp), staged=True)
-            self.assertEqual(scaffold.number_check(Path(tmp), staged=False)[0], 0)
+                area_numbers.number_check(Path(tmp), staged=True)
+            self.assertEqual(area_numbers.number_check(Path(tmp), staged=False)[0], 0)
 
 
 class Report(unittest.TestCase):
