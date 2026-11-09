@@ -35,7 +35,7 @@ Stand 2026-11-09: gebaut — die beiden Leser werfen `files.ReadError` mit Ursac
 
 ### 6a. Festlegen, was labkit durchsetzt — vor einem Umbau der Checks, offen seit 2026-11-09
 
-Warum: Viele Checks, Regeln und Tests (65 000 Zeilen Testcode) machen labkit schwer wartbar; ein Umbau in Stufen (einmal lesen, Inhalt prüfen, Regel, Gate) lohnt erst, wenn feststeht, welche Zusicherungen labkit hält. Grundlage: [Note](docs/notes/2026-11-09-enforced-core.md) — 178 blockierende Stellen, fast alle in der Kette Registrierung, Herkunft, Vollständigkeit, Audit-Abdeckung, Bericht; 13 außerhalb (Instrument, Störung während des Laufs, Hausregel). Zu entscheiden: diese drei Gruppen; danach bei jedem Blocker der Kette die konkrete Zusicherung prüfen, die er schützt.
+Warum: Viele Checks, Regeln und Tests (65 000 Zeilen Testcode) machen labkit schwer wartbar; ein Umbau in Stufen (einmal lesen, Inhalt prüfen, Regel, Gate) lohnt erst, wenn feststeht, welche Zusicherungen labkit hält. Grundlage: [Note](docs/notes/2026-11-09-enforced-core.md) — 178 blockierende Stellen, fast alle in der Kette Registrierung, Herkunft, Vollständigkeit, Audit-Abdeckung, Bericht; 13 außerhalb (Instrument, Störung während des Laufs, Hausregel). Gruppen außerhalb der Kette: Instrumentprüfung und Validierung, Laufbetrieb, Notizkonventionen — einzeln beurteilt, nicht pauschal umgestuft. Nächster Schritt: Einzelprüfung jedes Blockers (was wurde festgestellt, welche Zusicherung betrifft das, warum muss genau diese Handlung warten), erst danach umstufen. Bekannt schon jetzt: `prompt_check.py:87` ist ein Namensabgleich, also statischer Hinweis, und blockiert heute trotzdem.
 
 ### 7. Die nächste Nutzungsrunde durchführen — nach den Aufgaben 2–6
 
