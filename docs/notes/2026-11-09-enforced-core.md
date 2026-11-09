@@ -67,6 +67,34 @@ The five assurances orient; they are no closed list of the blockers allowed. A b
 | `labkit/checks/notes_check.py:158` | an instrument declared implemented that names no script, function or path                                   |
 | `labkit/checks/notes_check.py:216` | a note that cannot be read — a check not executed where access is refused, which stays recognisable as such |
 
+## Per-blocker check 2026-11-09
+
+Every blocking site read at its code, six groups by shared check logic; one row per site with finding, evidence kind, assurance, effect and recommendation: [blocker review](2026-11-09-blocker-review.tsv). Spot-checked here: the rename path (`labkit/formats/protocol_history.py:195`) and that `notes-check`'s exit stops nothing in the post-change hook (`labkit/gates/hook_post_change.py:342`). Of 177 sites: 163 keep, 5 warning, 1 remove, 8 decision open.
+
+| Recommendation | Site                                       | Why                                                                                                                                                                                 |
+|----------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| warning        | `labkit/checks/notes_check.py:135`, `:146` | a note convention no number depends on; the hook only reports it                                                                                                                    |
+| warning        | `labkit/checks/notes_check.py:158`         | a name pattern over the note's text: an indication                                                                                                                                  |
+| warning        | `labkit/checks/notes_check.py:216`         | a note that cannot be read, keeping the check-not-executable mark                                                                                                                   |
+| warning        | `labkit/checks/prompt_check.py:69`         | a test file that does not parse hides only the parser check, a warning since 5d01d203                                                                                               |
+| remove         | `labkit/formats/reference.py:197`          | the kept key missing or not finite is blocked already at `labkit/checks/run_record_check.py:949`: one cause, two blockers                                                           |
+| decision open  | `labkit/checks/run_record_check.py:405`    | matching answer–gold pairs are certain; what change the registered null condition makes expect is the missing basis (a placebo prompt or a fixed null predictor can match honestly) |
+| decision open  | `labkit/run/endpoint_lease.py:191`         | whether an endpoint is one model slot is a deployment fact no record states; declared per endpoint, the refusal would be exact                                                      |
+| decision open  | `labkit/checks/run_record_check.py:528`    | a run that froze no source: whether a low-cost run reading no file (inputs made by code, model answers only) is legitimate, and how it says so                                      |
+| decision open  | `labkit/checks/recheck.py:209`             | the recomputation requires shared descriptive values to be identical; LAB-041 Generate numbers, don't retype them says only that none may disappear                                 |
+| decision open  | `labkit/checks/report_blocks.py:359`       | a run-id-shaped token no run carries, matched over prose: a fabricated citation to block, or a pattern to warn (italics `_<id>_` and `<id>-based` are matched)                      |
+| decision open  | `labkit/gates/registered_report.py:201`    | a turn ends only on an adoption or a handover once a run exists; whether an honest progress account may end it while the next step is the author's                                  |
+| decision open  | `labkit/gates/report_hold.py:934`          | a review model's claim blocks the report; whether a reasoned author decision may release it, as for audit findings                                                                  |
+| decision open  | `labkit/gates/report_check.py:379`         | see below: a likely defect, not a grading question                                                                                                                                  |
+
+Found beside the grading, to repair rather than to decide:
+
+1. **A renamed protocol reads as never committed.** `committed_at` looks the protocol up at its present path in the first measurement's commit (`labkit/formats/protocol_history.py:195`); `docs/protocol-run-binding.md` allows renaming. After a rename the registration station says "nothing stood before the number" (`labkit/gates/report_check.py:379`), and `labkit/gates/registered_report.py:308`, `labkit/gates/registration_hold.py:375`, `labkit/gates/report_replacement.py:156` say "cannot be read" with a way out (`git fetch`) that does not help. Shown in the code path, not yet run.
+2. **Outcome marks.** `labkit/gates/report_check.py:437` and `labkit/formats/evidence.py:375` mark a refused read or a failed git call as violated; `labkit/gates/preflight.py:586` reports an environment failure of the test run as failed.
+3. **Messages that claim more than the condition shows:** `labkit/checks/run_record_check.py:284`, `:319`, `:708`, `labkit/gates/finalize.py:355`, `labkit/gates/report_check.py:472`, `labkit/checks/code_check.py:181`, `:256` (details in the review).
+4. **A duty no rule text names:** the decision review a `fixed` or `false-positive` BLOCKER owes (`labkit/gates/report_decisions.py:188`, `:221`, `:290`) rests on a note, not on LAB-015 Preflight audit before freezing.
+5. **No way out:** `labkit/gates/report_decisions.py:274` offers only the handover in an area with several protocols, and repeats `labkit/gates/report_check.py:457` once per earlier BLOCKER.
+
 ## Next
 
 The assignment above goes through each site's rule, so "nearly every blocker protects the chain" is provisional. Next, every blocker is recorded with five entries — **finding** (what the check actually shows), **evidence kind** (an exact check, or an indication that may be wrong), **assurance** (the concrete duty it protects), **effect** (which action it stops, and why exactly this one), **recommendation** (keep, warning, remove, or *decision open* with the basis that is missing: a scientific requirement, a counter-example not yet at hand). Sites that share one condition have the condition judged once and their effect each. Only then are blockers regraded; the restructuring of the checks stays a separate decision. The distinguishable failure causes built today stand either way.
