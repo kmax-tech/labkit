@@ -56,14 +56,16 @@ class Gates(unittest.TestCase):
     def tearDown(self):
         self._tmp.cleanup()
 
-    def test_parser_without_test_is_a_blocker(self):
+    def test_a_parser_no_test_calls_is_a_static_warning(self):
+        """A name match is an indication — a parser tested through its
+        caller has no call of its own —, so it warns and never blocks."""
         (self.repo / "tests" / "test_01_x.py").write_text(
             "from x import parse_answer\nparse_answer('Yes')\n", encoding="utf-8"
         )
         f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
         self.assertEqual(len(f), 1)
         self.assertIn("parse_score()", f[0])
-        self.assertTrue(f[0].startswith("BLOCKER"))
+        self.assertTrue(f[0].startswith("WARNING · static evidence · "), f[0])
 
     def test_a_name_in_a_comment_string_or_import_is_no_test(self):
         """A mention alone never silences the check."""
@@ -73,7 +75,8 @@ class Gates(unittest.TestCase):
             encoding="utf-8",
         )
         f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
-        named = sorted(x.split(" · ")[2].split("()")[0] for x in f)
+        # WARNING · static evidence · <where> · <name>() …
+        named = sorted(x.split(" · ")[3].split("()")[0] for x in f)
         self.assertEqual(named, ["parse_answer", "parse_score"])
 
     def test_an_unparsable_test_file_is_said(self):

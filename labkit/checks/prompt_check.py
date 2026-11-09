@@ -1,9 +1,11 @@
 """prompt_check — the prompt as the protocol states it and as the code sends it.
 
-Every `parse_*` function of an area's scripts is called by a test file
-(`check_parser_fixtures`: a parser fails silently into a wrong number) —
-a call in the syntax tree, not a mention in a comment or string; whether
-the test asserts on its result is not checked;
+Every `parse_*` function of an area's scripts is called by name in a test
+file (`check_parser_fixtures`: a parser fails silently into a wrong
+number) — a call in the syntax tree, not a mention in a comment or
+string. Static evidence, a warning: a name match shows no coverage, and a
+parser tested through its caller is not seen; whether a test asserts on
+the result is not checked;
 every line of a `PROMPT` constant without a `{placeholder}` appears in
 the protocol's prompt block (`check_prompt_drift`), read through
 `prompt_constants` and `protocol_check.registered_prompt_blocks`.
@@ -18,7 +20,7 @@ from pathlib import Path
 
 from labkit.formats.repo import shown
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import GUARANTEED
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.scope_sha import (
     SCRIPT_GLOB,
     SourceError,
@@ -84,15 +86,17 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     for name, sp in sorted(parsers.items()):
         if name not in called:
             findings.append(
+                # a name match is an indication, not coverage: a parser
+                # tested through its caller has no call of its own
                 coded(
-                    BLOCKER,
+                    WARNING,
                     sp.name,
-                    f"{name}() has no test under tests/ · a parser "
+                    f"{name}() is called by no test under tests/ · a parser "
                     f"fails silently into a wrong number",
                     rule="LAB-016 Resolution check before freezing",
                     fix=f"give it a test with real raw answers under tests/, "
                     f"then `{gate_command('code-check', area)}`",
-                    evidence_kind=GUARANTEED,
+                    evidence_kind=STATIC_EVIDENCE,
                 )
             )
     return findings

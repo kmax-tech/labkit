@@ -292,9 +292,9 @@ class TestPreflight(unittest.TestCase):
         self.assertIn("WARNING: no tests/test_", out)  # station 8 found its own
 
     def test_code_station_reports_parser_fixtures_and_prompt_drift(self):
-        """Station 4 runs code-check's whole list: a parser without a
-        fixture test and a PROMPT the protocol does not hold block here as
-        they block in code-check."""
+        """Station 4 runs code-check's whole list as code-check grades it: a
+        parser no test calls warns (static evidence), a PROMPT the protocol
+        does not hold blocks."""
         with _area_dir() as d:
             area, _ = _area(d)
             (area / "scripts" / "01_measure.py").write_text(
@@ -304,8 +304,11 @@ class TestPreflight(unittest.TestCase):
                 encoding="utf-8",
             )
             code, out = _run_preflight(area)
-        self.assertEqual(code, 1, out)
-        self.assertIn("parse_answer() has no test", out)
+        self.assertEqual(code, 1, out)  # the prompt's blocker
+        self.assertIn(
+            "WARNING · static evidence · 01_measure.py · parse_answer() is called by no test",
+            out,
+        )
         self.assertIn("PROMPT", out)
         self.assertIn("Is it causal?", out)
 

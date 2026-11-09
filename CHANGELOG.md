@@ -328,6 +328,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`code-check`'s parser check warns, it no longer blocks.** It matches a `parse_*` name against the calls in `tests/`; a name match shows no coverage and misses a parser tested through its caller, so the finding is static evidence (`WARNING · static evidence · …`, "is called by no test under tests/"), and static evidence never blocks. A code-check that found only this now exits 0. The standard's description of the routine check says so; the rule that every parser has a test with real raw answers is unchanged.
+
 - **A read failure says why, and a gate finding says whether its check ran.** The shared readers raise `files.ReadError` subclasses (`runs.ArtefactError`, `runs.MetricsError`, `scope_sha.SourceError`) carrying `cause`: `missing`, `access` or `malformed` (`files.read_cause`). A gate finding carries `check_outcome`, `violated` by default or `not executable` (`gate.outcome_of_failed_read`: only an access refused leaves the check not executed — a required input missing or malformed is a defect found); its line says so (`BLOCKER (check not executable): …`, ` · check not executable · ` in the dotted form). Eleven sites that catch a read failure pass it on — the code scan, the quality-check read, the parser-fixture check, the run's code since the run, notes-check, the result rendering, and finalize's five stations over a run's files, whose way out for an access refused is to make the files readable instead of measuring anew. Both block as before; a count tells them apart (docs/notes/2026-11-09-check-outcomes.md).
 
 ### Added

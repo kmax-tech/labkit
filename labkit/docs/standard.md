@@ -202,8 +202,10 @@ These are the rules an experiment area is held to — before a run, during it, a
 
   - `runlog` refuses a run whose control set (`data=` keys
     `anchor*`, `gate*`, `placebo*`, `control*`) shares an id with the measurement set;
-  - `code-check` blocks a `parse_*` function without a test and a
-    prompt block in the protocol that deviates from the `PROMPT` constant;
+  - `code-check` warns about a `parse_*` function no test calls by name
+    (static evidence: a parser tested through its caller is not seen) and
+    blocks a prompt block in the protocol that deviates from the `PROMPT`
+    constant;
   - `finalize` warns when a `criterion_<i>_n` does not correspond to any recorded input count.
 
   What remains for the agent is what no gate reads: the direction of a control, an unnamed confound, whether the number matches the sentence that promises it.
@@ -558,6 +560,7 @@ Sources: Kapoor & Narayanan 2023, *Patterns* 4(9), 100804, "A taxonomy of data l
 
 Dated changes that alter no rule; a change to a rule or a field is the next version of the standard.
 
+- 2026-11-09 — LAB-018 Routine check after every implementation: `code-check`'s parser check matches a `parse_*` name against the calls in `tests/`; a name match shows no coverage and misses a parser tested through its caller, so it warns as static evidence instead of blocking. That every parser has a test with real raw answers (LAB-041 Generate numbers, don't retype them) is unchanged; the version stays.
 - 2026-11-04 — LAB-064 The pilot is resumable too: an orphaned output lock is judged by its writer's kernel lock (`flock`), as the refusal of a second writer now reports it, no longer by `ps -p <pid>`. A PID the system had given to another process kept a dead run's lock "alive", and a writer started as `python -m …` looked dead while it wrote (docs/notes/2026-11-04-liveness-and-wait.md). What the rule asks — resumption after an interruption, never two writers on one file — is unchanged; the version stays.
 
 - 2026-11-01 — Protocol standard 0.24: a computation's head carries `[kept]` — `key`, the metrics key of the number it reports, and `unit`. The key stood only in the script (`METRIC_KEY`) and in prose; a run was adopted with a flag (`hrv_computed`) as its kept number while the Unit field named HRV_MeanNN (reference pilot, trial 2, task 34). finalize now holds the answering run to the registered key as a finite number (LAB-041 Generate numbers, don't retype them); `[reference] key` moved there, one home for the key. The key is bound by name, not by meaning: a wrong computation under the right key is the tests' and the analysis audit's to find.
