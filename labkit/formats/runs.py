@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Final, Literal, cast
 
 from labkit.formats.digests import DIGEST_CHARS, file_digest
-from labkit.formats.files import write_atomic
+from labkit.formats.files import ReadError, read_cause, write_atomic
 from labkit.formats.repo import layout_root, rel_posix
 
 
@@ -340,9 +340,11 @@ def parse_run_record(text: str, where: Path) -> RunConfig:
         ) from exc
 
 
-class ArtefactError(ValueError):
+class ArtefactError(ReadError):
     """A run's artefact (metrics.json, outputs.json, completion.json) that is
-    unreadable or not the shape its writer gives it."""
+    unreadable or not the shape its writer gives it. CAUSE (`files.READ_CAUSES`)
+    says which: MISSING, ACCESS, or MALFORMED — the default, every shape error
+    is one."""
 
 
 class MetricsError(ArtefactError):
@@ -356,7 +358,8 @@ def _json_of(path: Path, what: str) -> object:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ArtefactError(
-            f"{path}: unreadable {what} ({exc}) — repair the run or move it aside"
+            f"{path}: unreadable {what} ({exc}) — repair the run or move it aside",
+            cause=read_cause(exc),
         ) from exc
 
 
@@ -594,7 +597,7 @@ def read_metrics(path: Path) -> dict[str, object]:
     try:
         data = _json_of(path, "metrics")
     except ArtefactError as exc:
-        raise MetricsError(str(exc)) from exc
+        raise MetricsError(str(exc), cause=exc.cause) from exc
     if not isinstance(data, dict):
         raise MetricsError(
             f"{path}: metrics must be a JSON object, not {type(data).__name__}"

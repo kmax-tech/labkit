@@ -16,6 +16,42 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+#: why a reader could not give its file, carried with the error so that the
+#: check that called it decides what it means for its question
+#: (docs/notes/2026-11-09-check-outcomes.md): the file is not there; it is
+#: there and cannot be opened (a permission, a directory in its place); it
+#: was read and is not what its writer gives (not UTF-8, not JSON, not
+#: Python, not the shape)
+MISSING = "missing"
+ACCESS = "access"
+MALFORMED = "malformed"
+READ_CAUSES = (MISSING, ACCESS, MALFORMED)
+
+
+class ReadError(ValueError):
+    """A file a reader could not give, and why: CAUSE, one of READ_CAUSES,
+    MALFORMED by default — every shape error is one. The readers' own errors
+    derive from it (`runs.ArtefactError`, `scope_sha.SourceError`)."""
+
+    def __init__(self, message: str, *, cause: str = MALFORMED) -> None:
+        if cause not in READ_CAUSES:
+            raise ValueError(f"a read cause is one of {READ_CAUSES}, not {cause!r}")
+        super().__init__(message)
+        self.cause = cause
+
+
+def read_cause(exc: BaseException) -> str:
+    """The cause of a failed read EXC: a ReadError's own, MISSING for
+    FileNotFoundError, ACCESS for any other OSError, MALFORMED for anything
+    else (a decode, a parse, a shape)."""
+    if isinstance(exc, ReadError):
+        return exc.cause
+    if isinstance(exc, FileNotFoundError):
+        return MISSING
+    if isinstance(exc, OSError):
+        return ACCESS
+    return MALFORMED
+
 
 def write_atomic(path: Path, text: str) -> None:
     """Write `text` whole or not at all: a temp file beside `path`, then

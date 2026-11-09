@@ -99,7 +99,9 @@ from labkit.formats.gate import (
     GateFinding,
     STATIC_EVIDENCE,
     WARNING,
+    NOT_EXECUTABLE,
     blocker,
+    outcome_of_failed_read,
     withdrawn_first,
 )
 from labkit.formats.runs import metrics_path, read_metrics
@@ -588,17 +590,41 @@ def check_area_tests(findings: Findings, area: Path) -> None:
         )
 
 
+def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateFinding:
+    """The blocker TEXT for a run file that did not read with EXC: a file
+    that could not be opened leaves the check not executed — made readable,
+    then finalized again; a file missing or malformed is a defect of the
+    run — measured anew and audited, its own files staying as they are
+    (`gate.outcome_of_failed_read`). The area is the run directory's
+    grandparent (`<area>/runs/<id>`), as every finalize station takes it."""
+    area = answering_run.parent.parent
+    if outcome_of_failed_read(exc) == NOT_EXECUTABLE:
+        return blocker(
+            text,
+            fix=f"make the run's files readable (path and permissions), then "
+            f"`{gate_command('finalize', area)}`",
+            check_outcome=NOT_EXECUTABLE,
+        )
+    return blocker(
+        text,
+        fix=f"measure anew (`{measure_command(area)}`) and audit that run; "
+        f"the run's own files stay as they are",
+        step=measure_command(area),
+    )
+
+
 def check_null_lane(findings: Findings, answering_run: Path) -> None:
     """Station 7b: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
         held = null_lane_findings(answering_run)
     except (ValueError, OSError) as exc:
-        findings.block(
-            f"the outputs of {answering_run.name} do not read: {exc}",
-            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
-            f"and audit that run; the run's own files stay as they are",
-            step=measure_command(answering_run.parent.parent),
+        findings.take(
+            run_file_unread(
+                f"the outputs of {answering_run.name} do not read: {exc}",
+                exc,
+                answering_run,
+            )
         )
         return
     findings.take_all(held.unmoved)
@@ -616,11 +642,12 @@ def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
     try:
         drifted = output_record_findings(answering_run)
     except ArtefactError as exc:
-        findings.block(
-            f"the outputs of {answering_run.name} do not read: {exc}",
-            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
-            f"and audit that run; the run's own files stay as they are",
-            step=measure_command(answering_run.parent.parent),
+        findings.take(
+            run_file_unread(
+                f"the outputs of {answering_run.name} do not read: {exc}",
+                exc,
+                answering_run,
+            )
         )
         return
     findings.take_all(drifted)
@@ -673,11 +700,12 @@ def check_reference(
     try:
         metrics = runs_metrics(answering_run)
     except MetricsError as exc:
-        findings.block(
-            f"the metrics of {answering_run.name} do not read: {exc}",
-            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
-            f"and audit that run; the run's own files stay as they are",
-            step=measure_command(answering_run.parent.parent),
+        findings.take(
+            run_file_unread(
+                f"the metrics of {answering_run.name} do not read: {exc}",
+                exc,
+                answering_run,
+            )
         )
         return
     held = reference.comparison_gaps(ref, key, metrics)
@@ -737,11 +765,12 @@ def check_kept_number(
     try:
         metrics = runs_metrics(answering_run)
     except MetricsError as exc:
-        findings.block(
-            f"the metrics of {answering_run.name} do not read: {exc}",
-            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
-            f"and audit that run; the run's own files stay as they are",
-            step=measure_command(answering_run.parent.parent),
+        findings.take(
+            run_file_unread(
+                f"the metrics of {answering_run.name} do not read: {exc}",
+                exc,
+                answering_run,
+            )
         )
         return
     held = kept_number_gaps(
@@ -766,11 +795,12 @@ def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     try:
         w = criterion_n_input_mismatches(answering_run)
     except ArtefactError as exc:
-        findings.block(
-            f"the record of {answering_run.name} does not read: {exc}",
-            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
-            f"and audit that run; the run's own files stay as they are",
-            step=measure_command(answering_run.parent.parent),
+        findings.take(
+            run_file_unread(
+                f"the record of {answering_run.name} does not read: {exc}",
+                exc,
+                answering_run,
+            )
         )
         return
     for line in w:

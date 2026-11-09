@@ -27,7 +27,13 @@ from labkit.formats.scope_sha import (
     read_source,
     test_files,
 )
-from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
+from labkit.formats.gate import (
+    BLOCKER,
+    WARNING,
+    GateFinding,
+    coded,
+    outcome_of_failed_read,
+)
 from labkit.formats.protocol_check import registered_prompt_blocks, unheld_prompt_lines
 
 
@@ -65,6 +71,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     fix=f"repair it until `.venv/bin/python -m pytest "
                     f"{shlex.quote(shown(t, Path.cwd()))}` collects it",
                     evidence_kind=GUARANTEED,
+                    check_outcome=outcome_of_failed_read(exc),
                 )
             )
             continue

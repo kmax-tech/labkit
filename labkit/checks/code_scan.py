@@ -17,7 +17,7 @@ from pathlib import Path
 
 from labkit.formats.gate import AREA_SLOT
 from labkit.formats.gate import GUARANTEED
-from labkit.formats.gate import BLOCKER, GateFinding, coded
+from labkit.formats.gate import BLOCKER, GateFinding, coded, outcome_of_failed_read
 from labkit.formats.scope_sha import (
     ANALYSIS_GLOB,
     SCRIPT_GLOB,
@@ -140,12 +140,16 @@ def split_stages(area: Path) -> tuple[list[Path], list[Path]]:
 
 
 def unreadable_source(exc: SourceError) -> GateFinding:
-    """The blocker for a file in the area's scope that is not Python: the
-    scan cannot say what the code mentions, so nothing is waved through."""
+    """The blocker for a scope file that could not be read as Python —
+    missing, refused or malformed: the scan cannot say what the code
+    mentions, so nothing is waved through. A file that could not be opened
+    leaves the check not executed (`gate.outcome_of_failed_read`); missing or
+    malformed, the condition is violated."""
     return coded(
         BLOCKER,
         None,
         f"{exc} · the code cannot be read, so no check over it holds",
         fix=f"repair or remove the file, then `code-check {AREA_SLOT}`",
         evidence_kind=GUARANTEED,
+        check_outcome=outcome_of_failed_read(exc),
     )

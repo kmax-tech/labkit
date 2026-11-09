@@ -44,7 +44,7 @@ from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block
-from labkit.formats.gate import GateFinding, blocker
+from labkit.formats.gate import GateFinding, blocker, outcome_of_failed_read
 from labkit.formats.runs import (
     ArtefactError,
     OutputEntry,
@@ -174,6 +174,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
             blocker(
                 f"the code {rid} ran cannot be read now: {exc}",
                 fix=f"repair what the error names, then `{gate_command('finalize', area)}`",
+                check_outcome=outcome_of_failed_read(exc),
             ),
         ], []
     b, w = _helpers_since_run(helpers, script, repo, run, cfg)

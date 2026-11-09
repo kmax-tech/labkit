@@ -39,7 +39,7 @@ import re
 from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import GUARANTEED, GateFinding, blocker
+from labkit.formats.gate import GUARANTEED, GateFinding, blocker, outcome_of_failed_read
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
@@ -217,6 +217,7 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
                 f"{f}: not readable ({exc})",
                 fix="make the file readable (its path and permissions), then "
                 f"`{gate_command('notes-check', f)}`",
+                check_outcome=outcome_of_failed_read(exc),
             )
             continue
         findings.take_all(must)

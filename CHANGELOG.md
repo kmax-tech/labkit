@@ -326,6 +326,10 @@ pins (`requirements.txt` / `requirements.lock`).
   "tracked in git or kept outside it". The standard's Fixed inputs says
   where data may lie.
 
+### Changed
+
+- **A read failure says why, and a gate finding says whether its check ran.** The shared readers raise `files.ReadError` subclasses (`runs.ArtefactError`, `runs.MetricsError`, `scope_sha.SourceError`) carrying `cause`: `missing`, `access` or `malformed` (`files.read_cause`). A gate finding carries `check_outcome`, `violated` by default or `not executable` (`gate.outcome_of_failed_read`: only an access refused leaves the check not executed — a required input missing or malformed is a defect found); its line says so (`BLOCKER (check not executable): …`, ` · check not executable · ` in the dotted form). Eleven sites that catch a read failure pass it on — the code scan, the quality-check read, the parser-fixture check, the run's code since the run, notes-check, the result rendering, and finalize's five stations over a run's files, whose way out for an access refused is to make the files readable instead of measuring anew. Both block as before; a count tells them apart (docs/notes/2026-11-09-check-outcomes.md).
+
 ### Added
 
 - **The check inventory, `python -m labkit.tools.check_inventory`** (`just inventory`): every place labkit tells a finding — a gate finding, a run's start refusal, a printed `WARNING:` line — with the rule its call cites, its grade, its evidence kind and the console commands that reach it by a static call graph; and every active rule with the finding sites, other code strings, agent definitions, templates and guides that cite it. Read from the source, computed at every call, committed nowhere. The basis for measuring whether a rule earns its place; checks have no switches (`docs/notes/2026-11-09-checks-have-no-switches.md`).

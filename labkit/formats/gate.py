@@ -44,6 +44,8 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
+from labkit.formats.files import ACCESS, read_cause
+
 if TYPE_CHECKING:
     from labkit.formats.commands import Command
 
@@ -68,6 +70,28 @@ PREFIXED, AS_WRITTEN, DOTTED = "prefixed", "as written", "dotted"
 GUARANTEED = "guaranteed"
 STATIC_EVIDENCE = "static evidence"
 EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
+
+#: what a finding says about its check (`GateFinding.check_outcome`,
+#: docs/notes/2026-11-09-check-outcomes.md): the condition is violated — a
+#: required input missing or malformed is a violated condition too —, or the
+#: check could not be executed here (an access refused, a limit of the
+#: check). A BLOCKER blocks either way; the line tells them apart
+VIOLATED = "violated"
+NOT_EXECUTABLE = "not executable"
+OUTCOMES = (VIOLATED, NOT_EXECUTABLE)
+#: how a line names a check not executed: `BLOCKER (check not executable): …`
+NOT_EXECUTABLE_MARK = "check not executable"
+
+
+def outcome_of_failed_read(exc: BaseException) -> str:
+    """Map a failed read EXC to the finding's check outcome — not to its
+    cause, which `files.read_cause` names: NOT_EXECUTABLE when the access
+    was refused (the input may be sound), else VIOLATED — a required input
+    missing or malformed is a defect found. Any exception a site catches
+    around a read goes in; only an OSError other than a missing file gives
+    NOT_EXECUTABLE."""
+    return NOT_EXECUTABLE if read_cause(exc) == ACCESS else VIOLATED
+
 
 #: how every line joins its fix to its text — `<what is refused and why>.
 #: Next: <fix>`, the fix a command where one exists; a dotted line gives it
@@ -128,6 +152,9 @@ class GateFinding:
             changed since it ran (`withdrawn_first`); told
             as `WITHDRAW_FIRST` before `fix` in every form (`way`).
         evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
+        check_outcome: VIOLATED (the default) or NOT_EXECUTABLE (OUTCOMES): whether
+            the finding states a violated condition or a check that could
+            not be executed here; told in the line for NOT_EXECUTABLE.
         changed_since: The run whose code or declared scope this blocker
             found changed since it ran — set where the comparison found the
             difference (`run_record_check.code_since_run`,
@@ -147,6 +174,7 @@ class GateFinding:
     changed_since: str | None = field(default=None, kw_only=True)
     step: Command | None = field(default=None, kw_only=True)
     withdraw_first: Command | None = field(default=None, kw_only=True)
+    check_outcome: str = field(default=VIOLATED, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.grade not in (BLOCKER, WARNING):
@@ -159,6 +187,10 @@ class GateFinding:
             raise ValueError(
                 f"a gate finding's evidence kind is one of {EVIDENCE_KINDS}, "
                 f"not {self.evidence_kind!r}"
+            )
+        if self.check_outcome not in OUTCOMES:
+            raise ValueError(
+                f"a gate finding's outcome is one of {OUTCOMES}, not {self.check_outcome!r}"
             )
         if self.evidence_kind == STATIC_EVIDENCE and self.grade == BLOCKER:
             raise ValueError(
@@ -186,12 +218,20 @@ class GateFinding:
         line stays `WARNING: …`, and the summary counts the kind. The way
         out (`way`) ends the line in every form: its own dotted part
         (`Next: …`), else after `WAY_OUT`."""
+        unrun = NOT_EXECUTABLE_MARK if self.check_outcome == NOT_EXECUTABLE else None
         if self.form == DOTTED:
             kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
             fix = f"Next: {self.way}" if self.way else None
-            parts = (self.grade, kind, self.where, self.text, self.rule, fix)
+            parts = (self.grade, kind, unrun, self.where, self.text, self.rule, fix)
             return " · ".join(p for p in parts if p)
-        told = self.text if self.form == AS_WRITTEN else f"{self.grade}: {self.text}"
+        if self.form == AS_WRITTEN:
+            told = f"{self.text} ({unrun})" if unrun else self.text
+        else:
+            told = (
+                f"{self.grade} ({unrun}): {self.text}"
+                if unrun
+                else f"{self.grade}: {self.text}"
+            )
         return with_way_out(told, self.way)
 
     @property
@@ -222,10 +262,20 @@ def withdrawn_first(
     ]
 
 
-def blocker(text: str, *, fix: str, step: Command | None = None) -> GateFinding:
+def blocker(
+    text: str, *, fix: str, step: Command | None = None, check_outcome: str = VIOLATED
+) -> GateFinding:
     """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
-    check returns as data for the gate that takes it (`Findings.take`)."""
-    return GateFinding(BLOCKER, text, fix=fix, evidence_kind=GUARANTEED, step=step)
+    check returns as data for the gate that takes it (`Findings.take`).
+    CHECK_OUTCOME: VIOLATED, or NOT_EXECUTABLE for a check that could not run."""
+    return GateFinding(
+        BLOCKER,
+        text,
+        fix=fix,
+        evidence_kind=GUARANTEED,
+        step=step,
+        check_outcome=check_outcome,
+    )
 
 
 def coded(
@@ -236,10 +286,12 @@ def coded(
     evidence_kind: str,
     rule: str | None = None,
     fix: str | None = None,
+    check_outcome: str = VIOLATED,
 ) -> GateFinding:
     """A code check's finding (code-check, preflight's code station, the
     audit's tier note), told as `<grade> · <where> · <text> · <rule> · <fix>`
-    with the parts it has (static evidence named after the grade)."""
+    with the parts it has (static evidence, a check not executable, named
+    after the grade)."""
     return GateFinding(
         grade,
         text,
@@ -248,6 +300,7 @@ def coded(
         rule=rule,
         fix=fix,
         evidence_kind=evidence_kind,
+        check_outcome=check_outcome,
     )
 
 
@@ -350,20 +403,40 @@ class Findings:
         for finding in findings:
             self.take(finding)
 
-    def block(self, msg: str, *, fix: str, step: Command | None = None) -> None:
+    def block(
+        self,
+        msg: str,
+        *,
+        fix: str,
+        step: Command | None = None,
+        check_outcome: str = VIOLATED,
+    ) -> None:
         """A blocker: told as `BLOCKER: msg. Next: fix`, repeated in the
         summary, exit 1. Always GUARANTEED — static evidence never blocks.
         FIX is the way out (`GateFinding.fix`), required; STEP the command
-        it names, as data (`GateFinding.step`)."""
-        self.take(
-            GateFinding(BLOCKER, msg, fix=fix, evidence_kind=GUARANTEED, step=step)
-        )
+        it names, as data (`GateFinding.step`); CHECK_OUTCOME as `blocker`'s."""
+        self.take(blocker(msg, fix=fix, step=step, check_outcome=check_outcome))
 
-    def warn(self, msg: str, *, evidence_kind: str, fix: str | None = None) -> None:
+    def warn(
+        self,
+        msg: str,
+        *,
+        evidence_kind: str,
+        fix: str | None = None,
+        check_outcome: str = VIOLATED,
+    ) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own.
         EVIDENCE_KIND says what carries it (`GateFinding`); FIX, when given,
-        is told after it as for a blocker."""
-        self.take(GateFinding(WARNING, msg, fix=fix, evidence_kind=evidence_kind))
+        is told after it as for a blocker; CHECK_OUTCOME as `blocker`'s."""
+        self.take(
+            GateFinding(
+                WARNING,
+                msg,
+                fix=fix,
+                evidence_kind=evidence_kind,
+                check_outcome=check_outcome,
+            )
+        )
 
     def _kinds(self) -> str:
         """` (K static evidence)` when K warnings are indications, else ``."""

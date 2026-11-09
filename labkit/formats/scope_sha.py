@@ -37,6 +37,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 from labkit.formats.digests import digest, tree_digest
+from labkit.formats.files import ReadError, read_cause
 from labkit.formats.runs import CONFIG_FILE, metrics_path, recorded_runs, run_path
 from labkit.formats import console, protocol_block
 from pathlib import Path
@@ -54,9 +55,10 @@ from labkit.formats.repo import (
 from labkit.formats.requirements import requirement_lines
 
 
-class SourceError(ValueError):
+class SourceError(ReadError):
     """A file in the stamp's scope that cannot be read as Python; the message
-    names it. A gate reports it as a blocker."""
+    names it. A gate reports it as a blocker. CAUSE (`files.READ_CAUSES`):
+    MISSING, ACCESS, or MALFORMED (not UTF-8, not Python) — the default."""
 
 
 SCRIPT_GLOB = "scripts/*.py"
@@ -89,7 +91,9 @@ def read_source(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise SourceError(f"{path}: cannot be read ({exc})") from exc
+        raise SourceError(
+            f"{path}: cannot be read ({exc})", cause=read_cause(exc)
+        ) from exc
 
 
 def parse_text(text: str, path: Path) -> ast.Module:
