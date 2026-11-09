@@ -111,3 +111,7 @@ release version:
     git("tag", tag)
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()
     print(f"release: {sha} {title}\nrelease: tag {tag} on it, labkit reinstalled — push with:\n  git push origin main {tag}")
+
+# every place labkit tells a finding, with its rule, and every rule with its places: just inventory > /tmp/checks.md
+inventory:
+    {{venv}}/python -m labkit.tools.check_inventory

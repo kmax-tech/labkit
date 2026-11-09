@@ -322,6 +322,10 @@ pins (`requirements.txt` / `requirements.lock`).
   "tracked in git or kept outside it". The standard's Fixed inputs says
   where data may lie.
 
+### Added
+
+- **The check inventory, `python -m labkit.tools.check_inventory`** (`just inventory`): every place labkit tells a finding — a gate finding, a run's start refusal, a printed `WARNING:` line — with the rule its call cites, its grade, its evidence kind and the console commands that reach it by a static call graph; and every active rule with the finding sites, other code strings, agent definitions, templates and guides that cite it. Read from the source, computed at every call, committed nowhere. The basis for measuring whether a rule earns its place; checks have no switches (`docs/notes/2026-11-09-checks-have-no-switches.md`).
+
 ### Fixed
 
 - **A Conclusion of dashes or written twice is not written.**
