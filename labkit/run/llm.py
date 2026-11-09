@@ -244,6 +244,31 @@ def aliases() -> list[str]:
     return list(models) if isinstance(models, dict) else []
 
 
+def cache_declared() -> bool:
+    """Does the lab allow a cache of model answers across runs —
+    `[llm_cache] enabled = true` in its `models.toml` (LAB-069 No LLM cache
+    unless the lab declares one)? False without the table. Raises
+    ValueError for an `[llm_cache]` that is no table, holds another key, or
+    whose `enabled` is no boolean; FileNotFoundError without the file."""
+    path = find_models_toml()
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    table = data.get("llm_cache")
+    if table is None:
+        return False
+    if (
+        not isinstance(table, dict)
+        or set(table) != {"enabled"}
+        or not isinstance(table["enabled"], bool)
+    ):
+        raise ValueError(
+            f"{path} [llm_cache]: expected a table with only enabled = true or false"
+        )
+    return table["enabled"]
+
+
 def audit_alias(fallback: str) -> str:
     """The alias a lab names for its audits: `[audit] model` of `models.toml`,
     else FALLBACK. A round fixes its audit model in the lab's own file, so

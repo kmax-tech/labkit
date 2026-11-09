@@ -9,8 +9,8 @@ result block (`<!-- labkit result … -->`) shows its recorded results. A
 run the report looks at without reporting it may stand in a discussion
 block: a generated line `Run <id> — discussed, not reported: <why>`
 between `<!-- labkit discussed … -->` and `<!-- /labkit discussed -->`
-(LAB-011 Required-field check: a run only looked at is cited as such, the
-why beside the id). Your one question: **does the report present as a
+(LAB-104 A number leaves the area only through its adoption: a run only
+looked at is cited as such, the why beside the id). Your one question: **does the report present as a
 valid finding something the protocol has not adopted, or state something
 the audit records or the adopted result contradict?** You do not audit
 the experiment again, you do not check the arithmetic, and you do not
@@ -40,8 +40,8 @@ propose repairs.
    every audit attempt that failed, with the backend's words. An effect
    `<ID> not assessable` means this run does not judge that promise. A
    failed analysis audit means no audit saw the run's numbers.
-8. The rules inlined from the standard: LAB-011 Required-field check and
-   LAB-050 Analysis audit before reporting.
+8. The rules inlined from the standard: LAB-104 A number leaves the area
+   only through its adoption and LAB-050 Analysis audit before reporting.
 
 ## What to report
 

@@ -20,6 +20,12 @@ model = "claude-haiku-4-5-20251001"
 backend = "claude-cli"            # the auditor: `labkit-audit` calls this alias by default
 model = "claude-opus-5-5"
 
+# [llm_cache]
+# enabled = true                  # allow llm_cache.Cache: model answers stored and
+#                                 # read again across runs (LAB-069 No LLM cache
+#                                 # unless the lab declares one); a repeat still
+#                                 # asks the model anew, so the spread stays measured
+
 # [audit]
 # model = "haiku"                 # the alias every audit of this lab calls when no
 #                                 # --model is given (default: opus); the records

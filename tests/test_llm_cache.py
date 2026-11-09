@@ -18,6 +18,7 @@ import io
 import json
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 from unittest import mock
 
@@ -30,8 +31,16 @@ from labkit.formats.runs import LLM_CACHE_FILE, LLM_CALLS_FILE
 from labkit.run import llm, llm_backends, llm_cache, runlog
 
 
-def ollama_toml(url: str, model: str = "m") -> str:
-    return f'[models.o]\nbackend = "ollama"\nmodel = "{model}"\nendpoints = ["{url}"]\n'
+#: the lab's declaration every cache needs (LAB-069 No LLM cache unless the
+#: lab declares one)
+DECLARED = "[llm_cache]\nenabled = true\n"
+
+
+def ollama_toml(url: str, model: str = "m", *, declared: bool = True) -> str:
+    table = (
+        f'[models.o]\nbackend = "ollama"\nmodel = "{model}"\nendpoints = ["{url}"]\n'
+    )
+    return table + (DECLARED if declared else "")
 
 
 class CacheCase(unittest.TestCase):
@@ -134,6 +143,43 @@ class Rules(CacheCase):
                     "root": str(self.root),
                 },
             )
+
+
+class Declaration(CacheCase):
+    """The lab allows the cache in models.toml; without it the cache warns
+    for one release (the public API's release rule), a malformed table
+    refuses."""
+
+    def test_a_declared_cache_opens_without_a_warning(self) -> None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            self.run_once()
+
+    def test_an_undeclared_cache_warns_and_still_works(self) -> None:
+        self.toml.write_text(ollama_toml(self.url, declared=False), encoding="utf-8")
+        with self.assertWarnsRegex(DeprecationWarning, r"\[llm_cache\] enabled = true"):
+            _, answer = self.run_once()
+        self.assertIsNone(answer.origin)
+
+    def test_enabled_false_is_not_declared(self) -> None:
+        self.toml.write_text(
+            ollama_toml(self.url, declared=False) + "[llm_cache]\nenabled = false\n",
+            encoding="utf-8",
+        )
+        self.assertFalse(llm.cache_declared())
+
+    def test_a_malformed_declaration_names_the_table(self) -> None:
+        for bad in (
+            '[llm_cache]\nenabled = "yes"\n',
+            "[llm_cache]\nenabled = true\ndir = 1\n",
+            "llm_cache = true\n",
+        ):
+            with self.subTest(bad):
+                self.toml.write_text(
+                    bad + ollama_toml(self.url, declared=False), encoding="utf-8"
+                )
+                with self.assertRaisesRegex(ValueError, r"\[llm_cache\]"):
+                    llm.cache_declared()
 
 
 class Entries(CacheCase):

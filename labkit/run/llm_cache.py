@@ -19,6 +19,12 @@ The key (`key_inputs`) is built from:
 Not in it: the alias, endpoints, API keys, the parser. `llm.complete`
 sends no seed, so none enters the key.
 
+The lab allows the cache in its `models.toml` (`[llm_cache] enabled =
+true`, `llm.cache_declared`; LAB-069 No LLM cache unless the lab declares
+one): a cache hit repeats an answer, so a spread measured over cached
+answers is 0. Opened without that declaration, `Cache` warns
+(`DeprecationWarning`) and works as before; the next release refuses it.
+
 Three modes, fixed when a run opens the cache (`Cache`):
 
     normal   a hit is read; a miss asks the model and stores the answer
@@ -53,6 +59,7 @@ import json
 import re
 import sys
 import threading
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -184,12 +191,24 @@ class Cache:
     Opening it writes `llm-cache.json` into RUN's directory. The mode is
     `repeat` when RUN repeats another (`Run.draw` is set), else `replay`
     with REPLAY, else `normal`. ROOT defaults to `default_root` of the
-    run's area. Raises ValueError for a replay asked of a repeat, and for
-    a second opening in the same run with another mode or directory."""
+    run's area. Without the lab's declaration (`llm.cache_declared`) it
+    warns, `DeprecationWarning`. Raises ValueError for a replay asked of a
+    repeat, for a second opening in the same run with another mode or
+    directory, and for a malformed `[llm_cache]` table."""
 
     def __init__(
         self, run: Run, *, replay: bool = False, root: Path | None = None
     ) -> None:
+        if not llm.cache_declared():
+            # the public API's release rule: the old form warns for one
+            # release before it is refused (docs/architecture.md, "Public API")
+            warnings.warn(
+                "llm_cache.Cache opened without [llm_cache] enabled = true in "
+                "models.toml — LAB-069 No LLM cache unless the lab declares one; "
+                "the next labkit release refuses it",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if run.draw is not None and replay:
             raise ValueError(
                 f"run {run.run_id} repeats another run: a repeat asks the model "

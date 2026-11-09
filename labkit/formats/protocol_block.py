@@ -8,7 +8,7 @@ unit) and may carry a `[reference]` table, the stated value that number is
 compared with (`reference`):
 
     [protocol]
-    standard = "0.26"
+    standard = "0.27"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     repeat_cost = "low"         # low | high — the price of a repeat
@@ -48,15 +48,18 @@ from labkit.formats.runs import REPEAT_COSTS, RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.26"
+STANDARD = "0.27"
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    'from 0.24 or 0.25: set standard = "0.26"; nothing else in the head changes — '
+    'from 0.24, 0.25 or 0.26: set standard = "0.27"; nothing else in the head changes — '
     "0.25 admits a success bar the task states as an absolute value (LAB-035 "
     "Thresholds belong to the run, not to the measure), 0.26 keeps the question as "
     "registered after the first measurement, a typo included (LAB-003 No run "
-    "without an intent paragraph)"
+    "without an intent paragraph), 0.27 admits a cache of model answers the lab "
+    "declares (LAB-069 No LLM cache unless the lab declares one) and gives the "
+    "holds on a reported number their own rule (LAB-104 A number leaves the area "
+    "only through its adoption)"
 )
 TYPES = ("exploratory", "confirmatory")
 #: what the kept number asserts: a computation judges no

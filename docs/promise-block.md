@@ -189,7 +189,7 @@ The head and the tables:
 
 ```toml
 [protocol]
-standard = "0.26"
+standard = "0.27"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
 repeat_cost = "high"

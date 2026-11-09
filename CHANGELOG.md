@@ -9,6 +9,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Lab standard 0.27.** A protocol's head says `standard = "0.27"`; 0.112.0 is the last release that reads 0.26 (from 0.24, 0.25 or 0.26: set the version, nothing else in the head changes). LAB-069 is now "No LLM cache unless the lab declares one": a cache of model answers is allowed where `models.toml` says `[llm_cache] enabled = true`. The holds on a number leaving the area, which LAB-011 Required-field check carried, stand as their own rule, LAB-104 A number leaves the area only through its adoption, their text unchanged; the report reviewer inlines LAB-104 in place of LAB-011.
+
 - **The run index has its own format module, `labkit.formats.run_index`.**
   Its name and columns (`RUN_INDEX`, `RUN_INDEX_COLS`), its lock
   (`index_lock`), its row (`index_row`, `append_row`), its reading
@@ -321,6 +323,10 @@ pins (`requirements.txt` / `requirements.lock`).
   in Data / scope; a changed byte still blocks. finalize's summary says
   "tracked in git or kept outside it". The standard's Fixed inputs says
   where data may lie.
+
+### Deprecated
+
+- **`llm_cache.Cache` without the lab's declaration.** Opened in a lab whose `models.toml` lacks `[llm_cache] enabled = true`, it warns (`DeprecationWarning`) and works as before; the next release refuses it. `llm.cache_declared` reads the declaration; a malformed `[llm_cache]` table raises `ValueError`.
 
 ### Added
 

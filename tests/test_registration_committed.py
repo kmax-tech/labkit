@@ -244,7 +244,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         sha = self._commit(REGISTRATION.replace("", ""))
         self.proto.write_text(
             self.proto.read_text(encoding="utf-8").replace(
-                'standard = "0.26"', 'standard = "0.21"'
+                'standard = "0.27"', 'standard = "0.21"'
             ),
             encoding="utf-8",
         )

@@ -66,7 +66,7 @@ LAB-065	§2.F9	No worktree per experiment	active
 LAB-066	§2.G1	Extract only for the second user	active
 LAB-067	§2.G2	A prompt has one home, which the run freezes	active
 LAB-068	§2.G3	New areas start from the template-generated skeleton	active
-LAB-069	§2.G4	No LLM cache	active
+LAB-069	§2.G4	No LLM cache unless the lab declares one	active
 LAB-071	§2.H2	The proof is the item-wise diff, not a tolerance band	active
 LAB-072	§2.H3	Identifiers travel in English	active
 LAB-074	§3.1	Note and commit carry the why; reconcile	active
@@ -95,3 +95,4 @@ LAB-100		Answer before reasoning	active
 LAB-101		Comparison tables	active
 LAB-102		Cold reader before freezing	active
 LAB-103		The audit reads by declared scope, not by import graph	active
+LAB-104		A number leaves the area only through its adoption	active

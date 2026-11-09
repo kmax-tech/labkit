@@ -477,6 +477,7 @@ class CachedCalls(unittest.TestCase):
             f'[models.o]\nbackend = "ollama"\nmodel = "m"\nendpoints = ["{self.url}"]\n'
             f'[models.o2]\nbackend = "ollama"\nmodel = "m"\n'
             f'endpoints = ["{other_url}"]\n'
+            "[llm_cache]\nenabled = true\n"
         )
         serve(self, text)
         (self.lab / "models.toml").write_text(text, encoding="utf-8")

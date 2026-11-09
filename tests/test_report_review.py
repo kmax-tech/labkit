@@ -108,7 +108,7 @@ class Gather(unittest.TestCase):
         self.assertIn("effect: criterion-1 not assessable", prompt)
         self.assertIn("reason: the leak stays", prompt)
         self.assertIn("FAILED (unproven) · opus", prompt)
-        self.assertIn("LAB-011", prompt)  # the cited rules are inlined
+        self.assertIn("LAB-104", prompt)  # the cited rules are inlined
 
     def test_a_report_with_no_discussion_block_is_reviewed_too(self):
         """A report citing a run without a discussion block is read, never
@@ -495,7 +495,7 @@ class Cli(unittest.TestCase):
 
     def test_the_instructions_ship(self):
         self.assertIn("Report review", audit_prompt.instructions("report"))
-        self.assertEqual(audit_prompt.cited_rules("report"), ["LAB-011", "LAB-050"])
+        self.assertEqual(audit_prompt.cited_rules("report"), ["LAB-104", "LAB-050"])
 
 
 if __name__ == "__main__":
