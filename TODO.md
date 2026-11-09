@@ -33,6 +33,10 @@ Warum: Die Runde soll zeigen, welche Checks echte Mängel finden und welche Fehl
 
 Stand 2026-11-09: gebaut — die beiden Leser werfen `files.ReadError` mit Ursache (`missing`, `access`, `malformed`), ein Gate-Befund trägt `check_outcome` (`violated` oder `not executable`, nur ein verweigerter Zugriff lässt die Prüfung offen), die Zeile sagt es; elf Meldestellen geben es weiter, finalize rät bei verweigertem Zugriff „lesbar machen“ statt „neu messen“. Die übrigen gemischten Stellen (Audit-Datensätze, Journal, git) behalten ihre eigenen Fehler.
 
+### 6a. Festlegen, was labkit durchsetzt — vor einem Umbau der Checks, offen seit 2026-11-09
+
+Warum: Viele Checks, Regeln und Tests (65 000 Zeilen Testcode) machen labkit schwer wartbar; ein Umbau in Stufen (einmal lesen, Inhalt prüfen, Regel, Gate) lohnt erst, wenn feststeht, welche Zusicherungen labkit hält. Grundlage: [Note](docs/notes/2026-11-09-enforced-core.md) — 178 blockierende Stellen, fast alle in der Kette Registrierung, Herkunft, Vollständigkeit, Audit-Abdeckung, Bericht; 13 außerhalb (Instrument, Störung während des Laufs, Hausregel). Zu entscheiden: diese drei Gruppen; danach bei jedem Blocker der Kette die konkrete Zusicherung prüfen, die er schützt.
+
 ### 7. Die nächste Nutzungsrunde durchführen — nach den Aufgaben 2–6
 
 Die Runde prüft, ob Agenten fachlich korrekte Arbeit verlässlicher und mit weniger Aufwand abschließen. Sie bewertet die Aufgaben 2–6 als ein Paket, ohne Vorhersage je Änderung (entschieden 2026-11-06: Maßstab ist ein klares, wartbares Repo, nicht welche Einzeländerung wie viele Versuche umdreht). `limitation`-Entscheidungen weiter zählen: In Runde 23 waren es 36, zuvor 19 beziehungsweise 20. Dass ein Teil davon dem fertig angebotenen Entscheidungsbefehl folgte, ist bisher eine Vermutung.
