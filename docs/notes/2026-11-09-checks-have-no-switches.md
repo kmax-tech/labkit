@@ -16,6 +16,10 @@ A rule or a check is removed by a change to labkit, released as a version; an ex
 2. A usage round counts what fired: per check, how often, a real fault or a false alarm, and which never fired (`TODO.md`, "Bei der nächsten Nutzung beobachten").
 3. A rule that no check holds and no audit asks about, or whose checks never fired on a real fault, is a candidate. Removing it is a decision on that evidence, written into `CHANGELOG.md`.
 
+## How a rule comes
+
+The agent audit names the rule each finding holds, or `new class` when no rule of the standard fits (`findings.Finding.rule`, kept apart from the subject: one says where the fault lies, the other which rule it breaks). The `new class` findings are collected for the author (`check_inventory --records EXPERIMENTS`). A new rule, or a wider one, comes only from that review and with its grounds — what fault it names, where it occurred, why no rule holds it. A count of `new class` findings is a reason to look, not a rule.
+
 ## The state on 2026-11-09
 
 The first inventory: 227 finding sites, 26 of which cite a rule; 10 of the 96 active rules are cited by a finding site, 8 more only by other code strings, 18 only by agent definitions, templates and guides, 60 nowhere outside the standard. "Nowhere" is about the citation, not the check: `LAB-010 Commit before the run` is cited nowhere, yet every run records its uncommitted code as `uncommitted.patch` and its untracked sources under `source-untracked/` (`run/provenance.py`), the safety net the rule names. Until each finding names the rule it holds, a usage round can count findings but not rules. So the next step towards the measurement is the mapping finding → rule, which is a decision about the doctrine and stays with the author.
