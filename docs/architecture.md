@@ -1,6 +1,33 @@
 # Architecture
 
-Where what happens in labkit: the layers, the chain from promise to reported number, and the one home of each recurring question. Terms are coined in the README; the promise block in `docs/promise-block.md`.
+Where what happens in labkit: the model of rules, checks and gates, the layers, the chain from promise to reported number, and the one home of each recurring question. Terms are coined in the README; the promise block in `docs/promise-block.md`.
+
+## Rules, checks and gates
+
+The model in one picture; each part has its home, linked below, and this section repeats none of their detail.
+
+```
+rule (the standard, LAB-nnn)
+  │  held by
+  ├─ a guaranteed check     mechanical, silent on a correct input    → may block
+  ├─ a static-evidence check mechanical, may be wrong                → warns only
+  ├─ an agent audit         a model reads registration and code      → findings a person decides
+  └─ construction           the tool leaves no way to break it       → nothing to check
+        │
+gate: when a check runs (its station in the chain) and what its findings stop
+lane: which duties a protocol owes at all (its repeat cost)
+```
+
+| Part         | What it decides                                                                                                                                                                              | Home                                                                                                            |
+|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| Rule         | what the lab holds to; one id, one name, one text                                                                                                                                            | `labkit/docs/standard.md`, ledger `labkit/docs/rules.tsv` (`python -m labkit.formats.rules show LAB-nnn`)       |
+| Check tier   | what supports a finding: exact, an indication, or a model's reading                                                                                                                          | `docs/promise-block.md`, "Claim and check tiers"; a gate finding carries it as `gate.GateFinding.evidence_kind` |
+| Agent audit  | a model's findings, each with its subject (where the fault lies) and its rule (which rule it breaks, or `new class`); a person decides each, and a gate holds only that every one is decided | `findings.Finding`, `labkit/agents/experiment-preflight.agent.md`                                               |
+| Construction | a rule no check needs, because the tool does it: `runlog` records uncommitted code (LAB-010 Commit before the run), `batch.Store` resumes (LAB-064 The pilot is resumable too)               | the tool's own module                                                                                           |
+| Gate         | the order of the stations and what each holds; a finding's grade decides block or warn, the gate decides when it is asked                                                                    | [The gates in order](#the-gates-in-order)                                                                       |
+| Lane         | the duties of a repeat cost: freeze, registration, which audits, provenance                                                                                                                  | `standard_contract.Lane`                                                                                        |
+
+Two limits stand today. A mechanical finding names its rule only where its message cites one — 26 of 227 finding sites (`python -m labkit.tools.check_inventory`; the mapping of the rest is proposed in [the rule-per-finding note](notes/2026-11-09-rule-per-finding-proposal.md)). And nothing switches a check off: a rule leaves by a release on measured evidence, and comes — from the audits' `new class` findings — only with its grounds ([note](notes/2026-11-09-checks-have-no-switches.md)).
 
 ## Layers
 
