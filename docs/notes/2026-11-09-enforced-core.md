@@ -69,4 +69,4 @@ The five assurances orient; they are no closed list of the blockers allowed. A b
 
 ## Next
 
-The assignment above goes through each site's rule, so \"nearly every blocker protects the chain\" is provisional. Next, every blocker answers: *what was found, which assurance does it concern, and why must exactly this action wait for it?* Only then are blockers regraded; the restructuring of the checks stays a separate decision. The distinguishable failure causes built today stand either way.
+The assignment above goes through each site's rule, so "nearly every blocker protects the chain" is provisional. Next, every blocker answers: *what was found, which assurance does it concern, and why must exactly this action wait for it?* Only then are blockers regraded; the restructuring of the checks stays a separate decision. The distinguishable failure causes built today stand either way.
