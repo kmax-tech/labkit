@@ -246,7 +246,10 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
         protocol = self.area / "PROTOCOL-x.md"
         text = protocol.read_text(encoding="utf-8")
         decided = findings.Finding(
-            "WARNING", "WARNING · PROTOCOL-x.md:Data · statement · x", "fixed", "why"
+            "WARNING",
+            "WARNING · PROTOCOL-x.md:Data · statement · LAB-015 Preflight audit before freezing · x",
+            "fixed",
+            "why",
         )
         with self.assertRaises(AuditError) as caught:
             registration_hold._correction_field(decided, protocol, text)
@@ -254,7 +257,10 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
         self.assertEqual(caught.exception.fix, ways_out.PLACE_UNCLEAR_WAY)
         # the twin: a start of one label is that field
         unit = findings.Finding(
-            "WARNING", "WARNING · PROTOCOL-x.md:Uni · statement · x", "fixed", "why"
+            "WARNING",
+            "WARNING · PROTOCOL-x.md:Uni · statement · LAB-015 Preflight audit before freezing · x",
+            "fixed",
+            "why",
         )
         self.assertEqual(
             registration_hold._correction_field(unit, protocol, text), "unit"

@@ -6,10 +6,11 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from labkit.formats.commands import step_command
 from labkit.gates import audit_decisions, audit_reply
-from labkit.formats import findings, protocol_check
+from labkit.formats import findings, protocol_check, rules
 from labkit.formats import audit_gaps
 from protocol_fixture import registration_of  # noqa: E402
 
@@ -75,7 +76,15 @@ class UndecidedFindings(unittest.TestCase):
         area = area_with(
             [
                 ("preflight", TWO),
-                ("analysis", [("NOTE", "NOTE · n.py:1 · statement · n")]),
+                (
+                    "analysis",
+                    [
+                        (
+                            "NOTE",
+                            "NOTE · n.py:1 · statement · LAB-015 Preflight audit before freezing · n",
+                        )
+                    ],
+                ),
             ]
         )
         records = findings.area_records(area)
@@ -87,7 +96,15 @@ class UndecidedFindings(unittest.TestCase):
         area = area_with(
             [
                 ("preflight", TWO),
-                ("analysis", [("NOTE", "NOTE · n.py:1 · statement · n")]),
+                (
+                    "analysis",
+                    [
+                        (
+                            "NOTE",
+                            "NOTE · n.py:1 · statement · LAB-015 Preflight audit before freezing · n",
+                        )
+                    ],
+                ),
             ]
         )
         records = findings.area_records(area)
@@ -138,13 +155,19 @@ class WriteRead(unittest.TestCase):
             [
                 (
                     "analysis",
-                    [("NOTE", 'NOTE · x · statement · "quoted" · ä · \\ backslash')],
+                    [
+                        (
+                            "NOTE",
+                            'NOTE · x · statement · LAB-015 Preflight audit before freezing · "quoted" · ä · \\ backslash',
+                        )
+                    ],
                 )
             ]
         )
         rec = findings.area_records(area)[0]
         self.assertEqual(
-            rec.findings[0].text, 'NOTE · x · statement · "quoted" · ä · \\ backslash'
+            rec.findings[0].text,
+            'NOTE · x · statement · LAB-015 Preflight audit before freezing · "quoted" · ä · \\ backslash',
         )
 
     def test_a_second_audit_in_the_same_minute_does_not_overwrite(self):
@@ -288,7 +311,12 @@ class WriteRead(unittest.TestCase):
             "s",
             "b",
             (0, 1, 2),
-            [("WARNING", "WARNING · w.py:1 · statement · w")],
+            [
+                (
+                    "WARNING",
+                    "WARNING · w.py:1 · statement · LAB-015 Preflight audit before freezing · w",
+                )
+            ],
             registration=registration_of(area),
         )
 
@@ -650,7 +678,10 @@ class Subject(unittest.TestCase):
         for line, subject in (
             (self.STAT + "\n- evidence", "statement"),
             ("BLOCKER — a.py:1 — implementation — y", "implementation"),
-            ("**BLOCKER:** a.py:1 · `statement` · y", "statement"),
+            (
+                "**BLOCKER:** a.py:1 · `statement` · LAB-015 Preflight audit before freezing · y",
+                "statement",
+            ),
         ):
             with self.subTest(line=line):
                 self.assertEqual(findings.subject_of(line), subject)
@@ -724,6 +755,92 @@ class Subject(unittest.TestCase):
         )
         with self.assertRaisesRegex(findings.FindingsError, "subject 'wording'"):
             findings.read(path)
+
+
+class Rule(unittest.TestCase):
+    """The auditor names the rule a finding holds — an active rule id or
+    `new class` — read into its own field, apart from the subject and the
+    place; a decision keeps it; `new class` findings are collected."""
+
+    ONE = "BLOCKER · a.py:1 · implementation · the denominator counts generated rows — y · LAB-038 What the prompt demands · z"
+    NEW = "WARNING · b.py:2 · statement · claim wider than run · y · new class · z"
+
+    def record(self) -> Path:
+        area = area_with(
+            [("preflight", [("BLOCKER", self.ONE), ("WARNING", self.NEW)])]
+        )
+        return next((area / "audits").glob("*.toml"))
+
+    def test_the_rule_is_read_by_what_the_field_says_and_stored(self):
+        # the dash inside the free text shifts the positions; the field is
+        # found by its content
+        self.assertEqual(findings.active_rule_of(self.ONE), "LAB-038")
+        self.assertEqual(findings.active_rule_of(self.NEW), findings.NEW_CLASS)
+        self.assertEqual(
+            findings.active_rule_of(
+                "BLOCKER · a.py:1 · statement · x\n· `LAB-015 Preflight audit before freezing` · z"
+            ),
+            "LAB-015",
+        )
+        rec = findings.read(self.record())
+        self.assertEqual(
+            [f.rule for f in rec.findings], ["LAB-038", findings.NEW_CLASS]
+        )
+        # subject and rule are two fields, neither read from the other
+        self.assertEqual(
+            [f.subject for f in rec.findings], ["implementation", "statement"]
+        )
+
+    def test_an_id_inside_a_sentence_names_no_rule(self):
+        with self.assertRaisesRegex(ValueError, "without its rule"):
+            findings.active_rule_of(
+                "BLOCKER · a.py:1 · statement · breaks LAB-015 here · z"
+            )
+
+    def test_no_rule_two_rules_or_an_unknown_id_is_refused(self):
+        for line, words in (
+            ("BLOCKER · a.py:1 · statement · x · z", "without its rule"),
+            ("BLOCKER · a.py:1 · statement · LAB-015 x · LAB-038 y · z", "2 rules"),
+            ("BLOCKER · a.py:1 · statement · LAB-015 x · new class · z", "2 rules"),
+            ("BLOCKER · a.py:1 · statement · LAB-999 Nothing · z", "not in the ledger"),
+        ):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(ValueError, words):
+                    findings.active_rule_of(line)
+
+    def test_a_record_without_rules_does_not_read(self):
+        path = self.record()
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text.replace('rule = "LAB-038"\n', ""), encoding="utf-8")
+        with self.assertRaisesRegex(
+            findings.FindingsError, r"no rule field — .*0\.112\.0 or earlier"
+        ):
+            findings.read(path)
+
+    def test_a_retired_rule_is_refused_when_written_and_read_in_a_record(self):
+        """A record outlives its rule's retirement; only the writer holds
+        the rule active. The shipped ledger retires none, so one is given."""
+        path = self.record()
+        ledger = rules.load_ledger(rules.LEDGER)
+        retired = [
+            r._replace(status="retired") if r.id == "LAB-038" else r for r in ledger
+        ]
+        with mock.patch.object(rules, "load_ledger", return_value=retired):
+            with self.assertRaisesRegex(ValueError, "LAB-038, retired"):
+                findings.active_rule_of(self.ONE)
+            self.assertEqual(findings.read(path).findings[0].rule, "LAB-038")
+
+    def test_a_decision_keeps_the_rule(self):
+        path = self.record()
+        after = findings.write_decision(path, 2, "false-positive", "the run is right")
+        self.assertEqual(after.findings[1].rule, findings.NEW_CLASS)
+
+    def test_new_class_findings_are_collected_with_their_record_and_number(self):
+        area = self.record().parent.parent
+        collected = findings.new_class_findings(findings.repo_records(area.parent))
+        self.assertEqual(
+            [(a, n, f.grade) for a, _, n, f in collected], [(area, 2, "WARNING")]
+        )
 
 
 class Undetermined(unittest.TestCase):
@@ -1391,10 +1508,10 @@ class OneGrammarOfTheGradeLine(unittest.TestCase):
 
     def test_dots_dashes_bold_and_a_bullet_read_alike(self):
         for line in (
-            "BLOCKER · PROTOCOL-x.md:Unit · statement · says cases · fix",
+            "BLOCKER · PROTOCOL-x.md:Unit · statement · LAB-015 Preflight audit before freezing · says cases · fix",
             "BLOCKER — PROTOCOL-x.md:Unit — statement — says cases — fix",
-            "- **BLOCKER** · `PROTOCOL-x.md:Unit` · statement · says cases · fix",
-            "BLOCKER: PROTOCOL-x.md:Unit · statement · says cases · fix",
+            "- **BLOCKER** · `PROTOCOL-x.md:Unit` · statement · LAB-015 Preflight audit before freezing · says cases · fix",
+            "BLOCKER: PROTOCOL-x.md:Unit · statement · LAB-015 Preflight audit before freezing · says cases · fix",
         ):
             with self.subTest(line=line):
                 f = self.finding(line)
@@ -1403,9 +1520,15 @@ class OneGrammarOfTheGradeLine(unittest.TestCase):
 
     def test_the_twins_another_grade_no_colon_or_no_field_after_it(self):
         self.assertIsNone(
-            self.finding("WARNING · PROTOCOL-x.md:Unit · statement · x").place
+            self.finding(
+                "WARNING · PROTOCOL-x.md:Unit · statement · LAB-015 Preflight audit before freezing · x"
+            ).place
         )
-        self.assertIsNone(self.finding("BLOCKER · PROTOCOL-x.md · statement · x").place)
+        self.assertIsNone(
+            self.finding(
+                "BLOCKER · PROTOCOL-x.md · statement · LAB-015 Preflight audit before freezing · x"
+            ).place
+        )
         self.assertIsNone(self.finding("BLOCKER · PROTOCOL-x.md:Unit").place)
 
     def test_a_reading_hint_is_read_by_the_same_grammar(self):
@@ -1443,14 +1566,16 @@ class CorrectedField(unittest.TestCase):
 
     def test_the_place_is_read_from_the_grade_line(self):
         f = self.finding(
-            "WARNING · `PROTOCOL-x.md:Data / scope` · statement · says 4 · fix"
+            "WARNING · `PROTOCOL-x.md:Data / scope` · statement · LAB-015 Preflight audit before freezing · says 4 · fix"
         )
         self.assertEqual(f.place, ("PROTOCOL-x.md", "Data / scope"))
         self.assertIsNone(
             self.finding("WARNING — PROTOCOL-x.md:Data / scope — x").place
         )
         self.assertIsNone(
-            self.finding("WARNING · PROTOCOL-x.md · statement · x · y").place
+            self.finding(
+                "WARNING · PROTOCOL-x.md · statement · LAB-015 Preflight audit before freezing · x · y"
+            ).place
         )
 
     def test_a_label_named_whole_is_the_corrected_field(self):
@@ -1460,22 +1585,33 @@ class CorrectedField(unittest.TestCase):
             ("Terms", "terms of this protocol"),  # the one label it begins
             ("Null condition / anchors (in the same run)", "null condition / anchors"),
         ):
-            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · statement · x · y")
+            f = self.finding(
+                f"WARNING · PROTOCOL-x.md:{place} · statement · LAB-015 Preflight audit before freezing · x · y"
+            )
             self.assertEqual(
                 findings.corrected_field(f, self.PROTOCOL, self.TEXT), name
             )
 
     def test_the_twins_part_of_a_label_a_line_another_file_or_status_name_none(self):
         for line, status in (
-            ("WARNING · PROTOCOL-x.md:2 · statement · x · y", "fixed"),
-            ("WARNING · PROTOCOL-y.md:Data / scope · statement · x · y", "fixed"),
             (
-                "WARNING · scripts/01_measure.py:Data / scope · statement · x · y",
+                "WARNING · PROTOCOL-x.md:2 · statement · LAB-015 Preflight audit before freezing · x · y",
                 "fixed",
             ),
-            ("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y", "limitation"),
             (
-                "WARNING · PROTOCOL-x.md:Unit · statement · x · y",
+                "WARNING · PROTOCOL-y.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y",
+                "fixed",
+            ),
+            (
+                "WARNING · scripts/01_measure.py:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y",
+                "fixed",
+            ),
+            (
+                "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y",
+                "limitation",
+            ),
+            (
+                "WARNING · PROTOCOL-x.md:Unit · statement · LAB-015 Preflight audit before freezing · x · y",
                 "fixed",
             ),  # no such field
         ):
@@ -1486,29 +1622,39 @@ class CorrectedField(unittest.TestCase):
 
     def test_a_start_several_labels_share_raises(self):
         text = self.TEXT + "- **Data preparation:** none\n"
-        f = self.finding("WARNING · PROTOCOL-x.md:Data · statement · x · y")
+        f = self.finding(
+            "WARNING · PROTOCOL-x.md:Data · statement · LAB-015 Preflight audit before freezing · x · y"
+        )
         with self.assertRaises(protocol_check.FieldPlaceError) as caught:
             findings.corrected_field(f, self.PROTOCOL, text)
         self.assertEqual(caught.exception.begun, ["data / scope", "data preparation"])
         # the twin: the full label is exact first, though it begins nothing else
-        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y")
+        f = self.finding(
+            "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y"
+        )
         self.assertEqual(
             findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
         )
 
     def test_a_field_written_twice_raises(self):
         text = self.TEXT + "- **Data / scope:** data/raw/other\n"
-        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y")
+        f = self.finding(
+            "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y"
+        )
         with self.assertRaises(protocol_check.FieldPlaceError):
             findings.corrected_field(f, self.PROTOCOL, text)
 
     def test_the_question_is_no_corrected_field(self):
         text = "- **Question / hypothesis:** how many lines on average?\n" + self.TEXT
         for place in ("Question / hypothesis", "question / hypothesis"):
-            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · statement · x · y")
+            f = self.finding(
+                f"WARNING · PROTOCOL-x.md:{place} · statement · LAB-015 Preflight audit before freezing · x · y"
+            )
             self.assertIsNone(findings.corrected_field(f, self.PROTOCOL, text), place)
         # the twin: the other fields of the same text still are
-        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y")
+        f = self.finding(
+            "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y"
+        )
         self.assertEqual(
             findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
         )

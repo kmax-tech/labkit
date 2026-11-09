@@ -640,7 +640,7 @@ class ProgressAccount(unittest.TestCase):
             [
                 (
                     "BLOCKER",
-                    "BLOCKER · a.py:1 · statement · the mean counts a hidden file",
+                    "BLOCKER · a.py:1 · statement · LAB-015 Preflight audit before freezing · the mean counts a hidden file",
                 )
             ],
             run_id=run_id,

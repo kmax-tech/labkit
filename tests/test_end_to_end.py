@@ -1780,7 +1780,7 @@ class Judge(unittest.TestCase):
             scope_sha.area_stamp(self.area)[0],
             promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
             (1, 0, 0),
-            [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · statement · the prompt asks more than the gold scores")],
+            [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · statement · LAB-015 Preflight audit before freezing · the prompt asks more than the gold scores")],
             run_id=self.run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
 
@@ -1936,7 +1936,7 @@ class Judge(unittest.TestCase):
             scope_sha.area_stamp(self.area)[0],
             promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
             (0, 1, 0),
-            [("WARNING", "WARNING · data/raw:1 · statement · six connectives separate the classes")],
+            [("WARNING", "WARNING · data/raw:1 · statement · LAB-015 Preflight audit before freezing · six connectives separate the classes")],
             run_id=self.run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
         label = f"Limitation (audit {record.stem} #1)"

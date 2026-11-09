@@ -62,7 +62,7 @@ class VerdictHeldToLines(unittest.TestCase):
         rc, _, records = _run(LINE + "verdict: 1 blockers, 0 warnings, 0 notes")
         self.assertEqual((rc, len(records)), (1, 1))
         rc, _, records = _run(
-            "NOTE · a.py:1 · statement · x\nverdict: 0 blockers, 0 warnings, 1 notes"
+            "NOTE · a.py:1 · statement · LAB-015 Preflight audit before freezing · x\nverdict: 0 blockers, 0 warnings, 1 notes"
         )
         self.assertEqual((rc, len(records)), (0, 1))
 

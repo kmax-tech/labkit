@@ -25,8 +25,14 @@ def record(area: Path) -> Path:
         "bbbbbbbbbbbb",
         (1, 1, 0),
         [
-            ("BLOCKER", "BLOCKER · x.py:1 · statement · a"),
-            ("WARNING", "WARNING · x.py:2 · statement · b"),
+            (
+                "BLOCKER",
+                "BLOCKER · x.py:1 · statement · LAB-015 Preflight audit before freezing · a",
+            ),
+            (
+                "WARNING",
+                "WARNING · x.py:2 · statement · LAB-015 Preflight audit before freezing · b",
+            ),
         ],
         run_id="2026-10-21T10-00-00_aa11",
         shown_sha="cccccccccccc",

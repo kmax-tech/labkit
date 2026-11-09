@@ -212,7 +212,8 @@ class SupersededCallReleasesNothing(_Chain):
         # a failed call on the new code, then an audit that supersedes it and
         # judges nothing of the earlier BLOCKER
         rc, out = self.audit(
-            SIMULATED + "BLOCKER · x · statement · check: Not A Key\n"
+            SIMULATED
+            + "BLOCKER · x · statement · LAB-015 Preflight audit before freezing · check: Not A Key\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         self.assertEqual(rc, 2, out)

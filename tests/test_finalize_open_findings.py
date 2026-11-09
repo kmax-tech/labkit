@@ -46,11 +46,11 @@ METRICS = {
 }
 BLOCKER = (
     "BLOCKER",
-    "BLOCKER · scripts/01_measure.py:3 · statement · the target leaks",
+    "BLOCKER · scripts/01_measure.py:3 · statement · LAB-015 Preflight audit before freezing · the target leaks",
 )
 WARNING = (
     "WARNING",
-    "WARNING · scripts/01_measure.py:9 · statement · the seed is not recorded",
+    "WARNING · scripts/01_measure.py:9 · statement · LAB-015 Preflight audit before freezing · the seed is not recorded",
 )
 
 

@@ -1,7 +1,7 @@
 """check_inventory — every place labkit tells a finding, with the rule it
 cites, and every active rule of the standard with the places that cite it.
 
-    python -m labkit.tools.check_inventory [--out FILE]
+    python -m labkit.tools.check_inventory [--records EXPERIMENTS] [--out FILE]
 
 The basis for measuring whether a rule earns its place: a rule no finding
 cites is held by an agent audit or by nobody, and a finding that cites no
@@ -29,6 +29,12 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
     (`labkit-calltree` shows what one run did call); `—` where no command
     reaches it — code an area script calls (`recheck`, `lanes`) or nothing
 
+With `--records EXPERIMENTS` (a lab repo's experiments folder) it adds
+what the agent audits found there: the findings per rule the auditor named
+(`findings.Finding.rule`), and every `new class` finding — a fault no rule
+of the standard names, listed for the author to review. A new class
+becomes a rule only by a decision with its grounds, never by this list.
+
 The table is computed at every call and committed nowhere: line
 numbers move with every edit. Prints the markdown to stdout, or writes it
 to FILE.
@@ -45,10 +51,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console
+from labkit.formats import console, findings
 from labkit.formats.rules import CODE_RE, load_ledger
 
-USAGE = "usage: python -m labkit.tools.check_inventory [--out FILE]"
+USAGE = (
+    "usage: python -m labkit.tools.check_inventory [--records EXPERIMENTS] [--out FILE]"
+)
 
 RULE_ID = CODE_RE  # every rule family; the ledger read here holds LAB
 PRINTED_GRADE = re.compile(r"\b(WARNING|BLOCKER):")
@@ -632,17 +640,73 @@ def inventory(package_dir: Path) -> str:
     return render_inventory(sites, rule_uses(ledger, sites, modules, shipped), commands)
 
 
+def render_audit_rules(
+    experiments: Path, records: list[tuple[Path, findings.Record]]
+) -> str:
+    """What the agent audits under EXPERIMENTS found, as markdown: the
+    findings per rule the auditor named, then every `new class` finding
+    with its record and number, for the author to review."""
+    per_rule: dict[str, int] = defaultdict(int)
+    for _, record in records:
+        for f in record.findings:
+            per_rule[f.rule] += 1
+    new = findings.new_class_findings(records)
+    lines = [
+        "",
+        f"## Audit findings in {experiments}",
+        "",
+        f"{sum(per_rule.values())} findings in {len(records)} audit records, "
+        f"{len(new)} of them `{findings.NEW_CLASS}`.",
+        "",
+        "| Rule | Findings |",
+        "|---|---|",
+        *(f"| {rule} | {n} |" for rule, n in sorted(per_rule.items())),
+        "",
+        f"## `{findings.NEW_CLASS}` — for the author to review",
+        "",
+        "A fault no rule of the standard names. It becomes a rule only by a "
+        "decision with its grounds, never by this list.",
+        "",
+        "| Finding | Grade | Subject | Status | Text |",
+        "|---|---|---|---|---|",
+        *(
+            f"| `{record.path.relative_to(experiments)}#{n}` | {f.grade} | {f.subject} "
+            f"| {f.status} | {short(f.one_line)} |"
+            for _, record, n, f in new
+        ),
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def main(argv: list[str]) -> int:
-    """Print the inventory, or write it to `--out FILE`; 0."""
+    """Print the inventory, with `--records EXPERIMENTS` the audit findings
+    there by rule; to stdout, or to `--out FILE`; 0."""
     if argv in (["--help"], ["-h"]):
         print(__doc__)
         return 0
-    out: Path | None = None
-    if argv:
-        if len(argv) != 2 or argv[0] != "--out":
-            raise console.Refused("check_inventory", USAGE)
-        out = Path(argv[1])
+    options: dict[str, Path] = {}
+    rest = list(argv)
+    while rest:
+        option = rest[0]
+        if option not in ("--out", "--records"):
+            raise console.Refused(
+                "check_inventory", f"{option!r} is no option; {USAGE}"
+            )
+        if option in options:
+            raise console.Refused("check_inventory", f"{option} given twice; {USAGE}")
+        if len(rest) < 2:
+            raise console.Refused(
+                "check_inventory", f"{option} without its value; {USAGE}"
+            )
+        options[option] = Path(rest[1])
+        rest = rest[2:]
+    out = options.get("--out")
     text = inventory(PACKAGE_DIR)
+    experiments = options.get("--records")
+    if experiments is not None:
+        if not experiments.is_dir():
+            raise console.Refused("check_inventory", f"{experiments}: no such folder")
+        text += render_audit_rules(experiments, findings.repo_records(experiments))
     if out is None:
         sys.stdout.write(text)
     else:

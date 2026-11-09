@@ -9,8 +9,9 @@ import unittest
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console
+from labkit.formats import console, findings
 from labkit.tools import check_inventory as inv
+from protocol_fixture import registration_of
 
 
 def module(name: str, source: str) -> inv.Module:
@@ -173,6 +174,52 @@ class ThePackage(unittest.TestCase):
             )
         with self.assertRaises(console.Refused):
             inv.main(["--bogus"])
+
+
+class AuditRules(unittest.TestCase):
+    """`--records`: the audit findings of a lab repo per rule, and every
+    `new class` finding listed for review."""
+
+    def test_findings_are_counted_by_rule_and_new_classes_listed(self) -> None:
+        experiments = Path(tempfile.mkdtemp()) / "experiments"
+        area = experiments / "01-x"
+        area.mkdir(parents=True)
+        rows = [
+            (
+                "BLOCKER",
+                "BLOCKER · a.py:1 · implementation · x · y · LAB-038 What the prompt demands · z",
+            ),
+            (
+                "WARNING",
+                "WARNING · b.py:2 · statement · a claim wider than the run · y · new class · z",
+            ),
+        ]
+        findings.write(
+            area,
+            "preflight",
+            "opus",
+            "abc123def456",
+            "b10c0000000a",
+            (1, 1, 0),
+            rows,
+            registration=registration_of(area),
+        )
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "checks.md"
+            inv.main(["--records", str(experiments), "--out", str(out)])
+            text = out.read_text(encoding="utf-8")
+        self.assertIn("2 findings in 1 audit records, 1 of them `new class`", text)
+        self.assertIn("| LAB-038 | 1 |", text)
+        self.assertRegex(
+            text,
+            r"\| `01-x/audits/[^`]+-preflight\.toml#2` \| WARNING \| statement \| open \| WARNING · b\.py:2",
+        )
+
+    def test_a_missing_folder_and_a_doubled_option_are_refused(self) -> None:
+        for argv in (["--records", "/no/such/folder"], ["--out", "a", "--out", "b"]):
+            with self.subTest(argv=argv):
+                with self.assertRaises(console.Refused):
+                    inv.main(argv)
 
 
 if __name__ == "__main__":

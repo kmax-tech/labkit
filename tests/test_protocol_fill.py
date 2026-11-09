@@ -426,7 +426,7 @@ class Freeze(unittest.TestCase):
             [
                 (
                     "BLOCKER",
-                    "BLOCKER · scripts/01_measure.py:1 · statement · x · y · z · fix",
+                    "BLOCKER · scripts/01_measure.py:1 · statement · LAB-015 Preflight audit before freezing · x · y · z · fix",
                 )
             ],
         )

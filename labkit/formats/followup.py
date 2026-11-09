@@ -204,7 +204,8 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
     continues, why and, for an undetermined finding settled, as what (so
     the text does not grow over a chain), the
     member's check and note, the subject VERDICT settled an undetermined
-    finding to or else the member's, `carries` = its ref."""
+    finding to or else the member's, the member's rule, `carries` = its
+    ref."""
     return Finding(
         BLOCKER,
         f"carried from {member.ref} ({verdict.verdict}"
@@ -216,6 +217,7 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
         member.finding.check_note,
         member.ref,
         verdict.subject or member.finding.subject,
+        member.finding.rule,
     )
 
 

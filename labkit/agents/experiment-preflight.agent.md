@@ -101,6 +101,8 @@ rule name, or "new class"> · <smallest change that would remove the failure>
 
 A finding with both sides is two findings. Choose `undetermined` only for a suspicion a check can settle; a fault you can see is `implementation` or `statement`.
 
+**The sixth field names the rule the finding holds** — one rule, as `LAB-nnn <rule name>` from the rules inlined below, apart from the subject: the subject says where the fault lies, the rule which part of the standard it breaks, and neither follows from the other. When no rule fits, write `new class`: such findings are collected for the author to review, and a new rule comes only from that review with its grounds — do not stretch a rule to cover a finding it does not name. labkit refuses a finding line with no rule, with two, or with an id the standard does not hold.
+
 A finding on a protocol field names the field by its label as the place — `PROTOCOL-<name>.md:Unit`, `PROTOCOL-<name>.md:Data / scope` — not a line number, and in full: a start several labels share (`Data`) names no field. Only a field named so can be corrected in place and followed up.
 
 It can go on below that line with bullets or a few lines of evidence. It ends at the next finding line or the next section: a `FIX`, `READ`, `notes:`, `verdict:` or `scope:` line, or a code fence. A blank line does not end it: between two findings, text below a blank line belongs to the finding above. After the last finding, text below a blank line before the next section makes the audit unrecordable. Write a finding only if you stand by it: the verdict counts exactly the BLOCKER and WARNING lines, and a finding withdrawn in prose below it makes the audit unrecordable.

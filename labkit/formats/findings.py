@@ -115,6 +115,7 @@ from labkit.formats.repo import (
 from labkit.formats.commands import audit_command, decide_command
 from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.digests import digest
+from labkit.formats import rules
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
 DIR = EVIDENCE_DIR
@@ -293,6 +294,10 @@ class Finding:
     # (`subject_of`) and carried with the finding, never set by a decision;
     # every record names it (`_auditor_fields`)
     subject: str = ""
+    # the rule the auditor assigned (`active_rule_of`): `LAB-nnn` or NEW_CLASS,
+    # read when the record is written, never set by a decision; apart from
+    # the subject and the place, and never inferred from them
+    rule: str = ""
 
     @property
     def one_line(self) -> str:
@@ -440,6 +445,70 @@ def subject_of(text: str) -> str:
             f"a finding line without its subject: {first[:160]!r} — {SUBJECT_FORM}"
         )
     return subject
+
+
+#: the rule field of a finding the standard has no rule for — collected for
+#: the author to review (`new_class_findings`), never a rule of its own until
+#: a decision with its grounds makes one
+NEW_CLASS = "new class"
+RULE_FORM = (
+    "a finding line names the rule it holds in its sixth field: "
+    '`LAB-nnn <rule name>`, an active rule of the standard, or "new class" '
+    "when none fits"
+)
+# a field may open with the separator of a wrapped line (`· LAB-015 …`)
+_RULE_FIELD = re.compile(r'^[·—–`*"\'\s]*(LAB-\d{3})\b')
+_NEW_CLASS_FIELD = re.compile(r'^[·—–`*"\'\s]*new class\b', re.I)
+
+
+def active_rule_of(text: str) -> str:
+    """The rule a finding names, `LAB-nnn` or NEW_CLASS: the field of its
+    lines (parted at a dot or a dash, as `tagged_line` parts them) that
+    opens with a rule id or says "new class". Read by what the field says,
+    not by its position: the fields before it are free text that may hold a
+    dash. Kept apart from the subject (where the fault lies) and the place
+    (`file:line`): neither is inferred from the other. Raises ValueError,
+    quoting the first line, for no such field, for two different ones, and
+    for an id that is no active rule of the shipped ledger."""
+    found = []
+    for line in text.splitlines():
+        for field in _FIELD_SEP.split(line.strip()):
+            m = _RULE_FIELD.match(field)
+            if m is not None:
+                found.append(m.group(1))
+            elif _NEW_CLASS_FIELD.match(field):
+                found.append(NEW_CLASS)
+    named = list(dict.fromkeys(found))
+    first = text.splitlines()[0][:160] if text else ""
+    if not named:
+        raise ValueError(f"a finding line without its rule: {first!r} — {RULE_FORM}")
+    if len(named) > 1:
+        raise ValueError(
+            f"a finding line with {len(named)} rules ({', '.join(named)}): "
+            f"{first!r} — one rule per finding; {RULE_FORM}"
+        )
+    rule = named[0]
+    if rule != NEW_CLASS:
+        status = {r.id: r.status for r in rules.load_ledger(rules.LEDGER)}.get(rule)
+        if status != "active":
+            raise ValueError(
+                f"a finding line naming {rule}, "
+                f"{'not in the ledger' if status is None else status}: {first!r} "
+                f"— {RULE_FORM}"
+            )
+    return rule
+
+
+def recorded_rule_problem(rule: object) -> str | None:
+    """Why a record's RULE cannot stand, or None: NEW_CLASS, or an id the
+    shipped ledger holds — active or retired since, so a record outlives
+    its rule's retirement."""
+    if rule == NEW_CLASS:
+        return None
+    known = {r.id for r in rules.load_ledger(rules.LEDGER)}
+    if isinstance(rule, str) and rule in known:
+        return None
+    return f"rule {rule!r} — a rule id of the ledger or {NEW_CLASS!r}"
 
 
 def subject_refusal(f: Finding, status: str) -> str | None:
@@ -1136,6 +1205,7 @@ def write(
         if grade not in GRADES:
             raise ValueError(f"grade {grade!r} — one of {', '.join(GRADES)}")
         subject = subject_of(text)
+        rule = active_rule_of(text)
         problem = undetermined_finding_problem(grade, subject, check, note)
         if problem:
             raise ValueError(f"{problem}: {text.splitlines()[0][:160]!r}")
@@ -1145,6 +1215,7 @@ def write(
             f"grade = {_s(grade)}",
             f"text = {_s(text)}",
             f"subject = {_s(subject)}",
+            f"rule = {_s(rule)}",
             *([f"check = {_s(check)}"] if check else []),
             *([f"check_note = {_s(note)}"] if note else []),
             'status = "open"',
@@ -1173,12 +1244,18 @@ def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
                 f"a carried finding names its subject, one of "
                 f"{', '.join(SUBJECTS)}: {f.carries} carries {f.subject!r}"
             )
+        problem = recorded_rule_problem(f.rule)
+        if problem is not None:
+            raise ValueError(
+                f"a carried finding names its rule: {f.carries}: {problem}"
+            )
         lines += [
             "",
             "[[finding]]",
             f"grade = {_s(f.grade)}",
             f"text = {_s(f.text)}",
             f"subject = {_s(f.subject)}",
+            f"rule = {_s(f.rule)}",
             *([f"check = {_s(f.check)}"] if f.check else []),
             *([f"check_note = {_s(f.check_note)}"] if f.check_note else []),
             f"carries = {_s(f.carries)}",
@@ -1357,7 +1434,7 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     effect = row.get("effect", "")
     if not isinstance(effect, str):
         raise FindingsError(f"{path}: finding {i}: effect is not a string")
-    check, note, subject = _auditor_fields(path, i, row)
+    check, note, subject, rule = _auditor_fields(path, i, row)
     carries = row.get("carries", "")
     if not isinstance(carries, str) or (carries and not CARRIES_REF.match(carries)):
         raise FindingsError(
@@ -1373,6 +1450,7 @@ def _finding(path: Path, i: int, row: object) -> Finding:
         note,
         carries,
         subject,
+        rule,
     )
     problem = _effect_problem(found)
     if problem:
@@ -1380,12 +1458,13 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     return found
 
 
-def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str]:
-    """(check, check_note, subject) of the i-th `[[finding]]` table — the
-    fields labkit-audit takes from the auditor's line, never a decision: a
-    metrics key or "", a note only beside a check, and one of SUBJECTS —
-    a record without it is one labkit 0.112.0 or earlier wrote, read with
-    that version (the repo's pin), never here. Raises FindingsError
+def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str, str]:
+    """(check, check_note, subject, rule) of the i-th `[[finding]]` table —
+    the fields labkit-audit takes from the auditor's line, never a decision:
+    a metrics key or "", a note only beside a check, one of SUBJECTS, and a
+    rule id of the ledger or NEW_CLASS (`recorded_rule_problem`) — a record without
+    subject or rule is one labkit 0.112.0 or earlier wrote, read with that
+    version (the repo's pin), never here. Raises FindingsError
     otherwise (`carries` is read beside them)."""
     check = row.get("check", "")
     if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
@@ -1405,10 +1484,19 @@ def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str]:
             f"a record without subjects was written by labkit 0.112.0 or earlier "
             f"and is read with that version"
         )
+    rule = row.get("rule")
+    if rule is None:
+        raise FindingsError(
+            f"{path}: finding {i}: no rule field — a record without rules was "
+            f"written by labkit 0.112.0 or earlier and is read with that version"
+        )
+    rule_refused = recorded_rule_problem(rule)
+    if rule_refused is not None:
+        raise FindingsError(f"{path}: finding {i}: {rule_refused}")
     problem = undetermined_finding_problem(row["grade"], subject, check, note)
     if problem:
         raise FindingsError(f"{path}: finding {i}: {problem}")
-    return check, note, subject
+    return check, note, subject, str(rule)
 
 
 def read(path: Path) -> Record:
@@ -1653,7 +1741,7 @@ def write_decision(
     refused = subject_refusal(old, status)
     if refused is not None:
         raise FindingsError(f"{path}: finding {n}: {refused}")
-    # the check and the subject stay the auditor's: a decision never sets them
+    # the check, the subject and the rule stay the auditor's: a decision never sets them
     decided = Finding(
         old.grade,
         old.text,
@@ -1664,6 +1752,7 @@ def write_decision(
         old.check_note,
         old.carries,
         old.subject,
+        old.rule,
     )
     _hold_effect(decided)
     text = _decided_text(path, n, decided)
@@ -1903,6 +1992,21 @@ def repo_records(experiments: Path) -> list[tuple[Path, Record]]:
         if folder.is_dir():
             out += [(folder.parent, r) for r in area_records(folder.parent)]
     return out
+
+
+def new_class_findings(
+    records: Iterable[tuple[Path, Record]],
+) -> list[tuple[Path, Record, int, Finding]]:
+    """Every finding of RECORDS (`repo_records`: area and record) whose rule
+    the auditor gave as NEW_CLASS, with its area and number — what the
+    author reviews for a gap in the standard. A new class becomes a rule
+    only by a decision with its grounds, never by this list."""
+    return [
+        (area, record, n, f)
+        for area, record in records
+        for n, f in enumerate(record.findings, 1)
+        if f.rule == NEW_CLASS
+    ]
 
 
 def open_elsewhere(area: Path, experiments: Path) -> list[tuple[Path, Record, Finding]]:

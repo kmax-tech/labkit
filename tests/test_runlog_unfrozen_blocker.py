@@ -40,7 +40,7 @@ BLOCKER = (
 )
 WARNING = (
     "WARNING",
-    "WARNING · scripts/01_measure.py:9 · statement · the seed is not recorded",
+    "WARNING · scripts/01_measure.py:9 · statement · LAB-015 Preflight audit before freezing · the seed is not recorded",
 )
 
 

@@ -99,7 +99,7 @@ Before you report any result, run `finalize <area>`, then `labkit-audit
 
 `labkit-audit <area> --decide <N> <STATUS> --why "<REASON>" --record <record>`
 
-READ lines are hints, not findings to decide. The third field of each finding is what it is about, the auditor's subject: `implementation` (code, data handling or run depart from the registration), `statement` (the run is right; the finding is about what the text says) or `undetermined` (a suspicion the auditor could not settle; its check settles it). `--decide` refuses `limitation` for an `implementation` and an `undetermined` finding.
+READ lines are hints, not findings to decide. The third field of each finding is what it is about, the auditor's subject: `implementation` (code, data handling or run depart from the registration), `statement` (the run is right; the finding is about what the text says) or `undetermined` (a suspicion the auditor could not settle; its check settles it). `--decide` refuses `limitation` for an `implementation` and an `undetermined` finding. The sixth field is the rule the finding holds, `LAB-nnn` or `new class`; it is kept apart from the subject, and a decision never changes it.
 
 | status           | what follows                                                                                                                                                        |
 |------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
