@@ -22,8 +22,7 @@ sends no seed, so none enters the key.
 The lab allows the cache in its `models.toml` (`[llm_cache] enabled =
 true`, `llm.cache_declared`; LAB-069 No LLM cache unless the lab declares
 one): a cache hit repeats an answer, so a spread measured over cached
-answers is 0. Opened without that declaration, `Cache` warns
-(`DeprecationWarning`) and works as before; the next release refuses it.
+answers is 0. Without that declaration `Cache` refuses to open.
 
 Three modes, fixed when a run opens the cache (`Cache`):
 
@@ -59,7 +58,6 @@ import json
 import re
 import sys
 import threading
-import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -191,23 +189,21 @@ class Cache:
     Opening it writes `llm-cache.json` into RUN's directory. The mode is
     `repeat` when RUN repeats another (`Run.draw` is set), else `replay`
     with REPLAY, else `normal`. ROOT defaults to `default_root` of the
-    run's area. Without the lab's declaration (`llm.cache_declared`) it
-    warns, `DeprecationWarning`. Raises ValueError for a replay asked of a
-    repeat, for a second opening in the same run with another mode or
-    directory, and for a malformed `[llm_cache]` table."""
+    run's area. Ends with SystemExit and the sentence when the lab has not
+    declared the cache (`llm.cache_declared`) — a measure script's loud end,
+    before anything is written. Raises ValueError for a malformed
+    `[llm_cache]` table, a replay asked of a repeat, and a second opening
+    in the same run with another mode or directory."""
 
     def __init__(
         self, run: Run, *, replay: bool = False, root: Path | None = None
     ) -> None:
         if not llm.cache_declared():
-            # the public API's release rule: the old form warns for one
-            # release before it is refused (docs/architecture.md, "Public API")
-            warnings.warn(
-                "llm_cache.Cache opened without [llm_cache] enabled = true in "
-                "models.toml — LAB-069 No LLM cache unless the lab declares one; "
-                "the next labkit release refuses it",
-                DeprecationWarning,
-                stacklevel=2,
+            raise SystemExit(
+                "llm_cache: the lab has not declared a cache — a cached answer "
+                "repeats instead of measuring; set [llm_cache] enabled = true in "
+                "models.toml to allow it (LAB-069 No LLM cache unless the lab "
+                "declares one)"
             )
         if run.draw is not None and replay:
             raise ValueError(

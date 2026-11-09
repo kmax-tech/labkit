@@ -18,7 +18,6 @@ import io
 import json
 import tempfile
 import unittest
-import warnings
 from pathlib import Path
 from unittest import mock
 
@@ -146,20 +145,18 @@ class Rules(CacheCase):
 
 
 class Declaration(CacheCase):
-    """The lab allows the cache in models.toml; without it the cache warns
-    for one release (the public API's release rule), a malformed table
-    refuses."""
+    """The lab allows the cache in models.toml; without it the cache
+    refuses to open, and a malformed table raises."""
 
-    def test_a_declared_cache_opens_without_a_warning(self) -> None:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", DeprecationWarning)
-            self.run_once()
-
-    def test_an_undeclared_cache_warns_and_still_works(self) -> None:
-        self.toml.write_text(ollama_toml(self.url, declared=False), encoding="utf-8")
-        with self.assertWarnsRegex(DeprecationWarning, r"\[llm_cache\] enabled = true"):
-            _, answer = self.run_once()
+    def test_a_declared_cache_opens(self) -> None:
+        _, answer = self.run_once()
         self.assertIsNone(answer.origin)
+
+    def test_an_undeclared_cache_refuses_before_it_writes(self) -> None:
+        self.toml.write_text(ollama_toml(self.url, declared=False), encoding="utf-8")
+        with self.assertRaisesRegex(SystemExit, r"\[llm_cache\] enabled = true"):
+            self.run_once()
+        self.assertFalse(self.root.exists())
 
     def test_enabled_false_is_not_declared(self) -> None:
         self.toml.write_text(
