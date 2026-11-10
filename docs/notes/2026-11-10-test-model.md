@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1 and 2a are built — the reference check, the state builder, both guards, the decision on run inputs, the rule value in `GateFinding`, and the site account for finalize at the pilot's start commit `b4fdf56d` ([step 1](#1-establish-the-reference-check), [step 2a](#2a-prepare-only-what-finalize-needs)). **Next:** the finalize pilot (step 3), site by site in the site account, then the stop at the checkpoint.
+**Status:** steps 1 and 2a are built; the finalize pilot is under way — 11 of its 73 sites are accounted for ([pilot progress](#pilot-progress)). **Next:** the run-record stations of finalize, which read run directories themselves; then registration, provenance and the remaining forwarding sites; then the stop at the checkpoint.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -103,6 +103,21 @@ Before the migration, record the pilot's start commit, the selected sites and th
 6. An abstraction balance: the new types, wrappers, fixture options and indirections against the removed duplication and special cases. Name the purpose of each addition and what it replaces. Line counts alone do not decide simplicity. Before proposing a broader migration, remove or simplify each addition whose maintenance cost has no demonstrated benefit.
 
 **Pilot baseline, recorded 2026-11-10.** Start commit `b4fdf56d`. Selected sites: the 73 rows of the [site account](2026-11-10-site-account.tsv). Times at that commit on 11 cores (`pytest -q -p no:warnings -n auto`): fast tier (`-m "not slow"`) 80 s, 2 768 passed; slow tier (`-m slow`) 280 s, 485 passed; both green. Shared infrastructure (steps 1 and 2a) and the migration are told apart by their commits: everything up to `b4fdf56d` is infrastructure, every `finalize pilot` commit after it is migration and verification.
+
+### Pilot progress
+
+Each commit below moved or tested sites and filled their rows in the [site account](2026-11-10-site-account.tsv); the rows hold category, condition, rule value and tests.
+
+| Commit     | Station              | Sites | How                                                                                                                                         |
+|------------|----------------------|-------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| `e3789158` | 9, audited runs kept | 1     | pure check `audit_binding.check_audited_runs_kept`, rule test (step 1)                                                                      |
+| `f7a0234b` | 9, audit records     | 3     | pure checks `check_audit_records_read`, `check_audit_findings_decided`; the station composes, an undecided NOTE stays a told line           |
+| `67cdcdbb` | 8, criterion n       | 1     | `criterion_n_input_mismatches` takes the records (`criterion_ns`, `DataEntry`, `OutputEntry`); the station reads them, as decided in step 1 |
+| `057deec4` | 8, reference head    | 2     | forwarding of conditions tested where they live; one gate test each and a twin                                                              |
+| `a95e4d4d` | 0, protocol and head | 2     | composition of the early end in a passed collector; gate tests and a twin                                                                   |
+| `4b093d3b` | 1, run choice        | 2     | the missing protocol id from a state built in memory; the newer-by-name warning keeps its test                                              |
+
+What the first stations show for the remaining ones: where a condition already lives in a pure function with its own tests (`reference.comparison_gaps`, `protocol_check.reference_gap`), the site is forwarding and needs a gate test only; where a check takes a run directory (`run_record_check`: code since the run, provenance, outputs, null lane, row provenance, arms, model provenance), the work is the run-input decision of step 1 — the station reads with the `runs` readers, and the lineage of a run can come from the configs `AreaState.runs` already holds instead of reading each run's `config.json` again. The two `exit` rows in `labkit/run/batch.py` are still to be confirmed as reachable from finalize or removed with their reason.
 
 **Stop before another gate.** The author chooses to continue, to continue with a narrower scope and a time cap, or to defer. The choice rests on correctness, clarity, added complexity and cost; meeting the coverage and timing targets alone does not justify continuing. A usage round with a partial refactor requires an explicit change to the earlier decision that lists the deferred sites, the risks and the unmet targets. The deferred sites keep their existing checks and tests. No reliable overall estimate or time cap exists before this checkpoint.
 
