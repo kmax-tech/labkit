@@ -57,7 +57,7 @@ b4fdf56d	finding	labkit.gates.finalize.run_file_unread	{…}	labkit/gates/finali
 b4fdf56d	finding	labkit.gates.finalize.check_reference	{…}: {…}	labkit/gates/finalize.py:649				
 b4fdf56d	finding	labkit.gates.finalize.check_reference	{…}: {…}	labkit/gates/finalize.py:664				
 b4fdf56d	finding	labkit.gates.finalize.check_kept_number	{…}: {…}{…}	labkit/gates/finalize.py:725				
-b4fdf56d	finding	labkit.gates.finalize.check_criterion_n	{…}	labkit/gates/finalize.py:788				
+b4fdf56d	finding	labkit.gates.finalize.check_criterion_n	{…}	labkit/gates/finalize.py:788	scientific	a criterion denominator matches no input count the run recorded (static evidence); now `run_record_check.criterion_n_input_mismatches`, the station reads the inputs only when a denominator asks	open assignment	tests/test_rules_run_record_check.py::ACriterionDenominatorIsAnInputCount; gate: tests/test_finalize_steps.py::CriterionNStation
 b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}	labkit/gates/finalize.py:881				
 b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}: {…}	labkit/gates/finalize.py:891				
 b4fdf56d	finding	labkit.gates.finalize.declared_run_gaps	{…}	labkit/gates/finalize.py:978				

@@ -103,7 +103,7 @@ from labkit.formats.gate import (
     outcome_of_failed_read,
     withdrawn_first,
 )
-from labkit.formats.runs import metrics_path, read_metrics
+from labkit.formats.runs import metrics_path, metrics_text, read_data, read_metrics
 from labkit.formats import (
     console,
     findings as audit_findings,
@@ -156,6 +156,7 @@ from labkit.checks.run_record_check import (
     arm_findings,
     code_since_run,
     criterion_n_input_mismatches,
+    criterion_ns,
     kept_number_gaps,
     null_lane_findings,
     model_provenance_gap,
@@ -768,11 +769,20 @@ def runs_metrics(answering_run: Path) -> dict:
 
 
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
-    """Station 7: a criterion's denominator that matches no recorded input
-    count; a record whose inputs or outputs do not read blocks — at repeat
-    cost high no other station reads the inputs (`runs.read_data`)."""
+    """Station 8: a criterion's denominator that matches no recorded input
+    count (`run_record_check.criterion_n_input_mismatches`). The run's
+    inputs and outputs are read only when metrics.json holds a denominator;
+    a record that does not read then blocks — at repeat cost high no other
+    station reads the inputs (`runs.read_data`). No metrics.json: nothing
+    to hold."""
     try:
-        w = criterion_n_input_mismatches(answering_run)
+        has_metrics = metrics_text(answering_run) is not None
+        ns = criterion_ns(runs_metrics(answering_run)) if has_metrics else {}
+        if ns:  # the counts a denominator is held to
+            inputs = read_data(answering_run) or []
+            outputs = read_outputs(answering_run) or []
+        else:
+            inputs, outputs = [], []
     except ArtefactError as exc:
         findings.take(
             run_file_unread(
@@ -782,8 +792,8 @@ def check_criterion_n(findings: Findings, answering_run: Path) -> None:
             )
         )
         return
-    for line in w:
-        findings.warn(line, evidence_kind=STATIC_EVIDENCE)
+    w = criterion_n_input_mismatches(ns, inputs, outputs)
+    findings.take_all(w)
     if not w:
         findings.note(
             "  every criterion_<i>_n equals a recorded input count (or there is none)"

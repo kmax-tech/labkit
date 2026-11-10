@@ -327,5 +327,32 @@ class ReadmeRoute(unittest.TestCase):
             self.assertEqual(readme_check.readme_route(Path(d), "PROTOCOL-a.md"), [])
 
 
+class CriterionNStation(unittest.TestCase):
+    """finalize's criterion-n station reads a run's inputs and outputs only
+    when its metrics.json holds a denominator; a record that does not read
+    then blocks (the condition itself: `tests/test_rules_run_record_check.py`)."""
+
+    def _run(self, d: str, metrics: dict) -> Path:
+        run = Path(d) / "runs" / "r1"
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(json.dumps(run_record()), encoding="utf-8")
+        (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+        (run / "outputs.json").write_text("{not json", encoding="utf-8")
+        return run
+
+    def test_a_denominator_over_a_record_that_does_not_read_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            found = Findings(tell=None)
+            finalize.check_criterion_n(found, self._run(d, {"criterion_1_n": 12}))
+            (f,) = found.found
+            self.assertIn("the record of r1 does not read", f.text)
+
+    def test_the_twin_without_a_denominator_the_record_is_not_read(self):
+        with tempfile.TemporaryDirectory() as d:
+            found = Findings(tell=None)
+            finalize.check_criterion_n(found, self._run(d, {"criterion_1_pass": True}))
+            self.assertEqual(found.found, [])
+
+
 if __name__ == "__main__":
     unittest.main()

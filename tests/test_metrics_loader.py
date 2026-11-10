@@ -5,7 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.checks import run_record_check
 from labkit.formats import promises, runs
 
 
@@ -30,20 +29,6 @@ class ReadMetrics(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(runs.MetricsError):
                 runs.read_metrics(self._file(d, "{"))
-
-
-class CriterionNIsNoBool(unittest.TestCase):
-    def test_true_is_not_a_count(self):
-        with tempfile.TemporaryDirectory() as d:
-            run = Path(d)
-            (run / "metrics.json").write_text(json.dumps({"criterion_1_n": True}))
-            self.assertEqual(run_record_check.criterion_n_input_mismatches(run), [])
-
-    def test_an_int_is_still_held_to_the_counts(self):
-        with tempfile.TemporaryDirectory() as d:
-            run = Path(d)
-            (run / "metrics.json").write_text(json.dumps({"criterion_1_n": 12}))
-            self.assertTrue(run_record_check.criterion_n_input_mismatches(run))
 
 
 class ReadOutputsAndCompletion(unittest.TestCase):

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, replace
 import shlex
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from labkit.formats.commands import checkout_command, handover_command
@@ -27,7 +28,6 @@ from labkit.formats.runs import (
     NO_GIT,
     kept_script,
     metrics_path,
-    metrics_text,
     output_file,
     patch_text,
     script_copy_path,
@@ -45,6 +45,7 @@ from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block
 from labkit.formats.gate import (
+    OPEN_RULE,
     STATIC_EVIDENCE,
     WARNING,
     GateFinding,
@@ -54,6 +55,7 @@ from labkit.formats.gate import (
 from labkit.formats.runs import (
     CONFIG_FILE,
     ArtefactError,
+    DataEntry,
     OutputEntry,
     RunConfig,
     RunConfigError,
@@ -431,42 +433,60 @@ def null_lane_findings(answering_run: Path) -> NullLanes:
     return NullLanes(out, examined)
 
 
-def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
-    """Warnings: a criterion's denominator (`criterion_<i>_n` in metrics.json) that
-    matches no input count the run recorded — the size of what was counted,
-    not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
-    if metrics_text(answering_run) is None:
-        return []
-    metrics = read_metrics(metrics_path(answering_run))
-    ns = {
+def criterion_ns(metrics: Mapping[str, object]) -> dict[str, int]:
+    """The criterion denominators of METRICS, a run's metrics.json: every
+    `criterion_<i>_n` key that holds an integer — a bool is no count."""
+    return {
         k: v
         for k, v in metrics.items()
         if CRITERION_N.match(k) and isinstance(v, int) and not isinstance(v, bool)
     }
+
+
+def criterion_n_input_mismatches(
+    ns: Mapping[str, int],
+    inputs: Sequence[DataEntry],
+    outputs: Sequence[OutputEntry],
+) -> list[GateFinding]:
+    """A static-evidence WARNING per criterion denominator of NS
+    (`criterion_ns`) that matches no input count the run recorded — the rows
+    of its INPUTS (`data=`) and the lines of its OUTPUTS: the size of what
+    was counted, not a promised constant (that is
+    `intent_check.promised_constant_mismatches`). One WARNING when NS holds
+    denominators and the run recorded no count at all; [] when NS is empty
+    or every denominator matches. A warning, never a blocker, until its
+    false alarm rate is known; the rule is not decided yet (OPEN_RULE)."""
     if not ns:
         return []
     counts: dict[str, int] = {}
-    for d in read_data(answering_run) or []:
+    for d in inputs:
         if d.rows is not None:
             counts[f"data[{d.key}].rows"] = d.rows
-    for o in read_outputs(answering_run) or []:
+    for o in outputs:
         if o.lines is not None:
             counts[f"{o.path.name} lines"] = o.lines
     if not counts:
         return [
-            f"{', '.join(sorted(ns))} present, but the run recorded no input count "
-            f"(no data= rows, no output lines) to hold them to"
-        ]
-    out = []
-    for k, n in sorted(ns.items()):
-        if n not in counts.values():
-            out.append(
-                f"{k} = {n} matches no recorded count "
-                f"({', '.join(f'{a} = {b}' for a, b in sorted(counts.items()))}) — "
-                f"a denominator that is not the input is the audits' most "
-                f"frequent real finding"
+            _criterion_n_warning(
+                f"{', '.join(sorted(ns))} present, but the run recorded no input "
+                f"count (no data= rows, no output lines) to hold them to"
             )
-    return out
+        ]
+    return [
+        _criterion_n_warning(
+            f"{k} = {n} matches no recorded count "
+            f"({', '.join(f'{a} = {b}' for a, b in sorted(counts.items()))}) — "
+            f"a denominator that is not the input is the audits' most "
+            f"frequent real finding"
+        )
+        for k, n in sorted(ns.items())
+        if n not in counts.values()
+    ]
+
+
+def _criterion_n_warning(text: str) -> GateFinding:
+    """The static-evidence WARNING `criterion_n_input_mismatches` gives."""
+    return GateFinding(WARNING, text, rule=OPEN_RULE, evidence_kind=STATIC_EVIDENCE)
 
 
 def provenance_findings(
