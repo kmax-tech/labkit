@@ -118,13 +118,21 @@ class Blocks(unittest.TestCase):
         text = (
             f"see {RUN}\nand 2026-10-21T12-48-00_final\nand 2026-10-07T10-00-00_ffff\n"
         )
-        gaps = report_blocks.cited_gaps(report_blocks.cited_run_ids(text), {RUN})
+        cited = report_blocks.cited_run_ids(text)
+        gaps = report_blocks.cited_gaps(cited, {RUN}, structured={2, 3})
         self.assertEqual(len(gaps), 2, gaps)
         self.assertIn(
             "line 2: 2026-10-21T12-48-00_final reads as a run id", gaps[0].line
         )
         self.assertIn(
             "line 3: cites run 2026-10-07T10-00-00_ffff — no runs/", gaps[1].line
+        )
+        self.assertEqual({g.grade for g in gaps}, {"BLOCKER"})
+        # the same tokens in prose: a pattern over free text, a warning
+        prose = report_blocks.cited_gaps(cited, {RUN}, structured=set())
+        self.assertEqual(
+            {(g.grade, g.evidence_kind) for g in prose},
+            {("WARNING", "static evidence")},
         )
 
     def test_numbers_outside_blocks_are_named_and_ids_dates_versions_are_not(self):
@@ -447,12 +455,15 @@ class ReportFiles(unittest.TestCase):
         self.assertIn("`Answer:` line is no recorded verdict", brief)
         self.assertIn("is the author's Conclusion carried over", brief)
 
-    def test_an_invented_run_id_blocks(self):
+    def test_an_invented_run_id_in_prose_warns(self):
+        """A run-id-shaped token in prose is a pattern, not a proven invented
+        source: a warning; inside a generated block it blocks."""
         root, report = self._reported()
         with report.open("a", encoding="utf-8") as f:
             f.write("best run 2026-10-07T10-00-00_final\n")
         code, out = self._gate(root, report)
-        self.assertEqual(code, 1, out)
+        self.assertEqual(code, 0, out)
+        self.assertIn("WARNING: ", out)
         self.assertIn("reads as a run id but is not one runlog writes", out)
 
     def test_a_block_of_a_run_no_protocol_declares_blocks(self):

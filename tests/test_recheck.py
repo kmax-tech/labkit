@@ -230,9 +230,34 @@ class Area(unittest.TestCase):
     def test_a_tuple_is_the_list_the_run_recorded(self):
         """evaluate() returns a tuple, metrics.json holds a list: the same
         value after the JSON round trip, not a difference."""
-        self.assertEqual(recheck.agree({"a": [1, 2]}, {"a": (1, 2)}), [])
+        self.assertEqual(
+            recheck.agree({"criterion_1_pass": [1, 2]}, {"criterion_1_pass": (1, 2)}),
+            [],
+        )
         with self.assertRaises(SystemExit):
-            recheck.agree({"a": [1, 2]}, {"a": (1, 3)})
+            recheck.agree({"criterion_1_pass": [1, 2]}, {"criterion_1_pass": (1, 3)})
+
+    def test_the_kept_number_is_compared_exactly(self):
+        """A computation's `[kept]` key is the number it reports: exact, as
+        an identifier."""
+        with self.assertRaisesRegex(SystemExit, "kept number"):
+            recheck.agree({"mean": 3.5}, {"mean": 4.5}, reported=frozenset({"mean"}))
+        self.assertEqual(recheck.agree({"mean": 3.5}, {"mean": 4.5}), [])
+
+    def test_a_descriptive_value_may_differ_and_may_not_vanish(self):
+        """LAB-041 Generate numbers, don't retype them: identifiers exact;
+        of the descriptive keys none may disappear."""
+        self.assertEqual(
+            recheck.agree(
+                {"criterion_1_pass": True, "funnel": [3, 2]},
+                {"criterion_1_pass": True, "funnel": [3, 1], "table": "new"},
+            ),
+            ["table"],
+        )
+        with self.assertRaisesRegex(SystemExit, "vanished"):
+            recheck.agree(
+                {"criterion_1_pass": True, "funnel": [3, 2]}, {"criterion_1_pass": True}
+            )
 
     def test_custom_number_format_for_a_rounding_note(self):
         self._record({"ratio": 0.857142857})

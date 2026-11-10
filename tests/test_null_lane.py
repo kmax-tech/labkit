@@ -72,7 +72,12 @@ class NullLane(unittest.TestCase):
             (line,) = held.unmoved
             self.assertEqual(held.examined, 1)
             self.assertIn(
-                "rows.jsonl: the null lane answers what the registered", line.text
+                "rows.jsonl: the null lane's answer and gold equal the registered",
+                line.text,
+            )
+            # matching pairs are an indication, not proof the null measures nothing
+            self.assertEqual(
+                (line.grade, line.evidence_kind), ("WARNING", "static evidence")
             )
             self.assertIn("permuted gold", line.fix or "")
             out.write_text("".join(json.dumps(r) + "\n" for r in rows(lambda i, g: 0)))

@@ -44,7 +44,13 @@ from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block
-from labkit.formats.gate import GateFinding, blocker, outcome_of_failed_read
+from labkit.formats.gate import (
+    STATIC_EVIDENCE,
+    WARNING,
+    GateFinding,
+    blocker,
+    outcome_of_failed_read,
+)
 from labkit.formats.runs import (
     ArtefactError,
     OutputEntry,
@@ -377,8 +383,9 @@ def has_null_lanes(rows: list[dict]) -> bool:
 
 @dataclass(frozen=True)
 class NullLanes:
-    """What `null_lane_findings` found: one BLOCKER per output whose null
-    lane did not move (UNMOVED), with its way out, and how many outputs held
+    """What `null_lane_findings` found: one static-evidence WARNING per
+    output whose null lane did not move (UNMOVED), with its way out, and how
+    many outputs held
     both lanes (EXAMINED) — 0 says the check did not apply, not that it
     passed."""
 
@@ -402,15 +409,21 @@ def null_lane_findings(answering_run: Path) -> NullLanes:
             continue
         examined += 1
         if null_lane_unmoved(rows):
+            # matching answer-gold pairs are certain; that the null measures
+            # nothing is not — a placebo prompt or a fixed null predictor can
+            # match honestly — so it warns: static evidence
             out.append(
-                blocker(
-                    f"{entry.path.name}: the null lane answers what the registered "
-                    f"lane answers on every item — it measures no noise floor (an "
+                GateFinding(
+                    WARNING,
+                    f"{entry.path.name}: the null lane's answer and gold equal the "
+                    f"registered lane's on every item — if the null condition "
+                    f"should change either, it measures no noise floor (an "
                     f"instrument that ignores its labels predicts the same in both "
                     f"lanes; LAB-034 Null condition in the same run)",
-                    fix="give the instrument a null of its own, e.g. its predictions "
-                    f"against permuted gold, then "
+                    fix="if the null should differ, give the instrument a null of its "
+                    f"own, e.g. its predictions against permuted gold, then "
                     f"{measure_anew(answering_run.parent.parent)}",
+                    evidence_kind=STATIC_EVIDENCE,
                 )
             )
     return NullLanes(out, examined)

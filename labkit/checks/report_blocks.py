@@ -81,7 +81,7 @@ from labkit.formats.comment_blocks import (
     opener,
     with_comment_block,
 )
-from labkit.formats.gate import GateFinding, blocker
+from labkit.formats.gate import STATIC_EVIDENCE, WARNING, GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.commands import (
     Command,
@@ -348,27 +348,40 @@ def cited_run_ids(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[GateFinding]:
-    """Why a cited token names no run, one blocker each with its way out: not
-    in the shape runlog writes, or no `runs/<id>/` among KNOWN (the run ids
-    of the repo)."""
+def structured_lines(found: list[Block], discussed: list["Discussion"]) -> set[int]:
+    """The lines (1-based) inside a generated result or discussion block —
+    where a run id is a structured citation, not prose."""
+    return {n for b in [*found, *discussed] for n in range(b.first, b.last + 1)}
+
+
+def cited_gaps(
+    cited: list[tuple[int, str]], known: set[str], structured: set[int]
+) -> list[GateFinding]:
+    """Why a cited token names no run, one finding each with its way out:
+    not in the shape runlog writes, or no `runs/<id>/` among KNOWN (the run
+    ids of the repo). A token on a STRUCTURED line (`structured_lines`, a
+    generated block) blocks: the block names the run its number comes
+    from. A token in prose warns as static evidence: a pattern over free
+    text reads an italic `_<id>_` or an `<id>-based` too, and shows no
+    invented source by itself."""
     gaps: list[GateFinding] = []
     for n, token in cited:
         if not runs.RUN_ID.fullmatch(token):
-            gaps.append(
-                blocker(
-                    f"line {n}: {token} reads as a run id but is not one runlog writes",
-                    fix="cite a run by the id runlog wrote (its `runs/<id>/`), "
-                    "or reword the token",
-                )
-            )
+            why = f"line {n}: {token} reads as a run id but is not one runlog writes"
+            fix = "cite a run by the id runlog wrote (its `runs/<id>/`), or reword the token"
         elif token not in known:
+            why = f"line {n}: cites run {token} — no runs/{token}/ in the repo"
+            fix = (
+                "cite a run the repo holds — a run that is gone reports no number —, "
+                f"then {REPORT_CHECK_AGAIN}"
+            )
+        else:
+            continue
+        if n in structured:
+            gaps.append(blocker(why, fix=fix))
+        else:
             gaps.append(
-                blocker(
-                    f"line {n}: cites run {token} — no runs/{token}/ in the repo",
-                    fix="cite a run the repo holds — a run that is gone reports no "
-                    f"number —, then {REPORT_CHECK_AGAIN}",
-                )
+                GateFinding(WARNING, why, fix=fix, evidence_kind=STATIC_EVIDENCE)
             )
     return gaps
 

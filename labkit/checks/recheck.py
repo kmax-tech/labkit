@@ -149,6 +149,22 @@ def scopes_unchanged(run: Path, area: Path) -> None:
         )
 
 
+def kept_keys(run: Path, area: Path) -> frozenset[str]:
+    """The `[kept]` key of the protocol RUN is bound to — the number a
+    computation reports, compared exactly by `agree` —, empty for an
+    unbound run or a protocol without the table. Raises SystemExit when the
+    protocol's head does not read."""
+    cfg = runs.read_run_config(run)
+    if cfg is None or cfg.protocol.id is None:
+        return frozenset()
+    try:
+        protocol = protocol_block.find_by_id(area, cfg.protocol.id)
+        table = protocol_block.kept(state_of(area).text_of(protocol))
+    except protocol_block.BlockError as exc:
+        raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
+    return frozenset({table.key}) if table is not None and table.key else frozenset()
+
+
 def block_unchanged(run: Path, area: Path) -> None:
     """Refuse to hold a note whose promises changed after the run.
 
@@ -178,10 +194,18 @@ def rows_of(out: Path) -> list[dict]:
 
 
 def agree(
-    metrics: dict, recomputed: dict, ignore: frozenset[str] = LABKIT_KEYS
+    metrics: dict,
+    recomputed: dict,
+    ignore: frozenset[str] = LABKIT_KEYS,
+    reported: frozenset[str] = frozenset(),
 ) -> list[str]:
     """metrics.json against the recomputation; returns the keys that grew.
-    The recomputation is compared as JSON, the way the run recorded it
+    As LAB-041 Generate numbers, don't retype them states it: the
+    registered identifiers (`INTENT_KEY`) are compared exactly — on one side
+    only, or with another value, the check fails —, and so are the REPORTED
+    keys (the computation's `[kept]` key, `kept_keys`: the number it
+    reports); of the other descriptive keys none may disappear, and a value
+    that differs or a key that grew is no failure. Compared as JSON, the way the run recorded it
     (`runs.as_stored`): a tuple from evaluate() is the list in metrics.json,
     not a difference, and `1` is not `true`."""
     recomputed = json.loads(json.dumps(recomputed))
@@ -202,12 +226,13 @@ def agree(
         )
     differing = sorted(
         k
-        for k in recomputed
+        for k in intent | (reported & set(recomputed))
         if k in metrics and runs.as_stored(recomputed[k]) != runs.as_stored(metrics[k])
     )
     if differing:
         raise SystemExit(
-            f"recheck: recomputation differs from metrics.json in {differing}"
+            f"recheck: recomputation differs from metrics.json in the "
+            f"identifiers or the kept number {differing}"
         )
     return sorted(set(recomputed) - set(metrics))
 
@@ -308,7 +333,9 @@ def verified(
     scopes_unchanged(run, area)
     block_unchanged(run, area)
     metrics = runs.read_metrics(runs.metrics_path(run))
-    return metrics, agree(metrics, recompute(rows_of(out)), ignore)
+    return metrics, agree(
+        metrics, recompute(rows_of(out)), ignore, reported=kept_keys(run, area)
+    )
 
 
 def holds(
