@@ -16,7 +16,7 @@ The history behind three pieces of code, kept here so the code can state the rul
 
 **Where the rules of single stations came from.**
 
-- The audit line's coverage: until 0.95.0 preflight never compared the line's `scope sha` with the code's stamp and passed the state runlog's freeze gate refuses (audit 2026-10-15); until 0.99.0 both took `n/a` as a decision (third haiku round on 0.99.0, t18). `findings.audit_line_gap` is the one answer for both.
+- The audit line's coverage: until 0.95.0 preflight never compared the line's `scope sha` with the code's stamp and passed the state runlog's freeze gate refuses (audit 2026-10-15); until 0.99.0 both took `n/a` as a decision (third haiku round on 0.99.0 in labkit-paper area 09, the labkit attempt at task 18). `findings.audit_line_gap` is the one answer for both.
 - Deferred findings elsewhere in the repo are told, never counted: one deferred in area 16 bit in area 17 (uniagent 2026-10-08).
 - Code-check's lines are counted once by their own word (until 0.96.0 preflight counted them a second time).
 - A missing area test is a blocker once `frozen = true`: until 2026-10-07 it only warned, and a protocol could freeze without any test.
