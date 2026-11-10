@@ -10,6 +10,8 @@ gate reads the file.
 
 from __future__ import annotations
 
+import pytest
+
 import contextlib
 import io
 import tempfile
@@ -26,6 +28,10 @@ from labkit.formats import report_reviews
 from labkit.gates import report_check, report_hold, report_review
 from labkit.tools import protocol_fill
 from labkit.tools import protocol_result
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 RUN = "2026-10-07T10-00-00_ab12"
 P = "experiments/01-x/PROTOCOL-x.md"

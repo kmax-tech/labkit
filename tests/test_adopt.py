@@ -7,6 +7,8 @@ One command, not three to run in order
 
 from __future__ import annotations
 
+import pytest
+
 import contextlib
 import io
 import os
@@ -24,6 +26,10 @@ from labkit.formats import protocol_block  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 
 class Adopt(unittest.TestCase):

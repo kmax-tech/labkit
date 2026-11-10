@@ -6,6 +6,8 @@ cases. These tests establish mechanics, not an auditor's judgement.
 
 from __future__ import annotations
 
+import pytest
+
 import contextlib
 import io
 import json
@@ -25,6 +27,10 @@ from labkit.gates import audit
 from labkit.gates import undecided
 from labkit.tools import protocol_fill
 from labkit.tools import protocol_result
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 #: a simulated analysis answer holding one BLOCKER
 BLOCKED = (

@@ -7,9 +7,10 @@ venv := ".venv/bin"
 default:
     @just --list
 
-# the commit gate: ruff, format, pyright, pytest (the hook itself, one home)
-check:
-    .githooks/pre-commit
+# the checks the hooks run: `just check` the whole suite (before a push),
+# `just check fast` without the end-to-end scenario files (before a commit)
+check tier="full":
+    .githooks/checks {{tier}}
 
 # the suite, or the tests matching NAME
 test name="":
@@ -104,6 +105,9 @@ release version:
     entry = changelog.split(f"## {v} — ", 1)[1].split("\n## ", 1)[0]
     subhead = re.search(r"^### (.+)$", entry, re.M)
     title = f"{v}: {subhead.group(1)}" if subhead else v
+    # the commit hook runs the fast tier only; a release carries the whole suite
+    if subprocess.run([".githooks/checks", "full"]).returncode != 0:
+        die(f"the whole suite is not green (above) — pyproject.toml already says {v}; fix, then run again")
     git("add", "CHANGELOG.md", "pyproject.toml")
     r = subprocess.run(["git", "commit", "-q", "-m", title, "-m", f"Entry: CHANGELOG.md `## {v}`."])
     if r.returncode != 0:

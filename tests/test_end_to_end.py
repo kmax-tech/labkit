@@ -15,6 +15,8 @@ a refused adoption leaves no unchecked declaration standing (4).
 
 from __future__ import annotations
 
+import pytest
+
 import contextlib
 import importlib.util
 import io
@@ -52,6 +54,10 @@ from protocol_fixture import (
     shown_sha,
 )  # noqa: E402
 from labkit.formats.runs import RUN_ID_TIME  # noqa: E402
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 #: the second of a run id, as `time.strftime(RUN_ID_TIME)` writes it
 _SECOND = time.strftime(RUN_ID_TIME, time.gmtime(0))

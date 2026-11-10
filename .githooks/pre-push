@@ -1,0 +1,29 @@
+#!/bin/sh
+# labkit's gate before a push: the whole suite (`.githooks/checks full`),
+# end-to-end scenario files included — the commit hook leaves those out.
+# The checks read the working tree, so they speak for the pushed commit only
+# when that commit is HEAD and the tracked files equal it: anything else is
+# refused, not tested on the wrong state.
+# Escape hatch for a deliberate exception: git push --no-verify
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+head=$(git rev-parse HEAD)
+zero=0000000000000000000000000000000000000000
+# stdin: <local ref> <local sha> <remote ref> <remote sha>, one line per ref
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue  # a deletion pushes no code
+    # a tag names its commit through the tag object
+    commit=$(git rev-parse "$local_sha^{commit}" 2>/dev/null || echo "$local_sha")
+    if [ "$commit" != "$head" ]; then
+        echo "pre-push: $local_ref is $commit, not HEAD ($head) — the checks read the working tree; check that commit out and push again" >&2
+        exit 1
+    fi
+done
+if ! git diff --quiet HEAD --; then
+    echo "pre-push: the tracked files differ from HEAD — the checks would test them, not the pushed commit; commit or stash first" >&2
+    exit 1
+fi
+if ! .githooks/checks full; then
+    echo "pre-push: push refused — fix the above (or --no-verify for a deliberate exception)" >&2
+    exit 1
+fi

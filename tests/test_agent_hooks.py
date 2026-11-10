@@ -11,6 +11,8 @@ tool wrote them (git status, not the tool name), once per content.
 
 from __future__ import annotations
 
+import pytest
+
 from labkit.formats.evidence import read_evidence
 from labkit.gates import hook_post_change
 from labkit.formats.area_state import state_of
@@ -51,6 +53,10 @@ from protocol_fixture import (
     script_sha_of,
     shown_sha,
 )  # noqa: E402
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary

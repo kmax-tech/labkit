@@ -46,14 +46,21 @@ The editor's type checker reads the same `.venv` (`[tool.pyright]` in
 `pyproject.toml`).
 Reading and debugging recipes (a test under pdb, a command's call tree or
 timeline): `justfile` (`just` lists them); in VS Code `.vscode/launch.json`.
-Before a commit: `.venv/bin/ruff check . && .venv/bin/ruff format --check . &&
-.venv/bin/pyright` — all three clean (docs/coding-style.md CODE-008 Run the linter and the type checker),
-and the suite green. The versioned hook `.githooks/pre-commit` runs all four
-and refuses the commit otherwise — except for a commit that stages only
-`docs/notes/` and `TODO.md`, which no test reads; turn it on once per clone with
-`git config core.hooksPath .githooks`.
+The checks come in two tiers, one script (`.githooks/checks`, `just check`):
+ruff, ruff format and pyright — all three clean (docs/coding-style.md CODE-008
+Run the linter and the type checker) — and the suite green. Before a commit
+the fast tier: the suite without the end-to-end scenario files, which carry
+`pytestmark = pytest.mark.slow` (~1½ min instead of ~6½). Before a push the
+whole suite. The versioned hooks run them: `.githooks/pre-commit` (fast;
+skipped for a commit that stages only `docs/notes/` and `TODO.md`, which no
+test reads) and `.githooks/pre-push` (full; it refuses a push of a commit
+other than HEAD, or with tracked changes, since the checks read the working
+tree). Turn both on once per clone with `git config core.hooksPath .githooks`.
+While working, run the touched test files; do not run the whole suite by
+hand right before a commit. A new scenario file that runs real commands
+through a temporary repo gets the `slow` mark.
 A release is one step: write the `CHANGELOG.md` entry, then `just release
-X.Y.Z` sets the version, commits through the hook and tags that commit — in
+X.Y.Z` sets the version, runs the whole suite, commits through the hook and tags that commit — in
 this order the tag test (`tests/test_release_tags.py`) is never red; the
 push stays with the author.
 

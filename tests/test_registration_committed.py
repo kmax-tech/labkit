@@ -10,6 +10,8 @@ one at a commit without the registration.
 
 from __future__ import annotations
 
+import pytest
+
 import contextlib
 import io
 import json
@@ -35,6 +37,10 @@ from labkit.formats.gate import Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check
 from labkit.gates import report_context
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"

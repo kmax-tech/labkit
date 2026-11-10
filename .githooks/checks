@@ -1,0 +1,56 @@
+#!/bin/sh
+# labkit's checks, one home for both hooks: ruff, ruff format, pyright and
+# pytest, each judged by its own exit code — no pipe in front of a verdict (a
+# commit went in with pyright red because `pyright | tail` exited 0,
+# 2026-10-07).
+#
+#   .githooks/checks fast   before each commit: pytest without the end-to-end
+#                           scenario files (`pytestmark = pytest.mark.slow`)
+#   .githooks/checks full   before a push and a release: the whole suite
+#
+# Why two tiers: the 13 scenario files hold ~80 % of the suite's time — 383 s
+# whole, 81 s without them, on 11 cores (2026-11-10). A commit that breaks a
+# scenario is caught at the push, never on GitHub.
+set -u
+tier=${1:-}
+case "$tier" in
+    fast | full) ;;
+    *) echo "checks: say fast or full" >&2; exit 2 ;;
+esac
+cd "$(git rev-parse --show-toplevel)" || exit 1
+venv=.venv/bin
+if [ ! -x "$venv/python" ]; then
+    echo "checks: no $venv/python — create it: python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'" >&2
+    exit 1
+fi
+fail=0
+# Every check's whole output and exit code, kept until the next run of this
+# tier: a failure shown as its last 25 lines could not be told apart from a
+# known flaky test afterwards (2026-11-03). In this worktree's own git dir.
+log="$(git rev-parse --absolute-git-dir)/labkit-checks-$tier.log"
+: > "$log"
+run() {
+    name=$1
+    shift
+    out=$("$@" 2>&1)
+    code=$?
+    { printf '== %s\n' "$name"; printf '%s\n' "$out"; printf 'exit %s\n\n' "$code"; } >> "$log"
+    if [ "$code" -ne 0 ]; then
+        echo "checks ($tier): $name failed (exit $code; the whole output: $log):" >&2
+        printf '%s\n' "$out" | tail -25 >&2
+        fail=1
+    fi
+}
+run "ruff check" "$venv/ruff" check .
+run "ruff format --check" "$venv/ruff" format --check .
+run "pyright" "$venv/pyright"
+# On every core. Until 2026-10-23 `--dist loadscope` kept each class on one
+# worker because the end-to-end classes built test_04 on what test_02 left
+# behind; every test builds its own state now (`_adopted`, `_committed`).
+if [ "$tier" = fast ]; then
+    run "pytest ($tier)" "$venv/python" -m pytest -q -p no:warnings -n auto -m "not slow"
+else
+    run "pytest ($tier)" "$venv/python" -m pytest -q -p no:warnings -n auto
+fi
+[ "$fail" -eq 0 ] || exit 1
+echo "checks ($tier): ruff, format, pyright, pytest green"

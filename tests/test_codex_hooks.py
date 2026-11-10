@@ -7,9 +7,15 @@ import os
 import unittest
 from unittest import mock
 
+import pytest
+
 from labkit.gates import codex_hooks
 import test_agent_hooks as shared_tests
 from test_agent_hooks import _repo, _transcript
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 
 def invoke(action, event):

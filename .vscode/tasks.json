@@ -16,7 +16,13 @@
       "problemMatcher": []
     },
     {
-      "label": "labkit: check (commit gate)",
+      "label": "labkit: check (commit gate, fast)",
+      "type": "shell",
+      "command": "just check fast",
+      "problemMatcher": []
+    },
+    {
+      "label": "labkit: check (push gate, whole suite)",
       "type": "shell",
       "command": "just check",
       "problemMatcher": []

@@ -12,6 +12,8 @@ real commands; no model call."""
 
 from __future__ import annotations
 
+import pytest
+
 import os
 import shutil
 import tempfile
@@ -24,6 +26,10 @@ from labkit import PACKAGE_DIR
 from labkit.formats import findings
 from labkit.gates import audit_decisions
 from labkit.gates import next_step
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 #: actions the decision's line must not prescribe — labkit-next names them
 ACTIONS = (

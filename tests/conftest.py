@@ -71,3 +71,13 @@ def _no_declared_model_slots(monkeypatch: pytest.MonkeyPatch) -> None:
     from labkit.run import llm
 
     monkeypatch.setattr(llm, "_SLOTS", [frozenset()])
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """The marker `slow`: an end-to-end scenario file, run by the full
+    suite before a push (`.githooks/checks full`), not by the commit hook
+    (`.githooks/checks fast`)."""
+    config.addinivalue_line(
+        "markers",
+        "slow: an end-to-end scenario file — runs before a push, not each commit",
+    )

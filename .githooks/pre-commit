@@ -1,54 +1,23 @@
 #!/bin/sh
-# labkit's own gate before a commit: the four checks AGENTS.md asks for,
-# each judged by its own exit code — no pipe in front of a verdict (a commit
-# went in with pyright red because `pyright | tail` exited 0, 2026-10-07).
-# Turn on once per clone:  git config core.hooksPath .githooks
+# labkit's gate before a commit: the fast tier of the checks — ruff, ruff
+# format, pyright and the suite without its end-to-end scenario files
+# (`.githooks/checks fast`); the whole suite runs before a push
+# (`.githooks/pre-push`). Turn on once per clone, for both hooks:
+#   git config core.hooksPath .githooks
 # Escape hatch for a deliberate exception: git commit --no-verify
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
-venv=.venv/bin
-if [ ! -x "$venv/python" ]; then
-    echo "pre-commit: no $venv/python — create it: python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'" >&2
-    exit 1
-fi
-fail=0
-# Every check's whole output and exit code, kept until the next commit: a
-# failure shown as its last 25 lines could not be told apart from a known
-# flaky test afterwards (2026-11-03). In this worktree's own git dir.
-log="$(git rev-parse --absolute-git-dir)/labkit-pre-commit.log"
-: > "$log"
 # Notes and the TODO hold no code and no test reads them: a commit that
-# stages nothing else skips the four checks. Any other path, one .py among
-# them, runs all four. --no-renames: a file moved into docs/notes/ counts
+# stages nothing else skips the checks. Any other path, one .py among
+# them, runs them. --no-renames: a file moved into docs/notes/ counts
 # by its old path too. The index is the commit's (`git commit -- PATH`
 # hands the hook its own).
 staged=$(git diff --cached --name-only --no-renames)
 if [ -n "$staged" ] && ! printf '%s\n' "$staged" | grep -qv -e '^docs/notes/' -e '^TODO\.md$'; then
-    printf 'only docs/notes/ and TODO.md staged — checks skipped\n%s\n' "$staged" > "$log"
     echo "pre-commit: only docs/notes/ and TODO.md staged — checks skipped"
     exit 0
 fi
-run() {
-    name=$1
-    shift
-    out=$("$@" 2>&1)
-    code=$?
-    { printf '== %s\n' "$name"; printf '%s\n' "$out"; printf 'exit %s\n\n' "$code"; } >> "$log"
-    if [ "$code" -ne 0 ]; then
-        echo "pre-commit: $name failed (exit $code; the whole output: $log):" >&2
-        printf '%s\n' "$out" | tail -25 >&2
-        fail=1
-    fi
-}
-run "ruff check" "$venv/ruff" check .
-run "ruff format --check" "$venv/ruff" format --check .
-run "pyright" "$venv/pyright"
-# On every core. Until 2026-10-23 `--dist loadscope` kept each class on one
-# worker because the end-to-end classes built test_04 on what test_02 left
-# behind; every test builds its own state now (`_adopted`, `_committed`).
-run "pytest" "$venv/python" -m pytest -q -p no:warnings -n auto
-if [ "$fail" -ne 0 ]; then
+if ! .githooks/checks fast; then
     echo "pre-commit: commit refused — fix the above (or --no-verify for a deliberate exception)" >&2
     exit 1
 fi
-echo "pre-commit: ruff, format, pyright, pytest green"

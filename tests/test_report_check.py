@@ -15,6 +15,8 @@ cites a run.
 
 from __future__ import annotations
 
+import pytest
+
 from labkit.formats.evidence import read_evidence
 from labkit.formats import run_index
 from labkit.formats.area_state import state_of
@@ -60,6 +62,10 @@ from labkit.formats import (
 )
 from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 
 def _measured(protocol: Path) -> area_state.Measured:

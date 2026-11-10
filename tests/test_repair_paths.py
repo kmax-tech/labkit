@@ -15,6 +15,8 @@ audit.
 
 from __future__ import annotations
 
+import pytest
+
 import json
 import os
 import re
@@ -26,6 +28,10 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "docs" / "examples"

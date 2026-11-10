@@ -17,6 +17,8 @@ release chain, not an auditor's judgement. The judge skeleton of
 
 from __future__ import annotations
 
+import pytest
+
 import contextlib
 import io
 import os
@@ -36,6 +38,10 @@ from labkit.gates import report_context
 from labkit.gates import report_replacement
 from labkit.run import llm  # noqa: E402
 import test_end_to_end as e2e  # noqa: E402 — the module, so its tests are not collected here
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 SIMULATED = "SIMULATED answer for a counter-case — no model was called.\n"
 CLEAN = (
