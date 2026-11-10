@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import run_record_check
-from labkit.formats.runs import OUTPUTS_FILE
+from labkit.formats.runs import OUTPUTS_FILE, kept_jsonl_rows
 
 
 def rows(null_pred, null_gold=None) -> list[dict]:
@@ -57,7 +57,10 @@ class NullLane(unittest.TestCase):
     def test_rows_without_two_lanes_say_nothing(self):
         self.assertFalse(run_record_check.null_lane_unmoved([{"item": "1", "n": 3}]))
 
-    def test_the_run_record_is_read_through_its_outputs(self):
+    def test_the_kept_rows_are_read_through_the_runs_outputs(self):
+        """The reader: every registered JSONL output that stands, with its
+        rows; another suffix and a gone file are left out. The judgement
+        of the rows is a rule test (`tests/test_rules_run_record_check.py`)."""
         with tempfile.TemporaryDirectory() as d:
             run = Path(d) / "runs" / "2026-10-27T10-00-00_ab12"
             run.mkdir(parents=True)
@@ -66,25 +69,24 @@ class NullLane(unittest.TestCase):
             kept = rows(lambda i, g: g)
             out.write_text("".join(json.dumps(r) + "\n" for r in kept))
             (run / OUTPUTS_FILE).write_text(
-                json.dumps([{"path": str(out), "sha256": None, "lines": len(kept)}])
+                json.dumps(
+                    [
+                        {"path": str(out), "sha256": None, "lines": len(kept)},
+                        {
+                            "path": str(out.with_suffix(".csv")),
+                            "sha256": None,
+                            "lines": 1,
+                        },
+                        {
+                            "path": str(out.with_name("gone.jsonl")),
+                            "sha256": None,
+                            "lines": 1,
+                        },
+                    ]
+                )
             )
-            held = run_record_check.null_lane_findings(run)
-            (line,) = held.unmoved
-            self.assertEqual(held.examined, 1)
-            self.assertIn(
-                "rows.jsonl: the null lane's answer and gold equal the registered",
-                line.text,
-            )
-            # matching pairs are an indication, not proof the null measures nothing
-            self.assertEqual(
-                (line.grade, line.evidence_kind), ("WARNING", "static evidence")
-            )
-            self.assertIn("permuted gold", line.fix or "")
-            out.write_text("".join(json.dumps(r) + "\n" for r in rows(lambda i, g: 0)))
-            self.assertEqual(run_record_check.null_lane_findings(run).unmoved, [])
-            # a check that did not apply says so: no output with both lanes
-            out.write_text(json.dumps({"item": "1", "n": 3}) + "\n")
-            self.assertEqual(run_record_check.null_lane_findings(run).examined, 0)
+            (held,) = kept_jsonl_rows(run)
+            self.assertEqual((held.entry.path, held.rows), (out, kept))
 
 
 if __name__ == "__main__":

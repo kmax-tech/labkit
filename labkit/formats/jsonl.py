@@ -19,6 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import json
+from typing import Any
 
 
 def is_meta(obj: object) -> bool:
@@ -51,18 +52,18 @@ def lines_of(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
-def data_rows_of(path: Path) -> list[dict]:
+def data_rows_of(path: Path) -> list[dict[str, Any]]:
     """`data_rows` of the file at PATH, read here (the one reader of a JSONL
     file for the recomputation and the record check). Raises OSError when
     it cannot be read, ValueError on a line that is not a row."""
     return data_rows(path.read_text(encoding="utf-8"), str(path))
 
 
-def data_rows(text: str, where: str) -> list[dict]:
+def data_rows(text: str, where: str) -> list[dict[str, Any]]:
     """The records of TEXT as data rows: objects, the `_meta` header left
     out. Raises ValueError naming WHERE and the line for a line that is not
     JSON or not an object."""
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for n, obj in objects(text, where):
         if is_meta(obj):
             continue

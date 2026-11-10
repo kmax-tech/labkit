@@ -43,9 +43,10 @@ from labkit.formats.scope_sha import (
 from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
-from labkit.formats import jsonl, promises, protocol_block
+from labkit.formats import promises, protocol_block
 from labkit.formats.gate import (
     OPEN_RULE,
+    cited_rule,
     STATIC_EVIDENCE,
     WARNING,
     GateFinding,
@@ -56,6 +57,7 @@ from labkit.formats.runs import (
     CONFIG_FILE,
     ArtefactError,
     DataEntry,
+    KeptRows,
     OutputEntry,
     RunConfig,
     RunConfigError,
@@ -397,37 +399,36 @@ class NullLanes:
     examined: int
 
 
-def null_lane_findings(answering_run: Path) -> NullLanes:
-    """The outputs of ANSWERING_RUN (`runs.read_outputs`, its JSONL files)
-    held to their null lane (`NullLanes`): an output with both lanes whose
-    null did not move (`null_lane_unmoved`) is named — read from the rows
-    the run kept, not from a check in the editable script, which an agent
-    can delete before it first runs. Raises ValueError on an output that does not read."""
+def null_lane_findings(kept: Sequence[KeptRows], area: Path) -> NullLanes:
+    """The kept JSONL outputs of a run of AREA (`runs.kept_jsonl_rows`) held
+    to their null lane (`NullLanes`): an output with both lanes whose null
+    did not move (`null_lane_unmoved`) is named — read from the rows the
+    run kept, not from a check in the editable script, which an agent can
+    delete before it first runs (LAB-034 Null condition in the same run).
+    AREA names the measuring command in the way out."""
     out: list[GateFinding] = []
     examined = 0
-    for entry in read_outputs(answering_run) or []:
-        if entry.path.suffix != ".jsonl" or output_file(entry) is None:
-            continue
-        rows = jsonl.data_rows_of(entry.path)
-        if not has_null_lanes(rows):
+    for k in kept:
+        if not has_null_lanes(k.rows):
             continue
         examined += 1
-        if null_lane_unmoved(rows):
+        if null_lane_unmoved(k.rows):
             # matching answer-gold pairs are certain; that the null measures
             # nothing is not — a placebo prompt or a fixed null predictor can
             # match honestly — so it warns: static evidence
             out.append(
                 GateFinding(
                     WARNING,
-                    f"{entry.path.name}: the null lane's answer and gold equal the "
+                    f"{k.entry.path.name}: the null lane's answer and gold equal the "
                     f"registered lane's on every item — if the null condition "
                     f"should change either, it measures no noise floor (an "
                     f"instrument that ignores its labels predicts the same in both "
                     f"lanes; LAB-034 Null condition in the same run)",
                     fix="if the null should differ, give the instrument a null of its "
                     f"own, e.g. its predictions against permuted gold, then "
-                    f"{measure_anew(answering_run.parent.parent)}",
+                    f"{measure_anew(area)}",
                     evidence_kind=STATIC_EVIDENCE,
+                    rule=cited_rule("LAB-034 Null condition in the same run"),
                 )
             )
     return NullLanes(out, examined)

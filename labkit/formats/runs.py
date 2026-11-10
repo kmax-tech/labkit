@@ -22,6 +22,7 @@ from typing import Any, Final, Literal, cast
 
 from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.formats.files import ReadError, read_cause, write_atomic
+from labkit.formats.jsonl import data_rows_of
 from labkit.formats.repo import layout_root, rel_posix
 
 
@@ -605,6 +606,30 @@ def output_file(entry: OutputEntry) -> Path | None:
     """The file ENTRY registered when it stands in the tree, None when it is
     gone — the one test every reader of a registered output makes."""
     return entry.path if entry.path.is_file() else None
+
+
+@dataclass(frozen=True)
+class KeptRows:
+    """The data rows of one JSONL output a run registered (ENTRY), as the
+    tree holds the file now — what a check of the kept rows judges
+    (`kept_jsonl_rows`), so the check opens no file."""
+
+    entry: OutputEntry
+    rows: list[dict[str, object]]
+
+
+def kept_jsonl_rows(run_dir: Path) -> list[KeptRows]:
+    """Every `.jsonl` output RUN_DIR registered (`read_outputs`) that stands
+    in the tree (`output_file`), with its data rows (`jsonl.data_rows_of`),
+    in the order outputs.json names them; [] when the run registered none.
+    A gone output is left out — `run_record_check.output_record_findings`
+    names it. Raises ArtefactError when outputs.json does not read, OSError
+    or ValueError when a kept file does not."""
+    return [
+        KeptRows(entry, data_rows_of(entry.path))
+        for entry in read_outputs(run_dir) or []
+        if entry.path.suffix == ".jsonl" and output_file(entry) is not None
+    ]
 
 
 def metrics_text(run_dir: Path) -> str | None:

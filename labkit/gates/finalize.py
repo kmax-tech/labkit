@@ -48,9 +48,9 @@ each step's condition):
                     alarm rate is known
      null lane      an output the run kept with a registered and a null
                     lane: the null answers otherwise on some item, gold
-                    included — a blocker (`null_lane_findings`, LAB-034
-                    Null condition in the same run); without both lanes, a
-                    note
+                    included — a warning, static evidence
+                    (`null_lane_findings`, LAB-034 Null condition in the
+                    same run); without both lanes, a note
      kept number    a computation's kept number: the answering run's
                     metrics.json holds the key the head's `[kept]` names as a
                     finite number — a blocker naming the key, the run and
@@ -117,6 +117,7 @@ from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
     ArtefactError,
     MetricsError,
+    kept_jsonl_rows,
     read_outputs,
     unreportable,
     read_run_config,
@@ -586,7 +587,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
     """Station 7b: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
-        held = null_lane_findings(answering_run)
+        kept = kept_jsonl_rows(answering_run)
     except (ValueError, OSError) as exc:
         findings.take(
             run_file_unread(
@@ -596,6 +597,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
             )
         )
         return
+    held = null_lane_findings(kept, answering_run.parent.parent)
     findings.take_all(held.unmoved)
     if held.examined == 0:
         findings.note("  n/a — no kept output holds a registered and a null lane")
@@ -873,7 +875,7 @@ def finalize_area(
     8. registered outputs, criterion n, the null lane, the kept number and
        the reference comparison — only with a run; an output that is not
        the file the run recorded (gone, or another sha256 than outputs.json)
-       blocks, criterion n warns, a null lane that did not move blocks, a
+       blocks, criterion n warns, a null lane that did not move warns, a
        computation's run without its `[kept] key` as a finite number blocks, a
        registered reference the run cannot compare (the key absent or no
        finite number) blocks — a missed one is a result.
