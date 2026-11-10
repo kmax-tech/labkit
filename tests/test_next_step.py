@@ -585,10 +585,10 @@ class ProgressAccount(unittest.TestCase):
         self.assertEqual(rc, 0, out.getvalue())
         self.lab.commit("progress")
         self.assertIsNone(protocol_block.declared_run(self.protocol.read_text("utf-8")))
-        # the stop names the next step: the adoption or the handover
+        # an honest interim state ends the turn: the stop does not hold it,
+        # and the next step stays labkit-next's (the audit above)
         rc, err = self.lab.stop_hook()
-        self.assertEqual(rc, 2, err)
-        self.assertIn("progress account", err)
+        self.assertEqual(rc, 0, err)
 
     def test_an_interrupted_audit_leaves_the_account_and_the_audit_owed(self):
         import signal

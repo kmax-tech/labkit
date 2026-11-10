@@ -1,7 +1,7 @@
 """registered_report — what the report a protocol's head registers
 (`[protocol] report`) owes: its result block or the protocol's handover
 block once delivered (`report_owed`), the account of a measured run before
-any adoption (`progress_hold`, `progress_account`), the report the first
+any adoption (`progress_account`), the report the first
 measurements stood under (`bound_reports`, `report_binding_gap`), and one
 not written though the area measured or removed by a commit
 (`missing_report`). Read-only; report-check, the stop and `labkit-next`
@@ -58,7 +58,6 @@ def report_owed(
     sources: Sources,
     *,
     review: bool = True,
-    progress: bool = False,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
     the three ways out — or None. SOURCES is the check run's cache: the
@@ -90,11 +89,11 @@ def report_owed(
     shows the adopted number, it cannot tell what the text around it
     claims. The progress account: while nothing is
     adopted, a discussion block of this protocol for the run the gates hold
-    it to says what was measured and what is still open; with PROGRESS (the
-    commit) it passes — saved, releasing nothing, owing no review yet —,
-    without (the stop, a check by hand) it is one blocker naming the next
-    step: the adoption or the handover — so a report is written along the
-    way, not last. Before any measurement and without an answering run or adoption,
+    it to says what was measured and what is still open — an honest interim
+    state; it passes at the commit, the stop and a check by hand alike,
+    releasing nothing and owing no review yet. A run that exists forces
+    neither an adoption nor a handover; the next step stays `labkit-next`'s
+    to name. Before any measurement and without an answering run or adoption,
     a report draft owes no result block; it can be saved with registration.
     Malformed blocks still hold. Once a measurement exists, the progress,
     result or handover requirements apply."""
@@ -152,7 +151,7 @@ def report_owed(
         return None
     pending = None if declared is not None or run is None or why else run.name
     if pending is not None and progress_account(written, block_owner, pending):
-        return progress_hold(protocol, name_r, pending, progress=progress)
+        return None  # an honest interim state: saved, releasing nothing
     newest = declared or (run.name if run is not None else "<run_id>")
     what = (
         f"the result block of run {declared}, its adopted result"
@@ -185,28 +184,6 @@ def report_owed(
         f"it releases nothing and the result or the handover stays owed; "
         f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
         step=write_cmd,
-    )
-
-
-def progress_hold(
-    protocol: Path, name_r: str, run_id: str, *, progress: bool
-) -> GateFinding | None:
-    """`report_owed` on a registered report (NAME_R as shown) carrying the
-    progress account of RUN_ID for PROTOCOL while nothing is adopted: None
-    with PROGRESS (the commit: saved, releasing nothing), else one blocker
-    naming the next step — the adoption or the handover."""
-    if progress:
-        return None
-    here = Path.cwd()
-    return blocker(
-        f"{shown(protocol, here)}: {name_r} carries the progress account of run "
-        f"{run_id} (its discussion block) and no result yet — the progress is "
-        f"saved and may be committed; a result is released only by the adoption",
-        fix=f"take the next step `{step_command(protocol.parent)}` "
-        f"names — the analysis audit and its decisions, then "
-        f"`{adopt_command(protocol, run_id)}`; or end without a result: "
-        f"`{handover_command(protocol, name_r)}`",
-        step=adopt_command(protocol, run_id),
     )
 
 

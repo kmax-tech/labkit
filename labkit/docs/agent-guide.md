@@ -20,7 +20,7 @@ A result no longer holds when a gate refuses it, or when an audit BLOCKER agains
 
 A protocol head can register a report (`report = "REPORT.md"`, stamped by `labkit-init exp --report-file`, or set by `protocol-fill <PROTOCOL> report=REPORT.md` before the first measurement). If your task asks for a report file, register it before you measure: after the first measurement no fill registers, moves or drops it. Then the stop and the commit hold that file. They release it when it carries the adopted run's generated result block or the handover block. A number without its run id or a typed run id releases nothing. Other notes owe nothing.
 
-Write the progress account right after the measurement, before the audit: `labkit-next` names `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what was measured, what is still open>" --into REPORT.md`. While nothing is adopted, the commit takes that account; it releases no result and owes no report review yet. The stop names the next step once: the audit and the adoption, or the handover. The adoption puts the result block where the account stood.
+Write the progress account right after the measurement, before the audit: `labkit-next` names `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what was measured, what is still open>" --into REPORT.md`. While nothing is adopted, the commit and the stop take that account as an honest interim state; it releases no result and owes no report review yet, and `labkit-next` names the next step: the audit and the adoption, or the handover. The adoption puts the result block where the account stood.
 
 ## Choose the experiment: three separate decisions
 

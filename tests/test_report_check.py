@@ -1481,13 +1481,13 @@ class RegisteredReport(unittest.TestCase):
         )
         return report
 
-    def test_the_progress_account_passes_the_commit_and_the_stop_names_the_next_step(
+    def test_the_progress_account_passes_the_commit_and_the_stop(
         self,
     ):
         """While nothing is adopted, a discussion of the answering run is the
-        progress account — the commit takes it without a model call, the stop
-        names the adoption or the handover once. It releases nothing: nothing
-        is adopted, and report-check of the protocol still owes the analysis
+        progress account, an honest interim state: the commit and the stop
+        take it without a model call. It releases nothing: nothing is
+        adopted, and report-check of the protocol still owes the analysis
         audit."""
         area = self._fixture(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
@@ -1502,10 +1502,8 @@ class RegisteredReport(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertNotIn("report review", out.lower().replace("report-check", ""))
         code, out = self._gate(root, report)
-        self.assertEqual(code, 1, out)
-        self.assertIn("carries the progress account of run", out)
-        self.assertIn("labkit-adopt", out)
-        self.assertIn("--handover", out)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("carries the progress account of run", out)
         proto = area / "PROTOCOL-x.md"
         self.assertIsNone(protocol_block.declared_run(proto.read_text("utf-8")))
         ctx = report_context.checked(area, proto)

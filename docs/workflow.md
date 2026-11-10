@@ -257,10 +257,9 @@ checks affected delivered work. The stop reads the working tree; the commit
 reads staged evidence. These checks print findings and do not write approval.
 
 **Done / way out:** the applicable checks have no blocker. A registered
-report carrying only the progress account passes the commit; the stop holds
-it once, naming the audit and the adoption or the handover — the commit rule
-for this intermediate state is deliberately looser, the release requirements
-are not. A clean commit check alone does not mean every scientific claim was
+report carrying only the progress account passes the commit and the stop —
+an honest interim state; `labkit-next` names the audit and the adoption or
+the handover. The release requirements are unchanged. A clean commit check alone does not mean every scientific claim was
 assessed. If work must end without a result, record a handover through the commands below.
 Selection and enforcement: [run and hook enforcement](architecture.md#run-and-hook-enforcement).
 

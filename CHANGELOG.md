@@ -328,6 +328,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **An honest interim state ends a turn.** A registered report carrying the progress account of the run the gates hold (its discussion block) while nothing is adopted passes the stop and a check by hand as it passed the commit; a run that exists forces neither an adoption nor a handover, and `labkit-next` names the next step. `registered_report.progress_hold` is gone; `report_owed` lost its `progress` keyword.
+
 - **One cause, one blocker at finalize's reference station.** At kind compute the kept-number station reads the same metrics.json and holds the same key; a metrics.json that does not read, and a reference verdict not comparable for want of a finite kept number, are its blockers and the reference station names them in a note instead of a second blocker. Both stations are finalize's alone (`reference.comparison_gaps` has no other caller).
 
 - **Three blockers held to what they can show.** A null lane whose answer and gold equal the registered lane's on every item warns as static evidence (`run_record_check.null_lane_findings`): matching pairs are certain, that the null measures nothing is not — a placebo prompt or a fixed null predictor can match honestly. The recomputation (`02_analyze.py --check`, `recheck.agree`) compares the registered identifiers and the computation's `[kept]` key exactly and requires of the other descriptive keys only that none disappear, as LAB-041 Generate numbers, don't retype them states; a descriptive value that differs no longer fails. A run-id-shaped token that names no run blocks inside a generated result or discussion block and warns as static evidence in prose (`report_blocks.cited_gaps`, `structured_lines`).

@@ -1252,7 +1252,7 @@ def hold_registered(
         if staged
         else None
     )
-    owed = missing or report_owed(protocol, text, None, sources, progress=staged)
+    owed = missing or report_owed(protocol, text, None, sources)
     gaps = changed + [g for g in (binding, owed) if g is not None]
     if not gaps:
         return 0
