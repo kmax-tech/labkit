@@ -11,7 +11,8 @@ state its test wrote down.
 
 `run_dir` and `audit_record` build the parts a state and the evidence hold;
 the defaults they fill are named at each and bear on no condition a check of
-runs or records decides.
+runs or records decides. `checked` builds report-check's gate-layer context
+(`report_context.Checked`) for its gate tests; a check never receives it.
 """
 
 from __future__ import annotations
@@ -23,7 +24,9 @@ from labkit.formats import findings
 from labkit.formats.answering_run import RunFacts
 from labkit.formats.area_state import TREE, AreaState, FileState, Measured
 from labkit.formats.evidence import AreaEvidence
+from labkit.formats import protocol_block
 from labkit.formats.runs import RUNS_DIR, RunConfig, RunDir
+from labkit.gates.report_context import Checked
 from protocol_fixture import PID
 
 #: the area every built state lies in unless the test names another; a
@@ -125,4 +128,36 @@ def audit_record(
         verdict=(0, 0, 0),
         findings=tuple(found),
         protocol_id=protocol_id,
+    )
+
+
+def checked(
+    text: str,
+    *,
+    run: Path | None,
+    why: str = "",
+    area: Path = AREA,
+    protocol: str = "PROTOCOL-x.md",
+    file_state: FileState = TREE,
+    state: AreaState | None = None,
+    evidence: AreaEvidence | None = None,
+) -> Checked:
+    """The `Checked` of one report check over the protocol TEXT in AREA
+    (its head read from TEXT, `[result]` as TEXT declares it), the answering
+    RUN or None with WHY, FILE_STATE, and STATE and EVIDENCE as given — the
+    empty `area_state()` and `area_evidence()` when left out. Raises
+    BlockError as `protocol_block.head` does for a head that does not read."""
+    return Checked(
+        area=area,
+        repo=area,
+        protocol=area / protocol,
+        text=text,
+        head=protocol_block.head(text),
+        file_state=file_state,
+        declared=protocol_block.declared_run(text),
+        declaration_gap=None,
+        run=run,
+        why=why,
+        area_state=state or area_state(area=area),
+        evidence=evidence or area_evidence(),
     )
