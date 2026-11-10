@@ -21,4 +21,4 @@ The evidence behind the guide's rules, kept here so the guide carries only the r
 - **Model / tool and `[gate] labels`**: phase 4 (2026-10-21) — until 0.100.0 the prose line decided by matching "n/a", "none" or dashes, and the gate labels were a prose field.
 - **Model arms**: introduced 2026-10-09.
 - **Null condition**: usability probe 2026-10-07 — a placebo whose answer varied per item followed the gold label and left its band.
-- **Noise ceiling**: Sonnet v3 t3 and t5 (2026-10-16) wrote what they saw under Randomness controls, where nobody looks.
+- **Noise ceiling**: in the third Sonnet pilot round (2026-10-16), the agents on tasks 3 and 5 wrote what they saw under Randomness controls, where nobody looks.
