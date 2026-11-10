@@ -30,7 +30,7 @@ class RecheckRefuses(unittest.TestCase):
 
     def test_a_head_that_does_not_read(self):
         said = self._refused(lambda: recheck.chosen_run(self.area, "# no head\n"))
-        self.assertTrue(said.startswith("recheck: "), said)
+        self.assertTrue(said.startswith("recheck: no [protocol] table"), said)
 
     def test_a_named_run_whose_record_does_not_read(self):
         run = runs.run_path(self.area, "r1")
@@ -42,7 +42,7 @@ class RecheckRefuses(unittest.TestCase):
         said = self._refused(
             lambda: recheck.chosen_run(self.area, head(repeat_cost="low"), run_id="r1")
         )
-        self.assertTrue(said.startswith("recheck: "), said)
+        self.assertIn("config.json: unreadable run metadata", said)
 
     def test_an_output_the_run_did_not_register(self):
         run = runs.run_path(self.area, "r1")
