@@ -425,6 +425,7 @@ class CriterionNStation(unittest.TestCase):
             finalize.check_criterion_n(found, self._run(d, {"criterion_1_n": 12}))
             (f,) = found.found
             self.assertIn("the record of r1 does not read", f.text)
+            self.assertEqual(f.rule, OPEN_RULE)
 
     def test_the_twin_without_a_denominator_the_record_is_not_read(self):
         with tempfile.TemporaryDirectory() as d:

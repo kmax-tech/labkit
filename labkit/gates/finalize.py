@@ -441,6 +441,7 @@ def check_declared_scopes(
             f"answer; reproduce it with the labkit version its repo pins",
             fix=f"a block added after the run is a new registration: "
             f"{register_anew(per='per change, the promise block among them')}",
+            rule=OPEN_RULE,
         )
         return
     drift = promises.scope_drift(recorded, area)
@@ -450,6 +451,7 @@ def check_declared_scopes(
                 f"declared scope changed since {answering_run.name}: {d}",
                 fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
                 step=measure_command(area),
+                rule=OPEN_RULE,
             ),
             changed_since=answering_run.name,
         )
@@ -583,12 +585,14 @@ def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateF
             fix=f"make the run's files readable (path and permissions), then "
             f"`{gate_command('finalize', area)}`",
             check_outcome=NOT_EXECUTABLE,
+            rule=OPEN_RULE,
         )
     return blocker(
         text,
         fix=f"measure anew (`{measure_command(area)}`) and audit that run; "
         f"the run's own files stay as they are",
         step=measure_command(area),
+        rule=OPEN_RULE,
     )
 
 

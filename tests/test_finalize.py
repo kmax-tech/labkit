@@ -399,6 +399,33 @@ class IntentCheckRefused(unittest.TestCase):
             self.assertFalse(any("unreadable" in g.text for g in twin.found))
 
 
+class DeclaredScopeSinceTheRun(unittest.TestCase):
+    """Station 4: a promise's declared scope edited after the run blocks,
+    naming the run as data (`changed_since`) and the measuring command;
+    the twin, the scope as the run saw it, passes."""
+
+    def test_an_edited_scope_blocks_and_the_unedited_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            run = completed_run(area, "r1", metrics={"criterion_1_pass": True})
+            same = gate.Findings(tell=None)
+            finalize.check_declared_scopes(same, area, run, CLEAN_PROTOCOL)
+            self.assertEqual(same.found, [])
+            script = area / "scripts" / "01_measure.py"
+            script.write_text(script.read_text() + "# edited after the run\n")
+            edited = gate.Findings(tell=None)
+            finalize.check_declared_scopes(edited, area, run, CLEAN_PROTOCOL)
+        self.assertTrue(edited.found)
+        for f in edited.found:
+            self.assertTrue(
+                f.text.startswith("declared scope changed since r1: "), f.text
+            )
+            self.assertEqual((f.changed_since, f.rule), ("r1", gate.OPEN_RULE))
+            assert f.step is not None
+            self.assertEqual(f.step.name, "measure")
+
+
 class AreaTestsBeforeReporting(unittest.TestCase):
     """finalize runs the area's tests on every tier: a later edit of
     evaluate() that mutes the criterion is caught before a number leaves;
