@@ -12,11 +12,11 @@ The two t34 attempts had no such outage. Seven follow-up audits after prose edit
 
 ## Work packages
 
-| Package | Change | Status and next action |
-|---|---|---|
-| **B — report before adoption** | Save a readable intermediate report before the audit loop. Replace its discussion block on adoption. | Implemented. Joint verification with A1 passes; see acceptance cases below. An agent comparison is needed before claiming time saved. |
-| **A — consistent repair guidance** | Make the decision hint, next action and release gate agree about changed evidence. | A1 implemented in `200c6ebb`, with example helpers in `4dbf203c`. The correction route is described below. No general relaxation of code binding. |
-| **C — review the second-review duty** | Assess whether the second auditor can be removed or required more narrowly. | Retained for now: the investigated cases show useful protection. Improved review inputs are integrated. The separate proposal for verdict grounds failed its replay acceptance and was not adopted. |
+| Package                               | Change                                                                                               | Status and next action                                                                                                                                                                              |
+|---------------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **B — report before adoption**        | Save a readable intermediate report before the audit loop. Replace its discussion block on adoption. | Implemented. Joint verification with A1 passes; see acceptance cases below. An agent comparison is needed before claiming time saved.                                                               |
+| **A — consistent repair guidance**    | Make the decision hint, next action and release gate agree about changed evidence.                   | A1 implemented in `200c6ebb`, with example helpers in `4dbf203c`. The correction route is described below. No general relaxation of code binding.                                                   |
+| **C — review the second-review duty** | Assess whether the second auditor can be removed or required more narrowly.                          | Retained for now: the investigated cases show useful protection. Improved review inputs are integrated. The separate proposal for verdict grounds failed its replay acceptance and was not adopted. |
 
 B's prerequisites are implemented: shared measurement check (`7c70615f`), report setter (`410507cc`), historical reader (`82a372a5`) and report binding (`c413182d`). Block replacement is in `c68e0b0b`, next-step and commit handling in `4a664163`, workflow additions in `82dfa297`.
 
@@ -58,24 +58,24 @@ Adoption replaces the matching discussion block in place with the result block. 
 
 ### Where the existing workflow changes
 
-| Step in [the workflow](../workflow.md#the-steps-at-a-glance) | Implemented B behaviour |
-|---|---|
-| 0–2: create and register | Guide a required report to its registration before measurement. |
-| 3: measure | Write progress before entering the audit loop. |
-| 4–6: check, audit, decide and review | Preserve release requirements. Describe pending work in the report. |
-| 7–8: adopt and report | Replace the matching discussion in place; review the final text. |
-| 9: stop and commit | Accept progress at commit, remind once at stop; release no result. |
+| Step in [the workflow](../workflow.md#the-steps-at-a-glance) | Implemented B behaviour                                             |
+|--------------------------------------------------------------|---------------------------------------------------------------------|
+| 0–2: create and register                                     | Guide a required report to its registration before measurement.     |
+| 3: measure                                                   | Write progress before entering the audit loop.                      |
+| 4–6: check, audit, decide and review                         | Preserve release requirements. Describe pending work in the report. |
+| 7–8: adopt and report                                        | Replace the matching discussion in place; review the final text.    |
+| 9: stop and commit                                           | Accept progress at commit, remind once at stop; release no result.  |
 
 Use existing writers, report checks and next-step logic. Each command checks its conditions again; earlier advice is not permission or execution evidence. A1 and its new-run repair update steps 4–5 and recovery. Step 6 retains the second-review duty; the separate verdict-ground proposal is not adopted.
 
 ## Acceptance and verification
 
-| B case | Required outcome | Executable coverage |
-|---|---|---|
-| Save progress | Current-run discussion passes staged commit; stop reminds once; no adoption or extra model review. | `tests/test_next_step.py::ProgressAccount`, registered-report pairs in `tests/test_report_check.py`. |
-| Survive interruption | Interrupted audit leaves a readable report and a valid next action, without a success claim. | `ProgressAccount` and `tests/test_attempts.py`. |
-| Retain protection | Open blockers, altered evidence, stale references and malformed blocks retain their applicable holds. | `ProgressAccount`, `tests/test_report_check.py`, `tests/test_registration_committed.py`. |
-| Finish cleanly | Matching discussion is replaced, unrelated content remains, final review is due; negative results work too. | `tests/test_report_blocks.py::AdoptionReplacesTheAccount`, `tests/test_report_review.py`, `tests/test_counter_cases.py::HonestMiss`. |
+| B case               | Required outcome                                                                                            | Executable coverage                                                                                                                       |
+|----------------------|-------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| Save progress        | Current-run discussion passes staged commit; stop reminds once; no adoption or extra model review.          | `tests/test_next_step.py::ProgressAccount`, registered-report pairs in `tests/test_report_check.py`.                                      |
+| Survive interruption | Interrupted audit leaves a readable report and a valid next action, without a success claim.                | `ProgressAccount` and `tests/test_attempts.py`.                                                                                           |
+| Retain protection    | Open blockers, altered evidence, stale references and malformed blocks retain their applicable holds.       | `ProgressAccount`, `tests/test_report_check.py`, `tests/test_registration_committed.py`.                                                  |
+| Finish cleanly       | Matching discussion is replaced, unrelated content remains, final review is due; negative results work too. | `tests/test_report_blocks_text.py::AdoptionReplacesTheAccount`, `tests/test_report_review.py`, `tests/test_counter_cases.py::HonestMiss`. |
 
 The combined local probe used a registered count protocol and real commands: measure → save discussion → accept staged progress → correct a misdescribed document count → decide `fixed` → refuse adoption after a fresh audit without a verdict → obtain explicit `resolved` → adopt → review the final report → pass the staged check. Progress remained during the refused adoption; adoption replaced it and still owed report review. A separate registered-report probe also completed this path with a missed prediction criterion: the negative result remained a miss and passed final review and the staged gate.
 
@@ -111,12 +111,12 @@ The separate proposal for fixed verdict grounds was not adopted. Its replay stop
 
 The four remaining reports were reproduced on main `a2202e36` with real commands in fresh count labs and supplied model answers. They do not establish the quality of an auditor's judgement.
 
-| Case | Finding and disposition |
-|---|---|
-| Older progress discussion remains in a final report | Reproduced. `with_block` deliberately preserves other runs' discussions. A result for the newer run and historical discussion coexist. No automatic deletion is added; refresh an obsolete reason through `protocol-fill --discuss OLD_RUN --why ... --into REPORT`, then review the changed final report. |
-| Progress requested for the previous run after withdrawal | Reproduced. The current run is saved as unapproved progress; the following step correctly asks for the changed code to be measured. This follows B's agreed progress-before-gaps order, not a dead end. Reordering it would be a separate product decision. |
-| Finished registered report called unregistered | Confirmed defect, repaired. The final step now names the actual registered path; unregistered-report guidance remains available when no path is registered. |
-| Prose-only report held before any measurement | Confirmed defect, repaired. A valid draft can be committed with registration; after measurement, the same file owes progress, result or handover. Malformed blocks still hold. |
+| Case                                                     | Finding and disposition                                                                                                                                                                                                                                                                                    |
+|----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Older progress discussion remains in a final report      | Reproduced. `with_block` deliberately preserves other runs' discussions. A result for the newer run and historical discussion coexist. No automatic deletion is added; refresh an obsolete reason through `protocol-fill --discuss OLD_RUN --why ... --into REPORT`, then review the changed final report. |
+| Progress requested for the previous run after withdrawal | Reproduced. The current run is saved as unapproved progress; the following step correctly asks for the changed code to be measured. This follows B's agreed progress-before-gaps order, not a dead end. Reordering it would be a separate product decision.                                                |
+| Finished registered report called unregistered           | Confirmed defect, repaired. The final step now names the actual registered path; unregistered-report guidance remains available when no path is registered.                                                                                                                                                |
+| Prose-only report held before any measurement            | Confirmed defect, repaired. A valid draft can be committed with registration; after measurement, the same file owes progress, result or handover. Malformed blocks still hold.                                                                                                                             |
 
 Both regression tests failed on the original behaviour. The report-label test uses `SUMMARY.md`, completes adoption and report review, then checks the final guidance. The draft test commits the initial report, rejects a malformed block, measures, verifies that the unchanged draft is now held, and commits successfully after the progress command. See `tests/test_next_step.py::ProgressAccount` and `tests/test_repair_paths.py::BeforeTheFirstMeasurement`.
 
@@ -130,14 +130,14 @@ Use the existing sources: standard for the obligation, architecture's [chain tab
 
 For each applicable requirement, record what must hold, when it applies, evidence read, exact scope and limits of the check, consequence, valid recovery and faulty/correct/repaired cases. Checks about the same fact must share the comparison; partial comparisons must not claim the whole state is unchanged. Exercise the recommended recovery through the next gate.
 
-| Scientific requirement | Evidence needed |
-|---|---|
-| Question and method fit | Scientific review. |
-| Suitable data, splits and controls | Encodable checks plus suitability and leakage review. |
-| Correct metrics, units and denominators | Hand-checked examples and meaningful faults. |
-| Appropriate randomness and uncertainty | Task-dependent design and analysis checks. |
-| Traceable results | Registration, code, input, run and report binding. |
-| Supported conclusion | Scientific review of the claim and its limits. |
+| Scientific requirement                  | Evidence needed                                       |
+|-----------------------------------------|-------------------------------------------------------|
+| Question and method fit                 | Scientific review.                                    |
+| Suitable data, splits and controls      | Encodable checks plus suitability and leakage review. |
+| Correct metrics, units and denominators | Hand-checked examples and meaningful faults.          |
+| Appropriate randomness and uncertainty  | Task-dependent design and analysis checks.            |
+| Traceable results                       | Registration, code, input, run and report binding.    |
+| Supported conclusion                    | Scientific review of the claim and its limits.        |
 
 A justified standard requirement and a meaningful counterexample can warrant protection before an observed incident. Not every task needs every check. Mark mechanical coverage, semantic review, gaps and scope limits explicitly. Questions such as which tasks need a null comparison are proposals for the standard, not answers established by this note. This review adds no blocker.
 
