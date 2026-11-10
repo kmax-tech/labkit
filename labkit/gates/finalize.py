@@ -198,6 +198,7 @@ def choose_answering_run(
             "no stamped protocol id ([protocol] id) — no run is bound to it",
             fix="stamp the area with `labkit-init exp <name> --kind …`, which "
             "writes a fresh id, and carry the protocol's text over",
+            rule=OPEN_RULE,
         )
         return None
     choice, blocker, lines = state.measured_of(pid).told(text)
@@ -232,6 +233,7 @@ def choose_answering_run(
             f"answers, withdraw the adoption (`{withdraw_command(protocol)}`), "
             f"audit it and adopt it; a run left out of the report is named in it",
             evidence_kind=STATIC_EVIDENCE,
+            rule=OPEN_RULE,
         )
     return choice.run_dir
 

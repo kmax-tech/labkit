@@ -5,12 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import head, run_record  # noqa: E402
+from protocol_fixture import PID, head, run_record  # noqa: E402
+from state_fixture import AREA, area_state
 from labkit.formats.area_state import state_of
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
 from labkit.formats import protocol_block, repo
-from labkit.formats.gate import STATIC_EVIDENCE, Findings
+from labkit.formats.gate import OPEN_RULE, STATIC_EVIDENCE, Findings
 from labkit.formats.scope_sha import SourceError
 
 
@@ -53,6 +54,7 @@ class Steps(unittest.TestCase):
                 "2026-10-07T10-00-00_aa11: bound to this protocol", warning.text
             )
             self.assertIn("--withdraw", warning.text)
+            self.assertEqual(warning.rule, OPEN_RULE)
 
     def test_the_twin_before_adoption_holds_the_newest(self):
         with tempfile.TemporaryDirectory() as d:
@@ -325,6 +327,30 @@ class ReadmeRoute(unittest.TestCase):
     def test_no_readme_is_nothing(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(readme_check.readme_route(Path(d), "PROTOCOL-a.md"), [])
+
+
+class AHeadWithoutAProtocolId(unittest.TestCase):
+    """Station 1: a head without a stamped `[protocol] id` binds no run —
+    one blocker, and no run is chosen; read from a state built in memory."""
+
+    def test_no_id_is_one_blocker_and_no_run(self):
+        found = Findings(tell=None)
+        protocol = AREA / "PROTOCOL-x.md"
+        run = finalize.choose_answering_run(found, protocol, None, "", area_state())
+        self.assertIsNone(run)
+        (f,) = found.found
+        self.assertTrue(f.text.startswith("no stamped protocol id ([protocol] id)"))
+        self.assertIn("labkit-init exp", f.fix or "")
+        self.assertEqual(f.rule, OPEN_RULE)
+
+    def test_the_twin_a_stamped_id_goes_on_to_the_choice(self):
+        # nothing bound to the id: the choice's own blocker, not this one
+        found = Findings(tell=None)
+        protocol = AREA / "PROTOCOL-x.md"
+        finalize.choose_answering_run(found, protocol, PID, "", area_state())
+        self.assertFalse(
+            any(f.text.startswith("no stamped protocol id") for f in found.found)
+        )
 
 
 class CriterionNStation(unittest.TestCase):
