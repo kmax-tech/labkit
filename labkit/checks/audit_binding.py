@@ -38,7 +38,7 @@ from labkit.formats import (
 )
 from labkit.formats.area_state import AreaState, gone_run_restore
 from labkit.formats.evidence import AreaEvidence
-from labkit.formats.gate import GateFinding, blocker, with_way_out
+from labkit.formats.gate import GateFinding, blocker, cited_rule, with_way_out
 from labkit.formats.repo import layout_root, only_protocol, path_kind, shown, rel_posix
 from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
@@ -366,6 +366,7 @@ def check_audited_runs_kept(
                 f"read is a kept run (LAB-043 Runs go through `runlog`)",
                 fix=way,
                 step=handover,
+                rule=cited_rule("LAB-043 Runs go through `runlog`"),
             )
         )
     return out

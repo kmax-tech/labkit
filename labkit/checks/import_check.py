@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 from labkit.formats.gate import STATIC_EVIDENCE
-from labkit.formats.gate import WARNING, GateFinding, coded
+from labkit.formats.gate import WARNING, GateFinding, RuleAssignment, cited_rule, coded
 from labkit.formats.repo import shown
 from labkit.formats.scope_sha import (
     LOCAL_ROOTS,
@@ -94,7 +94,7 @@ def _import_findings(
     area: Path,
     repo: Path,
     where: str,
-    rule: str,
+    rule: RuleAssignment,
     fix: str,
 ) -> list[tuple[int, GateFinding]]:
     """The imports of NODE that resolve outside lib/ and src/."""
@@ -161,7 +161,7 @@ def _coverage_in(
     loaders and foreign-area paths are read in the area's OWN files only: a
     shared helper's loader is parameterised by its caller, and reporting it
     for every area that imports the helper would be the same line forever."""
-    rule = "LAB-019 The stamp covers everything that determines the number"
+    rule = cited_rule("LAB-019 The stamp covers everything that determines the number")
     fix = (
         "declare the file as a promise's scope (its declared_scope_sha then "
         "sees it) or copy it into the area"

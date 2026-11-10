@@ -20,7 +20,7 @@ from pathlib import Path
 
 from labkit.formats.repo import shown
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, cited_rule
 from labkit.formats.scope_sha import (
     SCRIPT_GLOB,
     SourceError,
@@ -97,7 +97,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     sp.name,
                     f"{name}() is called by no test under tests/ · a parser "
                     f"fails silently into a wrong number",
-                    rule="LAB-016 Resolution check before freezing",
+                    rule=cited_rule("LAB-016 Resolution check before freezing"),
                     fix=f"give it a test with real raw answers under tests/, "
                     f"then `{gate_command('code-check', area)}`",
                     evidence_kind=STATIC_EVIDENCE,
@@ -251,7 +251,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
                     protocol.name,
                     f"prompt block drifted from {name}: {len(missing)} of "
                     f"{len(fixed)} fixed line(s) missing, e.g. {missing[0][:60]!r}",
-                    rule="LAB-007 Render check before the instrument check",
+                    rule=cited_rule("LAB-007 Render check before the instrument check"),
                     fix="paste the rendered `--show` output, not a transcript",
                     evidence_kind=GUARANTEED,
                 )

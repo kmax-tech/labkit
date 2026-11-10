@@ -93,7 +93,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.gate import BLOCKER, NOTE, WARNING
+from labkit.formats.gate import BLOCKER, NEW_CLASS, NOTE, WARNING
 from labkit.formats.commands import checkout_command
 from labkit.formats import promises, protocol_block
 from labkit.formats.protocol_block import toml_string as _s
@@ -447,10 +447,12 @@ def subject_of(text: str) -> str:
     return subject
 
 
-#: the rule field of a finding the standard has no rule for — collected for
-#: the author to review (`new_class_findings`), never a rule of its own until
-#: a decision with its grounds makes one
-NEW_CLASS = "new class"
+#: NEW_CLASS (`gate.NEW_CLASS`, the one home of the rule kinds' words) is the
+#: rule field of a finding the standard has no rule for — collected for the
+#: author to review (`new_class_findings`), never a rule of its own until a
+#: decision with its grounds makes one. An audit finding's `Finding.rule` is
+#: still that text (`LAB-nnn` or NEW_CLASS), not the gate's `RuleAssignment`
+#: — step 2b of docs/notes/2026-11-10-test-model.md makes it one value
 RULE_FORM = (
     "a finding line names the rule it holds in its sixth field: "
     '`LAB-nnn <rule name>`, an active rule of the standard, or "new class" '

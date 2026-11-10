@@ -97,6 +97,7 @@ from labkit.formats.gate import (
     WARNING,
     Findings,
     GateFinding,
+    cited_rule,
     coded,
     outcome_of_failed_read,
 )
@@ -134,7 +135,7 @@ from labkit.checks.prompt_check import check_parser_fixtures, check_prompt_drift
 
 
 #: the rule every intent-id finding cites
-ID_RULE = "LAB-004 Identifiers make the intent addressable"
+ID_RULE = cited_rule("LAB-004 Identifiers make the intent addressable")
 
 
 # --- gate-label extraction ------------------------------------------------

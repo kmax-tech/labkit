@@ -14,7 +14,13 @@ from check_guards import pure_call
 from labkit.checks.audit_binding import check_audited_runs_kept
 from labkit.formats import findings
 from labkit.formats.commands import HANDOVER, handover_command
-from labkit.formats.gate import BLOCKER, GUARANTEED, VIOLATED
+from labkit.formats.gate import (
+    BLOCKER,
+    GUARANTEED,
+    KNOWN_RULE,
+    VIOLATED,
+    RuleAssignment,
+)
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 from state_fixture import AREA, area_evidence, area_state, audit_record, run_dir
 
@@ -38,6 +44,9 @@ class AnAuditedRunIsKept(unittest.TestCase):
         (f,) = found
         self.assertEqual(
             (f.grade, f.evidence_kind, f.check_outcome), (BLOCKER, GUARANTEED, VIOLATED)
+        )
+        self.assertEqual(
+            f.rule, RuleAssignment(KNOWN_RULE, "LAB-043", "Runs go through `runlog`")
         )
         self.assertEqual(
             f.text,

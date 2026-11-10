@@ -6,6 +6,8 @@ from __future__ import annotations
 import contextlib
 import io
 import unittest
+from dataclasses import replace
+from typing import cast
 
 from labkit.formats import commands
 from labkit.formats import gate
@@ -200,12 +202,13 @@ class Findings(unittest.TestCase):
             "WARNING",
             "a.py:2",
             "y · why",
-            rule="LAB-004 Name",
+            rule=gate.cited_rule("LAB-004 Identifiers make the intent addressable"),
             fix="do this",
             evidence_kind=gate.GUARANTEED,
         )
         self.assertEqual(
-            full.line, "WARNING · a.py:2 · y · why · LAB-004 Name · Next: do this"
+            full.line,
+            "WARNING · a.py:2 · y · why · LAB-004 Identifiers make the intent addressable · Next: do this",
         )
         self.assertEqual(
             gate.coded(
@@ -214,7 +217,16 @@ class Findings(unittest.TestCase):
             "BLOCKER · x · Next: y",
         )
         self.assertEqual(
-            (full.where, full.rule, full.fix), ("a.py:2", "LAB-004 Name", "do this")
+            (full.where, full.rule, full.fix),
+            (
+                "a.py:2",
+                gate.RuleAssignment(
+                    gate.KNOWN_RULE,
+                    "LAB-004",
+                    "Identifiers make the intent addressable",
+                ),
+                "do this",
+            ),
         )
 
     def test_an_ungraded_finding_is_refused(self):
@@ -329,10 +341,6 @@ class AreaSlot(unittest.TestCase):
         self.assertIn("`labkit-audit experiments/01-x --mode analysis`", f.blocked[0])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TheWayAsData(unittest.TestCase):
     """A finding carries the command its way out names as data
     (`GateFinding.step`, a `commands.Command`) and the withdrawal a hold
@@ -369,3 +377,72 @@ class TheWayAsData(unittest.TestCase):
         self.assertEqual(first.fix, "measure anew")  # the datum, not the words
         self.assertIs(same, warned)
         self.assertEqual(gate.withdrawn_first([held], None), [held])
+
+
+class ARuleAssignmentIsData(unittest.TestCase):
+    """`gate.RuleAssignment`: one validated value per kind, each refusal
+    beside the valid twin it differs from."""
+
+    RULE = "LAB-043 Runs go through `runlog`"
+
+    def test_a_cited_rule_carries_its_id_and_name(self):
+        r = gate.cited_rule(self.RULE)
+        self.assertEqual(
+            (r.kind, r.rule_id, r.name),
+            (gate.KNOWN_RULE, "LAB-043", "Runs go through `runlog`"),
+        )
+        self.assertEqual(r.line_part, self.RULE)
+
+    def test_a_cited_rule_without_its_name_or_of_another_shape_is_refused(self):
+        for bad in ("LAB-043", "LAB-43 Runs go", "lab-043 Runs go", "§2.D4 Runs go"):
+            with self.subTest(bad), self.assertRaises(ValueError):
+                gate.cited_rule(bad)
+
+    def test_the_kinds_without_a_rule_name_none_and_tell_nothing_but_new_class(self):
+        self.assertEqual(
+            [
+                r.line_part
+                for r in (gate.OPEN_RULE, gate.TECHNICAL_RULE, gate.NEW_CLASS_RULE)
+            ],
+            [None, None, gate.NEW_CLASS],
+        )
+
+    def test_contradictory_combinations_are_refused(self):
+        with self.assertRaises(ValueError):
+            gate.RuleAssignment(
+                gate.OPEN_ASSIGNMENT, "LAB-043", "Runs go through `runlog`"
+            )
+        with self.assertRaises(ValueError):
+            gate.RuleAssignment(gate.TECHNICAL_CONTRACT, "LAB-043")
+        with self.assertRaises(ValueError):
+            gate.RuleAssignment(gate.KNOWN_RULE)
+        with self.assertRaises(ValueError):
+            gate.RuleAssignment(gate.KNOWN_RULE, "LAB-043", " ")
+        with self.assertRaises(ValueError):
+            gate.RuleAssignment("proposed")
+        # the twins
+        gate.RuleAssignment(gate.OPEN_ASSIGNMENT)
+        gate.RuleAssignment(gate.KNOWN_RULE, "LAB-043", "Runs go through `runlog`")
+
+    def test_a_finding_refuses_a_plain_string_and_keeps_the_value_when_forwarded(self):
+        with self.assertRaises(ValueError):
+            gate.GateFinding(
+                "WARNING",
+                "x",
+                # a plain string where the value belongs: the refusal under test
+                rule=cast(gate.RuleAssignment, self.RULE),
+                evidence_kind=gate.GUARANTEED,
+            )
+        f = gate.blocker("x", fix="y", rule=gate.cited_rule(self.RULE))
+        forwarded = replace(f, text="finalize: x")
+        self.assertEqual(forwarded.rule, gate.cited_rule(self.RULE))
+        held = gate.Findings(tell=None)
+        held.block("z", fix="y", rule=gate.OPEN_RULE)
+        held.warn("w", evidence_kind=gate.GUARANTEED, rule=gate.TECHNICAL_RULE)
+        self.assertEqual(
+            [g.rule for g in held.found], [gate.OPEN_RULE, gate.TECHNICAL_RULE]
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

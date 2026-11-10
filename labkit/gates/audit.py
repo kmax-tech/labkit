@@ -79,7 +79,14 @@ from labkit.formats import (
     followup,
     protocol_block,
 )
-from labkit.formats.gate import GUARANTEED, WARNING, GateFinding, coded, with_way_out
+from labkit.formats.gate import (
+    GUARANTEED,
+    WARNING,
+    GateFinding,
+    cited_rule,
+    coded,
+    with_way_out,
+)
 from labkit.formats.repo import area_path, no_such_area, shown
 from labkit.formats.commands import audit_command, decide_command
 from labkit.formats.runs import completed_runs
@@ -161,7 +168,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
             None,
             'repeat_cost = "low" and no completed run · the first run is the cheaper '
             "probe; one audit in --mode analysis after it covers the preflight rows too",
-            rule="LAB-017 The number of audits follows the cost tier",
+            rule=cited_rule("LAB-017 The number of audits follows the cost tier"),
             fix="run first, audit once",
             evidence_kind=GUARANTEED,
         )

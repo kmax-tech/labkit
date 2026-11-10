@@ -39,6 +39,7 @@ that names its command is followed
 
 from __future__ import annotations
 
+import re
 import shlex
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
@@ -114,6 +115,86 @@ def with_way_out(why: str, fix: str | None) -> str:
     return why.rstrip().removesuffix(".") + WAY_OUT + fix
 
 
+#: the four kinds of a finding's rule assignment (`RuleAssignment`), the one
+#: home of their words: a rule of the standard the finding cites; a rule not
+#: decided yet; a technical condition no rule of the standard covers; a fault
+#: the agent audit found that no rule names (`findings.Finding.rule`)
+KNOWN_RULE = "known rule"
+OPEN_ASSIGNMENT = "open assignment"
+TECHNICAL_CONTRACT = "technical contract"
+NEW_CLASS = "new class"
+RULE_KINDS = (KNOWN_RULE, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT, NEW_CLASS)
+#: how a cited rule reads: `LAB-nnn <its name>`
+_CITED_RULE = re.compile(r"^(LAB-\d{3}) (\S.*)$")
+
+
+@dataclass(frozen=True)
+class RuleAssignment:
+    """Which rule of the standard a finding holds, as data: KIND, one of
+    RULE_KINDS; for a KNOWN_RULE its RULE_ID (`LAB-nnn`) and NAME as cited,
+    for every other kind neither — an open assignment names no rule, not
+    even a proposed one, and recording it decides nothing. Raises ValueError
+    for another kind, a malformed id, a known rule without its name, or an
+    id beside another kind. Whether the id and the name are the ledger's
+    active rule is held over the source, where they are written
+    (`rules.check_refs`, `tests/test_rules.py`): this module is core and
+    reads no ledger.
+
+    Attributes:
+        kind: KNOWN_RULE, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT or NEW_CLASS.
+        rule_id: `LAB-nnn` for KNOWN_RULE, else None.
+        name: The rule's name as cited for KNOWN_RULE, else None.
+    """
+
+    kind: str
+    rule_id: str | None = None
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind not in RULE_KINDS:
+            raise ValueError(
+                f"a rule assignment is one of {RULE_KINDS}, not {self.kind!r}"
+            )
+        if self.kind == KNOWN_RULE:
+            if self.rule_id is None or not re.fullmatch(r"LAB-\d{3}", self.rule_id):
+                raise ValueError(
+                    f"a known rule carries its id `LAB-nnn`, not {self.rule_id!r}"
+                )
+            if not (self.name or "").strip():
+                raise ValueError(f"a known rule carries its name: {self.rule_id}")
+        elif self.rule_id is not None or self.name is not None:
+            raise ValueError(
+                f"a rule assignment of kind {self.kind!r} names no rule, and this "
+                f"one names {self.rule_id!r} {self.name!r}"
+            )
+
+    @property
+    def line_part(self) -> str | None:
+        """What a finding's line tells of it: `LAB-nnn <name>` for a known
+        rule, NEW_CLASS for a new class, None (nothing told) for an open
+        assignment and a technical contract — they are data for the
+        inventory, not words for the reader."""
+        if self.kind == KNOWN_RULE:
+            return f"{self.rule_id} {self.name}"
+        return NEW_CLASS if self.kind == NEW_CLASS else None
+
+
+def cited_rule(rule: str) -> RuleAssignment:
+    """The KNOWN_RULE assignment of RULE as a site cites it, `LAB-nnn <its
+    name>` — the spelling `rules.check_refs` holds to the ledger. Raises
+    ValueError for any other shape."""
+    m = _CITED_RULE.match(rule)
+    if m is None:
+        raise ValueError(f"a cited rule reads `LAB-nnn <its name>`, not {rule!r}")
+    return RuleAssignment(KNOWN_RULE, m.group(1), m.group(2))
+
+
+#: the assignments without a rule, one value each
+OPEN_RULE = RuleAssignment(OPEN_ASSIGNMENT)
+TECHNICAL_RULE = RuleAssignment(TECHNICAL_CONTRACT)
+NEW_CLASS_RULE = RuleAssignment(NEW_CLASS)
+
+
 @dataclass(frozen=True)
 class GateFinding:
     """One finding of a gate. The grade field decides what counts, never the
@@ -139,7 +220,11 @@ class GateFinding:
         form: PREFIXED (`<grade>: <text>`), AS_WRITTEN (the text says its
             grade itself, `DUPLICATE protocol id`), DOTTED (`coded`).
         where: The file or `file:line` the finding points at, when it has one.
-        rule: The standard's rule it cites (`LAB-nnn Name`), when it cites one.
+        rule: The rule assignment (`RuleAssignment`). None: the site has not
+            been visited by the migration yet (docs/notes/2026-11-10-test-model.md,
+            step 3), so nothing is recorded; OPEN_RULE: visited, and the
+            rule is recorded as not decided. Neither is told in the line.
+            A plain string is refused.
         fix: The way out — what closes the finding, a command where one
             exists. Required for a BLOCKER (refused without one), optional
             for a WARNING; told in every form (`line`).
@@ -168,7 +253,7 @@ class GateFinding:
     text: str
     form: str = PREFIXED
     where: str | None = None
-    rule: str | None = None
+    rule: RuleAssignment | None = None
     fix: str | None = None
     evidence_kind: str = field(kw_only=True)
     changed_since: str | None = field(default=None, kw_only=True)
@@ -180,6 +265,11 @@ class GateFinding:
         if self.grade not in (BLOCKER, WARNING):
             raise ValueError(
                 f"a gate finding's grade is BLOCKER or WARNING, not {self.grade!r}"
+            )
+        if self.rule is not None and not isinstance(self.rule, RuleAssignment):
+            raise ValueError(
+                f"a gate finding's rule is a RuleAssignment (`cited_rule`, "
+                f"OPEN_RULE, TECHNICAL_RULE), not {self.rule!r}"
             )
         if self.form not in (PREFIXED, AS_WRITTEN, DOTTED):
             raise ValueError(f"a gate finding's form is not {self.form!r}")
@@ -222,7 +312,8 @@ class GateFinding:
         if self.form == DOTTED:
             kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
             fix = f"Next: {self.way}" if self.way else None
-            parts = (self.grade, kind, unrun, self.where, self.text, self.rule, fix)
+            rule = self.rule.line_part if self.rule is not None else None
+            parts = (self.grade, kind, unrun, self.where, self.text, rule, fix)
             return " · ".join(p for p in parts if p)
         if self.form == AS_WRITTEN:
             told = f"{self.text} ({unrun})" if unrun else self.text
@@ -263,14 +354,21 @@ def withdrawn_first(
 
 
 def blocker(
-    text: str, *, fix: str, step: Command | None = None, check_outcome: str = VIOLATED
+    text: str,
+    *,
+    fix: str,
+    step: Command | None = None,
+    check_outcome: str = VIOLATED,
+    rule: RuleAssignment | None = None,
 ) -> GateFinding:
     """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
     check returns as data for the gate that takes it (`Findings.take`).
-    CHECK_OUTCOME: VIOLATED, or NOT_EXECUTABLE for a check that could not run."""
+    CHECK_OUTCOME: VIOLATED, or NOT_EXECUTABLE for a check that could not run;
+    RULE: its rule assignment (`GateFinding.rule`)."""
     return GateFinding(
         BLOCKER,
         text,
+        rule=rule,
         fix=fix,
         evidence_kind=GUARANTEED,
         step=step,
@@ -284,7 +382,7 @@ def coded(
     text: str,
     *,
     evidence_kind: str,
-    rule: str | None = None,
+    rule: RuleAssignment | None = None,
     fix: str | None = None,
     check_outcome: str = VIOLATED,
 ) -> GateFinding:
@@ -410,12 +508,16 @@ class Findings:
         fix: str,
         step: Command | None = None,
         check_outcome: str = VIOLATED,
+        rule: RuleAssignment | None = None,
     ) -> None:
         """A blocker: told as `BLOCKER: msg. Next: fix`, repeated in the
         summary, exit 1. Always GUARANTEED — static evidence never blocks.
         FIX is the way out (`GateFinding.fix`), required; STEP the command
-        it names, as data (`GateFinding.step`); CHECK_OUTCOME as `blocker`'s."""
-        self.take(blocker(msg, fix=fix, step=step, check_outcome=check_outcome))
+        it names, as data (`GateFinding.step`); CHECK_OUTCOME and RULE as
+        `blocker`'s."""
+        self.take(
+            blocker(msg, fix=fix, step=step, check_outcome=check_outcome, rule=rule)
+        )
 
     def warn(
         self,
@@ -424,14 +526,17 @@ class Findings:
         evidence_kind: str,
         fix: str | None = None,
         check_outcome: str = VIOLATED,
+        rule: RuleAssignment | None = None,
     ) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own.
         EVIDENCE_KIND says what carries it (`GateFinding`); FIX, when given,
-        is told after it as for a blocker; CHECK_OUTCOME as `blocker`'s."""
+        is told after it as for a blocker; CHECK_OUTCOME and RULE as
+        `blocker`'s."""
         self.take(
             GateFinding(
                 WARNING,
                 msg,
+                rule=rule,
                 fix=fix,
                 evidence_kind=evidence_kind,
                 check_outcome=check_outcome,
