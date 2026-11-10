@@ -23,7 +23,7 @@ from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises, protocol_block
-from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
+from labkit.formats.gate import BLOCKER, GUARANTEED, OPEN_RULE, GateFinding
 from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.commands import Command, measure_command
 from labkit.formats.digests import digest
@@ -623,6 +623,7 @@ class AnsweringRun:
                 fix=self.way_out,
                 evidence_kind=GUARANTEED,
                 step=self.step,
+                rule=OPEN_RULE,
             ), [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
         if ids_registered and not self.reports_intent_keys:
             area = self.run_dir.parent.parent
@@ -639,6 +640,7 @@ class AnsweringRun:
                     fix=f"measure in full: `{measure_command(area)}` (no `--probe`, "
                     f"`--show` or `--eval-only`) writes the intent keys to metrics.json",
                     evidence_kind=GUARANTEED,
+                    rule=OPEN_RULE,
                 ),
                 [],
             )
