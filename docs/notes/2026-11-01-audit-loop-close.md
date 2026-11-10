@@ -4,12 +4,12 @@ Status: proposal, revised; the close is not built (waits for the experiment desi
 
 **Problem.** The loop measure → analysis audit → decide → measure again has no end but a clean adoption. In part 1 it took most of each lab session where it ran long:
 
-- 34: from the first audit to a clean adoption ~18 min (r1, 5 audits), ~15 min (r2, 5 audits); r3 ~23.5 min, 5 audit attempts, handed over without a number.
-- 21-r2: 6 audits in 27 min, no adoption. Each "Assignment:" became a metrics key, so a new run, so a new audit owed, so new WARNINGs about that diagnostic. The fifth audit called the bounding-box diagnostic the fourth had asked for useless.
-- 60-r3: a third audit was owed because the second ran before the first record's BLOCKERs were decided `fixed`. The limit came during the third.
+- Task 34: from the first audit to a clean adoption ~18 min (first repetition, 5 audits), ~15 min (second repetition, 5 audits); the third repetition ~23.5 min, 5 audit attempts, handed over without a number.
+- Task 21, second repetition: 6 audits in 27 min, no adoption. Each "Assignment:" became a metrics key, so a new run, so a new audit owed, so new WARNINGs about that diagnostic. The fifth audit called the bounding-box diagnostic the fourth had asked for useless.
+- Task 60, third repetition: a third audit was owed because the second ran before the first record's BLOCKERs were decided `fixed`. The limit came during the third.
 - Rounds came back to the same prose. Each hand-typed Conclusion before adoption drew new WARNINGs and READ hints, and the template's Conclusion is written after adoption anyway.
 
-Some of this was labkit's own fault (refused answers, invisible audit state, P3/P4 in `TODO.md`). What remains after those repairs is the question here. When the budget runs out, the attempt ends with nothing a reader can use: no report, and the last run's state stands only in the trace.
+Some of this was labkit's own fault (refused answers and invisible audit state, two problems listed in `TODO.md`). What remains after those repairs is the question here. When the budget runs out, the attempt ends with nothing a reader can use: no report, and the last run's state stands only in the trace.
 
 **Conditions (author's feedback, 2026-11-01).**
 1. A round limit never releases a result by itself.
@@ -37,9 +37,9 @@ Some of this was labkit's own fault (refused answers, invisible audit state, P3/
      (a negative finding is a claim, LAB-001).
 4. *Remove the rounds the loop makes itself, not the strict ones.*
    - The analysis audit gives no READ hint on the Runs list, Recorded results or the
-     Conclusion before adoption. These are adopt's to write (`TODO.md` P4, Unklar 15).
+     Conclusion before adoption. These are adopt's to write (`TODO.md`, under progress and missing steps: READ hints that ask for what only adopt writes).
    - `--findings` and `labkit-next` say "decide the open findings before auditing again";
-     a round run on undecided BLOCKERs follows nothing up (60-r3).
+     a round run on undecided BLOCKERs follows nothing up (task 60, third repetition).
 
 **Revised after the author's reading (2026-11-01).**
 - The close is offered from the first round on. From round 3 it is shown more prominently. The threshold is a chosen operating decision, not a scientific limit.
