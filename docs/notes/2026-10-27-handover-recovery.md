@@ -18,7 +18,7 @@ Only the stop/undecided commit check can acknowledge those exact integrity gaps.
 
 Normal audits and result release use the original integrity checks, never the terminal acknowledgement. Acknowledged loss is not restoration, an upheld audit or provenance proof. Restoring evidence actually repairs the gap; a handover does not. Free prose is still not mechanically proven true.
 
-Same day, after the second audit ([register](../audit-2026-10-27-handover.md), H3): the first form wrote a whole report and compared it byte for byte, and every printed command named the same `REPORT.md`. A second area handed over there, or a discussion block added later, voided the first acknowledgement, and the report could not name the findings left open. The block form follows the result and discussion blocks of `report_blocks`.
+Same day, after the second audit ([register](../audit-2026-10-27-handover.md)): the first form wrote a whole report and compared it byte for byte, and every printed command named the same `REPORT.md`. A second area handed over there, or a discussion block added later, voided the first acknowledgement, and the report could not name the findings left open. The block form follows the result and discussion blocks of `report_blocks`.
 
 ## Verification scope
 
