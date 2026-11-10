@@ -169,5 +169,45 @@ class Trace(unittest.TestCase):
         self.assertIs(GateFinding.__init__, before)
 
 
+class PerScenarioTest(unittest.TestCase):
+    """Step 4's report: a scenario test is COVERED when a faster test
+    reaches each of its sites below a command, HOLDS_A_SITE when one of
+    them only scenarios reach, UNKNOWN when it reached none."""
+
+    def test_covered_holds_and_unknown(self):
+        slow = {"tests/test_e2e.py"}
+        r = ti.Reach(
+            {
+                ("labkit/a.py", 1): {
+                    "gate": {"tests/test_fast.py::T::t", "tests/test_e2e.py::E::one"},
+                    ti.COMMAND: {"tests/test_e2e.py::E::two"},
+                },
+                ("labkit/b.py", 2): {
+                    ti.COMMAND: {
+                        "tests/test_e2e.py::E::two",
+                        "tests/test_fast.py::T::u",
+                    }
+                },
+            },
+            [],
+        )
+        listed = ti.scenario_tests(r, slow)
+        self.assertEqual(
+            [(s.test, s.sites, s.held, s.standing) for s in listed],
+            [
+                ("tests/test_e2e.py::E::one", ("labkit/a.py:1",), (), ti.COVERED),
+                (
+                    "tests/test_e2e.py::E::two",
+                    ("labkit/a.py:1", "labkit/b.py:2"),
+                    ("labkit/b.py:2",),
+                    ti.HOLDS_A_SITE,
+                ),
+            ],
+        )
+        self.assertEqual(
+            ti.scenario_standing("tests/test_e2e.py::E::three", listed), ti.UNKNOWN
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

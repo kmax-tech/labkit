@@ -339,6 +339,7 @@ def render_test_inventory(
     out += _site_lists(key, stand, r)
     out += _most_reached(key, r)
     out += _per_file(r, slow_files)
+    out += _per_scenario(r, slow_files)
     out += _unmapped_and_failed(r, failed)
     return "\n".join(out) + "\n"
 
@@ -441,6 +442,98 @@ def _per_file(r: Reach, slow_files: set[str]) -> list[str]:
         out.append(
             f"| `{f}` | {'yes' if f in slow_files else ''} | {len(tests)} | {cells} |"
         )
+    return out
+
+
+#: a scenario test's standing in step 4 of the test model
+#: (docs/notes/2026-11-10-test-model.md): every site it reaches is reached
+#: by a faster test too; a site only it (or another scenario) reaches; no
+#: traced site, so nothing is known — never read as redundant
+COVERED, HOLDS_A_SITE, UNKNOWN = "covered", "holds a site", "unknown"
+
+
+@dataclass(frozen=True)
+class ScenarioTest:
+    """One test of a scenario file (`slow_files`) and what reach says of it.
+
+    Attributes:
+        test: Its pytest node id.
+        sites: The finding sites it reaches, as `path:line`.
+        held: Of SITES, those no test outside the scenario files reaches
+            below a whole command — what only a scenario reaches.
+        standing: COVERED, HOLDS_A_SITE or UNKNOWN.
+    """
+
+    test: str
+    sites: tuple[str, ...]
+    held: tuple[str, ...]
+    standing: str
+
+
+def scenario_tests(r: Reach, slow: set[str]) -> list[ScenarioTest]:
+    """Every test of the SLOW files that reached a gate finding site, with
+    its sites and the sites no faster test reaches below a command
+    (`ScenarioTest`), sorted by test id. Reach is not an assertion: COVERED
+    says only that each site it reaches has a faster test too, never that
+    the scenario's assertions — what one command passes to the next — are
+    held elsewhere. A scenario test reaching no traced site is not listed;
+    its standing is UNKNOWN (`scenario_standing`). Pure."""
+
+    def scenario(t: str) -> bool:
+        return t.split("::", 1)[0] in slow
+
+    by_test: dict[str, set[str]] = defaultdict(set)
+    faster: dict[str, bool] = {}
+    for (path, line), layers in r.by_site.items():
+        key = f"{path}:{line}"
+        faster[key] = any(
+            not scenario(t)
+            for layer, ts in layers.items()
+            if layer != COMMAND
+            for t in ts
+        )
+        for ts in layers.values():
+            for t in ts:
+                if scenario(t):
+                    by_test[t].add(key)
+    out = []
+    for t in sorted(by_test):
+        sites = tuple(sorted(by_test[t]))
+        held = tuple(k for k in sites if not faster[k])
+        out.append(ScenarioTest(t, sites, held, HOLDS_A_SITE if held else COVERED))
+    return out
+
+
+def scenario_standing(test: str, listed: list[ScenarioTest]) -> str:
+    """The standing of TEST: its entry's in LISTED (`scenario_tests`), else
+    UNKNOWN — a scenario test whose findings were not traced (it reached no
+    gate finding, only exits or printed lines, or its subprocess carried no
+    test name) says nothing about redundancy."""
+    return next((s.standing for s in listed if s.test == test), UNKNOWN)
+
+
+def _per_scenario(r: Reach, slow: set[str]) -> list[str]:
+    """The table per scenario test (`scenario_tests`)."""
+    listed = scenario_tests(r, slow)
+    counts = {
+        k: sum(1 for s in listed if s.standing == k) for k in (COVERED, HOLDS_A_SITE)
+    }
+    out = [
+        "",
+        "## Per scenario test (step 4: reach only, not assertions)",
+        "",
+        f"{len(listed)} scenario tests reached a gate finding site: "
+        f"{counts[COVERED]} {COVERED} (every site has a faster test too), "
+        f"{counts[HOLDS_A_SITE]} {HOLDS_A_SITE}. A scenario test not listed is "
+        f"{UNKNOWN}. Reach never establishes a replacement: its assertions are "
+        "reviewed one by one before any removal.",
+        "",
+        "| test | sites | held only by scenarios |",
+        "|---|---|---|",
+    ]
+    for s in listed:
+        held = ", ".join(f"`{k}`" for k in s.held) or "—"
+        out.append(f"| `{s.test}` | {len(s.sites)} | {held} |")
     return out
 
 
