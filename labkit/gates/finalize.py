@@ -889,7 +889,7 @@ def finalize_area(
         if console_output:
             console.refuse("finalize", str(exc))
         else:
-            findings.block(str(exc), fix=PROTOCOL_NAMED)
+            findings.block(str(exc), fix=PROTOCOL_NAMED, rule=OPEN_RULE)
         return 2
     state, held = _inputs(area, state, held)
     text = state.text_of(chosen)
@@ -903,6 +903,7 @@ def finalize_area(
                 f"{chosen.name}: {exc}",
                 fix=f"repair the head as the sentence says: "
                 f"`{contract_command(chosen)}` shows its fields",
+                rule=OPEN_RULE,
             )
         return 2
 

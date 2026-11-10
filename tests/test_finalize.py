@@ -330,6 +330,46 @@ class TestFinalize(unittest.TestCase):
         self.assertIn("no stamped protocol id", out)
 
 
+class TheProtocolStepEndsEarly(unittest.TestCase):
+    """Step 0 of `finalize_area`, the only early end: in a passed collector
+    (report-check's) a protocol that cannot be chosen, or whose head does
+    not read, is one blocker and exit 2 — on the console a refusal."""
+
+    def _collected(self, area: Path) -> tuple[int, gate.Findings]:
+        collected = gate.Findings(tell=None)
+        return finalize.finalize_area(area, None, collected), collected
+
+    def test_a_head_that_does_not_read_is_one_blocker(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                CLEAN_PROTOCOL.replace("[protocol]", "[protocol", 1)
+            )
+            code, collected = self._collected(area)
+        self.assertEqual(code, 2)
+        (f,) = collected.found
+        self.assertTrue(f.text.startswith("PROTOCOL-x.md: "), f.text)
+        self.assertIn("shows its fields", f.fix or "")
+        self.assertEqual(f.rule, gate.OPEN_RULE)
+
+    def test_two_protocols_and_none_named_is_one_blocker(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            for name in ("PROTOCOL-a.md", "PROTOCOL-b.md"):
+                (area / name).write_text(CLEAN_PROTOCOL)
+            code, collected = self._collected(area)
+        self.assertEqual(code, 2)
+        (f,) = collected.found
+        self.assertEqual(f.rule, gate.OPEN_RULE)
+
+    def test_the_twin_a_readable_head_goes_past_step_0(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            code, _ = self._collected(area)
+        self.assertNotEqual(code, 2)
+
+
 class AreaTestsBeforeReporting(unittest.TestCase):
     """finalize runs the area's tests on every tier: a later edit of
     evaluate() that mutes the criterion is caught before a number leaves;

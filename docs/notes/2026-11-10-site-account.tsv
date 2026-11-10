@@ -58,8 +58,8 @@ b4fdf56d	finding	labkit.gates.finalize.check_reference	{…}: {…}	labkit/gates
 b4fdf56d	finding	labkit.gates.finalize.check_reference	{…}: {…}	labkit/gates/finalize.py:664	forwarding	forwards the BlockError of `protocol_block.reference` / `kept_key` (a [reference] table that does not read), condition tested in tests/test_reference.py::ReferenceTable	open assignment	gate: tests/test_reference.py::FinalizeForwardsTheHeadsGaps
 b4fdf56d	finding	labkit.gates.finalize.check_kept_number	{…}: {…}{…}	labkit/gates/finalize.py:725				
 b4fdf56d	finding	labkit.gates.finalize.check_criterion_n	{…}	labkit/gates/finalize.py:788	scientific	a criterion denominator matches no input count the run recorded (static evidence); now `run_record_check.criterion_n_input_mismatches`, the station reads the inputs only when a denominator asks	open assignment	tests/test_rules_run_record_check.py::ACriterionDenominatorIsAnInputCount; gate: tests/test_finalize_steps.py::CriterionNStation
-b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}	labkit/gates/finalize.py:881				
-b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}: {…}	labkit/gates/finalize.py:891				
+b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}	labkit/gates/finalize.py:881	composition	step 0 in a passed collector: the protocol cannot be chosen (`repo.the_protocol`'s refusal), exit 2	open assignment	gate: tests/test_finalize.py::TheProtocolStepEndsEarly
+b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}: {…}	labkit/gates/finalize.py:891	composition	step 0 in a passed collector: the head does not read (`protocol_block.head`'s BlockError), exit 2	open assignment	gate: tests/test_finalize.py::TheProtocolStepEndsEarly
 b4fdf56d	finding	labkit.gates.finalize.declared_run_gaps	{…}	labkit/gates/finalize.py:978				
 b4fdf56d	finding	labkit.gates.preflight.tell_test_run	pytest is not installed in this interpreter — tests not run	labkit/gates/preflight.py:585				
 b4fdf56d	finding	labkit.gates.preflight.tell_test_run	{…} did not run{…} — {…}	labkit/gates/preflight.py:595				
