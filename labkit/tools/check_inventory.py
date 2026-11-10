@@ -748,7 +748,7 @@ def render_audit_rules(
     per_rule: dict[str, int] = defaultdict(int)
     for _, record in records:
         for f in record.findings:
-            per_rule[f.rule] += 1
+            per_rule[findings.stored_rule(f.rule)] += 1
     new = findings.new_class_findings(records)
     lines = [
         "",

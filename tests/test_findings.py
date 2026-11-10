@@ -10,7 +10,7 @@ from unittest import mock
 
 from labkit.formats.commands import step_command
 from labkit.gates import audit_decisions, audit_reply
-from labkit.formats import findings, protocol_check, rules
+from labkit.formats import findings, gate, protocol_check, rules
 from labkit.formats import audit_gaps
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
@@ -794,7 +794,8 @@ class Rule(unittest.TestCase):
         )
         rec = findings.read(self.record())
         self.assertEqual(
-            [f.rule for f in rec.findings], ["LAB-038", findings.NEW_CLASS]
+            [findings.stored_rule(f.rule) for f in rec.findings],
+            ["LAB-038", findings.NEW_CLASS],
         )
         # subject and rule are two fields, neither read from the other
         self.assertEqual(
@@ -838,12 +839,34 @@ class Rule(unittest.TestCase):
         with mock.patch.object(rules, "load_ledger", return_value=retired):
             with self.assertRaisesRegex(ValueError, "LAB-038, retired"):
                 findings.active_rule_of(self.ONE)
-            self.assertEqual(findings.read(path).findings[0].rule, "LAB-038")
+            rule = findings.read(path).findings[0].rule
+            assert rule is not None
+            # read back as the gate's value, the retired rule's name from the ledger
+            self.assertEqual((rule.kind, rule.rule_id), (gate.KNOWN_RULE, "LAB-038"))
+
+    def test_a_stored_rule_reads_back_as_the_gates_value_and_is_stored_again(self):
+        """The record's text and `Finding.rule` are one value: a known rule
+        carries the ledger's name, and only a rule or the new class is
+        stored; an open assignment or a technical contract is none an
+        auditor gives."""
+        known = findings.recorded_rule("LAB-038")
+        assert known.name is not None
+        self.assertEqual((known.kind, known.rule_id), (gate.KNOWN_RULE, "LAB-038"))
+        self.assertEqual(findings.stored_rule(known), "LAB-038")
+        self.assertEqual(
+            findings.recorded_rule(findings.NEW_CLASS), gate.NEW_CLASS_RULE
+        )
+        self.assertEqual(findings.stored_rule(gate.NEW_CLASS_RULE), findings.NEW_CLASS)
+        for refused in (gate.OPEN_RULE, gate.TECHNICAL_RULE, None):
+            with self.subTest(refused=refused), self.assertRaises(ValueError):
+                findings.stored_rule(refused)
+        with self.assertRaises(ValueError):
+            findings.recorded_rule("LAB-999")
 
     def test_a_decision_keeps_the_rule(self):
         path = self.record()
         after = findings.write_decision(path, 2, "false-positive", "the run is right")
-        self.assertEqual(after.findings[1].rule, findings.NEW_CLASS)
+        self.assertEqual(after.findings[1].rule, gate.NEW_CLASS_RULE)
 
     def test_new_class_findings_are_collected_with_their_record_and_number(self):
         area = self.record().parent.parent

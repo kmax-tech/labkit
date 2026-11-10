@@ -85,6 +85,7 @@ the field — a findings file nobody can read is not "no findings".
 
 from __future__ import annotations
 
+import functools
 import re
 import shlex
 import time
@@ -93,7 +94,15 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.gate import BLOCKER, NEW_CLASS, NOTE, WARNING
+from labkit.formats.gate import (
+    BLOCKER,
+    KNOWN_RULE,
+    NEW_CLASS,
+    NEW_CLASS_RULE,
+    NOTE,
+    WARNING,
+    RuleAssignment,
+)
 from labkit.formats.commands import checkout_command
 from labkit.formats import promises, protocol_block
 from labkit.formats.protocol_block import toml_string as _s
@@ -294,10 +303,12 @@ class Finding:
     # (`subject_of`) and carried with the finding, never set by a decision;
     # every record names it (`_auditor_fields`)
     subject: str = ""
-    # the rule the auditor assigned (`active_rule_of`): `LAB-nnn` or NEW_CLASS,
-    # read when the record is written, never set by a decision; apart from
-    # the subject and the place, and never inferred from them
-    rule: str = ""
+    # the rule the auditor assigned (`active_rule_of`), as the gate's value
+    # (`gate.RuleAssignment`): a known rule with the ledger's name, or the
+    # new class; read when the record is written, never set by a decision;
+    # apart from the subject and the place, and never inferred from them.
+    # None only for a finding not read from a record (a test's)
+    rule: RuleAssignment | None = None
 
     @property
     def one_line(self) -> str:
@@ -450,9 +461,9 @@ def subject_of(text: str) -> str:
 #: NEW_CLASS (`gate.NEW_CLASS`, the one home of the rule kinds' words) is the
 #: rule field of a finding the standard has no rule for — collected for the
 #: author to review (`new_class_findings`), never a rule of its own until a
-#: decision with its grounds makes one. An audit finding's `Finding.rule` is
-#: still that text (`LAB-nnn` or NEW_CLASS), not the gate's `RuleAssignment`
-#: — step 2b of docs/notes/2026-11-10-test-model.md makes it one value
+#: decision with its grounds makes one. A record stores `LAB-nnn` or
+#: NEW_CLASS; `Finding.rule` holds it as the gate's `RuleAssignment`
+#: (`recorded_rule`, `stored_rule`)
 RULE_FORM = (
     "a finding line names the rule it holds in its sixth field: "
     '`LAB-nnn <rule name>`, an active rule of the standard, or "new class" '
@@ -501,14 +512,43 @@ def active_rule_of(text: str) -> str:
     return rule
 
 
+@functools.cache
+def _ledger_titles() -> dict[str, str]:
+    """Rule id → name of every rule of the shipped ledger, active or retired."""
+    return {r.id: r.title for r in rules.load_ledger(rules.LEDGER)}
+
+
+def recorded_rule(stored: str) -> RuleAssignment:
+    """The `RuleAssignment` of a record's rule field STORED: NEW_CLASS_RULE,
+    or the known rule with the ledger's name (a rule retired since keeps
+    its name). Raises ValueError as `recorded_rule_problem` names it."""
+    problem = recorded_rule_problem(stored)
+    if problem is not None:
+        raise ValueError(problem)
+    if stored == NEW_CLASS:
+        return NEW_CLASS_RULE
+    return RuleAssignment(KNOWN_RULE, stored, _ledger_titles()[stored])
+
+
+def stored_rule(rule: RuleAssignment | None) -> str:
+    """How a record stores RULE: its id, or NEW_CLASS. Raises ValueError for
+    None and for an assignment an auditor does not give (open, technical)."""
+    if rule is not None and rule.kind == KNOWN_RULE and rule.rule_id is not None:
+        return rule.rule_id
+    if rule == NEW_CLASS_RULE:
+        return NEW_CLASS
+    raise ValueError(
+        f"an audit finding's rule is a rule of the ledger or {NEW_CLASS!r}, not {rule!r}"
+    )
+
+
 def recorded_rule_problem(rule: object) -> str | None:
     """Why a record's RULE cannot stand, or None: NEW_CLASS, or an id the
     shipped ledger holds — active or retired since, so a record outlives
     its rule's retirement."""
     if rule == NEW_CLASS:
         return None
-    known = {r.id for r in rules.load_ledger(rules.LEDGER)}
-    if isinstance(rule, str) and rule in known:
+    if isinstance(rule, str) and rule in _ledger_titles():
         return None
     return f"rule {rule!r} — a rule id of the ledger or {NEW_CLASS!r}"
 
@@ -1269,18 +1309,19 @@ def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
                 f"a carried finding names its subject, one of "
                 f"{', '.join(SUBJECTS)}: {f.carries} carries {f.subject!r}"
             )
-        problem = recorded_rule_problem(f.rule)
-        if problem is not None:
+        try:
+            stored = stored_rule(f.rule)
+        except ValueError as exc:
             raise ValueError(
-                f"a carried finding names its rule: {f.carries}: {problem}"
-            )
+                f"a carried finding names its rule: {f.carries}: {exc}"
+            ) from exc
         lines += [
             "",
             "[[finding]]",
             f"grade = {_s(f.grade)}",
             f"text = {_s(f.text)}",
             f"subject = {_s(f.subject)}",
-            f"rule = {_s(f.rule)}",
+            f"rule = {_s(stored)}",
             *([f"check = {_s(f.check)}"] if f.check else []),
             *([f"check_note = {_s(f.check_note)}"] if f.check_note else []),
             f"carries = {_s(f.carries)}",
@@ -1490,7 +1531,9 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     return found
 
 
-def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str, str]:
+def _auditor_fields(
+    path: Path, i: int, row: dict
+) -> tuple[str, str, str, RuleAssignment]:
     """(check, check_note, subject, rule) of the i-th `[[finding]]` table —
     the fields labkit-audit takes from the auditor's line, never a decision:
     a metrics key or "", a note only beside a check, one of SUBJECTS, and a
@@ -1528,7 +1571,7 @@ def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str, str]:
     problem = undetermined_finding_problem(row["grade"], subject, check, note)
     if problem:
         raise FindingsError(f"{path}: finding {i}: {problem}")
-    return check, note, subject, str(rule)
+    return check, note, subject, recorded_rule(str(rule))
 
 
 def read(path: Path) -> Record:
@@ -2038,7 +2081,7 @@ def new_class_findings(
         (area, record, n, f)
         for area, record in records
         for n, f in enumerate(record.findings, 1)
-        if f.rule == NEW_CLASS
+        if f.rule == NEW_CLASS_RULE
     ]
 
 
