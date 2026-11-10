@@ -1,45 +1,18 @@
 # A standard way out for an agent that is stuck
 
-> Built 2026-10-27 after the repair case: `audit.WAYS_OUT` and the stamped
-> AGENTS.md section "When you are stuck" (contracts:
-> [new-registration contracts](2026-10-27-new-registration-contracts.md)); the
-> handover command below is still to build (plan 2.3).
+> Built 2026-10-27 after the repair case: `audit.WAYS_OUT` and the stamped AGENTS.md section "When you are stuck" (contracts: [new-registration contracts](2026-10-27-new-registration-contracts.md)); the handover command below is still to build (plan 2.3).
 
-*2026-10-27, proposal, not decided. Sources: the round reports of areas
-09 rounds 6–9 (`docs/usability/`), the check-and-exit matrix
-(`2026-10-26-escape-routes-checks-and-exits.md`), the audit register
-(`docs/audit-2026-10-27.md`), `labkit/templates/AGENTS.md.template`.*
+*2026-10-27, proposal, not decided. Sources: the round reports of areas 09 rounds 6–9 (`docs/usability/`), the check-and-exit matrix (`2026-10-26-escape-routes-checks-and-exits.md`), the audit register (`docs/audit-2026-10-27.md`), `labkit/templates/AGENTS.md.template`.*
 
-> Superseded in two points by the plan in `TODO.md` (2026-10-27,
-> "Konsolidierter Plan"): tripwires warn and never hold — a heuristic on
-> commands is static evidence (plan 3.4); and a decision changes a record
-> under `audits/` through `--decide`, the one supported way (plan 1.3), so
-> the draft's "edit a file under `audits/`" means editing or deleting a
-> record other than through `--decide`.
+> Superseded in two points by the plan in `TODO.md` (2026-10-27, "Konsolidierter Plan"): tripwires warn and never hold — a heuristic on commands is static evidence (plan 3.4); and a decision changes a record under `audits/` through `--decide`, the one supported way (plan 1.3), so the draft's "edit a file under `audits/`" means editing or deleting a record other than through `--decide`.
 
 ## Why
 
-The ways past the gates in nine rounds came where a well-meaning agent
-saw no admissible next step: t5 (round 9) fought its records for about 13
-of 30 minutes and delivered nothing; t18 left the chain ("the labkit
-framework is designed for single experiments"). Where a held step named
-its command, agents followed it (round 9: reports rewritten until the
-review named no claim; round 8 t5: re-decided after a rejection, standard
-met). Hints that hold nothing were not followed. So the standard way must
-stand where the agent is when it is stuck — in the refusal — be short,
-name the command, and be cheaper than the fight.
+The ways past the gates in nine rounds came where a well-meaning agent saw no admissible next step: t5 (round 9) fought its records for about 13 of 30 minutes and delivered nothing; t18 left the chain ("the labkit framework is designed for single experiments"). Where a held step named its command, agents followed it (round 9: reports rewritten until the review named no claim; round 8 t5: re-decided after a rejection, standard met). Hints that hold nothing were not followed. So the standard way must stand where the agent is when it is stuck — in the refusal — be short, name the command, and be cheaper than the fight.
 
-Today the stamped instructions name one honest exit, for a refused
-adoption (`AGENTS.md.template:151-157`: "a refusal is a finding to
-report, not an obstacle to route around" → `--discuss`). It needs a run,
-and there is no exit for being stuck as such.
+Today the stamped instructions name one honest exit, for a refused adoption (`AGENTS.md.template:151-157`: "a refusal is a finding to report, not an obstacle to route around" → `--discuss`). It needs a run, and there is no exit for being stuck as such.
 
-The scientific model is the lab notebook (and data-integrity practice
-such as ALCOA+: original, complete, attributable records): a record is
-never erased; a correction is added beside it, with the reason, and the
-original stays readable. A deviation from the plan is reported, not
-hidden (the standard's "Deviations after freeze"; LAB-042 Log the
-outcome — failures too).
+The scientific model is the lab notebook (and data-integrity practice such as ALCOA+: original, complete, attributable records): a record is never erased; a correction is added beside it, with the reason, and the original stays readable. A deviation from the plan is reported, not hidden (the standard's "Deviations after freeze"; LAB-042 Log the outcome — failures too).
 
 ## Draft for the stamped AGENTS.md (both lanes)
 
@@ -78,30 +51,15 @@ A delivered, honest "unresolved" is a correct end of the task. A number
 past a gate is not.
 ```
 
-Every refusal ends with the row that matches its cause and "or stop:
-`<handover command>`" — one line, the command whole.
+Every refusal ends with the row that matches its cause and "or stop: `<handover command>`" — one line, the command whole.
 
 ## What it needs beside the text
 
-1. **A handover command** that writes a generated "unresolved" block into
-   the report (TOML head: protocol, cause, what was tried, the runs and
-   records that stand), and report-check accepting that report as
-   complete without a number. With it, every report in an area with a
-   protocol states exactly one of: an adopted result, a discussed run, a
-   handover — which also closes the report that cites no run (round 9,
-   t18; TODO point 3 after the ninth round).
+1. **A handover command** that writes a generated "unresolved" block into the report (TOML head: protocol, cause, what was tried, the runs and records that stand), and report-check accepting that report as complete without a number. With it, every report in an area with a protocol states exactly one of: an adopted result, a discussed run, a handover — which also closes the report that cites no run (round 9, t18; TODO point 3 after the ninth round).
 2. **The fresh attempt** (TODO, decided): the "register anew" row.
-3. **Tripwires as held steps:** the pre-run hook refuses the commands in
-   the "stop instead" list and prints the last two rows — hardening with
-   its exit.
-4. **The evaluation counts the exit** (area 09, the lab's decision): an
-   honest handover is told apart from "standard not met"; otherwise the
-   measurement penalises the behaviour the instruction asks for.
+3. **Tripwires as held steps:** the pre-run hook refuses the commands in the "stop instead" list and prints the last two rows — hardening with its exit.
+4. **The evaluation counts the exit** (area 09, the lab's decision): an honest handover is told apart from "standard not met"; otherwise the measurement penalises the behaviour the instruction asks for.
 
 ## Limits
 
-Text alone does not make an agent follow it; the rounds say a held step
-with a named command does. Whether this works is measured (the repair
-case, then the tenth round), not assumed. Changing the stamped
-AGENTS.md changes the labkit arm of area 09: an intervention, recorded
-in its protocol's `Changed` line.
+Text alone does not make an agent follow it; the rounds say a held step with a named command does. Whether this works is measured (the repair case, then the tenth round), not assumed. Changing the stamped AGENTS.md changes the labkit arm of area 09: an intervention, recorded in its protocol's `Changed` line.
