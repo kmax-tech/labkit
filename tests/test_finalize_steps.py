@@ -150,6 +150,7 @@ class DeclaredRunHint(unittest.TestCase):
         self.assertIn("no run id runlog writes", gap.text)
         self.assertIn("--withdraw", gap.fix or "")
         self.assertIn("labkit-adopt ", gap.fix or "")
+        self.assertEqual(gap.rule, OPEN_RULE)
         self.assertEqual(
             finalize.declared_run_gaps(
                 head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"), protocol

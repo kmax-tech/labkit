@@ -752,6 +752,7 @@ def check_kept_number(
                 else f"repair the head as the sentence says, then "
                 f"`{gate_command('finalize', protocol.parent)}`"
             ),
+            rule=OPEN_RULE,
         )
     if gaps:
         return
@@ -1006,7 +1007,11 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
     try:
         protocol_block.declared_run(text)
     except protocol_block.BlockError as exc:
-        return [blocker(str(exc), fix=written, step=withdraw_command(protocol))]
+        return [
+            blocker(
+                str(exc), fix=written, step=withdraw_command(protocol), rule=OPEN_RULE
+            )
+        ]
     return []
 
 
