@@ -54,7 +54,13 @@ from labkit.formats.commands import checkout_command
 from labkit.formats import findings, handovers, report_reviews, reviews
 from labkit.formats.attempts import evidence_gaps
 from labkit.formats.findings import JOURNAL
-from labkit.formats.gate import GateFinding, blocker, with_way_out
+from labkit.formats.gate import (
+    NOT_EXECUTABLE,
+    VIOLATED,
+    GateFinding,
+    blocker,
+    with_way_out,
+)
 from labkit.formats.repo import (
     rel_posix,
     GitError,
@@ -371,8 +377,18 @@ def change_blockers(found: Sequence[tuple[str, str]]) -> list[GateFinding]:
     """FOUND (`change_findings`) as blockers, each with its restore as the
     way out — what a gate that releases on an area's records holds first:
     report-check (its first station, and so `labkit-next`), a replacement
-    for its predecessor's area, an exploration's registered report."""
-    return [blocker(why, fix=fix) for why, fix in found]
+    for its predecessor's area, an exploration's registered report. A
+    comparison git could not run (`unread_finding`, its way out UNREAD_WAY)
+    is a check not executed: nothing says the evidence changed."""
+    return [
+        blocker(
+            why,
+            fix=fix,
+            # UNREAD_WAY is the way out only `unread_finding` gives
+            check_outcome=NOT_EXECUTABLE if fix == UNREAD_WAY else VIOLATED,
+        )
+        for why, fix in found
+    ]
 
 
 def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]]:

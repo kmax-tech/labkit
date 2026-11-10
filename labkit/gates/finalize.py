@@ -354,8 +354,8 @@ def check_open_audit_findings(
         way, handover = gone_run_way(area, rec.run_id, state)
         findings.block(
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
-            f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run, "
-            f"and nothing restores its rows (LAB-043 Runs go through `runlog`)",
+            f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run "
+            f"(LAB-043 Runs go through `runlog`)",
             fix=way,
             step=handover,
         )

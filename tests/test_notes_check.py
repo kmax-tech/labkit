@@ -181,7 +181,8 @@ class TestCheckFile(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def test_exit_1_on_must_failure(self):
+    def test_a_convention_gap_warns_and_exits_0(self):
+        """A note convention no number depends on warns; it stops nothing."""
         import tempfile
 
         with tempfile.TemporaryDirectory() as d:
@@ -192,8 +193,9 @@ class TestMain(unittest.TestCase):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = notes_check.main([d])
-            self.assertEqual(rc, 1)
+            self.assertEqual(rc, 0)
             out = buf.getvalue()
+            self.assertIn("WARNING:", out)
             self.assertIn("no kind", out)
             self.assertIn("b.md: OK", out)
 

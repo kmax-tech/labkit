@@ -183,7 +183,7 @@ class CodeSinceRun(unittest.TestCase):
         _git(self.repo, "commit", "-qm", "the script imports an untracked helper")
         run = self.run_now()
         (line,) = self.held(run)
-        self.assertIn("extra.py was not committed when", line)
+        self.assertIn("extra.py is in neither", line)
 
     def test_an_untracked_sibling_is_compared_with_the_runs_copy(self) -> None:
         local = self.script.parent / "local.py"

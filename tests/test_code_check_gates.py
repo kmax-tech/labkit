@@ -83,6 +83,13 @@ class Gates(unittest.TestCase):
         (self.repo / "tests" / "test_01_x.py").write_text("def (:\n", encoding="utf-8")
         f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
         self.assertTrue(any("test_01_x.py · cannot be parsed" in x for x in f), f)
+        # it hides only an indication: a warning, the check not executed
+        self.assertTrue(
+            any(
+                x.startswith("WARNING · check not executable · test_01_x.py") for x in f
+            ),
+            f,
+        )
 
     def test_all_parsers_tested_is_silent(self):
         (self.repo / "tests" / "test_01_x.py").write_text(

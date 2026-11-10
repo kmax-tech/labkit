@@ -282,8 +282,8 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         return [
             *out,
             blocker(
-                f"{rid} recorded no commit, so the helpers its script imports "
-                f"({names}) cannot be compared",
+                f"{rid} recorded no commit, or the area lies in no git repository "
+                f"now, so the helpers its script imports ({names}) cannot be compared",
                 fix=f"in the repository, {measure_anew(run_dir.parent.parent)}",
             ),
         ], warnings
@@ -317,9 +317,10 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         if then[f] is None:
             out.append(
                 blocker(
-                    f"{shown(f, here)} was not committed when {rid} started — what "
-                    f"it held then is not recorded",
-                    fix=f"commit it, then {measure_anew(run_dir.parent.parent)}",
+                    f"{shown(f, here)} is in neither {rid}'s commit nor its "
+                    f"uncommitted.patch — untracked when the run started, or not yet "
+                    f"there — so what the run imported is not recorded",
+                    fix=f"commit {shown(f, here)}, then {measure_anew(run_dir.parent.parent)}",
                 )
             )
         elif then[f] != now[f]:
@@ -706,7 +707,8 @@ def _gone(f: Path, area: Path) -> GateFinding:
     The way back names both homes a source has: git where it tracks it, the
     route Data / scope gives where an ignore rule keeps it outside."""
     return blocker(
-        f"{f} is gone — the run's rows cannot be re-derived",
+        f"{f} is not at its recorded path on this machine — deleted, moved or "
+        f"held elsewhere; the run's rows cannot be re-derived here",
         fix=f"restore it (`{checkout_command(f)}` where git "
         f"holds it; else get it again from the source or access route Data / "
         f"scope names), or {measure_anew(area)}",

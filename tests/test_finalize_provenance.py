@@ -322,7 +322,7 @@ class Provenance(unittest.TestCase):
         self.src.unlink()
         rc, out = self._finalize()
         self.assertEqual(rc, 1, out)
-        self.assertIn(f"{self.src} is gone", out)
+        self.assertIn(f"{self.src} is not at its recorded path on this machine", out)
         self.assertIn("get it again from the source or access route Data / scope", out)
 
     def test_a_source_a_negated_rule_keeps_in_is_named_without_a_rule(self):

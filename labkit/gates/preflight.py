@@ -69,7 +69,7 @@ from pathlib import Path
 
 from labkit.formats.commands import contract_command, fill_command, gate_command
 from labkit.formats.repo import area_args
-from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
+from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
     audit_gaps,
@@ -111,7 +111,10 @@ class AreaTests:
 
     pattern: str  # what was looked for, for the message
     files: list[Path]
-    state: str  # "none" | "ok" | "failed" | "no-pytest"
+    # "none" (no test file) | "ok" | "failed" (pytest exit 1: a violated
+    # condition) | "not run" (exit 2-5: a check not executed) — both block,
+    # `tell_test_run` | "no-pytest" (a warning)
+    state: str
     tail: list[str]  # the last lines of a failing run
 
 
@@ -177,7 +180,10 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     if "No module named pytest" in (r.stderr or ""):
         return AreaTests(pattern, files, "no-pytest", [])
     tail = [ln for ln in (r.stdout or "").splitlines() if ln.strip()][-6:]
-    return AreaTests(pattern, files, "failed", tail)
+    # pytest's exit 1 is a test that ran and failed; 2-5 (interrupted, a
+    # collection or import error, an internal or usage error, nothing
+    # collected) is a run that did not test the code
+    return AreaTests(pattern, files, "failed" if r.returncode == 1 else "not run", tail)
 
 
 def preflight_area(
@@ -567,7 +573,9 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
     """What running the area's tests (TESTS, with files) found, one
     rendering for preflight and finalize: ok a note, a missing pytest a
     warning, a failure a blocker naming the files, pytest's last line (the
-    counts) and FAILED, the gate's sentence on what no longer holds. The
+    counts) and FAILED, the gate's sentence on what no longer holds; a run
+    that did not test the code (pytest exit 2-5) a blocker too, told as a
+    check not executed. The
     tail before it is a note; it reaches no collecting caller, so the
     counts travel with the blocker."""
     names = ", ".join(f.name for f in tests.files)
@@ -583,6 +591,15 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
             findings.note(f"  {ln}")
         last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
         files = " ".join(shlex.quote(shown(f, Path.cwd())) for f in tests.files)
+        if tests.state == "not run":
+            findings.block(
+                f"{names} did not run{last} — {failed}",
+                fix=f"make them run (a collection or import error, a missing "
+                f"dependency, no test collected) until "
+                f"`.venv/bin/python -m pytest {files}` passes",
+                check_outcome=NOT_EXECUTABLE,
+            )
+            return
         findings.block(
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "

@@ -32,9 +32,9 @@ from labkit.formats.scope_sha import (
 from labkit.formats.gate import (
     BLOCKER,
     WARNING,
+    NOT_EXECUTABLE,
     GateFinding,
     coded,
-    outcome_of_failed_read,
 )
 from labkit.formats.protocol_check import registered_prompt_blocks, unheld_prompt_lines
 
@@ -50,7 +50,9 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     the repo's tests/ (`parse_x(…)` or `module.parse_x(…)`). A name in a
     comment, a string or an import is no call.
     Whether the test asserts on the result is not checked. A test file that
-    cannot be parsed is a finding of its own: what it calls cannot be told."""
+    does not parse is a warning that this check could not run for it
+    (`NOT_EXECUTABLE`): what it calls cannot be told, so no warning about a
+    parser then means "not checked" for the calls that file holds."""
     scripts = area_files(area, (SCRIPT_GLOB,))
     parsers: dict[str, Path] = {}
     for sp in scripts:
@@ -65,15 +67,17 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
         try:
             tree = parse_source(t)
         except SourceError as exc:
+            # it hides only this check's indication, which never blocks: a
+            # check not executed for that file, told as a warning
             findings.append(
                 coded(
-                    BLOCKER,
+                    WARNING,
                     t.name,
                     f"cannot be parsed ({exc}) · which parsers it calls cannot be told",
                     fix=f"repair it until `.venv/bin/python -m pytest "
                     f"{shlex.quote(shown(t, Path.cwd()))}` collects it",
                     evidence_kind=GUARANTEED,
-                    check_outcome=outcome_of_failed_read(exc),
+                    check_outcome=NOT_EXECUTABLE,
                 )
             )
             continue

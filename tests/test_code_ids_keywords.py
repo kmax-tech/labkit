@@ -2,7 +2,7 @@
 
 `r.metrics(criterion_1_pass=...)` reaches metrics.json as "criterion_1_pass" without being a
 string literal. Reading literals only would give a BLOCKER against correct
-code ("no script mentions a 'c1' key").
+code ("no script names a 'c1' key literal").
 
 The decisive fixture is a twin pair: the same report written as a dict
 literal and as keyword arguments must get the same verdict. A local
@@ -64,9 +64,7 @@ class KeywordKeys(unittest.TestCase):
             )
         ]
         self.assertEqual(len(findings), 1)
-        self.assertIn(
-            "[criterion-1] is registered, but no script mentions", findings[0]
-        )
+        self.assertIn("[criterion-1] is registered, but no script names", findings[0])
 
     def test_suffixed_only_drops_a_bare_keyword(self):
         area, _ = area_with("f(quality_check_65=1, criterion_1_pass=2)\n")

@@ -181,9 +181,11 @@ def _intent_id_findings(area: Path, protocol: Path, text: str) -> list[GateFindi
             coded(
                 BLOCKER,
                 protocol.name,
-                f"[{i}] is registered, but no script mentions a "
-                f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key · the run reports nothing for this promise "
-                f"and the metrics check fails after the tokens are spent",
+                f"[{i}] is registered, but no script names a "
+                f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key literal (a key "
+                f"assembled at run time is not seen, and blocks here too) · the run "
+                f"may report nothing for this promise, and the metrics check fails "
+                f"after the tokens are spent",
                 rule=ID_RULE,
                 fix=f"report the key in the measure script or drop [{i}] from the "
                 f"block, then `{gate_command('code-check', area)}`",
@@ -257,7 +259,9 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     BLOCKER,
                     protocol.name,
                     f"[{p.id}] declares key '{p.key}', which no script "
-                    f"mentions{hint} · intent-check fails after the run",
+                    f"names as a literal{hint} (an assembled key is not seen, and "
+                    f"blocks here too) · intent-check fails after the run if the "
+                    f"run does not report it",
                     fix=f"report '{p.key}' in the measure script or correct the key "
                     f"in [{p.id}], then `{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,

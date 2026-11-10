@@ -11,7 +11,9 @@ from pathlib import Path
 
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats import files, gate, runs, scope_sha
-from labkit.gates import finalize
+from labkit.gates import finalize, preflight
+from labkit.checks import notes_check
+from labkit.formats import evidence
 
 #: a permission refused is no refusal for root, so those cases skip there
 AS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0
@@ -185,6 +187,63 @@ class FinalizeStation(unittest.TestCase):
         self.assertEqual(f.check_outcome, gate.NOT_EXECUTABLE)
         self.assertIn("make the run's files readable", f.fix or "")
         self.assertIsNone(f.step)
+
+
+class TestRunOutcome(unittest.TestCase):
+    """The area's tests: a run that failed is a violated condition, a run
+    that did not test the code (pytest exit 2-5) a check not executed;
+    both block."""
+
+    def told(self, state: str) -> gate.GateFinding:
+        tests = preflight.AreaTests(
+            "tests/test_01_x.py", [Path("test_01_x.py")], state, ["1 failed"]
+        )
+        findings = gate.Findings(None)
+        preflight.tell_test_run(findings, tests, "the resolution check")
+        (f,) = findings.found
+        return f
+
+    def test_a_failed_run_is_violated(self) -> None:
+        f = self.told("failed")
+        self.assertEqual((f.grade, f.check_outcome), (gate.BLOCKER, gate.VIOLATED))
+        self.assertIn("failed", f.text)
+
+    def test_a_run_that_did_not_test_the_code_is_not_executed(self) -> None:
+        f = self.told("not run")
+        self.assertEqual(
+            (f.grade, f.check_outcome), (gate.BLOCKER, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn("did not run", f.text)
+
+
+class EvidenceComparison(unittest.TestCase):
+    def test_a_comparison_git_could_not_run_is_not_executed(self) -> None:
+        unread, changed = evidence.change_blockers(
+            [
+                ("git could not compare", evidence.UNREAD_WAY),
+                ("a record changed", "restore it"),
+            ]
+        )
+        self.assertEqual(unread.check_outcome, gate.NOT_EXECUTABLE)
+        self.assertEqual(changed.check_outcome, gate.VIOLATED)
+
+
+class NoteConventions(unittest.TestCase):
+    @unittest.skipIf(AS_ROOT, "root reads every file")
+    def test_an_unreadable_note_warns_as_a_check_not_executed(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            note = Path(d) / "a.md"
+            note.write_text("# a\n", encoding="utf-8")
+            unreadable(note)
+            lines: list[str] = []
+            try:
+                code = notes_check.check_notes([note], tell=lines.append)
+            finally:
+                note.chmod(0o644)
+        self.assertEqual(code, 0)
+        self.assertTrue(
+            any("WARNING (check not executable)" in ln for ln in lines), lines
+        )
 
 
 if __name__ == "__main__":

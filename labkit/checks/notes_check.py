@@ -12,14 +12,17 @@ right after the purpose (LAB-082 In `notes/messung/`):
 
 The kind is DECLARED, never derived from code mentions: a Referenzkarte can
 name dozens of scripts, a draft can cite a prior area's code. The checker
-therefore only verifies presence and inconsistency, not classification:
+therefore only verifies presence and inconsistency, not classification.
+Every finding is a warning: a note convention no number depends on
+(docs/notes/2026-11-09-enforced-core.md):
 
-  MUST  meta line present (an italic paragraph after the title; a limitation
+  warn  meta line present (an italic paragraph after the title; a limitation
         blockquote BEFORE it is fine — the Befundregister reads exactly that)
-  MUST  kind declared in the meta line; the contract regex is tolerant to
+  warn  kind declared in the meta line; the contract regex is tolerant to
         dash variants:  Instrument\\s*[—–-]\\s*(Entwurf|implementiert)
-  MUST  'Instrument — implementiert' names code (a .py file, a function
-        call, or an experiments/ path) somewhere in the note
+  warn  'Instrument — implementiert' names code (a .py file, a function
+        call, or an experiments/ path) somewhere in the note — a name
+        pattern, static evidence
   warn  date in the meta line (YYYY-MM-DD or YYYY-MM)
   warn  a file named related-*.md declares Related-Lesart with a citekey
   warn  an implementiert note whose named .py files all fail to resolve
@@ -31,15 +34,21 @@ Usage:
 
 Directories are searched for notes/messung/*.md (a path already ending in
 messung/ is taken as the notes dir itself; 00-*.md index files are skipped).
-Exit 1 if any MUST check fails. Patterns follow the protocol-check contract
-doctrine: extend, never move.
+Exit 0 with or without warnings; 2 when no note is found. Patterns follow
+the protocol-check contract doctrine: extend, never move.
 """
 
 import re
 from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import GUARANTEED, GateFinding, blocker, outcome_of_failed_read
+from labkit.formats.gate import (
+    GUARANTEED,
+    STATIC_EVIDENCE,
+    WARNING,
+    GateFinding,
+    outcome_of_failed_read,
+)
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
@@ -124,44 +133,52 @@ def collect_notes(paths: list[str]) -> list[Path]:
 
 
 def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
-    """Return (must_failures as blockers with their way out, warnings as
-    printable lines) for one note."""
-    must: list[GateFinding] = []
-    warn: list[str] = []
+    """Return (the convention's gaps as warnings with their way out, the
+    softer warnings as printable lines) for one note."""
+    gaps: list[GateFinding] = []
+    softer: list[str] = []
     text = f.read_text(encoding="utf-8")
     meta = meta_paragraph(text)
     if meta is None:
-        must.append(
-            blocker(
-                f"{f}:1: MISSING (must): no italic meta line after the title",
+        gaps.append(
+            GateFinding(
+                WARNING,
+                f"{f}:1: MISSING: no italic meta line after the title",
                 fix="write one under the title: *<Zweck> · <Sorte> · … · <Datum>*, "
                 f"then `{gate_command('notes-check', f)}`",
+                evidence_kind=GUARANTEED,
             )
         )
-        return must, warn
+        return gaps, softer
     n, para = meta
     kind = KIND.search(para)
     if not kind:
-        must.append(
-            blocker(
-                f"{f}:{n}: MISSING (must): no kind in the meta line",
+        gaps.append(
+            GateFinding(
+                WARNING,
+                f"{f}:{n}: MISSING: no kind in the meta line",
                 fix="name one in it: Instrument — Entwurf|implementiert · "
                 "Related-Lesart · Referenzkarte · Audit, then "
                 f"`{gate_command('notes-check', f)}`",
+                evidence_kind=GUARANTEED,
             )
         )
     if not DATE.search(para):
-        warn.append(f"{f}:{n}: warning: no date in the meta line")
+        softer.append(f"{f}:{n}: warning: no date in the meta line")
     if IMPLEMENTED.search(para):
         if not CODE.search(text):
-            must.append(
-                blocker(
-                    f"{f}:{n}: MISSING (must): declared 'Instrument — "
+            # a name pattern over the note's text: a function named with
+            # its arguments is missed, so it is static evidence
+            gaps.append(
+                GateFinding(
+                    WARNING,
+                    f"{f}:{n}: MISSING: declared 'Instrument — "
                     f"implementiert' but names no script, function, or "
                     f"experiments/ path",
                     fix="name the script, function or experiments/ path that "
                     "implements it, or declare it 'Instrument — Entwurf', then "
                     f"`{gate_command('notes-check', f)}`",
+                    evidence_kind=STATIC_EVIDENCE,
                 )
             )
         else:
@@ -169,7 +186,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
             if rotten and len(rotten) == len(
                 set(m.group(0).lstrip("./") for m in PY_FILE.finditer(text))
             ):
-                warn.append(
+                softer.append(
                     f"{f}:{n}: warning: none of the named scripts "
                     f"resolve in the repo ({', '.join(rotten[:3])}"
                     f"{' …' if len(rotten) > 3 else ''}) — code "
@@ -177,16 +194,16 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                 )
     if f.name.startswith("related-"):
         if kind and "Related-Lesart" not in kind.group(0):
-            warn.append(
+            softer.append(
                 f"{f}:{n}: warning: filename says related-* but the "
                 f"declared kind is {kind.group(0)!r}"
             )
         elif "Related-Lesart" in para and not RELATED_WITH_KEY.search(para):
-            warn.append(
+            softer.append(
                 f"{f}:{n}: warning: Related-Lesart without a citekey "
                 f"— write 'Related-Lesart (<citekey>)'"
             )
-    return must, warn
+    return gaps, softer
 
 
 def main(argv: list[str]) -> int:
@@ -207,23 +224,25 @@ def main(argv: list[str]) -> int:
 
 def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
     """Check every note in FILES (`check_file`) and tell each finding, each
-    clean note's `OK` and the summary through TELL; 1 with a blocker, else 0."""
+    clean note's `OK` and the summary through TELL; 0, every finding a
+    warning."""
     findings = Findings(tell)
     for f in files:
         try:
-            must, warn = check_file(f)
+            gaps, softer = check_file(f)
         except OSError as exc:
-            findings.block(
+            findings.warn(
                 f"{f}: not readable ({exc})",
                 fix="make the file readable (its path and permissions), then "
                 f"`{gate_command('notes-check', f)}`",
+                evidence_kind=GUARANTEED,
                 check_outcome=outcome_of_failed_read(exc),
             )
             continue
-        findings.take_all(must)
-        for line in warn:
+        findings.take_all(gaps)
+        for line in softer:
             findings.warn(line, evidence_kind=GUARANTEED)
-        if not must and not warn:
+        if not gaps and not softer:
             tell(f"{f}: OK")
     return findings.report("notes-check", "the note counts")
 

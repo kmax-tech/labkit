@@ -102,6 +102,7 @@ from labkit.formats.gate import (
     Findings,
     GateFinding,
     blocker,
+    outcome_of_failed_read,
     withdrawn_first,
 )
 from labkit.formats.answering_run import (
@@ -437,6 +438,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
         return blocker(
             f"the analysis audit cannot be held to the area: {exc}",
             fix=f"repair what the sentence names, then {audit}",
+            check_outcome=outcome_of_failed_read(exc),
         )
     if gap is None:
         return None
@@ -470,7 +472,8 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
     if cfg is None:
         return [
             blocker(
-                f"{ctx.run.name}: no config.json — not a run",
+                f"{ctx.run.name}: no config.json in this file state — the run's "
+                f"record cannot be checked",
                 fix=f"measure through runlog: {measure}",
                 step=run,
             )
