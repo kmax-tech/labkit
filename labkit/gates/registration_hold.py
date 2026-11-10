@@ -59,8 +59,13 @@ from labkit.formats.protocol_check import (
 from labkit.checks.run_record_check import (
     code_since_run,
 )
-from labkit.formats.findings import corrected_field, decision_digest
-from labkit.formats.followup import chain, earlier_blockers, earlier_corrections
+from labkit.formats.findings import corrected_field
+from labkit.formats.followup import (
+    Correction,
+    awaited_corrections,
+    chain,
+    released_corrections,
+)
 
 
 def registration_changes(
@@ -273,68 +278,166 @@ def _scope_held(
             text = state.text_of(protocol)
             diffs, _ = released_fields(all_diffs, area, protocol, text, run, seen, held)
             if diffs:
-                labels = _labels(diffs)
-                restore = (
-                    f"restore {labels} as {first.dir.name} registered them"
-                    f"{shown_then(protocol, first, root)}, and measure again, then "
-                    f"audit that run (the earlier runs stay)"
-                ) + description_added(diffs)
-                waiting = awaiting_followup(area, protocol, text, run, held)
-                moved = moved_fields(seen, text)
-                refs = [
-                    None if what in moved else waiting.get(field_name(what))
-                    for what, _, _ in diffs
-                ]
-                if all(refs):
-                    # run B measured under a correction released for an earlier
-                    # run: the follow-up on B judges it again
-                    fix = (
-                        f"the follow-up analysis audit on {run.name} "
-                        f"(`{audit_command(area, '--mode', 'analysis', protocol=protocol)}`) "
-                        f"judges {', '.join(r for r in refs if r)}, decided `fixed` "
-                        f"as a correction of {labels} in place — only its `resolved` "
-                        f"on that finding, judged on this run and this text, releases "
-                        f"the change; a verdict on an earlier run releases nothing "
-                        f"for this one; or, a changed definition, population or "
-                        f"question is no correction: {restore}; or, {anew_way(pid)}"
-                    )
-                else:
-                    fix = f"{restore}{correction_way(diffs)}; or, {anew_way(pid)}"
+                refs = waiting_refs(
+                    diffs,
+                    awaiting_followup(area, protocol, text, run, held),
+                    moved_fields(seen, text),
+                )
                 return [
-                    blocker(
-                        f"what the number is about changed after the first measurement "
-                        f"{first.dir.name}: {quoted_changes(diffs)} (as the answering "
-                        f"run {run.name} saw the protocol) — a scope set after a "
-                        f"result was seen does not answer the registered question",
-                        fix=fix,
-                        step=restore_step(protocol, first, root),
-                        rule=OPEN_RULE,
+                    seen_hold(
+                        pid,
+                        run.name,
+                        first_measurement(protocol, first, root),
+                        diffs,
+                        refs,
+                        audit_command(area, "--mode", "analysis", protocol=protocol),
                     )
                 ]
     now = scope_now(area, protocol, pid, run, root, measured, state, held)
     if now is None or not now.kept:
         return []
     text = state.text_of(protocol)
-    waiting = awaiting_followup(area, protocol, text, run, held)
-    refs = [waiting.get(field_name(what)) for what, _, _ in now.kept]
-    labels = _labels(now.kept)
+    refs = waiting_refs(now.kept, awaiting_followup(area, protocol, text, run, held))
+    # the code's state is read only where the way depends on it: every held
+    # field's correction decided
+    code_changed = all(refs) and code_since_run(area, run)[0]
+    declaring = declaring_protocol(protocol, text, run, state) if code_changed else None
+    return now_hold(
+        pid,
+        run.name,
+        first_measurement(protocol, now.first, root),
+        now.kept,
+        refs,
+        audit_command(area, "--mode", "analysis", protocol=protocol),
+        measure=measure_command(area) if code_changed else None,
+        withdraw=withdraw_command(declaring) if declaring else None,
+    )
+
+
+@dataclass(frozen=True)
+class FirstMeasurement:
+    """The first measurement a scope hold names: its RUN_ID, the clause
+    saying where its text can be read (`shown_then`) and the step that
+    restores it (`restore_step`)."""
+
+    run_id: str
+    shown: str
+    step: Command | None
+
+
+def first_measurement(
+    protocol: Path, first: RunDir, root: Path | None
+) -> FirstMeasurement:
+    """FIRST as a scope hold on PROTOCOL names it (`FirstMeasurement`).
+    Reads git through `shown_then` and `restore_step`."""
+    return FirstMeasurement(
+        first.dir.name,
+        shown_then(protocol, first, root),
+        restore_step(protocol, first, root),
+    )
+
+
+def waiting_refs(
+    diffs: list[tuple[str, str, str]],
+    waiting: dict[str, str],
+    moved: set[str] | frozenset[str] = frozenset(),
+) -> list[str | None]:
+    """Per difference of DIFFS (what, from, to), the ref of the decided
+    correction a follow-up would judge for its field (WAITING, by
+    `field_name`, `awaiting_followup`), None where there is none — or where
+    the field moved (MOVED: the run saw another text than the protocol
+    holds now, so no verdict on this text covers the run). A hold leads
+    with the follow-up only when every difference has a ref. Pure."""
+    return [
+        None if what in moved else waiting.get(field_name(what)) for what, _, _ in diffs
+    ]
+
+
+def seen_hold(
+    pid: str,
+    run_id: str,
+    first: FirstMeasurement,
+    diffs: list[tuple[str, str, str]],
+    refs: list[str | None],
+    analysis: Command,
+) -> GateFinding:
+    """The BLOCKER on DIFFS — what the number is about, changed since FIRST,
+    as the answering run RUN_ID saw the protocol — with its way out: where
+    every difference's correction is decided (REFS, `waiting_refs`), the
+    follow-up audit on RUN_ID (ANALYSIS) that judges them, since a verdict
+    on an earlier run releases nothing for this one; otherwise the restore
+    and measuring again, with the correction route for the fields that
+    have one (`correction_way`). Registering anew is always the last way.
+    Pure."""
+    labels = _labels(diffs)
     restore = (
-        f"restore {labels} as {now.first.dir.name} registered them"
-        f"{shown_then(protocol, now.first, root)} — the runs measured under them "
+        f"restore {labels} as {first.run_id} registered them"
+        f"{first.shown}, and measure again, then "
+        f"audit that run (the earlier runs stay)"
+    ) + description_added(diffs)
+    if all(refs):
+        # run B measured under a correction released for an earlier
+        # run: the follow-up on B judges it again
+        fix = (
+            f"the follow-up analysis audit on {run_id} "
+            f"(`{analysis}`) "
+            f"judges {', '.join(r for r in refs if r)}, decided `fixed` "
+            f"as a correction of {labels} in place — only its `resolved` "
+            f"on that finding, judged on this run and this text, releases "
+            f"the change; a verdict on an earlier run releases nothing "
+            f"for this one; or, a changed definition, population or "
+            f"question is no correction: {restore}; or, {anew_way(pid)}"
+        )
+    else:
+        fix = f"{restore}{correction_way(diffs)}; or, {anew_way(pid)}"
+    return blocker(
+        f"what the number is about changed after the first measurement "
+        f"{first.run_id}: {quoted_changes(diffs)} (as the answering "
+        f"run {run_id} saw the protocol) — a scope set after a "
+        f"result was seen does not answer the registered question",
+        fix=fix,
+        step=first.step,
+        rule=OPEN_RULE,
+    )
+
+
+def now_hold(
+    pid: str,
+    run_id: str,
+    first: FirstMeasurement,
+    kept: list[tuple[str, str, str]],
+    refs: list[str | None],
+    analysis: Command,
+    *,
+    measure: Command | None,
+    withdraw: Command | None,
+) -> list[GateFinding]:
+    """The BLOCKER on KEPT — what the number is about, changed since FIRST
+    in the protocol as it stands, no run measured under it — with its way
+    out: where every held field's correction is decided (REFS,
+    `waiting_refs`) and the measuring code changed since RUN_ID (MEASURE,
+    the command that measures again), the new run and its follow-up
+    (ANALYSIS) that judges the corrections; decided and the code
+    unchanged, the follow-up on the run as it stands, no new measurement
+    owed; otherwise the restore, with the correction route for the fields
+    that have one (`correction_way`). Registering anew is always the last
+    way. WITHDRAW, the withdrawal of a standing adoption, comes first
+    (`gate.withdrawn_first`). Pure."""
+    labels = _labels(kept)
+    restore = (
+        f"restore {labels} as {first.run_id} registered them"
+        f"{first.shown} — the runs measured under them "
         f"stay; an audit that read the rewritten fields is owed again "
         f"(`labkit-next` names it)"
-    ) + description_added(now.kept)
-    analysis = audit_command(area, "--mode", "analysis", protocol=protocol)
-    declaring: Path | None = None
-    if all(refs) and code_since_run(area, run)[0]:
+    ) + description_added(kept)
+    if all(refs) and measure is not None:
         # a code repair after the correction: the run that answers was measured
         # by other code, so a new run comes first and its follow-up judges the
         # correction on it — a follow-up of the old run would be held by the
         # changed code
-        declaring = declaring_protocol(protocol, text, run, state)
         fix = (
-            f"the measuring code changed since {run.name} ran: measure again "
-            f"(`{measure_command(area)}`), then the follow-up analysis audit on that "
+            f"the measuring code changed since {run_id} ran: measure again "
+            f"(`{measure}`), then the follow-up analysis audit on that "
             f"run (`{analysis}`) judges {', '.join(r for r in refs if r)}, decided "
             f"`fixed` as a correction of {labels} in place, beside the repair — only "
             f"its `resolved` on that finding, judged on the new run and this text, "
@@ -354,20 +457,18 @@ def _scope_held(
             f"is no correction: {restore}; or, {anew_way(pid)}"
         )
     else:
-        fix = f"{restore}{correction_way(now.kept)}; or, {anew_way(pid)}"
+        fix = f"{restore}{correction_way(kept)}; or, {anew_way(pid)}"
     finding = blocker(
         f"what the number is about changed after the first measurement "
-        f"{now.first.dir.name}: {quoted_changes(now.kept)} (as the protocol stands "
+        f"{first.run_id}: {quoted_changes(kept)} (as the protocol stands "
         f"now; no run measured under it yet) — a scope set after a result was seen "
         f"does not answer the registered question, and a new measurement would "
         f"carry the change",
         fix=fix,
-        step=restore_step(protocol, now.first, root),
+        step=first.step,
         rule=OPEN_RULE,
     )
-    return withdrawn_first(
-        [finding], withdraw_command(declaring) if declaring else None
-    )
+    return withdrawn_first([finding], withdraw)
 
 
 def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
@@ -490,17 +591,6 @@ class ScopeNow:
     corrected: list[tuple[tuple[str, str, str], Correction]]
 
 
-@dataclass(frozen=True)
-class Correction:
-    """A field corrected in place and judged: the correction's REF
-    (`<record>#<n>`), the follow-up record JUDGED_IN that holds its
-    `resolved`, and the verdict's WHY."""
-
-    ref: str
-    judged_in: str
-    why: str
-
-
 def scope_now(
     area: Path,
     protocol: Path,
@@ -554,8 +644,23 @@ def released_fields(
     field stands on its own: one released field releases no other. HELD is
     the area's audit evidence, read once. Raises RuntimeError when git
     fails."""
-    resolved = resolved_corrections(area, protocol, text, run, held)
-    moved = moved_fields(seen, text)
+    return split_released(
+        diffs,
+        resolved_corrections(area, protocol, text, run, held),
+        moved_fields(seen, text),
+    )
+
+
+def split_released(
+    diffs: list[tuple[str, str, str]],
+    resolved: dict[str, Correction],
+    moved: set[str],
+) -> tuple[list[tuple[str, str, str]], list[tuple[tuple[str, str, str], Correction]]]:
+    """DIFFS (what, from, to) sorted into (kept, released): released where
+    RESOLVED (by `field_name`, `resolved_corrections`) holds the field's
+    correction and the field is not in MOVED — the labels in which the
+    protocol as the run saw it and as it stands differ (`moved_fields`).
+    Each field on its own: one field's correction releases no other. Pure."""
     kept: list[tuple[str, str, str]] = []
     corrected: list[tuple[tuple[str, str, str], Correction]] = []
     for d in diffs:
@@ -593,18 +698,9 @@ def resolved_corrections(
         members = chain(records).members
     except (ValueError, FileNotFoundError):
         return {}
-    out: dict[str, Correction] = {}
-    for record in covering:
-        for v in record.fix_verdicts:
-            m = members.get(v.ref)
-            if v.verdict != "resolved" or m is None:
-                continue
-            if decision_digest(m.finding) != v.decision_sha:
-                continue
-            name = _correction_field(m.finding, protocol, text)
-            if name is not None:
-                out.setdefault(name, Correction(v.ref, record.path.name, v.why))
-    return out
+    return released_corrections(
+        covering, members, lambda f: _correction_field(f, protocol, text)
+    )
 
 
 def _correction_field(
@@ -644,24 +740,14 @@ def awaiting_followup(
     except (ValueError, FileNotFoundError):
         return {}
 
-    def current(r: audit_findings.Record) -> bool:
-        return r.path.name in covering
-
-    def field_of(f: audit_findings.Finding) -> str | None:
-        return _correction_field(f, protocol, text)
-
     try:
-        shown_ = earlier_blockers(records, current) + earlier_corrections(
-            records, current, field_of
+        return awaited_corrections(
+            records,
+            lambda r: r.path.name in covering,
+            lambda f: _correction_field(f, protocol, text),
         )
     except audit_findings.FindingsError:
         return {}
-    out: dict[str, str] = {}
-    for m in shown_:
-        name = field_of(m.finding)
-        if name is not None:
-            out.setdefault(name, m.ref)
-    return out
 
 
 def corrected_in_place(

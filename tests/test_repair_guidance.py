@@ -219,6 +219,11 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
     def test_the_question_stands_as_registered_after_the_first_run(self):
         line = self.line("PROTOCOL-x.md:Question / hypothesis")
         self.assertIn("after the first measurement it has no correction in place", line)
+        # it explains the condition and names no way of its own: the
+        # correction route is not offered for the question
+        self.assertIn("names the step this repair owes now", line)
+        self.assertNotIn("a correction in place", line)
+        self.assertNotIn("misdescribing the unchanged run", line)
 
     def test_other_fields_and_places_are_any_other_repair(self):
         for place in (

@@ -108,10 +108,12 @@ def audit_record(
     found: Sequence[findings.Finding] = (),
     area: Path = AREA,
     protocol_id: str = PID,
+    fix_verdicts: Sequence[findings.FixVerdict] = (),
 ) -> findings.Record:
     """The audit record `audits/NAME` of AREA in MODE, naming RUN_ID as the
     run it read (None for a preflight record, `findings.NO_RUN` for an
-    analysis of no run), holding FOUND. The binding fields — date, model,
+    analysis of no run), holding FOUND and, for a follow-up, FIX_VERDICTS
+    on earlier findings. The binding fields — date, model,
     the code, block and shown digests, the registration, the verdict — are
     fixed placeholders: what an audit was bound to bears on no check of
     which run a record names or which finding stands open."""
@@ -128,6 +130,7 @@ def audit_record(
         verdict=(0, 0, 0),
         findings=tuple(found),
         protocol_id=protocol_id,
+        fix_verdicts=tuple(fix_verdicts),
     )
 
 

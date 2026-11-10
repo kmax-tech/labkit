@@ -368,3 +368,66 @@ def _earlier_hold(
             f"{check_order(f.check, f.check_note)}; then a new run, and {STEP_AUDIT}",
         )
     return None
+
+
+@dataclass(frozen=True)
+class Correction:
+    """A field corrected in place and judged: the correction's REF
+    (`<record>#<n>`), the follow-up record JUDGED_IN that holds its
+    `resolved`, and the verdict's WHY."""
+
+    ref: str
+    judged_in: str
+    why: str
+
+
+def released_corrections(
+    covering: list[Record],
+    members: dict[str, Member],
+    field_of: Callable[[Finding], str | None],
+) -> dict[str, Correction]:
+    """The fields a correction in place releases, by the name FIELD_OF
+    gives (`findings.corrected_field`: a finding decided `fixed` that names
+    the field as its place): a `resolved` verdict, in a record of COVERING
+    (the analysis records that cover the area now), on a finding of MEMBERS
+    (`chain`), bound to that finding as it is decided now
+    (`decision_digest`). An `unresolved` or `not_assessable` verdict, a
+    verdict on the decision as it stood before, a verdict in a record that
+    no longer covers the area and a verdict on a finding FIELD_OF names no
+    field for release nothing; a verdict on one field releases that field
+    alone. The first record of COVERING that releases a field names it.
+    Raises what FIELD_OF raises. Pure."""
+    out: dict[str, Correction] = {}
+    for record in covering:
+        for v in record.fix_verdicts:
+            m = members.get(v.ref)
+            if v.verdict != "resolved" or m is None:
+                continue
+            if decision_digest(m.finding) != v.decision_sha:
+                continue
+            name = field_of(m.finding)
+            if name is not None:
+                out.setdefault(name, Correction(v.ref, record.path.name, v.why))
+    return out
+
+
+def awaited_corrections(
+    records: list[Record],
+    current: Callable[[Record], bool],
+    field_of: Callable[[Finding], str | None],
+) -> dict[str, str]:
+    """The fields whose correction a follow-up audit of the state CURRENT
+    tells would be shown and judge, by the name FIELD_OF gives, each with
+    the correction's ref (`<record>#<n>`): what `earlier_blockers` and
+    `earlier_corrections` show — a head decided in a record not of that
+    state — whose finding FIELD_OF names a field for. The first such
+    finding names the field. Raises what `chain` and FIELD_OF raise. Pure."""
+    shown = earlier_blockers(records, current) + earlier_corrections(
+        records, current, field_of
+    )
+    out: dict[str, str] = {}
+    for m in shown:
+        name = field_of(m.finding)
+        if name is not None:
+            out.setdefault(name, m.ref)
+    return out
