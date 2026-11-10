@@ -40,7 +40,8 @@ class ChangedQuestion(e2e.CorrectionCommands):
         self.lab.fill(
             self.protocol,
             "--force",
-            f"Question / hypothesis={e2e.CorrectedDescription.MEDIAN}",
+            "Question / hypothesis=What is the median number of lines of a "
+            "document of data/raw/docs?",
         )
         self.lab.commit("the question changed after run A")
         self.kept = Path(tempfile.mkdtemp())

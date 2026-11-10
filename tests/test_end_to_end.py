@@ -1041,8 +1041,10 @@ class CorrectedDescription(CorrectionCommands):
     the hold of what the number is about (`registration_hold.resolved_corrections`);
     a fresh audit without it, a verdict on another field, a text edited
     after the verdict and a place given as a line number release nothing,
-    at every grade (docs/notes/2026-11-02-registered-field-repair.md).
-    Through the real commands; no test writes a head by hand."""
+    at every grade (docs/notes/2026-11-02-registered-field-repair.md). Each
+    of those conditions, its release and its refusals:
+    tests/test_rules_registration_hold.py. Here the route through the real
+    commands; no test writes a head by hand."""
 
     def test_the_corrected_description_is_followed_up_and_released(self):
         blocking = self.audited("BLOCKER", "Data / scope")
@@ -1074,139 +1076,6 @@ class CorrectedDescription(CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, self.run_a)
         self.assertEqual(rc, 0, out)
 
-    def test_a_corrected_warning_is_released_by_its_resolved_alone(self):
-        warning = self.audited("WARNING", "Data / scope")
-        self.describe(self.RIGHT)
-        self.decide(warning, 1, "fixed", "Data / scope now says 3 documents")
-        rc, out, prompt = self.analysis(self.clean)  # a fresh audit, no verdict
-        self.assertIn(f"{warning.name}#1", prompt)  # shown, but not judged
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-        rc, out, _ = self.follow_up(warning, "resolved", "now 3 documents, as read")
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 0, out)
-
-    QUESTION = "How many lines does a document of data/raw/docs hold on average?"
-    MEDIAN = "What is the median number of lines of a document of data/raw/docs?"
-
-    def asked(self, value: str) -> None:
-        self.lab.fill(self.protocol, "--force", f"Question / hypothesis={value}")
-
-    def audited_question(self) -> Path:
-        """The analysis audit of run A with one WARNING on the question."""
-        rc, out, _ = self.analysis(
-            "WARNING · PROTOCOL-lines.md:Question / hypothesis · statement · the question asks "
-            "for the mean, the documents' lengths are skewed · the mean as asked · "
-            "LAB-050 Analysis audit before reporting · ask for the median\n"
-            "verdict: 0 blockers, 1 warnings, 0 notes"
-        )
-        self.assertEqual(rc, 1, out)
-        assert self.record is not None
-        return self.record
-
-    def test_a_changed_question_is_held_even_with_its_resolved(self):
-        warning = self.audited_question()
-        self.asked(self.MEDIAN)
-        line = self.decide(warning, 1, "fixed", "the question now asks for the median")
-        # the decision's line explains the condition the gate holds; it names
-        # no way of its own
-        self.assertIn(
-            "Question / hypothesis: after the first measurement it has no "
-            "correction in place",
-            line,
-        )
-        self.assertIn("names the step this repair owes now", line)
-        self.assertNotIn("misdescribing the unchanged run", line)
-        rc, out, _ = self.follow_up(warning, "resolved", "the question reads well")
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-        self.assertIn("Question / hypothesis has no correction in place", out)
-        self.assertNotIn("misdescribing the unchanged run", out)
-        # the way back: the question as registered passes
-        self.asked(self.QUESTION)
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 0, out)
-
-    def test_the_twin_a_reflowed_question_is_no_change(self):
-        self.asked(self.QUESTION.replace(" a document ", "  a   document "))
-        self.assertIn("  a   document ", self.protocol.read_text(encoding="utf-8"))
-        rc, out, _ = self.analysis(self.clean)
-        self.assertEqual(rc, 0, out)
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 0, out)
-        self.assertNotIn(self.HELD, out)
-
-    def test_the_twin_a_changed_description_is_offered_the_correction_route(self):
-        self.describe(self.RIGHT)
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("Data / scope misdescribing the unchanged run", out)
-        self.assertNotIn("has no correction in place", out)
-        # a rewrite: the hold names no place for an addition
-        self.assertNotIn("stands inside the new one", out)
-
-    def test_a_description_that_only_grew_is_told_where_the_addition_belongs(self):
-        """The registered text stands inside the new one: the hold stays
-        (labkit cannot tell a description from a changed population), and
-        its way names the Conclusion or the report for the addition
-        (`registration_hold.description_added`), not the restore alone."""
-        self.describe(self.WRONG + "; the two shortest held out as a check")
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-        self.assertIn("stands inside the new one", out)
-        self.assertIn("restore Data / scope as", out)
-
-    def test_a_resolved_on_another_field_releases_this_one_not(self):
-        warning = self.audited("WARNING", "Unit")
-        self.describe(self.RIGHT)
-        self.decide(warning, 1, "fixed", "corrected")
-        rc, out, _ = self.follow_up(warning, "resolved", "the unit reads well")
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-
-    def test_a_text_edited_after_the_verdict_is_held_again(self):
-        warning = self.audited("WARNING", "Data / scope")
-        self.describe(self.RIGHT)
-        self.decide(warning, 1, "fixed", "Data / scope now says 3 documents")
-        rc, out, _ = self.follow_up(warning, "resolved", "now 3 documents, as read")
-        self.describe("data/raw/docs, 3 documents (the short ones), read directly")
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-
-    def test_a_place_given_as_a_line_number_names_no_field(self):
-        line = next(
-            n
-            for n, ln in enumerate(self.protocol.read_text().splitlines(), 1)
-            if "**Data / scope:**" in ln
-        )
-        warning = self.audited("WARNING", str(line))
-        self.describe(self.RIGHT)
-        self.decide(warning, 1, "fixed", "Data / scope now says 3 documents")
-        rc, out, prompt = self.analysis(self.clean)
-        self.assertNotIn(f"{warning.name}#1", prompt)  # no correction to follow up
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-
-    def test_a_redefinition_judged_unresolved_stays_held_and_is_not_carried(self):
-        warning = self.audited("WARNING", "Data / scope")
-        self.describe("data/raw/docs, the 3 documents of over ten lines, read directly")
-        self.decide(warning, 1, "fixed", "narrowed to the long documents")
-        rc, out, _ = self.follow_up(
-            warning, "unresolved", "the change narrows which documents count"
-        )
-        assert self.record is not None
-        self.assertEqual([f.carries for f in findings.read(self.record).findings], [])
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-        self.assertIn("register anew", out)
-
     def test_an_unchanged_description_stays_held_through_another_audit(self):
         blocking = self.audited("BLOCKER", "Data / scope")
         self.decide(blocking, 1, "fixed", "corrected")  # but nothing changed
@@ -1219,39 +1088,6 @@ class CorrectedDescription(CorrectionCommands):
         self.assertEqual(rc, 1, out)
         self.assertIn("decided `fixed` in the state audited", out)
 
-    def test_an_insufficient_correction_is_judged_and_carried_open(self):
-        blocking = self.audited("BLOCKER", "Data / scope")
-        self.describe("data/raw/docs, 5 documents, read directly")
-        self.decide(blocking, 1, "fixed", "Data / scope corrected")
-        rc, out, _ = self.follow_up(
-            blocking, "unresolved", "Data / scope says 5 documents, the run read 3"
-        )
-        assert self.record is not None
-        carried = [
-            f
-            for f in findings.read(self.record).findings
-            if f.carries == f"{blocking.name}#1"
-        ]
-        self.assertEqual([(f.grade, f.status) for f in carried], [("BLOCKER", "open")])
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertEqual(rc, 1, out)
-
-    def test_writing_the_report_fields_leaves_the_audit_standing(self):
-        """The twin of the binding: the Conclusion and the adoption's own
-        lines are not bound, so the usual audit-then-adopt order holds."""
-        blocking = self.audited("BLOCKER", "Data / scope")
-        self.describe(self.RIGHT)
-        # decided before the next audit, which a follow-up then judges
-        self.decide(blocking, 1, "fixed", "Data / scope corrected")
-        rc, out, _ = self.follow_up(blocking, "resolved", "now 3 documents, as read")
-        self.lab.fill(
-            self.protocol, "Conclusion=Three documents hold 3.0 lines on average."
-        )
-        records = self.records()
-        rc, out = self.lab.adopt(self.protocol, self.run_a)
-        self.assertNotIn("no analysis audit saw the area as it is now", out)
-        self.assertEqual(self.records(), records)
-
 
 class CorrectionThenNewRun(CorrectionCommands):
     """A description corrected in place and released for run A, then a
@@ -1261,10 +1097,11 @@ class CorrectionThenNewRun(CorrectionCommands):
     with the field as B saw it, as it stands and as judged all one text;
     the earlier verdict on A releases nothing for B. Another field changed
     without a release of its own holds; several fields each released pass
-    (docs/notes/2026-11-02-registered-field-repair.md, "Decided 2026-11-03")."""
+    (docs/notes/2026-11-02-registered-field-repair.md, "Decided 2026-11-03").
+    Those conditions: tests/test_rules_registration_hold.py; here the routes
+    through the commands — B released, the verdict on A held at the text B
+    saw, and an adopted A withdrawn and replaced."""
 
-    RIGHT_TOO = "data/raw/docs, the 3 documents, read directly"
-    UNIT_RIGHT = "one text document of data/raw/docs"
     CODE_FINDING = (
         "BLOCKER · scripts/01_measure.py:1 · statement · rows() keeps a size the protocol "
         "does not name · the rows as measured · LAB-050 Analysis audit before "
@@ -1361,174 +1198,6 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.assertIn(f"{correction.name}#1", held)
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 1, out)
-
-    def test_the_code_repair_beside_a_correction_is_measured_again(self):
-        """The hold before the new run names the measurement, then the
-        follow-up on it (the decision's line points to labkit-next) — not
-        restore and decide the repair `limitation`."""
-        self.corrected_for_a()
-        self.code_repaired()
-        # the decision's line points to labkit-next; the hold names the step
-        self.assertIn("names the step this repair owes now", self.said)
-        self.assertNotIn("measure again", self.said)
-        self.assertNotIn("withdraw", self.said)  # nothing adopted
-        rc, out = self.lab.finalize(self.area)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(
-            f"the measuring code changed since {self.run_a} ran: measure again", out
-        )
-
-    def test_the_correction_judged_unresolved_on_the_new_run_holds(self):
-        correction = self.corrected_for_a()
-        code = self.code_repaired()
-        run_b = self.measure()
-        self.judged((code, "resolved"), (correction, "unresolved"))
-        self.held_as_b_saw(run_b, "Data / scope")
-
-    def test_a_field_edited_after_the_new_run_holds(self):
-        """Edited after B ran, then judged on the new text: B saw another text."""
-        correction = self.corrected_for_a()
-        code = self.code_repaired()
-        run_b = self.measure()
-        self.describe(self.RIGHT_TOO)
-        self.judged((code, "resolved"), (correction, "resolved"))
-        self.held_as_b_saw(run_b, "Data / scope")
-
-    def test_a_field_edited_after_the_verdict_on_the_new_run_holds(self):
-        correction = self.corrected_for_a()
-        code = self.code_repaired()
-        self.measure()
-        self.judged((code, "resolved"), (correction, "resolved"))
-        self.describe(self.RIGHT_TOO)
-        rc, out = self.lab.finalize(self.area)
-        self.assertEqual(rc, 1, out)
-        self.assertIn(self.HELD, out)
-
-    def test_another_field_changed_without_its_own_release_holds(self):
-        correction = self.corrected_for_a()
-        code = self.code_repaired()
-        self.lab.fill(self.protocol, "--force", f"Unit={self.UNIT_RIGHT}")
-        run_b = self.measure()
-        self.judged((code, "resolved"), (correction, "resolved"))
-        held = self.held_as_b_saw(run_b, "Unit")
-        self.assertNotIn("Data / scope", held)  # released; Unit is not
-
-    def test_the_twin_two_fields_each_released_pass(self):
-        rc, out, _ = self.analysis(
-            "BLOCKER · PROTOCOL-lines.md:Data / scope · statement · Data / scope says 4 "
-            "documents, the run read 3 · the denominator · LAB-050 Analysis audit "
-            "before reporting · correct the description\n"
-            "WARNING · PROTOCOL-lines.md:Unit · statement · the Unit does not say the "
-            "documents are text files · the unit · LAB-050 Analysis audit before "
-            "reporting · correct the description\n"
-            "verdict: 1 blockers, 1 warnings, 0 notes"
-        )
-        assert self.record is not None
-        both = self.record
-        self.describe(self.RIGHT)
-        self.lab.fill(self.protocol, "--force", f"Unit={self.UNIT_RIGHT}")
-        self.decide(both, 1, "fixed", "Data / scope now says 3 documents")
-        self.decide(both, 2, "fixed", "the Unit names text documents")
-        code = self.code_repaired()
-        run_b = self.measure()
-        rc, out, _ = self.analysis(
-            f"FIX · {both.name}#1 · resolved · 3 documents, as B read\n"
-            f"FIX · {both.name}#2 · resolved · text documents, as B read\n"
-            f"FIX · {code.name}#1 · resolved · the size is gone\n\n{self.clean}"
-        )
-        self.assertEqual(rc, 0, out)
-        rc, out = self.lab.finalize(self.area)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("first measurement " + self.run_a + ": Data / scope", out)
-        self.assertIn("first measurement " + self.run_a + ": Unit", out)
-        rc, out = self.lab.adopt(self.protocol, run_b)
-        self.assertEqual(rc, 0, out)
-
-    def test_a_question_corrected_then_measured_again_holds(self):
-        """Question / hypothesis has no correction in place
-        (`protocol_history.correctable`): a new run under a rewritten
-        question is held even with a `resolved` on it, and the hold and the
-        decision's line name only the way back or a protocol of its own."""
-        rc, out, _ = self.analysis(
-            "BLOCKER · PROTOCOL-lines.md:Question / hypothesis · statement · the question "
-            "says on average, the run computes the mean · the question · LAB-050 "
-            "Analysis audit before reporting · correct the description\n"
-            "verdict: 1 blockers, 0 warnings, 0 notes"
-        )
-        assert self.record is not None
-        question = self.record
-        self.lab.fill(
-            self.protocol,
-            "--force",
-            "Question / hypothesis=What is the median number of lines of a "
-            "document of data/raw/docs?",
-        )
-        said = io.StringIO()
-        with contextlib.redirect_stdout(said):
-            rc = audit.main(
-                [
-                    str(self.area),
-                    "--decide",
-                    "1",
-                    *decide_words("fixed", "the question names the statistic"),
-                    "--record",
-                    str(question),
-                ]
-            )
-        self.assertEqual(rc, 0, said.getvalue())
-        self.assertNotIn("a correction in place", said.getvalue())
-        code = self.code_repaired()
-        run_b = self.measure()
-        self.judged((code, "resolved"), (question, "resolved"))
-        held = self.held_as_b_saw(run_b, "Question / hypothesis")
-        self.assertIn("restore Question / hypothesis", held)
-        self.assertIn("register anew", held)
-        self.assertNotIn("names the field as its place", held)
-
-    def question_beside_a_waiting_correction(self) -> Path:
-        """Data / scope corrected and decided `fixed`, not yet judged, and
-        Question / hypothesis rewritten beside it without a finding; the
-        correction's record."""
-        blocking = self.audited("BLOCKER", "Data / scope")
-        self.describe(self.RIGHT)
-        self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
-        self.lab.fill(
-            self.protocol,
-            "--force",
-            "Question / hypothesis=What is the median number of lines of a "
-            "document of data/raw/docs?",
-        )
-        return blocking
-
-    def test_a_question_beside_a_waiting_correction_names_no_follow_up_first(self):
-        """The question has no correction (`findings.corrected_field` gives
-        none), so not every held field waits for a follow-up: the hold leads
-        with the way back and says the question stands as registered, not
-        with the follow-up that would release nothing for it."""
-        self.question_beside_a_waiting_correction()
-        rc, out = self.lab.finalize(self.area)
-        self.assertEqual(rc, 1, out)
-        held = next(
-            ln for ln in out.splitlines() if self.HELD in ln and "BLOCKER" in ln
-        )
-        self.assertIn("Question / hypothesis has no correction in place", held)
-        self.assertNotIn("the follow-up analysis audit on", held)
-
-    def test_the_twin_on_a_new_run_a_question_beside_a_correction_holds_the_same(
-        self,
-    ):
-        """The same after a code repair and run B: the hold on the text B
-        saw names no follow-up first either, and a `resolved` on the
-        correction releases Data / scope while the question stays held."""
-        correction = self.question_beside_a_waiting_correction()
-        code = self.code_repaired()
-        run_b = self.measure()
-        held = self.held_as_b_saw(run_b, "Question / hypothesis")
-        self.assertIn("Question / hypothesis has no correction in place", held)
-        self.assertNotIn("the follow-up analysis audit on", held)
-        self.judged((code, "resolved"), (correction, "resolved"))
-        held = self.held_as_b_saw(run_b, "Question / hypothesis")
-        self.assertNotIn("Data / scope", held)
 
     def test_an_adopted_corrected_run_is_withdrawn_measured_again_and_replaced(self):
         correction = self.corrected_for_a()
