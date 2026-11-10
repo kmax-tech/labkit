@@ -1,6 +1,6 @@
 # Audit journals require bound audit starts
 
-2026-11-03. S1 of the [combined maintainability plan](2026-11-03-maintainability-repair-plan.md). Max decided to remove the old journal reader now, keeping as little legacy handling as possible. This supersedes the plan's recommendation to wait for another deliberate break. No scientific standard changes.
+2026-11-03. The special case for old audit-journal starts in the [combined maintainability plan](2026-11-03-maintainability-repair-plan.md). Max decided to remove the old journal reader now, keeping as little legacy handling as possible. This supersedes the plan's recommendation to wait for another deliberate break. No scientific standard changes.
 
 **Problem.** Audit starts written by 0.103.0 or earlier name neither the protocol nor the promise block. Reading them required a separate supersession rule: a later audit of the same mode could settle the call regardless of its protocol. Current starts already record both bindings.
 
