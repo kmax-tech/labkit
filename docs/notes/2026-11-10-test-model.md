@@ -153,7 +153,7 @@ After each implementation commit, record the completed step/gate, acceptance tes
 The limits:
 
 - **Reaching a site is not asserting it.** A test may build a finding and check something else.
-- **Only gate findings are traced**: 194 of the 226 finding sites. The remaining 26 `exit` and 6 `printed` sites are now explicit work in steps 2 and 3, not an exemption.
+- **Only gate findings are traced**: 194 of the 226 finding sites. The remaining 26 `exit` and 6 `printed` sites are now explicit work in steps 2b and 3, not an exemption.
 - **The scanner is incomplete too.** Review on 2026-11-10 reproduced all three channel counts with `finding_sites(read_modules(PACKAGE_DIR))`. `check_inventory._refusal_message` ignores a call used as the argument of `SystemExit`; the wrapped messages in `runlog._repeat_parent` and `runlog._require_no_open_twin` therefore do not appear even among the 226. The revised baseline must account for these before claiming full coverage.
 - **2 078 findings were built where no site stands.** They are gates passing a finding on with a prefix (`replace(f, text=FINALIZE + f.text)`, `labkit/gates/report_check.py:679`, `labkit/gates/finalize.py:211`) and are already counted at their own site.
 - **Unreached is a claim.** Three of the 30 unreached sites were checked by hand, and each is an error branch of a function whose ordinary path is tested: `labkit/checks/run_record_check.py:125`, `labkit/gates/report_decisions.py:269`, `labkit/gates/report_replacement.py:61`.
