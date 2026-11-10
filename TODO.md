@@ -70,7 +70,11 @@ Analyse 2026-11-10 — empfohlene Fortsetzung, noch kein zusätzlicher Beschluss
 
 Die Schritte einzeln committen und jeweils mit gültigem Gegenfall prüfen; vor jedem Code-Commit die vorgeschriebenen Lint-, Typ- und Suite-Prüfungen. Erst danach Aufgabe 6b abschließen und die Nutzungsrunde vorbereiten. Keine Veröffentlichung, kein Rollout und kein neuer Versuch aus dieser Analyse.
 
-### 7. Die nächste Nutzungsrunde durchführen — nach den Aufgaben 2–6
+### 6c. Ein klares Testmodell und der Umbau der Checks — vor der Nutzungsrunde, entschieden 2026-11-10
+
+Warum: labkit soll wartbar sein; Befunde der Nutzungsrunde müssten nach einem späteren Umbau ohnehin in die neue Architektur portiert werden, also kommt der Umbau zuerst (Entscheidung des Autors 2026-11-10). Stand: 187 Testdateien, 65 500 Zeilen; 13 Ablaufdateien (485 Tests) brauchen ~80 % der Laufzeit (383 s gesamt, 81 s ohne sie, 2026-11-10), viele Regeln sind nur über solche Abläufe geprüft. Vorschlag: vier Ebenen — Leser, Regel (Zustand rein, Befund raus, mit Gegenfall), Gate (Reihenfolge an einem Einstieg), Ablauf (wenige Wege je Zusicherung). Bestandsaufnahme gebaut 2026-11-10 (`python -m labkit.tools.test_inventory`), Ergebnis und Plan: [Note](docs/notes/2026-11-10-test-model.md) — von 194 Prüfstellen mit Gate-Befund erreichen 145 Tests unterhalb eines ganzen Kommandos, 19 nur über ganze Kommandos, 30 kein Test (meist Fehlerzweige); nur 54 auf Ebene einer einzelnen Prüffunktion; 168 nennen keine Regel. Nächster Schritt: Plan Schritt 1, ein Zustandsbauer für Tests (`tests/state_fixture.py`).
+
+### 7. Die nächste Nutzungsrunde durchführen — nach den Aufgaben 2–6 und 6c
 
 Die Runde prüft, ob Agenten fachlich korrekte Arbeit verlässlicher und mit weniger Aufwand abschließen. Sie bewertet die Aufgaben 2–6 als ein Paket, ohne Vorhersage je Änderung (entschieden 2026-11-06: Maßstab ist ein klares, wartbares Repo, nicht welche Einzeländerung wie viele Versuche umdreht). `limitation`-Entscheidungen weiter zählen: In Runde 23 waren es 36, zuvor 19 beziehungsweise 20. Dass ein Teil davon dem fertig angebotenen Entscheidungsbefehl folgte, ist bisher eine Vermutung.
 
