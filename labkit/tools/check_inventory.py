@@ -337,9 +337,16 @@ def _call_rules(
     return tuple(sorted({r for t in texts for r in RULE_ID.findall(t)}))
 
 
+#: the one spelling of a refusal with its way out (`gate.with_way_out`): a
+#: `SystemExit` around it is a refusal, its first argument the message
+WAY_OUT_WRAPPER = "with_way_out"
+
+
 def _refusal_message(n: ast.AST) -> ast.AST | None:
-    """The message of a `raise SystemExit(<message>)`; None for any other
-    node, and for an exit code or a main's result passed through."""
+    """The message of a `raise SystemExit(<message>)` — for
+    `SystemExit(with_way_out(<message>, <fix>))` its first argument; None
+    for any other node, and for an exit code or a main's result passed
+    through (`SystemExit(main(argv))`)."""
     if not (isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call)):
         return None
     exc = n.exc
@@ -348,9 +355,10 @@ def _refusal_message(n: ast.AST) -> ast.AST | None:
     ):
         return None
     arg = exc.args[0]
-    if isinstance(arg, ast.Call) or (
-        isinstance(arg, ast.Constant) and isinstance(arg.value, int)
-    ):
+    if isinstance(arg, ast.Call):
+        wrapped = isinstance(arg.func, ast.Name) and arg.func.id == WAY_OUT_WRAPPER
+        return arg.args[0] if wrapped and arg.args else None
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, int):
         return None
     return arg
 

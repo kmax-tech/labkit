@@ -49,6 +49,8 @@ CHECKS = module(
     def start(argv):
         if not argv:
             raise SystemExit(f"runlog: no area given")
+        if argv == ["--again"]:
+            raise SystemExit(with_way_out(f"runlog: {argv[0]} is a repeat", "name its parent"))
         raise SystemExit(main(argv))
 
 
@@ -95,10 +97,12 @@ class FindingSites(unittest.TestCase):
         self.assertEqual(len(drift), 1)
 
     def test_an_exit_with_a_message_counts_an_exit_code_does_not(self) -> None:
+        """A message given directly or through `with_way_out` is a refusal;
+        a main's exit code passed through is none."""
         start = [s for s in inv.finding_sites([CHECKS]) if s.unit.endswith(".start")]
         self.assertEqual(
             [(s.channel, s.wording) for s in start],
-            [("exit", "runlog: no area given")],
+            [("exit", "runlog: no area given"), ("exit", "runlog: {…} is a repeat")],
         )
 
     def test_a_printed_warning_line_counts(self) -> None:
