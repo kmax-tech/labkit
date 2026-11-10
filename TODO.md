@@ -1,6 +1,6 @@
 # TODO — labkit
 
-Hier steht, was als Nächstes ansteht, welche Entscheidungen gelten und welche Vorschläge auf einen Auslöser warten. Stand: 2026-11-06. Die Reihenfolge unten ist maßgeblich.
+Hier steht, was als Nächstes ansteht, welche Entscheidungen gelten und welche Vorschläge auf einen Auslöser warten. Stand: 2026-11-10. Die Reihenfolge unten ist maßgeblich.
 
 Die bisherige Fassung mit den ausführlichen Herleitungen liegt im [historischen Anhang](TODO-history-2026-11-06.md). Dort stehen auch ältere offene Hinweise; sie sind erhalten, aber vor einer Umsetzung am aktuellen Stand nachzustellen. Implementierte Verträge stehen in [Architektur](docs/architecture.md), [README](README.md) und [Laborstandard](labkit/docs/standard.md), Formatbrüche im [CHANGELOG](CHANGELOG.md).
 
@@ -72,7 +72,11 @@ Die Schritte einzeln committen und jeweils mit gültigem Gegenfall prüfen; vor 
 
 ### 6c. Ein klares Testmodell und der Umbau der Checks — vor der Nutzungsrunde, entschieden 2026-11-10
 
-Warum: labkit soll wartbar sein; Befunde der Nutzungsrunde müssten nach einem späteren Umbau ohnehin in die neue Architektur portiert werden, also kommt der Umbau zuerst (Entscheidung des Autors 2026-11-10). Stand: 187 Testdateien, 65 500 Zeilen; 13 Ablaufdateien (485 Tests) brauchen ~80 % der Laufzeit (383 s gesamt, 81 s ohne sie, 2026-11-10), viele Regeln sind nur über solche Abläufe geprüft. Vorschlag: vier Ebenen — Leser, Regel (Zustand rein, Befund raus, mit Gegenfall), Gate (Reihenfolge an einem Einstieg), Ablauf (wenige Wege je Zusicherung). Bestandsaufnahme gebaut 2026-11-10 (`python -m labkit.tools.test_inventory`), Ergebnis und Plan: [Note](docs/notes/2026-11-10-test-model.md) — von 194 Prüfstellen mit Gate-Befund erreichen 145 Tests unterhalb eines ganzen Kommandos, 19 nur über ganze Kommandos, 30 kein Test (meist Fehlerzweige); nur 54 auf Ebene einer einzelnen Prüffunktion; 168 nennen keine Regel. Ziele und Plan in der Note, Abschnitte „Targets“ und „The plan“; entschieden 2026-11-10: Regel als eigenes Feld im Befund mit ausdrücklichem Wert für offene Zuordnung; „erreicht“ ist Zwischenziel, Abnahme verlangt geprüften Befund und Gegenfall; Ablauftests gehen erst, wenn jede ihrer Zusicherungen anderswo gehalten wird. Nächster Schritt: Plan Schritt 1, ein Zustandsbauer für Tests (`tests/state_fixture.py`).
+Warum: labkit soll wartbar sein; der Autor hat den Umbau vor der Nutzungsrunde entschieden. Der verbindliche [Ablaufplan](docs/notes/2026-11-10-test-model.md#the-plan) hält die fünf Schritte, Abnahme je Schritt, das Testmodell und die Messbasis; der Fortschritt wird dort gepflegt. Hier stehen nur Platz in der Reihenfolge und nächste Aktion.
+
+**Stand:** Bestandsaufnahme gebaut, Umsetzung der fünf Schritte offen. **Nächste Aktion:** Schritt 1 — Zustandsbauer für Tests (`tests/state_fixture.py`) und erster Regeltest mit Fehler- und gültigem Gegenfall, ohne Repository. Danach Regelfeld, Umbau und Tests je Gate, Ablauftests ausdünnen, abschließend neu messen. Beim Umbau zählen alle erhaltenen Prüfstellen, auch die bisher nur über Gates erreichten; die 30 unerreichten und 19 nur über Kommandos erreichten sind der Anfang.
+
+**Abhängigkeit:** Vorher die offenen Punkte aus 6b abschließen; die sechs Entscheidungen zur Zweitprüfung bleiben beim Autor. Die einzelnen Regelzuordnungen sind teils noch Vorschläge und werden durch den Umbau nicht freigegeben. Die bereits beschlossenen Grenzen und der Umgang mit offenen Zuordnungen stehen im [Plan](docs/notes/2026-11-10-test-model.md#decisions-and-dependencies).
 
 ### 7. Die nächste Nutzungsrunde durchführen — nach den Aufgaben 2–6 und 6c
 
