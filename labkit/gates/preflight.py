@@ -69,7 +69,7 @@ from pathlib import Path
 
 from labkit.formats.commands import contract_command, fill_command, gate_command
 from labkit.formats.repo import area_args
-from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE, STATIC_EVIDENCE
+from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE, OPEN_RULE, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
     audit_gaps,
@@ -585,6 +585,7 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
         findings.warn(
             "pytest is not installed in this interpreter — tests not run",
             evidence_kind=GUARANTEED,
+            rule=OPEN_RULE,
         )
     else:
         for ln in tests.tail:
@@ -598,12 +599,14 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
                 f"dependency, no test collected) until "
                 f"`.venv/bin/python -m pytest {files}` passes",
                 check_outcome=NOT_EXECUTABLE,
+                rule=OPEN_RULE,
             )
             return
         findings.block(
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
             f"`.venv/bin/python -m pytest {files}` passes",
+            rule=OPEN_RULE,
         )
 
 

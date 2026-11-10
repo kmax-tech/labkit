@@ -11,7 +11,14 @@ from labkit.formats.area_state import state_of
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
 from labkit.formats import protocol_block, repo
-from labkit.formats.gate import OPEN_RULE, STATIC_EVIDENCE, Findings
+from labkit.formats.gate import (
+    NOT_EXECUTABLE,
+    OPEN_RULE,
+    STATIC_EVIDENCE,
+    VIOLATED,
+    Findings,
+)
+from labkit.gates.preflight import AreaTests, tell_test_run
 from labkit.formats.scope_sha import SourceError
 
 
@@ -405,6 +412,44 @@ class DataCountsStation(unittest.TestCase):
     def test_the_twin_a_scope_without_generated_counts_passes(self):
         held, found = self._station("data/x.csv, 4 items")
         self.assertEqual((held, found.found), (True, []))
+
+
+class AreaTestsTold(unittest.TestCase):
+    """What a run of the area's tests found, told by one rendering for
+    preflight and finalize (`preflight.tell_test_run`) from the value
+    `area_tests` gives — no test is run here."""
+
+    FILE = AREA / "tests" / "test_01_x.py"
+
+    def _told(self, state: str, tail: list[str]) -> Findings:
+        found = Findings(tell=None)
+        tested = AreaTests("tests/test_01_*.py", [self.FILE], state, tail)
+        tell_test_run(found, tested, "evaluate() lost its check")
+        return found
+
+    def test_no_pytest_warns(self):
+        (f,) = self._told("no-pytest", []).found
+        self.assertEqual((f.grade, f.rule), ("WARNING", OPEN_RULE))
+        self.assertIn("pytest is not installed", f.text)
+
+    def test_tests_that_did_not_run_block_as_not_executable(self):
+        (f,) = self._told("not run", ["ERROR collecting", "1 error in 0.1s"]).found
+        self.assertEqual(
+            (f.grade, f.check_outcome, f.rule), ("BLOCKER", NOT_EXECUTABLE, OPEN_RULE)
+        )
+        self.assertIn("test_01_x.py did not run (1 error in 0.1s)", f.text)
+
+    def test_failing_tests_block_naming_the_counts(self):
+        (f,) = self._told("failed", ["FAILED test_x", "1 failed in 0.1s"]).found
+        self.assertEqual(
+            (f.grade, f.check_outcome, f.rule), ("BLOCKER", VIOLATED, OPEN_RULE)
+        )
+        self.assertIn(
+            "test_01_x.py failed (1 failed in 0.1s) — evaluate() lost its check", f.text
+        )
+
+    def test_the_twin_passing_tests_are_a_note(self):
+        self.assertEqual(self._told("ok", []).found, [])
 
 
 class CriterionNStation(unittest.TestCase):
