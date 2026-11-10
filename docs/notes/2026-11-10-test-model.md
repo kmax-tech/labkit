@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1, 2a, 2b and 3 are built; all 256 sites are classified ([step 3](#step-3-for-the-other-gates-as-built-2026-11-10)). **Next:** step 4 — the report per scenario test, then the review of their assertions.
+**Status:** steps 1, 2a, 2b and 3 are built, and step 4's report per scenario test ([step 4](#4-reduce-scenario-variants)). **Next:** step 4's review of the scenario tests' assertions, starting with the four files that hold two thirds of the slow tier's time; each removal names its replacement.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -177,6 +177,8 @@ First extend the inventory with a report per scenario test: its pytest node id, 
 Then review the assertions of every scenario test in the report. Name the replacement test for each assertion before removing it. Keep the tests of state that one command passes to the next, of stored state that the next command reads, and of repairs across gates. Reach alone never establishes a replacement. Scenario tests that stay keep the `slow` mark.
 
 **The report, built 2026-11-10 (`03b53d3b`).** `test_inventory` lists each scenario test with the gate finding sites it reaches and those no faster test reaches below a whole command (`scenario_tests`). On the trace of `6e5783c0`: of the 485 scenario tests, 293 reached a traced site — 132 `covered` (a faster test reaches each of their sites), 161 `holds a site` — and 192 reached none and are `unknown`. Verified on two cases: `tests/test_adopt.py::Adopt::test_a_refused_adoption_leaves_no_kept_copy` is covered (its two sites have faster tests); `tests/test_handovers.py::HandoverRecovery::test_a_bad_record_name_does_not_hide_its_readable_blocker` held `labkit/gates/report_check.py:438`, reached otherwise only through whole commands — since step 3 a gate test reaches it too. Reach is no assertion: `covered` says where to review, never what to remove.
+
+**Where the slow tier's time lies (2026-11-10, `20e99f59`).** 485 scenario tests, 2 487 test-seconds, 273 s on 11 cores. Four files hold 1 690 s of it, two thirds: `tests/test_repair_paths.py` 618 s (46 tests), `tests/test_end_to_end.py` 565 s (63), `tests/test_handovers.py` 308 s (36), `tests/test_next_step.py` 200 s (28); then `tests/test_counter_cases.py` 137 s and `tests/test_registration_committed.py` 113 s. The 120 s target asks for about half of the test-seconds to go. The assertion review starts with these files, `covered` tests first; a test that keeps state one command passes to the next stays whatever its reach.
 
 ### 5. Measure and review
 
