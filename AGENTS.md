@@ -91,6 +91,14 @@ until that tag is pushed, that `pip install` fails.
   `docs/notes/` (one per topic, dated), which the code links. Test for each
   historical sentence: would removing it make a present limit unclear or a
   wrong change likelier? Then a short why stays; else it moves.
+- **A note names the thing, not its row id.** An id from a working table —
+  an audit finding (H3, M2), a probe case (E1, D21), a task or repetition of
+  a usage round (t34, r2) — stays in the table that defines it. Everywhere
+  else the note says what it is in a few words; if the sentence already says
+  it, the id goes. A reader who has not the table in front of them cannot
+  resolve the id (2026-11-10: 231 such ids in 43 notes; `term-check NOTE
+  --repo .` lists them). Promise ids use their current names
+  (`[criterion-1]`, not `[C1]`).
 - **Check, file access and display apart.** A validation or comparison is a
   pure function: input in, result or error out — a `validate_*` never
   writes. A format reads and writes its own files in its own module, and a
