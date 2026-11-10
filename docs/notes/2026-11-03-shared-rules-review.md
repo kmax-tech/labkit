@@ -1,8 +1,8 @@
 # Shared rules, duplicate comparisons, special cases
 
-2026-11-03. Code inspected: `e5fdf363`; the package is unchanged up to `424aed0e`, so every `path:line` below holds there too. A second, separate pass beside the [maintainability review](2026-11-03-maintainability-review.md) of the same day; both follow the [workflow simplification](2026-11-02-workflow-simplification.md) plan's "Review maintainability after the simplification". No production code was changed. Overlap: V3 here is that review's M1, V5 its M2.
+2026-11-03. Code inspected: `e5fdf363`; the package is unchanged up to `424aed0e`, so every `path:line` below holds there too. A second, separate pass beside the [maintainability review](2026-11-03-maintainability-review.md) of the same day; both follow the [workflow simplification](2026-11-02-workflow-simplification.md) plan's "Review maintainability after the simplification". No production code was changed. Overlap: two findings here are also in that review. The finding here on whether the declared run's code changed is that review's finding that presentation text controls withdrawal order. The finding here on what changed since the first measurement is that review's finding that decision guidance reasons from a different state.
 
-> The work order and the verdict on each finding are owned by the [consolidated repair plan](2026-11-03-maintainability-repair-plan.md), which re-ran R1, V1, V2 and S2 and narrows V1, V2 and N4 (below).
+> The work order and the verdict on each finding are owned by the [consolidated repair plan](2026-11-03-maintainability-repair-plan.md), which re-ran four findings — the template-placeholder check, the field-value lookup, the Data-profile comparison and the run-log reader that skips short rows — and narrows the field-value lookup, the Data-profile comparison and the rule for registering a report after measuring (below).
 
 ## Consolidated review and work order
 
@@ -12,15 +12,15 @@ The [combined repair plan](2026-11-03-maintainability-repair-plan.md) owns the c
 
 21 findings, no case for a rebuild. The main pattern: one fact is checked in two places with their own logic — 14 of 21. Three already disagree today, reproduced by running the functions (`.venv`, synthetic protocol texts):
 
-- A prompt that starts with `<` counts as the template placeholder at run start and runs without the drift check (R1).
-- A field label with a gloss, e.g. `Unit (per judged item)`, hides a changed value from `scope_differences` (V1; shown at the helper, not as a full adoption bypass).
-- A Data profile whose inner spacing changed counts as a changed registration while the audit stamp sees none (V2; a plain line wrap already compares equal).
+- A prompt that starts with `<` counts as the template placeholder at run start and runs without the drift check.
+- A field label with a gloss, e.g. `Unit (per judged item)`, hides a changed value from `scope_differences` (shown at the helper, not as a full adoption bypass).
+- A Data profile whose inner spacing changed counts as a changed registration while the audit stamp sees none (a plain line wrap already compares equal).
 
-Six findings (N1–N6) are places where `labkit-next` or another tool advises differently from what the gate then decides. Removable special cases are rare: two reading paths for old formats (S1, S2).
+Six findings are places where `labkit-next` or another tool advises differently from what the gate then decides. Removable special cases are rare: two reading paths for old formats.
 
 ## Method
 
-Three questions: (1) the same rule in more than one home; (2) two places comparing the same fact with their own logic; (3) branches for names, forms or old versions that a general rule already covers. First a mechanical search (functions defined in several modules, identical bodies, regex literals, module constants) — nothing duplicated. Then three readers each took one part (`gates/`, `formats/` + `checks/`, `tools/` + `run/`); every finding was re-read at its location, R1, V1 and V2 also run. "Status" says how far.
+Three questions: (1) the same rule in more than one home; (2) two places comparing the same fact with their own logic; (3) branches for names, forms or old versions that a general rule already covers. First a mechanical search (functions defined in several modules, identical bodies, regex literals, module constants) — nothing duplicated. Then three readers each took one part (`gates/`, `formats/` + `checks/`, `tools/` + `run/`); every finding was re-read at its location, and the three that already disagree (above) were also run. "Status" says how far.
 
 ## Same rule in more than one home
 
@@ -34,16 +34,16 @@ Three questions: (1) the same rule in more than one home; (2) two places compari
 
 ## Duplicate comparisons
 
-| No. | Fact                                              | Locations                                                                                                                                       | Divergence                                                                                                                                                                     | Status                           | Smallest change                                            |
-|-----|---------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------|------------------------------------------------------------|
-| V1  | value of a registration field                     | `labkit/formats/protocol_history.py:414`, `:465` look up the label as written; `labkit/formats/protocol_check.py:179`, `:899` by `field_name`   | With `**Unit (per judged item):**` `scope_differences` returns `[]` for a changed value, `audited_texts` sees it. A field written twice: stamp takes the first, hold the last. | run                              | One `field_values(text)` in `protocol_check` for all four. |
-| V2  | Data profile changed?                             | `labkit/formats/protocol_history.py:468` raw; `:391` and `labkit/formats/protocol_check.py:916` whitespace-folded                               | Changed inner spacing (`alpha beta` → `alpha  beta`) is a changed registration a successor must declare, though the audit stamp sees none; a plain line wrap compares equal.   | run                              | `scope_value` for `COMPARED_FIELDS` too.                   |
-| V3  | declared run's code changed? (= M1)               | `labkit/gates/report_check.py:888` searches "changed since <run>" in finalize's texts; finalize decides at `labkit/gates/finalize.py:999`       | Messages about predecessor runs or a deleted script name another id; report-check's stages then lack "withdraw the adoption first".                                            | read                             | finalize returns `held_by`.                                |
-| V4  | does a report block belong to this protocol?      | as written: `labkit/gates/report_hold.py:367`, `:374`, `:457`; resolved: `:914` (comment on the pilot bug), `labkit/gates/report_review.py:147` | `./PROTOCOL-x.md` or another spelling: missing in one place, present in the other. The 2026-11-01 pilot bug is fixed in one place only.                                        | read                             | Compare `block_protocol(report, b)` everywhere.            |
-| V5  | what changed since the first measurement? (≈ M2)  | `labkit/gates/audit_decisions.py:1013` (`_departure`) without release step; `labkit/gates/finalize.py:644` (`scope_now`) with `released_fields` | After a released in-place correction, `--decide fixed` can say "finalize refuses it" for a field finalize already released.                                                    | in the code, flow not reproduced | `_departure` reads `scope_now(…).held`.                    |
-| V6  | does the preflight audit cover this state?        | `labkit/formats/audit_gaps.py:239`–`275` field by field; `labkit/formats/findings.py:504` `AuditedState` as the one match                       | Same today; a new `AuditedState` field would not be compared by preflight.                                                                                                     | read                             | Compare `AuditedState` first, fields only for wording.     |
-| V7  | registration changed after the first measurement? | `labkit/gates/finalize.py:343`; `labkit/checks/result_render.py:295` (`_unregistered`)                                                          | Same for the promise block; finalize also holds scope changes, the successor rendering does not and still shows a verdict.                                                     | read                             | One pure function for both.                                |
-| V8  | registration ready for the full run?              | `labkit/gates/agent_hooks.py:344` says "registration written" (working tree); `labkit/run/start_check.py:146` requires it committed             | Hook says ready, runlog refuses "not committed" — one round lost.                                                                                                              | read                             | Hook calls the start check or names "committed".           |
+| No. | Fact                                                                                       | Locations                                                                                                                                       | Divergence                                                                                                                                                                     | Status                           | Smallest change                                            |
+|-----|--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------|------------------------------------------------------------|
+| V1  | value of a registration field                                                              | `labkit/formats/protocol_history.py:414`, `:465` look up the label as written; `labkit/formats/protocol_check.py:179`, `:899` by `field_name`   | With `**Unit (per judged item):**` `scope_differences` returns `[]` for a changed value, `audited_texts` sees it. A field written twice: stamp takes the first, hold the last. | run                              | One `field_values(text)` in `protocol_check` for all four. |
+| V2  | Data profile changed?                                                                      | `labkit/formats/protocol_history.py:468` raw; `:391` and `labkit/formats/protocol_check.py:916` whitespace-folded                               | Changed inner spacing (`alpha beta` → `alpha  beta`) is a changed registration a successor must declare, though the audit stamp sees none; a plain line wrap compares equal.   | run                              | `scope_value` for `COMPARED_FIELDS` too.                   |
+| V3  | declared run's code changed? (= the other review's withdrawal-order finding)               | `labkit/gates/report_check.py:888` searches "changed since <run>" in finalize's texts; finalize decides at `labkit/gates/finalize.py:999`       | Messages about predecessor runs or a deleted script name another id; report-check's stages then lack "withdraw the adoption first".                                            | read                             | finalize returns `held_by`.                                |
+| V4  | does a report block belong to this protocol?                                               | as written: `labkit/gates/report_hold.py:367`, `:374`, `:457`; resolved: `:914` (comment on the pilot bug), `labkit/gates/report_review.py:147` | `./PROTOCOL-x.md` or another spelling: missing in one place, present in the other. The 2026-11-01 pilot bug is fixed in one place only.                                        | read                             | Compare `block_protocol(report, b)` everywhere.            |
+| V5  | what changed since the first measurement? (≈ the other review's decision-guidance finding) | `labkit/gates/audit_decisions.py:1013` (`_departure`) without release step; `labkit/gates/finalize.py:644` (`scope_now`) with `released_fields` | After a released in-place correction, `--decide fixed` can say "finalize refuses it" for a field finalize already released.                                                    | in the code, flow not reproduced | `_departure` reads `scope_now(…).held`.                    |
+| V6  | does the preflight audit cover this state?                                                 | `labkit/formats/audit_gaps.py:239`–`275` field by field; `labkit/formats/findings.py:504` `AuditedState` as the one match                       | Same today; a new `AuditedState` field would not be compared by preflight.                                                                                                     | read                             | Compare `AuditedState` first, fields only for wording.     |
+| V7  | registration changed after the first measurement?                                          | `labkit/gates/finalize.py:343`; `labkit/checks/result_render.py:295` (`_unregistered`)                                                          | Same for the promise block; finalize also holds scope changes, the successor rendering does not and still shows a verdict.                                                     | read                             | One pure function for both.                                |
+| V8  | registration ready for the full run?                                                       | `labkit/gates/agent_hooks.py:344` says "registration written" (working tree); `labkit/run/start_check.py:146` requires it committed             | Hook says ready, runlog refuses "not committed" — one round lost.                                                                                                              | read                             | Hook calls the start check or names "committed".           |
 
 ### Advice and gate check differently
 
@@ -58,7 +58,7 @@ Three questions: (1) the same rule in more than one home; (2) two places compari
 | N5  | anything open after a handover?               | `next_step.py:221` checks only `report_owed`, else "nothing"                                                                                              | `hold_registered` (`report_check.py:1046`) also checks `report_binding_gap`                                                              | reported, not re-read | Gap list as one pure function.                             |
 | N6  | does the progress account suffice?            | `next_step.py:332` accepts it even when another block does not read                                                                                       | `report_hold.py:393` does not (`why`)                                                                                                    | reported, not re-read | One `account_owed` for both.                               |
 
-Belongs to R1: the prompt-drift comparison itself is written twice, `labkit/run/lanes.py:345` and `labkit/checks/prompt_check.py:216`. Same today; pull it into one function with R1.
+Belongs to the template-placeholder finding (a prompt that starts with `<`): the prompt-drift comparison itself is written twice, `labkit/run/lanes.py:345` and `labkit/checks/prompt_check.py:216`. Same today; pull it into one function together with that fix.
 
 ## Special cases
 
@@ -71,21 +71,21 @@ Most old-format branches detect and refuse, naming the version — allowed by "B
 
 ## To decide
 
-1. **Report after the first measurement (N4):** bound at every cost tier (the gate gets stricter) or only at `low` (`protocol-fill` stops refusing)? Today `protocol-fill` refuses, a hand edit passes every gate.
-2. **Journal starts of labkit 0.103.0 and earlier (S1):** refuse them in the next Breaking release, or keep them as a justified exception?
+1. **Report after the first measurement:** bound at every cost tier (the gate gets stricter) or only at `low` (`protocol-fill` stops refusing)? Today `protocol-fill` refuses, a hand edit passes every gate.
+2. **Journal starts of labkit 0.103.0 and earlier:** refuse them in the next Breaking release, or keep them as a justified exception?
 
 ## Open points
 
 By risk. Each one is its own small commit with a twin test (today's wrong case, the correct variant still passing). None needs a rebuild.
 
-1. R1 + prompt drift.
-2. V1 + V2: one `field_values(text)` by `field_name`, folded whitespace for Data profile.
-3. N4, after the decision above.
-4. S2.
-5. N1, N2.
-6. V3, V4, V5 (V3/V5 overlap M1/M2 of the other review; reproduce V5 first).
-7. N3, N5, N6 (re-read N5, N6 first).
-8. R2–R5, V6–V8: merge the copies while they still agree.
-9. S1, after the decision above.
+1. The template-placeholder check (a prompt that starts with `<`) and the prompt-drift comparison.
+2. The field-value lookup and the Data-profile comparison: one `field_values(text)` by `field_name`, folded whitespace for Data profile.
+3. Registering a report after the first measurement, after the decision above.
+4. The run-log reader that silently skips short rows.
+5. Advice that differs from the gate on whether a run is still open and whether the lock holder is still writing.
+6. Whether the declared run's code changed, whether a report block belongs to this protocol, and what changed since the first measurement (the first and the third overlap the other review's two findings; reproduce the third first).
+7. Which reports the commit holds, whether anything is open after a handover, and whether the progress account suffices (re-read the last two first).
+8. The seven copies that agree today — the one-`<…>` value test, the declared run, the measured run, the two text pieces, the preflight coverage, the registration change after the first measurement and the readiness for the full run: merge them while they still agree.
+9. Old journal starts of labkit 0.103.0 and earlier, after the decision above.
 
-Not found: duplicated hash functions, regex literals or module constants, layering violations, old-format reading in `tools/` and `run/` beyond S2. No module split is proposed: no finding depends on module size.
+Not found: duplicated hash functions, regex literals or module constants, layering violations, old-format reading in `tools/` and `run/` beyond the run-log reader that skips short rows. No module split is proposed: no finding depends on module size.
