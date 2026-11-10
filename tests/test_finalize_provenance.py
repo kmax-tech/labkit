@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import digests
+from labkit.formats import digests, runs
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.checks import run_record_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
@@ -178,6 +178,21 @@ class Provenance(unittest.TestCase):
         rc, out = self._finalize()
         self.assertEqual(rc, 1)
         self.assertIn("source not frozen", out)
+
+    def test_a_run_declaring_no_input_file_passes_and_says_so(self):
+        """data=runlog.NO_INPUTS: the author's declaration, told apart from a
+        data= left out — it passes, named as the author's word."""
+        self._run(SHORT, {runs.NO_INPUTS_KEY: runs.NO_INPUTS_DECLARED}, commit=True)
+        rc, out = self._finalize()
+        self.assertNotIn("source not frozen", out)
+        self.assertIn("declares it reads no input file", out)
+
+    def test_the_twin_an_empty_record_is_no_declaration(self):
+        """An old record's empty data= gains no release: only the key says it."""
+        self._run(SHORT, {}, commit=True)
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1)
+        self.assertIn("data=runlog.NO_INPUTS", out)
 
     def test_a_source_the_record_holds_no_checksum_of_blocks(self):
         data = self._frozen()

@@ -52,10 +52,12 @@ from labkit.formats.gate import (
     outcome_of_failed_read,
 )
 from labkit.formats.runs import (
+    CONFIG_FILE,
     ArtefactError,
     OutputEntry,
     RunConfig,
     RunConfigError,
+    declares_no_inputs,
     read_data,
     read_metrics,
     read_outputs,
@@ -478,7 +480,8 @@ def provenance_findings(
     (`_source_finding`, the standard's Fixed inputs: large or protected
     data stay out of the repository, which holds their source or access
     route and version in Data / scope). OUTSIDE names each source kept out
-    of git, by an ignore rule or by lying outside the repository. Raises GitError when git cannot list a directory source's tracked
+    of git, by an ignore rule or by lying outside the repository, and a
+    run's declaration that it reads no input file (`runs.NO_INPUTS_KEY`). Raises GitError when git cannot list a directory source's tracked
     files or say which are ignored (`repo.ignoring_rules`): finalize then ends
     in that error, not in a blocker with a way out that may not lead out.
     A `data=` entry naming no path blocks. Outside a git repository every
@@ -487,6 +490,12 @@ def provenance_findings(
     sources, blockers = _recorded_sources(area, answering_run)
     warnings: list[str] = []
     outside: list[str] = []
+    cfg = read_run_config(answering_run)
+    if not sources and not blockers and cfg is not None:
+        outside.append(
+            "the run declares it reads no input file (data=runlog.NO_INPUTS) — "
+            "the author's word; the script is not checked for it"
+        )
     registered = read_outputs(answering_run)
     outputs: list[Path] = [o.path for o in registered or []]
     if registered is None:
@@ -538,11 +547,17 @@ def _recorded_sources(
             )
         ]
     if not entries:
+        cfg = read_run_config(answering_run)
+        if cfg is not None and declares_no_inputs(
+            cfg.data, str(answering_run / CONFIG_FILE)
+        ):
+            return [], []  # the author declared no input file (`provenance_findings`)
         return [], [
             blocker(
                 "source not frozen — the run carries no `data=`",
                 fix="pass data={name: path} to runlog.run so sha and rows are "
-                f"recorded, then {measure_anew(area)}",
+                f"recorded, or data=runlog.NO_INPUTS for a run that reads no "
+                f"input file, then {measure_anew(area)}",
             )
         ]
     return [

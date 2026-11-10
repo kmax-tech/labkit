@@ -390,6 +390,19 @@ class Runs(unittest.TestCase):
         self.assertTrue((run.dir / "completion.json").exists())
         self.assertIn(run.run_id, (self.area / "runs.tsv").read_text())
 
+    def test_no_inputs_is_recorded_apart_from_data_left_out(self) -> None:
+        """`data=runlog.NO_INPUTS` records the author's declaration; a run
+        whose data= is left out records an empty table."""
+        with runlog.run("e", {}, self.area, data=runlog.NO_INPUTS) as declared:
+            declared.metrics(n=1)
+        with runlog.run("e", {}, self.area) as left_out:
+            left_out.metrics(n=1)
+        record = json.loads((declared.dir / "config.json").read_text())["data"]
+        self.assertEqual(record, {runs.NO_INPUTS_KEY: runs.NO_INPUTS_DECLARED})
+        self.assertEqual(
+            json.loads((left_out.dir / "config.json").read_text())["data"], {}
+        )
+
     def test_store_resumes_by_id_and_holds_its_rows(self) -> None:
         out = self.area / "answers.jsonl"
         with batch.Store(out) as store:

@@ -382,6 +382,14 @@ class OutputEntry:
 #: the one `data=` key of a run's record that holds no input but the
 #: leakage verdict across splits, a sentence (`provenance.describe_data`)
 LEAKAGE_CHECK_KEY = "leakage_check"
+#: the other: the author's declaration that the run reads no input file
+#: (`runlog.run(data=runlog.NO_INPUTS)`), so a record without inputs is told
+#: apart from one whose `data=` was left out — the author's word, not a
+#: check that the script reads no file
+NO_INPUTS_KEY = "no_input_files"
+NO_INPUTS_DECLARED = "declared by the author: the run reads no input file"
+#: the `data=` keys that hold no input
+RESERVED_DATA_KEYS = (LEAKAGE_CHECK_KEY, NO_INPUTS_KEY)
 
 
 @dataclass(frozen=True)
@@ -408,7 +416,7 @@ def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
     missing path into the text "None"."""
     out: list[DataEntry] = []
     for key, value in data.items():
-        if key == LEAKAGE_CHECK_KEY:
+        if key in RESERVED_DATA_KEYS:
             continue
         if not isinstance(value, dict):
             raise ArtefactError(f"{where}: data[{key!r}] is no entry ({value!r})")
@@ -433,6 +441,25 @@ def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
             raise ArtefactError(f"{where}: data[{key!r}]: rows is {rows!r}")
         out.append(DataEntry(key, path, sha, cast("int | None", rows)))
     return out
+
+
+def declares_no_inputs(data: JsonObject, where: str) -> bool:
+    """Does a run record's `data=` table DATA carry the author's declaration
+    that the run reads no input file (NO_INPUTS_KEY)? Raises ArtefactError
+    naming WHERE when the key holds anything but NO_INPUTS_DECLARED, or
+    stands beside an input."""
+    if NO_INPUTS_KEY not in data:
+        return False
+    if data[NO_INPUTS_KEY] != NO_INPUTS_DECLARED:
+        raise ArtefactError(
+            f"{where}: data[{NO_INPUTS_KEY!r}] = {data[NO_INPUTS_KEY]!r}, not "
+            f"{NO_INPUTS_DECLARED!r}"
+        )
+    if set(data) - set(RESERVED_DATA_KEYS):
+        raise ArtefactError(
+            f"{where}: data declares no input file and names inputs beside it"
+        )
+    return True
 
 
 def read_data(run_dir: Path) -> list[DataEntry] | None:

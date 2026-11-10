@@ -100,7 +100,13 @@ from labkit.formats.run_index import (
     read_index,
     read_index_now,
 )
-from labkit.formats.runs import metrics_path, patch_path, run_path
+from labkit.formats.runs import (
+    NO_INPUTS_DECLARED,
+    NO_INPUTS_KEY,
+    metrics_path,
+    patch_path,
+    run_path,
+)
 from labkit.run import batch, code_repos, detached
 from labkit.run.detached import DetachedStart
 from labkit.formats import console, repo
@@ -348,6 +354,19 @@ def _make_run_dir(base_dir: Path) -> tuple[str, Path]:
     )
 
 
+class NoInputs:
+    """The type of NO_INPUTS: `data=runlog.NO_INPUTS` declares that a run
+    reads no input file — told apart, in the run's record
+    (`runs.NO_INPUTS_KEY`), from a `data=` left out or empty, which declare
+    nothing. The author's word, not a check of the script."""
+
+    def __repr__(self) -> str:
+        return "runlog.NO_INPUTS"
+
+
+NO_INPUTS = NoInputs()
+
+
 class Run:
     """One measure run: its directory, its frozen config, the outputs it
     registers and the metrics it reports.
@@ -386,7 +405,7 @@ class Run:
         experiment: str,
         config: dict,
         base_dir: Path,
-        data: dict | None = None,
+        data: dict | NoInputs | None = None,
         run_kind: RunKind = "probe",
         protocol: str | Path | None = None,
         derived_from: str | None = None,
@@ -412,7 +431,12 @@ class Run:
         _check_run_index(base_dir)
         if prepared.run_kind == MEASUREMENT:
             _require_no_open_twin(base_dir)
-        described = describe_data(data, base_dir) if data else {}
+        # NO_INPUTS: the author's declaration, recorded as such; a data= left
+        # out or empty records nothing, and a check holds that apart
+        if isinstance(data, NoInputs):
+            described: dict = {NO_INPUTS_KEY: NO_INPUTS_DECLARED}
+        else:
+            described = describe_data(data, base_dir) if data else {}
         unfrozen_ack, audit_failed = False, None
         if prepared.run_kind == MEASUREMENT:
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
@@ -747,7 +771,7 @@ class run:
         experiment: str,
         config: dict,
         base_dir: str | Path | None = None,
-        data: dict | None = None,
+        data: dict | NoInputs | None = None,
         run_kind: RunKind = "probe",
         protocol: str | Path | None = None,
         derived_from: str | None = None,

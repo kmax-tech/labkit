@@ -27,6 +27,7 @@ from labkit.formats.digests import DIGEST_CHARS, digest, file_digest, tree_diges
 from labkit.formats.runs import (
     DIRTY_MARK,
     LEAKAGE_CHECK_KEY,
+    RESERVED_DATA_KEYS,
     NO_GIT,
     RECORD_SHA_CHARS,
     recorded_path,
@@ -423,10 +424,17 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
     values remain text datasets and are checked for row-id overlap.
     Missing inputs and text decoding failures propagate before a run starts;
     a decoding failure names the key, the file and `BinaryInput`
-    (`BINARY_INPUT_WAY`).
+    (`BINARY_INPUT_WAY`). A key labkit reserves (`runs.RESERVED_DATA_KEYS`)
+    raises ValueError: it holds no input.
     """
     out: dict = {}
     text_paths = {}
+    reserved = sorted(set(paths) & set(RESERVED_DATA_KEYS))
+    if reserved:
+        raise ValueError(
+            f"data[{reserved[0]!r}]: a key labkit reserves in the run's record — "
+            f"name the input otherwise"
+        )
     for key, value in paths.items():
         binary = isinstance(value, BinaryInput)
         p = Path(value.path if binary else value)
