@@ -14,16 +14,16 @@
 
 Extracting a check and testing its condition belong in the same commit. Repeat step 3 in small commits by gate. Use touched tests while working and the repository's required commit checks; run the full suite when measurement requires it.
 
-| Step       | Deliverable                                                        | Acceptance                                                                                                                    |
-|------------|--------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| 1          | Minimal state builder, run-input decision and first migrated check | Violation and valid twin run from data; inconsistent test inputs remain unchanged; reference and boundary guards are recorded |
-| 2a         | Shared rule value and finalize site account                        | Invalid rule values are refused; finalize's sites are listed at the pilot's start commit                                      |
-| 3, pilot   | Migrate finalize                                                   | Its conditions, composition and boundary exceptions meet the contracts below; stop at the checkpoint                          |
-| Checkpoint | Pilot cost and remaining-effort estimate                           | Author chooses continuation, a narrower scope/time cap, or deferral                                                           |
-| 2b         | Rule data throughout, inventory coverage and comparison            | Remaining sites and recovered refusals are accounted for; changes are explained through the site account                      |
-| 3, rest    | Migrate remaining gates and run-time checks                        | Every site maps to condition/composition tests or a justified exception                                                       |
-| 4          | Candidate report and fewer scenario variants                       | Every removed assertion has a named replacement; unique hand-overs remain covered                                             |
-| 5          | Final inventory, review and timing                                 | Report all targets, open assignments, exceptions and timing results                                                           |
+| Step       | Deliverable                                                        | Acceptance                                                                                                                        |
+|------------|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| 1          | Minimal state builder, run-input decision and first migrated check | Violation and valid twin run from data; inconsistent test inputs remain unchanged; reference and boundary guards are recorded     |
+| 2a         | Shared rule value in `GateFinding` and finalize site account       | Invalid rule values are refused; every `GateFinding.rule` uses the value; finalize's sites are listed at the pilot's start commit |
+| 3, pilot   | Migrate finalize                                                   | Its conditions, composition and boundary exceptions meet the contracts below; stop at the checkpoint                              |
+| Checkpoint | Pilot cost and remaining-effort estimate                           | Author chooses continuation, a narrower scope/time cap, or deferral                                                               |
+| 2b         | Rule data throughout, inventory coverage and comparison            | Remaining sites and recovered refusals are accounted for; changes are explained through the site account                          |
+| 3, rest    | Migrate remaining gates and run-time checks                        | Every site maps to condition/composition tests or a justified exception                                                           |
+| 4          | Candidate report and fewer scenario variants                       | Every removed assertion has a named replacement; unique hand-overs remain covered                                                 |
+| 5          | Final inventory, review and timing                                 | Report all targets, open assignments, exceptions and timing results                                                               |
 
 ### 1. Establish the reference check
 
@@ -35,9 +35,9 @@ Migrate one condition with its violation and valid twin under the [check contrac
 
 ### 2a. Prepare only what finalize needs
 
-Define and validate the [shared rule value](#rule-assignment); populate finalize's existing `GateFinding.rule` and the constructors it uses. The first migrated test then asserts the normalized value.
+Define and validate the [shared rule value](#rule-assignment) and switch `GateFinding.rule` to it at once, at every site that sets it — about 15 `rule=` uses in 7 modules on 2026-11-10, none in finalize — so the field never accepts the old string and the new value side by side. Then populate it at finalize's sites. The first migrated test asserts the normalized value.
 
-Open the [site account](#site-account) for finalize at the pilot's start commit, covering all three channels. Check the source for refusals the scanner misses. Broader constructor changes, audit records and inventory tooling wait for 2b.
+Open the [site account](#site-account) for finalize at the pilot's start commit, covering all three channels. Check the source for refusals the scanner misses. The audit records' `findings.Finding.rule`, constructors that cannot yet receive a rule, and inventory tooling wait for 2b.
 
 ### 3. Migrate by gate, stopping after finalize
 
@@ -60,7 +60,7 @@ Record the pilot's start commit, selected sites and baseline timings before migr
 
 ### 2b. Complete rule data and measurement
 
-Extend remaining constructors and audit records to the shared rule value. Check public API and on-disk format obligations before changing accepted values; follow the repository's transition and Breaking policies. Inventory rule counts read the data field, not message text. Extend forwarding tests as specified below.
+Extend the audit records (`findings.Finding.rule`) and the constructors that cannot yet receive a rule to the shared rule value. Check public API and on-disk format obligations before changing accepted values; follow the repository's transition and Breaking policies. Inventory rule counts read the data field, not message text. Extend forwarding tests as specified below.
 
 Complete the site account and repair the scanner's known omission: `check_inventory._refusal_message` excludes a `SystemExit` argument that is a call, hiding `runlog` messages wrapped in `with_way_out`. A known wrapped refusal and a direct refusal must both appear; command exit-code forwarding must not become a finding. Review other scanner boundaries and add discovered sites explicitly to the denominator.
 
@@ -114,7 +114,7 @@ Define English tags once; reject invalid ids and contradictory tag/payload combi
 
 ### Site account
 
-Create one TSV beside this note, one row per site: source commit, channel, qualified function, normalized message template, source `file:line`, category, underlying condition/forwarding behavior, rule value and named tests. Track removals, merges and extraction exceptions with their reasons. The row carries the identity across a move; source lines are locations at a commit. This account is the sole old-to-new mapping and per-site implementation record.
+Create one TSV beside this note, one row per site: source commit, channel, qualified function, normalized message template, source `file:line`, category, underlying condition/forwarding behavior, rule value and named tests. Generate the key columns — channel, qualified function, normalized message template, `file:line` — from `check_inventory.finding_sites` (`FindingSite.channel`, `unit`, `wording`, `path`, `line`), the same fields 2b's comparison reads; fill only category, condition, rule value and tests by hand, and add by hand only a refusal the scanner misses, marked as such. Track removals, merges and extraction exceptions with their reasons. The row carries the identity across a move; source lines are locations at a commit. This account is the sole old-to-new mapping and per-site implementation record.
 
 ### Architecture guards
 
