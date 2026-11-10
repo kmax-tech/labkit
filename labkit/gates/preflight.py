@@ -242,6 +242,7 @@ def preflight_area(
         findings.block(
             f"HEAD (must): {report.head_error}",
             fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
+            rule=OPEN_RULE,
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
@@ -319,29 +320,35 @@ def check_protocol_fields(
         findings.block(
             f"MISSING (must): {label}",
             fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
+            rule=OPEN_RULE,
         )
     for twice in report.repeated:
         findings.block(
             f"REPEATED (must): {twice}",
             fix=f"{protocol_check.REPEATED_WAY_OUT}; then "
             f"`{gate_command('protocol-check', protocol)}`",
+            rule=OPEN_RULE,
         )
     for n, label in report.must_holes:
         findings.block(
             f"{protocol.name}:{n}: PLACEHOLDER (must): {label}",
             fix=f"replace the placeholder with this protocol's own text; "
             f"{contract_hint(protocol)}",
+            rule=OPEN_RULE,
         )
     for finding in id_findings:
         findings.take(finding)
     if lowered:
-        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE)
+        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE)
     for label in report.missing_should:
-        findings.warn(f"missing (should): {label}", evidence_kind=GUARANTEED)
+        findings.warn(
+            f"missing (should): {label}", evidence_kind=GUARANTEED, rule=OPEN_RULE
+        )
     for n, label in report.soft_holes:
         findings.warn(
             f"{protocol.name}:{n}: placeholder (should): {label}",
             evidence_kind=GUARANTEED,
+            rule=OPEN_RULE,
         )
     if not (
         report.missing_must
@@ -382,6 +389,7 @@ def check_promise_sentences(
             f"(`{fill_command(protocol, '<id> sentence=<the promise>')}`); "
             f"{contract_hint(protocol)}",
             evidence_kind=GUARANTEED,
+            rule=OPEN_RULE,
         )
 
 
@@ -421,8 +429,10 @@ def _owed(findings: Findings, frozen: bool) -> Callable[[str, str], None]:
     """How a gap the freeze owes is told, with its way out: a blocker once
     FROZEN, else a warning — a mechanical fact either way (GUARANTEED)."""
     if frozen:
-        return lambda msg, fix: findings.block(msg, fix=fix)
-    return lambda msg, fix: findings.warn(msg, fix=fix, evidence_kind=GUARANTEED)
+        return lambda msg, fix: findings.block(msg, fix=fix, rule=OPEN_RULE)
+    return lambda msg, fix: findings.warn(
+        msg, fix=fix, evidence_kind=GUARANTEED, rule=OPEN_RULE
+    )
 
 
 def check_audit_records(
@@ -437,7 +447,7 @@ def check_audit_records(
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
-        findings.block(str(exc), fix=audit_findings.record_way(area))
+        findings.block(str(exc), fix=audit_findings.record_way(area), rule=OPEN_RULE)
         return []
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
@@ -486,7 +496,7 @@ def check_handed_over_elsewhere(
     try:
         elsewhere = audit_findings.open_elsewhere(area, experiments)
     except audit_findings.FindingsError as exc:
-        findings.warn(str(exc), evidence_kind=GUARANTEED)
+        findings.warn(str(exc), evidence_kind=GUARANTEED, rule=OPEN_RULE)
         elsewhere = []
     handed: dict[Path, set[str]] = {}
     told = 0
@@ -494,7 +504,9 @@ def check_handed_over_elsewhere(
         if other not in handed:
             kept = evidence.read_evidence(other, staged=False)
             if kept.handovers_unread:
-                findings.warn(kept.handovers_unread, evidence_kind=GUARANTEED)
+                findings.warn(
+                    kept.handovers_unread, evidence_kind=GUARANTEED, rule=OPEN_RULE
+                )
             handed[other] = set(kept.handed_over_entries)
         if handovers.entry(r, audit_findings.number_of(r, f)) not in handed[other]:
             continue
@@ -548,6 +560,7 @@ def check_working_tree(findings: Findings, repo: Path) -> None:
         findings.warn(
             f"uncommitted changes in {repo} (commit or stash before the run)",
             evidence_kind=GUARANTEED,
+            rule=OPEN_RULE,
         )
     else:
         findings.note("  clean")
@@ -559,7 +572,7 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
     the hooks (or with an older labkit's) runs on good intentions only."""
     gaps = install_hooks.check(git_repo)
     for g in gaps:
-        findings.warn(g, evidence_kind=GUARANTEED)
+        findings.warn(g, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     if gaps:
         findings.note("  fix with  .venv/bin/labkit-hooks install")
     else:

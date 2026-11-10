@@ -81,6 +81,7 @@ from labkit.formats.comment_blocks import (
     opener,
     with_comment_block,
 )
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import STATIC_EVIDENCE, WARNING, GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.commands import (
@@ -286,6 +287,7 @@ def block_gaps(
                     "(`labkit-adopt <area> <run_id>`) "
                     "and write it again",
                     step=adopt_command(report.parent / b.protocol),
+                    rule=OPEN_RULE,
                 )
             )
         elif s.run_id != b.run_id:
@@ -294,6 +296,7 @@ def block_gaps(
                     f"{at}: the protocol has adopted run {s.run_id} now",
                     fix=f"{into} replaces the block",
                     step=into_cmd,
+                    rule=OPEN_RULE,
                 )
             )
         elif s.body is None:
@@ -303,6 +306,7 @@ def block_gaps(
                     fix=f"repair what the sentence names in the protocol, then "
                     f"{into} writes the block again",
                     step=into_cmd,
+                    rule=OPEN_RULE,
                 )
             )
         elif b.body != s.body:
@@ -311,6 +315,7 @@ def block_gaps(
                     f"{at} differs from the protocol's rendering",
                     fix=f"{into} writes it again",
                     step=into_cmd,
+                    rule=OPEN_RULE,
                 )
             )
     return gaps
@@ -378,10 +383,12 @@ def cited_gaps(
         else:
             continue
         if n in structured:
-            gaps.append(blocker(why, fix=fix))
+            gaps.append(blocker(why, fix=fix, rule=OPEN_RULE))
         else:
             gaps.append(
-                GateFinding(WARNING, why, fix=fix, evidence_kind=STATIC_EVIDENCE)
+                GateFinding(
+                    WARNING, why, fix=fix, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE
+                )
             )
     return gaps
 
@@ -579,6 +586,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
                     f"{at} repeats the block at line {seen[key]} — one block per "
                     f"protocol and run",
                     fix=f"remove one, then {REPORT_CHECK_AGAIN}",
+                    rule=OPEN_RULE,
                 )
             )
         else:
@@ -591,6 +599,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
                     fix=f"say what refused the adoption and what was found: "
                     f"`{discuss}`",
                     step=discuss,
+                    rule=OPEN_RULE,
                 )
             )
         elif d.body != discussion_body(d.run_id, d.why.strip()):
@@ -599,6 +608,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
                     f"{at}: its line differs from its head",
                     fix=f"edit the head with `protocol-fill … --discuss {d.run_id} "
                     f"--why … --into <FILE>`, not the line",
+                    rule=OPEN_RULE,
                 )
             )
     return gaps

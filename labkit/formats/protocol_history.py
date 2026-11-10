@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 from labkit.formats import runs
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
@@ -288,6 +289,7 @@ def check_protocol_id(
                 fix="re-stamp the copy: `labkit-init exp <name> --kind …` writes "
                 "a fresh id, and the copy's text moves into it",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
     was = id_in_git_head(path)
@@ -300,6 +302,7 @@ def check_protocol_id(
                 f"resolving.",
                 form=AS_WRITTEN,
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
     return out
@@ -392,6 +395,7 @@ def check_annotation_validity(
             fix="bind it to one apply protocol of this repo whose head has adopted "
             "its result (`[result] run`, adopted there first), or name a DOI",
             evidence_kind=GUARANTEED,
+            rule=OPEN_RULE,
         )
     ]
 

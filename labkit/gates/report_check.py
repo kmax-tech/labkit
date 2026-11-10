@@ -94,6 +94,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats import commands
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
@@ -252,12 +253,13 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
                 f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
                 f"then `{freeze_command(ctx.protocol)}`",
                 step=freeze_command(ctx.protocol),
+                rule=OPEN_RULE,
             )
         ]
     )
     report = check_fields(ctx.text)
     gaps += [
-        blocker(f"{name}: {label}", fix=f"write the field; {fields}")
+        blocker(f"{name}: {label}", fix=f"write the field; {fields}", rule=OPEN_RULE)
         for label in report.missing_must
     ]
     # a must field still holding its `<…>` placeholder blocks here as
@@ -266,6 +268,7 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
         blocker(
             f"{name}: line {n}: {label} still a placeholder",
             fix=f"replace it with this protocol's own text; {fields}",
+            rule=OPEN_RULE,
         )
         for n, label in report.must_holes
     ]
@@ -280,6 +283,7 @@ def repeated_gaps(ctx: Checked) -> list[GateFinding]:
         blocker(
             f"{ctx.protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `{gate_command('protocol-check', ctx.protocol)}`",
+            rule=OPEN_RULE,
         )
         for twice in check_fields(ctx.text).repeated
     ]
@@ -317,6 +321,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 "not a git repository — the registration cannot be held to the "
                 "commit of the first measurement",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         ]
     return [gap for rd in first for gap in _registration_at(ctx, root, rd, len(first))]
@@ -349,6 +354,7 @@ def _registration_at(
                 f"cannot be held to what stood before the number (LAB-003 No run "
                 f"without an intent paragraph)",
                 fix=anew,
+                rule=OPEN_RULE,
             )
         ]
     if then.cause == UNKNOWN_COMMIT:
@@ -360,6 +366,7 @@ def _registration_at(
                 f"read (LAB-003 No run without an intent paragraph)",
                 fix="fetch that commit from a clone that has it (`git fetch "
                 "--unshallow` in a shallow clone)",
+                rule=OPEN_RULE,
             )
         ]
     assert commit is not None, "a recorded commit the repository holds"
@@ -373,6 +380,7 @@ def _registration_at(
                 f"(`git fsck` names them) or fetch them from a clone that has them "
                 f"(`git fetch`), then `{gate_command('report-check', ctx.area)}`; "
                 f"where they are lost, {anew}",
+                rule=OPEN_RULE,
             )
         ]
     if then.text is None:
@@ -383,6 +391,7 @@ def _registration_at(
                 f"commit of the first measurement holds (LAB-003 No run without an "
                 f"intent paragraph)",
                 fix=anew,
+                rule=OPEN_RULE,
             )
         ]
     missing = registration_missing(then.text, ctx.head.kind)
@@ -396,6 +405,7 @@ def _registration_at(
                 f"not restore what stood before the number (LAB-003 No run without "
                 f"an intent paragraph)",
                 fix=anew,
+                rule=OPEN_RULE,
             )
         ]
     return []
@@ -421,6 +431,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"no answering run to hold it to — {ctx.why}",
             fix=f"measure: `{measure_command(ctx.area)}`, then audit that run",
             step=measure_command(ctx.area),
+            rule=OPEN_RULE,
         )
     try:
         gap = audit_gaps.audit_coverage(
@@ -431,6 +442,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
         return blocker(
             f"the analysis audit cannot be held to the run: {exc.why}",
             fix=exc.fix or audit,
+            rule=OPEN_RULE,
         )
     except (FileNotFoundError, ValueError) as exc:
         # ValueError: nothing to stamp, a findings file or the promise block
@@ -439,6 +451,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"the analysis audit cannot be held to the area: {exc}",
             fix=f"repair what the sentence names, then {audit}",
             check_outcome=outcome_of_failed_read(exc),
+            rule=OPEN_RULE,
         )
     if gap is None:
         return None
@@ -455,8 +468,9 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"restore, `{findings_command}` lists every loss with its restore —, "
             f"then {audit}; (b) where nothing restores it, no audit covers the "
             f"area and no number leaves it: {ways_out.HANDOVER}",
+            rule=OPEN_RULE,
         )
-    return blocker(gap, fix=audit)
+    return blocker(gap, fix=audit, rule=OPEN_RULE)
 
 
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
@@ -476,6 +490,7 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
                 f"record cannot be checked",
                 fix=f"measure through runlog: {measure}",
                 step=run,
+                rule=OPEN_RULE,
             )
         ]
     owed = "a full run (run_kind='measurement')" + (
@@ -487,6 +502,7 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
             f"reported; a reported number owes {owed}",
             fix=f"measure in full{' after the freeze' if freeze_owed else ''}: "
             f"{measure}, then audit that run",
+            rule=OPEN_RULE,
         )
         for mark in unreportable(cfg)
     ]
@@ -622,6 +638,7 @@ def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
             f"({pending_adoption(ctx.protocol).name} keeps it as it was before)",
             fix=f"`{adopt_command(ctx.protocol)}` puts it back first and adopts again",
             step=adopt_command(ctx.protocol),
+            rule=OPEN_RULE,
         )
     ]
 
@@ -638,6 +655,7 @@ def declaration_gaps(ctx: Checked) -> list[GateFinding]:
             f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
             f"`[result]` table for it",
             step=withdraw_command(ctx.protocol),
+            rule=OPEN_RULE,
         )
     ]
 
@@ -714,6 +732,7 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
                 f"{shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}` "
                 f"exits 0; a number in the protocol comes from `protocol-fill`, "
                 f"never typed",
+                rule=OPEN_RULE,
             )
         ]
         if failed

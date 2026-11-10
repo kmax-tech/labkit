@@ -42,6 +42,7 @@ import re
 from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import (
     GUARANTEED,
     STATIC_EVIDENCE,
@@ -147,6 +148,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                 fix="write one under the title: *<Zweck> · <Sorte> · … · <Datum>*, "
                 f"then `{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
         return gaps, softer
@@ -161,6 +163,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                 "Related-Lesart · Referenzkarte · Audit, then "
                 f"`{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
     if not DATE.search(para):
@@ -179,6 +182,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                     "implements it, or declare it 'Instrument — Entwurf', then "
                     f"`{gate_command('notes-check', f)}`",
                     evidence_kind=STATIC_EVIDENCE,
+                    rule=OPEN_RULE,
                 )
             )
         else:
@@ -237,11 +241,12 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
                 f"`{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
                 check_outcome=outcome_of_failed_read(exc),
+                rule=OPEN_RULE,
             )
             continue
         findings.take_all(gaps)
         for line in softer:
-            findings.warn(line, evidence_kind=GUARANTEED)
+            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
         if not gaps and not softer:
             tell(f"{f}: OK")
     return findings.report("notes-check", "the note counts")

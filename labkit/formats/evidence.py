@@ -54,6 +54,7 @@ from labkit.formats.commands import checkout_command
 from labkit.formats import findings, handovers, report_reviews, reviews
 from labkit.formats.attempts import evidence_gaps
 from labkit.formats.findings import JOURNAL
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import (
     NOT_EXECUTABLE,
     VIOLATED,
@@ -386,6 +387,7 @@ def change_blockers(found: Sequence[tuple[str, str]]) -> list[GateFinding]:
             fix=fix,
             # UNREAD_WAY is the way out only `unread_finding` gives
             check_outcome=NOT_EXECUTABLE if fix == UNREAD_WAY else VIOLATED,
+            rule=OPEN_RULE,
         )
         for why, fix in found
     ]

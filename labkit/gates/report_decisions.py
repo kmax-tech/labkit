@@ -8,6 +8,7 @@ follow-up of earlier decided BLOCKERs (`followup_findings`).
 from __future__ import annotations
 
 
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.gate import (
     BLOCKER,
@@ -72,6 +73,7 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                             )
                         )
                         + "`",
+                        rule=OPEN_RULE,
                     )
                 )
     if ctx.declared is None:
@@ -85,6 +87,7 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                 fix=f"repair what the sentence names, then "
                 f"`{render_command(ctx.protocol)}` writes the result section",
                 check_outcome=outcome_of_failed_read(exc),
+                rule=OPEN_RULE,
             )
         ]
     return gaps + render_gaps(ctx.text, expected)
@@ -125,6 +128,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                 WARNING,
                 f"a review nobody can read: {ctx.evidence.reviews_unread}",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
     for r in records:
@@ -143,6 +147,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     fix=f"{_review_step(ctx, r)} asks a second auditor (owed at "
                     f"every repeat cost); after a rejection, decide again",
                     evidence_kind=GUARANTEED,
+                    rule=OPEN_RULE,
                 )
             )
         for n, f in enumerate(r.findings, 1):
@@ -162,6 +167,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     fix=f"{_review_step(ctx, r)} asks a second auditor whether the "
                     f"reason shows it {_closing_question(f.status)}",
                     evidence_kind=GUARANTEED,
+                    rule=OPEN_RULE,
                 )
             )
         out += first_dismissals(ctx, r, found)
@@ -196,6 +202,7 @@ def repaired_claims(
                 f"Conclusion as it stands no longer makes the claim the finding "
                 f"names; no new measurement and no analysis audit",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
     return out
@@ -228,6 +235,7 @@ def first_dismissals(
                 fix=f"{_review_step(ctx, r)} asks a second auditor whether the reason "
                 f"shows it {_closing_question('false-positive')}",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
         )
     return out
@@ -269,12 +277,14 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
             blocker(
                 f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
                 fix=findings.record_way(ctx.area, ctx.protocol),
+                rule=OPEN_RULE,
             )
         ]
     out = [
         blocker(
             f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",
             fix=h.step,
+            rule=OPEN_RULE,
         )
         for h in held
         # one cause, one blocker: without a cover the analysis gap names
@@ -296,6 +306,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
                         f"(LAB-015 Preflight audit before freezing)",
                         fix=f"{_review_step(ctx, r)} asks a second auditor whether "
                         f"the reason shows it {_closing_question(f.status)}",
+                        rule=OPEN_RULE,
                     )
                 )
     return out

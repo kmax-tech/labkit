@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
 from labkit.formats.area_state import Measured
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -184,6 +185,7 @@ def report_owed(
         f"it releases nothing and the result or the handover stays owed; "
         f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
         step=write_cmd,
+        rule=OPEN_RULE,
     )
 
 
@@ -289,6 +291,7 @@ def report_binding_gap(
             "--unshallow` in a shallow clone), or restore the repository's missing "
             f"objects (`git fsck` names them); else {anew}",
             step=handover,
+            rule=OPEN_RULE,
         )
     if len(values) > 1:
         named = ", ".join(
@@ -299,6 +302,7 @@ def report_binding_gap(
             f"— which one stood before the number cannot be told",
             fix=anew,
             step=handover,
+            rule=OPEN_RULE,
         )
     if not values:
         if head.report is not None and not bound.unread and measured.has_measured:
@@ -306,6 +310,7 @@ def report_binding_gap(
                 f"{name_p}: its first measurement is missing — the report binding cannot be read",
                 fix=f"restore the missing run evidence, then `{step_command(protocol.parent)}`; or {anew}",
                 step=handover,
+                rule=OPEN_RULE,
             )
         return None
     (registered,) = values
@@ -325,6 +330,7 @@ def report_binding_gap(
         f"a report cannot be registered, dropped or moved after measurement",
         fix=f"{restore}, then `{step_command(protocol.parent)}`; or {anew}",
         step=handover,
+        rule=OPEN_RULE,
     )
 
 
@@ -423,6 +429,7 @@ def missing_report(
             f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
             step=into,
+            rule=OPEN_RULE,
         )
     discuss = report_blocks.discuss_command(
         name_p, "<run_id>", name_r, report_blocks.WHY_PROGRESS
@@ -436,6 +443,7 @@ def missing_report(
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",
         step=discuss,
+        rule=OPEN_RULE,
     )
 
 
@@ -461,6 +469,7 @@ def registered_review(
             f"{name_r}: its discussion blocks do not read — {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote "
             "them (`--discuss … --into` writes the block again)",
+            rule=OPEN_RULE,
         )
     return review_gap(
         report,

@@ -88,6 +88,7 @@ from pathlib import Path
 
 from labkit.formats.commands import gate_command
 from labkit.formats.area_state import state_of
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
@@ -249,6 +250,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     fix=f"name files that exist in [{p.id}]'s scope, then "
                     f"`{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
+                    rule=OPEN_RULE,
                 )
             )
         out += constant_copies(area, protocol, p)
@@ -266,6 +268,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     fix=f"report '{p.key}' in the measure script or correct the key "
                     f"in [{p.id}], then `{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
+                    rule=OPEN_RULE,
                 )
             )
     return out
@@ -397,6 +400,7 @@ def quality_check_reads(
                 fix="fix the file",
                 evidence_kind=GUARANTEED,
                 check_outcome=outcome_of_failed_read(exc),
+                rule=OPEN_RULE,
             )
         ]
     return [
@@ -486,6 +490,7 @@ def constant_copies(
                         fix=f'read it with promises.constants(PROTOCOL, "{p.id}")'
                         f'["{target.id}"]',
                         evidence_kind=STATIC_EVIDENCE,
+                        rule=OPEN_RULE,
                     )
                 )
     return out
@@ -719,6 +724,7 @@ def main(argv: list[str]) -> int:
                 f"bundle: {label} could not be read — the reader sees "
                 f"`not readable` in its place",
                 evidence_kind=GUARANTEED,
+                rule=OPEN_RULE,
             )
     _not_checked(findings, protocol, bundle_to, text)
     return findings.report("code-check", "the run")
