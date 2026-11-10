@@ -18,10 +18,13 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
     and the functions nested in either; code at module level and the
     methods of a nested class are not, and two sites of one channel on one
     line count once
-  - its rules are the rule ids in the strings of that call: its own
-    literals, the module constants it names, and what is assigned to a
-    local name it passes; a rule cited only in a callee's message is not
-    seen, so a site without a rule is a site whose call shows none
+  - its rule is the assignment the call records as data (`rule=`, a
+    `gate.RuleAssignment`: a rule id, an open assignment, a technical
+    contract, a new class), read through a local name and a module
+    constant; the rule tables count by it. Beside it the scan names the
+    rule ids the call's strings cite — its own literals, the module
+    constants it names, what is assigned to a local name it passes —, a
+    citation in the text, not a record
   - its commands are the console scripts (`[project.scripts]`) whose code
     reaches its function by a static call graph: a call or reference by
     name, through an import or a module alias, a method through `self` or
@@ -52,6 +55,7 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, findings
+from labkit.formats.gate import NEW_CLASS, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT
 from labkit.formats.rules import CODE_RE, load_ledger
 
 USAGE = (
@@ -105,8 +109,16 @@ class FindingSite:
             passes one.
         evidence_kind: GUARANTEED, STATIC_EVIDENCE, `variable`, or
             `none` for an exit or a printed line, which carry none.
-        rules: The rule ids in the call's strings, sorted.
+        rules: The rule ids in the call's strings, sorted — what the
+            message cites, not what the finding records.
         wording: The message's constant text, every value as `{…}`.
+        assignment: The rule assignment the call records as data
+            (`gate.RuleAssignment`, `_call_assignment`): a rule id
+            `LAB-nnn`, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT or NEW_CLASS;
+            NOT_RECORDED where the call sets none (every `exit` and
+            `printed` site, and a gate finding the migration has not
+            visited); `variable` where it passes a value the scan cannot
+            follow. The rule tables count by it.
     """
 
     unit: str
@@ -118,6 +130,17 @@ class FindingSite:
     evidence_kind: str
     rules: tuple[str, ...]
     wording: str
+    assignment: str = ""
+
+
+#: a site that records no rule assignment as data
+NOT_RECORDED = "not recorded"
+#: the module constants of `gate` that stand for an assignment without a rule
+_RULE_CONSTANTS = {
+    "OPEN_RULE": OPEN_ASSIGNMENT,
+    "TECHNICAL_RULE": TECHNICAL_CONTRACT,
+    "NEW_CLASS_RULE": NEW_CLASS,
+}
 
 
 @dataclass(frozen=True)
@@ -342,6 +365,60 @@ def _call_rules(
 WAY_OUT_WRAPPER = "with_way_out"
 
 
+def _rule_argument(call: ast.Call, ctor: str) -> ast.AST | None:
+    """The expression CALL to the finding constructor CTOR passes as its
+    rule: the `rule=` keyword, or a GateFinding's fifth positional argument
+    (grade, text, form, where, rule)."""
+    for k in call.keywords:
+        if k.arg == "rule":
+            return k.value
+    if ctor == "GateFinding" and len(call.args) > 4:
+        return call.args[4]
+    return None
+
+
+def _call_assignment(
+    expr: ast.AST | None,
+    assigned: dict[str, list[ast.AST]],
+    constants: dict[str, list[str]],
+    module: str,
+    imports: dict[str, str],
+) -> str:
+    """The rule assignment EXPR records (`FindingSite.assignment`): a
+    gate constant by its name, `cited_rule("LAB-nnn …")` by its id, read
+    through a local name assigned once and through a module constant;
+    NOT_RECORDED without EXPR or for a literal None, `variable` for
+    anything else."""
+    if expr is None or (isinstance(expr, ast.Constant) and expr.value is None):
+        return NOT_RECORDED
+    name = (
+        expr.id
+        if isinstance(expr, ast.Name)
+        else expr.attr
+        if isinstance(expr, ast.Attribute)
+        else None
+    )
+    if name in _RULE_CONSTANTS:
+        return _RULE_CONSTANTS[name]
+    if isinstance(expr, ast.Name) and len(assigned.get(expr.id, [])) == 1:
+        return _call_assignment(
+            assigned[expr.id][0], assigned, constants, module, imports
+        )
+    texts: list[str] = []
+    if isinstance(expr, ast.Call) and getattr(expr.func, "id", None) == "cited_rule":
+        texts = [
+            a.value
+            for a in expr.args
+            if isinstance(a, ast.Constant) and isinstance(a.value, str)
+        ]
+    elif isinstance(expr, ast.Name):
+        texts = constants.get(f"{module}.{expr.id}", []) or constants.get(
+            imports.get(expr.id, ""), []
+        )
+    ids = sorted({r for t in texts for r in RULE_ID.findall(t)})
+    return ids[0] if len(ids) == 1 else "variable"
+
+
 def _refusal_message(n: ast.AST) -> ast.AST | None:
     """The message of a `raise SystemExit(<message>)` — for
     `SystemExit(with_way_out(<message>, <fix>))` its first argument; None
@@ -447,6 +524,19 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
                             n, skip, assigned, constants, m.name, imports
                         ),
                         wording=short(wording(msg, assigned)),
+                        assignment=(
+                            _call_assignment(
+                                _rule_argument(n, ctor),
+                                assigned,
+                                constants,
+                                m.name,
+                                imports,
+                            )
+                            if channel == "finding"
+                            and isinstance(n, ast.Call)
+                            and (ctor := _constructor(n)) is not None
+                            else NOT_RECORDED
+                        ),
                     )
                 )
     return out
@@ -569,7 +659,7 @@ def rule_uses(
         out.append(
             RuleUse(
                 rule=f"{rid} {title}",
-                sites=tuple(s for s in sites if rid in s.rules),
+                sites=tuple(s for s in sites if s.assignment == rid),
                 code_modules=tuple(sorted(in_code.get(rid, set()))),
                 shipped_texts=tuple(
                     sorted(name for name, text in shipped.items() if rid in text)
@@ -590,13 +680,14 @@ def render_inventory(
     def short_unit(unit: str) -> str:
         return unit.removeprefix("labkit.")
 
-    cited = sum(1 for s in sites if s.rules)
+    cited = sum(1 for s in sites if RULE_ID.fullmatch(s.assignment))
     held = [u for u in uses if u.sites]
     lines = [
         "# Check inventory",
         "",
-        f"{len(sites)} finding sites, {cited} of them cite a rule; "
-        f"{len(held)} of {len(uses)} active rules are cited by a finding site. "
+        f"{len(sites)} finding sites, {cited} of them record a rule as data "
+        f"(`GateFinding.rule`); {len(held)} of {len(uses)} active rules are "
+        "recorded by a finding site. "
         "Read from the source, not run: `python -m labkit.tools.check_inventory` "
         "(its docstring says what counts and how far the estimate reaches).",
         "",
@@ -615,13 +706,13 @@ def render_inventory(
         "",
         "## Finding sites",
         "",
-        "| Site | Function | Channel | Grade | Evidence kind | Rules | Commands | Wording |",
-        "|---|---|---|---|---|---|---|---|",
+        "| Site | Function | Channel | Grade | Evidence kind | Rule (data) | Cited in the text | Commands | Wording |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for s in sites:
         lines.append(
             f"| `{s.path}:{s.line}` | `{short_unit(s.unit)}` | {s.channel} | {s.grade} "
-            f"| {s.evidence_kind} | {', '.join(s.rules) or '—'} | {cmds(s.unit)} "
+            f"| {s.evidence_kind} | {s.assignment} | {', '.join(s.rules) or '—'} | {cmds(s.unit)} "
             f"| {s.wording} |"
         )
     return "\n".join(lines) + "\n"

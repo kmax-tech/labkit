@@ -14,14 +14,15 @@ from unittest import mock
 from labkit.checks import run_record_check
 from labkit.formats.gate import GateFinding
 from labkit.tools import test_inventory as ti
-from labkit.tools.check_inventory import FindingSite
+from labkit.tools.check_inventory import NOT_RECORDED, FindingSite
 
 COMMANDS = {"labkit.gates.finalize", "labkit.tools.adopt"}
 
 
-def site(path: str, line: int, end: int, rules: tuple[str, ...] = ()) -> FindingSite:
+def site(path: str, line: int, end: int, rule: str = NOT_RECORDED) -> FindingSite:
+    """A gate-finding site recording RULE as its assignment (`FindingSite.assignment`)."""
     return FindingSite(
-        "labkit.x.f", path, line, end, "finding", "BLOCKER", "guaranteed", rules, "w"
+        "labkit.x.f", path, line, end, "finding", "BLOCKER", "guaranteed", (), "w", rule
     )
 
 
@@ -66,8 +67,8 @@ class SiteAt(unittest.TestCase):
 
 class ReachAndStanding(unittest.TestCase):
     def setUp(self) -> None:
-        self.direct = site("labkit/gates/g.py", 5, 6, ("LAB-001",))
-        self.command = site("labkit/gates/g.py", 20, 20, ("LAB-001",))
+        self.direct = site("labkit/gates/g.py", 5, 6, "LAB-001")
+        self.command = site("labkit/gates/g.py", 20, 20, "LAB-001")
         self.unreached = site("labkit/checks/c.py", 3, 3)
         self.sites = [self.direct, self.command, self.unreached]
         self.events = [
@@ -124,7 +125,7 @@ class ReachAndStanding(unittest.TestCase):
         self.assertIn("| unreached | 1 |", text)
         self.assertIn("| gate | 1 |", text)  # the direct site, reached through a gate
         self.assertIn("| LAB-001 | 2 | 1 | 1 | 0 | 2 |", text)
-        self.assertIn("| (no rule) | 1 | 0 | 0 | 1 | 0 |", text)
+        self.assertIn(f"| {NOT_RECORDED} | 1 | 0 | 0 | 1 | 0 |", text)
         self.assertIn("Unmapped findings (built where no site stands): 1.", text)
         self.assertIn("| `tests/test_e.py` | yes | 1 |", text)
         self.assertIn("| `labkit/gates/g.py:30` | 1 |", text)

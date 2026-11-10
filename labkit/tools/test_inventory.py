@@ -346,12 +346,13 @@ def render_test_inventory(
 def _per_rule(
     key: dict[tuple[str, int], FindingSite], stand: dict[tuple[str, int], str], r: Reach
 ) -> list[str]:
-    """The table per rule: its sites by standing and the tests reaching them."""
+    """The table per rule, by the assignment each site records as data
+    (`FindingSite.assignment`): its sites by standing and the tests
+    reaching them."""
     out: list[str] = []
     rules: dict[str, list[tuple[str, int]]] = defaultdict(list)
     for k, s in key.items():
-        for rule in s.rules or ("(no rule)",):
-            rules[rule].append(k)
+        rules[s.assignment].append(k)
     out += [
         "",
         "## Per rule",
@@ -391,7 +392,7 @@ def _site_lists(
             s = key[k]
             out.append(
                 f"| `{s.path}:{s.line}` | `{s.unit}` | {s.grade} | "
-                f"{', '.join(s.rules) or '—'} | {len(_tests(r.by_site[k]))} |"
+                f"{s.assignment} | {len(_tests(r.by_site[k]))} |"
             )
     return out
 

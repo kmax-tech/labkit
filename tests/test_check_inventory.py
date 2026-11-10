@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console, findings
+from labkit.formats import console, findings, gate
 from labkit.tools import check_inventory as inv
 from protocol_fixture import protocol_id_of, registration_of
 
@@ -56,6 +56,19 @@ CHECKS = module(
 
     def tell(f):
         print(f"{f}: WARNING: placeholder left")
+
+
+    ID_RULE = cited_rule("LAB-004 Identifiers make the intent addressable")
+
+
+    def recorded(out):
+        out.block("open", fix="x", rule=OPEN_RULE)
+        out.block("cited", fix="x", rule=cited_rule("LAB-034 Null condition in the same run"))
+        out.block("constant", fix="x", rule=ID_RULE)
+        held = TECHNICAL_RULE
+        out.block("local", fix="x", rule=held)
+        out.block("passed", fix="x", rule=out.rule)
+        out.block("none", fix="x")
     ''',
 )
 
@@ -110,6 +123,31 @@ class FindingSites(unittest.TestCase):
         self.assertEqual((s.grade, s.evidence_kind), ("WARNING", "none"))
 
 
+class RecordedRule(unittest.TestCase):
+    """The rule tables count the assignment a call records as data
+    (`FindingSite.assignment`), never an id its message only cites."""
+
+    def test_each_form_of_the_rule_argument_reads_as_its_assignment(self) -> None:
+        sites = [s for s in inv.finding_sites([CHECKS]) if s.unit.endswith(".recorded")]
+        self.assertEqual(
+            [(s.wording, s.assignment) for s in sites],
+            [
+                ("open", gate.OPEN_ASSIGNMENT),
+                ("cited", "LAB-034"),
+                ("constant", "LAB-004"),
+                ("local", gate.TECHNICAL_CONTRACT),
+                ("passed", "variable"),
+                ("none", inv.NOT_RECORDED),
+            ],
+        )
+
+    def test_a_rule_only_cited_in_the_message_is_not_recorded(self) -> None:
+        (s,) = [
+            s for s in inv.finding_sites([CHECKS]) if s.unit.endswith(".freeze_gap")
+        ]
+        self.assertEqual((s.rules, s.assignment), (("LAB-003",), inv.NOT_RECORDED))
+
+
 class Reach(unittest.TestCase):
     def test_a_command_reaches_a_check_through_a_module_alias(self) -> None:
         graph = inv.call_graph([CHECKS, GATE])
@@ -136,6 +174,7 @@ class RuleUses(unittest.TestCase):
                     ("LAB-001", "A negative finding is a claim"),
                     ("LAB-003", "No run without an intent paragraph"),
                     ("LAB-015", "Preflight audit before freezing"),
+                    ("LAB-004", "Identifiers make the intent addressable"),
                 ],
                 sites,
                 [CHECKS],
@@ -145,10 +184,11 @@ class RuleUses(unittest.TestCase):
         first = uses["LAB-001 A negative finding is a claim"]
         self.assertEqual((first.sites, first.code_modules), ((), ()))
         self.assertEqual(first.shipped_texts, ("agents/demo.agent.md",))
+        # a site counts for the rule it records as data, not one its message cites
         third = uses["LAB-003 No run without an intent paragraph"]
-        self.assertEqual(
-            [s.unit for s in third.sites], ["labkit.checks.demo.freeze_gap"]
-        )
+        self.assertEqual(third.sites, ())
+        recorded = uses["LAB-004 Identifiers make the intent addressable"]
+        self.assertEqual([s.wording for s in recorded.sites], ["constant"])
         # the constant stands outside every site's call: other code
         freeze = uses["LAB-015 Preflight audit before freezing"]
         self.assertEqual(freeze.code_modules, ("labkit.checks.demo",))
