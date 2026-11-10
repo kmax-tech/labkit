@@ -17,7 +17,7 @@ from pathlib import Path
 from protocol_fixture import run_record  # noqa: E402
 from labkit.run import batch, runlog
 from labkit.checks import run_record_check
-from labkit.formats import runs
+from labkit.formats import gate, runs
 
 A = "2026-10-01T10-00-00_aaaa"
 
@@ -227,6 +227,21 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
                 blockers[0].fix or "",
             )
             self.assertIn("never delete it", blockers[0].fix or "")
+
+    def test_an_output_whose_rows_do_not_read_is_a_blocker(self) -> None:
+        """A damaged line before the last: the rows cannot be held to any
+        run, so the output blocks with its reader's sentence."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            out = area / "x.jsonl"
+            run = self._run(area, "2026-10-02T10-00-00_bbbb", out)
+            out.write_text('{"id": "1", "ans\n', encoding="utf-8")
+            _rows(out, run.name, ["2"])
+            blockers, _ = run_record_check.row_provenance_findings(run)
+            (b,) = blockers
+            self.assertTrue(b.text.startswith("x.jsonl: "), b.text)
+            self.assertIn("measure anew", b.fix or "")
+            self.assertEqual(b.rule, gate.OPEN_RULE)
 
     def test_continued_rows_of_other_code_are_a_blocker(self) -> None:
         """The repair case: the run continues the faulty run's file, and

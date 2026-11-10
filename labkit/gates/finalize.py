@@ -293,13 +293,13 @@ def check_answering_run(
             *unreportable_warnings(answering_run),
         ):
             if warning:
-                findings.warn(warning, evidence_kind=GUARANTEED)
+                findings.warn(warning, evidence_kind=GUARANTEED, rule=OPEN_RULE)
         blockers, notes = row_provenance_findings(answering_run)
         findings.take_all(blockers)
         for n in notes:
             findings.note(f"  {n}")
         for w in arm_findings(text, area, answering_run):
-            findings.warn(w, evidence_kind=GUARANTEED)
+            findings.warn(w, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     return answering_run
 
 

@@ -63,6 +63,33 @@ class Steps(unittest.TestCase):
             self.assertEqual(run.name, "2026-10-07T10-00-00_aa11")
             self.assertEqual((found.blocked, found.warned), ([], []))
 
+    def test_station_1_tells_the_run_checks_sentences_as_warnings(self):
+        """The station forwards the run checks' sentences about the chosen
+        run: a model run whose lineage recorded no models_resolved, and its
+        single draw, are guaranteed warnings with their rule open."""
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self._area(d, None)
+            chosen = protocol.parent / "runs" / "2026-10-07T10-00-00_aa11"
+            (chosen / "metrics.json").write_text(
+                '{"criterion_1_pass": true, "llm_retries": 0}'
+            )
+            text = protocol.read_text(encoding="utf-8")
+            found = Findings(tell=None)
+            run = finalize.check_answering_run(
+                found,
+                protocol.parent,
+                protocol,
+                text,
+                protocol_block.head(text).id,
+                state_of(protocol.parent),
+            )
+        self.assertEqual(run, chosen)
+        warned = [f for f in found.found if f.grade == "WARNING"]
+        self.assertEqual(len(warned), 2, [f.text for f in found.found])
+        self.assertIn("no run in its lineage recorded models_resolved", warned[0].text)
+        self.assertIn("is one draw — no spread", warned[1].text)
+        self.assertEqual({f.rule for f in warned}, {OPEN_RULE})
+
     def test_an_adopted_run_with_no_directory_is_one_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             protocol = self._area(d, "2026-10-07T11-00-00_cc33")

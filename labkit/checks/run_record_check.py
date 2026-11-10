@@ -906,6 +906,7 @@ def row_provenance_findings(
             blocker(
                 f"row provenance: the lineage of {answering_run.name} is broken — {exc}",
                 fix=measure_anew(answering_run.parent.parent),
+                rule=OPEN_RULE,
             )
         ], []
     for entry in read_outputs(answering_run) or []:
@@ -949,7 +950,8 @@ def row_provenance_findings(
                 f"{entry.path.name}: {rr.unstamped} row(s) without _prov — written "
                 f"outside a run or by a Store without prov; their run is unknown"
             )
-    return blockers, notes
+    # every blocker of the row check carries one rule, not decided yet
+    return [replace(b, rule=OPEN_RULE) for b in blockers], notes
 
 
 def _continued_with_other_code(
