@@ -14,16 +14,16 @@
 
 Extracting a check and testing its condition belong in the same commit. Repeat step 3 in small commits by gate. Use touched tests while working and the repository's required commit checks; run the full suite when measurement requires it.
 
-| Step       | Deliverable                                                        | Acceptance                                                                                                                        |
-|------------|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| 1          | Minimal state builder, run-input decision and first migrated check | Violation and valid twin run from data; inconsistent test inputs remain unchanged; reference and boundary guards are recorded     |
-| 2a         | Shared rule value in `GateFinding` and finalize site account       | Invalid rule values are refused; every `GateFinding.rule` uses the value; finalize's sites are listed at the pilot's start commit |
-| 3, pilot   | Migrate finalize                                                   | Its conditions, composition and boundary exceptions meet the contracts below; stop at the checkpoint                              |
-| Checkpoint | Pilot cost and remaining-effort estimate                           | Author chooses continuation, a narrower scope/time cap, or deferral                                                               |
-| 2b         | Rule data throughout, inventory coverage and comparison            | Remaining sites and recovered refusals are accounted for; changes are explained through the site account                          |
-| 3, rest    | Migrate remaining gates and run-time checks                        | Every site maps to condition/composition tests or a justified exception                                                           |
-| 4          | Candidate report and fewer scenario variants                       | Every removed assertion has a named replacement; unique hand-overs remain covered                                                 |
-| 5          | Final inventory, review and timing                                 | Report all targets, open assignments, exceptions and timing results                                                               |
+| Step       | Deliverable                                                            | Acceptance                                                                                                                        |
+|------------|------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| 1          | Minimal state builder, run-input decision and first migrated check     | Violation and valid twin run from data; inconsistent test inputs remain unchanged; reference and boundary guards are recorded     |
+| 2a         | Shared rule value in `GateFinding` and finalize site account           | Invalid rule values are refused; every `GateFinding.rule` uses the value; finalize's sites are listed at the pilot's start commit |
+| 3, pilot   | Migrate finalize                                                       | Its conditions, composition and boundary exceptions meet the contracts below; stop at the checkpoint                              |
+| Checkpoint | Pilot cost, clarity, abstraction balance and remaining-effort estimate | Author chooses continuation, a narrower scope/time cap, or deferral                                                               |
+| 2b         | Rule data throughout, inventory coverage and comparison                | Remaining sites and recovered refusals are accounted for; changes are explained through the site account                          |
+| 3, rest    | Migrate remaining gates and run-time checks                            | Every site maps to condition/composition tests or a justified exception                                                           |
+| 4          | Candidate report and fewer scenario variants                           | Every removed assertion has a named replacement; unique hand-overs remain covered                                                 |
+| 5          | Final inventory, review and timing                                     | Report all targets, open assignments, exceptions and timing results                                                               |
 
 ### 1. Establish the reference check
 
@@ -55,8 +55,10 @@ Record the pilot's start commit, selected sites and baseline timings before migr
 2. Implementation and verification time per condition/site, plus shared infrastructure cost.
 3. Code/test line changes and measured fast/slow timing changes. Report no gain or unmeasured gain honestly; scenario savings may come only in step 4.
 4. A remaining-effort range, including still-unclassified sites.
+5. A before/after example from the pilot: how a further condition and its twin were added, which files and helpers were needed, and whether the reader can follow input → condition → finding → gate caller. Ask the author to judge clarity at this checkpoint; passing tests alone do not establish that the design is easier to use.
+6. An abstraction balance: new types, wrappers, fixture options and indirections versus removed duplication and special cases. Name the purpose of each addition and what it replaces. Line counts alone do not decide simplicity; remove or simplify additions whose maintenance cost has no demonstrated benefit before proposing broader migration.
 
-**Stop before another gate.** The author chooses continuation, a narrower scope with a time cap, or deferral. A usage round with a partial refactor requires an explicit change to the earlier decision, listing deferred sites, risks and unmet targets. Keep their existing checks and tests. No reliable overall estimate or time cap exists before this checkpoint.
+**Stop before another gate.** The author chooses continuation, a narrower scope with a time cap, or deferral based on correctness, clarity, added complexity and cost. Meeting coverage and timing targets alone is insufficient to continue. A usage round with a partial refactor requires an explicit change to the earlier decision, listing deferred sites, risks and unmet targets. Keep their existing checks and tests. No reliable overall estimate or time cap exists before this checkpoint.
 
 ### 2b. Complete rule data and measurement
 
@@ -74,7 +76,7 @@ Then review every candidate's assertions. Name the replacement test for each ass
 
 ### 5. Measure and review
 
-Compare inventories through the account and resolve unexplained changes before claiming gains. Under comparable conditions, record full-suite, fast-tier and slow-tier times, worker count, and added/removed sites. Evaluate the [targets](#targets), keeping open assignments and extraction exceptions visible. The usage round remains a separate research task subject to its prerequisites.
+Compare inventories through the account and resolve unexplained changes before claiming gains. Under comparable conditions, record full-suite, fast-tier and slow-tier times, worker count, and added/removed sites. Evaluate the [targets](#targets), keeping open assignments and extraction exceptions visible, and close the temporary site account as specified below. The usage round remains a separate research task subject to its prerequisites.
 
 ## Contracts used throughout
 
@@ -92,6 +94,8 @@ A finding site is where a result is built or told; it is an accounting unit. A c
 Repository architecture and ledger tests remain a separate group. The inventory measures execution reach; reviewing assertions establishes condition acceptance. Composition-only sites belong at the gate/boundary layer and need no invented scientific twin.
 
 ### Check contract
+
+This contract applies to pure validation, not to every existing function. Operations whose purpose is to read, write, execute or interact with the environment remain named readers, writers or execution boundaries, with tests for their real side effects and failures. Extract their independently useful conditions only; do not force the whole operation into a pure-check wrapper.
 
 Use the existing subject module under `labkit/checks/`. Reference signature for an area check: `check_<condition>(state: AreaState, *, evidence: AreaEvidence) -> list[GateFinding]`; prefer smaller explicitly typed domain inputs where sufficient. Run checks receive the records decided in step 1, never a directory to read. No mutable collector or gate-layer `Checked` input.
 
@@ -113,6 +117,8 @@ The gate decides whether/when to call the check and forwards its result through 
 Define English tags once; reject invalid ids and contradictory tag/payload combinations, with valid twins. No arbitrary-string fallback, parallel rule field or new registry. Rule data survive forwarding and display. Recording an open assignment never approves it.
 
 ### Site account
+
+Use the account as a temporary migration instrument, not a permanent registry or authority over source and tests. At completion, freeze it as dated evidence tied to the final comparison commit; subsequent refactors do not have to maintain it. Step 5 reviews which information needs a permanent home in code, tests or documentation. A lasting account would require a demonstrated need and a separate decision.
 
 Create one TSV beside this note, one row per site: source commit, channel, qualified function, normalized message template, source `file:line`, category, underlying condition/forwarding behavior, rule value and named tests. Generate the key columns — channel, qualified function, normalized message template, `file:line` — from `check_inventory.finding_sites` (`FindingSite.channel`, `unit`, `wording`, `path`, `line`), the same fields 2b's comparison reads; fill only category, condition, rule value and tests by hand, and add by hand only a refusal the scanner misses, marked as such. Track removals, merges and extraction exceptions with their reasons. The row carries the identity across a move; source lines are locations at a commit. This account is the sole old-to-new mapping and per-site implementation record.
 
@@ -144,7 +150,7 @@ Steps 1, 2a and the finalize pilot do not wait for the six second-review decisio
 
 ## Updating the plan
 
-After each implementation commit, record the completed step/gate, acceptance tests and commit here; update per-site rows in the account. Keep TODO 6c to status, next action and dependencies. Keep the dated baseline below and add final measurements rather than replacing it.
+After each implementation commit, record the completed step/gate, acceptance tests and commit here; update per-site rows in the account while migration is active. Keep TODO 6c to status, next action and dependencies. Keep the dated baseline below and add final measurements rather than replacing it.
 
 ## How it was measured
 
