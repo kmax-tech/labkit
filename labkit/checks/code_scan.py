@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from labkit.formats.gate import AREA_SLOT
-from labkit.formats.gate import GUARANTEED
+from labkit.formats.gate import GUARANTEED, OPEN_RULE
 from labkit.formats.gate import BLOCKER, GateFinding, coded, outcome_of_failed_read
 from labkit.formats.scope_sha import (
     ANALYSIS_GLOB,
@@ -152,4 +152,5 @@ def unreadable_source(exc: SourceError) -> GateFinding:
         fix=f"repair or remove the file, then `code-check {AREA_SLOT}`",
         evidence_kind=GUARANTEED,
         check_outcome=outcome_of_failed_read(exc),
+        rule=OPEN_RULE,
     )

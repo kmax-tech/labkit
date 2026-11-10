@@ -380,6 +380,32 @@ class AHeadWithoutAProtocolId(unittest.TestCase):
         )
 
 
+class DataCountsStation(unittest.TestCase):
+    """Station 5 forwards `data_counts.counts_gap` (its conditions:
+    tests/test_data_counts.py) as one blocker naming the command that writes
+    the counts again; read from a state built in memory."""
+
+    PROTOCOL = AREA / "PROTOCOL-x.md"
+
+    def _station(self, scope: str) -> tuple[bool, Findings]:
+        found = Findings(tell=None)
+        text = f"- **Data / scope:** {scope}\n"
+        held = finalize.check_data_counts(found, self.PROTOCOL, text, area_state())
+        return held, found
+
+    def test_counts_of_a_run_the_area_lacks_block(self):
+        held, found = self._station("data/x.csv · counts (prepare run r9): 4 items")
+        self.assertFalse(held)
+        (f,) = found.found
+        self.assertIn("names prepare run r9, which the area does not have", f.text)
+        self.assertIn("--data-counts r9", f.fix or "")
+        self.assertEqual(f.rule, OPEN_RULE)
+
+    def test_the_twin_a_scope_without_generated_counts_passes(self):
+        held, found = self._station("data/x.csv, 4 items")
+        self.assertEqual((held, found.found), (True, []))
+
+
 class CriterionNStation(unittest.TestCase):
     """finalize's criterion-n station reads a run's inputs and outputs only
     when its metrics.json holds a denominator; a record that does not read

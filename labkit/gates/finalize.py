@@ -475,12 +475,17 @@ def check_open_fields(
     the README's route block (CODE-016)."""
     holes = open_holes(text, head)
     for lineno, label in holes:
-        findings.warn(f"{protocol.name}:{lineno}: {label}", evidence_kind=GUARANTEED)
+        findings.warn(
+            f"{protocol.name}:{lineno}: {label}",
+            evidence_kind=GUARANTEED,
+            rule=OPEN_RULE,
+        )
     repeated = repeated_findings(text)
     for twice in repeated:
         findings.block(
             f"{protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
+            rule=OPEN_RULE,
         )
     stale = readme_placeholders(protocol.parent)
     for line in stale:
@@ -488,6 +493,7 @@ def check_open_fields(
         findings.warn(
             f"{line} — a stamped placeholder, fill or delete the line",
             evidence_kind=STATIC_EVIDENCE,
+            rule=OPEN_RULE,
         )
     try:
         route = readme_route(protocol.parent, protocol.name)
@@ -496,7 +502,7 @@ def check_open_fields(
         route = [str(exc)]
     else:
         for line in route:
-            findings.warn(line, evidence_kind=GUARANTEED)
+            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")
@@ -520,6 +526,7 @@ def check_data_counts(
         why,
         fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {run_id}` "
         f"writes them from the run — never typed",
+        rule=OPEN_RULE,
     )
     return False
 
