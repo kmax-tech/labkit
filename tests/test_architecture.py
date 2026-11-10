@@ -381,6 +381,61 @@ class NoFileAccessInGates(unittest.TestCase):
         )
 
 
+#: what a forwarded gate finding keeps: a gate that passes a finding on
+#: (`dataclasses.replace(f, text=…)`) adds a prefix or a way out, never
+#: another grade, rule assignment, evidence kind or check outcome
+KEPT_WHEN_FORWARDED = {"grade", "rule", "evidence_kind", "check_outcome"}
+#: (module, function) of an explicit transformation of one of them, each
+#: with its reason; none today
+FORWARDING_TRANSFORMATIONS: set[tuple[str, str]] = set()
+
+
+def forwarding_changes(source: str) -> list[tuple[str, int, list[str]]]:
+    """(function, line, fields) of every `replace(...)` in SOURCE that sets
+    a field of KEPT_WHEN_FORWARDED."""
+    out: list[tuple[str, int, list[str]]] = []
+    tree = ast.parse(source)
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for n in ast.walk(fn):
+            if not isinstance(n, ast.Call):
+                continue
+            name = (
+                n.func.id
+                if isinstance(n.func, ast.Name)
+                else getattr(n.func, "attr", "")
+            )
+            changed = sorted({k.arg for k in n.keywords if k.arg} & KEPT_WHEN_FORWARDED)
+            if name == "replace" and changed:
+                out.append((fn.name, n.lineno, changed))
+    return out
+
+
+class ForwardingKeepsWhatAFindingIs(unittest.TestCase):
+    """The forwarding guard of docs/notes/2026-11-10-test-model.md: a
+    finding passed on keeps its grade, rule assignment, evidence kind and
+    check outcome, but for a named transformation."""
+
+    def test_no_forwarding_changes_what_a_finding_is(self):
+        offenders = {
+            (m, fn, line, tuple(fields))
+            for m, p in sorted(module_paths().items())
+            for fn, line, fields in forwarding_changes(p.read_text(encoding="utf-8"))
+            if (m, fn) not in FORWARDING_TRANSFORMATIONS
+        }
+        self.assertEqual(offenders, set())
+
+    def test_the_guard_bites_and_lets_a_prefix_pass(self):
+        forbidden = (
+            "def forward(f):\n"
+            "    return dataclasses.replace(f, text='x' + f.text, rule=OPEN_RULE)\n"
+        )
+        self.assertEqual(forwarding_changes(forbidden), [("forward", 2, ["rule"])])
+        allowed = "def forward(f):\n    return replace(f, text='finalize: ' + f.text)\n"
+        self.assertEqual(forwarding_changes(allowed), [])
+
+
 class Packaging(unittest.TestCase):
     def test_every_package_ships(self):
         """pyproject names every folder holding an `__init__.py`: a package
