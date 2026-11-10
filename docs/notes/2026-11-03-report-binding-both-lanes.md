@@ -1,6 +1,6 @@
 # One report binding at both repeat costs
 
-2026-11-03. N4 of the [combined plan](2026-11-03-maintainability-repair-plan.md). Max authorized the same committed-first-measurement binding at low and high, and refusal of late report registration when no first measurement registered one. This is an announced behavioural break, not a run-schema or scientific-standard change; 0.107.0 is the last release with the old behaviour.
+2026-11-03. Settles the [combined plan](2026-11-03-maintainability-repair-plan.md)'s finding on registering a report after measuring. Max authorized the same committed-first-measurement binding at low and high, and refusal of late report registration when no first measurement registered one. This is an announced behavioural break, not a run-schema or scientific-standard change; 0.107.0 is the last release with the old behaviour.
 
 **Problem.** The report setter refused changes on both lanes, but the historical gate compared only low registrations. Preflight's promise and registration digests do not bind the report field. Freeze therefore did not supply the missing report-path guarantee. Low also allowed a manually added late report while its setter refused it.
 
