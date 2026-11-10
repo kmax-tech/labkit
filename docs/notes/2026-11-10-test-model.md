@@ -50,18 +50,20 @@ Four layers of tests, each asking one kind of question. A fifth group stands apa
 
 The rule layer is where a check's variants belong. A rule is tested once, with its twin, at the narrowest layer that can show it; a scenario only shows that the pieces fit. The precondition was built in task 5: the gates are functions of `AreaState` and `AreaEvidence`, which can be built as data.
 
-## Targets — the inventory measures each
+## Targets
+
+The inventory measures reach: a site was executed. That is an intermediate target, not the acceptance. A site counts as tested only when a test asserts its finding — the grade, the rule, the sentence that names the cause — and its twin, the valid case, passes. That is read in the test, not traced.
 
 1. **No unreached site.** Each of the 30 gets a rule test, or is removed when the branch cannot happen.
 2. **No site reached only through commands.** Each of the 19 gets a rule test.
-3. **Every gate-finding site is reached at the rule layer** (check or format) by a test with its twin. Today that holds for 54 of 194.
-4. **Every site names its rule** in the code. A message citing a rule can carry it, or a field can, as audit findings now do (`findings.Finding.rule`). Then the per-rule table counts something.
-5. **The slow tier shrinks to the scenarios that are walks**: a scenario test whose every site is also reached at a narrower layer is redundant, unless it is the one walk of an assurance. Target: the slow tier under 2 minutes, from 5. The fast tier stays under 90 s.
+3. **Every gate-finding site is reached at the rule layer** (check or format): 54 of 194 today, the measured intermediate target. Accepted per site when that test asserts the finding and a twin passes.
+4. **Every site names its rule as a field** of its finding, as audit findings do (`findings.Finding.rule`); the message is for people, the field for tests and counts (decided 2026-11-10). Many assignments are still proposals (`docs/notes/2026-11-09-rule-per-finding-proposal.md`), and a required field must not make an open one look settled: the field takes an explicit value for an assignment still open, counted apart, as an audit's `new class` is.
+5. **The slow tier keeps what only a scenario shows.** A scenario test is not redundant because its sites are reached lower: it may check the hand-over between commands, a state one command stores and the next reads, or a repair path across gates. One goes only when each of its assertions is kept elsewhere, named per test. Target: the slow tier under 2 minutes, from 5; the fast tier stays under 90 s.
 
 ## The plan, each step its own commit and measured by the inventory
 
 1. **A state builder for tests** (`tests/state_fixture.py`): an `AreaState`, `AreaEvidence` and `Checked` from data, without a repository — the enabler of the rule and gate layers.
 2. **The rule of each site as data**, so the inventory counts per rule (target 4), in the shape the restructuring of the checks gives a check (rule, check, gate). This is where the restructuring and the test model meet: a check that becomes a pure function of the state gets its rule test in the same commit.
 3. **Close the 30 unreached and the 19 command-only sites** (targets 1 and 2), gate by gate: finalize, report-check, preflight, the report holds.
-4. **Move the variants out of the scenario files** (target 5): the inventory gains a column naming the scenario tests whose sites are all reached lower; those that are no walk go.
+4. **Move the variants out of the scenario files** (target 5): the inventory names the scenario tests whose sites are all reached lower — candidates, no more. For each, what it asserts beyond those sites (a hand-over, a stored state, a repair path) is listed; it goes only when each of those is kept by another test.
 5. **Measure again**: the inventory's tables and the suite's time, before the usage round.
