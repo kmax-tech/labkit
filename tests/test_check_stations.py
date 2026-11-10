@@ -13,10 +13,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.checks import code_check, notes_check
-from labkit.formats import promises
+import json
+
+from labkit.checks import code_check, notes_check, run_record_check
+from labkit.formats import promises, protocol_block, protocol_history
+from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
+from labkit.gates import audit
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, VIOLATED, WARNING, Findings
-from protocol_fixture import head
+from protocol_fixture import PID, head, run_record
 
 
 class QualityCheckReadsNotDone(unittest.TestCase):
@@ -96,6 +100,63 @@ class ANoteThatCannotBeOpened(unittest.TestCase):
         self.assertEqual(
             (f.grade, f.check_outcome, f.rule), (WARNING, NOT_EXECUTABLE, OPEN_RULE)
         )
+
+
+class AProtocolIdChangedAgainstHead(unittest.TestCase):
+    """`protocol_history.check_protocol_id`: an id that differs from the
+    one git's HEAD holds warns — the runs bound to the old id are no
+    longer this protocol's; the same id passes."""
+
+    def _found(self, was: str | None):
+        text = head(repeat_cost="low")
+        with mock.patch.object(protocol_history, "id_in_git_head", return_value=was):
+            return protocol_history.check_protocol_id(
+                Path("area/PROTOCOL-x.md"), protocol_block.head(text), {}
+            )
+
+    def test_a_changed_id_warns(self):
+        (f,) = self._found("p-ffffffffffffffff")
+        self.assertEqual((f.grade, f.rule), (WARNING, OPEN_RULE))
+        self.assertIn(
+            "protocol id changed against HEAD (p-ffffffffffffffff -> ", f.text
+        )
+
+    def test_the_twin_the_same_id_passes(self):
+        self.assertEqual(self._found(PID), [])
+
+
+class AnAuditBeforeTheTierAsksForIt(unittest.TestCase):
+    """`audit.early_for_tier`: at repeat cost low and no completed run, a
+    preflight audit comes earlier than the tier asks (LAB-017); an analysis
+    audit there is the one owed."""
+
+    def test_a_preflight_audit_before_the_first_run_warns(self):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(head(repeat_cost="low"))
+            (f,) = audit.early_for_tier(Path(d), protocol, PREFLIGHT_AUDIT)
+            self.assertEqual(
+                (f.grade, f.rule.rule_id if f.rule else None), (WARNING, "LAB-017")
+            )
+            self.assertEqual(
+                audit.early_for_tier(Path(d), protocol, ANALYSIS_AUDIT), []
+            )
+
+
+class ADataEntryThatDoesNotRead(unittest.TestCase):
+    """`run_record_check.provenance_findings`: a `data=` entry of the run's
+    record that names no path blocks where the record is read."""
+
+    def test_an_entry_naming_no_path_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = Path(d) / "runs" / "r1"
+            run.mkdir(parents=True)
+            cfg = run_record(data={"broken": {"sha256": "ab", "rows": 1}})
+            (run / "config.json").write_text(json.dumps(cfg))
+            blockers, _, _ = run_record_check.provenance_findings(Path(d), run)
+        (f,) = blockers
+        self.assertIn("data['broken'] in the run's record names no path", f.text)
+        self.assertEqual(f.rule, OPEN_RULE)
 
 
 if __name__ == "__main__":
