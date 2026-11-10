@@ -406,7 +406,7 @@ def check_run_code(
         withdrawn_first(changed, withdraw_command(held_by) if held_by else None)
     )
     for line in apart:
-        findings.warn(line, evidence_kind=GUARANTEED)
+        findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     if not changed and not apart:
         findings.note(
             f"  the script and the helpers it imports are as {answering_run.name} ran them"

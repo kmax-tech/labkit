@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks.run_record_check import code_since_run  # noqa: E402
-from labkit.formats import repo, runs  # noqa: E402
+from labkit.formats import gate, repo, runs  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from protocol_fixture import (  # noqa: E402
     completed_run,
@@ -309,6 +309,43 @@ class CodeSinceRun(unittest.TestCase):
         (gone,) = code_since_run(self.area, parent)[0]
         self.assertIsNone(gone.changed_since)
 
+    def _record(self, run: Path, **fields: object) -> None:
+        """Rewrite FIELDS of RUN's record, as a run of another state left it."""
+        cfg = json.loads((run / "config.json").read_text(encoding="utf-8"))
+        (run / "config.json").write_text(json.dumps({**cfg, **fields}))
+
+    def test_the_comparisons_that_cannot_be_made_each_hold(self) -> None:
+        """The boundary's branches where the code cannot be compared — each
+        a blocker with its way out, none naming a changed run: a lineage
+        that breaks, a script that does not read now, no commit recorded, a
+        commit this clone lacks, a patch that does not apply to it."""
+        broken = self.run_now(
+            name="2026-10-27T13-00-00_aa00", derived_from="2026-10-27T09-00-00_gone"
+        )
+        (cut,) = code_since_run(self.area, broken)[0]
+        self.assertIn("its runs cannot be followed", cut.line)
+        self.assertIsNone(cut.changed_since)
+        run = self.run_now()
+        self._record(run, git_full=runs.NO_GIT)
+        (line,) = self.held(run)
+        self.assertIn("recorded no commit, or the area lies in no git repository", line)
+        self._record(run, git_full="f" * 40)
+        (line,) = self.held(run)
+        self.assertIn(
+            f"started at commit {'f' * 12}, which this clone does not hold", line
+        )
+        foreign = (
+            "diff --git a/lib/counting.py b/lib/counting.py\n"
+            "--- a/lib/counting.py\n+++ b/lib/counting.py\n"
+            "@@ -1,2 +1,2 @@\n-def nothing_like_this():\n+def other():\n     return 0\n"
+        )
+        unapplied = self.run_now(name="2026-10-27T12-00-00_ef56", patch=foreign)
+        (line,) = self.held(unapplied)
+        self.assertIn("cannot be read for", line)
+        self.script.write_text("import features\nfrom lib import (\n", encoding="utf-8")
+        lines = self.held(run)
+        self.assertTrue(any("cannot be read now" in ln for ln in lines), lines)
+
     def test_a_helper_in_another_repository_is_named_not_compared(self) -> None:
         """`lib/` as a link out of the repository or as a submodule cannot be
         compared: such a module is a warning, never a crash or a blocker
@@ -327,6 +364,13 @@ class CodeSinceRun(unittest.TestCase):
         self.assertEqual(blockers, [])
         self.assertEqual(len(warnings), 2, warnings)
         self.assertIn("lies in another repository", warnings[0])
+        # finalize's station tells each as a guaranteed warning, rule open
+        told = gate.Findings(tell=None)
+        finalize.check_run_code(told, self.area, run, None)
+        self.assertEqual(
+            [(f.grade, f.rule) for f in told.found],
+            [(gate.WARNING, gate.OPEN_RULE)] * 2,
+        )
         self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
         self.assertEqual(len(code_since_run(self.area, run)[0]), 1)
 

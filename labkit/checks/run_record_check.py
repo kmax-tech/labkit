@@ -122,7 +122,10 @@ def code_since_run(
     difference names its run as data (`GateFinding.changed_since`); one
     that could not compare (no script or commit recorded, a commit this
     clone lacks, a helper uncommitted then, a script gone or ambiguous)
-    names none. Read-only."""
+    names none. Read-only. An extraction exception of the test model
+    (docs/notes/2026-11-10-test-model.md): every condition here is an answer
+    of git or of the run's kept copies, so the comparison stays one boundary,
+    tested against real repositories (`tests/test_run_code.py`)."""
     try:
         chain = lineage(answering_run)
     except ValueError as exc:
@@ -130,6 +133,7 @@ def code_since_run(
             blocker(
                 f"{answering_run.name}: its runs cannot be followed ({exc})",
                 fix=measure_anew(answering_run.parent.parent),
+                rule=OPEN_RULE,
             )
         ], []
     blockers: list[GateFinding] = []
@@ -138,7 +142,8 @@ def code_since_run(
         b, w = _run_code(area, run)
         blockers += b
         warnings += w
-    return blockers, warnings
+    # every blocker of the comparison carries one rule, not decided yet
+    return [replace(b, rule=OPEN_RULE) for b in blockers], warnings
 
 
 def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
