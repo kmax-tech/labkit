@@ -94,11 +94,10 @@ from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
-    BLOCKER,
     GUARANTEED,
+    NOTE,
     GateFinding,
     STATIC_EVIDENCE,
-    WARNING,
     NOT_EXECUTABLE,
     blocker,
     outcome_of_failed_read,
@@ -165,7 +164,12 @@ from labkit.checks.run_record_check import (
     row_provenance_findings,
     single_draw,
 )
-from labkit.checks.audit_binding import check_audited_runs_kept
+from labkit.checks.audit_binding import (
+    UNDECIDED,
+    check_audit_findings_decided,
+    check_audit_records_read,
+    check_audited_runs_kept,
+)
 from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
@@ -320,26 +324,20 @@ def check_open_audit_findings(
     STATE and HELD are the area's state and audit evidence, read once at
     the entry."""
     if held.unreadable:
-        for why in held.unreadable:
-            findings.block(why, fix=audit_findings.record_way(area))
+        findings.take_all(check_audit_records_read(state, evidence=held))
         return
-    records = list(held.records)
     gone = check_audited_runs_kept(state, evidence=held)
-    findings.take_all(gone)
-    seen = len(gone)
-    for u in audit_findings.open_findings(records):
-        seen += 1
-        line = f"{u.line} — undecided (LAB-015 Preflight audit before freezing)"
-        if u.grade == BLOCKER:
-            findings.block(line, fix=audit_findings.decide_way(area, u))
-        elif u.grade == WARNING:
-            findings.warn(line, evidence_kind=GUARANTEED)
-        else:
-            findings.note(f"  {line}")
-    if not seen:
+    undecided = check_audit_findings_decided(state, evidence=held)
+    findings.take_all([*gone, *undecided])
+    notes = 0
+    for u in audit_findings.open_findings(held.records):
+        if u.grade == NOTE:  # no gate finding: told, never counted
+            notes += 1
+            findings.note(f"  {u.line} — {UNDECIDED}")
+    if not gone and not undecided and not notes:
         findings.note(
-            f"  every finding decided ({len(records)} record(s))"
-            if records
+            f"  every finding decided ({len(held.records)} record(s))"
+            if held.records
             else "  no audit record in audits/"
         )
 

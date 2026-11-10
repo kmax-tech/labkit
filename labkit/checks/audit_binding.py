@@ -38,7 +38,16 @@ from labkit.formats import (
 )
 from labkit.formats.area_state import AreaState, gone_run_restore
 from labkit.formats.evidence import AreaEvidence
-from labkit.formats.gate import GateFinding, blocker, cited_rule, with_way_out
+from labkit.formats.gate import (
+    BLOCKER,
+    GUARANTEED,
+    OPEN_RULE,
+    WARNING,
+    GateFinding,
+    blocker,
+    cited_rule,
+    with_way_out,
+)
 from labkit.formats.repo import layout_root, only_protocol, path_kind, shown, rel_posix
 from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
@@ -340,6 +349,44 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     findings file it cannot read."""
     records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
     return audit_gaps.covering_records(records, analysis_now(area, text, run))
+
+
+#: how a gate tells an audit finding nobody decided, after its line
+UNDECIDED = "undecided (LAB-015 Preflight audit before freezing)"
+
+
+def check_audit_records_read(
+    state: AreaState, *, evidence: AreaEvidence
+) -> list[GateFinding]:
+    """A blocker per audit record of EVIDENCE that does not read
+    (`AreaEvidence.unreadable`, its sentence): a record nobody can read is not
+    "no findings". The way out restores it or audits again
+    (`findings.record_way` for the area of STATE). [] when every record
+    reads. The rule is not decided yet (OPEN_RULE)."""
+    return [
+        blocker(why, fix=findings.record_way(state.area), rule=OPEN_RULE)
+        for why in evidence.unreadable
+    ]
+
+
+def check_audit_findings_decided(
+    state: AreaState, *, evidence: AreaEvidence
+) -> list[GateFinding]:
+    """finalize's row of `findings.open_findings`' table: every finding of
+    EVIDENCE's records still `open`, any mode, as a gate finding of its
+    record's grade (LAB-015 Preflight audit before freezing) — a BLOCKER
+    blocks with its `--decide` way out (`findings.decide_way` for the area
+    of STATE), a WARNING warns. A NOTE is no gate finding and gives none:
+    the gate tells it. [] when every finding is decided."""
+    out: list[GateFinding] = []
+    for u in findings.open_findings(evidence.records):
+        line = f"{u.line} — {UNDECIDED}"
+        rule = cited_rule("LAB-015 Preflight audit before freezing")
+        if u.grade == BLOCKER:
+            out.append(blocker(line, fix=findings.decide_way(state.area, u), rule=rule))
+        elif u.grade == WARNING:
+            out.append(GateFinding(WARNING, line, rule=rule, evidence_kind=GUARANTEED))
+    return out
 
 
 def check_audited_runs_kept(

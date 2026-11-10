@@ -1,0 +1,74 @@
+source_commit	channel	function	message_template	source	category	condition	rule	tests
+b4fdf56d	finding	labkit.checks.audit_binding.check_audited_runs_kept	{…}: names {…} as the run it read, and there is no runs/{…}/ in this area — a run an audi…	labkit/checks/audit_binding.py:363	scientific	an analysis audit record names a run the area no longer holds	LAB-043 Runs go through `runlog`	tests/test_rules_audit_binding.py::AnAuditedRunIsKept; gate: tests/test_finalize_open_findings.py::test_a_record_of_a_deleted_run_is_a_blocker
+b4fdf56d	finding	labkit.checks.code_scan.unreadable_source	{…} · the code cannot be read, so no check over it holds	labkit/checks/code_scan.py:148				
+b4fdf56d	finding	labkit.checks.intent_check.hold	{…}	labkit/checks/intent_check.py:260				
+b4fdf56d	finding	labkit.checks.intent_check.hold	{…}	labkit/checks/intent_check.py:277				
+b4fdf56d	finding	labkit.checks.intent_check.unregistered_outcomes	{…}: [{…}] records {…} = {…}, which is none of its outcomes' names	labkit/checks/intent_check.py:347				
+b4fdf56d	finding	labkit.checks.run_record_check.code_since_run	{…}: its runs cannot be followed ({…})	labkit/checks/run_record_check.py:125				
+b4fdf56d	finding	labkit.checks.run_record_check._run_code	{…} recorded no script — the code behind its number cannot be compared	labkit/checks/run_record_check.py:147				
+b4fdf56d	finding	labkit.checks.run_record_check._run_code	{…}: {…}	labkit/checks/run_record_check.py:156				
+b4fdf56d	finding	labkit.checks.run_record_check._run_code	{…} changed since {…} ran it — its number came from other code	labkit/checks/run_record_check.py:167				
+b4fdf56d	finding	labkit.checks.run_record_check._run_code	the code {…} ran cannot be read now: {…}	labkit/checks/run_record_check.py:182				
+b4fdf56d	finding	labkit.checks.run_record_check._helpers_since_run	{…} changed since {…} ran it (it was untracked; the run kept it as {…})	labkit/checks/run_record_check.py:270				
+b4fdf56d	finding	labkit.checks.run_record_check._helpers_since_run	{…} recorded no commit, or the area lies in no git repository now, so the helpers its scr…	labkit/checks/run_record_check.py:292				
+b4fdf56d	finding	labkit.checks.run_record_check._helpers_since_run	{…} started at commit {…}, which this clone does not hold	labkit/checks/run_record_check.py:301				
+b4fdf56d	finding	labkit.checks.run_record_check._helpers_since_run	the tree {…} started from cannot be read for {…}: {…}	labkit/checks/run_record_check.py:319				
+b4fdf56d	finding	labkit.checks.run_record_check._helpers_since_run	{…} is in neither {…}'s commit nor its uncommitted.patch — untracked when the run started…	labkit/checks/run_record_check.py:327				
+b4fdf56d	finding	labkit.checks.run_record_check._helpers_since_run	{…} changed since {…} ran	labkit/checks/run_record_check.py:338				
+b4fdf56d	finding	labkit.checks.run_record_check.null_lane_findings	{…}: the null lane's answer and gold equal the registered lane's on every item — if the n…	labkit/checks/run_record_check.py:418				
+b4fdf56d	finding	labkit.checks.run_record_check._recorded_sources	{…}	labkit/checks/run_record_check.py:543				
+b4fdf56d	finding	labkit.checks.run_record_check._recorded_sources	source not frozen — the run carries no `data=`	labkit/checks/run_record_check.py:556				
+b4fdf56d	finding	labkit.checks.run_record_check._source_finding	source {…} is not the bytes the run read: {…}, the run recorded sha256 {…}	labkit/checks/run_record_check.py:600				
+b4fdf56d	finding	labkit.checks.run_record_check._untracked_source	{…} — whether it belongs to the project is left open	labkit/checks/run_record_check.py:686				
+b4fdf56d	finding	labkit.checks.run_record_check.output_record_findings	{…}: not the file run {…} recorded — {…}	labkit/checks/run_record_check.py:724				
+b4fdf56d	finding	labkit.checks.run_record_check._gone	{…} is not at its recorded path on this machine — deleted, moved or held elsewhere; the r…	labkit/checks/run_record_check.py:737				
+b4fdf56d	finding	labkit.checks.run_record_check.row_provenance_findings	row provenance: the lineage of {…} is broken — {…}	labkit/checks/run_record_check.py:820				
+b4fdf56d	finding	labkit.checks.run_record_check.row_provenance_findings	{…}: {…}	labkit/checks/run_record_check.py:832				
+b4fdf56d	finding	labkit.checks.run_record_check.row_provenance_findings	{…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file …	labkit/checks/run_record_check.py:842				
+b4fdf56d	finding	labkit.checks.run_record_check._continued_with_other_code	{…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s …	labkit/checks/run_record_check.py:889				
+b4fdf56d	finding	labkit.checks.run_record_check.kept_number_gaps	the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th…	labkit/checks/run_record_check.py:979				
+b4fdf56d	finding	labkit.formats.answering_run.AnsweringRun.explain	{…}	labkit/formats/answering_run.py:620				
+b4fdf56d	finding	labkit.formats.answering_run.AnsweringRun.explain	{…} {…} — a probe or producer run, not an answer	labkit/formats/answering_run.py:635				
+b4fdf56d	finding	labkit.formats.evidence.change_blockers	{…}	labkit/formats/evidence.py:384				
+b4fdf56d	finding	labkit.formats.reference.comparison_gaps	metrics.json carries {…} and the head registers no [reference] — a comparison is register…	labkit/formats/reference.py:168				
+b4fdf56d	finding	labkit.formats.reference.comparison_gaps	the head registers [reference] on `{…}`, and the run recorded no verdict (no `{…}` in met…	labkit/formats/reference.py:181				
+b4fdf56d	finding	labkit.formats.reference.comparison_gaps	`{…}` {…}, so the registered reference ({…}) cannot be compared and no verdict can be rep…	labkit/formats/reference.py:197				
+b4fdf56d	finding	labkit.formats.reference.comparison_gaps	the verdict in metrics.json does not read: `{…}` = {…}, `{…}` = {…} — written beside the …	labkit/formats/reference.py:208				
+b4fdf56d	finding	labkit.formats.reference.comparison_gaps	the run compared with {…}, the head registers {…} — the reference changed after the run, …	labkit/formats/reference.py:224				
+b4fdf56d	finding	labkit.gates.finalize.choose_answering_run	no stamped protocol id ([protocol] id) — no run is bound to it	labkit/gates/finalize.py:191				
+b4fdf56d	finding	labkit.gates.finalize.choose_answering_run	{…}: bound to this protocol and newer by name than the adopted run {…} — if one of them a…	labkit/gates/finalize.py:223				
+b4fdf56d	finding	labkit.gates.finalize.check_answering_run	{…}	labkit/gates/finalize.py:286				
+b4fdf56d	finding	labkit.gates.finalize.check_answering_run	{…}	labkit/gates/finalize.py:292				
+b4fdf56d	finding	labkit.gates.finalize.check_open_audit_findings	{…}	labkit/gates/finalize.py:324	technical	an audit record of the area does not read; now `audit_binding.check_audit_records_read`	open assignment	tests/test_rules_audit_binding.py::AnAuditRecordReads; gate: tests/test_finalize_open_findings.py::test_an_unreadable_record_is_a_blocker
+b4fdf56d	finding	labkit.gates.finalize.check_open_audit_findings	{…} — undecided (LAB-015 Preflight audit before freezing)	labkit/gates/finalize.py:334	scientific	an audit finding graded BLOCKER is still open; now `audit_binding.check_audit_findings_decided`	LAB-015 Preflight audit before freezing	tests/test_rules_audit_binding.py::AnAuditFindingIsDecided; gate: tests/test_finalize_open_findings.py
+b4fdf56d	finding	labkit.gates.finalize.check_open_audit_findings	{…} — undecided (LAB-015 Preflight audit before freezing)	labkit/gates/finalize.py:336	scientific	an audit finding graded WARNING is still open; same check as the BLOCKER row	LAB-015 Preflight audit before freezing	tests/test_rules_audit_binding.py::AnAuditFindingIsDecided; gate: tests/test_finalize_open_findings.py
+b4fdf56d	finding	labkit.gates.finalize.check_intent_keys_in_metrics	intent-check: {…}	labkit/gates/finalize.py:375				
+b4fdf56d	finding	labkit.gates.finalize.check_run_code	{…}	labkit/gates/finalize.py:405				
+b4fdf56d	finding	labkit.gates.finalize.check_declared_scopes	{…} recorded no promise block: {…} — a run records the block it was measured under, so th…	labkit/gates/finalize.py:433				
+b4fdf56d	finding	labkit.gates.finalize.check_declared_scopes	declared scope changed since {…}: {…}	labkit/gates/finalize.py:444				
+b4fdf56d	finding	labkit.gates.finalize.check_open_fields	{…}:{…}: {…}	labkit/gates/finalize.py:473				
+b4fdf56d	finding	labkit.gates.finalize.check_open_fields	{…}: {…}	labkit/gates/finalize.py:476				
+b4fdf56d	finding	labkit.gates.finalize.check_open_fields	{…} — a stamped placeholder, fill or delete the line	labkit/gates/finalize.py:483				
+b4fdf56d	finding	labkit.gates.finalize.check_open_fields	{…}	labkit/gates/finalize.py:494				
+b4fdf56d	finding	labkit.gates.finalize.check_data_counts	{…}	labkit/gates/finalize.py:514				
+b4fdf56d	finding	labkit.gates.finalize.check_provenance	{…}	labkit/gates/finalize.py:530				
+b4fdf56d	finding	labkit.gates.finalize.run_file_unread	{…}	labkit/gates/finalize.py:569				
+b4fdf56d	finding	labkit.gates.finalize.run_file_unread	{…}	labkit/gates/finalize.py:575				
+b4fdf56d	finding	labkit.gates.finalize.check_reference	{…}: {…}	labkit/gates/finalize.py:649				
+b4fdf56d	finding	labkit.gates.finalize.check_reference	{…}: {…}	labkit/gates/finalize.py:664				
+b4fdf56d	finding	labkit.gates.finalize.check_kept_number	{…}: {…}{…}	labkit/gates/finalize.py:725				
+b4fdf56d	finding	labkit.gates.finalize.check_criterion_n	{…}	labkit/gates/finalize.py:788				
+b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}	labkit/gates/finalize.py:881				
+b4fdf56d	finding	labkit.gates.finalize.finalize_area	{…}: {…}	labkit/gates/finalize.py:891				
+b4fdf56d	finding	labkit.gates.finalize.declared_run_gaps	{…}	labkit/gates/finalize.py:978				
+b4fdf56d	finding	labkit.gates.preflight.tell_test_run	pytest is not installed in this interpreter — tests not run	labkit/gates/preflight.py:585				
+b4fdf56d	finding	labkit.gates.preflight.tell_test_run	{…} did not run{…} — {…}	labkit/gates/preflight.py:595				
+b4fdf56d	finding	labkit.gates.preflight.tell_test_run	{…} failed{…} — {…}	labkit/gates/preflight.py:603				
+b4fdf56d	finding	labkit.gates.registration_hold.registration_changes	the first measurements recorded different registrations: {…} — which one stood before the…	labkit/gates/registration_hold.py:108				
+b4fdf56d	finding	labkit.gates.registration_hold.registration_changes	the registration changed after the first measurement {…}: {…} (recorded by the answering …	labkit/gates/registration_hold.py:131				
+b4fdf56d	finding	labkit.gates.registration_hold.scope_changes	whether a correction in place releases what the number is about cannot be checked: {…}	labkit/gates/registration_hold.py:233				
+b4fdf56d	finding	labkit.gates.registration_hold._scope_held	what the number is about changed after the first measurement {…}: {…} (as the answering r…	labkit/gates/registration_hold.py:300				
+b4fdf56d	finding	labkit.gates.registration_hold._scope_held	what the number is about changed after the first measurement {…}: {…} (as the protocol st…	labkit/gates/registration_hold.py:353				
+b4fdf56d	finding	labkit.gates.registration_hold.unread_hold	what the number is about cannot be compared with its first measurement: {…} — the compari…	labkit/gates/registration_hold.py:375				
+b4fdf56d	exit	labkit.run.batch.Ledger.require_complete	{…}: the output does not balance its {…} input items — {…}. The run is NOT complete.	labkit/run/batch.py:211				
+b4fdf56d	exit	labkit.run.batch.Store.__enter__	{…} exists — another run is writing this output: {…} {…}	labkit/run/batch.py:385				
