@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1, 2a, the finalize pilot and step 2b are built ([2b](#2b-complete-rule-data-and-measurement)); 73 of 256 sites are classified. **Next:** step 3 for the other gates — report-check, preflight, the report holds, then the refusals raised during a measurement.
+**Status:** steps 1, 2a, 2b and 3 are built; all 256 sites are classified ([step 3](#step-3-for-the-other-gates-as-built-2026-11-10)). **Next:** step 4 — the report per scenario test, then the review of their assertions.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -157,6 +157,18 @@ Complete the site account and repair the scanner's known omission. `check_invent
 Compare the baseline inventory with the current one through the site account. The comparison key is the channel, the qualified function and the normalized message template; line numbers only locate the source. Explain moves, rewordings, renames, splits, merges, removals and additions in the site account. Resolve duplicate keys there by hand, never by line order. The comparison lists the differences the site account does not explain and ignores lines that only moved because others were inserted; do not build a second automatic matcher. Enter each remaining site before migrating its gate.
 
 **Built 2026-11-10 (`95639c56`…`6e5783c0`).** The audit records' `findings.Finding.rule` is the gate's `RuleAssignment`; the record stores the same text as before (`recorded_rule`, `stored_rule`), so the on-disk format did not change. The scanner sees a refusal wrapped in `with_way_out`: 30 refusals of `runlog` and the run start check were missing, and the 226 inventoried sites are 256 (194 `finding`, 56 `exit`, 6 `printed`); no other missed form was found. Both inventories count rules by the data field (`FindingSite.assignment`) and keep the cited ids beside it. The forwarding guard is `tests/test_architecture.py::ForwardingKeepsWhatAFindingIs`. The site account holds all 256 sites at `6e5783c0`: finalize's 73 rows kept their hand columns, the five sites the pilot moved name their old place in the condition, and the rows of two `batch` refusals and `evidence.change_blockers` are no longer marked removed — they are live sites of other gates. `python -m labkit.tools.check_inventory --account docs/notes/2026-11-10-site-account.tsv` compares by key and count and reports no difference; ten keys are shared by two sites each, told apart by hand.
+
+### Step 3 for the other gates, as built (2026-11-10)
+
+Every one of the 256 sites of the [site account](2026-11-10-site-account.tsv) is classified: 98 scientific, 28 technical, 31 composition, 2 forwarding, 8 reader, 23 boundary, 56 refusals and printed lines, and 10 sites of `report_decisions.py` that wait for the decision on the second review. Every gate finding site records its rule as data (`253b82a`; 179 open assignments, 15 known rules). The sites the inventory of `6e5783c0` found unreached or reached only through whole commands got tests below the command: report-check, the report holds, the replacement gate, the registered report, preflight, code-check, notes-check, the protocol history, the audit's tier warning and a `data=` entry (`tests/test_*_stations.py`, `tests/test_check_stations.py`); `state_fixture.checked` builds report-check's context for its gate tests. The exit sites are named by the tests that reach them, traced through `with_way_out` in one run of the suite, or by the tests whose source holds their wording; recheck's and the run start's untested refusals got tests (`tests/test_recheck_refusals.py`, `tests/test_run_start_refusals.py`).
+
+Outside finalize no further check was extracted: their conditions are tested at the check layer already (59 sites) or are composition and boundaries of their gates; the pilot's extractions show the pattern where a condition read files itself.
+
+Open from step 3, for the author:
+
+1. `report_check.analysis_audit_gap` catches `FileNotFoundError` and `ValueError`, not a refused access: a `PermissionError` from the audit's inputs ends report-check in that error, while the branch classifies with `outcome_of_failed_read`, which suggests a check not executable was meant. The test holds today's behaviour (`tests/test_report_check_stations.py`).
+2. Seven sites no test names, none a gate finding: `runlog.py:315` (a repeat whose parent record does not read), `detached.py:292` (the detached runner's usage), `recheck.py:164` (a `[kept]` table that does not read when the kept keys are read), and four printed warning lines (`protocol_report.py:745` and `:838`, `protocol_fill.py:763`, `usability.py:565`), lines at `6e5783c0`.
+3. The ten sites of `report_decisions.py` wait for the six decisions on the second review.
 
 ### 4. Reduce scenario variants
 
