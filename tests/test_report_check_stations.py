@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.checks.audit_binding import AuditError
-from labkit.formats.gate import BLOCKER, OPEN_RULE, VIOLATED
+from labkit.formats.gate import BLOCKER, NOT_EXECUTABLE, OPEN_RULE, VIOLATED
 from labkit.gates import report_check
 from protocol_fixture import head
 from state_fixture import AREA, checked
@@ -37,11 +37,12 @@ class TheAnalysisAuditCannotBeHeld(unittest.TestCase):
         self.assertEqual(gap.fix, "restore it")
 
     def test_an_area_that_does_not_read_holds_it_to_the_area(self):
-        # a refused access (PermissionError) is not caught here and ends
-        # report-check in that error — open point in the test-model plan
+        # a missing file or a malformed one is a defect found; a refused
+        # access leaves the check not executed
         for raised, outcome in (
             (ValueError("the promise block does not read"), VIOLATED),
             (FileNotFoundError("scripts/01_measure.py"), VIOLATED),
+            (PermissionError("scripts/ refused"), NOT_EXECUTABLE),
         ):
             with self.subTest(raised=type(raised).__name__):
                 gap = self._gap(raised)

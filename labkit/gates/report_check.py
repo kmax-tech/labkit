@@ -444,12 +444,14 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             fix=exc.fix or audit,
             rule=OPEN_RULE,
         )
-    except (FileNotFoundError, ValueError) as exc:
-        # ValueError: nothing to stamp, a findings file or the promise block
-        # unreadable (FindingsError, PromiseError)
+    except (OSError, ValueError) as exc:
+        # OSError: a file missing (violated) or refused (not executable,
+        # `outcome_of_failed_read`); ValueError: nothing to stamp, a findings
+        # file or the promise block unreadable (FindingsError, PromiseError)
         return blocker(
             f"the analysis audit cannot be held to the area: {exc}",
-            fix=f"repair what the sentence names, then {audit}",
+            fix=f"repair what the sentence names (a refused file: make it "
+            f"readable), then {audit}",
             check_outcome=outcome_of_failed_read(exc),
             rule=OPEN_RULE,
         )
