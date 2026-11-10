@@ -49,7 +49,7 @@ import ast
 import re
 import sys
 import tomllib
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -59,7 +59,8 @@ from labkit.formats.gate import NEW_CLASS, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT
 from labkit.formats.rules import CODE_RE, load_ledger
 
 USAGE = (
-    "usage: python -m labkit.tools.check_inventory [--records EXPERIMENTS] [--out FILE]"
+    "usage: python -m labkit.tools.check_inventory [--records EXPERIMENTS] "
+    "[--account FILE] [--out FILE]"
 )
 
 RULE_ID = CODE_RE  # every rule family; the ledger read here holds LAB
@@ -669,6 +670,100 @@ def rule_uses(
     return out
 
 
+#: the columns of a site account (docs/notes/2026-11-10-test-model.md,
+#: "Site account"): the key a site is compared by, then the hand columns
+ACCOUNT_COLUMNS = (
+    "source_commit",
+    "channel",
+    "function",
+    "message_template",
+    "source",
+    "category",
+    "condition",
+    "rule",
+    "tests",
+)
+#: the category of a row whose site no longer stands, with its reason
+REMOVED = "removed"
+
+
+def site_key(channel: str, unit: str, wording: str) -> tuple[str, str, str]:
+    """The key a site and an account row are compared by: channel,
+    qualified function and the message template on one line — never the
+    line number, which moves with every edit above it."""
+    return channel, unit, " ".join(wording.split())
+
+
+def read_account(path: Path) -> list[dict[str, str]]:
+    """The rows of the site account at PATH, a TSV with ACCOUNT_COLUMNS.
+    Raises ValueError naming the file for another header or a row of
+    another width."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or tuple(lines[0].split("\t")) != ACCOUNT_COLUMNS:
+        raise ValueError(f"{path}: the header is not {chr(9).join(ACCOUNT_COLUMNS)}")
+    rows = []
+    for n, line in enumerate(lines[1:], 2):
+        cells = line.split("\t")
+        if len(cells) != len(ACCOUNT_COLUMNS):
+            raise ValueError(
+                f"{path}:{n}: {len(cells)} cells, not {len(ACCOUNT_COLUMNS)}"
+            )
+        rows.append(dict(zip(ACCOUNT_COLUMNS, cells)))
+    return rows
+
+
+@dataclass(frozen=True)
+class AccountDifference:
+    """One key (`site_key`) where the source and the site account disagree:
+    SITES sites stand in the source, ROWS rows of the account (not marked
+    REMOVED) name it."""
+
+    key: tuple[str, str, str]
+    sites: int
+    rows: int
+
+
+def account_differences(
+    rows: list[dict[str, str]], sites: list[FindingSite]
+) -> list[AccountDifference]:
+    """Every key whose number of sites differs from the number of the
+    account's rows that name it, removed rows left out — a site the account
+    does not explain, or a row whose site is gone. The comparison is by key
+    and count alone: which row belongs to which of two sites sharing a key
+    the account says by hand, and a site that only moved down a file
+    differs in no key. [] when the account explains the source."""
+    in_source = Counter(site_key(s.channel, s.unit, s.wording) for s in sites)
+    in_account = Counter(
+        site_key(r["channel"], r["function"], r["message_template"])
+        for r in rows
+        if r["category"] != REMOVED
+    )
+    return [
+        AccountDifference(k, in_source[k], in_account[k])
+        for k in sorted(set(in_source) | set(in_account))
+        if in_source[k] != in_account[k]
+    ]
+
+
+def render_account_differences(differences: list[AccountDifference]) -> str:
+    """The differences as markdown, or the line that there are none."""
+    if not differences:
+        return "\n## Site account\n\nThe site account explains every site.\n"
+    lines = [
+        "",
+        "## Site account",
+        "",
+        f"{len(differences)} key(s) where source and account disagree:",
+        "",
+        "| Channel | Function | Wording | Sites | Rows |",
+        "|---|---|---|---|---|",
+    ]
+    for d in differences:
+        channel, unit, wording = d.key
+        lines.append(f"| {channel} | `{unit}` | {wording} | {d.sites} | {d.rows} |")
+    return "\n".join(lines) + "\n"
+
+
 def render_inventory(
     sites: list[FindingSite], uses: list[RuleUse], commands: dict[str, set[str]]
 ) -> str:
@@ -777,17 +872,14 @@ def render_audit_rules(
     return "\n".join(lines) + "\n"
 
 
-def main(argv: list[str]) -> int:
-    """Print the inventory, with `--records EXPERIMENTS` the audit findings
-    there by rule; to stdout, or to `--out FILE`; 0."""
-    if argv in (["--help"], ["-h"]):
-        print(__doc__)
-        return 0
+def _options(argv: list[str]) -> dict[str, Path]:
+    """ARGV's options, each with its path. Raises console.Refused for an
+    unknown option, one given twice and one without its value."""
     options: dict[str, Path] = {}
     rest = list(argv)
     while rest:
         option = rest[0]
-        if option not in ("--out", "--records"):
+        if option not in ("--out", "--records", "--account"):
             raise console.Refused(
                 "check_inventory", f"{option!r} is no option; {USAGE}"
             )
@@ -799,6 +891,18 @@ def main(argv: list[str]) -> int:
             )
         options[option] = Path(rest[1])
         rest = rest[2:]
+    return options
+
+
+def main(argv: list[str]) -> int:
+    """Print the inventory, with `--records EXPERIMENTS` the audit findings
+    there by rule, with `--account FILE` the keys where the source and that
+    site account disagree; to stdout, or to `--out FILE`. 0, or 1 when the
+    account leaves a difference unexplained."""
+    if argv in (["--help"], ["-h"]):
+        print(__doc__)
+        return 0
+    options = _options(argv)
     out = options.get("--out")
     text = inventory(PACKAGE_DIR)
     experiments = options.get("--records")
@@ -806,12 +910,23 @@ def main(argv: list[str]) -> int:
         if not experiments.is_dir():
             raise console.Refused("check_inventory", f"{experiments}: no such folder")
         text += render_audit_rules(experiments, findings.repo_records(experiments))
+    account = options.get("--account")
+    differences: list[AccountDifference] = []
+    if account is not None:
+        try:
+            rows = read_account(account)
+        except (OSError, ValueError) as exc:
+            raise console.Refused("check_inventory", str(exc)) from exc
+        differences = account_differences(
+            rows, finding_sites(read_modules(PACKAGE_DIR))
+        )
+        text += render_account_differences(differences)
     if out is None:
         sys.stdout.write(text)
     else:
         out.write_text(text, encoding="utf-8")
         print(f"check_inventory: wrote {out}")
-    return 0
+    return 1 if differences else 0
 
 
 def cli() -> None:

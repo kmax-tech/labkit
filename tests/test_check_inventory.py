@@ -148,6 +148,65 @@ class RecordedRule(unittest.TestCase):
         self.assertEqual((s.rules, s.assignment), (("LAB-003",), inv.NOT_RECORDED))
 
 
+def _row(channel: str, unit: str, wording: str, category: str = "") -> dict[str, str]:
+    """An account row keyed by CHANNEL, UNIT and WORDING, its hand columns empty."""
+    return dict(
+        zip(
+            inv.ACCOUNT_COLUMNS,
+            ("c0ffee00", channel, unit, wording, "x.py:1", category, "", "", ""),
+        )
+    )
+
+
+def _site(unit: str, wording: str, line: int) -> inv.FindingSite:
+    return inv.FindingSite(
+        unit, "x.py", line, line, "finding", "BLOCKER", "GUARANTEED", (), wording
+    )
+
+
+class SiteAccount(unittest.TestCase):
+    """The comparison through the site account: by key and count, never by
+    line; a removed row names no site."""
+
+    def test_an_explained_source_has_no_difference_though_its_lines_moved(self) -> None:
+        rows = [_row("finding", "m.f", "x {…}")]
+        self.assertEqual(
+            inv.account_differences(rows, [_site("m.f", "x  {…}", 99)]), []
+        )
+
+    def test_a_site_without_a_row_and_a_row_without_a_site_are_named(self) -> None:
+        rows = [_row("finding", "m.gone", "old"), _row("finding", "m.kept", "k")]
+        sites = [_site("m.kept", "k", 1), _site("m.new", "new", 2)]
+        self.assertEqual(
+            [(d.key[1], d.sites, d.rows) for d in inv.account_differences(rows, sites)],
+            [("m.gone", 0, 1), ("m.new", 1, 0)],
+        )
+
+    def test_a_removed_row_and_a_shared_key_count_as_written(self) -> None:
+        rows = [
+            _row("finding", "m.f", "{…}"),
+            _row("finding", "m.f", "{…}"),
+            _row("finding", "m.g", "g", category=inv.REMOVED),
+        ]
+        sites = [_site("m.f", "{…}", 1), _site("m.f", "{…}", 2)]
+        self.assertEqual(inv.account_differences(rows, sites), [])
+        (d,) = inv.account_differences(rows[:1], sites)
+        self.assertEqual((d.sites, d.rows), (2, 1))
+
+    def test_an_account_of_another_shape_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "account.tsv"
+            path.write_text("site\tnote\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "the header is not"):
+                inv.read_account(path)
+            path.write_text(
+                "\t".join(inv.ACCOUNT_COLUMNS) + "\nonly\tthree\tcells\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "3 cells"):
+                inv.read_account(path)
+
+
 class Reach(unittest.TestCase):
     def test_a_command_reaches_a_check_through_a_module_alias(self) -> None:
         graph = inv.call_graph([CHECKS, GATE])
