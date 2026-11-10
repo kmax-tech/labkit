@@ -51,7 +51,13 @@ from pathlib import Path
 from labkit.formats.gate import AREA_SLOT
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
-from labkit.formats.gate import EXIT_CONTRACT, GateFinding, blocker, with_way_out
+from labkit.formats.gate import (
+    EXIT_CONTRACT,
+    OPEN_RULE,
+    GateFinding,
+    blocker,
+    with_way_out,
+)
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import run_facts
 from labkit.formats.area_state import AreaState, state_of
@@ -257,7 +263,9 @@ def hold(
         )
     mismatch = _prose_block_mismatch(protocol, text, block)
     if mismatch:
-        return Held([], [blocker(m, fix=INTENT_FIX) for m in mismatch], "")
+        return Held(
+            [], [blocker(m, fix=INTENT_FIX, rule=OPEN_RULE) for m in mismatch], ""
+        )
 
     reg = ids_in_prose(text)
     if not reg:
@@ -274,7 +282,7 @@ def hold(
     except ValueError as exc:  # MetricsError, RunConfigError
         raise console.Refused("intent-check", str(exc)) from exc
     found = [
-        blocker(m, fix=INTENT_FIX)
+        blocker(m, fix=INTENT_FIX, rule=OPEN_RULE)
         for m in _key_mismatch(protocol, mpath, reg, metrics)
         + (check_block_against_run(block, mpath, metrics) if block is not None else [])
     ] + (
@@ -350,6 +358,7 @@ def unregistered_outcomes(
                 fix=f"record one of {', '.join(outcomes)} — the name of the "
                 f"outcome whose condition holds, as [[promise]] {p.id} writes it: "
                 f"fix the code, then `.venv/bin/python {AREA_SLOT}/scripts/01_measure.py`",
+                rule=OPEN_RULE,
             )
         )
     return out

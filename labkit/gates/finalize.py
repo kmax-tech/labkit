@@ -380,6 +380,7 @@ def check_intent_keys_in_metrics(
             f"intent-check: {exc.why}",
             fix=f"repair what the sentence names; `intent-check "
             f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",
+            rule=OPEN_RULE,
         )
         return
     # Its findings as data, each a blocker; its notes — which run, on what

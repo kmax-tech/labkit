@@ -18,6 +18,7 @@ from labkit.gates import registration_hold
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import gate  # noqa: E402
 from protocol_fixture import PID, completed_run, head  # noqa: E402
+from labkit.formats.area_state import state_of  # noqa: E402
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -368,6 +369,34 @@ class TheProtocolStepEndsEarly(unittest.TestCase):
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
             code, _ = self._collected(area)
         self.assertNotEqual(code, 2)
+
+
+class IntentCheckRefused(unittest.TestCase):
+    """intent-check refuses when the answering run's metrics.json does not
+    read; finalize's intent station keeps that as one blocker naming
+    intent-check, never a crash. The twin: readable metrics are held."""
+
+    def test_an_unreadable_metrics_file_is_one_blocker(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            protocol = area / "PROTOCOL-x.md"
+            protocol.write_text(CLEAN_PROTOCOL)
+            run = completed_run(area, "r1", metrics={"criterion_1_pass": True})
+            (run / "metrics.json").write_text("{")
+            found = gate.Findings(tell=None)
+            finalize.check_intent_keys_in_metrics(
+                found, protocol, CLEAN_PROTOCOL, run, state_of(area)
+            )
+            (f,) = found.found
+            self.assertTrue(f.text.startswith("intent-check: "), f.text)
+            self.assertIn("metrics", f.text)
+            self.assertEqual(f.rule, gate.OPEN_RULE)
+            (run / "metrics.json").write_text('{"criterion_1_pass": true}')
+            twin = gate.Findings(tell=None)
+            finalize.check_intent_keys_in_metrics(
+                twin, protocol, CLEAN_PROTOCOL, run, state_of(area)
+            )
+            self.assertFalse(any("unreadable" in g.text for g in twin.found))
 
 
 class AreaTestsBeforeReporting(unittest.TestCase):
