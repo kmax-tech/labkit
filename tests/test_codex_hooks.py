@@ -4,7 +4,9 @@ import contextlib
 import io
 import json
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -175,8 +177,26 @@ class CodexAdapter(unittest.TestCase):
             self.assertEqual(codex_hooks.main(["--help"]), 0)
 
 
-class CodexStop(shared_tests.Stop):
-    """Run the shared stop contract, including clean twins, through Codex JSON."""
+class CodexStop(shared_tests.StopFixture):
+    """The stop contract through Codex JSON for the cases that use what the
+    Codex entry adds: a hold and its clean twin, the `stop_hook_active`
+    field, and the session base the Codex pre-run keeps. The other cases of
+    `test_agent_hooks.Stop` reach the same `agent_hooks.stop` with the same
+    event (`CodexStopPassesTheSharedStop`), so they are not run twice."""
+
+    test_a_blocker_sends_the_agent_back = (
+        shared_tests.Stop.test_a_blocker_sends_the_agent_back
+    )
+    test_a_correct_answer_lets_it_stop = (
+        shared_tests.Stop.test_a_correct_answer_lets_it_stop
+    )
+    test_sent_back_once_already_no_loop = (
+        shared_tests.Stop.test_sent_back_once_already_no_loop
+    )
+    test_a_script_changed_under_a_reported_number_is_sent_back = (
+        shared_tests.Stop.test_a_script_changed_under_a_reported_number_is_sent_back
+    )
+    test_a_base_removed_after_a_commit_holds_the_commits_since_the_transcript = shared_tests.Stop.test_a_base_removed_after_a_commit_holds_the_commits_since_the_transcript
 
     def _stop(self, active=False):
         return invoke(
@@ -202,3 +222,42 @@ class CodexStop(shared_tests.Stop):
                 "tool_input": {"command": command},
             },
         )
+
+
+class CodexStopPassesTheSharedStop(unittest.TestCase):
+    """`codex-hook stop` hands `agent_hooks.stop` the wire event with two
+    fields added — `project_dir`, the event's cwd, and `hook_command` — and
+    returns its exit unchanged; the stop itself is `test_agent_hooks.Stop`'s."""
+
+    def event(self, root: Path, *, active: bool) -> dict:
+        return {
+            "hook_event_name": "Stop",
+            "session_id": "s1",
+            "cwd": str(root),
+            "transcript_path": None,
+            "stop_hook_active": active,
+        }
+
+    def test_the_event_and_the_exit_pass_unchanged_but_for_two_fields(self):
+        root = Path(tempfile.mkdtemp()).resolve()
+        for rc, active in ((0, True), (2, False)):
+            with self.subTest(rc=rc, active=active):
+                event = self.event(root, active=active)
+                with mock.patch.object(
+                    codex_hooks.agent_hooks, "stop", return_value=rc
+                ) as stop:
+                    self.assertEqual(invoke("stop", event)[0], rc)
+                stop.assert_called_once_with(
+                    {**event, "project_dir": str(root), "hook_command": "codex-hook"}
+                )
+
+    def test_the_project_is_the_events_never_an_inherited_claude_directory(self):
+        """Outside a repository the stop names the directory it judged and
+        speaks as codex-hook: the event's cwd, though Claude's variable names
+        another."""
+        root = Path(tempfile.mkdtemp()).resolve()
+        with mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": "/no-such-repo"}):
+            rc, _, err = invoke("stop", self.event(root, active=False))
+        self.assertEqual(rc, 2, err)
+        self.assertIn(f"codex-hook stop: {root} lies in no git repository", err)
+        self.assertNotIn("/no-such-repo", err)

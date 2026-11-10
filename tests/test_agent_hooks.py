@@ -752,11 +752,12 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class Stop(unittest.TestCase):
-    """`claude-hook stop`: a number written back in this session goes
-    through report-check, the whole release check, before the agent ends its
-    turn. The area is at low, where the hook's rule is the same and no freeze
-    is owed."""
+class StopFixture(unittest.TestCase):
+    """The lab the stop is tested in and the session's events: an area at
+    low, where the hook's rule is the same and no freeze is owed, with one
+    completed run and its decided analysis record. A base without tests of
+    its own: `Stop` holds the contract, `test_codex_hooks.CodexStop` runs
+    the cases that pass through Codex's own entry."""
 
     RUN = "2026-10-07T10-00-00_ab12"
 
@@ -860,6 +861,18 @@ class Stop(unittest.TestCase):
         event["transcript_path"] = str(self.transcript)
         return _run(hook_pre_run.pre_run, event)
 
+    def _base(self) -> str:
+        """The session's stop base: the commit the next stop counts from."""
+        path = hook_session.stop_base_file(self.root, "s1")
+        assert path is not None
+        return path.read_text(encoding="utf-8").strip()
+
+
+class Stop(StopFixture):
+    """`claude-hook stop`: a number written back in this session goes
+    through report-check, the whole release check, before the agent ends its
+    turn."""
+
     def test_a_blocker_sends_the_agent_back(self):
         self._answer("2026-10-01T09-00-00_ffff")
         rc, _, err = self._stop()
@@ -915,11 +928,6 @@ class Stop(unittest.TestCase):
     def test_nothing_written_back_is_silent(self):
         rc, out, err = self._stop()
         self.assertEqual((rc, out, err), (0, "", ""))
-
-    def _base(self) -> str:
-        path = hook_session.stop_base_file(self.root, "s1")
-        assert path is not None
-        return path.read_text(encoding="utf-8").strip()
 
     def test_a_commit_past_the_pre_commit_is_held_at_every_stop(self):
         """`git commit --no-verify` leaves the tree clean, so git status alone
