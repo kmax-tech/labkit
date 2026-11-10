@@ -177,13 +177,39 @@ class CommittedAt:
     detail: str = ""
 
 
+def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
+    """Where the protocol carrying id PID stood in COMMIT of the repository
+    ROOT — the `PROTOCOL-*.md` whose head names PID —, or None when no file
+    there does. The id is the binding and survives a rename or a move
+    (docs/protocol-run-binding.md); the head is read as TOML only, since an
+    older commit holds an older standard `protocol_block.head` refuses.
+    Raises GitError when git cannot run."""
+    listed = git_run(["ls-tree", "-r", "-z", "--name-only", commit], root)
+    if listed.returncode != 0:
+        raise GitError(f"git ls-tree {commit[:12]} in {root}: {listed.stderr.strip()}")
+    names = [n for n in listed.stdout.split("\0") if n]
+    for rel in sorted(n for n in names if Path(n).name.startswith("PROTOCOL-")):
+        text = text_at(root, root / rel, commit)
+        if text is None:
+            continue
+        try:
+            table = protocol_block.parse_toml_block(text).get("protocol", {})
+        except protocol_block.BlockError:
+            continue  # a block that does not parse names no id to bind
+        if isinstance(table, dict) and table.get("id") == pid:
+            return root / rel
+    return None
+
+
 def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
     """The protocol PATH as the commit run RD recorded (`runs.recorded_commit`)
     holds it in the repository ROOT — the one reading of "what stood
     before the number" that the registration station
     (`report_check.registration_gaps`) and the binding of the report
-    registered before it share. RD's config must read. Raises
-    GitError when git cannot run."""
+    registered before it share. Read at PATH, and where the commit holds
+    nothing there, by the id RD's run is bound to (`protocol_path_at`): a
+    protocol renamed or moved since stood before the number all the same.
+    RD's config must read. Raises GitError when git cannot run."""
     from labkit.formats.runs import recorded_commit
 
     assert rd.config is not None, "a run whose config reads"
@@ -199,6 +225,11 @@ def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
         unread = unreadable_at(root, path, commit)
         if unread:
             return CommittedAt(rd.dir.name, commit, None, UNREADABLE_COMMIT, unread)
+        # absent at PATH: renamed or moved since, found by its id
+        pid = rd.config.protocol.id
+        then = protocol_path_at(root, commit, pid) if pid is not None else None
+        text = text_at(root, then, commit) if then is not None else None
+    if text is None:
         return CommittedAt(rd.dir.name, commit, None, NOT_COMMITTED)
     return CommittedAt(rd.dir.name, commit, text, None)
 
@@ -650,8 +681,12 @@ def as_measured(
         )
     patch_file = patch_path(rd.dir)
     patch = patch_file.read_text(encoding="utf-8") if patch_file.is_file() else ""
+    pid = rd.config.protocol.id if rd.config is not None else None
     try:
         blob = blobs_then(root, commit, patch, [protocol])[protocol]
+        then = protocol_path_at(root, commit, pid) if blob is None and pid else None
+        if then is not None:  # renamed or moved since: found by its id
+            blob = blobs_then(root, commit, patch, [then])[then]
     except GitError as exc:
         return None, f"its first measurement {rd.dir.name}: {exc}"
     if blob is None:

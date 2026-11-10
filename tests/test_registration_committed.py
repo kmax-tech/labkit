@@ -179,6 +179,43 @@ class RegistrationAtTheFirstMeasurement(_Repository):
             out,
         )
 
+    def test_a_protocol_renamed_after_the_first_measurement_stood_before_it(self):
+        """The id binds, not the path: a protocol renamed and moved since its
+        first measurement is found in that commit by its id."""
+        sha = self._commit(REGISTRATION)
+        self._run(sha)
+        _git(
+            self.root,
+            "mv",
+            "experiments/01-x/PROTOCOL-x.md",
+            "experiments/01-x/PROTOCOL-y.md",
+        )
+        _git(self.root, "commit", "-qm", "rename")
+        self.proto = self.area / "PROTOCOL-y.md"
+        self.assertEqual(self._gaps(), [])
+        then = protocol_history.committed_at(
+            self.proto,
+            area_state.state_of(self.area).measured_of(PID).firsts[0],
+            self.root,
+        )
+        self.assertIsNone(then.cause)
+        self.assertIn("does it hold?", then.text or "")
+        # what the run saw reads back too, where the comparisons read it
+        rd = area_state.state_of(self.area).measured_of(PID).firsts[0]
+        text, where = protocol_history.as_measured(self.proto, rd, self.root)
+        self.assertIn("does it hold?", text or "", where)
+
+    def test_the_twin_a_rename_finds_nothing_when_no_protocol_carried_the_id(self):
+        before = self._commit("")
+        self.proto.unlink()
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "no protocol yet")
+        sha = _git(self.root, "rev-parse", "HEAD")
+        self.assertNotEqual(sha, before)
+        self._commit(REGISTRATION)
+        self._run(sha)
+        self.assertIsNone(protocol_history.protocol_path_at(self.root, sha, PID))
+
     def test_a_field_written_after_the_first_measurement_blocks(self):
         sha = self._commit("")  # the question not yet written
         self._run(sha)

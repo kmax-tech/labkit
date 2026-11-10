@@ -338,6 +338,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A protocol renamed or moved after its first measurement no longer reads as never committed.** The registration station, the binding of the registered report and the comparisons with what a first measurement saw looked the protocol up at its present path in the measurement's commit; after a rename they said "nothing stood before the number" or "ran with the protocol untracked". They now find it in that commit by the id the run is bound to (`protocol_history.protocol_path_at`), as docs/protocol-run-binding.md says a rename keeps the identity. A commit git cannot read is still named as unreadable.
+
 - **A Conclusion of dashes or written twice is not written.**
   `protocol_check.conclusion_written`, the claim a decision review binds
   to, reads through `written_line`, the answer the result block shows; it
