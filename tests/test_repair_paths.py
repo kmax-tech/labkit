@@ -69,56 +69,12 @@ def sh(cwd: Path, *args: str) -> tuple[int, str]:
     return p.returncode, p.stdout + p.stderr
 
 
-@unittest.skipUnless(
-    (VENV / "bin" / "usability").is_file() and shutil.which("git"),
-    "needs the suite's venv with labkit's commands, and git",
-)
-class RepairPaths(unittest.TestCase):
-    """Each test starts from one lab: registered, measured once, committed."""
+class StagedLab(unittest.TestCase):
+    """The count task in a staged lab (`usability stage`), copied fresh for
+    each test from the lab a subclass builds once (`setUpClass`), and the
+    commands an agent runs in it. A base without tests of its own."""
 
     base: Path
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.base = Path(tempfile.mkdtemp()) / "lab"
-        steps = [
-            [
-                str(VENV / "bin" / "usability"),
-                "stage",
-                str(cls.base),
-                "--task",
-                "count",
-                "--venv",
-                str(VENV),
-            ],
-        ]
-        for step in steps:
-            rc, out = sh(cls.base.parent, *step)
-            assert rc == 0, out
-        lab = cls.base
-        for step in (
-            [".venv/bin/python", str(EXAMPLES / "count-fill.py")],
-            [
-                ".venv/bin/protocol-fill",
-                P,
-                "type=exploratory",
-                "kept.key=mean_docs_per_case",
-                "kept.unit=documents",
-                f"Terms of this protocol={TERMS}",
-                "Question / hypothesis=What is the mean number of input documents per case?",
-                "Data / scope=data/raw/cases.jsonl (12 cases) and data/raw/inputs/<case_id>/",
-                "Exclusions / filters=hidden files and nested directories are not counted",
-                f"Unit={UNIT}",
-            ],
-            ["git", "add", AREA],
-            ["git", "commit", "-q", "-m", "register", "--", AREA],
-            [".venv/bin/python", f"{AREA}/scripts/01_measure.py"],
-            [".venv/bin/protocol-fill", P, f"Conclusion={CONCLUSION}"],
-            ["git", "add", AREA],
-            ["git", "commit", "-q", "-m", "run 1", "--", AREA],
-        ):
-            rc, out = sh(lab, *step)
-            assert rc == 0, (step, out)
 
     def setUp(self) -> None:
         self.lab = Path(tempfile.mkdtemp()) / "lab"
@@ -190,6 +146,56 @@ class RepairPaths(unittest.TestCase):
         self.assertIn(HELD_NOW, refused)
         self.assertEqual(self.runs(), 1)
         return record, said
+
+
+@unittest.skipUnless(
+    (VENV / "bin" / "usability").is_file() and shutil.which("git"),
+    "needs the suite's venv with labkit's commands, and git",
+)
+class RepairPaths(StagedLab):
+    """Each test starts from one lab: registered, measured once, committed."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.base = Path(tempfile.mkdtemp()) / "lab"
+        steps = [
+            [
+                str(VENV / "bin" / "usability"),
+                "stage",
+                str(cls.base),
+                "--task",
+                "count",
+                "--venv",
+                str(VENV),
+            ],
+        ]
+        for step in steps:
+            rc, out = sh(cls.base.parent, *step)
+            assert rc == 0, out
+        lab = cls.base
+        for step in (
+            [".venv/bin/python", str(EXAMPLES / "count-fill.py")],
+            [
+                ".venv/bin/protocol-fill",
+                P,
+                "type=exploratory",
+                "kept.key=mean_docs_per_case",
+                "kept.unit=documents",
+                f"Terms of this protocol={TERMS}",
+                "Question / hypothesis=What is the mean number of input documents per case?",
+                "Data / scope=data/raw/cases.jsonl (12 cases) and data/raw/inputs/<case_id>/",
+                "Exclusions / filters=hidden files and nested directories are not counted",
+                f"Unit={UNIT}",
+            ],
+            ["git", "add", AREA],
+            ["git", "commit", "-q", "-m", "register", "--", AREA],
+            [".venv/bin/python", f"{AREA}/scripts/01_measure.py"],
+            [".venv/bin/protocol-fill", P, f"Conclusion={CONCLUSION}"],
+            ["git", "add", AREA],
+            ["git", "commit", "-q", "-m", "run 1", "--", AREA],
+        ):
+            rc, out = sh(lab, *step)
+            assert rc == 0, (step, out)
 
     def test_a_unit_named_as_its_place_takes_the_correction_route(self):
         """The decision's line names the correction: no new measurement, the
@@ -390,7 +396,7 @@ def review_answer(verdict: str) -> str:
     (VENV / "bin" / "usability").is_file() and shutil.which("git"),
     "needs the suite's venv with labkit's commands, and git",
 )
-class RegisteredReportRepairs(RepairPaths):
+class RegisteredReportRepairs(StagedLab):
     """The same lab with `report = "REPORT.md"` registered before the first
     measurement and its progress account committed — the repair paths that
     end at the report: a report deleted after the adoption, a handover that
@@ -488,12 +494,6 @@ class RegisteredReportRepairs(RepairPaths):
         self.run_(".venv/bin/labkit-adopt", AREA, run)
         self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
         self.commit("adopted")
-
-    # -- not the tests of the base class: this lab registers a report
-    test_a_unit_named_as_its_place_takes_the_correction_route = None  # type: ignore[assignment]
-    test_a_field_not_named_by_its_label_is_held = None  # type: ignore[assignment]
-    test_the_twin_a_conclusion_rewritten_owes_no_measurement_and_no_audit = None  # type: ignore[assignment]
-    test_the_twin_a_code_repair_is_measured_again_and_audited = None  # type: ignore[assignment]
 
     def test_a_registered_report_deleted_after_the_adoption_is_held(self):
         """`git rm REPORT.md`, committed alone, is held by the commit,
