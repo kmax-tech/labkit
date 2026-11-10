@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from labkit.formats.commands import register_anew
 from labkit.formats.gate import AREA_SLOT
-from labkit.formats.gate import GateFinding, blocker
+from labkit.formats.gate import OPEN_RULE, GateFinding, blocker
 from labkit.formats.protocol_block import (
     AT_LEAST,
     AT_MOST,
@@ -173,6 +173,7 @@ def comparison_gaps(
                 "(value, tolerance, relation, source), or drop the keys from "
                 f"evaluate_rows(); then `.venv/bin/python "
                 f"{AREA_SLOT}/scripts/01_measure.py`",
+                rule=OPEN_RULE,
             )
         ]
     assert key is not None, "a registered [reference] compares the [kept] key"
@@ -185,6 +186,7 @@ def comparison_gaps(
                 fix="write the verdict from the head after evaluate_rows() — the "
                 "compute skeleton's `metrics_of()` does (`reference.with_verdict`) "
                 "— then measure anew and audit that run",
+                rule=OPEN_RULE,
             )
         ]
     if metrics[STATE_KEY] == NOT_COMPARABLE:
@@ -201,6 +203,7 @@ def comparison_gaps(
                 f"key the head's [kept] names, which the compute skeleton reads), "
                 f"measure anew and audit that run; a [kept] key that names the "
                 f"wrong number is a new registration",
+                rule=OPEN_RULE,
             )
         ]
     if metrics[STATE_KEY] != COMPARED or metrics.get(MET_KEY) not in (True, False):
@@ -211,6 +214,7 @@ def comparison_gaps(
                 f"written beside the number, not by `reference.with_verdict`",
                 fix="let the compute skeleton's `metrics_of()` write the verdict, "
                 "measure anew and audit that run",
+                rule=OPEN_RULE,
             )
         ]
     now = reference_verdict(0, ref)
@@ -228,6 +232,7 @@ def comparison_gaps(
                 f"result was seen does not answer the registered question",
                 fix="restore the [reference] the run compared with, or "
                 + register_anew(per="per change, the [reference] among them"),
+                rule=OPEN_RULE,
             )
         ]
     return []

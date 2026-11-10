@@ -443,6 +443,18 @@ class ComparisonGaps(unittest.TestCase):
         (gap,) = reference.comparison_gaps(ref, "lines_median", unreadable)
         self.assertIn("is no finite number", gap.text)
 
+    def test_a_verdict_written_beside_the_number_blocks(self):
+        ref = ref_of(WITHIN)
+        metrics = reference.with_verdict({"lines_mean": 0.625}, ref, "lines_mean")
+        for typed in ({"ref_state": "met"}, {"ref_met": "yes"}):
+            with self.subTest(typed=typed):
+                (gap,) = reference.comparison_gaps(
+                    ref, "lines_mean", {**metrics, **typed}
+                )
+                self.assertIn("the verdict in metrics.json does not read", gap.text)
+                self.assertIn("metrics_of()", gap.fix or "")
+                self.assertEqual(gap.rule, OPEN_RULE)
+
     def test_a_reference_changed_after_the_run_blocks(self):
         ref = ref_of(WITHIN)
         metrics = reference.with_verdict({"lines_mean": 0.625}, ref, "lines_mean")

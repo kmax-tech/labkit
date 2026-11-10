@@ -1005,5 +1005,6 @@ def kept_number_gaps(
             f"{measure_anew(area)}; when [kept] names the wrong number, set it "
             f"before the first measurement — after it, "
             + register_anew(per="per change, the [kept] among them", kind="compute"),
+            rule=OPEN_RULE,
         )
     ]
