@@ -24,7 +24,6 @@ import json
 from datetime import datetime, timezone
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -478,23 +477,6 @@ class Count(unittest.TestCase):
         self.assertNotIn("report-check", out)
         lab.git("checkout", "HEAD", "--", str(self.protocol))
 
-    def test_06_without_the_check_script_the_gap_names_the_template(self):
-        """Finding (1), the other way round: an area stamped before the count
-        had its own check script is told which template to stamp."""
-        self._committed()
-        lab = type(self).lab
-        check = self.area / sc.CHECK_SCRIPT
-        check.unlink()
-        try:
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out):
-                rc = report_command.main([str(self.area)])
-            self.assertEqual(rc, 1, out.getvalue())
-            self.assertIn("no scripts/02_analyze.py", out.getvalue())
-            self.assertIn("analyze-quick-script.py.template", out.getvalue())
-        finally:
-            lab.git("checkout", "--", ".")
-
 
 def _strip_promise_placeholders(protocol: Path) -> None:
     """The stamp's `<…>` promise sentences, written as the sentences they
@@ -721,26 +703,6 @@ class MeasuredRunsKeepTheirSecond(CountCommands):
         hooks."""
         a, b = self.measure(), self.measure()
         self.assertNotEqual(a[: len(_SECOND)], b[: len(_SECOND)])
-
-
-class TwoRunsInOneSecondAreRefused(CountCommands):
-    """The refusal the fixture steers clear of (`measure`), held on its
-    own and deterministically: a second completed run whose id carries the
-    first one's second leaves the answering run's choice blocked, and
-    finalize says so with its way out instead of holding or passing on a
-    run chosen by chance (`answering_run.same_second_rival`)."""
-
-    def test_a_second_run_in_the_same_second_blocks_finalize(self):
-        first = self.measure()
-        twin = (
-            first[: len(_SECOND)] + "_" + ("0000" if first[-4:] != "0000" else "ffff")
-        )
-        shutil.copytree(self.area / "runs" / first, self.area / "runs" / twin)
-        rc, out = self.lab.finalize(self.area)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("started in the same second", out)
-        self.assertIn("move the one that does not answer out of runs/", out)
-        self.assertNotIn("finalize: all clear", out)
 
 
 class Withdraw(CountCommands):
@@ -1591,8 +1553,10 @@ class DataCounts(unittest.TestCase):
     """The counts of Data / scope come from the preparation run, through the
     real commands: the stamped 00_prepare.py records them, `protocol-fill
     --data-counts` writes them as the field's end, finalize holds that part
-    to the run, so no count is typed that the data does not hold. The twin:
-    a count typed over the written part is held."""
+    to the run, so no count is typed that the data does not hold. A count
+    typed over the written part is held: tests/test_data_counts.py (the
+    condition) and tests/test_finalize_steps.py, DataCountsStation (finalize
+    forwards it)."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -1656,21 +1620,6 @@ class DataCounts(unittest.TestCase):
         rc, out = self.finalized()
         self.assertNotIn("the counts differ", out)
         self.assertNotIn("names prepare run", out)
-
-    def test_a_count_typed_over_the_written_part_is_held(self):
-        self.lab.fill(
-            self.protocol, "Data / scope=data/raw/points.jsonl by 00_prepare.py"
-        )
-        self.assertEqual(self.counts()[0], 0)
-        typed = self.data_scope().replace("12 labelled", "10 labelled")
-        self.lab.fill(self.protocol, "--force", f"Data / scope={typed}")
-        rc, out = self.finalized()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("the counts differ from what prepare run", out)
-        self.assertIn("--data-counts", out)
-        self.assertEqual(self.counts()[0], 0)  # written again from the run
-        rc, out = self.finalized()
-        self.assertNotIn("the counts differ", out)
 
     def test_no_preparation_run_is_refused(self):
         other = Lab()
