@@ -37,6 +37,7 @@ from labkit.gates import (
     audit_prompt,
     audit_reply,
     decision_review,
+    report_check,
     report_context,
     report_decisions,
     ways_out,
@@ -3281,6 +3282,38 @@ class FollowupGate(unittest.TestCase):
     def follow_up(self, area: Path, lines: str) -> findings.Record:
         return self.cr.audit_with(area, lines)
 
+    def chain(self, area: Path) -> list[str]:
+        """The blocker lines of report-check's whole chain."""
+        ctx = report_context.checked(area, area / "PROTOCOL-x0.md")
+        return [g.line for g in report_check.chain_gaps(ctx).blockers]
+
+    def test_without_a_cover_the_missing_audit_is_the_one_blocker(self):
+        """One cause, one blocker: no analysis record covers the state, so
+        the analysis gap names the follow-up audit once — not again per
+        earlier BLOCKER whose only missing step is that audit. The twin: a
+        covering audit that judged nothing, and the hold names the BLOCKER."""
+        area, r1 = self.fv.area()
+        self.assertEqual(self.gate(area), [])
+        lines = self.chain(area)
+        self.assertEqual(
+            sum("no analysis audit saw the area as it is now" in ln for ln in lines),
+            1,
+            lines,
+        )
+        self.assertFalse([ln for ln in lines if f"{r1.name}#1" in ln], lines)
+        self.fv.audit(area, CLEAN)  # an audit that judged nothing
+        (line,) = self.gate(area)
+        self.assertIn(f"{r1.name}#1: decided `fixed`, never followed up", line)
+
+    def test_without_a_cover_a_missing_required_check_still_holds(self):
+        """A hold that owes more than the follow-up audit — a required check
+        the run lacks — is its own cause and stays without a cover."""
+        area, r1 = self.fv.area(
+            FixVerdicts.LEAK + " · check: feature_sources (every column)"
+        )
+        (line,) = self.gate(area)
+        self.assertIn("lacks the required check `feature_sources`", line)
+
     def test_no_earlier_decided_blocker_holds_nothing(self):
         area = OneSnapshot.area(OneSnapshot())
         self.fv.audit(area, CLEAN)
@@ -3307,6 +3340,8 @@ class FollowupGate(unittest.TestCase):
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
         self.assertEqual(self.gate(area), [])
         self.cr.new_state(area, 1)
+        self.assertEqual(self.gate(area), [])  # uncovered: the analysis gap's
+        self.fv.audit(area, CLEAN)  # an audit of the new state that judged nothing
         (line,) = self.gate(area)
         self.assertIn(
             f"{r1.name}#1: followed up in {r2.path.name}, which no longer covers "
@@ -3425,6 +3460,8 @@ class FollowupGate(unittest.TestCase):
         findings.write_decision(
             r1, 1, "limitation", "kept", "criterion-1 not assessable"
         )
+        self.assertEqual(self.gate(area), [])  # uncovered: the analysis gap's
+        self.fv.audit(area, CLEAN)
         self.assertEqual(len(self.gate(area)), 1)  # never followed up
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")

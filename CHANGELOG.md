@@ -330,6 +330,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One cause, one blocker for a missing analysis audit.** When no analysis record covers the state reported, report-check named the missing audit once and then again for every earlier decided BLOCKER whose only missing step was that same follow-up audit ("never followed up", "followed up in …, which no longer covers this state"). The analysis gap is now the one blocker; such holds appear once an audit covers the state. A hold that owes more — a required check the run lacks — stays.
+
 - **The endpoint lease refuses only on a declared model slot.** `models.toml` names the endpoints that are one model slot each (`[model_slots] exclusive = ["gamma1", …]`, names from `[endpoints]` or URLs; `llm.exclusive_slots`, fixed per process). Exclusivity belongs to the canonical URL (`endpoint_lease.canonical_endpoint`), so two names for one URL cannot disagree. On a declared slot a second alias is refused as before; an undeclared endpoint is leased — the record says who uses it — and refuses nobody. The URL form of `[endpoints]` is unchanged. LAB-028's text and a dated Change in the standard say so.
 
 - **An honest interim state ends a turn.** A registered report carrying the progress account of the run the gates hold (its discussion block) while nothing is adopted passes the stop and a check by hand as it passed the commit; a run that exists forces neither an adoption nor a handover, and `labkit-next` names the next step. `registered_report.progress_hold` is gone; `report_owed` lost its `progress` keyword.

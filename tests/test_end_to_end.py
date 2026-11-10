@@ -806,10 +806,14 @@ class Withdraw(CountCommands):
             text,
             rf"- {run_a} — .* · withdrawn \d{{4}}-\d{{2}}-\d{{2}}: the measuring code changed after the adoption",
         )
-        # withdrawn alone, nothing is released: the fixed BLOCKER owes its follow-up
+        # withdrawn alone, nothing is released: the fixed BLOCKER owes its
+        # follow-up, which the missing analysis audit names once
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 1, out)
-        self.assertIn(f"{record.name}#1: decided `fixed`, never followed up", out)
+        self.assertEqual(
+            out.count("BLOCKER: analysis audit: no analysis audit saw"), 1, out
+        )
+        self.assertNotIn("never followed up", out)
         rc, out, prompt = self.analysis(
             f"FIX · {record.name}#1 · resolved · the head has adopted no run now\n\n{self.clean}"
         )
@@ -1076,10 +1080,14 @@ class CorrectedDescription(CorrectionCommands):
         blocking = self.audited("BLOCKER", "Data / scope")
         self.describe(self.RIGHT)
         self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
-        # the correction moved the state: the finding owes its follow-up
+        # the correction moved the state: the finding owes its follow-up,
+        # which the missing analysis audit names once
         rc, out = self.lab.adopt(self.protocol, self.run_a)
         self.assertEqual(rc, 1, out)
-        self.assertIn(f"{blocking.name}#1: decided `fixed`, never followed up", out)
+        self.assertEqual(
+            out.count("BLOCKER: analysis audit: no analysis audit saw"), 1, out
+        )
+        self.assertNotIn("never followed up", out)
         rc, out, prompt = self.follow_up(
             blocking, "resolved", "Data / scope says 3 documents, as the run read"
         )

@@ -242,8 +242,11 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
     record upholds the new decision — the follow-up did not find the fault
     gone, so closing it is not settling it (the rule of
     `reviews.once_not_upheld`, for a verdict of the follow-up). A chain
-    that does not read is a BLOCKER. Without a covering record every
-    earlier decided BLOCKER is held — no follow-up saw it. Empty without an
+    that does not read is a BLOCKER. Without a covering record no
+    follow-up saw any earlier decided BLOCKER: one whose only missing step
+    is the follow-up audit is not held here, since the missing analysis
+    audit (`report_check.analysis_audit_gap`) is that one cause's blocker;
+    one that also owes a required check in the run is held. Empty without an
     answering run, or when the covering records or the area's records do
     not read (`report_check.analysis_audit_gap` names those); silent on whether a verdict
     is right: that is the auditor's judgement."""
@@ -274,6 +277,9 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
             fix=h.step,
         )
         for h in held
+        # one cause, one blocker: without a cover the analysis gap names
+        # the follow-up audit once, not once per earlier BLOCKER
+        if covering or h.step != followup.STEP_AUDIT
     ]
     # review_findings names a file that does not read; unreviewed holds here
     found = list(ctx.evidence.reviews)
