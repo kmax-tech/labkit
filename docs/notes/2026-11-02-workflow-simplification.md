@@ -1,6 +1,6 @@
 # Plan to simplify the labkit workflow
 
-2026-11-02. Requested by Max. This is the work plan; current rules belong in the standard and [workflow](../workflow.md). Proposals below do not change those rules. Status checked on 2026-11-03: B, A1, the repair-path fixes, both threshold templates and committed-record integrity are integrated in `e754b0c3`. The second-review duty stays; the proposed verdict grounds were not adopted. The bounded interface check and both maintainability reviews are complete; next are the prioritized repairs in the [combined plan](2026-11-03-maintainability-repair-plan.md).
+2026-11-02. Requested by Max. This is the work plan; current rules belong in the standard and [workflow](../workflow.md). Proposals below do not change those rules. Status checked on 2026-11-03: B, the registered-field repair, the repair-path fixes, both threshold templates and committed-record integrity are integrated in `e754b0c3`. The second-review duty stays; the proposed verdict grounds were not adopted. The bounded interface check and both maintainability reviews are complete; next are the prioritized repairs in the [combined plan](2026-11-03-maintainability-repair-plan.md).
 
 ## Goal and evidence
 
@@ -8,14 +8,14 @@ Correct work should reach a useful report with fewer repeated steps, without wea
 
 In area 17, six of 18 labkit attempts reached the 2400-second limit; none of 18 controls did. Five of the six left no report. However, four shared a proxy outage and lost about 16 minutes each to retries. No control ran during that window. The timeout contrast is confounded and must not be presented as the effect of labkit alone.
 
-The two t34 attempts had no such outage. Seven follow-up audits after prose edits cost about 20 minutes together. The unchanged numbers do not show that these audits were useless: one found a missing reference. Finding the successor-registration route cost about 18 minutes across those attempts. Repeated calculations took seconds; no expensive acquisition was repeated. Sources and limits are in the appendix.
+The two attempts on task 34 (heart-rate variability) had no such outage. Seven follow-up audits after prose edits cost about 20 minutes together. The unchanged numbers do not show that these audits were useless: one found a missing reference. Finding the successor-registration route cost about 18 minutes across those attempts. Repeated calculations took seconds; no expensive acquisition was repeated. Sources and limits are in the appendix.
 
 ## Work packages
 
 | Package                               | Change                                                                                               | Status and next action                                                                                                                                                                              |
 |---------------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **B — report before adoption**        | Save a readable intermediate report before the audit loop. Replace its discussion block on adoption. | Implemented. Joint verification with A1 passes; see acceptance cases below. An agent comparison is needed before claiming time saved.                                                               |
-| **A — consistent repair guidance**    | Make the decision hint, next action and release gate agree about changed evidence.                   | A1 implemented in `200c6ebb`, with example helpers in `4dbf203c`. The correction route is described below. No general relaxation of code binding.                                                   |
+| **B — report before adoption**        | Save a readable intermediate report before the audit loop. Replace its discussion block on adoption. | Implemented. Joint verification with the registered-field repair passes; see acceptance cases below. An agent comparison is needed before claiming time saved.                                      |
+| **A — consistent repair guidance**    | Make the decision hint, next action and release gate agree about changed evidence.                   | The registered-field repair is implemented in `200c6ebb`, with example helpers in `4dbf203c`. The correction route is described below. No general relaxation of code binding.                       |
 | **C — review the second-review duty** | Assess whether the second auditor can be removed or required more narrowly.                          | Retained for now: the investigated cases show useful protection. Improved review inputs are integrated. The separate proposal for verdict grounds failed its replay acceptance and was not adopted. |
 
 B's prerequisites are implemented: shared measurement check (`7c70615f`), report setter (`410507cc`), historical reader (`82a372a5`) and report binding (`c413182d`). Block replacement is in `c68e0b0b`, next-step and commit handling in `4a664163`, workflow additions in `82dfa297`.
@@ -34,7 +34,7 @@ Registration is one step for `compute`, `fit` and `apply`. Choose the kind by wh
 
 When a task requires a report, create the area with `--report-file REPORT.md`, or use `protocol-fill PROTOCOL report=REPORT.md` before the first measurement. The option already existed; agent guidance now points to it. None of the 18 area-17 protocols registered a report, so B would not apply to those historical states without this setup change.
 
-Before measurement, replacing the path requires `--force` (E2). At both `low` and `high`, the first measurement requires it to be committed. Removing or redirecting the bound path then blocks: restore it, or hand over and explicitly register a successor protocol (E1). Earlier evidence remains. New registration is not the normal repair for faulty code.
+Before measurement, replacing the path requires `--force`. At both `low` and `high`, the first measurement requires it to be committed. Removing or redirecting the bound path then blocks: restore it, or hand over and explicitly register a successor protocol. Earlier evidence remains. New registration is not the normal repair for faulty code.
 
 Scope: both repeat costs use the committed first measurement as the report binding. Moving to `high` does not remove it. A first measurement without a registered report binds that absence too: late registration is held, whether edited by hand or proposed through `protocol-fill`. Restoring the original path is allowed; changing the obligation requires handover and a new protocol. High retains its additional freeze and preflight requirements. Decision and tests: [report binding at both costs](2026-11-03-report-binding-both-lanes.md).
 
@@ -66,7 +66,7 @@ Adoption replaces the matching discussion block in place with the result block. 
 | 7–8: adopt and report                                        | Replace the matching discussion in place; review the final text.    |
 | 9: stop and commit                                           | Accept progress at commit, remind once at stop; release no result.  |
 
-Use existing writers, report checks and next-step logic. Each command checks its conditions again; earlier advice is not permission or execution evidence. A1 and its new-run repair update steps 4–5 and recovery. Step 6 retains the second-review duty; the separate verdict-ground proposal is not adopted.
+Use existing writers, report checks and next-step logic. Each command checks its conditions again; earlier advice is not permission or execution evidence. The registered-field repair and its new-run repair update steps 4–5 and recovery. Step 6 retains the second-review duty; the separate verdict-ground proposal is not adopted.
 
 ## Acceptance and verification
 
@@ -82,15 +82,15 @@ The combined local probe used a registered count protocol and real commands: mea
 Model responses were fixtures. This checks binding and command flow, not scientific judgement. The focused regression selection covers next-step, report-block, registration, repair-path, end-to-end, counter-case, executable workflow and field-command tests. Required repository checks also run before commit. The historical [injection benchmark](../usability/2026-10-29-injection-ab4ce6d.md) remains the protection regression set; local tests are not a new replay of that historical benchmark. A replay needs valid current baselines and a finding about the intended fault, not just a nonzero exit.
 
 - [x] Implement B's prerequisites, progress path and block replacement.
-- [x] Map the four acceptance cases and exercise B together with A1.
+- [x] Map the four acceptance cases and exercise B together with the registered-field repair.
 - [x] Required repository checks passed on the combined code, including ruff, format, pyright and the full suite on integrated main `e754b0c3`: 2835 tests and 6914 subtests passed, one test skipped. This is command-path and regression evidence, not a new agent comparison or injection replay.
 - [ ] Before claiming work saved, compare agent behaviour under a controlled setup that distinguishes infrastructure failures from labkit costs.
 
 ## A: repair guidance
 
-The probe on `82dfa297` found a real bypass: changing Unit or Terms and re-auditing the first run allowed adoption, while measuring again reached the registration hold. The decision hint recommended that unsuccessful second path. A1 compares the current protocol as well as run snapshots with the first registration and shares the comparison with repair guidance.
+The probe on `82dfa297` found a real bypass: changing Unit or Terms and re-auditing the first run allowed adoption, while measuring again reached the registration hold. The decision hint recommended that unsuccessful second path. The registered-field repair compares the current protocol as well as run snapshots with the first registration and shares the comparison with repair guidance.
 
-A setup description can be corrected in place only through a finding that names the full field label, a `fixed` decision and the follow-up audit's explicit `resolved` for this state. A fresh audit alone releases nothing, including for WARNINGs. The question is excluded from correction, even for a typo; standard 0.26, the guide and the implementation agree. The binding is mechanical; whether another field still describes the same experiment is auditor judgement, supported by evidence outside the changed field. The [A1 note](2026-11-02-registered-field-repair.md) owns the detailed contract, limits and tests.
+A setup description can be corrected in place only through a finding that names the full field label, a `fixed` decision and the follow-up audit's explicit `resolved` for this state. A fresh audit alone releases nothing, including for WARNINGs. The question is excluded from correction, even for a typo; standard 0.26, the guide and the implementation agree. The binding is mechanical; whether another field still describes the same experiment is auditor judgement, supported by evidence outside the changed field. The [registered-field note](2026-11-02-registered-field-repair.md) owns the detailed contract, limits and tests.
 
 Keep the repair paths distinct:
 
@@ -105,7 +105,7 @@ Keep the repair paths distinct:
 
 The investigated BLOCKER limitations show useful error detection, so the general second-review duty remains. Some held decisions lacked evidence in the prompt; required-check values and the measuring script as run are now included through shared helpers. Correct numbers alone do not establish that a limitation or conclusion is justified.
 
-The separate proposal for fixed verdict grounds was not adopted. Its replay stopped after 37 proved answers (41 calls including four unproved outcomes): a predeclared limit failed. Grounds overlapped, and D21 exposed a dispute between the task's method and an unqualified conclusion. The partial result does not establish general equivalence of instructions or settle the case labels. No further model round is authorized here. The [verdict-ground note](2026-11-02-review-verdict-grounds.md) owns that proposal and its limits; this plan adds no new categories or review duty.
+The separate proposal for fixed verdict grounds was not adopted. Its replay stopped after 37 proved answers (41 calls including four unproved outcomes): a predeclared limit failed. Grounds overlapped, and the case of the task-21 pilot (an unclipped buffer, which is the task's own method) exposed a dispute between the task's method and an unqualified conclusion. The partial result does not establish general equivalence of instructions or settle the case labels. No further model round is authorized here. The [verdict-ground note](2026-11-02-review-verdict-grounds.md) owns that proposal and its limits; this plan adds no new categories or review duty.
 
 ## Interface closeout on 2026-11-03
 
@@ -167,9 +167,9 @@ The initial inspection was a targeted structure review, not a full audit: roughl
 
 ## Evidence appendix
 
-- **Area 17:** labkit-paper `scores_attempts_c17.jsonl`, commit `48c8a2d`, summary `96c7f69c`; [TODO context](../../TODO-history-2026-11-06.md#werkzeuge-und-standard). All 18 attempts called labkit. None registered a report. The separate tsts512 attempt changed its null band after failure and passed with warnings, without audit/adoption; this is not proof about all timeouts.
+- **Area 17:** labkit-paper `scores_attempts_c17.jsonl`, commit `48c8a2d`, summary `96c7f69c`; [TODO context](../../TODO-history-2026-11-06.md#werkzeuge-und-standard). All 18 attempts called labkit. None registered a report. The separate attempt on the sentence-similarity task changed its null band after failure and passed with warnings, without audit/adoption; this is not proof about all timeouts.
 - **Timeout assessment:** labkit-evidence `72bf1b01`, `usability/2026-11-02-c17-timeouts/{assessment.md,rounds.tsv,outage.tsv}`. Four timeouts overlapped 502 errors at 06:28–06:40 UTC. Fourteen audits completed: five initial, one voluntary preflight, one repair-confirming, seven after prose edits. Peak-correction and split-finding correctness remain unverified. Raw traces and excerpts stay in the evidence repo.
-- **Registered-field probe:** that evidence directory's `probe-registered-field/`, archived labkit `82dfa297`, real commands and stand-in audit records; A1's public repair note links its consequences.
+- **Registered-field probe:** that evidence directory's `probe-registered-field/`, archived labkit `82dfa297`, real commands and stand-in audit records; the registered-field repair's public note links its consequences.
 - **Round 2:** [assessment](../../TODO-history-2026-11-06.md#wo-die-vollendung-stirbt--auswertung-der-48-laborversuche-der-runde-2-2026-10-31-nachts): 12/48 adopted, seven compliant and five not. Six unfinished cases had stale audits after code edits; four had `fixed` without required measurement and audit. Causes overlap. All 39 transcript-counted attempts called labkit.
 - **Field addresses:** `process_attempts_c17.json`: 175 `protocol-fill` calls, 18 exit 2: ten wrong fields, seven already filled, one freeze edit, no shell-quoting errors. Two suggestions confused `criterion-1 sentence` with `Inference criterion`. `field_address_hint` now names the existing syntax before fuzzy suggestions. CLI tests follow the advice and check refused input leaves files unchanged. File input remains deferred; these small errors are not an established timeout driver.
 - **Second review:** [replay](../usability/2026-10-22-decision-review-replay-v5.md), 13/15 stable judgements across two runs. The later case assessment and verdict-ground replay are recorded in labkit-evidence `usability/2026-11-02-second-review/` and `usability/2026-11-02-review-grounds-replay/`; stability and added error detection are distinct questions.
