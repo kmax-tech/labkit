@@ -15,6 +15,7 @@ from pathlib import Path
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
+    OPEN_RULE,
     GateFinding,
     blocker,
     withdrawn_first,
@@ -116,6 +117,7 @@ def registration_changes(
                     "of the new protocol lists them)",
                 )
                 + f"; or {HANDOVER}",
+                rule=OPEN_RULE,
             )
         ]
     if not registered:
@@ -139,6 +141,7 @@ def registration_changes(
             f"when the registration cannot be answered as written, "
             + register_anew(pid)
             + " — the earlier protocol, its runs and their verdict stay",
+            rule=OPEN_RULE,
         )
     ]
 
@@ -236,6 +239,7 @@ def scope_changes(
                 fix=exc.fix
                 or f"repair what the sentence names, then "
                 f"`{gate_command('finalize', area)}`",
+                rule=OPEN_RULE,
             )
         ]
 
@@ -304,6 +308,7 @@ def _scope_held(
                         f"result was seen does not answer the registered question",
                         fix=fix,
                         step=restore_step(protocol, first, root),
+                        rule=OPEN_RULE,
                     )
                 ]
     now = scope_now(area, protocol, pid, run, root, measured, state, held)
@@ -358,6 +363,7 @@ def _scope_held(
         f"carry the change",
         fix=fix,
         step=restore_step(protocol, now.first, root),
+        rule=OPEN_RULE,
     )
     return withdrawn_first(
         [finding], withdraw_command(declaring) if declaring else None
@@ -381,6 +387,7 @@ def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
         f"the repository's missing objects restored (`git fsck` names them), then "
         f"`{gate_command('finalize', area)}`; where it cannot be read back at all, "
         f"{anew_way(pid)}; or {HANDOVER}",
+        rule=OPEN_RULE,
     )
 
 

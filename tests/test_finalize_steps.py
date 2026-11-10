@@ -452,6 +452,45 @@ class AreaTestsTold(unittest.TestCase):
         self.assertEqual(self._told("ok", []).found, [])
 
 
+class ARegistrationReleaseThatCannotBeChecked(unittest.TestCase):
+    """Station 2: when whether a correction in place releases a field
+    cannot be told (an `AuditError` of the follow-up's coverage), that is
+    one blocker naming why — never an unreleased change whose way back
+    would undo the correction. Composition: the comparison is stubbed."""
+
+    def _held(self, inner) -> list:
+        from unittest import mock
+
+        from labkit.formats.area_state import Measured
+        from labkit.gates import registration_hold
+        from state_fixture import area_evidence
+
+        with mock.patch.object(registration_hold, "_scope_held", inner):
+            return registration_hold.scope_changes(
+                AREA,
+                AREA / "PROTOCOL-x.md",
+                PID,
+                AREA / "runs" / "r1",
+                None,
+                Measured(AREA, PID, (), (), (), ()),
+                area_state(),
+                area_evidence(),
+            )
+
+    def test_an_audit_error_is_one_blocker_with_its_way_out(self):
+        from labkit.checks.audit_binding import AuditError
+
+        def fails(*_a, **_k):
+            raise AuditError("the follow-up's record does not read", fix="restore it")
+
+        (f,) = self._held(fails)
+        self.assertIn("cannot be checked: the follow-up's record does not read", f.text)
+        self.assertEqual((f.fix, f.rule), ("restore it", OPEN_RULE))
+
+    def test_the_twin_a_comparison_that_runs_is_its_own_answer(self):
+        self.assertEqual(self._held(lambda *_a, **_k: []), [])
+
+
 class CriterionNStation(unittest.TestCase):
     """finalize's criterion-n station reads a run's inputs and outputs only
     when its metrics.json holds a denominator; a record that does not read
