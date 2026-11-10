@@ -12,7 +12,7 @@
 | `fit`   | how well a model **trained or adjusted in this experiment** predicts | yes       | metric (Unit), success criterion, reference (null condition / anchors, computed in the same run), admissibility, the evaluation split named |
 | `apply` | how well a model **used unchanged** predicts or judges against gold  | yes       | the same as `fit`, plus the data profile and the prompt where a prompt exists                                                               |
 
-Metric, criterion and reference are three things and the template already has three fields for them: `Unit` (what one measured thing is), `Success / failure criterion` (`[C1]`, the value that supports the hypothesis), `Null condition / anchors` (`[A2]`, the reference with its expected value). The probe does not add fields; it asks which of the existing ones each kind owes.
+Metric, criterion and reference are three things and the template already has three fields for them: `Unit` (what one measured thing is), `Success / failure criterion` (`[criterion-1]`, the value that supports the hypothesis), `Null condition / anchors` (`[quality-check-2]`, the reference with its expected value). The probe does not add fields; it asks which of the existing ones each kind owes.
 
 ## The four registrations
 
@@ -30,7 +30,7 @@ Unit:                  one document = one visible regular file directly in a cas
 
 No criterion, no reference, no promise table: there is no trivial result a count could pass with — a wrong count is wrong, not optimistic. This is exactly today's seconds cut for an area without `[model]`. Nothing new.
 
-### 2 · `fit` — DILI random forest (t18)
+### 2 · `fit` — DILI random forest (task 18)
 
 ```
 kind = "fit"   cost = "seconds"
@@ -45,9 +45,9 @@ Exclusions / filters:  none
 [[promise]] C1 c1_pass · A1 a1_pass · A2 a2_pass (constants: margin = 0.10)
 ```
 
-What the kind forced, against the attempt as delivered: a metric that is not the grid's own best score (the winner's-curse BLOCKER becomes a registration question, answered before the run), a reference computed in the run (the hand-written "~59%" becomes `a2_*` keys), and an admissibility that names the block selection — the off-by-one the assessment found is a failed [A3], not a sentence in a Limit line. The 55 test predictions are output, not the number: see ambiguity 1.
+What the kind forced, against the attempt as delivered: a metric that is not the grid's own best score (the winner's-curse BLOCKER becomes a registration question, answered before the run), a reference computed in the run (the hand-written "~59%" becomes `a2_*` keys), and an admissibility that names the block selection — the off-by-one the assessment found is a failed third quality check, not a sentence in a Limit line. The 55 test predictions are output, not the number: see ambiguity 1.
 
-### 3 · `fit` — DKPES random forest (t5)
+### 3 · `fit` — DKPES random forest (task 5)
 
 ```
 kind = "fit"   cost = "seconds"
@@ -61,7 +61,7 @@ Data / scope:          dkpes_train.csv, 44 molecules (the protocol of t5 said 28
 [[promise]] C1 · A1 · A2 · A3 · A4 (constants: margin = 0.15, permutations = 20)
 ```
 
-What the kind forced: the Youden threshold on in-sample probabilities cannot be the kept number, because `fit` owes an evaluation split and a reference; the unregistered median cut becomes `[A3]`; the "28 training samples" cannot stand once the run records 44 as the denominator of `[A1]`. Every one of t5's nine findings is a field here.
+What the kind forced: the Youden threshold on in-sample probabilities cannot be the kept number, because `fit` owes an evaluation split and a reference; the unregistered median cut becomes the third quality check; the "28 training samples" cannot stand once the run records 44 as the denominator of the first quality check. Every one of the nine findings on the task-5 attempt is a field here.
 
 ### 4 · `apply` — causal-claims judge (the usability judge task)
 
@@ -106,4 +106,4 @@ Nothing above needed a special rule. The gate's condition holds.
 
 ## Recommendation
 
-Option A as laid out: `kind ∈ {count, fit, apply}` meaning what the kept number asserts; obligations per the table; `count` exempt by definition; inference without a reported number declares no result and needs no kind. Build small on `main`, Breaking under Unreleased; the sketch branch (`origin/claude/zealous-davinci-3hbhvk`, 32 commits, flat layout) is the naming's precedent, not a merge. First measurement after the build: the count and judge rounds as today, plus one cold `fit` probe on the DILI data — does an agent register criterion and reference before the run, and does the attempt's own delivered state fail [A3]?
+Option A as laid out: `kind ∈ {count, fit, apply}` meaning what the kept number asserts; obligations per the table; `count` exempt by definition; inference without a reported number declares no result and needs no kind. Build small on `main`, Breaking under Unreleased; the sketch branch (`origin/claude/zealous-davinci-3hbhvk`, 32 commits, flat layout) is the naming's precedent, not a merge. First measurement after the build: the count and judge rounds as today, plus one cold `fit` probe on the DILI data — does an agent register criterion and reference before the run, and does the attempt's own delivered state fail the third quality check, the block selection?
