@@ -672,7 +672,10 @@ def check_reference(
     metrics.json (`reference.comparison_gaps`, each a guaranteed blocker):
     a table that does not read, or one on a kind with a bar
     (`reference_gap`), blocks too; metrics that do not read block as the
-    other stations' do. Without a table: a note, nothing owed — unless the
+    other stations' do. At kind compute the kept-number station holds the
+    same metrics and key: metrics that do not read, and a verdict not
+    comparable for want of a finite kept number, are its blockers, told
+    here as a note — one cause, one blocker. Without a table: a note, nothing owed — unless the
     run wrote `ref_*` keys. `not met` is a valid outcome, told as a note."""
     gap = reference_gap(text, head)
     if gap:
@@ -697,15 +700,26 @@ def check_reference(
             f"`{gate_command('protocol-check', protocol)}` shows them",
         )
         return
+    # at kind compute the kept-number station reads the same metrics.json
+    # and holds the same key: a cause it names is not told a second time
+    kept_held = head.kind == COMPUTE_KIND
     try:
         metrics = runs_metrics(answering_run)
     except MetricsError as exc:
+        if kept_held:
+            findings.note("  not read — the kept-number station names the metrics")
+            return
         findings.take(
             run_file_unread(
                 f"the metrics of {answering_run.name} do not read: {exc}",
                 exc,
                 answering_run,
             )
+        )
+        return
+    if kept_held and metrics.get(reference.STATE_KEY) == reference.NOT_COMPARABLE:
+        findings.note(
+            "  not compared — the kept-number station names the kept key it lacks"
         )
         return
     held = reference.comparison_gaps(ref, key, metrics)

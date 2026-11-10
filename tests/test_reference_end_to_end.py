@@ -171,8 +171,10 @@ class ReferenceOnTheChain(unittest.TestCase):
         # the kept-number gate, which no script edit reaches
         self.assertIn(f"metrics.json of {run_id} holds no `lines_median`", out)
         self.assertIn("it holds lines_mean = 3.0", out)
-        self.assertIn("`lines_median` is absent from metrics.json", out)
-        self.assertIn("no verdict can be reported", out)
+        # one cause, one blocker: the reference station names it no second time
+        self.assertNotIn("`lines_median` is absent from metrics.json", out)
+        self.assertIn("not compared — the kept-number station names", out)
+        self.assertNotIn("no verdict can be reported", out)
         self.assertIn("write `lines_median` as a finite number", out)
         self.assertIn("measure anew", out)
         self.lab.record(area, protocol, "analysis", run_id)
