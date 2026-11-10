@@ -20,7 +20,12 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import (
+    Command,
+    checkout_command,
+    handover_command,
+    register_anew,
+)
 from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
@@ -31,9 +36,10 @@ from labkit.formats import (
     protocol_check,
     runs,
 )
-from labkit.formats.area_state import AreaState
-from labkit.formats.gate import with_way_out
-from labkit.formats.repo import layout_root, path_kind, shown, rel_posix
+from labkit.formats.area_state import AreaState, gone_run_restore
+from labkit.formats.evidence import AreaEvidence
+from labkit.formats.gate import GateFinding, blocker, with_way_out
+from labkit.formats.repo import layout_root, only_protocol, path_kind, shown, rel_posix
 from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
@@ -334,3 +340,54 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     findings file it cannot read."""
     records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
     return audit_gaps.covering_records(records, analysis_now(area, text, run))
+
+
+def check_audited_runs_kept(
+    state: AreaState, *, evidence: AreaEvidence
+) -> list[GateFinding]:
+    """A blocker per analysis record of EVIDENCE that names a run STATE no
+    longer holds (`audit_gaps.records_of_gone_runs` over `state.runs`): a
+    run an audit read is a kept run (LAB-043 Runs go through `runlog`), and
+    the record of a run deleted after its audit would otherwise read as
+    "every finding decided". [] when every named run stands; a record of no
+    run (`findings.NO_RUN`) and a preflight record name none. The way out is
+    `gone_run_way`'s. Pure: reads STATE and EVIDENCE only — but the way out
+    names the protocol as the working directory reaches it (`repo.shown`
+    resolves the path)."""
+    known = {rd.dir.name for rd in state.runs}
+    out: list[GateFinding] = []
+    for rec in audit_gaps.records_of_gone_runs(list(evidence.records), known):
+        assert rec.run_id is not None  # records_of_gone_runs keeps only named runs
+        way, handover = gone_run_way(state, rec.run_id)
+        out.append(
+            blocker(
+                f"{rec.path.name}: names {rec.run_id} as the run it read, and "
+                f"there is no runs/{rec.run_id}/ in this area — a run an audit "
+                f"read is a kept run (LAB-043 Runs go through `runlog`)",
+                fix=way,
+                step=handover,
+            )
+        )
+    return out
+
+
+def gone_run_way(state: AreaState, run_id: str) -> tuple[str, Command]:
+    """The way out of an audit record whose run RUN_ID is gone from the area
+    of STATE, and the handover it names as the finding's step: put it back
+    where git holds it (STATE's `deleted`: the commit that held it last,
+    `area_state.gone_run_restore`), else hand the area over naming the
+    loss, or register anew. Measuring again lifts nothing — the record
+    stays and names the gone run —, so the way out never offers it."""
+    protocol = only_protocol(state.protocols) or state.area / "PROTOCOL-<name>.md"
+    handover = handover_command(protocol)
+    held_back = next((rd for rd in state.deleted if rd.dir.name == run_id), None)
+    put_back = (
+        f"put it back where git holds it ({gone_run_restore(held_back)}); else"
+        if held_back is not None
+        else "no commit holds it:"
+    )
+    return (
+        f"{put_back} it is lost, and a new run "
+        f"does not lift this — hand the area over naming the loss "
+        f"(`{handover}`), or {register_anew()}"
+    ), handover

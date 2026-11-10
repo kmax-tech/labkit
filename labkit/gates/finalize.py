@@ -90,7 +90,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats import evidence
-from labkit.formats.area_state import AreaState, gone_run_restore, state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
@@ -106,7 +106,6 @@ from labkit.formats.gate import (
 )
 from labkit.formats.runs import metrics_path, read_metrics
 from labkit.formats import (
-    audit_gaps,
     console,
     findings as audit_findings,
     promises,
@@ -123,18 +122,15 @@ from labkit.formats.runs import (
     read_run_config,
 )
 from labkit.formats.repo import (
-    only_protocol,
     layout_root,
     ProtocolChoiceError,
     shown,
     the_protocol,
 )
 from labkit.formats.commands import (
-    Command,
     adopt_command,
     contract_command,
     fill_command,
-    handover_command,
     measure_command,
     withdraw_command,
 )
@@ -169,6 +165,7 @@ from labkit.checks.run_record_check import (
     row_provenance_findings,
     single_draw,
 )
+from labkit.checks.audit_binding import check_audited_runs_kept
 from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
@@ -309,56 +306,26 @@ def unreportable_warnings(answering_run: Path) -> list[str]:
     ]
 
 
-def gone_run_way(area: Path, run_id: str, state: AreaState) -> tuple[str, Command]:
-    """The way out of an audit record whose run RUN_ID is gone from AREA,
-    and the handover it names as the finding's step: put it back where
-    git holds it (STATE's `deleted`: the commit that held it last,
-    `area_state.gone_run_restore`), else hand the area over naming the
-    loss, or register anew. Measuring again lifts nothing — the record
-    stays and names the gone run —, so the way out never offers it."""
-    protocol = only_protocol(state.protocols) or area / "PROTOCOL-<name>.md"
-    handover = handover_command(protocol)
-    held_back = next((rd for rd in state.deleted if rd.dir.name == run_id), None)
-    put_back = (
-        f"put it back where git holds it ({gone_run_restore(held_back)}); else"
-        if held_back is not None
-        else "no commit holds it:"
-    )
-    return (
-        f"{put_back} it is lost, and a new run "
-        f"does not lift this — hand the area over naming the loss "
-        f"(`{handover}`), or {register_anew()}"
-    ), handover
-
-
 def check_open_audit_findings(
     findings: Findings, area: Path, state: AreaState, held: evidence.AreaEvidence
 ) -> None:
-    """Station 8: every finding still `open` in the area's audit records, any
+    """Station 9: every finding still `open` in the area's audit records, any
     mode (`findings.open_findings`, with the table of the gates' rules) — a
     BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
     its file; and every analysis record names a run the area still holds
-    (`audit_gaps.records_of_gone_runs`): a run an audit read is a kept run,
+    (`audit_binding.check_audited_runs_kept`): a run an audit read is a kept run,
     and its deleted directory is a blocker where the record stands. A
-    record nobody can read is a blocker, not "no findings". STATE and HELD
-    are the area's state and audit evidence, read once at the entry."""
+    record nobody can read is a blocker, not "no findings" — and while one
+    does not read, neither the gone runs nor the open findings are checked.
+    STATE and HELD are the area's state and audit evidence, read once at
+    the entry."""
     if held.unreadable:
         for why in held.unreadable:
             findings.block(why, fix=audit_findings.record_way(area))
         return
     records = list(held.records)
-    known = {rd.dir.name for rd in state.runs}
-    gone = audit_gaps.records_of_gone_runs(records, known)
-    for rec in gone:
-        assert rec.run_id is not None  # records_of_gone_runs keeps only named runs
-        way, handover = gone_run_way(area, rec.run_id, state)
-        findings.block(
-            f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
-            f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run "
-            f"(LAB-043 Runs go through `runlog`)",
-            fix=way,
-            step=handover,
-        )
+    gone = check_audited_runs_kept(state, evidence=held)
+    findings.take_all(gone)
     seen = len(gone)
     for u in audit_findings.open_findings(records):
         seen += 1

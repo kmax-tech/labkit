@@ -494,17 +494,17 @@ class RoundTwoFileStates(_Repository):
         self.assertEqual(seen, [True, False])
 
     def test_a_gone_run_git_holds_is_put_back_from_the_commit_that_held_it(self):
-        from labkit.gates import finalize
+        from labkit.checks.audit_binding import gone_run_way
 
         run = self._run(RUN)
         held = _git(self.root, "rev-parse", "HEAD")
         _git(self.root, "rm", "-rq", str(run))
         _git(self.root, "commit", "-qm", "deleted")
-        way, _ = finalize.gone_run_way(self.area, RUN, state_of(self.area))
+        way, _ = gone_run_way(state_of(self.area), RUN)
         self.assertIn(held[:7], way)
         self.assertNotIn("checkout HEAD", way)
         # the twin: a run no commit held has no restore to offer
-        way, _ = finalize.gone_run_way(self.area, "never-held", state_of(self.area))
+        way, _ = gone_run_way(state_of(self.area), "never-held")
         self.assertIn("no commit holds it", way)
         self.assertNotIn("git checkout", way)
 

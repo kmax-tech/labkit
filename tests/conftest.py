@@ -22,6 +22,7 @@ system temp directory would pile up there run after run
 import os
 import shutil
 import tempfile
+from collections.abc import Iterator
 
 import pytest
 
@@ -81,3 +82,22 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "slow: an end-to-end scenario file — runs before a push, not each commit",
     )
+    config.addinivalue_line(
+        "markers",
+        "rule: a rule test — one condition from typed data in memory; it starts "
+        "no process, enters no command and builds no repository (tests/check_guards.py)",
+    )
+
+
+@pytest.fixture(autouse=True)
+def _rule_test_guard(request: pytest.FixtureRequest) -> Iterator[None]:
+    """A test marked `rule` runs under `check_guards.no_process_or_command`:
+    a rule test that reaches a process, a command or a repository, also
+    through a helper, fails with ForbiddenAccess. Other tests run as they are."""
+    if request.node.get_closest_marker("rule") is None:
+        yield
+        return
+    from check_guards import no_process_or_command
+
+    with no_process_or_command():
+        yield
