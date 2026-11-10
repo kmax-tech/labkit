@@ -531,7 +531,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     b, w, outside = provenance_findings(area, answering_run)
     findings.take_all(b)
     for line in w:
-        findings.warn(line, evidence_kind=GUARANTEED)
+        findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     for line in outside:
         findings.note(f"  {line}")
     if not b and not w:

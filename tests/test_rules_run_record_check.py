@@ -17,6 +17,8 @@ from labkit.checks.run_record_check import (
     criterion_ns,
     null_lane_findings,
     output_record_findings,
+    SourceNow,
+    source_finding,
 )
 from labkit.formats.gate import (
     BLOCKER,
@@ -164,6 +166,71 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
 
     def test_the_twin_the_recorded_bytes_pass(self):
         self.assertEqual(self._held("ab12" + "0" * 60), [])
+
+
+class ASourceIsTheBytesTheRunRead(unittest.TestCase):
+    """A run's source at low repeat cost: gone, neither tracked nor ignored,
+    or other bytes than the record blocks; kept outside git by a rule or
+    lying outside the repository is a note (`source_finding`, over the
+    facts `source_now` reads)."""
+
+    AREA = Path("area")
+    SOURCE = Path("data/items.jsonl")
+    SHA = "ab12"
+
+    def _decided(self, **facts: object):
+        now = SourceNow(self.SOURCE, self.SHA, **facts)  # type: ignore[arg-type] — the facts per case
+        return pure_call(source_finding, now, self.AREA)
+
+    def _blocker(self, **facts: object):
+        found, note = self._decided(**facts)
+        assert found is not None
+        self.assertIsNone(note)
+        self.assertEqual(
+            (found.grade, found.evidence_kind, found.rule),
+            (BLOCKER, GUARANTEED, OPEN_RULE),
+        )
+        return found
+
+    def test_a_gone_source_blocks(self):
+        f = self._blocker(kind=None)
+        self.assertIn("is not at its recorded path on this machine", f.text)
+        self.assertIn("git checkout HEAD -- data/items.jsonl", f.fix or "")
+
+    def test_an_untracked_file_blocks_though_its_bytes_match(self):
+        f = self._blocker(kind="file", loose=(self.SOURCE,), untracked=True)
+        self.assertIn("neither tracked in git nor ignored by a rule", f.text)
+        self.assertIn("git add data/items.jsonl", f.fix or "")
+        self.assertIn("sha256 ab12", f.fix or "")
+
+    def test_an_untracked_directory_names_its_loose_files(self):
+        loose = tuple(Path("data/d") / f"{n}.txt" for n in "abcd")
+        f = self._blocker(kind="dir", loose=loose, untracked=True)
+        self.assertIn("4 file(s) under it", f.text)
+        self.assertIn(", …", f.text)
+        self.assertIn(
+            "git add -- data/d/a.txt data/d/b.txt data/d/c.txt data/d/d.txt",
+            f.fix or "",
+        )
+
+    def test_other_bytes_block(self):
+        f = self._blocker(kind="file", drift="its sha256 is now cd34")
+        self.assertIn("is not the bytes the run read: its sha256 is now cd34", f.text)
+
+    def test_a_source_kept_out_by_a_rule_or_outside_the_repo_is_a_note(self):
+        found, note = self._decided(
+            kind="file", untracked=True, ignore_rules=(".gitignore:3:data/",)
+        )
+        self.assertIsNone(found)
+        self.assertIn(
+            "kept outside git by an ignore rule (.gitignore:3:data/)", note or ""
+        )
+        found, note = self._decided(kind="file", beyond=True)
+        self.assertIsNone(found)
+        self.assertIn("lies outside the repository", note or "")
+
+    def test_the_twin_a_tracked_source_with_its_bytes_passes(self):
+        self.assertEqual(self._decided(kind="file"), (None, None))
 
 
 if __name__ == "__main__":

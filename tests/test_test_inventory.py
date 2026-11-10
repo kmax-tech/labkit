@@ -150,14 +150,12 @@ class Trace(unittest.TestCase):
                 mock.patch.object(ti, "_out", opened := []),
             ):
                 ti.install_trace()
-                run_record_check._untracked_source(source, [source], "s" * 12)
+                run_record_check._gone(source, Path(d))
             opened[1].close()
             (line,) = Path(d, f"{os.getpid()}.jsonl").read_text().splitlines()
         record = json.loads(line)
         self.assertEqual(record["path"], "labkit/checks/run_record_check.py")
-        self.assertEqual(
-            record["entry"], "labkit.checks.run_record_check._untracked_source"
-        )
+        self.assertEqual(record["entry"], "labkit.checks.run_record_check._gone")
         self.assertIn(
             "Trace::test_a_finding_built_by_a_check_is_recorded", record["test"]
         )

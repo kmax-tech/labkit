@@ -399,7 +399,7 @@ def resolves_under(root: Path, path: Path) -> bool:
     The counterpart of `under_root`, which keeps a link where it lies: a
     link in the repo to a file outside is not held here. The question git
     can answer for a data source: what lies outside ROOT it can neither
-    track nor ignore (`run_record_check._source_finding`)."""
+    track nor ignore (`run_record_check.source_finding`)."""
     return path.resolve().is_relative_to(root.resolve())
 
 

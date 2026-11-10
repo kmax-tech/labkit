@@ -499,7 +499,7 @@ def provenance_findings(
     are the ones the record's sha256 names, and in the repository git
     holds it — tracked, or kept outside on purpose by an ignore rule; a
     source that lies outside the repository is held by its checksum alone
-    (`_source_finding`, the standard's Fixed inputs: large or protected
+    (`source_finding`, the standard's Fixed inputs: large or protected
     data stay out of the repository, which holds their source or access
     route and version in Data / scope). OUTSIDE names each source kept out
     of git, by an ignore rule or by lying outside the repository, and a
@@ -528,7 +528,7 @@ def provenance_findings(
     # outside a repository the bytes are still held to the record; only
     # git's half (tracked or ignored) and the outputs' tracking are skipped
     for f, sha in sources:
-        found, note = _source_finding(repo, area, f, sha)
+        found, note = source_finding(source_now(repo, f, sha), area)
         if found is not None:
             blockers.append(found)
         if note is not None:
@@ -566,6 +566,7 @@ def _recorded_sources(
                 str(exc),
                 fix="pass every source in `data=` to runlog.run, then "
                 f"{measure_anew(area)}",
+                rule=OPEN_RULE,
             )
         ]
     if not entries:
@@ -580,6 +581,7 @@ def _recorded_sources(
                 fix="pass data={name: path} to runlog.run so sha and rows are "
                 f"recorded, or data=runlog.NO_INPUTS for a run that reads no "
                 f"input file, then {measure_anew(area)}",
+                rule=OPEN_RULE,
             )
         ]
     return [
@@ -587,24 +589,47 @@ def _recorded_sources(
     ], []
 
 
-def _source_finding(
-    repo: Path | None, area: Path, source: Path, sha: str
-) -> tuple[GateFinding | None, str | None]:
-    """(blocker, outside note) for one SOURCE the run recorded with
-    checksum SHA. The record is the one integrity evidence, git status a
-    hygiene rule beside it (docs/notes/2026-11-06-pin-route.md). In this
-    order: gone (`_gone`); inside REPO, a file
-    neither tracked nor ignored by a rule (`_untracked_source`), even when
-    the bytes match; bytes unlike the record (`source_drift`) — tracked,
-    ignored or outside REPO alike. Otherwise no blocker, and the note for a
-    source kept outside git: the ignore rule that keeps it out, or that it
-    lies outside REPO (its resolved path), where git can neither track nor
-    ignore it — held by the checksum alone, its source or access route
-    owed in Data / scope. REPO None (no repository): git's half is
-    skipped. Raises GitError as `_untracked_files` and `repo.ignoring_rules`
-    do."""
-    if path_kind(source) is None:
-        return _gone(source, area), None
+@dataclass(frozen=True)
+class SourceNow:
+    """What the tree and git say now of one source a run recorded
+    (`source_now`) — the facts `source_finding` decides on, so the decision
+    opens no file and asks no git.
+
+    Attributes:
+        path: The source as the record names it, resolved against the repo.
+        sha: The sha256 the run recorded for it (cut as recorded).
+        kind: "file", "dir" or None when nothing stands at PATH
+            (`repo.path_kind`).
+        beyond: The source resolves outside the repository: git can neither
+            track nor ignore it.
+        loose: Its files git neither tracks nor ignores by a rule.
+        untracked: Some file of it is untracked, ignored ones included.
+        ignore_rules: The rules that keep its untracked files out, sorted.
+        drift: Why its bytes are not the recorded ones (`source_drift`),
+            None when they are — and None unread when it is gone or LOOSE
+            decides first: a large source is not hashed for nothing.
+    """
+
+    path: Path
+    sha: str
+    kind: str | None
+    beyond: bool = False
+    loose: tuple[Path, ...] = ()
+    untracked: bool = False
+    ignore_rules: tuple[str, ...] = ()
+    drift: str | None = None
+
+
+def source_now(repo: Path | None, source: Path, sha: str) -> SourceNow:
+    """What the tree and git REPO (None: no repository, git's half
+    skipped) say now of SOURCE, recorded with SHA (`SourceNow`): its kind,
+    whether it lies outside REPO, its untracked files and the ignore rules
+    that keep them out, and — only when nothing decided before — whether
+    its bytes drifted. Reads SOURCE and asks git; raises GitError as
+    `_untracked_files` and `repo.ignoring_rules` do."""
+    kind = path_kind(source)
+    if kind is None:
+        return SourceNow(source, sha, None)
     # git's half only for bytes that lie in the repository: one outside it
     # (a model directory on scratch, reached directly or by a link) git can
     # neither track nor ignore, so a refusal naming either as the way out
@@ -613,34 +638,62 @@ def _source_finding(
     # a directory: file by file; ignored files are among the untracked
     untracked = [] if repo is None or beyond else _untracked_files(repo, source)
     rules = {} if repo is None else ignoring_rules(repo, untracked)
-    loose = [f for f in untracked if own_path(f) not in rules]
-    if loose:
-        return _untracked_source(source, loose, sha), None
-    drift = source_drift(source, sha)
-    if drift is not None:
+    loose = tuple(f for f in untracked if own_path(f) not in rules)
+    return SourceNow(
+        source,
+        sha,
+        kind,
+        beyond=beyond,
+        loose=loose,
+        untracked=bool(untracked),
+        ignore_rules=tuple(sorted(set(rules.values()))),
+        drift=None if loose else source_drift(source, sha),
+    )
+
+
+def source_finding(
+    source: SourceNow, area: Path
+) -> tuple[GateFinding | None, str | None]:
+    """(blocker, outside note) for one SOURCE of a run of AREA, as
+    `source_now` read it. The record is the one integrity evidence, git
+    status a hygiene rule beside it (docs/notes/2026-11-06-pin-route.md).
+    In this order: gone (`_gone`); a file neither tracked nor ignored by a
+    rule (`_untracked_source`), even when the bytes match; bytes unlike the
+    record — tracked, ignored or outside the repository alike. Otherwise
+    no blocker, and the note for a source kept outside git: lying outside
+    the repository (its resolved path), where git can neither track nor
+    ignore it — held by the checksum alone, its source or access route
+    owed in Data / scope —, or the ignore rule that keeps it out. The rule
+    is not decided yet (OPEN_RULE)."""
+    if source.kind is None:
+        return _gone(source.path, area), None
+    if source.loose:
+        return _untracked_source(source), None
+    if source.drift is not None:
         return (
             blocker(
-                f"source {source} is not the bytes the run read: {drift}, the run "
-                f"recorded sha256 {sha}",
+                f"source {source.path} is not the bytes the run read: "
+                f"{source.drift}, the run recorded sha256 {source.sha}",
                 fix="restore the bytes the run read (from git where it tracks them, "
                 "else from the source or access route Data / scope names), or "
                 f"{measure_anew(area)}",
+                rule=OPEN_RULE,
             ),
             None,
         )
-    if beyond:
+    if source.beyond:
         return None, (
-            f"source {source} lies outside the repository ({source.resolve()}), "
-            f"pinned by the checksum the run recorded (sha256 {sha}); its source "
-            f"or access route and version belong in Data / scope"
+            f"source {source.path} lies outside the repository "
+            f"({source.path.resolve()}), pinned by the checksum the run recorded "
+            f"(sha256 {source.sha}); its source or access route and version "
+            f"belong in Data / scope"
         )
-    if not untracked:
+    if not source.untracked:
         return None, None
-    named = sorted(set(rules.values()))
     return None, (
-        f"source {source} is kept outside git by an ignore rule "
-        f"({'; '.join(named)}), pinned by the checksum the run recorded "
-        f"(sha256 {sha})"
+        f"source {source.path} is kept outside git by an ignore rule "
+        f"({'; '.join(source.ignore_rules)}), pinned by the checksum the run "
+        f"recorded (sha256 {source.sha})"
     )
 
 
@@ -685,26 +738,27 @@ def _untracked_files(repo: Path, source: Path) -> list[Path]:
     return [f for f in files if f not in held]
 
 
-def _untracked_source(source: Path, loose: list[Path], sha: str) -> GateFinding:
-    """The blocker `_source_finding` raises for a SOURCE of the run whose
-    files LOOSE git neither tracks nor ignores by a rule (at repeat cost
-    low), however well their bytes match the checksum SHA the run
+def _untracked_source(source: SourceNow) -> GateFinding:
+    """The blocker `source_finding` gives for a SOURCE of the run whose
+    files `loose` git neither tracks nor ignores by a rule (at repeat cost
+    low), however well their bytes match the checksum (`sha`) the run
     recorded: whether data belong to the versioned project is git's to
     say. The way out is the two routes the standard's Fixed inputs names:
     a small input that may legally be shared is committed; large or
     protected data are kept outside git on purpose, by an ignore rule, with
     their source or access route and version in Data / scope — finalize
-    then holds them to SHA. A directory names its loose files
+    then holds them to it. A directory names its loose files
     (`NAMED_UNTRACKED` of them), and its commit lists each of them, so no
     file the run did not read goes in."""
-    what = f"source {source} is neither tracked in git nor ignored by a rule"
-    if path_kind(source) == "dir":
-        names = ", ".join(shown(f, source) for f in loose[:NAMED_UNTRACKED])
+    loose, sha = source.loose, source.sha
+    what = f"source {source.path} is neither tracked in git nor ignored by a rule"
+    if source.kind == "dir":
+        names = ", ".join(shown(f, source.path) for f in loose[:NAMED_UNTRACKED])
         more = ", …" if len(loose) > NAMED_UNTRACKED else ""
         what += f": {len(loose)} file(s) under it ({names}{more})"
         add = "git add -- " + " ".join(shlex.quote(str(f)) for f in loose)
     else:
-        add = f"git add {shlex.quote(str(source))}"
+        add = f"git add {shlex.quote(str(source.path))}"
     return blocker(
         f"{what} — whether it belongs to the project is left open",
         fix=f"if it is small and may legally be shared, commit it (`{add}`); "
@@ -712,6 +766,7 @@ def _untracked_source(source: Path, loose: list[Path], sha: str) -> GateFinding:
         f"it (a `.gitignore` or `.git/info/exclude`) and its source or access "
         f"route and version in the protocol's Data / scope — finalize then holds "
         f"it to the checksum this run recorded, `sha256 {sha}`",
+        rule=OPEN_RULE,
     )
 
 
@@ -765,6 +820,7 @@ def _gone(f: Path, area: Path) -> GateFinding:
         fix=f"restore it (`{checkout_command(f)}` where git "
         f"holds it; else get it again from the source or access route Data / "
         f"scope names), or {measure_anew(area)}",
+        rule=OPEN_RULE,
     )
 
 
