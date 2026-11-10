@@ -164,10 +164,10 @@ Every one of the 256 sites of the [site account](2026-11-10-site-account.tsv) is
 
 Outside finalize no further check was extracted: their conditions are tested at the check layer already (59 sites) or are composition and boundaries of their gates; the pilot's extractions show the pattern where a condition read files itself.
 
-Open from step 3, for the author:
+Open from step 3, for the author — points 1 and 2 closed on 2026-11-10:
 
-1. `report_check.analysis_audit_gap` catches `FileNotFoundError` and `ValueError`, not a refused access: a `PermissionError` from the audit's inputs ends report-check in that error, while the branch classifies with `outcome_of_failed_read`, which suggests a check not executable was meant. The test holds today's behaviour (`tests/test_report_check_stations.py`).
-2. Seven sites no test names, none a gate finding: `runlog.py:315` (a repeat whose parent record does not read), `detached.py:292` (the detached runner's usage), `recheck.py:164` (a `[kept]` table that does not read when the kept keys are read), and four printed warning lines (`protocol_report.py:745` and `:838`, `protocol_fill.py:763`, `usability.py:565`), lines at `6e5783c0`.
+1. ~~`report_check.analysis_audit_gap` did not catch a refused access~~ — fixed in `b8968d4e`: a `PermissionError` is the station's blocker, told as a check not executable, with the way out to make the file readable (CHANGELOG, Fixed); the gate test covers missing, malformed and refused.
+2. ~~Seven sites no test named~~ — closed: six got a targeted test or name the test that asserts their sentence (`runlog.py:315`, `detached.py:292`, `recheck.py:164`, `protocol_report.py:745` and `:838`, `protocol_fill.py:763`); `usability.py:565` is an extraction exception — the probe's progress line during `usability stage`, which builds a venv, its condition `labkit_spec_problem` tested in `tests/test_usability.py`. Every site of the account names a test or a reason; three sites of `report_decisions.py` reach no test and wait with the others of that module (point 3).
 3. The ten sites of `report_decisions.py` wait for the six decisions on the second review.
 
 ### 4. Reduce scenario variants

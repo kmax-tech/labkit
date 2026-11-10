@@ -15,8 +15,8 @@ from unittest import mock
 
 import json
 
-from labkit.checks import code_check, notes_check, run_record_check
-from labkit.formats import promises, protocol_block, protocol_history
+from labkit.checks import code_check, notes_check, protocol_report, run_record_check
+from labkit.formats import audit_gaps, promises, protocol_block, protocol_history
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 from labkit.gates import audit
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, VIOLATED, WARNING, Findings
@@ -157,6 +157,41 @@ class ADataEntryThatDoesNotRead(unittest.TestCase):
         (f,) = blockers
         self.assertIn("data['broken'] in the run's record names no path", f.text)
         self.assertEqual(f.rule, OPEN_RULE)
+
+
+class ProtocolCheckTellsItsWarnings(unittest.TestCase):
+    """`protocol_report.print_report` prints protocol-check's own WARNING
+    lines: a head's `preflight_audit` record that covers no full run, with
+    its way out, and a registered constant nothing names."""
+
+    def _told(self, **fields: object) -> list[str]:
+        told: list[str] = []
+        report = protocol_report.FileReport(Path("area/PROTOCOL-x.md"), None, **fields)  # type: ignore[arg-type] — the fields a case sets
+        protocol_report.print_report(report, tell=told.append)
+        return told
+
+    def test_a_record_that_covers_no_full_run_warns_with_its_way_out(self):
+        gap = audit_gaps.RecordGap(
+            "the record saw scope sha 000000000000", "audit again"
+        )
+        told = self._told(audit_drift=gap)
+        self.assertIn(
+            "area/PROTOCOL-x.md: WARNING: preflight_audit: the record saw scope sha "
+            "000000000000. Next: audit again",
+            told,
+        )
+
+    def test_an_unmentioned_constant_warns(self):
+        told = self._told(
+            unmentioned_constants=["[criterion-1] threshold = 0.5 is named nowhere"]
+        )
+        self.assertIn(
+            "area/PROTOCOL-x.md: WARNING: [criterion-1] threshold = 0.5 is named nowhere",
+            told,
+        )
+
+    def test_the_twin_a_clean_report_tells_no_warning(self):
+        self.assertFalse(any("WARNING" in t for t in self._told()))
 
 
 if __name__ == "__main__":

@@ -55,5 +55,60 @@ class TheRunStartRefuses(unittest.TestCase):
         )
 
 
+class ARepeatWhoseParentDoesNotCompare(unittest.TestCase):
+    """`runlog._repeat_draw`: when the comparison with the parent run
+    cannot read a record (`answering_run.repeat_mismatch` raises
+    RunConfigError), the repeat is refused naming the parent — never drawn
+    against a parent nobody could compare. The parent, its draw number and
+    the comparison are stubbed: the refusal is what is under test."""
+
+    def test_an_unreadable_record_refuses_the_repeat(self):
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from labkit.formats.runs import RunConfigError
+        from labkit.run import runlog
+
+        prepared = SimpleNamespace(
+            derived_from=None,
+            config={},
+            bound=SimpleNamespace(binding={}),
+            promises=None,
+        )
+        with (
+            mock.patch.object(runlog, "_repeat_parent", return_value=object()),
+            mock.patch.object(runlog, "next_draw", return_value=2),
+            mock.patch.object(runlog, "script_sha", return_value="ab12"),
+            mock.patch.object(
+                runlog,
+                "repeat_mismatch",
+                side_effect=RunConfigError("r1/config.json: not JSON"),
+            ),
+            self.assertRaises(SystemExit) as cm,
+        ):
+            runlog._repeat_draw(Path("area"), "r1", False, prepared, {}, {})  # type: ignore[arg-type] — a stand-in for Prepared
+        said = str(cm.exception)
+        self.assertTrue(
+            said.startswith("runlog: repeat_of='r1': r1/config.json: not JSON"), said
+        )
+        self.assertIn("git checkout", said)
+
+
+class TheDetachedSupervisorsUsage(unittest.TestCase):
+    """`detached.main`, started by `runlog start` only: a command line
+    without its four arguments and the `--` before the command is refused
+    with the usage, before anything is supervised."""
+
+    def test_a_command_line_without_the_separator_is_refused(self):
+        from labkit.run import detached
+
+        for argv in ([], ["3", "area", "u", "log", "python", "x.py"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit) as cm:
+                detached.main(argv)
+            self.assertTrue(
+                str(cm.exception).startswith("usage: python -P -m labkit.run.detached")
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
