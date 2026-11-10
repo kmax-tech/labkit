@@ -55,6 +55,24 @@ class ReadOutputsAndCompletion(unittest.TestCase):
                 [("out.jsonl", 12), ("gone.txt", None)],
             )
 
+    def test_outputs_now_carry_each_files_sha256_or_none_when_gone(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = Path(d)
+            kept = run / "out.txt"
+            kept.write_text("a\n")
+            (run / "outputs.json").write_text(
+                json.dumps(
+                    [
+                        {"path": str(kept), "sha256": "ab12", "lines": 1},
+                        {"path": str(run / "gone.txt"), "sha256": None, "lines": None},
+                    ]
+                )
+            )
+            got = runs.outputs_now(run)
+            assert got is not None
+            self.assertEqual([o.sha256 for o in got], [runs.file_digest(kept), None])
+            self.assertIsNone(runs.outputs_now(run / "elsewhere"))
+
     def test_no_outputs_file_is_none(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertIsNone(runs.read_outputs(Path(d)))

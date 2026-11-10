@@ -59,6 +59,7 @@ from labkit.formats.runs import (
     DataEntry,
     KeptRows,
     OutputEntry,
+    OutputNow,
     RunConfig,
     RunConfigError,
     declares_no_inputs,
@@ -714,40 +715,43 @@ def _untracked_source(source: Path, loose: list[Path], sha: str) -> GateFinding:
     )
 
 
-def output_drift(entry: OutputEntry) -> str | None:
-    """Why the file at ENTRY.path is not the one the run recorded in
-    outputs.json, or None when it is: the file is gone, the run ended
-    without it (no sha256 recorded), or its sha256 differs from the record.
-    The record is the run's, taken after the run (`runlog.Run._finalize`);
-    the tree at check time is only compared, never trusted. Reads the file,
-    writes nothing."""
-    if output_file(entry) is None:
+def output_drift(output: OutputNow) -> str | None:
+    """Why the file of a registered OUTPUT is not the one the run recorded
+    in outputs.json, or None when it is: the file is gone, the run ended
+    without it (no sha256 recorded), or its sha256 now differs from the
+    record. The record is the run's, taken after the run
+    (`runlog.Run._finalize`); the tree at check time is only compared,
+    never trusted."""
+    recorded = output.entry.sha256
+    if output.sha256 is None:
         return "the file is gone"
-    if entry.sha256 is None:
+    if recorded is None:
         return "the run ended without it (outputs.json records no sha256)"
-    actual = file_digest(entry.path)
-    if not actual.startswith(entry.sha256):
+    if not output.sha256.startswith(recorded):
         return (
-            f"its sha256 {actual[: len(entry.sha256)]} is not the recorded "
-            f"{entry.sha256}"
+            f"its sha256 {output.sha256[: len(recorded)]} is not the recorded "
+            f"{recorded}"
         )
     return None
 
 
-def output_record_findings(answering_run: Path) -> list[GateFinding]:
-    """A blocker per output ANSWERING_RUN registered (`runs.read_outputs`)
-    whose file is not the one the run recorded (`output_drift`): the
-    number's rows, and a deliverable the run wrote for an external task,
-    are pinned to the run by path and sha256 — a file swapped, edited or
-    removed after the run is no longer what the run produced. Raises
-    ArtefactError when outputs.json does not read."""
+def output_record_findings(
+    outputs: Sequence[OutputNow], run_id: str, area: Path
+) -> list[GateFinding]:
+    """A blocker per registered output of the run RUN_ID of AREA whose file
+    is not the one the run recorded (`output_drift`, OUTPUTS as
+    `runs.outputs_now` gives them): the number's rows, and a deliverable
+    the run wrote for an external task, are pinned to the run by path and
+    sha256 — a file swapped, edited or removed after the run is no longer
+    what the run produced. [] when every file is as recorded."""
     return [
         blocker(
-            f"{entry.path}: not the file run {answering_run.name} recorded — {why}",
-            fix=measure_anew(answering_run.parent.parent),
+            f"{o.entry.path}: not the file run {run_id} recorded — {why}",
+            fix=measure_anew(area),
+            rule=OPEN_RULE,
         )
-        for entry in read_outputs(answering_run) or []
-        if (why := output_drift(entry)) is not None
+        for o in outputs
+        if (why := output_drift(o)) is not None
     ]
 
 

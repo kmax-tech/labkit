@@ -609,6 +609,35 @@ def output_file(entry: OutputEntry) -> Path | None:
 
 
 @dataclass(frozen=True)
+class OutputNow:
+    """One output a run registered (ENTRY) and the sha256 of its file as
+    the tree holds it now (SHA256, full hex; None when the file is gone) —
+    what a check of the recorded outputs compares (`outputs_now`), so the
+    check opens no file."""
+
+    entry: OutputEntry
+    sha256: str | None
+
+
+def output_now(entry: OutputEntry) -> OutputNow:
+    """ENTRY with the sha256 of its file now (`digests.file_digest`), None
+    when it is gone (`output_file`). Raises OSError when the file stands
+    and does not read."""
+    return OutputNow(
+        entry, file_digest(entry.path) if output_file(entry) is not None else None
+    )
+
+
+def outputs_now(run_dir: Path) -> list[OutputNow] | None:
+    """Every output RUN_DIR registered (`read_outputs`) as the tree holds it
+    now (`output_now`), in outputs.json's order; None when the run
+    registered none. Raises ArtefactError when outputs.json does not read,
+    OSError when a registered file stands and does not read."""
+    registered = read_outputs(run_dir)
+    return None if registered is None else [output_now(e) for e in registered]
+
+
+@dataclass(frozen=True)
 class KeptRows:
     """The data rows of one JSONL output a run registered (ENTRY), as the
     tree holds the file now — what a check of the kept rows judges

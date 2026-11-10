@@ -20,7 +20,7 @@ b4fdf56d	finding	labkit.checks.run_record_check._recorded_sources	{…}	labkit/c
 b4fdf56d	finding	labkit.checks.run_record_check._recorded_sources	source not frozen — the run carries no `data=`	labkit/checks/run_record_check.py:556				
 b4fdf56d	finding	labkit.checks.run_record_check._source_finding	source {…} is not the bytes the run read: {…}, the run recorded sha256 {…}	labkit/checks/run_record_check.py:600				
 b4fdf56d	finding	labkit.checks.run_record_check._untracked_source	{…} — whether it belongs to the project is left open	labkit/checks/run_record_check.py:686				
-b4fdf56d	finding	labkit.checks.run_record_check.output_record_findings	{…}: not the file run {…} recorded — {…}	labkit/checks/run_record_check.py:724				
+b4fdf56d	finding	labkit.checks.run_record_check.output_record_findings	{…}: not the file run {…} recorded — {…}	labkit/checks/run_record_check.py:724	scientific	a registered output is gone, unrecorded or other bytes than outputs.json records; the check takes `runs.outputs_now` (each output with its sha256 now)	open assignment	tests/test_rules_run_record_check.py::AnOutputIsTheFileTheRunRecorded; reader: tests/test_metrics_loader.py::ReadOutputsAndCompletion; gate: tests/test_deliverable.py
 b4fdf56d	finding	labkit.checks.run_record_check._gone	{…} is not at its recorded path on this machine — deleted, moved or held elsewhere; the r…	labkit/checks/run_record_check.py:737				
 b4fdf56d	finding	labkit.checks.run_record_check.row_provenance_findings	row provenance: the lineage of {…} is broken — {…}	labkit/checks/run_record_check.py:820				
 b4fdf56d	finding	labkit.checks.run_record_check.row_provenance_findings	{…}: {…}	labkit/checks/run_record_check.py:832				

@@ -118,6 +118,7 @@ from labkit.formats.runs import (
     ArtefactError,
     MetricsError,
     kept_jsonl_rows,
+    outputs_now,
     read_outputs,
     unreportable,
     read_run_config,
@@ -611,7 +612,7 @@ def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
     deliverable of an external task, held by path and sha256 from
     outputs.json, on every lane."""
     try:
-        drifted = output_record_findings(answering_run)
+        registered = outputs_now(answering_run)
     except ArtefactError as exc:
         findings.take(
             run_file_unread(
@@ -621,8 +622,10 @@ def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
             )
         )
         return
+    drifted = output_record_findings(
+        registered or [], answering_run.name, answering_run.parent.parent
+    )
     findings.take_all(drifted)
-    registered = read_outputs(answering_run)
     if registered is None:
         findings.note("  n/a — the run registered no output file (run.output)")
     elif not drifted:

@@ -16,15 +16,18 @@ from labkit.checks.run_record_check import (
     criterion_n_input_mismatches,
     criterion_ns,
     null_lane_findings,
+    output_record_findings,
 )
 from labkit.formats.gate import (
+    BLOCKER,
+    GUARANTEED,
     KNOWN_RULE,
     OPEN_RULE,
     STATIC_EVIDENCE,
     WARNING,
     RuleAssignment,
 )
-from labkit.formats.runs import DataEntry, KeptRows, OutputEntry
+from labkit.formats.runs import DataEntry, KeptRows, OutputEntry, OutputNow
 
 pytestmark = pytest.mark.rule
 
@@ -124,6 +127,43 @@ class TheNullLaneMoved(unittest.TestCase):
     def test_an_output_without_both_lanes_is_not_examined(self):
         held = self._held([{"item": "1", "n": 3}])
         self.assertEqual((held.examined, held.unmoved), (0, []))
+
+
+class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
+    """A registered output whose file is gone, was never recorded, or holds
+    other bytes than outputs.json records blocks (`output_record_findings`)."""
+
+    AREA = Path("area")
+    RECORDED = OutputEntry(Path("out/rows.jsonl"), "ab12", 4)
+
+    def _held(self, now: str | None, recorded: str | None = "ab12"):
+        entry = OutputEntry(self.RECORDED.path, recorded, 4)
+        return pure_call(
+            output_record_findings, [OutputNow(entry, now)], "r1", self.AREA
+        )
+
+    def test_a_gone_an_unrecorded_and_a_changed_file_block(self):
+        for now, recorded, said in (
+            (None, "ab12", "the file is gone"),
+            (
+                "ab12" + "0" * 60,
+                None,
+                "the run ended without it (outputs.json records no sha256)",
+            ),
+            ("cd34" + "0" * 60, "ab12", "its sha256 cd34 is not the recorded ab12"),
+        ):
+            with self.subTest(said=said):
+                (f,) = self._held(now, recorded)
+                self.assertEqual(
+                    (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, OPEN_RULE)
+                )
+                self.assertEqual(
+                    f.text, f"out/rows.jsonl: not the file run r1 recorded — {said}"
+                )
+                self.assertIn("measure anew", f.fix or "")
+
+    def test_the_twin_the_recorded_bytes_pass(self):
+        self.assertEqual(self._held("ab12" + "0" * 60), [])
 
 
 if __name__ == "__main__":

@@ -122,7 +122,7 @@ def pin(run: Path, out: Path) -> None:
         raise SystemExit(
             f"recheck: run {run.name} did not register {out.name} as an output"
         )
-    drift = run_record_check.output_drift(recorded)
+    drift = run_record_check.output_drift(runs.output_now(recorded))
     if drift is not None:
         raise SystemExit(
             f"recheck: {out.name} is not the file run {run.name} recorded — "
