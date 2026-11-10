@@ -4,7 +4,7 @@
 
 ## Why
 
-Before this, labkit noticed evidence that went *missing*: a record or an answer an ended attempt names, a file under `audits/` HEAD holds, a journal cut against HEAD or against its copy in the git directory (`attempts.gaps`, `copy_gaps`). Evidence *rewritten* in place was seen only where a rewrite broke the record's format: the ninth Haiku round's t5 rewrote records field by field, and a committed run's `metrics.json` could change under its run id with no gate saying so. The lab notebook's rule is the same for both: a record is never erased or written over; a correction is added beside it.
+Before this, labkit noticed evidence that went *missing*: a record or an answer an ended attempt names, a file under `audits/` HEAD holds, a journal cut against HEAD or against its copy in the git directory (`attempts.gaps`, `copy_gaps`). Evidence *rewritten* in place was seen only where a rewrite broke the record's format: the ninth Haiku round's task-5 agent rewrote records field by field, and a committed run's `metrics.json` could change under its run id with no gate saying so. The lab notebook's rule is the same for both: a record is never erased or written over; a correction is added beside it.
 
 The direction for labkit is a well-meaning agent (decided 2026-10-28): a slip or a shortcut is to be caught, exactly and with its way out; an agent that also rewrites git's own records is out of reach of a local check and is measured in the experiments through the sandbox's proxy log, which the agent cannot reach.
 
