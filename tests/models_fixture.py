@@ -31,6 +31,7 @@ def serve(case: type[unittest.TestCase] | unittest.TestCase, text: str) -> Path:
     patches = (
         mock.patch.object(llm, "find_models_toml", lambda: path),
         mock.patch.dict(llm._FROZEN, clear=True),
+        mock.patch.object(llm, "_SLOTS", []),
     )
     for p in patches:
         if isinstance(case, type):

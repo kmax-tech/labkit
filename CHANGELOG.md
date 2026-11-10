@@ -328,6 +328,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The endpoint lease refuses only on a declared model slot.** `models.toml` names the endpoints that are one model slot each (`[model_slots] exclusive = ["gamma1", …]`, names from `[endpoints]` or URLs; `llm.exclusive_slots`, fixed per process). Exclusivity belongs to the canonical URL (`endpoint_lease.canonical_endpoint`), so two names for one URL cannot disagree. On a declared slot a second alias is refused as before; an undeclared endpoint is leased — the record says who uses it — and refuses nobody. The URL form of `[endpoints]` is unchanged. LAB-028's text and a dated Change in the standard say so.
+
 - **An honest interim state ends a turn.** A registered report carrying the progress account of the run the gates hold (its discussion block) while nothing is adopted passes the stop and a check by hand as it passed the commit; a run that exists forces neither an adoption nor a handover, and `labkit-next` names the next step. `registered_report.progress_hold` is gone; `report_owed` lost its `progress` keyword.
 
 - **One cause, one blocker at finalize's reference station.** At kind compute the kept-number station reads the same metrics.json and holds the same key; a metrics.json that does not read, and a reference verdict not comparable for want of a finite kept number, are its blockers and the reference station names them in a note instead of a second blocker. Both stations are finalize's alone (`reference.comparison_gaps` has no other caller).

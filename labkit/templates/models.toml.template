@@ -20,6 +20,12 @@ model = "claude-haiku-4-5-20251001"
 backend = "claude-cli"            # the auditor: `labkit-audit` calls this alias by default
 model = "claude-opus-5-5"
 
+# [model_slots]
+# exclusive = ["gamma1"]          # endpoints that are ONE model slot (a swap proxy):
+#                                 # a second alias there is refused (LAB-028 An
+#                                 # endpoint is a model slot, not a service); names
+#                                 # from [endpoints] or URLs. Undeclared: leased, not refused
+
 # [llm_cache]
 # enabled = true                  # allow llm_cache.Cache: model answers stored and
 #                                 # read again across runs (LAB-069 No LLM cache

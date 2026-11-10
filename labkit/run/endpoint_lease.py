@@ -24,8 +24,15 @@ staggered" is a sentence in a protocol and a code comment, i.e. an
 intention. Any second process breaks it: another terminal, another area, a
 test fired alongside.
 
-The rule here, in one line: **same alias may share, a different alias is
-refused — and a process never blocks itself.** One script that runs the
+Which endpoint is one model slot is a deployment fact no URL tells: the
+lab declares it in `models.toml` (`[model_slots] exclusive = [...]`, names
+from `[endpoints]` or URLs; `llm.exclusive_slots`). Exclusivity belongs to
+the canonical URL (`canonical_endpoint`), so two names for one URL cannot
+disagree. An endpoint not declared exclusive is leased all the same — the
+record says who uses it — and refuses nobody.
+
+The rule here, in one line, on an exclusive slot: **same alias may share, a
+different alias is refused — and a process never blocks itself.** One script that runs the
 generator stage and then the judge stage holds two aliases in one pid: that IS
 the staggering the rule wants, so own-pid records are not conflicts. Sharing an alias costs throughput, never a swap; a second alias
 costs the run. Refusal is immediate (SystemExit) rather than a wait — a
@@ -88,20 +95,25 @@ def _slug(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_") or "default"
 
 
+def canonical_endpoint(endpoint: str) -> str:
+    """ENDPOINT's canonical URL: scheme and host in lower case, no trailing
+    slash (`HTTP://Host/v1/` is `http://host/v1`) — one identity per
+    serving slot, for its lease directory and its exclusivity."""
+    u = urllib.parse.urlsplit(endpoint.strip())
+    return urllib.parse.urlunsplit(
+        (u.scheme.lower(), u.netloc.lower(), u.path.rstrip("/"), u.query, "")
+    )
+
+
 def endpoint_dir(endpoint: str) -> str:
     """The lease directory's name for ENDPOINT: one per serving slot.
 
-    The URL is made canonical first (scheme and host in lower case, no
-    trailing slash: `HTTP://Host/v1/` is `http://host/v1`), then named by a
-    digest of it, with a readable slug in front. The slug alone is no
-    identity: `http://h/a-b` and `http://h/a_b` would share a directory
-    (one slot's lease refusing the other), and `Host` and `host` would get
-    two (no interlock at all).
+    The canonical URL (`canonical_endpoint`), named by a digest of it, with
+    a readable slug in front. The slug alone is no identity: `http://h/a-b`
+    and `http://h/a_b` would share a directory (one slot's lease refusing
+    the other), and `Host` and `host` would get two (no interlock at all).
     """
-    u = urllib.parse.urlsplit(endpoint.strip())
-    canonical = urllib.parse.urlunsplit(
-        (u.scheme.lower(), u.netloc.lower(), u.path.rstrip("/"), u.query, "")
-    )
+    canonical = canonical_endpoint(endpoint)
     return f"{_slug(canonical)[:60]}-{digests.digest(canonical.encode('utf-8'))}"
 
 
@@ -200,8 +212,13 @@ def _refuse(endpoint: str, alias: str, other: dict) -> None:
     )
 
 
-def acquire(alias: str, endpoints: list[str] | None) -> None:
-    """Lease every endpoint this alias may use. Idempotent, refuses on conflict.
+def acquire(
+    alias: str, endpoints: list[str] | None, exclusive: frozenset[str] = frozenset()
+) -> None:
+    """Lease every endpoint this alias may use. Idempotent; refuses a
+    conflict only on an endpoint whose canonical URL EXCLUSIVE holds (the
+    lab's declared model slots, `llm.exclusive_slots`) — elsewhere the
+    lease is recorded and refuses nobody.
 
     Called by `llm.complete` on every call; the work happens once per
     (endpoint, alias) and per process. Backends without an endpoint
@@ -217,14 +234,17 @@ def acquire(alias: str, endpoints: list[str] | None) -> None:
             d = lease_dir() / endpoint_dir(endpoint)
             d.mkdir(parents=True, exist_ok=True)
             with _locked(d):
-                _lease_one(d, endpoint, alias)
+                _lease_one(
+                    d, endpoint, alias, refuse=canonical_endpoint(endpoint) in exclusive
+                )
             _HELD.add(key)
             _FILES[key] = d / f"{_slug(alias)}.{os.getpid()}.json"
 
 
-def _lease_one(d: Path, endpoint: str, alias: str) -> None:
-    """Check and write one record; caller holds the directory lock."""
-    other = _conflict(endpoint, alias)
+def _lease_one(d: Path, endpoint: str, alias: str, *, refuse: bool) -> None:
+    """Write one record — after checking it, and refusing a conflict, where
+    REFUSE (an exclusive slot); caller holds the directory lock."""
+    other = _conflict(endpoint, alias) if refuse else None
     if other is not None:
         _refuse(endpoint, alias, other)
     rec = {
@@ -238,6 +258,8 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
     }
     f = d / f"{_slug(alias)}.{os.getpid()}.json"
     files.write_atomic(f, json.dumps(rec))
+    if not refuse:
+        return
     # On a shared filesystem flock may not hold, and two processes can pass
     # the check at the same moment. Re-read after writing: whoever is not
     # the oldest live holder yields.

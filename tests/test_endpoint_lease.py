@@ -20,6 +20,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -27,6 +28,16 @@ from labkit.run import endpoint_lease as el  # noqa: E402
 
 EP = "http://gammaweb07.medien.uni-weimar.de:11726"
 EP2 = "http://gammaweb09.medien.uni-weimar.de:11490"
+
+
+def acquire_exclusive(alias: str, endpoints: list[str] | None) -> None:
+    """`acquire` on endpoints the lab declares exclusive model slots — where
+    the lease refuses a second alias."""
+    el.acquire(
+        alias,
+        endpoints,
+        exclusive=frozenset(el.canonical_endpoint(e) for e in endpoints or []),
+    )
 
 
 class TestEndpointLease(unittest.TestCase):
@@ -91,7 +102,7 @@ class TestEndpointLease(unittest.TestCase):
 
     # -- the rule ---------------------------------------------------------
     def test_free_endpoint_is_leased(self):
-        el.acquire("gpt-oss-vllm", [EP])
+        acquire_exclusive("gpt-oss-vllm", [EP])
         self.assertEqual([h["alias"] for h in el.holders(EP)], ["gpt-oss-vllm"])
 
     def test_second_alias_is_refused(self):
@@ -99,7 +110,7 @@ class TestEndpointLease(unittest.TestCase):
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
         with self.assertRaises(SystemExit) as cm:
-            el.acquire("qwen25-32b-awq", [EP])
+            acquire_exclusive("qwen25-32b-awq", [EP])
         msg = str(cm.exception)
         self.assertIn("gpt-oss-vllm", msg)
         self.assertIn("LABKIT_NO_ENDPOINT_LEASE", msg)
@@ -108,13 +119,13 @@ class TestEndpointLease(unittest.TestCase):
         """Sharing an alias costs throughput, never a swap — pilot next to resume."""
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
-        el.acquire("gpt-oss-vllm", [EP])  # must not raise
+        acquire_exclusive("gpt-oss-vllm", [EP])  # must not raise
         self.assertTrue(any(h["pid"] == os.getpid() for h in el.holders(EP)))
 
     def test_other_endpoint_is_untouched(self):
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
-        el.acquire("qwen", [EP2])  # different slot, no conflict
+        acquire_exclusive("qwen", [EP2])  # different slot, no conflict
         self.assertEqual([h["alias"] for h in el.holders(EP2)], ["qwen"])
 
     def test_two_endpoints_one_slug_are_two_slots(self):
@@ -122,7 +133,7 @@ class TestEndpointLease(unittest.TestCase):
         refuses the other."""
         pid, script = self._live_other_process()
         self._foreign("http://host/a-b", "gpt-oss-vllm", pid=pid, script=script)
-        el.acquire("qwen", ["http://host/a_b"])  # must not raise
+        acquire_exclusive("qwen", ["http://host/a_b"])  # must not raise
         self.assertNotEqual(
             el.endpoint_dir("http://host/a-b"), el.endpoint_dir("http://host/a_b")
         )
@@ -138,7 +149,7 @@ class TestEndpointLease(unittest.TestCase):
         pid, script = self._live_other_process()
         self._foreign("http://Host:8000/v1/", "gpt-oss-vllm", pid=pid, script=script)
         with self.assertRaises(SystemExit):
-            el.acquire("qwen", ["HTTP://host:8000/v1"])
+            acquire_exclusive("qwen", ["HTTP://host:8000/v1"])
 
     def test_writers_in_the_same_second_are_ordered(self):
         """On the second alone both re-reads would see the other as no
@@ -156,7 +167,7 @@ class TestEndpointLease(unittest.TestCase):
     def test_dead_holder_does_not_block_forever(self):
         """A crashed run must not own the slot; PID 999999 is nobody."""
         self._foreign(EP, "gpt-oss-vllm", pid=999999)
-        el.acquire("qwen25-32b-awq", [EP])
+        acquire_exclusive("qwen25-32b-awq", [EP])
         self.assertEqual([h["alias"] for h in el.holders(EP)], ["qwen25-32b-awq"])
 
     def test_undecidable_holder_counts_as_alive(self):
@@ -165,33 +176,33 @@ class TestEndpointLease(unittest.TestCase):
         undecidable (runs.is_alive -> None) -> the lease is kept."""
         self._foreign(EP, "gpt-oss-vllm", pid=1, script="")
         with self.assertRaises(SystemExit):
-            el.acquire("qwen25-32b-awq", [EP])
+            acquire_exclusive("qwen25-32b-awq", [EP])
 
     def test_idempotent(self):
-        el.acquire("gpt-oss-vllm", [EP])
-        el.acquire("gpt-oss-vllm", [EP])
+        acquire_exclusive("gpt-oss-vllm", [EP])
+        acquire_exclusive("gpt-oss-vllm", [EP])
         self.assertEqual(len(el.holders(EP)), 1)
 
     def test_multi_endpoint_alias_leases_all(self):
-        el.acquire("gpt-oss", [EP, EP2])
+        acquire_exclusive("gpt-oss", [EP, EP2])
         self.assertEqual(len(el.holders(EP)), 1)
         self.assertEqual(len(el.holders(EP2)), 1)
 
     def test_no_endpoints_leases_nothing(self):
-        el.acquire("haiku", None)  # claude-cli has no endpoint
+        acquire_exclusive("haiku", None)  # claude-cli has no endpoint
         self.assertEqual(el.holders(EP), [])
 
     def test_release_frees_the_slot(self):
-        el.acquire("gpt-oss-vllm", [EP])
+        acquire_exclusive("gpt-oss-vllm", [EP])
         el.release_all()
         self.assertEqual(el.holders(EP), [])
-        el.acquire("qwen25-32b-awq", [EP])  # must not raise
+        acquire_exclusive("qwen25-32b-awq", [EP])  # must not raise
 
     def test_opt_out_env(self):
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
         os.environ["LABKIT_NO_ENDPOINT_LEASE"] = "1"
-        el.acquire("qwen25-32b-awq", [EP])  # deliberate exception
+        acquire_exclusive("qwen25-32b-awq", [EP])  # deliberate exception
         self.addCleanup(lambda: os.environ.pop("LABKIT_NO_ENDPOINT_LEASE", None))
 
     def _broken(self, age_s: float) -> Path:
@@ -208,7 +219,7 @@ class TestEndpointLease(unittest.TestCase):
         deleting on sight could drop a live holder."""
         f = self._broken(age_s=1)
         with self.assertRaises(SystemExit):
-            el.acquire("qwen25-32b-awq", [EP])
+            acquire_exclusive("qwen25-32b-awq", [EP])
         self.assertTrue(f.exists())
 
     def test_old_unreadable_record_is_removed_loudly(self):
@@ -220,7 +231,7 @@ class TestEndpointLease(unittest.TestCase):
         self.assertIn("removing unreadable lease record", err.getvalue())
 
     def test_record_is_written_whole_and_lock_is_not_a_record(self):
-        el.acquire("qwen25-32b-awq", [EP])
+        acquire_exclusive("qwen25-32b-awq", [EP])
         d = Path(self.tmp.name) / el.endpoint_dir(EP)
         names = sorted(p.name for p in d.iterdir())
         self.assertEqual(names, [".lock", f"qwen25_32b_awq.{os.getpid()}.json"])
@@ -232,8 +243,9 @@ class TestEndpointLease(unittest.TestCase):
             "import os,sys,time; sys.path.insert(0, %r);"
             "from labkit.run import endpoint_lease as el;"
             "time.sleep(max(0, float(sys.argv[2]) - time.time()));"
-            "el.acquire(sys.argv[1], [%r]); time.sleep(1.5); print('ADMITTED')"
-            % (str(Path(__file__).resolve().parents[1]), EP)
+            "el.acquire(sys.argv[1], [%r], exclusive=frozenset({el.canonical_endpoint(%r)}));"
+            "time.sleep(1.5); print('ADMITTED')"
+            % (str(Path(__file__).resolve().parents[1]), EP, EP)
         )
         start = time.time() + 1.0
         procs = [
@@ -258,8 +270,61 @@ class TestEndpointLease(unittest.TestCase):
         self._foreign(EP, "other-alias", pid=pid, script=script)
         llm._FROZEN["probe-alias"] = OpenAISpec("probe-alias", "m", (EP,))
         self.addCleanup(lambda: llm._FROZEN.pop("probe-alias", None))
-        with self.assertRaises(SystemExit):
-            llm.complete("probe-alias", "hi", attempts=1)
+        # the lab declares the endpoint one model slot
+        with mock.patch.object(llm, "_SLOTS", [frozenset({el.canonical_endpoint(EP)})]):
+            with self.assertRaises(SystemExit):
+                llm.complete("probe-alias", "hi", attempts=1)
+
+    def test_the_twin_an_undeclared_endpoint_is_leased_and_refuses_nobody(self):
+        """Without the lab's declaration a second alias is recorded, not refused."""
+        pid, script = self._live_other_process()
+        self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
+        el.acquire("qwen25-32b-awq", [EP])  # must not raise
+        self.assertEqual(
+            sorted(h["alias"] for h in el.holders(EP)),
+            ["gpt-oss-vllm", "qwen25-32b-awq"],
+        )
+
+    def test_two_names_for_one_url_are_one_exclusive_slot(self):
+        """Exclusivity belongs to the canonical URL: a name and a URL spelled
+        otherwise name one slot."""
+        from labkit.run import llm
+
+        toml = (
+            '[endpoints]\ngamma1 = "HTTP://Host:8000/v1/"\ngamma2 = "http://host:8000/v1"\n'
+            '[model_slots]\nexclusive = ["gamma1"]\n'
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "models.toml"
+            path.write_text(toml, encoding="utf-8")
+            with (
+                mock.patch.object(llm, "find_models_toml", lambda: path),
+                mock.patch.object(llm, "_SLOTS", []),
+            ):
+                self.assertEqual(
+                    llm.exclusive_slots(), frozenset({"http://host:8000/v1"})
+                )
+        self.assertEqual(
+            el.canonical_endpoint("HTTP://Host:8000/v1/"),
+            el.canonical_endpoint("http://host:8000/v1"),
+        )
+
+    def test_a_malformed_declaration_is_refused(self):
+        from labkit.run import llm
+
+        for bad, words in (
+            ('[model_slots]\nexclusive = "gamma1"\n', "expected only exclusive"),
+            ('[model_slots]\nexclusive = ["nope"]\n', "not in \\[endpoints\\]"),
+        ):
+            with self.subTest(bad=bad), tempfile.TemporaryDirectory() as d:
+                path = Path(d) / "models.toml"
+                path.write_text(bad, encoding="utf-8")
+                with (
+                    mock.patch.object(llm, "find_models_toml", lambda: path),
+                    mock.patch.object(llm, "_SLOTS", []),
+                ):
+                    with self.assertRaisesRegex((ValueError, KeyError), words):
+                        llm.exclusive_slots()
 
 
 if __name__ == "__main__":

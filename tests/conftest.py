@@ -59,3 +59,15 @@ if os.environ.get("LABKIT_TEST_RAISE") == "1":
     def pytest_internalerror(excinfo: pytest.ExceptionInfo[BaseException]) -> None:
         """Re-raise pytest's own errors for the same reason."""
         raise excinfo.value
+
+
+@pytest.fixture(autouse=True)
+def _no_declared_model_slots(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No model slot declared unless a test says so: a test that hands `llm`
+    a spec without a models.toml (patching `spec`) would otherwise make
+    `llm.exclusive_slots` look for one. `models_fixture.serve` and the lease
+    tests set `llm._SLOTS` themselves, so the declaration is read where it
+    is under test."""
+    from labkit.run import llm
+
+    monkeypatch.setattr(llm, "_SLOTS", [frozenset()])

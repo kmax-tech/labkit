@@ -244,6 +244,56 @@ def aliases() -> list[str]:
     return list(models) if isinstance(models, dict) else []
 
 
+_SLOTS: list[frozenset[str]] = []  # the declared slots, fixed at first use per process
+
+
+def exclusive_slots() -> frozenset[str]:
+    """The canonical URLs (`endpoint_lease.canonical_endpoint`) the lab
+    declares to be one model slot each — `[model_slots] exclusive = [...]`
+    in its `models.toml`, names from `[endpoints]` or URLs; empty without
+    the table. Only there does a second alias refuse (`endpoint_lease`).
+    Fixed per process at first use, as `spec` is. Raises ValueError for a
+    `[model_slots]` that is no table with only a list of strings
+    `exclusive`, KeyError for a name `[endpoints]` lacks; FileNotFoundError
+    without the file."""
+    with _FROZEN_LOCK:
+        if not _SLOTS:
+            _SLOTS.append(_read_slots())
+        return _SLOTS[0]
+
+
+def _read_slots() -> frozenset[str]:
+    """`exclusive_slots` as `models.toml` states it now."""
+    path = find_models_toml()
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    table = data.get("model_slots")
+    if table is None:
+        return frozenset()
+    named = table.get("exclusive") if isinstance(table, dict) else None
+    if (
+        not isinstance(table, dict)
+        or set(table) != {"exclusive"}
+        or not isinstance(named, list)
+        or not all(isinstance(n, str) for n in named)
+    ):
+        raise ValueError(
+            f'{path} [model_slots]: expected only exclusive = ["<endpoint name or URL>", ...]'
+        )
+    names = data.get("endpoints", {})
+    out = set()
+    for n in named:
+        url = n if "://" in n else names.get(n) if isinstance(names, dict) else None
+        if not isinstance(url, str):
+            raise KeyError(
+                f"{path} [model_slots]: endpoint name {n!r} not in [endpoints]"
+            )
+        out.add(endpoint_lease.canonical_endpoint(url))
+    return frozenset(out)
+
+
 def cache_declared() -> bool:
     """Does the lab allow a cache of model answers across runs —
     `[llm_cache] enabled = true` in its `models.toml` (LAB-069 No LLM cache
@@ -621,9 +671,8 @@ def _complete_once(
     # empty answers that a quality check counts as a parser finding. The lease sits
     # HERE and not in the calling script on purpose — a rule a script has to
     # remember is an intention (endpoint_lease's docstring carries the chain).
-    endpoint_lease.acquire(
-        alias, None if isinstance(used, ClaudeCliSpec) else list(used.endpoints)
-    )
+    if not isinstance(used, ClaudeCliSpec):
+        endpoint_lease.acquire(alias, list(used.endpoints), exclusive_slots())
     if isinstance(used, ClaudeCliSpec):
         return complete_claude_cli(
             used,
