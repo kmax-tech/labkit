@@ -1,143 +1,150 @@
 # Simplify checks and tests — implementation plan (2026-11-10)
 
-> Decided by the author on 2026-11-10: the test model and the restructuring of the checks come before the next usage round. This note owns the implementation steps and their acceptance; [TODO task 6c](../../TODO.md#6c-ein-klares-testmodell-und-der-umbau-der-checks--vor-der-nutzungsrunde-entschieden-2026-11-10) owns their place in the work order.
+> Decided by the author on 2026-11-10: restructure the checks and tests before the next usage round. This note owns the implementation plan; [TODO task 6c](../../TODO.md#6c-ein-klares-testmodell-und-der-umbau-der-checks--vor-der-nutzungsrunde-entschieden-2026-11-10) owns its place in the work order.
 
-## Outcome and current status
+## Start here
 
-A check states which rule it holds and tests that rule against data in memory. A gate composes checks; a scenario verifies the hand-over between real commands. This puts each assurance in one place and makes changes possible without rebuilding a repository for every variant. Doing this before the usage round avoids carrying its findings into a second structure later.
+**Goal:** each scientific or technical condition has one implementation and direct tests; gates compose checks, and scenarios verify hand-overs between real commands. Preserve those assurances first; reduce test time second.
 
-The current inventory is built; its extensions and the implementation steps below are pending. **Next: step 1, the state builder for tests, including the decision how an answering run's files reach a check as data.** Implementation has not started. Only steps 1 and 2a precede the finalize pilot; the remaining tool work (2b) follows the checkpoint.
+**Status:** the inventory exists; implementation has not started. **Next:** step 1 — build minimal test inputs and migrate one check as the reference. This includes deciding how the answering run's files reach a check as data.
 
-The baseline is the green suite measured on 2026-11-10: 3 233 tests in 187 files, about 65 700 lines; 383 s in total and 81 s without the 13 scenario files (about 12 900 lines), on 11 cores. Of 194 gate-finding sites, 30 are unreached, 19 are reached only through commands and 54 are reached through a check or format function. These reach counts cover only the gate channel. All 226 currently inventoried sites are in scope, including 26 `exit` and 6 `printed` sites; the inventory itself also misses some refusals, as documented below. The detailed baseline and its limits are preserved below.
-
-## Decisions and dependencies
-
-1. **Agreed:** four test layers; a rule field on each finding, with an explicit value for an assignment still open; acceptance by an asserted finding and a passing valid twin; scenario removal only after every assertion has a named replacement.
-2. **Still open:** individual rule assignments in the [assignment proposal](2026-11-09-rule-per-finding-proposal.md). Recording an open assignment must not approve it. A technical contract without a standard rule must not be assigned an invented rule merely to fill the field.
-3. **Dependencies by site:** steps 1 and 2a and the finalize pilot can start independently of the six author decisions on second review. The rule value can carry an open assignment without settling it. In step 3, defer the checks in `labkit/gates/report_decisions.py` whose assignment or meaning depends on LAB-015 Preflight audit before freezing until those decisions are made. The dependent [report-claim decision contract](2026-11-10-report-claim-decisions.md) waits as well. Task 6b's remaining adoption acceptance for two protocols remains a prerequisite for the usage round, not for building a test fixture. Their status stays in [TODO task 6b](../../TODO.md#6b-die-einzelprüfung-der-blocker-umsetzen--entschieden-2026-11-10).
-4. **Boundary:** preserve the checks' current meaning while restructuring them. A change to the scientific rule is a separate author decision. Release, rollout and the usage experiment remain separate tasks.
+**Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling before it.
 
 ## The plan
 
-Follow the steps in order, with the mandatory checkpoint after the first gate in step 3. Step 2 is split around that checkpoint: before the finalize pilot only what finalize needs (2a), the rest after the checkpoint and before the next gate (2b), so that the checkpoint measures migration work rather than mostly tool building. Step 3 repeats in small commits by gate; extracting a check and giving it its rule test belong in the same commit. The 226 sites are the starting inventory, not a claim that the scanner finds every refusal.
+Extracting a check and testing its condition belong in the same commit. Repeat step 3 in small commits by gate. Use touched tests while working and the repository's required commit checks; run the full suite when measurement requires it.
 
-| Step | Work                                      | Complete when                                                                                                                                                        | Status  |
-|------|-------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| 1    | Build test state from data                | A rule test runs without a repository, from `AreaState` and `AreaEvidence` or from an answering run's files given as data                                            | Next    |
-| 2a   | Rule value and site list for the pilot    | The rule value is defined and validated; finalize's sites stand in the site account at the pilot's start commit                                                      | Pending |
-| 2b   | Rule data and baseline for the rest       | The rule value reaches every constructor and the audit records; all channels and recovered refusals are in the baseline; every remaining site is in the site account | Pending |
-| 3    | Restructure and test checks, gate by gate | All sites map to tested conditions or composition behavior; first-gate checkpoint passed                                                                             | Pending |
-| 4    | Reduce scenario variants                  | Each removed assertion has a named test that keeps it; command hand-overs remain covered                                                                             | Pending |
-| 5    | Measure and review the result             | Acceptance and timing are recorded, with any remaining gaps explicit                                                                                                 | Pending |
+| Step       | Deliverable                                                        | Acceptance                                                                                                                    |
+|------------|--------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| 1          | Minimal state builder, run-input decision and first migrated check | Violation and valid twin run from data; inconsistent test inputs remain unchanged; reference and boundary guards are recorded |
+| 2a         | Shared rule value and finalize site account                        | Invalid rule values are refused; finalize's sites are listed at the pilot's start commit                                      |
+| 3, pilot   | Migrate finalize                                                   | Its conditions, composition and boundary exceptions meet the contracts below; stop at the checkpoint                          |
+| Checkpoint | Pilot cost and remaining-effort estimate                           | Author chooses continuation, a narrower scope/time cap, or deferral                                                           |
+| 2b         | Rule data throughout, inventory coverage and comparison            | Remaining sites and recovered refusals are accounted for; changes are explained through the site account                      |
+| 3, rest    | Migrate remaining gates and run-time checks                        | Every site maps to condition/composition tests or a justified exception                                                       |
+| 4          | Candidate report and fewer scenario variants                       | Every removed assertion has a named replacement; unique hand-overs remain covered                                             |
+| 5          | Final inventory, review and timing                                 | Report all targets, open assignments, exceptions and timing results                                                           |
 
-### 1. Build test state from data
+### 1. Establish the reference check
 
-Add `tests/state_fixture.py` to construct `AreaState` and `AreaEvidence` directly from data. `Checked` (`labkit/gates/report_context.py`) is report-check's gate-layer object, which no check receives; add it to the builder only when report-check's gate tests need it. Keep the inputs relevant to the tested condition explicit; use existing state types rather than a second representation of an area. Build only what the first migrated check needs, then extend with subsequent checks. Construct explicit, minimal data without hidden scientific defaults, derived-field synchronization, automatic repairs or special cases that make an invalid state valid. Tests must be able to supply inconsistent states deliberately. Reuse production data types, not production normalization that could erase the condition under test. Defaults may shorten irrelevant boilerplate only when documented and independent of the tested condition.
+Build `tests/state_fixture.py` using existing `AreaState` and `AreaEvidence` types. Keep relevant inputs explicit and minimal. No hidden scientific defaults, synchronization of derived fields, automatic repair or normalization of inconsistent states. Defaults may shorten irrelevant boilerplate only when documented and independent of the tested condition. Add gate-layer `Checked` only when report-check's gate tests need it; checks never receive it.
 
-**The answering run's files as data.** About half of finalize's stations do not read the area state: they take the answering run's directory and read its files themselves — `check_run_code`, `check_declared_scopes`, `check_provenance`, `check_null_lane`, `check_registered_outputs`, `check_criterion_n` in `labkit/gates/finalize.py` (code and scope hashes, `outputs.json`, `metrics.json`, the recorded inputs, git tracking). `AreaState` holds none of these. Before the pilot reaches them, decide which typed value carries what these checks read of one run — its records as read, each read failure as data (`gate.outcome_of_failed_read` decides its outcome) — and which reader builds it. Prefer the records `labkit/formats/runs.py` already returns (`read_outputs`, `read_metrics`, the run record); the checks behind these stations live in `labkit/checks/run_record_check.py` and take the run's directory today; a new type is justified only where no existing one carries the input, and it describes a run, not a second representation of an area. Record the decision with the reference implementation. `check_area_tests` runs the area's tests as a subprocess and stays a named boundary (`preflight.area_tests`), not a pure check.
+**Resolve the missing run inputs before migrating their checks.** About half of finalize's stations take a run directory and read data absent from `AreaState`: code/scope hashes, outputs, metrics, recorded inputs and Git tracking. This affects `check_run_code`, `check_declared_scopes`, `check_provenance`, `check_null_lane`, `check_registered_outputs` and `check_criterion_n`; their checks in `labkit/checks/run_record_check.py` currently take a directory too. Reuse the records returned by `labkit/formats/runs.py` where possible. Decide which typed value carries the remaining inputs and read failures, and which reader builds it. A new type must describe a run, not duplicate the area model. `gate.outcome_of_failed_read` remains the outcome classifier. `check_area_tests` remains an execution boundary through `preflight.area_tests`.
 
-**Acceptance:** migrate a first rule test with its violation and valid twin. Both run without a repository, file reads or commands where the file itself is not the subject. The test asserts the cause of the finding and the existing rule field where assigned. Record the first migrated function and its gate caller here as the reference implementation, using the contract below, before migrating more checks. Step 2a then normalizes the rule value. Demonstrate that the builder preserves a deliberately inconsistent input unchanged, and add the rule-test boundary guard described below with this first example.
+Migrate one condition with its violation and valid twin under the [check contract](#check-contract). Record its actual signature, location, gate caller and run-input decision here as the template for later migrations. Demonstrate that the builder preserves a deliberately inconsistent input. Introduce the rule-test and pure-check guards with this example.
 
-### 2. Unify rule data and prepare measurement
+### 2a. Prepare only what finalize needs
 
-Step 2 is split around the checkpoint. 2a supplies what the finalize pilot needs; 2b, the rest, comes after the checkpoint and before the next gate is migrated.
+Define and validate the [shared rule value](#rule-assignment); populate finalize's existing `GateFinding.rule` and the constructors it uses. The first migrated test then asserts the normalized value.
 
-#### 2a. Rule value and site list for the pilot
+Open the [site account](#site-account) for finalize at the pilot's start commit, covering all three channels. Check the source for refusals the scanner misses. Broader constructor changes, audit records and inventory tooling wait for 2b.
 
-**Rule representation.** `GateFinding.rule` already exists (`labkit/formats/gate.py`, class `GateFinding`); its documented value is `LAB-nnn Name`, whereas `findings.Finding.rule` carries `LAB-nnn` or `new class`. Normalize the machine value to the rule id in both forms, using one validator and the rules ledger for the display title. Add an explicit value for an assignment still open. Keep that distinct from an audit's `new class` (no existing rule names the fault) and a technical contract without a standard rule. Represent these cases with one validated, tagged value: a known-rule case carries the rule id, an open-assignment case carries no invented id, and a technical-contract case is explicit. Preserve the separate audit `new class` case. Define the English tags once and reject contradictory tag/payload combinations. Do not use arbitrary strings or a fallback that turns an invalid id into an open assignment; keep the representation small, without a new registry. Do not introduce a parallel rule field. Before the pilot, fill the existing `GateFinding.rule` at finalize's sites and in the constructors finalize uses; the rest follows in 2b.
+### 3. Migrate by gate, stopping after finalize
 
-**The site account.** Open a site account: one row per site in a TSV file beside this note, holding the site as it stands at a named commit (channel, qualified function, normalized message template, `file:line` at that commit), its category, the condition or forwarding behavior it maps to, its rule value and the tests that hold it — or its removal, merge or extraction exception with the reason. A site is identified by its row, not by its line: the line is a display location at the row's commit. For the pilot, enter finalize's sites in all three channels at the pilot's start commit, and check `labkit/gates/finalize.py` for refusals the scanner misses (a `SystemExit` whose argument is a call, see 2b).
+At each gate, start with unreached and command-only sites; then review the remaining conditions and existing tests. Apply the [test model](#the-model) and [check contract](#check-contract). Classify every site and link it to the tests of its condition or forwarding behavior in the account. Do not create a function or duplicate a twin test merely to improve a site count.
 
-**Acceptance:** the rule value rejects an invalid id and a contradictory tag/payload combination, with a passing valid twin; the first migrated rule test asserts the normalized field; finalize's sites stand in the site account with the pilot's start commit.
+Keep gate tests for ordering, withdrawal, one cause/one blocker and index-versus-tree selection. For `exit` and `printed` sites, retain assertions for the outward exception/status or warning. A boundary that gains nothing from extraction, such as a usage error, needs an explicit exception reason and its boundary test. Remove an unreachable branch only with evidence that it cannot occur.
 
-#### 2b. Rule data and baseline for the rest
+After finalize, follow the checkpoint below. If continued, complete 2b before report-check, preflight and report holds; then cover the remaining readers and run-time refusals outside those gates. The 32 non-gate sites are included, not implicitly exempt.
 
-**Rule data everywhere.** Fill the rule value at every migrated site and extend the constructors that currently cannot receive it, including the audit records' `findings.Finding.rule` — a record format on disk, so check the public API and record-format obligations first and follow the repository's transition and Breaking policies where applicable. Read the inventory's rule counts from these data, not from message text.
+### Checkpoint after finalize
 
-**Inventory coverage.** List all `exit` and `printed` sites alongside gate findings, with their test-evidence status. The scanner currently excludes `SystemExit` arguments that are calls (`check_inventory._refusal_message`); this hides `runlog` refusals wrapped in `with_way_out`, including `_repeat_parent` and `_require_no_open_twin`. Review this omission and other scanner boundaries before freezing the comparison baseline. A known wrapped refusal and a known direct refusal must both appear; command exit-code forwarding must not become a spurious finding. New sites discovered here increase the denominator explicitly.
+Record the pilot's start commit, selected sites and baseline timings before migration; track infrastructure time separately from migration and verification. At the stop, report:
 
-**Comparison through the site account.** The site account is the old-to-new mapping; there is no second, automatic matcher. Compare the inventory at the baseline commit with the current one by channel, qualified function and normalized message template — no line numbers, so inserting lines changes nothing. Every difference (moved into a check, renamed, reworded, split, merged, removed, added) must be explained by a row of the site account. A key that occurs more than once on one side is resolved in the account by hand, never by line order. Enter every remaining site in the account before its gate is migrated.
+1. Sites accounted for and distinct conditions tested.
+2. Implementation and verification time per condition/site, plus shared infrastructure cost.
+3. Code/test line changes and measured fast/slow timing changes. Report no gain or unmeasured gain honestly; scenario savings may come only in step 4.
+4. A remaining-effort range, including still-unclassified sites.
 
-**Acceptance:** rule data survive forwarding and display; the inventory distinguishes assigned, open and technical-contract cases. All current channels and newly found refusals are accounted for. The comparison lists every difference no row explains, and nothing for a mere line insertion. Preserve the dated 194-site trace as a partial baseline; do not infer reach for untraced channels. Use direct test assertions as evidence for those until tracing exists. The cross-test candidate report required by step 4 is a separate tool deliverable there.
+**Stop before another gate.** The author chooses continuation, a narrower scope with a time cap, or deferral. A usage round with a partial refactor requires an explicit change to the earlier decision, listing deferred sites, risks and unmet targets. Keep their existing checks and tests. No reliable overall estimate or time cap exists before this checkpoint.
 
-### 3. Restructure and test checks, gate by gate
+### 2b. Complete rule data and measurement
 
-Start with finalize and stop at the checkpoint below. If continued, work through report-check, preflight and the report holds, then the remaining readers and run-time refusals outside those gates. At each gate, start with its unreached and command-only sites, then cover the sites reached only through a gate or tool. Review existing check and format tests against the same acceptance. Closing just the 30 unreached and 19 command-only sites does not finish this step: the target covers all retained sites across `finding`, `exit` and `printed`, plus refusals recovered from scanner omissions. Assign the 32 non-gate sites to their owning module in the site account; none is implicitly exempt.
+Extend remaining constructors and audit records to the shared rule value. Check public API and on-disk format obligations before changing accepted values; follow the repository's transition and Breaking policies. Inventory rule counts read the data field, not message text. Extend forwarding tests as specified below.
 
-**Sites account for the implementation; conditions define the tests.** Classify each site as a scientific rule condition, a technical contract condition, or composition/forwarding. Several sites may share one condition and its violation/valid-twin tests when their meaning and inputs are the same. Map each such site to that condition and its named tests; test only additional context or wiring at the caller. Forwarding a finding does not create a new rule condition. Do not extract a function or duplicate a twin test merely to improve a site count.
+Complete the site account and repair the scanner's known omission: `check_inventory._refusal_message` excludes a `SystemExit` argument that is a call, hiding `runlog` messages wrapped in `with_way_out`. A known wrapped refusal and a direct refusal must both appear; command exit-code forwarding must not become a finding. Review other scanner boundaries and add discovered sites explicitly to the denominator.
 
-For each site:
-
-1. Identify its category, underlying condition or forwarding behavior, current rule assignment and existing assertions. Preserve a proposed assignment as open.
-2. Put the condition in its single pure check function where it can be tested from data. Keep file reading in the reader and station order at the gate entry.
-3. For each distinct scientific or technical condition, assert the finding's grade, rule field and cause and provide the valid twin; reuse these tests for sites sharing that condition. Where the check can be `not executable`, assert that result separately from a violation.
-4. Keep gate tests for composition, ordering, withdrawal and index-versus-tree selection. Those assertions are different from a rule's variants.
-5. For an `exit` or `printed` site, test the underlying condition as data (reusing its twin tests where shared) and retain a boundary assertion for the exit status or printed warning. Test forwarding as forwarding, including correct handling of a passing result, rather than inventing a separate scientific twin. The boundary keeps its current outward behavior. If extraction does not help (for example a command usage error), record a per-site exclusion with its reason and the test that still holds it. Exclusion from extraction is not exclusion from accounting.
-6. Remove an unreachable branch only with evidence that it cannot occur. Record the removed site's reason so a smaller denominator cannot masquerade as better coverage.
-
-**Acceptance per gate or module:** every retained site maps to a tested scientific condition, tested technical condition, tested composition/forwarding behavior, or a justified extraction exception. Every distinct condition has a violation and valid twin; composition tests assert the extra behavior they own. Report site reach and condition acceptance separately: more tests per site are not a success criterion. The inventory confirms where execution entered; reading the assertions establishes what is tested. If the outermost-call tracer still classifies a migrated test as `gate`, explain or correct the test entry rather than treating reach as acceptance.
-
-### Check contract and first-gate checkpoint
-
-**Reference form to establish in step 1:** put an extracted area-state check in the owning subject module under `labkit/checks/`; reuse an existing module where it owns that condition. Its reference signature is `check_<condition>(state: AreaState, *, evidence: AreaEvidence) -> list[GateFinding]`. A check needing only smaller data takes explicitly typed domain arguments instead; record those inputs with the first example. A run-level check takes the answering run's records as decided in step 1 ("The answering run's files as data"), not the run's directory. Do not pass a mutable collector or the gate-layer `Checked` object into a check. A passing check returns `[]`; a failure returns findings with grade, rule, cause, evidence kind, check outcome and the required way out. A check neither reads files nor prints, writes, raises `SystemExit` or changes its input. Malformed caller data still raises a named validation error; it must not silently become success.
-
-The gate chooses whether and when to call the check, then passes its returned list to the existing `Findings.take_all`. The reader supplies file contents or a typed read failure as data. For run-time refusals, the boundary translates the result to the existing exception or printed channel. Record the actual first function's signature, location, return values and caller in this note; use it as the template for later migrations. Keep genuine differences in input types explicit rather than introducing a check registry or new universal wrapper.
-
-**Architecture guards, built alongside the first migrations.** Extend existing tests rather than creating a second architecture checker. `tests/test_architecture.py::NoFileAccessInGates` already scans gates and checks for direct file, git and subprocess calls with named exceptions. Keep that guard and add only the missing boundaries:
-
-1. In step 1, identify rule tests explicitly with an existing pytest mechanism, such as a marker. A shared fixture for these tests rejects process creation, command-entry calls and repository construction, including when reached through a helper. Reader tests and gate tests that verify index/tree behavior remain outside this restriction.
-2. With the first extracted check, exercise it under a guard that rejects file access, repository access and subprocess creation through helpers as well as direct calls. Keep named boundary exceptions out of pure checks. This supplements the existing source scan; it does not claim to prove purity for every possible execution.
-3. In step 2b, extend the tests of the existing finding forwarding operations to assert that the rule assignment, evidence kind and check outcome survive unchanged except where an explicit transformation is intended.
-
-For each guard, include a small deliberately forbidden example and an allowed example so a green architecture test shows that the guard itself works. Reuse those guards for later migrations. They enforce observable technical boundaries; review still judges whether a test asserts the intended scientific condition.
-
-**Mandatory stop after finalize, before another gate is migrated.** Before starting the pilot, record its commit, the selected sites, suite timings and the time spent on shared infrastructure separately. Track implementation and verification time during the pilot. At the checkpoint report sites accounted for, distinct conditions completed, implementation/verification time per condition and per site, code and test line changes, fast/slow suite time changes, and a remaining-effort range based on the observed work and the still-unclassified sites. Scenario time may not improve before step 4; report zero or unmeasured improvement honestly rather than crediting an anticipated saving.
-
-A reliable estimate and an overall time cap do not exist yet. The finalize pilot itself runs without a time cap (decided by the author on 2026-11-10); the checkpoint after it is the stop. At this checkpoint the author chooses whether to continue unchanged, narrow the work with a time cap, or defer the rest. Do not continue the broad migration automatically. A usage round with a partial refactor requires an explicit change to the earlier decision: list completed modules, deferred sites, remaining risks and unmet targets. Preserve the checks and tests for deferred sites. This checkpoint prevents the complete migration from becoming an unbounded prerequisite while leaving the research decision with the author.
+Compare baseline and current inventories through the account. Channel, qualified function and normalized message template form the comparison key; line numbers only locate source. Explain moves, rewordings, renames, splits, merges, removals and additions in the account. Resolve duplicate keys there by hand, never by line order. The comparison must list unexplained differences and ignore mere line insertion; do not build a second automatic matcher. Enter each remaining site before migrating its gate.
 
 ### 4. Reduce scenario variants
 
-**Tool work first:** extend the inventory to emit per-scenario test node id, its reached site identities, and the lower-layer test ids reaching each site. This cross-test candidate list does not exist in the current renderer, which reports mostly per site and file. Test the report with a scenario whose sites all have lower-layer witnesses and one with a command-only site. Flag tests with no traced sites, untraced channels or missing subprocess events as unknown; never call them redundant.
+First extend the inventory with a per-scenario candidate report: test node id, reached sites and lower-layer test ids witnessing each site. The current renderer lacks this cross-test list. Verify it with one candidate whose sites all have lower-layer witnesses and one with a command-only site. No traced sites, untraced channels or missing subprocess events mean **unknown**, not redundant.
 
-Use that report to find candidates whose sites are reached lower. For each candidate, list every assertion and name the test that will keep it. Include command hand-overs, stored state read by the next command, and repairs across gates. Move single-rule variants to the narrowest layer; retain scenarios for each assurance and repair path that only real commands demonstrate.
+Then review every candidate's assertions. Name the replacement test for each assertion before removing it. Preserve command hand-overs, stored state read by the next command and repairs across gates. Reach alone never establishes replacement. Retained scenarios keep the `slow` mark.
 
-**Acceptance:** every removed assertion has a named replacement. A site reached by another test is insufficient evidence. Retained scenario tests keep the `slow` mark. Timing pressure does not justify losing an assurance.
+### 5. Measure and review
 
-### 5. Measure and review the result
+Compare inventories through the account and resolve unexplained changes before claiming gains. Under comparable conditions, record full-suite, fast-tier and slow-tier times, worker count, and added/removed sites. Evaluate the [targets](#targets), keeping open assignments and extraction exceptions visible. The usage round remains a separate research task subject to its prerequisites.
 
-Run the extended inventory and compare its tables with the baseline through the site account from step 2b under comparable conditions. Resolve unmatched sites before claiming coverage gains. Record the whole suite, fast-tier and slow-tier times, worker count, and the added or removed sites. Use the full-suite run required for this measurement; while migrating checks, use the touched tests and the repository's normal commit checks.
+## Contracts used throughout
 
-**Acceptance:** evaluate all [targets](#targets), name the condition and composition tests supporting the site account, and record any open assignments or missed timing targets. Retained assurances and passing architecture guards take priority over timing. Target times remain under 90 s for the fast tier and under 2 min for the slow tier; missing a timing target is reported separately and never justifies removing a unique assurance. The next usage round is a separate research task and starts only after the work order's prerequisites are satisfied.
+### The model
 
-## Maintaining this plan
+A finding site is where a result is built or told; it is an accounting unit. A condition is what the check decides; it is a testing unit. Several conditions can belong to one standard rule, and several sites can share one condition and its twin tests. Classify sites as scientific conditions, technical contract conditions, or composition/forwarding. Test only additional context at each caller.
 
-After each implementation commit, update the step's status here and record the gate or sites completed, the tests establishing acceptance, and the commit. Keep TODO task 6c as a short pointer and current next action; keep detailed counts and the implementation record in this note, the per-site rows in the site account (step 2a). Keep the baseline below dated and add the final comparison rather than overwriting the starting measurements.
+| Layer    | What it establishes                                                                                                                   | Setup                                                                          |
+|----------|---------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| reader   | File/object conversion, read failure causes, writer round-trip                                                                        | A temporary file; no gate, Git or command                                      |
+| rule     | One distinct condition: asserted grade, rule assignment and cause; valid twin passes; `not executable` distinguished where applicable | Typed data in memory; no repository or command                                 |
+| gate     | Composition, ordering, withdrawal and file-state selection                                                                            | State in memory; repository only to test index/tree behavior; no whole command |
+| scenario | Hand-overs between real commands and repairs across gates                                                                             | Lab repository and real commands; marked `slow`                                |
 
-## The model
+Repository architecture and ledger tests remain a separate group. The inventory measures execution reach; reviewing assertions establishes condition acceptance. Composition-only sites belong at the gate/boundary layer and need no invented scientific twin.
 
-Four layers of tests, each asking one kind of question. A fifth group stands apart: the repository's own rules (`test_architecture`, `test_one_home`, the rules ledger).
+### Check contract
 
-| layer    | asks                                                                                                                                                       | builds                                                                   | never                                                   |
-|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------|
-| reader   | does a file read as its object, or refuse with its cause (`files.ReadError`); does a writer's output read back                                             | one file in a temporary folder                                           | a gate, git, a command                                  |
-| rule     | for one distinct scientific or technical condition: the violation is found, the twin passes, a check that cannot run says so (`not executable`)            | the check's input as data — an `AreaState`, records, a text in memory    | files where the file is not the subject, git, a command |
-| gate     | the order of the stations at one entry, one cause one blocker, a withdrawal first, the file state read (index or tree)                                     | a state in memory; a repository only where the file state is the subject | a whole command                                         |
-| scenario | one walk through the real commands per assurance — registration, provenance, completeness, audit coverage, report — and per repair path that crosses gates | a lab repository, real commands; marked `slow`                           | a single rule's variants                                |
+Use the existing subject module under `labkit/checks/`. Reference signature for an area check: `check_<condition>(state: AreaState, *, evidence: AreaEvidence) -> list[GateFinding]`; prefer smaller explicitly typed domain inputs where sufficient. Run checks receive the records decided in step 1, never a directory to read. No mutable collector or gate-layer `Checked` input.
 
-The rule layer is where a condition's variants belong. Each distinct condition is tested with its twin at the narrowest layer that can show it; several conditions may belong to one standard rule, and several sites may share one condition; a scenario only shows that the pieces fit. The precondition was built in task 5: the gates are functions of `AreaState` and `AreaEvidence`, which can be built as data.
+Return `[]` on valid input; otherwise return findings with grade, rule assignment, cause, evidence kind, check outcome and required way out. No file/repository access, process creation, printing, writes, `SystemExit` or input mutation. Invalid caller data raises a named validation error rather than silently passing.
+
+The gate decides whether/when to call the check and forwards its result through existing `Findings.take_all`. Readers supply contents or typed read failures; execution boundaries retain the existing exception/printed behavior. No new check registry or universal wrapper.
+
+### Rule assignment
+
+`GateFinding.rule` already exists with `LAB-nnn Name`; audit `findings.Finding.rule` uses `LAB-nnn` or `new class`. Use one small validated, tagged value with one validator:
+
+| Case               | Meaning                                                        |
+|--------------------|----------------------------------------------------------------|
+| Known rule         | Carries the rule id; display obtains its title from the ledger |
+| Open assignment    | Assignment undecided; no invented rule id                      |
+| Technical contract | A technical condition without an applicable standard rule      |
+| Audit `new class`  | Auditor found a fault no existing rule names                   |
+
+Define English tags once; reject invalid ids and contradictory tag/payload combinations, with valid twins. No arbitrary-string fallback, parallel rule field or new registry. Rule data survive forwarding and display. Recording an open assignment never approves it.
+
+### Site account
+
+Create one TSV beside this note, one row per site: source commit, channel, qualified function, normalized message template, source `file:line`, category, underlying condition/forwarding behavior, rule value and named tests. Track removals, merges and extraction exceptions with their reasons. The row carries the identity across a move; source lines are locations at a commit. This account is the sole old-to-new mapping and per-site implementation record.
+
+### Architecture guards
+
+Extend existing tests alongside migrations. `tests/test_architecture.py::NoFileAccessInGates` already scans direct file, Git and subprocess access with named exceptions. Add only the missing guards:
+
+| When                  | Guard                                                                                                                                                       |
+|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Step 1                | Identify rule tests explicitly with pytest; a shared fixture rejects process creation, command entry and repository construction, including through helpers |
+| First extracted check | Exercise it under guards rejecting file/repository access and process creation through helpers; pure checks gain no boundary exceptions                     |
+| Step 2b               | Existing forwarding operations preserve rule assignment, evidence kind and check outcome except for explicit transformations                                |
+
+Give each guard a forbidden example that it rejects and an allowed example that passes. Reuse the guards in later migrations. Reader and file-state gate tests retain their necessary access. These checks enforce exercised technical boundaries, not scientific adequacy or purity for every possible execution.
+
+## Decisions and dependencies
+
+The test model, rule field, explicit open assignment and assertion-preserving scenario removal are agreed. Preserve current check meaning during migration; scientific changes require the author's decision. Release and rollout remain separate work.
+
+Steps 1, 2a and the finalize pilot do not wait for the six second-review decisions. The dependent checks in `report_decisions.py` wait for the decision on LAB-015 Preflight audit before freezing, as does the [report-claim contract](2026-11-10-report-claim-decisions.md). Task 6b's adoption acceptance for two protocols remains due before the usage round. Status stays in [TODO task 6b](../../TODO.md#6b-die-einzelprüfung-der-blocker-umsetzen--entschieden-2026-11-10). Individual assignments in the [rule proposal](2026-11-09-rule-per-finding-proposal.md) remain open until decided.
 
 ## Targets
 
-Scope: all 226 currently inventoried sites, plus sites recovered by reviewing scanner omissions in step 2b. Extraction exceptions require a per-site reason and a named boundary test; untraced is a measurement status, not an exception.
+1. **Complete account:** all 226 inventoried sites (194 findings, 26 exits, 6 printed) and newly recovered refusals map to condition/composition tests or justified boundary exceptions. Removals have evidence; exceptions remain counted separately.
+2. **Direct condition tests:** close the 30 unreached and 19 command-only sites. Each distinct condition has an asserted finding and valid twin; shared conditions reuse tests. Gate reach is an intermediate measure, not acceptance. For untraced channels, name direct assertions instead of inferring reach.
+3. **Explicit rule data:** migrated sites use the shared value; boundary-only exceptions keep assignments in the account. Open assignments remain distinct from technical contracts and audit `new class`.
+4. **Preserved integration assurances:** every removed scenario assertion has a named replacement. Architecture guards pass their allowed and forbidden examples; review checks scientific adequacy.
+5. **Timing, subordinate to assurances:** fast tier under 90 s, slow tier under 2 min. The fast baseline is already 81 s. The roughly 302 s full-minus-fast difference is not a measured slow-tier baseline; measure that tier separately. Report missed timing goals without removing unique assurances to meet them.
 
-The inventory measures reach: a site was executed. That is an intermediate target, not the acceptance. A condition counts as tested only when a test asserts its finding — the grade, rule assignment and cause — and its valid twin passes. A site is accounted for by mapping it, in its row of the site account, to those tests, to tests of its additional composition behavior, or to a justified boundary exception. This mapping is reviewed, not inferred from reach. It need not have a one-to-one relationship with tests.
+## Updating the plan
 
-1. **No unreached site.** Each of the 30 is linked to condition tests or composition tests, or removed with evidence that the branch cannot happen.
-2. **No site reached only through commands.** Each of the 19 is linked to condition or composition tests below the command layer, with boundary assertions for any additional command behavior or a justified boundary-only exception.
-3. **Every retained site has narrow-layer acceptance or a justified extraction exception.** For scientific and technical conditions, reach at the check or format layer is an intermediate measure: 54 of 194 sites in the original trace. Composition-only sites belong at the gate or boundary layer and are counted separately, not forced into a rule test. For the 26 `exit` and 6 `printed` sites, and newly found refusals, record asserted condition and boundary tests separately until their reach is traceable. Acceptance follows the condition/composition mapping above; report exceptions separately from completed migrations.
-4. **Every migrated site names its rule as a field** of its finding; justified boundary-only exceptions keep their assignment in the site account. Gate and audit findings use the same rule-id representation; the message is for people, the field for tests and counts (decided 2026-11-10). Many assignments are still proposals (`docs/notes/2026-11-09-rule-per-finding-proposal.md`), and a required field must not make an open one look settled: the field takes an explicit value for an assignment still open, counted apart and distinct from an audit's `new class` and from a technical contract without a standard rule.
-5. **The slow tier keeps what only a scenario shows.** A scenario test is not redundant because its sites are reached lower: it may check the hand-over between commands, a state one command stores and the next reads, or a repair path across gates. One goes only when each of its assertions is kept elsewhere, named per test. Timing goals: slow tier under 2 minutes; fast tier under 90 s. The fast baseline (81 s) already meets its goal; expected savings come mainly from removing redundant scenario variants. The roughly 302 s difference between the full and fast runs is not an independently measured slow-tier baseline. Measure that tier separately before comparing. Preserving assurances takes priority over both timing goals.
-6. **Boundaries remain enforced.** The architecture guards introduced with steps 1 and 2b pass, reject their known forbidden examples and allow their valid examples. Scientific adequacy remains a review obligation.
+After each implementation commit, record the completed step/gate, acceptance tests and commit here; update per-site rows in the account. Keep TODO 6c to status, next action and dependencies. Keep the dated baseline below and add final measurements rather than replacing it.
 
 ## How it was measured
 
