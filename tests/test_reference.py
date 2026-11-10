@@ -17,6 +17,7 @@ from pathlib import Path
 from labkit.tools import protocol_result
 from labkit.gates import audit_prompt
 from labkit.formats import protocol_block, protocol_check, reference
+from labkit.formats.gate import OPEN_RULE, Findings
 from protocol_fixture import head  # noqa: E402
 
 WITHIN = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
@@ -181,6 +182,45 @@ class OnAKindWithABar(unittest.TestCase):
         gap = protocol_check.reference_gap(text, protocol_block.head(text))
         assert gap is not None
         self.assertIn("in a criterion", gap)
+
+
+class FinalizeForwardsTheHeadsGaps(unittest.TestCase):
+    """finalize's reference station forwards the head's gaps — the table on
+    a kind with a bar (`reference_gap`, held above) and a table that does
+    not read (`protocol_block.reference`, held above) — as one blocker each,
+    naming the protocol, before it reads the run."""
+
+    PROTOCOL = Path("area") / "PROTOCOL-x.md"
+    RUN = Path("area") / "runs" / "r1"  # never read: the head ends the station
+
+    def _held(self, text: str) -> list:
+        from labkit.gates import finalize
+
+        found = Findings(tell=None)
+        finalize.check_reference(
+            found, self.PROTOCOL, text, protocol_block.head(text), self.RUN
+        )
+        return found.found
+
+    def test_a_table_on_a_kind_with_a_bar_is_one_blocker(self):
+        (f,) = self._held(head(repeat_cost="low", kind="fit", reference=WITHIN))
+        self.assertTrue(
+            f.text.startswith('PROTOCOL-x.md: [reference] with kind = "fit"')
+        )
+        self.assertIn("repair the head", f.fix or "")
+        self.assertEqual(f.rule, OPEN_RULE)
+
+    def test_a_table_that_does_not_read_is_one_blocker(self):
+        (f,) = self._held(compute('relation = "within"\ntolerance = 0.01\n'))
+        self.assertTrue(f.text.startswith("PROTOCOL-x.md: "))
+        self.assertIn("missing `value`", f.text)
+        self.assertIn("repair the [reference] and [kept] tables", f.fix or "")
+        self.assertEqual(f.rule, OPEN_RULE)
+
+    def test_the_twin_a_sound_head_yields_no_head_finding(self):
+        # the run's metrics do not read here; at kind compute the kept-number
+        # station names that, so this station only notes it
+        self.assertEqual(self._held(compute(WITHIN)), [])
 
 
 class RegistrationStamp(unittest.TestCase):

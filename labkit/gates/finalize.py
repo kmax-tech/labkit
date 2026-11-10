@@ -96,6 +96,7 @@ from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
     GUARANTEED,
     NOTE,
+    OPEN_RULE,
     GateFinding,
     STATIC_EVIDENCE,
     NOT_EXECUTABLE,
@@ -649,6 +650,7 @@ def check_reference(
             f"{protocol.name}: {gap}",
             fix=f"repair the head as the sentence says, then "
             f"`{gate_command('finalize', protocol.parent)}`",
+            rule=OPEN_RULE,
         )
         return
     if kept_gaps(text, head):
@@ -664,6 +666,7 @@ def check_reference(
             f"{protocol.name}: {exc}",
             fix=f"repair the [reference] and [kept] tables as the sentence says; "
             f"`{gate_command('protocol-check', protocol)}` shows them",
+            rule=OPEN_RULE,
         )
         return
     # at kind compute the kept-number station reads the same metrics.json
