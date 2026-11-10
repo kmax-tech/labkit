@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from labkit.checks import audit_binding
-from labkit.formats import findings, promises, protocol_check, scope_sha
+from labkit.formats import findings, promises, protocol_block, protocol_check, scope_sha
 
 area = Path(sys.argv[1])
 run = sorted((area / "runs").iterdir())[-1]
@@ -49,6 +49,7 @@ path = findings.write(
     ),
     found,
     registration=protocol_check.registration_stamp(text),
+    protocol_id=protocol_block.head(text).id or "",
     run_id=run.name,
     shown_sha=audit_binding.run_shown(area, run, "", text).sha,
 )

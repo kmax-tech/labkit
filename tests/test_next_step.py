@@ -626,7 +626,7 @@ class ProgressAccount(unittest.TestCase):
         """Retained protection: the account changes the commit rule for the
         report only; an undecided audit BLOCKER still holds the commit."""
         from labkit.formats import findings, promises, scope_sha
-        from protocol_fixture import registration_of, shown_sha
+        from protocol_fixture import protocol_id_of, registration_of, shown_sha
 
         run_id = self.measure()
         self.account(run_id)
@@ -646,6 +646,7 @@ class ProgressAccount(unittest.TestCase):
             run_id=run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / run_id),
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         self.lab.git("add", "-A")
         lines = undecided.undecided_blockers(

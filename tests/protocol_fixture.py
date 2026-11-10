@@ -70,6 +70,26 @@ def registration_of(area: Path) -> dict[str, str]:
     return {protocol_check.REGISTRATION_KIND: protocol_check.REGISTRATION_ABSENT}
 
 
+#: the id a record a test writes names when AREA holds no protocol with one
+NO_PROTOCOL_ID = "p-0000000000000000"
+
+
+def protocol_id_of(area: Path) -> str:
+    """The protocol id a record a test writes names: that of AREA's
+    `PROTOCOL-x.md` (else its one protocol), as `labkit-audit` writes it;
+    NO_PROTOCOL_ID when AREA holds none with a stamped id — the record
+    then follows up no protocol of AREA."""
+    from labkit.formats import protocol_block
+
+    named = area / "PROTOCOL-x.md"
+    found = [named] if named.is_file() else sorted(area.glob("PROTOCOL-*.md"))
+    if len(found) == 1:
+        pid = protocol_block.id_of(found[0].read_text(encoding="utf-8"))
+        if pid is not None:
+            return pid
+    return NO_PROTOCOL_ID
+
+
 def protocol_text_of(area: Path) -> str:
     """AREA's `PROTOCOL-x.md` (else its one protocol) as it stands now, ""
     without one — the text a record a test writes was audited on."""

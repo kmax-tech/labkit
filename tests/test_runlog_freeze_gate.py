@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
-from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05T10-00-preflight.toml"  # a record name; no such record is written
 FROZEN = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, model="haiku")
@@ -110,6 +110,7 @@ class FreezeGate(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=protocol_check.registration_stamp(text),
+                protocol_id=protocol_id_of(self.tmp),
             )
             text = head(
                 repeat_cost="high", frozen=True, preflight_audit=written.name, **fields
@@ -195,6 +196,7 @@ class FreezeGate(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=protocol_check.registration_stamp(text),
+            protocol_id=protocol_id_of(self.tmp),
         )
         area = self._area(
             head(repeat_cost="high", frozen=True, preflight_audit=old.name)
@@ -239,6 +241,7 @@ class FreezeGate(unittest.TestCase):
                 )
             ],
             registration=protocol_check.registration_stamp(text),
+            protocol_id=protocol_id_of(self.tmp),
         )
         area = self._area(
             head(repeat_cost="high", frozen=True, preflight_audit=open_.name)

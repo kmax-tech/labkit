@@ -22,6 +22,7 @@ from labkit.formats import attempts, findings, report_reviews  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.gates import audit, audit_prompt, report_review  # noqa: E402
 from labkit.run import llm_backends  # noqa: E402
+from protocol_fixture import protocol_id_of
 
 RUN = "2026-10-25T20-57-42_9ae7"
 PROTOCOL = "# Protocol\n\n**Question:** does criterion-1 hold?\n"
@@ -70,6 +71,7 @@ class Area:
                 )
             ],
             registration={"question": "does criterion-1 hold?"},
+            protocol_id=protocol_id_of(self.area),
             run_id=RUN,
             shown_sha="0" * 12,
         )

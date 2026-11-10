@@ -11,7 +11,7 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import console, findings
 from labkit.tools import check_inventory as inv
-from protocol_fixture import registration_of
+from protocol_fixture import protocol_id_of, registration_of
 
 
 def module(name: str, source: str) -> inv.Module:
@@ -203,6 +203,7 @@ class AuditRules(unittest.TestCase):
             (1, 1, 0),
             rows,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "checks.md"

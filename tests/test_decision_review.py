@@ -22,6 +22,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from protocol_fixture import (
+    protocol_id_of,
     registration_of,
     completed_run,
     head,
@@ -120,6 +121,7 @@ def area_with(
         run_id=RUN,
         shown_sha=shown_sha(area, run),
         registration=registration_of(area),
+        protocol_id=protocol_id_of(area),
     )
     for n, (status, reason, effect) in decide.items():
         findings.write_decision(record, n, status, reason, effect)

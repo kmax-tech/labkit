@@ -13,6 +13,7 @@ from labkit.formats import failed_attempts
 from labkit.checks import protocol_report
 from labkit.gates import audit
 from labkit.tools import scaffold
+from protocol_fixture import protocol_id_of
 
 
 class WorkflowOrientation(unittest.TestCase):
@@ -155,6 +156,7 @@ class WorkflowOrientation(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration,
+                protocol_id=protocol_id_of(area),
             )
             # the failed call and the later audit as labkit-audit makes them:
             # each an attempt of the journal, ended with its file
@@ -201,6 +203,7 @@ class WorkflowOrientation(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration,
+                protocol_id=protocol_id_of(area),
                 run_id=findings.NO_RUN,
                 shown_sha="none",
             )

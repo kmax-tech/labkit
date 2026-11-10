@@ -13,7 +13,7 @@ from pathlib import Path
 
 from labkit.tools import protocol_result
 from labkit.formats import findings
-from protocol_fixture import registration_of  # noqa: E402
+from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
 
 def record(area: Path) -> Path:
@@ -37,6 +37,7 @@ def record(area: Path) -> Path:
         run_id="2026-10-21T10-00-00_aa11",
         shown_sha="cccccccccccc",
         registration=registration_of(area),
+        protocol_id=protocol_id_of(area),
     )
 
 

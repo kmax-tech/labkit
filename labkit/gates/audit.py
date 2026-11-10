@@ -444,11 +444,15 @@ def main(argv: list[str]) -> int:
 
 def _refuse_undecided(area: Path, bound: BoundPrompt, protocol: Path) -> None:
     """Refuse an analysis audit, before the call, while an earlier analysis
-    record of another state holds a BLOCKER undecided: the follow-up is
+    record of the same protocol and another state holds a BLOCKER undecided: the follow-up is
     shown decided BLOCKERs only, so the call would judge none of them and
     leave one more audit owed. Raises AuditError naming each
     with the command that decides it."""
-    records = [r for r in findings.area_records(area) if r.mode == ANALYSIS]
+    records = [
+        r
+        for r in followup.protocol_records(area, bound.protocol_id)
+        if r.mode == ANALYSIS
+    ]
     open_heads = followup.undecided_earlier(records, lambda r: r.state == bound.state)
     if not open_heads:
         return
@@ -504,6 +508,7 @@ def _record(
             result["verdict"],
             result["findings"],
             registration=bound.state.registration,
+            protocol_id=bound.protocol_id,
             run_id=bound.state.run_id,
             shown_sha=bound.state.shown_sha,
             fix_verdicts=fixes,

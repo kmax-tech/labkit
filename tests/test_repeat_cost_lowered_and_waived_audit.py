@@ -29,7 +29,13 @@ from labkit.formats import (
 )
 from labkit.checks import protocol_report  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
-from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from protocol_fixture import (
+    protocol_id_of,
+    registration_of,
+    DEFAULT_BLOCK,
+    head,
+    scope_file,
+)  # noqa: E402
 
 BODY = """
 - **Model / tool:** haiku
@@ -246,6 +252,7 @@ class WaivedAudit(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, other.name, text)
         self.assertIn("the code now stamps", gap.why if gap else "")
@@ -259,6 +266,7 @@ class WaivedAudit(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, stale.name, text)
         self.assertIn("saw the promise block otherblock00", gap.why if gap else "")
@@ -276,6 +284,7 @@ class WaivedAudit(unittest.TestCase):
                 )
             ],
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, open_.name, text)
         self.assertIn("still `open`", gap.why if gap else "")
@@ -288,6 +297,7 @@ class WaivedAudit(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         self.assertIsNone(audit_gaps.audit_record_gap(self.area, good.name, text))
         analysis = findings.write(
@@ -301,6 +311,7 @@ class WaivedAudit(unittest.TestCase):
             run_id=findings.NO_RUN,
             shown_sha="0" * 12,
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, analysis.name, text)
         self.assertIn(

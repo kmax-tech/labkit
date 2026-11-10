@@ -39,6 +39,7 @@ from unittest import mock
 
 from protocol_fixture import (
     source_entry,
+    protocol_id_of,
     registration_of,
     C1_BLOCK,
     C1_PROSE,
@@ -112,6 +113,7 @@ class ReportCheck(unittest.TestCase):
             run_id=run.name,
             shown_sha=shown_sha(area, run),
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
 
     def _run(
@@ -735,6 +737,7 @@ class IfReported(unittest.TestCase):
                 run_id=run.name,
                 shown_sha=shown_sha(area, run),
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         if git:
             self._git(area.parent.parent, "add", "-A")

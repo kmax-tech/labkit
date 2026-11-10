@@ -30,6 +30,7 @@ from labkit.checks import audit_binding  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import (  # noqa: E402
+    protocol_id_of,
     registration_of,
     run_record,
     PID,
@@ -377,6 +378,7 @@ class Freeze(unittest.TestCase):
             (sum(g == "BLOCKER" for g, _ in rows), 0, 0),
             rows,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
 
     def test_set_freeze_rewrites_both_keys_and_nothing_else(self):
@@ -873,6 +875,7 @@ class Adopt(unittest.TestCase):
                 run_id=self.RUN,
                 shown_sha=shown_sha(area, area / "runs" / self.RUN),
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         return area
 

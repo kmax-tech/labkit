@@ -47,8 +47,6 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats.repo import (
     ProtocolChoiceError,
-    area_protocols,
-    only_protocol,
     git_root,
     layout_root,
     no_such_area,
@@ -68,7 +66,6 @@ from labkit.formats.standard_contract import (
 from labkit.gates import ways_out
 from labkit.gates.ways_out import (
     AUDIT_AGAIN,
-    HANDOVER,
     PROTOCOL_NAMED,
 )
 from labkit.run.llm import model_entry
@@ -583,31 +580,31 @@ def carried_of(
 
 
 def earlier_of(
-    area: Path, current: Callable[[findings.Record], bool], metrics: dict | None
+    area: Path,
+    protocol: Path,
+    pid: str,
+    current: Callable[[findings.Record], bool],
+    metrics: dict | None,
 ) -> Followup:
-    """The follow-up of AREA: its earlier decided BLOCKERs and its earlier
-    corrections of a field of its one protocol
-    (`followup.earlier_corrections`, `findings.corrected_field`) — those of
-    a record that CURRENT does not tell as the state now audited — with the
-    origin of each, each correction's change — a BLOCKER's too —
-    (`FieldChange`: the field as
+    """The follow-up of PROTOCOL (stamped id PID) in AREA: the earlier
+    decided BLOCKERs and corrections of a field of PROTOCOL
+    (`followup.earlier_corrections`, `findings.corrected_field`) of the
+    area's records that name PID — those of a record that CURRENT does not
+    tell as the state now audited — with the origin of each, each
+    correction's change — a BLOCKER's too — (`FieldChange`: the field as
     the first measurement registered it, `protocol_history.
     registrations_as_first_measured`, and as it reads now), and METRICS as
-    shown. Raises AuditError when there are earlier BLOCKERs and the area
-    holds more than one protocol: the records carry no protocol id, so
-    whose question an earlier finding judged is not certain; with several
-    protocols no correction is shown, and the field's change stays held."""
-    records = findings.area_records(area)
-    protocols = area_protocols(area)
-    protocol = only_protocol(protocols)
-    text = protocol.read_text(encoding="utf-8") if protocol is not None else ""
+    shown. A record of another protocol of the area is not followed up
+    here: it judged another question. Raises AuditError when the records
+    do not read (`findings.FindingsError`) or a finding's place names no
+    single field."""
+    records = followup.protocol_records(area, pid)
+    text = protocol.read_text(encoding="utf-8")
 
     def field_of(f: findings.Finding) -> str | None:
-        """The field F corrects in the area's one protocol, or None. Raises
-        AuditError when F's place begins several fields or means one written
-        twice (`findings.corrected_field`)."""
-        if protocol is None:
-            return None
+        """The field F corrects in PROTOCOL, or None. Raises AuditError
+        when F's place begins several fields or means one written twice
+        (`findings.corrected_field`)."""
         try:
             return findings.corrected_field(f, protocol, text)
         except protocol_check.FieldPlaceError as exc:
@@ -619,26 +616,13 @@ def earlier_of(
         corrections = followup.earlier_corrections(records, current, field_of)
     except findings.FindingsError as exc:
         raise AuditError(str(exc), fix=findings.record_way(area)) from exc
-    if blockers and len(protocols) > 1:
-        raise AuditError(
-            f"{len(blockers)} earlier decided BLOCKER(s) and {len(protocols)} "
-            f"protocols in {area.name}: the records name no protocol, so which "
-            f"question an earlier finding judged is not certain — the follow-up "
-            f"does not guess, and deciding an earlier finding again does not remove "
-            f"it from what is followed up; no step labkit offers clears this here yet",
-            fix=HANDOVER,
-        )
     shown = blockers + corrections
     origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
-    changes = (
-        {
-            e.ref: _field_change(protocol, text, e.finding)
-            for e in shown
-            if field_of(e.finding) is not None
-        }
-        if protocol is not None
-        else {}
-    )
+    changes = {
+        e.ref: _field_change(protocol, text, e.finding)
+        for e in shown
+        if field_of(e.finding) is not None
+    }
     return Followup(shown, metrics, origins, changes)
 
 
@@ -682,13 +666,15 @@ class BoundPrompt:
     the STATE the record binds (`findings.AuditedState`: code, promises,
     registration and, in MODE analysis, the run shown and the digest of
     what is shown of it); the INDEXED files (stamped, not read in full);
-    and SHOWN_NOW, the earlier repairs shown (`Followup`)."""
+    SHOWN_NOW, the earlier repairs shown (`Followup`); and PROTOCOL_ID, the
+    stamped id of the protocol read, which the record names."""
 
     prompt: str
     stamp: Stamp
     state: findings.AuditedState
     indexed: list[Path]
     earlier_repairs: Followup
+    protocol_id: str
 
 
 def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
@@ -722,6 +708,14 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
         run_dir, why = audited_run(state_of(area), protocol, text)
         run_id = run_dir.name if run_dir is not None else findings.NO_RUN
         shown = run_shown(area, run_dir, why, text)
+    # after the run's choice, which names a head that does not read
+    pid = protocol_block.id_of(text)
+    if pid is None:
+        raise AuditError(
+            f"{protocol.name} carries no stamped id ([protocol] id): a record names "
+            f"the protocol it audited",
+            fix="stamp it: `labkit-init exp <name> --kind …` writes a fresh id",
+        )
     state = findings.AuditedState(
         snap.sha,
         promises.block_stamp(text),
@@ -735,7 +729,7 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
         return r.mode == ANALYSIS and r.state == state
 
     earlier_repairs = (
-        earlier_of(area, current, shown.evidence() if shown else None)
+        earlier_of(area, protocol, pid, current, shown.evidence() if shown else None)
         if mode == ANALYSIS
         else Followup([], None, {}, {})
     )
@@ -766,5 +760,5 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     ):
         raise AuditError(f"{area}: {changed}", fix=AUDIT_AGAIN)
     return BoundPrompt(
-        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, earlier_repairs
+        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, earlier_repairs, pid
     )

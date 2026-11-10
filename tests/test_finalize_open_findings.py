@@ -24,7 +24,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, runs  # noqa: E402
 from labkit.gates import finalize, report_check  # noqa: E402
-from protocol_fixture import registration_of, completed_run, head, run_record  # noqa: E402
+from protocol_fixture import (
+    protocol_id_of,
+    registration_of,
+    completed_run,
+    head,
+    run_record,
+)  # noqa: E402
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -98,6 +104,7 @@ class OpenFindings(unittest.TestCase):
             run_id="r1" if mode == "analysis" else None,
             shown_sha="0" * 12 if mode == "analysis" else None,
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
 
     def test_an_open_blocker_blocks_with_its_file(self):

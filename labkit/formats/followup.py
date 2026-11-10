@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from labkit.formats.gate import BLOCKER
 from labkit.formats.findings import (
@@ -41,6 +42,7 @@ from labkit.formats.findings import (
     FindingsError,
     FixVerdict,
     Record,
+    area_records,
     check_order,
     decision_digest,
     fixed_claim,
@@ -83,12 +85,24 @@ class Chain:
         return [m for ref, m in self.members.items() if self.origin[ref] == origin]
 
 
+def protocol_records(area: Path, pid: str | None) -> list[Record]:
+    """The records of AREA that audited the protocol with stamped id PID,
+    oldest first — in an area of several protocols, the findings on that
+    one's question; none for PID None (a protocol without an id has no
+    record, `findings.write` refuses one). Raises FindingsError when a
+    record does not read (`findings.area_records`) or the area's records
+    do not form a chain (`chain`: a carry across protocols among them)."""
+    records = area_records(area)
+    chain(records)
+    return [r for r in records if pid is not None and r.protocol_id == pid]
+
+
 def chain(records: list[Record]) -> Chain:
     """The chain of RECORDS, oldest first as `findings.area_records` gives
     them. Raises FindingsError on a `carries` that names no finding of
     RECORDS, a finding of the same or a later record, a finding that is no
-    BLOCKER; on a loop; on two findings of one origin carried in one
-    record."""
+    BLOCKER, a finding of a record on another protocol; on a loop; on two
+    findings of one origin carried in one record."""
     members: dict[str, Member] = {}
     order: dict[str, int] = {}
     for i, r in enumerate(records):
@@ -108,6 +122,13 @@ def chain(records: list[Record]) -> Chain:
             )
         if members[target].finding.grade != BLOCKER:
             raise FindingsError(f"{ref}: carries {target}, which is no BLOCKER")
+        if members[target].record.protocol_id != m.record.protocol_id:
+            raise FindingsError(
+                f"{ref}: carries {target}, a finding on protocol "
+                f"{members[target].record.protocol_id}, into a record on "
+                f"{m.record.protocol_id} — an audit takes over no finding of "
+                f"another question"
+            )
     origin = {ref: _origin(ref, members) for ref in members}
     _once_per_record(members, origin)
     carried = {m.finding.carries for m in members.values() if m.finding.carries}
@@ -231,26 +252,11 @@ class Hold:
     why: str
     step: str
 
-    @property
-    def needs_followup_audit(self) -> bool:
-        """Does STEP end in the follow-up audit (FOLLOWUP_AUDIT)? It refuses an
-        area holding several protocols (`audit_prompt.earlier_of`)."""
-        return FOLLOWUP_AUDIT in self.step
-
 
 #: the follow-up audit as a step names it
 FOLLOWUP_AUDIT = "`labkit-audit <area> --mode analysis`"
 #: the step when a follow-up audit is all that is missing
 STEP_AUDIT = f"{FOLLOWUP_AUDIT} follows it up"
-#: what stands instead of a step ending in the follow-up audit where it
-#: cannot run: an area holding several protocols (`audit_prompt.earlier_of`)
-STEP_NONE_SEVERAL = (
-    "no step labkit offers clears this here yet: the follow-up audit refuses an "
-    "area holding several protocols (its records name no protocol, so it would "
-    "guess whose question an earlier finding judged), and deciding the finding "
-    "again does not remove it from what is followed up — the number stays "
-    "unreported from this area"
-)
 
 
 def release_holds(

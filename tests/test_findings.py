@@ -12,7 +12,7 @@ from labkit.formats.commands import step_command
 from labkit.gates import audit_decisions, audit_reply
 from labkit.formats import findings, protocol_check, rules
 from labkit.formats import audit_gaps
-from protocol_fixture import registration_of  # noqa: E402
+from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
 BLOCK = "b10c0000000a"  # the promise block every fixture record names
 RUN = "2026-01-01T00-00-00_0001"  # the run every analysis fixture record names
@@ -51,6 +51,7 @@ def area_with(
             shown_sha=SHOWN if mode == "analysis" else None,
             now=1_700_000_000 + 60 * i,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
     return area
 
@@ -182,6 +183,7 @@ class WriteRead(unittest.TestCase):
             [],
             now=1_700_000_000,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         b = findings.write(
             area,
@@ -193,6 +195,7 @@ class WriteRead(unittest.TestCase):
             [],
             now=1_700_000_000,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         self.assertNotEqual(a, b)
         self.assertEqual(len(findings.area_records(area)), 2)
@@ -219,6 +222,7 @@ class WriteRead(unittest.TestCase):
                     [],
                     now=1_700_000_000,
                     registration=registration_of(area),
+                    protocol_id=protocol_id_of(area),
                 )
             )
 
@@ -245,6 +249,7 @@ class WriteRead(unittest.TestCase):
             [],
             now=1_700_000_000,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         before = first.read_bytes()
         second = findings.write(
@@ -257,6 +262,7 @@ class WriteRead(unittest.TestCase):
             [],
             now=1_700_000_000,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         self.assertTrue(second.name.endswith("-preflight-2.toml"))
         self.assertEqual(first.read_bytes(), before)
@@ -273,6 +279,7 @@ class WriteRead(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         with self.assertRaises(ValueError):
             findings.write(
@@ -284,6 +291,7 @@ class WriteRead(unittest.TestCase):
                 (0, 0, 0),
                 [("READ", "x")],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
 
     def test_a_verdict_counting_more_than_the_lines_is_refused(self):
@@ -300,6 +308,7 @@ class WriteRead(unittest.TestCase):
                 (2, 0, 0),
                 [],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         self.assertIn("counts 2 blocker(s)", str(cm.exception))
         self.assertEqual(list(area.glob("audits/*")), [])
@@ -318,6 +327,7 @@ class WriteRead(unittest.TestCase):
                 )
             ],
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
 
 
@@ -1102,6 +1112,7 @@ class DecisionList(unittest.TestCase):
             result["verdict"],
             result["findings"],
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         return area, path
 
@@ -1154,6 +1165,7 @@ class DecisionList(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         report = "READ · README.md:3 · a stamped placeholder\nverdict: 0 blockers, 0 warnings\n"
         text = "\n".join(
@@ -1330,6 +1342,7 @@ class Binding(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "names none"):
             findings.write(
@@ -1342,6 +1355,7 @@ class Binding(unittest.TestCase):
                 [],
                 run_id=RUN,
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "names what it was shown"):
             findings.write(
@@ -1354,6 +1368,7 @@ class Binding(unittest.TestCase):
                 [],
                 run_id=RUN,
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "is shown none"):
             findings.write(
@@ -1366,6 +1381,7 @@ class Binding(unittest.TestCase):
                 [],
                 shown_sha=SHOWN,
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "held to the answering run"):
             audit_gaps.audit_coverage(
@@ -1401,6 +1417,7 @@ class Binding(unittest.TestCase):
             run_id=findings.NO_RUN,
             shown_sha=SHOWN,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         self.assertEqual(findings.read(path).run_id, "none")
         self.assertIn(
@@ -1488,6 +1505,7 @@ class AuditedStateMatch(unittest.TestCase):
         path = findings.write(
             area, "analysis", "m", "c", "b", (0, 0, 0), [],
             run_id=RUN, shown_sha=SHOWN, registration=reg,
+            protocol_id=protocol_id_of(area),
         )  # fmt: skip
         record = findings.read(path)
         now = findings.AuditedState("c", "b", reg, RUN, SHOWN)

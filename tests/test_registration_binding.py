@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
 from labkit.formats import audit_gaps
-from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** what is the mean line count per case?
@@ -101,6 +101,7 @@ class PreflightRecord(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=protocol_check.registration_stamp(text),
+            protocol_id=protocol_id_of(self.area),
         ).name
 
     def test_the_record_covers_the_protocol_it_judged(self):
@@ -145,6 +146,7 @@ class PreflightRecord(unittest.TestCase):
                 )
             ],
             registration=protocol_check.registration_stamp(text),
+            protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, open_.name, text)
         assert gap is not None

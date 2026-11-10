@@ -40,6 +40,7 @@ from labkit.tools import protocol_result
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
     source_entry,
+    protocol_id_of,
     registration_of,
     run_record,
     DEFAULT_BLOCK,
@@ -282,6 +283,7 @@ class PreRun(unittest.TestCase):
                 )
             ],
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         rc, out, err = _run(
             hook_pre_run.pre_run,
@@ -821,6 +823,7 @@ class Stop(unittest.TestCase):
                 run_id=self.RUN,
                 shown_sha=shown_sha(self.area, self.area / "runs" / self.RUN),
                 registration=registration_of(self.area),
+                protocol_id=protocol_id_of(self.area),
             )
 
     def _answer(self, run_id: str) -> None:

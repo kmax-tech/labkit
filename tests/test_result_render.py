@@ -18,7 +18,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from labkit.tools import protocol_result
-from protocol_fixture import registration_of, completed_run, head, scope_file, shown_sha  # noqa: E402
+from protocol_fixture import (
+    protocol_id_of,
+    registration_of,
+    completed_run,
+    head,
+    scope_file,
+    shown_sha,
+)  # noqa: E402
 
 RUN = "2026-10-21T10-00-00_abcd"
 BODY = "\n## Result\n\n- **Recorded results:** <per registered id its verdict…>\n- **Raw output:** r\n\n## Runs\n\n- <run_id> — <one sentence>\n"
@@ -61,6 +68,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         run_id=run.name,
         shown_sha=shown_sha(area, run),
         registration=registration_of(area),
+        protocol_id=protocol_id_of(area),
     )
     if limit_reason is not None:
         findings.write_decision(path, 1, "limitation", limit_reason, "stands")

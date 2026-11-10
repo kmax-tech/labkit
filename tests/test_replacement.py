@@ -32,7 +32,13 @@ from labkit.formats import (  # noqa: E402
 from labkit.gates import report_check, report_hold  # noqa: E402
 from labkit.gates import report_context
 from labkit.gates import report_replacement
-from protocol_fixture import completed_run, head, registration_of, started_at  # noqa: E402
+from protocol_fixture import (
+    completed_run,
+    head,
+    protocol_id_of,
+    registration_of,
+    started_at,
+)  # noqa: E402
 
 A_ID, B_ID = "p-aaaaaaaaaaaaaaaa", "p-bbbbbbbbbbbbbbbb"
 A_RUN, B_RUN = "2026-10-27T09-00-00_aaaa", "2026-10-27T10-00-00_bbbb"
@@ -315,6 +321,7 @@ class Gate(_Areas):
             run_id=A_RUN,
             shown_sha="2" * 12,
             registration=registration_of(self.a),
+            protocol_id=protocol_id_of(self.a),
         )
         self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         (gap,) = self.gaps()
@@ -368,6 +375,7 @@ class Gate(_Areas):
             run_id=A_RUN,
             shown_sha="2" * 12,
             registration=registration_of(self.a),
+            protocol_id=protocol_id_of(self.a),
         )
         self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         changed = f"the predecessor's area 01-a: audits/{record.name}: changed"

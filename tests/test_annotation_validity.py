@@ -28,7 +28,7 @@ from labkit.formats import (
 from labkit.formats.gate import BLOCKER  # noqa: E402
 from labkit.probes import usability  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
-from protocol_fixture import registration_of, head, run_record  # noqa: E402
+from protocol_fixture import protocol_id_of, registration_of, head, run_record  # noqa: E402
 
 VALIDATION_ID = "p-1111111111111111"
 RUN = "2026-10-23T10-00-00_ab12"
@@ -432,6 +432,7 @@ class StaleEvidence(Evidence):
             (0, 0, 0),
             [],
             registration=registration_of(share),
+            protocol_id=protocol_id_of(share),
         ).name
 
     def _gap(self, share: Path, name: str, text: str) -> str | None:

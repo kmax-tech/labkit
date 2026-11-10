@@ -34,7 +34,7 @@ from labkit.formats import (  # noqa: E402
 )
 from labkit.checks import protocol_report  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
-from protocol_fixture import head, scope_file  # noqa: E402
+from protocol_fixture import protocol_id_of, head, scope_file  # noqa: E402
 
 
 MUST = [f.label for f in protocol_check.FIELDS if f.level == "must"]
@@ -486,6 +486,7 @@ class TestFixtures(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=protocol_check.registration_stamp(frozen()),
+                protocol_id=protocol_id_of(area),
             )
             p.write_text(frozen(preflight_audit=record.name), encoding="utf-8")
             buf = io.StringIO()

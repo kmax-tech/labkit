@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.formats import findings, handovers, promises  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from labkit.formats.gate import Findings  # noqa: E402
-from protocol_fixture import registration_of, head  # noqa: E402
+from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -452,6 +452,7 @@ class TestAuditFindings(unittest.TestCase):
             (0, 1, 0),
             self.ROW,
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
         )
         return area, path
 
@@ -488,6 +489,7 @@ class TestAuditFindings(unittest.TestCase):
                 (0, 1, 0),
                 self.ROW,
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=stale.name))
             code, out = _run_preflight(area)
@@ -509,6 +511,7 @@ class TestAuditFindings(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=other.name))
             code, out = _run_preflight(area)
@@ -552,6 +555,7 @@ class TestAuditFindings(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
             p = area / "PROTOCOL-x.md"
             p.write_text(_protocol(frozen=True, preflight_audit=path.name))
@@ -572,6 +576,7 @@ class TestAuditFindings(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration=registration_of(area),
+                protocol_id=protocol_id_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=good.name))
             code, out = _run_preflight(area)
@@ -603,6 +608,7 @@ class TestAuditFindings(unittest.TestCase):
                 (0, 1, 0),
                 self.ROW,
                 registration=registration_of(other),
+                protocol_id=protocol_id_of(other),
             )
             # an open finding elsewhere is that area's work in progress: not told
             code, out = _run_preflight(area)

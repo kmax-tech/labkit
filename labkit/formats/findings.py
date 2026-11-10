@@ -95,7 +95,7 @@ from pathlib import Path
 
 from labkit.formats.gate import BLOCKER, NOTE, WARNING
 from labkit.formats.commands import checkout_command
-from labkit.formats import promises
+from labkit.formats import promises, protocol_block
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_history import correctable
 from labkit.formats.protocol_check import (
@@ -862,6 +862,9 @@ class Record:
     shown_sha: str | None
     verdict: tuple[int, int, int]
     findings: tuple[Finding, ...]
+    # the id of the protocol the audit read (`protocol_block.ID_SHAPE`): in
+    # an area of several protocols, whose question each finding judged
+    protocol_id: str
     # mode analysis: its verdicts on earlier decided BLOCKERs, one per
     # finding at most; a finding shown without one is unchecked
     fix_verdicts: tuple[FixVerdict, ...] = ()
@@ -1105,6 +1108,32 @@ REASON_FORM = (
 )
 
 
+def _head_problem(
+    mode: str, protocol_id: str, run_id: str | None, shown_sha: str | None
+) -> str | None:
+    """What is wrong with the `[audit]` head `write` is handed, or None: a
+    PROTOCOL_ID not of `protocol_block.ID_SHAPE`, a MODE outside MODES, a
+    RUN_ID or SHOWN_SHA given in preflight or missing in analysis."""
+    if not protocol_block.ID_SHAPE.match(protocol_id):
+        return (
+            f"protocol_id {protocol_id!r}: the stamped id of the audited protocol "
+            f"(`labkit-init exp` stamps it)"
+        )
+    if mode not in MODES:
+        return f"mode {mode!r} — one of {', '.join(MODES)}"
+    if (mode == ANALYSIS_AUDIT) != (run_id is not None):
+        return (
+            f"mode {mode!r} with run_id {run_id!r}: an analysis audit names the "
+            f"run it read (NO_RUN for none), a preflight audit names none"
+        )
+    if (mode == ANALYSIS_AUDIT) != (shown_sha is not None):
+        return (
+            f"mode {mode!r} with shown_sha {shown_sha!r}: an analysis audit names "
+            f"what it was shown of the run, a preflight audit is shown none"
+        )
+    return None
+
+
 def write(
     area: Path,
     mode: str,
@@ -1115,6 +1144,7 @@ def write(
     findings: list[tuple[str, str]],
     *,
     registration: Mapping[str, str],
+    protocol_id: str,
     run_id: str | None = None,
     shown_sha: str | None = None,
     fix_verdicts: Iterable[FixVerdict] = (),
@@ -1125,7 +1155,8 @@ def write(
     """Write the audit's findings file into AREA/audits/ and return its path.
     SCOPE_SHA is the code the auditor read, BLOCK_SHA the promise block
     (`promises.block_stamp`), REGISTRATION the registration it judged
-    (`protocol_check.registration_stamp`), RUN_ID the run whose rows it read and SHOWN_SHA
+    (`protocol_check.registration_stamp`), PROTOCOL_ID the stamped id of the
+    protocol it read (refused when not `protocol_block.ID_SHAPE`), RUN_ID the run whose rows it read and SHOWN_SHA
     the digest of what the prompt showed of it (`audit_binding.run_shown`) — both
     owed in mode analysis (RUN_ID NO_RUN when there was none), refused in
     mode preflight.
@@ -1146,18 +1177,9 @@ def write(
     what the follow-up piece measured, written as `followup`.
     """
     carried = tuple(carried)
-    if mode not in MODES:
-        raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
-    if (mode == ANALYSIS_AUDIT) != (run_id is not None):
-        raise ValueError(
-            f"mode {mode!r} with run_id {run_id!r}: an analysis audit names the "
-            f"run it read (NO_RUN for none), a preflight audit names none"
-        )
-    if (mode == ANALYSIS_AUDIT) != (shown_sha is not None):
-        raise ValueError(
-            f"mode {mode!r} with shown_sha {shown_sha!r}: an analysis audit names "
-            f"what it was shown of the run, a preflight audit is shown none"
-        )
+    problem = _head_problem(mode, protocol_id, run_id, shown_sha)
+    if problem:
+        raise ValueError(problem)
     for key, value in zip(("blockers", "warnings", "notes"), verdict, strict=True):
         problem = count_problem(key, value)
         if problem:
@@ -1180,6 +1202,7 @@ def write(
         "[audit]",
         f"date = {_s(date_minute(when))}",
         f"mode = {_s(mode)}",
+        f"protocol = {_s(protocol_id)}",
         f"model = {_s(model)}",
         f"scope_sha = {_s(scope_sha)}",
         f"block_sha = {_s(block_sha)}",
@@ -1367,6 +1390,13 @@ def _audit_table(path: Path, data: dict) -> dict:
     if audit["mode"] not in MODES:
         raise FindingsError(
             f"{path}: [audit] mode {audit['mode']!r} — one of {', '.join(MODES)}"
+        )
+    pid = audit.get("protocol")
+    if not isinstance(pid, str) or not protocol_block.ID_SHAPE.match(pid):
+        raise FindingsError(
+            f"{path}: [audit] protocol {pid!r} — a record names the id of the protocol "
+            f"it audited; a record without it was written by labkit 0.112.0 or "
+            f"earlier and is read with that version"
         )
     problem = _run_fields_problem(audit)
     if problem:
@@ -1557,6 +1587,7 @@ def _record_of(path: Path, text: str) -> Record:
         audit.get("shown_sha"),
         (audit["blockers"], audit["warnings"], audit["notes"]),
         parsed,
+        audit["protocol"],
         verdicts,
     )
 

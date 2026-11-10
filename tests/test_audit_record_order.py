@@ -15,7 +15,7 @@ from pathlib import Path
 
 from labkit.formats import findings
 from labkit.formats import failed_attempts
-from protocol_fixture import registration_of  # noqa: E402
+from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
 NOW = time.mktime((2026, 10, 20, 14, 3, 0, 0, 0, -1))
 
@@ -62,6 +62,7 @@ class WrittenOrder(unittest.TestCase):
                 [],
                 now=NOW,
                 registration=registration_of(self.area),
+                protocol_id=protocol_id_of(self.area),
             )
         self.assertEqual(
             [r.scope_sha for r in findings.area_records(self.area)],
@@ -96,6 +97,7 @@ class Counts(unittest.TestCase):
                         [],
                         now=NOW,
                         registration=registration_of(self.area),
+                        protocol_id=protocol_id_of(self.area),
                     )
 
     def test_a_negative_count_is_refused_on_read(self) -> None:
@@ -109,6 +111,7 @@ class Counts(unittest.TestCase):
             [],
             now=NOW,
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         path.write_text(path.read_text().replace("blockers = 0", "blockers = -1"))
         with self.assertRaisesRegex(findings.FindingsError, "non-negative"):
@@ -125,6 +128,7 @@ class Counts(unittest.TestCase):
             [],
             now=NOW,
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         self.assertEqual(len(findings.area_records(self.area)), 1)
 

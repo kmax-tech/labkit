@@ -19,6 +19,7 @@ from labkit.formats.gate import (
 from labkit.formats import (
     findings,
     followup,
+    protocol_block,
     reviews,
     runs,
 )
@@ -250,7 +251,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         return []
     try:
         covering = covering_analysis(ctx.area, ctx.text, ctx.run)
-        records = findings.area_records(ctx.area)
+        records = followup.protocol_records(ctx.area, protocol_block.head(ctx.text).id)
     except (AuditError, FileNotFoundError, ValueError):
         return []  # analysis_audit_gap names them
     try:
@@ -267,15 +268,10 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
                 fix=findings.record_way(ctx.area, ctx.protocol),
             )
         ]
-    # the follow-up refuses an area with several protocols (`audit_prompt.earlier_of`):
-    # no step there may name it
-    several = len(ctx.area_state.protocols) > 1
     out = [
         blocker(
             f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",
-            fix=followup.STEP_NONE_SEVERAL
-            if several and h.needs_followup_audit
-            else h.step,
+            fix=h.step,
         )
         for h in held
     ]

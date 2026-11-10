@@ -30,7 +30,7 @@ from labkit.gates import hook_session
 from labkit.formats import evidence, findings  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
-from protocol_fixture import head, registration_of  # noqa: E402
+from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
 from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
 
 WARNING = (
@@ -51,6 +51,7 @@ def _record(area: Path) -> Path:
         (0, 1, 0),
         [WARNING],
         registration=registration_of(area),
+        protocol_id=protocol_id_of(area),
     )
 
 

@@ -9,7 +9,7 @@ from typing import Any
 from labkit.formats import findings
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
-from protocol_fixture import registration_of  # noqa: E402
+from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
 SHA, BLOCK = "abc123def456", "b10c0000000a"
 
@@ -62,6 +62,7 @@ class WriteRead(unittest.TestCase):
             (0, 0, 0),
             [],
             registration=registration_of(self.area),
+            protocol_id=protocol_id_of(self.area),
         )
         self.assertEqual(len(findings.area_records(self.area)), 1)
         self.assertEqual(len(failed_attempts.failed_attempts(self.area)), 1)

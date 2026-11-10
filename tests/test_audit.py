@@ -23,7 +23,13 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
-from protocol_fixture import protocol_text_of, registration_of, run_record, shown_sha  # noqa: E402
+from protocol_fixture import (
+    protocol_text_of,
+    protocol_id_of,
+    registration_of,
+    run_record,
+    shown_sha,
+)  # noqa: E402
 from labkit.formats import digests
 from labkit.gates import (
     audit,
@@ -98,7 +104,9 @@ def repo_with(protocols: int = 1) -> Path:
     (area / "scripts").mkdir(parents=True)
     (area / "scripts" / "01_measure.py").write_text(SCRIPT, encoding="utf-8")
     for i in range(protocols):
-        (area / f"PROTOCOL-x{i}.md").write_text(PROTOCOL, encoding="utf-8")
+        (area / f"PROTOCOL-x{i}.md").write_text(
+            fixture.head(id=f"p-{i}123456789abcdef") + PROTOCOL, encoding="utf-8"
+        )
     (repo / "lib").mkdir()
     (repo / "lib" / "scoring.py").write_text("X = 0.7\n", encoding="utf-8")
     return area
@@ -298,9 +306,22 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("===== ROWS =====\nno rows: ", sent[0])
         # a prose head cannot name the run: refused as no audit, not a traceback
-        rc, _, err, sent = run(repo_with(), CLEAN, "--mode", "analysis")
+        prose = repo_with()
+        (prose / "PROTOCOL-x0.md").write_text(PROTOCOL, encoding="utf-8")
+        rc, _, err, sent = run(prose, CLEAN, "--mode", "analysis")
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("head unreadable", err)
+
+    def test_a_protocol_without_a_stamped_id_is_not_audited(self):
+        """A record names the protocol it audited: without a stamped id there
+        is none to name, refused before the call. The twin: stamped, it runs."""
+        area = repo_with()
+        (area / "PROTOCOL-x0.md").write_text(PROTOCOL, encoding="utf-8")
+        rc, _, err, sent = run(area, CLEAN)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn("carries no stamped id", err)
+        rc, _, err, sent = run(repo_with(), CLEAN)
+        self.assertEqual((rc, len(sent)), (0, 1), err)
 
     def test_a_preflight_audit_at_cost_seconds_without_a_run_says_it_is_early(self):
         area = repo_with()
@@ -1349,6 +1370,7 @@ class FixVerdicts(unittest.TestCase):
             (1, 0, 0),
             [("BLOCKER", line or self.LEAK)],
             registration={"kind": "compute"},
+            protocol_id=protocol_id_of(area),
             run_id="2026-01-01T00-00-00_0001",
             shown_sha="2" * 12,
             now=0,
@@ -1517,6 +1539,7 @@ class FixVerdicts(unittest.TestCase):
             (2, 0, 0),
             [("BLOCKER", self.LEAK), ("BLOCKER", self.LEAK + " (test split)")],
             registration={"kind": "compute"},
+            protocol_id=protocol_id_of(area),
             run_id="2026-01-01T00-00-00_0001",
             shown_sha="2" * 12,
             now=0,
@@ -1584,6 +1607,7 @@ class FixVerdicts(unittest.TestCase):
                     (1, 0, 0) if grade == "BLOCKER" else (0, 1, 0),
                     [(grade, self.LEAK.replace("BLOCKER", grade))],
                     registration={"kind": "compute"},
+                    protocol_id=protocol_id_of(area),
                     run_id="2026-01-01T00-00-00_0001",
                     shown_sha="2" * 12,
                     now=0,
@@ -1619,6 +1643,7 @@ class FixVerdicts(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration={"kind": "compute"},
+                protocol_id=protocol_id_of(area),
                 run_id="r" if analysis else None,
                 shown_sha="s" * 12 if analysis else None,
                 fix_verdicts=verdicts,
@@ -1945,6 +1970,7 @@ class CheckNote(unittest.TestCase):
                     result["verdict"],
                     [(g, with_subject(t)) for g, t in result["findings"]],
                     registration={"kind": "fit"},
+                    protocol_id=protocol_id_of(area),
                     run_id="r",
                     shown_sha="s" * 12,
                 )
@@ -2322,7 +2348,8 @@ class UnrecordedCall(unittest.TestCase):
         protocol = area / "PROTOCOL-x0.md"
         registered = protocol.read_text(encoding="utf-8")
         protocol.write_text(
-            fixture.head(promises=fixture.C1_BLOCK) + registered, encoding="utf-8"
+            fixture.head(id="p-0123456789abcdef", promises=fixture.C1_BLOCK) + PROTOCOL,
+            encoding="utf-8",
         )
         rc, _, err, _ = run(area, WARN)
         self.assertEqual(rc, 1, err)
@@ -2348,6 +2375,7 @@ class UnrecordedCall(unittest.TestCase):
             (0, 0, 0),
             [],
             registration={"kind": "fit"},
+            protocol_id=protocol_id_of(area),
             run_id=findings.NO_RUN,
             shown_sha="s" * 12,
         )
@@ -2998,6 +3026,7 @@ class Carried(unittest.TestCase):
             (1, 0, 0),
             [("BLOCKER", FixVerdicts.LEAK)],
             registration=registration_of(area),
+            protocol_id=protocol_id_of(area),
             run_id=run.name,
             shown_sha=shown_sha(area, run),
             now=60,
@@ -3068,14 +3097,96 @@ class Carried(unittest.TestCase):
             findings.decision_digest(base), findings.decision_digest(carried)
         )
 
-    def test_several_protocols_refuse_a_follow_up(self):
-        area, _ = self.fv.area()
-        (area / "PROTOCOL-x1.md").write_text(
+    def test_several_protocols_each_follow_up_its_own_records(self):
+        """A record names the protocol it audited: beside a second protocol
+        the follow-up of the first shows its earlier BLOCKER, and the
+        second's follow-up shows none of it."""
+        area, r1 = self.fv.area()
+        x1 = area / "PROTOCOL-x1.md"
+        x1.write_text(
             fixture.head(id="p-1123456789abcdef") + PROTOCOL, encoding="utf-8"
         )
+        self.assertEqual(findings.read(r1).protocol_id, "p-0123456789abcdef")
         rc, _, err, sent = self.fv.audit(area, CLEAN, protocol=area / "PROTOCOL-x0.md")
-        self.assertEqual((rc, sent), (2, []))
-        self.assertIn("records name no protocol", err)
+        self.assertEqual((rc, len(sent)), (0, 1), err)
+        self.assertIn(r1.name, sent[0])
+        theirs = audit_prompt.earlier_of(
+            area, x1, "p-1123456789abcdef", lambda r: False, None
+        )
+        self.assertEqual(theirs.entries, [])
+        ours = audit_prompt.earlier_of(
+            area, area / "PROTOCOL-x0.md", "p-0123456789abcdef", lambda r: False, None
+        )
+        self.assertEqual([e.ref for e in ours.entries], [f"{r1.name}#1"])
+
+    def test_two_protocols_follow_up_their_own_blockers_and_a_rename_keeps_them(self):
+        """Each protocol of an area has its own earlier decided BLOCKER:
+        each follow-up shows its own and not the other's; the protocol file
+        renamed, the id keeps the binding."""
+        area, r1 = self.fv.area()
+        x1 = area / "PROTOCOL-x1.md"
+        x1.write_text(
+            fixture.head(id="p-1123456789abcdef") + PROTOCOL, encoding="utf-8"
+        )
+        r1x = findings.write(
+            area,
+            "analysis",
+            "opus",
+            "0" * 12,
+            "1" * 12,
+            (1, 0, 0),
+            [("BLOCKER", FixVerdicts.LEAK)],
+            registration={"kind": "compute"},
+            protocol_id="p-1123456789abcdef",
+            run_id="2026-01-01T00-00-00_0001",
+            shown_sha="2" * 12,
+            now=60,
+        )
+        findings.write_decision(r1x, 1, "fixed", "dropped poisson_ratio")
+
+        def shown(protocol: Path, pid: str) -> list[str]:
+            return [
+                e.ref
+                for e in audit_prompt.earlier_of(
+                    area, protocol, pid, lambda r: False, None
+                ).entries
+            ]
+
+        x0 = area / "PROTOCOL-x0.md"
+        self.assertEqual(shown(x0, "p-0123456789abcdef"), [f"{r1.name}#1"])
+        self.assertEqual(shown(x1, "p-1123456789abcdef"), [f"{r1x.name}#1"])
+        renamed = x0.rename(area / "PROTOCOL-renamed.md")
+        self.assertEqual(shown(renamed, "p-0123456789abcdef"), [f"{r1.name}#1"])
+
+    def test_a_carry_across_protocols_is_refused(self):
+        """A record on one protocol that carries a finding of a record on
+        another is refused where the records are read. The twin: on its own
+        protocol, the same chain holds."""
+        area, r1 = self.fv.area()
+        self.new_state(area, 1)
+        r2 = self.audit_with(area, f"FIX · {r1.name}#1 · unresolved · still read")
+        self.assertEqual(
+            [r.path for r in followup.protocol_records(area, r2.protocol_id)],
+            [r1, r2.path],
+        )
+        text = r2.path.read_text(encoding="utf-8")
+        r2.path.write_text(
+            text.replace(
+                'protocol = "p-0123456789abcdef"', 'protocol = "p-1123456789abcdef"'
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(findings.FindingsError, "into a record on"):
+            followup.protocol_records(area, "p-1123456789abcdef")
+
+    def test_a_record_without_its_protocol_id_is_not_read(self):
+        area, r1 = self.fv.area()
+        text = r1.read_text(encoding="utf-8")
+        r1.write_text(
+            text.replace('protocol = "p-0123456789abcdef"\n', ""), encoding="utf-8"
+        )
+        with self.assertRaisesRegex(findings.FindingsError, "0.112.0 or earlier"):
+            findings.read(r1)
 
     def test_a_printed_decide_line_runs_as_printed_where_several(self):
         """In an area of several protocols the `--decide` line is printed
@@ -3207,63 +3318,28 @@ class FollowupGate(unittest.TestCase):
         self.follow_up(area, f"FIX · {r1.name}#1 · resolved · still gone")
         self.assertEqual(self.gate(area), [])
 
-    def test_in_an_area_of_several_protocols_no_step_names_the_refused_audit(self):
-        """The follow-up audit refuses an area holding several protocols
-        (`audit_prompt.earlier_of`); the hold says so instead of naming the command
-        it would refuse. The twin: one protocol names it."""
+    def test_in_an_area_of_several_protocols_each_holds_its_own_findings(self):
+        """The records name their protocol: beside a second protocol the
+        first's hold still names the follow-up audit, and the second's gate
+        holds nothing of the first's findings."""
         area, _ = self.fv.area()
         self.fv.audit(area, CLEAN)
+        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
+        x1 = area / "PROTOCOL-x1.md"
+        x1.write_text(
+            re.sub(
+                r'^id = "p-[0-9a-f]+"',
+                'id = "p-ffffffffffffffff"',
+                text,
+                count=1,
+                flags=re.M,
+            ),
+            encoding="utf-8",
+        )
         (line,) = self.gate(area)
         self.assertIn("--mode analysis` follows it up", line)
-        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
-        (area / "PROTOCOL-x1.md").write_text(
-            re.sub(
-                r'^id = "p-[0-9a-f]+"',
-                'id = "p-ffffffffffffffff"',
-                text,
-                count=1,
-                flags=re.M,
-            ),
-            encoding="utf-8",
-        )
-        (line,) = self.gate(area)
-        self.assertIn(followup.STEP_NONE_SEVERAL, line)
-        self.assertNotIn("labkit-audit", line)
-
-    def test_every_step_ending_in_the_follow_up_is_replaced_where_several(self):
-        """Not only the bare follow-up: a step that asks for a run and then
-        the follow-up, and the step of a BLOCKER `fixed` in the state
-        audited, end in the audit the area refuses. The twin: a step that
-        names no follow-up stays."""
-        for step in (
-            followup.STEP_AUDIT,
-            f"a run that writes `x` to metrics.json, then {followup.STEP_AUDIT}",
-            "change what the finding names — the code, then a new run; the declared "
-            "run, `protocol-fill <PROTOCOL> --from-run <run_id> --force` — and "
-            f"{followup.FOLLOWUP_AUDIT}",
-        ):
-            self.assertTrue(followup.Hold("r#1", "w", step).needs_followup_audit, step)
-        self.assertFalse(
-            followup.Hold(
-                "r#1", "w", "decide the finding the follow-up carried"
-            ).needs_followup_audit
-        )
-        area, _ = self.fv.area(RequiredCheck.CHECKED)
-        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
-        (area / "PROTOCOL-x1.md").write_text(
-            re.sub(
-                r'^id = "p-[0-9a-f]+"',
-                'id = "p-ffffffffffffffff"',
-                text,
-                count=1,
-                flags=re.M,
-            ),
-            encoding="utf-8",
-        )
-        (line,) = self.gate(area)
-        self.assertIn("lacks the required check", line)
-        self.assertIn(followup.STEP_NONE_SEVERAL, line)
-        self.assertNotIn("labkit-audit", line)
+        ctx = report_context.checked(area, x1)
+        self.assertEqual(report_decisions.followup_findings(ctx), [])
 
     def test_a_missing_check_asks_for_a_run_and_a_shown_one_releases(self):
         area, r1 = self.fv.area(RequiredCheck.CHECKED)
@@ -3318,6 +3394,7 @@ class FollowupGate(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 registration={"kind": "compute"},
+                protocol_id=protocol_id_of(area),
                 run_id="r",
                 shown_sha="s" * 12,
                 fix_verdicts=[verdict],
@@ -3434,7 +3511,8 @@ def as_today(record: bytes) -> bytes:
     `dismissed`) in today's words (`limitation`, `false-positive`), and
     each finding given the subject and the rule a record names
     (`statement`, LAB-050 Analysis audit before reporting, as
-    `with_subject` gives the archived answers): the archive stays as kept."""
+    `with_subject` gives the archived answers), and its head the protocol
+    id a record names: the archive stays as kept."""
     today = record.replace(b'status = "accepted"', b'status = "limitation"').replace(
         b'status = "dismissed"', b'status = "false-positive"'
     )
@@ -3444,10 +3522,16 @@ def as_today(record: bytes) -> bytes:
         today,
     )
     # and the rule the archive predates (ARCHIVED_RULE's id)
-    return re.sub(
+    with_rules = re.sub(
         rb'(?m)^(subject = "[a-z]+"\n)(?!rule = )',
         rb'\1rule = "LAB-050"\n',
         with_subjects,
+    )
+    return re.sub(
+        rb'(?m)^(mode = "[a-z]+"\n)(?!protocol = )',
+        rb'\1protocol = "p-0123456789abcdef"\n',
+        with_rules,
+        count=1,
     )
 
 
