@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1 and 2a and the finalize pilot are built; the author decided to continue ([checkpoint report](#checkpoint-report-2026-11-10-at-602f794f)). **Next:** step 2b — the rule value in the audit records, the scanner's missed refusals, the complete site account and the inventory comparison through it, the forwarding guard.
+**Status:** steps 1, 2a, the finalize pilot and step 2b are built ([2b](#2b-complete-rule-data-and-measurement)); 73 of 256 sites are classified. **Next:** step 3 for the other gates — report-check, preflight, the report holds, then the refusals raised during a measurement.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -155,6 +155,8 @@ Extend the audit records (`findings.Finding.rule`) and the constructors that can
 Complete the site account and repair the scanner's known omission. `check_inventory._refusal_message` skips a `SystemExit` whose argument is a call, so it does not see the `runlog` messages wrapped in `with_way_out`. After the repair, a known wrapped refusal and a direct refusal both appear, and forwarding a command's exit code does not become a finding. Review the scanner's other limits and add each site found that way explicitly to the site count.
 
 Compare the baseline inventory with the current one through the site account. The comparison key is the channel, the qualified function and the normalized message template; line numbers only locate the source. Explain moves, rewordings, renames, splits, merges, removals and additions in the site account. Resolve duplicate keys there by hand, never by line order. The comparison lists the differences the site account does not explain and ignores lines that only moved because others were inserted; do not build a second automatic matcher. Enter each remaining site before migrating its gate.
+
+**Built 2026-11-10 (`95639c56`…`6e5783c0`).** The audit records' `findings.Finding.rule` is the gate's `RuleAssignment`; the record stores the same text as before (`recorded_rule`, `stored_rule`), so the on-disk format did not change. The scanner sees a refusal wrapped in `with_way_out`: 30 refusals of `runlog` and the run start check were missing, and the 226 inventoried sites are 256 (194 `finding`, 56 `exit`, 6 `printed`); no other missed form was found. Both inventories count rules by the data field (`FindingSite.assignment`) and keep the cited ids beside it. The forwarding guard is `tests/test_architecture.py::ForwardingKeepsWhatAFindingIs`. The site account holds all 256 sites at `6e5783c0`: finalize's 73 rows kept their hand columns, the five sites the pilot moved name their old place in the condition, and the rows of two `batch` refusals and `evidence.change_blockers` are no longer marked removed — they are live sites of other gates. `python -m labkit.tools.check_inventory --account docs/notes/2026-11-10-site-account.tsv` compares by key and count and reports no difference; ten keys are shared by two sites each, told apart by hand.
 
 ### 4. Reduce scenario variants
 
