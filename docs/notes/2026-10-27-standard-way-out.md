@@ -8,7 +8,7 @@
 
 ## Why
 
-The ways past the gates in nine rounds came where a well-meaning agent saw no admissible next step: t5 (round 9) fought its records for about 13 of 30 minutes and delivered nothing; t18 left the chain ("the labkit framework is designed for single experiments"). Where a held step named its command, agents followed it (round 9: reports rewritten until the review named no claim; round 8 t5: re-decided after a rejection, standard met). Hints that hold nothing were not followed. So the standard way must stand where the agent is when it is stuck — in the refusal — be short, name the command, and be cheaper than the fight.
+The ways past the gates in nine rounds came where a well-meaning agent saw no admissible next step: the attempt on ScienceAgentBench task 5 (round 9) fought its records for about 13 of 30 minutes and delivered nothing; the attempt on task 18 left the chain ("the labkit framework is designed for single experiments"). Where a held step named its command, agents followed it (round 9: reports rewritten until the review named no claim; round 8, task 5: re-decided after a rejection, standard met). Hints that hold nothing were not followed. So the standard way must stand where the agent is when it is stuck — in the refusal — be short, name the command, and be cheaper than the fight.
 
 Today the stamped instructions name one honest exit, for a refused adoption (`AGENTS.md.template:151-157`: "a refusal is a finding to report, not an obstacle to route around" → `--discuss`). It needs a run, and there is no exit for being stuck as such.
 
@@ -55,7 +55,7 @@ Every refusal ends with the row that matches its cause and "or stop: `<handover 
 
 ## What it needs beside the text
 
-1. **A handover command** that writes a generated "unresolved" block into the report (TOML head: protocol, cause, what was tried, the runs and records that stand), and report-check accepting that report as complete without a number. With it, every report in an area with a protocol states exactly one of: an adopted result, a discussed run, a handover — which also closes the report that cites no run (round 9, t18; TODO point 3 after the ninth round).
+1. **A handover command** that writes a generated "unresolved" block into the report (TOML head: protocol, cause, what was tried, the runs and records that stand), and report-check accepting that report as complete without a number. With it, every report in an area with a protocol states exactly one of: an adopted result, a discussed run, a handover — which also closes the report that cites no run (round 9, task 18; TODO point 3 after the ninth round).
 2. **The fresh attempt** (TODO, decided): the "register anew" row.
 3. **Tripwires as held steps:** the pre-run hook refuses the commands in the "stop instead" list and prints the last two rows — hardening with its exit.
 4. **The evaluation counts the exit** (area 09, the lab's decision): an honest handover is told apart from "standard not met"; otherwise the measurement penalises the behaviour the instruction asks for.
