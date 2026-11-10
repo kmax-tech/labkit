@@ -350,6 +350,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`python -m labkit.tools.test_inventory`: which test reaches which finding site, through which layer.** Runs labkit's own suite once with every gate finding traced and tells per rule and per site the tests that reached it — through a whole command, or a gate, check or format function —, the sites only commands reach, the unreached, and the narrowest layer per site. The basis of the test model (`docs/notes/2026-11-10-test-model.md`).
+
 - **`data=runlog.NO_INPUTS`: a run that reads no input file says so.** Recorded as `data = {"no_input_files": "declared by the author: the run reads no input file"}` (`runs.NO_INPUTS_KEY`), apart from a `data=` left out or empty, which still blocks at finalize's provenance station ("source not frozen"); an old record's empty table gains no release. finalize tells the declaration as the author's word — the script is not checked for it. `data=` keys labkit reserves (`leakage_check`, `no_input_files`) are refused as input names.
 
 - **The check inventory, `python -m labkit.tools.check_inventory`** (`just inventory`): every place labkit tells a finding — a gate finding, a run's start refusal, a printed `WARNING:` line — with the rule its call cites, its grade, its evidence kind and the console commands that reach it by a static call graph; and every active rule with the finding sites, other code strings, agent definitions, templates and guides that cite it. Read from the source, computed at every call, committed nowhere. The basis for measuring whether a rule earns its place; checks have no switches (`docs/notes/2026-11-09-checks-have-no-switches.md`).
