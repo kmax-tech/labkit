@@ -141,14 +141,17 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
     def _held(self, now: str | None, recorded: str | None = "ab12"):
         entry = OutputEntry(self.RECORDED.path, recorded, 4)
         return pure_call(
-            output_record_findings, [OutputNow(entry, now)], "r1", self.AREA
+            output_record_findings,
+            [OutputNow(entry, now is not None or recorded is None, now)],
+            "r1",
+            self.AREA,
         )
 
     def test_a_gone_an_unrecorded_and_a_changed_file_block(self):
         for now, recorded, said in (
             (None, "ab12", "the file is gone"),
             (
-                "ab12" + "0" * 60,
+                None,  # nothing recorded to compare with: the file is not read
                 None,
                 "the run ended without it (outputs.json records no sha256)",
             ),

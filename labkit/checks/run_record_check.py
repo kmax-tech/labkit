@@ -142,8 +142,7 @@ def code_since_run(
         b, w = _run_code(area, run)
         blockers += b
         warnings += w
-    # every blocker of the comparison carries one rule, not decided yet
-    return [replace(b, rule=OPEN_RULE) for b in blockers], warnings
+    return blockers, warnings
 
 
 def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
@@ -157,6 +156,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
             blocker(
                 f"{rid} recorded no script — the code behind its number cannot be compared",
                 fix=measure_anew(area),
+                rule=OPEN_RULE,
             )
         ], []
     script = script_of(area, cfg)
@@ -168,6 +168,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                 fix=f"{measure_anew(area)}, with the script where it is now; only "
                 f"when it was moved or deleted by mistake, restore it from "
                 f"{shown(kept, here)}",
+                rule=OPEN_RULE,
             )
         ], []
     out: list[GateFinding] = []
@@ -179,6 +180,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                     f"came from other code",
                     fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(kept, here))} "
                     f"{shlex.quote(shown(script, here))}`)",
+                    rule=OPEN_RULE,
                 ),
                 changed_since=rid,
             )
@@ -193,6 +195,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                 f"the code {rid} ran cannot be read now: {exc}",
                 fix=f"repair what the error names, then `{gate_command('finalize', area)}`",
                 check_outcome=outcome_of_failed_read(exc),
+                rule=OPEN_RULE,
             ),
         ], []
     b, w = _helpers_since_run(helpers, script, repo, run, cfg)
@@ -282,6 +285,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                             f"untracked; the run kept it as {shown(copy, here)})",
                             fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(copy, here))} "
                             f"{shlex.quote(shown(f, here))}`)",
+                            rule=OPEN_RULE,
                         ),
                         changed_since=rid,
                     )
@@ -303,6 +307,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"{rid} recorded no commit, or the area lies in no git repository "
                 f"now, so the helpers its script imports ({names}) cannot be compared",
                 fix=f"in the repository, {measure_anew(run_dir.parent.parent)}",
+                rule=OPEN_RULE,
             ),
         ], warnings
     if not commit_known(repo, cfg.git_full):
@@ -313,6 +318,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"does not hold",
                 fix=f"fetch it (`git fetch --unshallow` in a shallow clone) or "
                 f"{measure_anew(run_dir.parent.parent)}",
+                rule=OPEN_RULE,
             ),
         ], warnings
     try:
@@ -329,6 +335,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             blocker(
                 f"the tree {rid} started from cannot be read for {names}: {exc}",
                 fix=measure_anew(run_dir.parent.parent),
+                rule=OPEN_RULE,
             ),
         ], warnings
     for f in in_git:
@@ -339,6 +346,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                     f"uncommitted.patch — untracked when the run started, or not yet "
                     f"there — so what the run imported is not recorded",
                     fix=f"commit {shown(f, here)}, then {measure_anew(run_dir.parent.parent)}",
+                    rule=OPEN_RULE,
                 )
             )
         elif then[f] != now[f]:
@@ -349,6 +357,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                         f"{shown(f, here)} changed since {rid} ran",
                         fix=f"{FIX_FIRST} (`git -C {shlex.quote(shown(repo, here))} "
                         f"cat-file blob {blob} > {shlex.quote(shown(f, here))}`)",
+                        rule=OPEN_RULE,
                     ),
                     changed_since=rid,
                 )
@@ -783,10 +792,11 @@ def output_drift(output: OutputNow) -> str | None:
     (`runlog.Run._finalize`); the tree at check time is only compared,
     never trusted."""
     recorded = output.entry.sha256
-    if output.sha256 is None:
+    if not output.stands:
         return "the file is gone"
     if recorded is None:
         return "the run ended without it (outputs.json records no sha256)"
+    assert output.sha256 is not None, "output_now hashes a standing recorded file"
     if not output.sha256.startswith(recorded):
         return (
             f"its sha256 {output.sha256[: len(recorded)]} is not the recorded "
@@ -919,6 +929,7 @@ def row_provenance_findings(
                 blocker(
                     f"{entry.path.name}: {exc}",
                     fix=measure_anew(answering_run.parent.parent),
+                    rule=OPEN_RULE,
                 )
             )
             continue
@@ -935,6 +946,7 @@ def row_provenance_findings(
                     f"script, e.g. `{next_output_name(entry.path)}`; keep "
                     f"{entry.path.name} and its runs, never delete it: those rows are "
                     f"the other runs' evidence",
+                    rule=OPEN_RULE,
                 )
             )
         if entry.continues:
@@ -950,8 +962,7 @@ def row_provenance_findings(
                 f"{entry.path.name}: {rr.unstamped} row(s) without _prov — written "
                 f"outside a run or by a Store without prov; their run is unknown"
             )
-    # every blocker of the row check carries one rule, not decided yet
-    return [replace(b, rule=OPEN_RULE) for b in blockers], notes
+    return blockers, notes
 
 
 def _continued_with_other_code(
@@ -983,6 +994,7 @@ def _continued_with_other_code(
                 f"the output in the measuring script, e.g. "
                 f"`{next_output_name(path)}` — keep {path.name} and its runs, "
                 f"then audit that run",
+                rule=OPEN_RULE,
             )
         )
     return out

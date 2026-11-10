@@ -327,8 +327,9 @@ def check_open_audit_findings(
     and its deleted directory is a blocker where the record stands. A
     record nobody can read is a blocker, not "no findings" — and while one
     does not read, neither the gone runs nor the open findings are checked.
-    STATE and HELD are the area's state and audit evidence, read once at
-    the entry."""
+    An undecided NOTE is no gate finding: it is told after the blockers and
+    warnings, not in its record's order. STATE and HELD are the area's
+    state and audit evidence, read once at the entry."""
     if held.unreadable:
         findings.take_all(check_audit_records_read(state, evidence=held))
         return
@@ -355,7 +356,7 @@ def check_intent_keys_in_metrics(
     answering_run: Path | None,
     state: AreaState,
 ) -> None:
-    """Station 2: every registered intent id reports as a key of the answering
+    """Station 3: every registered intent id reports as a key of the answering
     run's metrics.json, a branch as one of its registered outcomes
     (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
@@ -396,7 +397,7 @@ def check_intent_keys_in_metrics(
 def check_run_code(
     findings: Findings, area: Path, answering_run: Path, held_by: Path | None
 ) -> None:
-    """Station 3, first half: the code that produced the answering run's
+    """Station 4, first half: the code that produced the answering run's
     number, and that of every run it derives from, is the code here now
     (`run_record_check.code_since_run`), for every kind — a fix after the
     run with no new run would leave the old code's number standing. A module in another repository is a warning. HELD_BY,
@@ -421,7 +422,7 @@ def check_declared_scopes(
     text: str = "",
     held_by: Path | None = None,
 ) -> None:
-    """Station 3, second half: a promise's declared scope edited after the run: today's code is not
+    """Station 4, second half: a promise's declared scope edited after the run: today's code is not
     the code that produced the number. An answering run that recorded no block is a blocker
     (`promises.promise_tables_owed`: every reportable run is held to
     a registration that is data) — it came from a labkit that let it pass,
@@ -473,7 +474,7 @@ def check_open_fields(
     head: protocol_block.Head,
     state: AreaState,
 ) -> None:
-    """Station 4: fields of the protocol still empty or a placeholder, and
+    """Station 5: fields of the protocol still empty or a placeholder, and
     the README's route block (CODE-016)."""
     holes = open_holes(text, head)
     for lineno, label in holes:
@@ -513,7 +514,7 @@ def check_open_fields(
 def check_data_counts(
     findings: Findings, protocol: Path, text: str, state: AreaState
 ) -> bool:
-    """Station 4, the generated counts of Data / scope: where the field
+    """Station 5, the generated counts of Data / scope: where the field
     holds them (`counts (prepare run <id>): …`), they are what that run
     recorded (`data_counts.counts_gap`) — a part typed by hand or left
     stale blocks, with the command that writes it again. True when they
@@ -534,7 +535,7 @@ def check_data_counts(
 
 
 def check_provenance(findings: Findings, area: Path, answering_run: Path) -> None:
-    """Station 5: every source the run read frozen in its record, its bytes
+    """Station 6: every source the run read frozen in its record, its bytes
     the ones the record names, and tracked in git or kept outside it — by
     an ignore rule, or lying outside the repository; the outputs tracked,
     an untracked one a warning (`provenance_findings`)."""
@@ -553,7 +554,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
 
 
 def check_area_tests(findings: Findings, area: Path) -> None:
-    """Station 6: the area's own tests. The resolution check runs again before a number leaves: a later edit
+    """Station 7: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
     tier, low included, where preflight is not owed. A
     missing test is no finding here; preflight owes it at the freeze."""
@@ -597,7 +598,7 @@ def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateF
 
 
 def check_null_lane(findings: Findings, answering_run: Path) -> None:
-    """Station 7b: the kept rows' null lane moved (`null_lane_findings`) —
+    """Station 8: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
         kept = kept_jsonl_rows(answering_run)
@@ -619,7 +620,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
 
 
 def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
-    """Station 7: every output the run registered is the file the run
+    """Station 8: every output the run registered is the file the run
     recorded (`output_record_findings`) — the number's rows and the
     deliverable of an external task, held by path and sha256 from
     outputs.json, on every lane."""
@@ -653,7 +654,7 @@ def check_reference(
     head: protocol_block.Head,
     answering_run: Path,
 ) -> None:
-    """Station 7: the comparison with the stated value the head registers
+    """Station 8: the comparison with the stated value the head registers
     (`[reference]`, a computation's), held to the answering run's
     metrics.json (`reference.comparison_gaps`, each a guaranteed blocker):
     a table that does not read, or one on a kind with a bar
@@ -729,7 +730,7 @@ def check_kept_number(
     head: protocol_block.Head,
     answering_run: Path,
 ) -> None:
-    """Station 7: a computation's kept number — the key the head's `[kept]`
+    """Station 8: a computation's kept number — the key the head's `[kept]`
     names — held as a finite number in the answering run's metrics.json
     (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check
     the agent cannot edit away, where the skeleton's own `kept_number()`

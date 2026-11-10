@@ -65,12 +65,16 @@ class ReadOutputsAndCompletion(unittest.TestCase):
                     [
                         {"path": str(kept), "sha256": "ab12", "lines": 1},
                         {"path": str(run / "gone.txt"), "sha256": None, "lines": None},
+                        {"path": str(kept), "sha256": None, "lines": 1},
                     ]
                 )
             )
             got = runs.outputs_now(run)
             assert got is not None
-            self.assertEqual([o.sha256 for o in got], [runs.file_digest(kept), None])
+            self.assertEqual(
+                [(o.stands, o.sha256) for o in got],
+                [(True, runs.file_digest(kept)), (False, None), (True, None)],
+            )
             self.assertIsNone(runs.outputs_now(run / "elsewhere"))
 
     def test_no_outputs_file_is_none(self):

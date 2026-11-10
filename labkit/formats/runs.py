@@ -610,22 +610,29 @@ def output_file(entry: OutputEntry) -> Path | None:
 
 @dataclass(frozen=True)
 class OutputNow:
-    """One output a run registered (ENTRY) and the sha256 of its file as
-    the tree holds it now (SHA256, full hex; None when the file is gone) —
+    """One output a run registered (ENTRY) as the tree holds its file now —
     what a check of the recorded outputs compares (`outputs_now`), so the
-    check opens no file."""
+    check opens no file.
+
+    Attributes:
+        entry: The output as outputs.json records it.
+        stands: Its file stands in the tree (`output_file`).
+        sha256: The file's sha256 now, full hex — None when it is gone, and
+            None unread when outputs.json records none to compare with.
+    """
 
     entry: OutputEntry
+    stands: bool
     sha256: str | None
 
 
 def output_now(entry: OutputEntry) -> OutputNow:
-    """ENTRY with the sha256 of its file now (`digests.file_digest`), None
-    when it is gone (`output_file`). Raises OSError when the file stands
-    and does not read."""
-    return OutputNow(
-        entry, file_digest(entry.path) if output_file(entry) is not None else None
-    )
+    """ENTRY with its file as it stands now: whether it stands, and its
+    sha256 (`digests.file_digest`) only when it stands and the record holds
+    one to compare with. Raises OSError when that file does not read."""
+    stands = output_file(entry) is not None
+    compared = stands and entry.sha256 is not None
+    return OutputNow(entry, stands, file_digest(entry.path) if compared else None)
 
 
 def outputs_now(run_dir: Path) -> list[OutputNow] | None:
