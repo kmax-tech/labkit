@@ -390,7 +390,7 @@ class IntentCheckRefused(unittest.TestCase):
             (f,) = found.found
             self.assertTrue(f.text.startswith("intent-check: "), f.text)
             self.assertIn("metrics", f.text)
-            self.assertEqual(f.rule, gate.OPEN_RULE)
+            self.assertEqual(f.rule, gate.TECHNICAL_RULE)
             (run / "metrics.json").write_text('{"criterion_1_pass": true}')
             twin = gate.Findings(tell=None)
             finalize.check_intent_keys_in_metrics(

@@ -15,7 +15,7 @@ from pathlib import Path
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
-    OPEN_RULE,
+    TECHNICAL_RULE,
     GateFinding,
     blocker,
     cited_rule,
@@ -247,7 +247,7 @@ def scope_changes(
                 fix=exc.fix
                 or f"repair what the sentence names, then "
                 f"`{gate_command('finalize', area)}`",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
 
@@ -491,7 +491,7 @@ def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
         f"the repository's missing objects restored (`git fsck` names them), then "
         f"`{gate_command('finalize', area)}`; where it cannot be read back at all, "
         f"{anew_way(pid)}; or {HANDOVER}",
-        rule=OPEN_RULE,
+        rule=TECHNICAL_RULE,
     )
 
 

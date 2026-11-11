@@ -20,7 +20,7 @@ from pathlib import Path
 
 from labkit.formats.repo import shown
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, cited_rule
 from labkit.formats.scope_sha import (
     SCRIPT_GLOB,
@@ -79,7 +79,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     f"{shlex.quote(shown(t, Path.cwd()))}` collects it",
                     evidence_kind=GUARANTEED,
                     check_outcome=NOT_EXECUTABLE,
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
             continue
@@ -236,7 +236,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
             f"{name} is not statically readable (a call or a format spec this "
             f"check does not compute) · prompt drift unchecked for it",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
         for name in unreadable
     ]

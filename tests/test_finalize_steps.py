@@ -16,6 +16,7 @@ from labkit.formats.gate import (
     GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
+    TECHNICAL_RULE,
     cited_rule,
     STATIC_EVIDENCE,
     VIOLATED,
@@ -461,7 +462,7 @@ class AreaTestsTold(unittest.TestCase):
 
     def test_no_pytest_warns(self):
         (f,) = self._told("no-pytest", []).found
-        self.assertEqual((f.grade, f.rule), ("WARNING", OPEN_RULE))
+        self.assertEqual((f.grade, f.rule), ("WARNING", TECHNICAL_RULE))
         self.assertIn("pytest is not installed", f.text)
 
     def test_tests_that_did_not_run_block_as_not_executable(self):
@@ -517,7 +518,7 @@ class ARegistrationReleaseThatCannotBeChecked(unittest.TestCase):
 
         (f,) = self._held(fails)
         self.assertIn("cannot be checked: the follow-up's record does not read", f.text)
-        self.assertEqual((f.fix, f.rule), ("restore it", OPEN_RULE))
+        self.assertEqual((f.fix, f.rule), ("restore it", TECHNICAL_RULE))
 
     def test_the_twin_a_comparison_that_runs_is_its_own_answer(self):
         self.assertEqual(self._held(lambda *_a, **_k: []), [])

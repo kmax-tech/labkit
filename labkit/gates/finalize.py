@@ -99,6 +99,7 @@ from labkit.formats.gate import (
     NOT_EXECUTABLE,
     OPEN_RULE,
     STATIC_EVIDENCE,
+    TECHNICAL_RULE,
     GateFinding,
     blocker,
     cited_rule,
@@ -387,7 +388,7 @@ def check_intent_keys_in_metrics(
             f"intent-check: {exc.why}",
             fix=f"repair what the sentence names; `intent-check "
             f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
         return
     # Its findings as data, each a blocker; its notes — which run, on what
@@ -414,7 +415,7 @@ def check_run_code(
         withdrawn_first(changed, withdraw_command(held_by) if held_by else None)
     )
     for line in apart:
-        findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.warn(line, evidence_kind=GUARANTEED, rule=TECHNICAL_RULE)
     if not changed and not apart:
         findings.note(
             f"  the script and the helpers it imports are as {answering_run.name} ran them"

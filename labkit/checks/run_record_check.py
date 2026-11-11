@@ -47,6 +47,7 @@ from labkit.formats import promises, protocol_block
 from labkit.formats.gate import (
     OPEN_RULE,
     STATIC_EVIDENCE,
+    TECHNICAL_RULE,
     WARNING,
     GateFinding,
     blocker,
@@ -137,7 +138,7 @@ def code_since_run(
             blocker(
                 f"{answering_run.name}: its runs cannot be followed ({exc})",
                 fix=measure_anew(answering_run.parent.parent),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ], []
     blockers: list[GateFinding] = []
@@ -172,7 +173,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                 fix=f"{measure_anew(area)}, with the script where it is now; only "
                 f"when it was moved or deleted by mistake, restore it from "
                 f"{shown(kept, here)}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ], []
     out: list[GateFinding] = []
@@ -199,7 +200,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                 f"the code {rid} ran cannot be read now: {exc}",
                 fix=f"repair what the error names, then `{gate_command('finalize', area)}`",
                 check_outcome=outcome_of_failed_read(exc),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             ),
         ], []
     b, w = _helpers_since_run(helpers, script, repo, run, cfg)
@@ -322,7 +323,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"does not hold",
                 fix=f"fetch it (`git fetch --unshallow` in a shallow clone) or "
                 f"{measure_anew(run_dir.parent.parent)}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             ),
         ], warnings
     try:
@@ -339,7 +340,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             blocker(
                 f"the tree {rid} started from cannot be read for {names}: {exc}",
                 fix=measure_anew(run_dir.parent.parent),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             ),
         ], warnings
     for f in in_git:
@@ -922,7 +923,7 @@ def row_provenance_findings(
             blocker(
                 f"row provenance: the lineage of {answering_run.name} is broken — {exc}",
                 fix=measure_anew(answering_run.parent.parent),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ], []
     for entry in read_outputs(answering_run) or []:
@@ -935,7 +936,7 @@ def row_provenance_findings(
                 blocker(
                     f"{entry.path.name}: {exc}",
                     fix=measure_anew(answering_run.parent.parent),
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
             continue

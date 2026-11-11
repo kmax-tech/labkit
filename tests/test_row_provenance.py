@@ -241,7 +241,7 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             (b,) = blockers
             self.assertTrue(b.text.startswith("x.jsonl: "), b.text)
             self.assertIn("measure anew", b.fix or "")
-            self.assertEqual(b.rule, gate.OPEN_RULE)
+            self.assertEqual(b.rule, gate.TECHNICAL_RULE)
 
     def test_continued_rows_of_other_code_are_a_blocker(self) -> None:
         """The repair case: the run continues the faulty run's file, and

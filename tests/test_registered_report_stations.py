@@ -12,7 +12,7 @@ from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import BLOCKER, OPEN_RULE, cited_rule
+from labkit.formats.gate import BLOCKER, cited_rule, TECHNICAL_RULE
 from labkit.gates import registered_report
 from protocol_fixture import PID, head
 
@@ -37,7 +37,7 @@ class AReportBinding(unittest.TestCase):
     def test_a_lost_first_measurement_leaves_the_binding_unread(self):
         gap = self._gap(("2026-11-10T10-00-00_lost",))
         assert gap is not None
-        self.assertEqual((gap.grade, gap.rule), (BLOCKER, OPEN_RULE))
+        self.assertEqual((gap.grade, gap.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertIn(
             "its first measurement is missing — the report binding cannot be read",
             gap.text,

@@ -74,6 +74,7 @@ from labkit.formats.gate import (
     NOT_EXECUTABLE,
     OPEN_RULE,
     STATIC_EVIDENCE,
+    TECHNICAL_RULE,
     cited_rule,
 )
 from labkit.checks.code_check import code_findings
@@ -458,7 +459,9 @@ def check_audit_records(
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
-        findings.block(str(exc), fix=audit_findings.record_way(area), rule=OPEN_RULE)
+        findings.block(
+            str(exc), fix=audit_findings.record_way(area), rule=TECHNICAL_RULE
+        )
         return []
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
@@ -507,7 +510,7 @@ def check_handed_over_elsewhere(
     try:
         elsewhere = audit_findings.open_elsewhere(area, experiments)
     except audit_findings.FindingsError as exc:
-        findings.warn(str(exc), evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.warn(str(exc), evidence_kind=GUARANTEED, rule=TECHNICAL_RULE)
         elsewhere = []
     handed: dict[Path, set[str]] = {}
     told = 0
@@ -516,7 +519,7 @@ def check_handed_over_elsewhere(
             kept = evidence.read_evidence(other, staged=False)
             if kept.handovers_unread:
                 findings.warn(
-                    kept.handovers_unread, evidence_kind=GUARANTEED, rule=OPEN_RULE
+                    kept.handovers_unread, evidence_kind=GUARANTEED, rule=TECHNICAL_RULE
                 )
             handed[other] = set(kept.handed_over_entries)
         if handovers.entry(r, audit_findings.number_of(r, f)) not in handed[other]:
@@ -609,7 +612,7 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
         findings.warn(
             "pytest is not installed in this interpreter — tests not run",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     else:
         for ln in tests.tail:

@@ -16,7 +16,7 @@ from pathlib import Path, PurePosixPath
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import OPEN_RULE, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -293,7 +293,7 @@ def report_binding_gap(
             "--unshallow` in a shallow clone), or restore the repository's missing "
             f"objects (`git fsck` names them); else {anew}",
             step=handover,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     if len(values) > 1:
         named = ", ".join(
@@ -312,7 +312,7 @@ def report_binding_gap(
                 f"{name_p}: its first measurement is missing — the report binding cannot be read",
                 fix=f"restore the missing run evidence, then `{step_command(protocol.parent)}`; or {anew}",
                 step=handover,
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         return None
     (registered,) = values

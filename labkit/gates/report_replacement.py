@@ -13,7 +13,7 @@ from labkit.formats.commands import gate_command
 from labkit.formats.area_state import state_of
 from labkit.formats.area_state import FileState
 from labkit.formats import evidence
-from labkit.formats.gate import OPEN_RULE, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import (
     GateFinding,
     blocker,
@@ -164,7 +164,7 @@ def _undeclared_changes(
             blocker(
                 f"the registrations cannot be compared — {'; '.join(gaps)}",
                 fix=f"until they can, {ways_out.HANDOVER}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     ((new, new_where),) = news
@@ -218,7 +218,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
             blocker(
                 f"the predecessor's audit records do not read: {exc}",
                 fix=findings.record_way(pred.parent, pred),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     out: list[GateFinding] = []

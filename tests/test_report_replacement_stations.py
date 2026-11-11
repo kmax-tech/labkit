@@ -7,7 +7,7 @@ from __future__ import annotations
 import unittest
 from unittest import mock
 
-from labkit.formats.gate import BLOCKER, OPEN_RULE
+from labkit.formats.gate import BLOCKER, OPEN_RULE, TECHNICAL_RULE
 from labkit.gates import report_replacement
 from protocol_fixture import head
 from state_fixture import AREA, area_evidence, checked
@@ -43,7 +43,7 @@ class AReplacement(unittest.TestCase):
             (gap,) = report_replacement._predecessor_open(
                 checked(head(repeat_cost="low"), run=None), AREA / "PROTOCOL-old.md"
             )
-        self.assertEqual(gap.rule, OPEN_RULE)
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
         self.assertIn("audits/x.toml: not TOML", gap.text)
 
 

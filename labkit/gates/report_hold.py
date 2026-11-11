@@ -20,7 +20,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
 from labkit.checks.report_blocks import discuss_command
-from labkit.formats.gate import OPEN_RULE, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
@@ -880,7 +880,7 @@ def review_gap(
         return blocker(
             f"{rel}: its report review cannot be told — {exc}",
             fix=f"repair what the sentence names, then review this state: {command}",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     if stands.released:
         return None
@@ -944,7 +944,7 @@ def review_hold(
             f"{rel}: {owed_because} and has no clean report review of this "
             f"state — and none can run: {lost.cause}",
             fix=lost.fix,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     if stands.claims:
         return blocker(
@@ -1045,7 +1045,7 @@ def undeclared_findings(
                     f"has adopted no result — and neither its adoption nor a "
                     f"discussion can pass: {lost.cause}",
                     fix=lost.fix,
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
             continue

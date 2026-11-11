@@ -12,7 +12,13 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.formats import findings as audit_findings
-from labkit.formats.gate import BLOCKER, OPEN_RULE, WARNING, Findings, cited_rule
+from labkit.formats.gate import (
+    BLOCKER,
+    WARNING,
+    Findings,
+    cited_rule,
+    TECHNICAL_RULE,
+)
 from labkit.gates import preflight
 from state_fixture import area_evidence, audit_record
 
@@ -48,7 +54,7 @@ class PreflightStations(unittest.TestCase):
             preflight.check_audit_records(found, self.area, frozen=False), []
         )
         (f,) = found.found
-        self.assertEqual((f.grade, f.rule), (BLOCKER, OPEN_RULE))
+        self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertIn("not TOML", f.text)
 
     def test_the_twin_no_record_blocks_nothing(self):
@@ -88,8 +94,8 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual(
             [(f.grade, f.rule, f.text) for f in found.found],
             [
-                (WARNING, OPEN_RULE, "02-y/audits/a.toml: not TOML"),
-                (WARNING, OPEN_RULE, "02-y/handovers.toml: not TOML"),
+                (WARNING, TECHNICAL_RULE, "02-y/audits/a.toml: not TOML"),
+                (WARNING, TECHNICAL_RULE, "02-y/handovers.toml: not TOML"),
             ],
         )
 

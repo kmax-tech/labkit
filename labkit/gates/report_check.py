@@ -94,7 +94,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats import commands
-from labkit.formats.gate import OPEN_RULE, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
@@ -326,7 +326,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 "not a git repository — the registration cannot be held to the "
                 "commit of the first measurement",
                 evidence_kind=GUARANTEED,
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     return [gap for rd in first for gap in _registration_at(ctx, root, rd, len(first))]
@@ -447,7 +447,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
         return blocker(
             f"the analysis audit cannot be held to the run: {exc.why}",
             fix=exc.fix or audit,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     except (OSError, ValueError) as exc:
         # OSError: a file missing (violated) or refused (not executable,
@@ -458,7 +458,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             fix=f"repair what the sentence names (a refused file: make it "
             f"readable), then {audit}",
             check_outcome=outcome_of_failed_read(exc),
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     if gap is None:
         return None
@@ -475,7 +475,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"restore, `{findings_command}` lists every loss with its restore —, "
             f"then {audit}; (b) where nothing restores it, no audit covers the "
             f"area and no number leaves it: {ways_out.HANDOVER}",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     return blocker(gap, fix=audit, rule=LAB_050)
 

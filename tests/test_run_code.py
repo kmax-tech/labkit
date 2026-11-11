@@ -369,7 +369,7 @@ class CodeSinceRun(unittest.TestCase):
         finalize.check_run_code(told, self.area, run, None)
         self.assertEqual(
             [(f.grade, f.rule) for f in told.found],
-            [(gate.WARNING, gate.OPEN_RULE)] * 2,
+            [(gate.WARNING, gate.TECHNICAL_RULE)] * 2,
         )
         self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
         self.assertEqual(len(code_since_run(self.area, run)[0]), 1)

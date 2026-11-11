@@ -10,7 +10,13 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.checks.audit_binding import AuditError
-from labkit.formats.gate import BLOCKER, NOT_EXECUTABLE, OPEN_RULE, VIOLATED
+from labkit.formats.gate import (
+    BLOCKER,
+    NOT_EXECUTABLE,
+    OPEN_RULE,
+    VIOLATED,
+    TECHNICAL_RULE,
+)
 from labkit.gates import report_check
 from protocol_fixture import head
 from state_fixture import AREA, checked
@@ -30,7 +36,7 @@ class TheAnalysisAuditCannotBeHeld(unittest.TestCase):
     def test_a_registered_output_gone_holds_it_to_the_run(self):
         gap = self._gap(AuditError("out.jsonl is gone", fix="restore it"))
         assert gap is not None
-        self.assertEqual((gap.grade, gap.rule), (BLOCKER, OPEN_RULE))
+        self.assertEqual((gap.grade, gap.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertEqual(
             gap.text, "the analysis audit cannot be held to the run: out.jsonl is gone"
         )
@@ -52,7 +58,9 @@ class TheAnalysisAuditCannotBeHeld(unittest.TestCase):
                         "the analysis audit cannot be held to the area: "
                     )
                 )
-                self.assertEqual((gap.check_outcome, gap.rule), (outcome, OPEN_RULE))
+                self.assertEqual(
+                    (gap.check_outcome, gap.rule), (outcome, TECHNICAL_RULE)
+                )
 
     def test_the_twin_no_run_names_the_measurement(self):
         gap = report_check.analysis_audit_gap(

@@ -12,7 +12,7 @@ from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.checks.audit_binding import AuditError
-from labkit.formats.gate import BLOCKER, OPEN_RULE, cited_rule
+from labkit.formats.gate import BLOCKER, cited_rule, TECHNICAL_RULE
 from labkit.gates import report_hold
 from state_fixture import area_evidence, area_state
 
@@ -106,7 +106,7 @@ class AReportHold(unittest.TestCase):
         self.assertEqual(
             gap.text, "REPORT.md: its report review cannot be told — an output is gone"
         )
-        self.assertEqual(gap.rule, OPEN_RULE)
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
 
     def test_a_run_of_a_protocol_whose_head_does_not_read_blocks(self):
         sources = self._sources(known={"r1"})

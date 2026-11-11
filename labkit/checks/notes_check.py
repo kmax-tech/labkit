@@ -42,7 +42,7 @@ import re
 from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import OPEN_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import (
     GUARANTEED,
     STATIC_EVIDENCE,
@@ -245,7 +245,7 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
                 f"`{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
                 check_outcome=outcome_of_failed_read(exc),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
             continue
         findings.take_all(gaps)
