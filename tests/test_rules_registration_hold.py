@@ -14,6 +14,7 @@ the commands: tests/test_end_to_end.py, `CorrectedDescription` and
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
 import pytest
 
@@ -29,6 +30,7 @@ from labkit.formats.followup import (
 from labkit.formats.gate import BLOCKER, OPEN_RULE
 from labkit.formats.protocol_history import STANDS_AS_REGISTERED, scope_differences
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
+from labkit.gates import registration_hold
 from labkit.gates.audit_prompt import Followup, carried_of
 from labkit.gates.registration_hold import (
     CORRECTION_ROUTE,
@@ -40,7 +42,7 @@ from labkit.gates.registration_hold import (
     split_released,
     waiting_refs,
 )
-from state_fixture import AREA, audit_record
+from state_fixture import AREA, area_evidence, audit_record
 
 pytestmark = pytest.mark.rule
 
@@ -209,6 +211,50 @@ class TheReleaseHoldsEachFieldOnItsOwn(unittest.TestCase):
             split_released, [self.SCOPE], {"data / scope": self.C}, {"Data / scope"}
         )
         self.assertEqual((kept, corrected), ([self.SCOPE], []))
+
+
+class TheReleaseReadsWhichFieldTheRunSawOtherwise(unittest.TestCase):
+    """`released_fields`: what the caller adds to `split_released` — it
+    tells from the protocol as the run saw it and as it stands which field
+    was edited since (`moved_fields`) and hands that on. Which corrections
+    are resolved is given here; `resolved_corrections` reads the area's
+    records."""
+
+    SCOPE = TheReleaseHoldsEachFieldOnItsOwn.SCOPE
+    C = TheReleaseHoldsEachFieldOnItsOwn.C
+    SCOPE_EDITED = TEXT.replace("read directly", "read through the loader")
+    UNIT_EDITED = TEXT.replace("one document of", "one text document of")
+
+    def released(self, seen: str, text: str):
+        with mock.patch.object(
+            registration_hold,
+            "resolved_corrections",
+            return_value={"data / scope": self.C},
+        ):
+            return registration_hold.released_fields(
+                [self.SCOPE],
+                AREA,
+                AREA / "PROTOCOL-x.md",
+                text,
+                AREA / "runs" / "r1",
+                seen,
+                area_evidence(),
+            )
+
+    def test_a_field_edited_after_the_run_saw_it_stays_held(self):
+        """Its correction is resolved on the text as it stands, but the run
+        measured under another description."""
+        self.assertNotEqual(self.SCOPE_EDITED, TEXT)
+        self.assertEqual(self.released(TEXT, self.SCOPE_EDITED), ([self.SCOPE], []))
+
+    def test_the_twin_a_field_that_reads_as_the_run_saw_it_is_released(self):
+        self.assertEqual(self.released(TEXT, TEXT), ([], [(self.SCOPE, self.C)]))
+
+    def test_another_field_edited_after_the_run_holds_this_one_not(self):
+        self.assertNotEqual(self.UNIT_EDITED, TEXT)
+        self.assertEqual(
+            self.released(TEXT, self.UNIT_EDITED), ([], [(self.SCOPE, self.C)])
+        )
 
 
 def awaited(records: list[findings.Record], current: set[str]) -> dict[str, str]:
