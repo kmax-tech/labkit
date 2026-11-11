@@ -605,3 +605,99 @@ class Hint(_Areas):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+REFERENCE = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
+SHARE = (
+    "- **Question / hypothesis:** the deforested share near the roads\n"
+    "- **Data / scope:** roads.geojson\n- **Exclusions / filters:** none\n"
+    "- **Unit:** a fraction\n"
+)
+
+
+class AChangedComparison(unittest.TestCase):
+    """A computation's registered comparison (`[reference]`) changed after
+    its first measurement is held in that protocol (tests/
+    test_registration_committed.py); the way on the hold names is walked
+    here: a successor that declares the change passes, only as an
+    exploratory protocol, and the earlier registration stays as it was."""
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp())
+        _git(self.root, "init", "-q")
+        self.a = self.root / "experiments" / "01-a"
+        self.b = self.root / "experiments" / "02-b"
+        self._area(self.a, A_ID, A_RUN, REFERENCE)
+        self.registered = (self.a / "PROTOCOL-x.md").read_text(encoding="utf-8")
+
+    def _area(self, area: Path, pid: str, run: str, reference: str, **kw) -> Path:
+        (area / "scripts").mkdir(parents=True, exist_ok=True)
+        (area / "scripts" / "01_measure.py").write_text("x = 1\n", encoding="utf-8")
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            head(
+                id=pid,
+                result=run,
+                repeat_cost="low",
+                kind="compute",
+                promises=kw.pop("promises", None),
+                reference=reference,
+                kept=("share", "1"),
+                **kw,
+            )
+            + SHARE,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", f"register {area.name}")
+        started_at(
+            completed_run(area, run, pid=pid, metrics={"share": 0.47}), self.root
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", f"run {area.name}")
+        return proto
+
+    def _successor(self, *, declared: bool, **kw) -> list[str]:
+        """B with the comparison moved to 0.48, the change DECLARED or not;
+        the replacement station's gaps."""
+        moved = REFERENCE.replace("0.62", "0.48")
+        rows = ""
+        if declared:
+            was = head(kind="compute", promises=None, reference=REFERENCE)
+            now = head(kind="compute", promises=None, reference=moved)
+            ((what, old, new),) = protocol_history.scope_differences(was, now)
+            self.assertEqual(what, "[reference]")
+            ts = protocol_block.toml_string
+            rows = (
+                f"\n[[replaces.change]]\nwhat = {ts(what)}\nfrom = {ts(old)}\n"
+                f"to = {ts(new)}\nwhy = {ts('the stated value was misread')}\n"
+            )
+        self._area(
+            self.b,
+            B_ID,
+            B_RUN,
+            moved,
+            promises=f'\n[replaces]\nprotocol = "{A_ID}"\n{rows}',
+            **kw,
+        )
+        ctx = report_context.checked(self.b, self.b / "PROTOCOL-x.md")
+        return [g.line for g in report_replacement.replacement_gaps(ctx)]
+
+    def test_the_successor_that_declares_the_changed_comparison_passes(self):
+        self.assertEqual(self._successor(declared=True), [])
+        # the earlier registration stays: its text and its comparison
+        now = (self.a / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        self.assertEqual(now, self.registered)
+        ref = protocol_block.reference(now)
+        assert ref is not None
+        self.assertEqual(ref.value, 0.62)
+
+    def test_the_twin_the_change_not_declared_is_held_naming_the_comparison(self):
+        (gap,) = self._successor(declared=False)
+        self.assertIn("not declared: [reference]", gap)
+        self.assertIn("value = 0.62", gap)
+        self.assertIn("value = 0.48", gap)
+
+    def test_the_twin_a_confirmatory_successor_is_held(self):
+        (gap,) = self._successor(declared=True, type="confirmatory")
+        self.assertIn('type = "exploratory"', gap)

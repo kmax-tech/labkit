@@ -386,16 +386,20 @@ class TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands(unittest.TestCase):
 
 
 class TheRuleAScopeHoldRecords(unittest.TestCase):
-    """`scope_rule`: the rule's text names the fields, not the head's `kind`,
-    `[kept]` and `[reference]` — a hold on those records an open assignment."""
+    """`scope_rule`: LAB-003's text names the fields, LAB-035's the
+    registered comparison; the head's `kind` and `[kept]` no rule's — a
+    hold on those records an open assignment, and so does a hold that
+    would owe two rules."""
 
     LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+    LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
+    REFERENCE = ("[reference]", "a", "b")
 
     def test_a_field_the_rule_names_records_the_rule(self):
         self.assertEqual(registration_hold.scope_rule(SCOPE), self.LAB_003)
 
-    def test_a_head_part_the_rule_does_not_name_is_open_alone_or_among_fields(self):
-        self.assertIn("kind", registration_hold.UNNAMED_HEAD_PARTS)
+    def test_a_head_part_no_rule_names_is_open_alone_or_among_others(self):
+        self.assertEqual(registration_hold.UNNAMED_HEAD_PARTS, ("kind", "[kept]"))
         for part in registration_hold.UNNAMED_HEAD_PARTS:
             diff = (part, "a", "b")
             with self.subTest(part=part):
@@ -403,10 +407,21 @@ class TheRuleAScopeHoldRecords(unittest.TestCase):
                 self.assertEqual(
                     registration_hold.scope_rule([*SCOPE, diff]), OPEN_RULE
                 )
+                self.assertEqual(
+                    registration_hold.scope_rule([self.REFERENCE, diff]), OPEN_RULE
+                )
+
+    def test_the_comparison_alone_records_the_rule_that_fixes_it(self):
+        self.assertEqual(registration_hold.scope_rule([self.REFERENCE]), self.LAB_035)
+
+    def test_the_comparison_changed_with_a_field_claims_neither_rule(self):
+        self.assertEqual(
+            registration_hold.scope_rule([*SCOPE, self.REFERENCE]), OPEN_RULE
+        )
 
     def test_the_hold_blocks_whatever_rule_it_records(self):
         f = pure_call(
-            seen_hold, PID, "r2", FIRST, [("[reference]", "a", "b")], [None], ANALYSIS
+            seen_hold, PID, "r2", FIRST, [("[kept]", "a", "b")], [None], ANALYSIS
         )
         self.assertEqual((f.grade, f.rule), (BLOCKER, OPEN_RULE))
 

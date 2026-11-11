@@ -39,6 +39,7 @@ from labkit.formats.runs import (
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import AreaState, Measured
 from labkit.formats import protocol_history
+from labkit.formats.reference import LAB_035
 from labkit.formats.repo import (
     rel_posix,
     area_protocols,
@@ -71,18 +72,29 @@ from labkit.formats.followup import (
 )
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-#: the parts of the head the scope hold compares that no sentence of its
-#: rule names, as `protocol_history.scope_differences` labels them
-UNNAMED_HEAD_PARTS = ("kind", "[kept]", "[reference]")
+#: the parts of the head the scope hold compares that no sentence of a rule
+#: names, as `protocol_history.scope_differences` labels them
+UNNAMED_HEAD_PARTS = ("kind", "[kept]")
+#: the head's registered comparison as `scope_differences` labels it: LAB_035
+#: fixes it before the first measurement
+REFERENCE_PART = "[reference]"
 
 
 def scope_rule(diffs: list[tuple[str, str, str]]) -> RuleAssignment:
-    """The rule a scope hold on DIFFS records: LAB_003 where the rule's text
-    names every changed field; an open assignment as soon as one difference
-    is in a part of UNNAMED_HEAD_PARTS — the hold blocks either way. Pure."""
-    if any(what in UNNAMED_HEAD_PARTS for what, _, _ in diffs):
+    """The rule a scope hold on DIFFS records, one for the whole hold:
+    LAB_003 where its text names every changed field; LAB_035 where every
+    difference is the registered comparison (REFERENCE_PART) — a changed
+    one is reported as exploratory, which the hold's last way out, the
+    exploratory successor, is; an open assignment as soon as one
+    difference is in a part of UNNAMED_HEAD_PARTS, and where the
+    comparison changed together with a field, since one finding records
+    one rule. The hold blocks either way. Pure."""
+    changed = {what for what, _, _ in diffs}
+    if changed & set(UNNAMED_HEAD_PARTS):
         return OPEN_RULE
-    return LAB_003
+    if REFERENCE_PART not in changed:
+        return LAB_003
+    return LAB_035 if changed == {REFERENCE_PART} else OPEN_RULE
 
 
 def registration_rule(was: dict, now: dict) -> RuleAssignment:
