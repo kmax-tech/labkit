@@ -11,6 +11,7 @@ assignment `criterion_1_pass = ...` is not a reported key and must stay invisibl
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
@@ -20,7 +21,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks.code_check import check_intent_ids  # noqa: E402
 from labkit.checks.intent_check import code_ids  # noqa: E402
-from labkit.formats.gate import BLOCKER, VIOLATED, WARNING, cited_rule  # noqa: E402
+from labkit.formats.gate import (  # noqa: E402
+    BLOCKER,
+    NOT_EXECUTABLE,
+    VIOLATED,
+    WARNING,
+    cited_rule,
+)
+from labkit.formats.scope_sha import SourceError  # noqa: E402
 
 PROTOCOL = "Criterion [criterion-1]; admissibility [quality-check-1].\n"
 LITERAL = 'r.metrics(**{"criterion_1_pass": ok, "quality_check_1_anchor_ok": a})\n'
@@ -107,6 +115,30 @@ class KeywordKeys(unittest.TestCase):
             'x = {"criterion_1_pass": 1}\nr.metrics(quality_check_1_ok=1\n'
         )
         self.assertEqual(set(code_ids(area)), {"criterion-1"})
+
+    def test_a_script_that_cannot_be_read_is_not_told_as_a_missing_key(self):
+        """The script sets the key and is not UTF-8: the search did not see
+        it, so the finding is the unreadable file, never "no script names
+        the key" — that would be a blocker against correct code."""
+        area, protocol = area_with(LITERAL)
+        script = area / "scripts" / "01_measure.py"
+        script.write_bytes(LITERAL.encode() + b"# \xff\xfe\n")
+        (f,) = check_intent_ids(area, protocol, protocol.read_text(encoding="utf-8"))
+        self.assertIn("cannot be read", f.text)
+        self.assertNotIn("is registered, but no script names", f.text)
+        self.assertEqual((f.grade, f.outcome), (BLOCKER, VIOLATED))
+        with self.assertRaises(SourceError):
+            code_ids(area)
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads every file")
+    def test_a_script_refused_leaves_the_check_not_executed(self):
+        area, protocol = area_with(LITERAL)
+        script = area / "scripts" / "01_measure.py"
+        script.chmod(0)
+        self.addCleanup(script.chmod, 0o644)
+        (f,) = check_intent_ids(area, protocol, protocol.read_text(encoding="utf-8"))
+        self.assertEqual((f.grade, f.outcome), (BLOCKER, NOT_EXECUTABLE))
+        self.assertNotIn("is registered, but no script names", f.text)
 
 
 if __name__ == "__main__":

@@ -374,6 +374,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A script that cannot be read is no longer told as a missing key.** The key search of code-check and preflight (`intent_check.code_keys`) skipped an area script or an imported helper it could not read, and the registered id was then blocked as "no script names a … key literal" although the script set it. The unreadable file is the finding now (`code_scan.unreadable_source`): a check not executed where the access was refused, a violated technical contract where the file is not UTF-8.
+
 - **A refused file no longer ends report-check in a traceback.** The analysis-audit station (`report_check.analysis_audit_gap`) caught a missing file and a malformed one, not a refused access: a `PermissionError` while reading what the audit is held to ended report-check in that error. It is now the station's blocker, told as a check not executable, with the way out to make the file readable; a missing or malformed file stays a violated condition.
 
 - **A protocol renamed or moved after its first measurement no longer reads as never committed.** The registration station, the binding of the registered report and the comparisons with what a first measurement saw looked the protocol up at its present path in the measurement's commit; after a rename they said "nothing stood before the number" or "ran with the protocol untracked". They now find it in that commit by the id the run is bound to (`protocol_history.protocol_path_at`), as docs/protocol-run-binding.md says a rename keeps the identity. A commit git cannot read is still named as unreadable.

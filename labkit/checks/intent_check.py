@@ -62,7 +62,6 @@ from labkit.formats.answering_run import run_facts
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.scope_sha import (
-    SourceError,
     area_files,
     imported_repo_helpers,
     read_source,
@@ -537,8 +536,9 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     is not yet a reported key. An area file that does not parse keeps its
     literal hits and loses only the keyword half; with a `lib/` or `src/` in
     the repo the import walk needs its syntax tree and raises
-    `scope_sha.SourceError` naming it — code-check and preflight report
-    that as one blocker.
+    `scope_sha.SourceError` naming it, and so does a file that cannot be
+    read at all (`code_keys`) — code-check and preflight report that as one
+    blocker.
     """
     hits: dict[str, list[str]] = {}
     for key, where in code_keys(area).items():
@@ -559,7 +559,10 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     calls), but keeping the whole key: a promise block declares `criterion_1_pass`,
     and `"criterion_1_passed"` in the code answers the id, not the key. Preflight
     holds the block's keys to this, before any run, so a renamed key
-    surfaces before the run rather than after it.
+    surfaces before the run rather than after it. Raises
+    `scope_sha.SourceError` for a file of the area or an imported helper
+    that cannot be read: no key is told as absent from code the search did
+    not see.
     """
     hits: dict[str, list[str]] = {}
     # The imported repo-local code counts as the area's: a shared helper
@@ -572,10 +575,9 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     root = layout_root(area)
     own = area_files(area)
     for path in own + imported_repo_helpers(area, root):
-        try:
-            source = read_source(path)
-        except SourceError:
-            continue
+        # not skipped when it cannot be read: a key the search did not see
+        # would be told as a key the code does not set
+        source = read_source(path)
         for lineno, line in enumerate(source.splitlines(), 1):
             for m in ID_LITERAL.finditer(line):
                 key = (m.group(1) + (m.group(2) or "")).lower()
