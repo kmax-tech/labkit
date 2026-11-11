@@ -4,7 +4,7 @@
 
 The [review of the rule assignments](2026-11-11-rule-assignment-review.md) left 68 finding sites with an open assignment. The author's work order (TODO, "Arbeitsauftrag für die 68 offenen Zuordnungen") asks for each site one of four findings: a technical contract with the contract named, a methodical duty with the sentence of the rule that states it, a methodical duty no decided rule states, or a check without grounds. A site that forwards several causes gets its assignment where the cause is found. An open assignment weakens no gate: every check blocks or warns as before. Two messages changed their wording, no check changed its grade.
 
-State after the split of the mixed sites (`python -m labkit.tools.check_inventory`, 28dd8000): 278 finding sites, 92 with a known rule, 80 technical contracts, 24 open, 20 whose rule the cause passes in. After the first pass (91f9a1c6): 260, 83, 76, 30, 9. Before it: 256, 73, 52, 68, 1. The site count rises where a site that told several causes is one site per cause now. Open causes are counted apart from open sites: `OPEN_RULE` stands 33 times in the package's code outside its definition — at the 24 open sites and at 9 causes a site receives its rule from (counted by hand with `grep`; the inventory does not count them yet).
+State after the split of the mixed sites (`python -m labkit.tools.check_inventory`, 28dd8000): 278 finding sites, 92 with a known rule, 80 technical contracts, 24 open, 20 whose rule the cause passes in. After the first pass (91f9a1c6): 260, 83, 76, 30, 9. Before it: 256, 73, 52, 68, 1. The site count rises where a site that told several causes is one site per cause now. Open causes are counted apart from open sites: `OPEN_RULE` stands 33 times in the package's code outside its definition — at the 24 open sites and at 9 causes a site receives its rule from (the inventory counts both since 7521fda2, table "Open causes a site receives"; the hand count with `grep` before it gave the same 33).
 
 | Finding                                    | Sites of the 68 | State                         |
 |--------------------------------------------|-----------------|-------------------------------|
@@ -141,6 +141,30 @@ How the rule travels: a pure check returns the finding with its rule (`run_recor
 
 Two assignments follow the author's earlier decisions and not a reader's recommendation: an `annotation_validity` id of no protocol, and an arm's missing profile file, are technical contracts as "a reference that leads nowhere" (decided for the dead references of a discussion block).
 
+## Where a site receives its rule: every cause carries an assignment (20 sites)
+
+The inventory reads these sites as `variable`. For each, the table names what hands the rule to the site and why no cause can arrive without one. Read at the code, 7521fda2; the type checker (`pyright`, clean) refuses a `None` where the type is `RuleAssignment`.
+
+| Site                                                                | The rule comes from                                                        | Why it is complete                                                         |
+|---------------------------------------------------------------------|----------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| `labkit/checks/import_check.py:113`                                 | a parameter; its one caller passes LAB-019                                 | one constant                                                               |
+| `labkit/checks/intent_check.py:332`                                 | `promises.BlockDrift.rule`                                                 | a required field; four causes, four values                                 |
+| `labkit/checks/report_blocks.py:310`                                | `report_blocks.BlockSource.rule`                                           | a source without a declared run and without a rule is refused (ValueError) |
+| `labkit/formats/answering_run.py:641`                               | `AnsweringRun.rule`, for an adopted run `cannot_answer_rule`               | a blocker without its rule is refused (ValueError); the function is total  |
+| `labkit/formats/protocol_history.py:412`                            | `protocol_history.NotBound.rule`                                           | a required field; five causes, five values                                 |
+| `labkit/gates/finalize.py:338`, `labkit/gates/report_check.py:522`  | `finalize.UNREPORTABLE_RULES[cause]`                                       | a table over the two causes; a cause it lacks raises KeyError              |
+| `labkit/gates/finalize.py:557`                                      | `data_counts.CountsGap.rule`                                               | a required field; three causes                                             |
+| `labkit/gates/finalize.py:776`                                      | `protocol_check.MustGap.rule` (`kept_gaps`)                                | a required field                                                           |
+| `labkit/gates/preflight.py:334`, `labkit/gates/report_check.py:280` | `protocol_check.MustGap.rule` (`FieldReport.must_gaps`)                    | a required field; nine sources                                             |
+| `labkit/gates/finalize.py:952`, `labkit/gates/preflight.py:256`     | `protocol_check.head_rule(exc)`                                            | total: a head part missing, else a head that does not read                 |
+| `labkit/gates/preflight.py:449`, `:450`                             | a parameter of `_owed`: LAB-015, LAB-016, `audit_gaps.RecordGap.rule`      | two constants and a required field                                         |
+| `labkit/gates/preflight.py:640`                                     | a parameter of `tell_test_run`: LAB-016 at preflight, CODE-003 at finalize | two constants                                                              |
+| `labkit/gates/registered_report.py:183`                             | a local name: open, technical once the report or its blocks do not read    | set before every use                                                       |
+| `labkit/gates/report_hold.py:612`                                   | `report_blocks.unread_rule(exc)`                                           | total: a discussion head lacking a key, else a block that does not read    |
+| `labkit/gates/report_replacement.py:68`, `:123`                     | a condition in the rule argument                                           | two arms each                                                              |
+
+Which cause carries which rule stands in the two sections above ("Entered: the cause names the rule", "Entered: several causes at one site, split by cause"). The inventory cannot show this pairing; it lists the open ones among them.
+
 ## Open: causes the split left without a rule (16)
 
 Nine are finding sites of their own now, seven are causes a site receives (with the two of the field list, nine such causes in the code).
@@ -157,6 +181,13 @@ Nine are finding sites of their own now, seven are causes a site receives (with 
 | the validation protocol is no apply; it has adopted no result (2 causes)                  | `protocol_history.bound_validation`                | `annotation_validity` is not in the standard                                 |
 | a written registered report owes its result or handover block                             | `registered_report.report_owed`                    | LAB-104 states the neighbouring duty, for a report never written             |
 | a `[[replaces.change]]` without its reason                                                | `report_replacement.replacement_gaps`              | LAB-003: "on grounds the new registration states"                            |
+
+What a look at the code and the standard adds to four of these (2026-11-11, after the feedback the author passed on; nothing was entered for it — a nearest sentence closes no assignment):
+
+- **The notes' schema.** LAB-082 says "schema above", and the shipped standard holds no schema of the meta line: it names the meta line at LAB-082, at the sketch-or-settled axis and at LAB-100 Answer before reasoning ("the purpose in the meta line"), nowhere its parts. The author's house rules hold one (`<purpose> · <kind> · reference · <date>`), outside this repo. So the date has a source a lab with labkit alone cannot read; the two other conventions (named scripts resolve, `related-*` matches its kind) have none.
+- **No `outputs.json`.** Four checks read the file and treat its absence as "no output registered" (`output_record_findings`, the row provenance, the audit binding, `recheck`). The warning is the one place that says so. It states that these checks had nothing to hold, a missing basis — not that a run owes an output.
+- **An output not in git.** No check needs it; it is a duty of keeping (the fix says "before the commit that cites the number").
+- **The registered report.** The duty does not start with the file: a report draft before the first measurement owes nothing, and after one a progress account passes (`registered_report.report_owed`). What is held is a written report once a measurement or an adoption exists, without the result block, the handover block or the account.
 
 ## Open: methodical duty no decided rule states (15)
 
