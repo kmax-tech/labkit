@@ -2,7 +2,7 @@
 
 > Review of `00aaeaad`, against the baseline `524b93ce` and the [test-model plan](2026-11-10-test-model.md). The reviewer did not author the migration. Verdict: the review is complete, but target 4 remains open because one removed assertion has no adequate replacement. This review approves neither the open rule assignments nor the undecided second-review policy.
 >
-> Since `29290169` the assertion is restored ([Correction](#correction-2026-11-11)); one related call stays without a test.
+> Since `29290169` the assertion is restored ([Correction](#correction-2026-11-11)); the related second call got its test in `cd615bb5`, and a measurement over the callers of every pure check found and closed one more unheld caller ([below](#the-callers-of-every-pure-check-2026-11-11)).
 
 ## Finding: medium — a removed scenario's replacement misses its caller
 
@@ -38,4 +38,36 @@ A second session repeated the mutation on the whole suite at `00aaeaad`, not onl
 
 `29290169` adds the required test, `tests/test_rules_registration_hold.py::TheReleaseReadsWhichFieldTheRunSawOtherwise`. It passes two protocol texts through `released_fields` and stubs only `resolved_corrections`. A field edited after the run stays held although its correction is resolved; the twin with equal texts releases it; an edit of another field releases it too. Under the mutation the first test fails (1 failed, 2 passed); on the unchanged code all three pass.
 
-Still without a test: `scope_changes` calls `moved_fields` a second time (`labkit/gates/registration_hold.py:284`) and hands the result to `waiting_refs`, which decides whether a hold leads with the follow-up audit as its way out. The same mutation covers that call, and the suite stayed green. The call decides the way out a hold names first, not whether the field is held. A test of it needs `scope_changes` with a first measurement in a repository.
+Closed in `cd615bb5` (`TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands`), at first without a test: `scope_changes` calls `moved_fields` a second time (`labkit/gates/registration_hold.py:284`) and hands the result to `waiting_refs`, which decides whether a hold leads with the follow-up audit as its way out. The same mutation covers that call, and the suite stayed green. The call decides the way out a hold names first, not whether the field is held. A test of it needs `scope_changes` with a first measurement in a repository.
+
+## The callers of every pure check (2026-11-11)
+
+The finding above raised the question whether other callers are unheld in the same way. A second session answered it by measurement at `cd615bb5`. For 16 of the 17 functions the rule tests call under `pure_call`, and for the comparison `moved_fields`, one run of the suite replaced the function's answer by "nothing found" (an empty list, an empty mapping, nothing released, nothing waiting). A call from a file under `tests/` kept the original, so the rule tests stayed what they are; a call from the package got the replacement. A run stopped at its first failing test.
+
+| Function                                                                                            | Result                                          | First failing test                                              |
+|-----------------------------------------------------------------------------------------------------|-------------------------------------------------|-----------------------------------------------------------------|
+| `registration_hold.moved_fields` (the comparison of this review)                                    | survived at `00aaeaad`; killed since `29290169` | `TheReleaseReadsWhichFieldTheRunSawOtherwise`                   |
+| `registration_hold.waiting_refs`                                                                    | killed, by the test `cd615bb5` added            | `TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands`              |
+| `registration_hold.split_released` (keeps every difference)                                         | killed                                          | `TheReleaseReadsWhichFieldTheRunSawOtherwise`                   |
+| `registration_hold.now_hold`                                                                        | killed                                          | `tests/test_unread_registration.py::UnreadFirstMeasurement`     |
+| `registration_hold.description_added`                                                               | killed                                          | `TheWayBackNamesWhatEachFieldHas`                               |
+| `followup.awaited_corrections`                                                                      | killed, in the slow tier only                   | `tests/test_end_to_end.py::CorrectionThenNewRun`                |
+| `followup.released_corrections`                                                                     | killed                                          | `tests/test_unread_registration.py::ReleaseThatCannotBeChecked` |
+| `protocol_history.scope_differences`                                                                | killed                                          | `tests/test_replacement.py::Differences`                        |
+| `audit_prompt.carried_of`                                                                           | killed                                          | `tests/test_audit.py::Carried`                                  |
+| `audit_binding.check_audit_findings_decided`, `check_audit_records_read`, `check_audited_runs_kept` | killed, each                                    | `tests/test_finalize_open_findings.py::OpenFindings`            |
+| `run_record_check.criterion_n_input_mismatches`, `criterion_ns`                                     | killed, each                                    | `tests/test_finalize.py::TestOneRunForEveryStation`             |
+| `run_record_check.output_record_findings`                                                           | killed                                          | `tests/test_deliverable.py::CountDelivers`                      |
+| `run_record_check.source_finding`                                                                   | killed                                          | `tests/test_finalize_provenance.py::Provenance`                 |
+| `run_record_check.null_lane_findings` (every null lane moved)                                       | **survived**; killed since the test below       | `tests/test_finalize_steps.py::NullLaneStation`                 |
+
+One more caller was unheld: finalize's null-lane station. With the check answering that every null lane moved, the fast and the slow tier passed. `tests/test_finalize_steps.py::NullLaneStation` now gives the kept rows and calls the station: an unmoved null lane reaches the findings as a static-evidence warning, a moved one leaves none. The run under the mutant fails at that test.
+
+What the measurement does not show:
+
+- It replaces a check's answer, not its inputs. A caller that computes a wrong input for a check stays unseen unless the function that computes the input is replaced, as `moved_fields` was. The three gate tests added today are the only ones written against that kind of fault.
+- A run stops at its first failure. For `waiting_refs` and `split_released` the first failing test is one added today; whether an older test fails too was not measured.
+- `seen_hold` returns one finding and has no "nothing found" answer; it was not replaced.
+- `awaited_corrections` is held only by a scenario test of the slow tier, so a fault there shows at the push, not at the commit.
+
+The runner was a session script and is not kept in the repository: it set the replacement at interpreter start, so the test process, its workers and the commands a test starts all ran with it.
