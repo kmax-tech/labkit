@@ -29,7 +29,7 @@ class Head(unittest.TestCase):
                 h.preflight_audit,
             ),
             (
-                "0.27",
+                "0.28",
                 PID,
                 "exploratory",
                 "low",
@@ -121,11 +121,11 @@ class Head(unittest.TestCase):
 
     def test_other_standard_names_the_way_out(self):
         self.assertRejects(
-            head().replace('"0.27"', '"0.18"'), "reproduced with the labkit release"
+            head().replace('"0.28"', '"0.18"'), "reproduced with the labkit release"
         )
         # a protocol with runs is never offered the conversion
         self.assertRejects(
-            head().replace('"0.27"', '"0.18"'),
+            head().replace('"0.28"', '"0.18"'),
             "only a protocol not yet run may be updated",
         )
 

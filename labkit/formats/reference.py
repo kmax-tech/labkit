@@ -29,7 +29,7 @@ from __future__ import annotations
 from labkit.formats.commands import register_anew
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import AREA_SLOT
-from labkit.formats.gate import OPEN_RULE, GateFinding, blocker, cited_rule
+from labkit.formats.gate import GateFinding, blocker, cited_rule
 from labkit.formats.protocol_block import (
     AT_LEAST,
     AT_MOST,
@@ -39,6 +39,9 @@ from labkit.formats.protocol_block import (
 )
 from labkit.formats.runs import as_stored
 
+#: the registered comparison of a computation; the checks here reach the
+#: reserved `ref_*` keys only, a comparison under another name is the audit's
+LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
 #: the keys the verdict writes into metrics.json, beside the kept number's
@@ -155,8 +158,8 @@ def comparison_gaps(
     KEY, the kept number's (`[kept] key`; None only without REF), one
     guaranteed blocker each, or []: a `ref_*` key without a registered
     reference (a comparison typed beside the number); a registered
-    reference the run recorded no verdict for (the script does not read
-    the head); a verdict NOT_COMPARABLE — the key absent or no finite
+    reference the run recorded no verdict for (why it is missing is not
+    told); a verdict NOT_COMPARABLE — the key absent or no finite
     number, with the way out: write the key, measure anew; a verdict in
     neither state or with a `ref_met` that is not true or false (written
     beside the number); or a verdict compared against another value,
@@ -176,7 +179,7 @@ def comparison_gaps(
                 "(value, tolerance, relation, source), or drop the keys from "
                 f"evaluate_rows(); then `.venv/bin/python "
                 f"{AREA_SLOT}/scripts/01_measure.py`",
-                rule=OPEN_RULE,
+                rule=LAB_035,
             )
         ]
     assert key is not None, "a registered [reference] compares the [kept] key"
@@ -184,12 +187,12 @@ def comparison_gaps(
         return [
             blocker(
                 f"the head registers [reference] on `{key}`, and the run recorded "
-                f"no verdict (no `{STATE_KEY}` in metrics.json) — the script does "
-                f"not read the head's reference",
+                f"no verdict (no `{STATE_KEY}` in metrics.json) — the registered "
+                f"comparison cannot be shown from this run",
                 fix="write the verdict from the head after evaluate_rows() — the "
                 "compute skeleton's `metrics_of()` does (`reference.with_verdict`) "
                 "— then measure anew and audit that run",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     if metrics[STATE_KEY] == NOT_COMPARABLE:
@@ -235,7 +238,7 @@ def comparison_gaps(
                 f"result was seen does not answer the registered question",
                 fix="restore the [reference] the run compared with, or "
                 + register_anew(per="per change, the [reference] among them"),
-                rule=OPEN_RULE,
+                rule=LAB_035,
             )
         ]
     return []

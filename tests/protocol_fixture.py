@@ -283,7 +283,7 @@ def head(
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.27"',
+        'standard = "0.28"',
         f'id = "{id}"',
         f'type = "{type}"',
         f'repeat_cost = "{repeat_cost}"',

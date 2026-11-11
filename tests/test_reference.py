@@ -422,13 +422,18 @@ class ComparisonGaps(unittest.TestCase):
         )
         self.assertIn("registers no [reference]", gap.text)
         self.assertEqual(gap.evidence_kind, "guaranteed")
+        self.assertEqual(gap.rule, reference.LAB_035)
 
     def test_a_reference_the_run_did_not_compare_blocks(self):
         (gap,) = reference.comparison_gaps(
             ref_of(WITHIN), "lines_mean", {"lines_mean": 3.0}
         )
         self.assertIn("recorded no verdict", gap.text)
+        # only the missing verdict is found, no cause is told
+        self.assertTrue(gap.text.endswith("cannot be shown from this run"), gap.text)
+        self.assertNotIn("script", gap.text)
         self.assertIn("metrics_of()", gap.fix or "")
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
 
     def test_not_comparable_blocks_naming_the_key_and_the_way_out(self):
         ref = ref_of(WITHIN)
@@ -464,6 +469,18 @@ class ComparisonGaps(unittest.TestCase):
         self.assertIn("ref_value = 0.62", gap.text)
         self.assertIn("ref_value = 0.6", gap.text)
         self.assertIn("changed after the run", gap.text)
+        self.assertEqual(gap.rule, reference.LAB_035)
+
+    def test_a_changed_tolerance_or_relation_is_held_like_a_changed_value(self):
+        ref = ref_of(WITHIN)
+        metrics = reference.with_verdict({"lines_mean": 0.625}, ref, "lines_mean")
+        for key in ("ref_tolerance", "ref_relation"):
+            with self.subTest(key=key):
+                (gap,) = reference.comparison_gaps(
+                    ref, "lines_mean", {**metrics, key: "other"}
+                )
+                self.assertIn(f"{key} = 'other'", gap.text)
+                self.assertEqual(gap.rule, reference.LAB_035)
 
 
 class StampedSkeleton(unittest.TestCase):
