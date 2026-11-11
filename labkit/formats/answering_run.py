@@ -601,7 +601,8 @@ class AnsweringRun:
         rule: The rule assignment of `blocker`'s cause, set with it: the
             technical contract where nothing is measured yet, a newer run
             does not read or two runs started in one second; for an adopted
-            run that cannot answer, what `cannot_answer_rule` says.
+            run that cannot answer, what `cannot_answer_rule` says. A
+            blocker without its way out or its rule is refused (ValueError).
         step: The command the way out names, as data (`GateFinding.step`):
             the measurement where no run stands yet.
         adopted: The run is the protocol's `[result] run`, not the newest
@@ -622,6 +623,13 @@ class AnsweringRun:
     adopted: bool = False
     newer_by_name: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        if self.blocker is not None and (self.way_out is None or self.rule is None):
+            raise ValueError(
+                f"a choice that names why no run stands names its way out "
+                f"(way_out) and the rule of its cause (rule): {self.blocker!r}"
+            )
+
     def explain(self, ids_registered: bool) -> tuple[GateFinding | None, list[str]]:
         """(why no run may answer as a BLOCKER with its way out, or None; the
         lines that say what was looked at) — ONE telling for finalize,
@@ -630,13 +638,9 @@ class AnsweringRun:
         reports no intent key while the protocol registers ids is a blocker
         here, everywhere: a probe or producer run is not an answer."""
         if self.run_dir is None:
-            assert (
-                self.blocker is not None
-                and self.way_out is not None
-                and self.rule is not None
-            ), (
-                "bound_answering_run sets a blocker, its way out and its rule "
-                "whenever no run stands"
+            assert self.blocker is not None and self.rule is not None, (
+                "bound_answering_run sets a blocker whenever no run stands, "
+                "and a blocker carries its way out and its rule"
             )
             return GateFinding(
                 BLOCKER,

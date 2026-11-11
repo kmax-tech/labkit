@@ -25,6 +25,14 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
     rule ids the call's strings cite — its own literals, the module
     constants it names, what is assigned to a local name it passes —, a
     citation in the text, not a record
+  - an open cause a site receives is a place the code names `OPEN_RULE`
+    that is not the rule argument of a finding site itself: the value of a
+    cause's record, a table, a function's result, or one arm of a
+    condition in a rule argument. A site whose rule reads `variable` gets
+    its assignment from such a place, so the open sites alone undercount
+    what is open; the count line and the last table name both. What the
+    scan cannot tell: which site receives which cause, and whether every
+    cause of a `variable` site carries an assignment
   - its commands are the console scripts (`[project.scripts]`) whose code
     reaches its function by a static call graph: a call or reference by
     name, through an import or a module alias, a method through `self` or
@@ -49,7 +57,7 @@ import ast
 import re
 import sys
 import tomllib
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -141,6 +149,17 @@ _RULE_CONSTANTS = {
     "TECHNICAL_RULE": TECHNICAL_CONTRACT,
     "NEW_CLASS_RULE": NEW_CLASS,
 }
+
+
+@dataclass(frozen=True)
+class OpenCause:
+    """One place the code names `OPEN_RULE` outside a finding site's own
+    rule argument (`open_causes`): PATH and LINE, and UNIT, the function
+    or method around it, the module's name for code at module level."""
+
+    path: str
+    line: int
+    unit: str
 
 
 @dataclass(frozen=True)
@@ -542,6 +561,60 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
     return out
 
 
+def _names_open_rule(n: ast.AST) -> bool:
+    """Is N the name `OPEN_RULE`, bare or through a module, where it is read?"""
+    if isinstance(n, ast.Name):
+        return n.id == "OPEN_RULE" and isinstance(n.ctx, ast.Load)
+    return isinstance(n, ast.Attribute) and n.attr == "OPEN_RULE"
+
+
+def _site_rule_names(node: ast.AST, skip: set[int]) -> set[int]:
+    """The ids of the `OPEN_RULE` names under the unit NODE that a finding
+    site of it records as its own rule: its rule argument, read through a
+    local name assigned once as `_call_assignment` reads it."""
+    assigned = local_assignments(node)
+    out: set[int] = set()
+    for n in ast.walk(node):
+        kind = site_kind(n, skip)
+        if kind is None or kind[0] != "finding" or not isinstance(n, ast.Call):
+            continue
+        ctor = _constructor(n)
+        expr = _rule_argument(n, ctor) if ctor is not None else None
+        while isinstance(expr, ast.Name) and len(assigned.get(expr.id, [])) == 1:
+            expr = assigned[expr.id][0]
+        if expr is not None and _names_open_rule(expr):
+            out.add(id(expr))
+    return out
+
+
+def open_causes(modules: list[Module]) -> list[OpenCause]:
+    """Every place MODULES name `OPEN_RULE` that is not a finding site's
+    own rule argument, in source order — the open assignments a site
+    receives from its cause. Code at module level counts (a table of
+    rules); an import and the constant's definition name no cause."""
+    out: list[OpenCause] = []
+    for m in modules:
+        skip = docstring_nodes(m.tree)
+        at_site: set[int] = set()
+        unit_of: dict[int, str] = {}
+        for unit, node in units(m).items():
+            if isinstance(node, ast.ClassDef):
+                continue
+            if unit not in CONSTRUCTOR_UNITS:
+                at_site |= _site_rule_names(node, skip)
+            for n in ast.walk(node):
+                unit_of[id(n)] = unit
+        out += sorted(
+            (
+                OpenCause(m.path, n.lineno, unit_of.get(id(n), m.name))  # type: ignore[attr-defined] — a name has a line
+                for n in ast.walk(m.tree)
+                if _names_open_rule(n) and id(n) not in at_site
+            ),
+            key=lambda c: c.line,
+        )
+    return out
+
+
 @dataclass(frozen=True)
 class _Scope:
     """What a name in one unit can resolve to (`call_graph`)."""
@@ -670,9 +743,13 @@ def rule_uses(
 
 
 def render_inventory(
-    sites: list[FindingSite], uses: list[RuleUse], commands: dict[str, set[str]]
+    sites: list[FindingSite],
+    uses: list[RuleUse],
+    commands: dict[str, set[str]],
+    causes: list[OpenCause],
 ) -> str:
-    """The inventory as markdown: a count line, the rules, the sites."""
+    """The inventory as markdown: a count line, the rules, the sites, the
+    open causes a site receives (CAUSES)."""
 
     def cmds(unit: str) -> str:
         return ", ".join(sorted(commands.get(unit, set()))) or "—"
@@ -681,6 +758,7 @@ def render_inventory(
         return unit.removeprefix("labkit.")
 
     cited = sum(1 for s in sites if RULE_ID.fullmatch(s.assignment))
+    by_kind = Counter(s.assignment for s in sites)
     held = [u for u in uses if u.sites]
     lines = [
         "# Check inventory",
@@ -688,6 +766,13 @@ def render_inventory(
         f"{len(sites)} finding sites, {cited} of them record a rule as data "
         f"(`GateFinding.rule`); {len(held)} of {len(uses)} active rules are "
         "recorded by a finding site. "
+        f"Of the others: {by_kind[TECHNICAL_CONTRACT]} a technical contract, "
+        f"{by_kind[OPEN_ASSIGNMENT]} an open assignment, {by_kind[NEW_CLASS]} a "
+        f"new class, {by_kind['variable']} a rule the cause passes in "
+        f"(`variable`), {by_kind[NOT_RECORDED]} none. Open assignments in all: "
+        f"{by_kind[OPEN_ASSIGNMENT] + len(causes)} — at the "
+        f"{by_kind[OPEN_ASSIGNMENT]} open sites and at {len(causes)} causes a "
+        "site receives (last table). "
         "Read from the source, not run: `python -m labkit.tools.check_inventory` "
         "(its docstring says what counts and how far the estimate reaches).",
         "",
@@ -715,6 +800,14 @@ def render_inventory(
             f"| {s.evidence_kind} | {s.assignment} | {', '.join(s.rules) or '—'} | {cmds(s.unit)} "
             f"| {s.wording} |"
         )
+    lines += [
+        "",
+        "## Open causes a site receives",
+        "",
+        "| Place | Function |",
+        "|---|---|",
+        *(f"| `{c.path}:{c.line}` | `{short_unit(c.unit)}` |" for c in causes),
+    ]
     return "\n".join(lines) + "\n"
 
 
@@ -736,7 +829,12 @@ def inventory(package_dir: Path) -> str:
     }
     pyproject = (package_dir.parent / "pyproject.toml").read_text(encoding="utf-8")
     commands = reaching_commands(call_graph(modules), entry_points(pyproject))
-    return render_inventory(sites, rule_uses(ledger, sites, modules, shipped), commands)
+    return render_inventory(
+        sites,
+        rule_uses(ledger, sites, modules, shipped),
+        commands,
+        open_causes(modules),
+    )
 
 
 def render_audit_rules(

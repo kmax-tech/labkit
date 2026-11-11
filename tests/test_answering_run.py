@@ -327,6 +327,9 @@ class Explain(unittest.TestCase):
             ),
         )
         self.assertEqual(blocker.rule, TECHNICAL_RULE)  # the choice's, as given
+        # a cause without its rule cannot reach a gate
+        with self.assertRaises(ValueError):
+            answering_run.AnsweringRun(None, 0, (), "no run", way_out="measure")
 
     def test_an_adopted_run_that_cannot_answer_names_the_rule_of_its_cause(self):
         def left_out(state: runs.RunState, repeat_of: str | None = None) -> RunFacts:

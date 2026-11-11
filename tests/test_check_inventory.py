@@ -141,6 +141,50 @@ class RecordedRule(unittest.TestCase):
             ],
         )
 
+    def test_an_open_cause_is_every_open_rule_no_site_records_itself(self) -> None:
+        causes = module(
+            "labkit.checks.causes",
+            """
+            from labkit.formats import gate
+            from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+
+            RULES = {"unfrozen": OPEN_RULE}
+
+
+            def gap(recorded):
+                if recorded is None:
+                    return ("no block", OPEN_RULE)
+                return ("old digest", TECHNICAL_RULE)
+
+
+            def told(out, exc, why):
+                out.block("open site", fix="x", rule=OPEN_RULE)
+                held = gate.OPEN_RULE
+                out.block("open through a local name", fix="x", rule=held)
+                out.block("one arm", fix="x", rule=OPEN_RULE if exc else TECHNICAL_RULE)
+                out.block("passed", fix="x", rule=why.rule)
+            """,
+        )
+        self.assertEqual(
+            [(c.line, c.unit) for c in inv.open_causes([causes])],
+            [
+                (5, "labkit.checks.causes"),  # a table at module level
+                (10, "labkit.checks.causes.gap"),  # a cause's value
+                (18, "labkit.checks.causes.told"),  # one arm of a condition
+            ],
+        )
+        # the twin: the two open sites are sites, not causes
+        sites = inv.finding_sites([causes])
+        self.assertEqual(
+            [s.assignment for s in sites],
+            [gate.OPEN_ASSIGNMENT, gate.OPEN_ASSIGNMENT, "variable", "variable"],
+        )
+        text = inv.render_inventory(sites, [], {}, inv.open_causes([causes]))
+        self.assertIn(
+            "Open assignments in all: 5 — at the 2 open sites and at 3 causes", text
+        )
+        self.assertIn("| `labkit/checks/causes.py:10` | `checks.causes.gap` |", text)
+
     def test_a_rule_only_cited_in_the_message_is_not_recorded(self) -> None:
         (s,) = [
             s for s in inv.finding_sites([CHECKS]) if s.unit.endswith(".freeze_gap")
