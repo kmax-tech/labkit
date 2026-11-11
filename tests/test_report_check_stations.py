@@ -95,5 +95,26 @@ class AnAnsweringRunWithoutItsRecord(unittest.TestCase):
         )
 
 
+class AReportedNumberOwesTheFreeze(unittest.TestCase):
+    """`freeze_gaps`: a protocol whose reported run required the freeze
+    still carries `frozen = true` (LAB-104 A number leaves the area only
+    through its adoption)."""
+
+    def _unfrozen(self, frozen: bool):
+        ctx = checked(head(repeat_cost="high", frozen=frozen), run=None)
+        return [
+            gap
+            for gap in report_check.freeze_gaps(ctx, repeated=False)
+            if "not `frozen = true`" in gap.text
+        ]
+
+    def test_a_head_without_the_flag_is_held_by_the_adoption_rule(self):
+        (gap,) = self._unfrozen(False)
+        self.assertEqual((gap.grade, gap.rule), (BLOCKER, report_check.LAB_104))
+
+    def test_the_twin_a_frozen_head_is_not_held_for_the_flag(self):
+        self.assertEqual(self._unfrozen(True), [])
+
+
 if __name__ == "__main__":
     unittest.main()

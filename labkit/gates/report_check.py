@@ -94,7 +94,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats import commands
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE
 from labkit.formats.runs import NO_GIT, RunDir
 from labkit.formats.gate import (
@@ -210,6 +210,7 @@ LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
+LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 #: how long `--check` may take inside the gate
@@ -271,7 +272,7 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
                 f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
                 f"then `{freeze_command(ctx.protocol)}`",
                 step=freeze_command(ctx.protocol),
-                rule=OPEN_RULE,
+                rule=LAB_104,
             )
         ]
     )
