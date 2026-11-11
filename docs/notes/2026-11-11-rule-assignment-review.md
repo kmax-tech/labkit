@@ -246,3 +246,28 @@ The readings: a report written and then removed is not "never written" — the c
 
 Items 1 to 5 change which rule a finding records or what one message says; no check blocks more or less. Item 7 would change what a hint lists. Open without a change: `kind` and `[kept]` in the scope hold.
 
+### The change list worked through, and what stays unclear
+
+*Decided by the author on 2026-11-11: items 1 to 5 built, item 6 tested before its assignment closes, item 7 taken out of the hint. With this the round on the reasons ends; the fields that stay open stay open.*
+
+| #   | Outcome                                                                                                                                                                                                                                                                            | Commit   |
+|-----|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| 1   | a claim that holds a report records LAB-015; no clean review stays LAB-104; lost evidence the technical contract — each cause tested with its sentence                                                                                                                             | 2caf7333 |
+| 2   | a registered report a commit held is told "written and is gone" and records the open assignment, in the tree, at the commit and after a commit that removed it (`repo.ever_committed` reads the history); never committed stays "not written" under LAB-104                        | a512dbfe |
+| 3   | a registration hold with a changed declared scope records the open assignment (`registration_rule`)                                                                                                                                                                                | 6a4cab6b |
+| 4   | the Recorded results line that differs records the technical contract for the whole line                                                                                                                                                                                           | 166ff504 |
+| 5   | **no change.** The case does not occur as the second pass read it: at the commit an unstaged review record is a difference between tree and index, and `staged_area_gap` blocks first, names the file and stages the area (`tests/test_report_blocks.py`, "its record not staged") | —        |
+| 6   | the successor way is walked for `[reference]` (`tests/test_replacement.py`, `AChangedComparison`); a hold whose only difference is the comparison records LAB-035                                                                                                                  | 443c780b |
+| 7   | the hint beside a discussed run no longer counts the block's own lines                                                                                                                                                                                                             | a226b732 |
+
+Inventory after these: 278 finding sites, 84 with a rule, 89 a technical contract, 16 open, 27 a rule the cause passes in; open assignments in all 31. The open count rose because causes that were closed under a rule whose text does not state them are now told as open.
+
+What stays unclear, kept here and not worked on:
+
+1. **The duty behind a removed registered report.** The hold stands and claims no rule. Stating the duty ("a registered report stays delivered") is a change of the standard, the author's.
+2. **A declared scope changed after the first measurement.** No rule names it; which duty binds a promise's declared scope is open.
+3. **`kind` and `[kept]` in the scope hold.** Open by the widened measure too.
+4. **A hold that would owe two rules.** A comparison changed together with a field records the open assignment, because one finding records one rule (`scope_rule`). It is no gap in the rules; the data model has no place for two.
+5. **Limits of what was shown.** Item 2: a report written and removed without a commit in between leaves no trace and reads "not written"; in a shallow clone whose history does not show the report, no rule is claimed. Item 5: a review record git ignores is seen by neither `staged_area_gap` nor the commit's filter and would read "has no clean report review"; not reproduced. Item 6: the test walks the replacement station, not the whole of report-check for the successor.
+6. **The table's reading is one reader's.** The per-cause table above was not checked independently.
+
