@@ -42,7 +42,8 @@ from labkit.gates.registration_hold import (
     split_released,
     waiting_refs,
 )
-from state_fixture import AREA, area_evidence, audit_record
+from labkit.formats.area_state import Measured
+from state_fixture import AREA, area_evidence, area_state, audit_record
 
 pytestmark = pytest.mark.rule
 
@@ -321,6 +322,67 @@ SCOPE = [("Data / scope", "data/raw/docs, 4 documents", "data/raw/docs, 3 docume
 QUESTION = [("Question / hypothesis", "the mean?", "the median?")]
 REF = f"{AUDITED}#1"
 PID = "p-0123456789abcdef"
+
+
+class TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands(unittest.TestCase):
+    """`_scope_held`, the hold of the answering run's text: what the gate
+    adds to `waiting_refs` — it tells which field was edited after the run
+    (`moved_fields`), and for that field no follow-up leads the way out,
+    since no verdict on today's text covers the run. What the run saw, the
+    difference to the first measurement and the decided correction are
+    given; their readers open the repository and the records."""
+
+    LEADS = "the follow-up analysis audit on r2 "
+
+    def fix(self, text: str) -> str:
+        state = area_state(
+            protocols=[PROTOCOL], protocol_texts={PROTOCOL.resolve(): text}
+        )
+        history = registration_hold.protocol_history
+        with (
+            mock.patch.object(registration_hold, "read_run_dir"),
+            mock.patch.object(history, "as_measured", return_value=(TEXT, "")),
+            mock.patch.object(
+                history, "first_measured_differences", return_value=(None, SCOPE)
+            ),
+            mock.patch.object(
+                registration_hold, "resolved_corrections", return_value={}
+            ),
+            mock.patch.object(
+                registration_hold,
+                "awaiting_followup",
+                return_value={"data / scope": REF},
+            ),
+            mock.patch.object(
+                registration_hold, "first_measurement", return_value=FIRST
+            ),
+        ):
+            (f,) = registration_hold._scope_held(
+                AREA,
+                PROTOCOL,
+                PID,
+                AREA / "runs" / "r2",
+                None,
+                [mock.sentinel.first_measurement],
+                Measured(AREA, PID, (), (), (), ()),
+                state,
+                area_evidence(),
+            )
+        assert f.fix is not None
+        return f.fix
+
+    def test_a_field_edited_after_the_run_saw_it_gets_no_follow_up_first(self):
+        edited = TEXT.replace("read directly", "read through the loader")
+        self.assertNotEqual(edited, TEXT)
+        self.assertFalse(self.fix(edited).startswith(self.LEADS), self.fix(edited))
+
+    def test_the_twin_a_field_that_reads_as_the_run_saw_it_leads_with_it(self):
+        self.assertTrue(self.fix(TEXT).startswith(self.LEADS), self.fix(TEXT))
+
+    def test_another_field_edited_after_the_run_changes_nothing_for_this_one(self):
+        edited = TEXT.replace("one document of", "one text document of")
+        self.assertNotEqual(edited, TEXT)
+        self.assertTrue(self.fix(edited).startswith(self.LEADS), self.fix(edited))
 
 
 class TheHoldAsTheRunSawIt(unittest.TestCase):
