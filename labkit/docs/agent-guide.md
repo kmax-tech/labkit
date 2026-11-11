@@ -145,7 +145,7 @@ After you change an audit decision, run `protocol-fill <PROTOCOL> --render`. The
 
 To discuss a run without adoption, run `protocol-fill <PROTOCOL> --discuss
 <run_id> --why "<what refused adoption, what you found>" --into
-REPORT.md`. Say that the question stays open. In a report the head does not register, a discussion owes `labkit-audit <area> --report-review REPORT.md` of the finished report, in this order:
+REPORT.md`. Say that the question stays open. A report holds one discussion block per protocol and run: the command rewrites that block, and a second one is refused. In a report the head does not register, a discussion owes `labkit-audit <area> --report-review REPORT.md` of the finished report, in this order:
 
 1. Write the whole report.
 2. Run `--discuss`.

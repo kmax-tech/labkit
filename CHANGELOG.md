@@ -330,6 +330,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **An analysis check that does not end is a check not executed.** When `02_analyze.py --check` does not end within its time, report-check told it as a failed check under LAB-041 Generate numbers, don't retype them. Nothing was found: the blocker now reads `BLOCKER (check not executed)` and says so (`report_check.CheckUnfinished`); the release waits as before.
+
+- **A helper that cannot be compared says what is shown.** A module the script imports that is in neither the run's commit nor its `uncommitted.patch` blocked with "what the run imported is not recorded". The blocker now says that the file cannot be compared with what the run imported, and that the record tells neither why nor whether the run used it.
+
 - **One cause, one blocker for a missing analysis audit.** When no analysis record covers the state reported, report-check named the missing audit once and then again for every earlier decided BLOCKER whose only missing step was that same follow-up audit ("never followed up", "followed up in …, which no longer covers this state"). The analysis gap is now the one blocker; such holds appear once an audit covers the state. A hold that owes more — a required check the run lacks — stays.
 
 - **The endpoint lease refuses only on a declared model slot.** `models.toml` names the endpoints that are one model slot each (`[model_slots] exclusive = ["gamma1", …]`, names from `[endpoints]` or URLs; `llm.exclusive_slots`, fixed per process). Exclusivity belongs to the canonical URL (`endpoint_lease.canonical_endpoint`), so two names for one URL cannot disagree. On a declared slot a second alias is refused as before; an undeclared endpoint is leased — the record says who uses it — and refuses nobody. The URL form of `[endpoints]` is unchanged. LAB-028's text and a dated Change in the standard say so.

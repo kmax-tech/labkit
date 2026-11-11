@@ -56,6 +56,12 @@ help in the template.
 - Keep the labels in English, exactly as stamped, because `protocol-check`
   reads them. Write the values in German or English, one language per
   protocol.
+- Write a field once. Every field the registration or an audit record
+  binds stands once, and so does a generated line (`Recorded results`, a
+  `Limitation (audit …)` line): readers and writers find a field by its
+  label and must find exactly one. A second copy is refused, with equal
+  wording too. A label that varies by design may repeat (one `Prompt` per
+  variant).
 - `→ LAB-nnn <name>` points to a rule of the lab standard.
   `python -m labkit.formats.rules show LAB-nnn` prints the rule and its
   reasons.
