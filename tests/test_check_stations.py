@@ -163,7 +163,7 @@ class AProtocolIdChangedAgainstHead(unittest.TestCase):
 
     def test_a_changed_id_warns(self):
         (f,) = self._found("p-ffffffffffffffff")
-        self.assertEqual((f.grade, f.rule), (WARNING, OPEN_RULE))
+        self.assertEqual((f.grade, f.rule), (WARNING, TECHNICAL_RULE))
         self.assertIn(
             "protocol id changed against HEAD (p-ffffffffffffffff -> ", f.text
         )

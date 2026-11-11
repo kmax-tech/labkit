@@ -20,7 +20,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
 from labkit.checks.report_blocks import discuss_command
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
@@ -168,7 +168,7 @@ def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
         fix=f"`{step}` stages the whole area ({len(differs)} file(s), listed "
         "above); stash what the commit must not hold",
         step=step,
-        rule=OPEN_RULE,
+        rule=TECHNICAL_RULE,
     )
 
 
@@ -652,7 +652,7 @@ def link_gap(
         f"at its own path, never through a link: the file a link points to can "
         f"lie where no report is held (under runs/ or data/, outside the repo)",
         fix=f"put the file in its place: `{' && '.join(steps)}`",
-        rule=OPEN_RULE,
+        rule=TECHNICAL_RULE,
     )
 
 
@@ -1030,7 +1030,7 @@ def undeclared_findings(
                     f"adoption (`labkit-adopt`) wrote is not staged",
                     fix=f"`git add {named}` stages the protocol with its "
                     f"adoption; commit the report and the protocol together",
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
             continue

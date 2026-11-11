@@ -180,9 +180,12 @@ from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
 
+CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
+LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
+LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
 LAB_103 = cited_rule("LAB-103 The audit reads by declared scope, not by import graph")
 
 
@@ -207,7 +210,7 @@ def choose_answering_run(
             "no stamped protocol id ([protocol] id) — no run is bound to it",
             fix="stamp the area with `labkit-init exp <name> --kind …`, which "
             "writes a fresh id, and carry the protocol's text over",
-            rule=OPEN_RULE,
+            rule=LAB_043,
         )
         return None
     choice, blocker, lines = state.measured_of(pid).told(text)
@@ -449,7 +452,7 @@ def check_declared_scopes(
             f"answer; reproduce it with the labkit version its repo pins",
             fix=f"a block added after the run is a new registration: "
             f"{register_anew(per='per change, the promise block among them')}",
-            rule=OPEN_RULE,
+            rule=LAB_004,
         )
         return
     drift = promises.scope_drift(recorded, area)
@@ -482,7 +485,8 @@ def check_open_fields(
     state: AreaState,
 ) -> None:
     """Station 5: fields of the protocol still empty or a placeholder, and
-    the README's route block (CODE-016)."""
+    the README's placeholders and route block (CODE-016 The experiment area
+    reconstructs itself)."""
     holes = open_holes(text, head)
     for lineno, label in holes:
         findings.warn(
@@ -503,7 +507,7 @@ def check_open_fields(
         findings.warn(
             f"{line} — a stamped placeholder, fill or delete the line",
             evidence_kind=STATIC_EVIDENCE,
-            rule=OPEN_RULE,
+            rule=CODE_016,
         )
     try:
         route = readme_route(protocol.parent, protocol.name)
@@ -512,7 +516,7 @@ def check_open_fields(
         route = [str(exc)]
     else:
         for line in route:
-            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+            findings.warn(line, evidence_kind=GUARANTEED, rule=CODE_016)
     counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")
@@ -917,7 +921,7 @@ def finalize_area(
         if console_output:
             console.refuse("finalize", str(exc))
         else:
-            findings.block(str(exc), fix=PROTOCOL_NAMED, rule=OPEN_RULE)
+            findings.block(str(exc), fix=PROTOCOL_NAMED, rule=TECHNICAL_RULE)
         return 2
     state, held = _inputs(area, state, held)
     text = state.text_of(chosen)

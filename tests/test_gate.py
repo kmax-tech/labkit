@@ -393,8 +393,22 @@ class ARuleAssignmentIsData(unittest.TestCase):
         )
         self.assertEqual(r.line_part, self.RULE)
 
+    def test_a_rule_of_the_code_standard_is_cited_the_same_way(self):
+        r = gate.cited_rule("CODE-003 Test the functions that produce numbers")
+        self.assertEqual(
+            (r.kind, r.rule_id, r.name),
+            (gate.KNOWN_RULE, "CODE-003", "Test the functions that produce numbers"),
+        )
+
     def test_a_cited_rule_without_its_name_or_of_another_shape_is_refused(self):
-        for bad in ("LAB-043", "LAB-43 Runs go", "lab-043 Runs go", "§2.D4 Runs go"):
+        for bad in (
+            "LAB-043",
+            "LAB-43 Runs go",
+            "lab-043 Runs go",
+            "§2.D4 Runs go",
+            "CODE-003",
+            "LOCAL-081 Bindungstest",
+        ):
             with self.subTest(bad), self.assertRaises(ValueError):
                 gate.cited_rule(bad)
 

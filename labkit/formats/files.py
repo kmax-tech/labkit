@@ -62,9 +62,9 @@ def write_atomic(path: Path, text: str) -> None:
     a protocol `labkit-init` promotes or restamps and the stamp files it
     writes go through it; the run index is appended under its lock
     instead. Staged beside the target, not outside its directory
-    (CODE-013): the same filesystem is certain there, and every reader asks
-    for a record by name or lists directories — a `.config.json.tmp<pid>`
-    next to it is never read as one. An existing file keeps its mode, one
+    (CODE-013 Publish state atomically): the same filesystem is certain
+    there, and every reader asks for a record by name or lists directories
+    — a `.config.json.tmp<pid>` next to it is never read as one. An existing file keeps its mode, one
     not writable is refused as a write in place would be (PermissionError),
     and a failed write leaves no temp file. A symlink at `path` is replaced
     by the file, not written through."""

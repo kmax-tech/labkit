@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 #: files a reader takes as current; CHANGELOG.md and docs/usability/ are records
 #: and keep the names they were written with, docs/coding-style.md is a vendored copy
+#: the code standard whose heads name the CODE rules (the vendored copy)
+CODE_STANDARD = ROOT / "docs" / "coding-style.md"
 LIVING = (
     sorted((ROOT / "labkit").rglob("*.py"))
     + sorted((ROOT / "labkit").rglob("*.md"))
@@ -59,6 +61,27 @@ class ShippedStandard(unittest.TestCase):
 
     def test_every_living_reference_resolves_and_names_its_rule(self) -> None:
         rows = rules.load_ledger(rules.LEDGER)
+        problems = []
+        for path in LIVING:
+            problems += rules.check_refs(
+                str(path.relative_to(ROOT)), path.read_text(encoding="utf-8"), rows
+            )
+        self.assertEqual(problems, [])
+
+    def test_every_living_reference_to_the_code_standard_names_its_rule(self) -> None:
+        # labkit's ledger keeps no CODE id, so the references above pass
+        # unread; here they are held to the heads of the code standard —
+        # among them every rule a finding site records (`gate.cited_rule`)
+        heads = rules.rule_heads(CODE_STANDARD.read_text(encoding="utf-8"))
+        rows = [
+            RuleRow(h.id, "", h.title, "active")
+            for h in heads
+            if h.id.startswith("CODE-")
+        ]
+        self.assertIn(
+            ("CODE-003", "Test the functions that produce numbers"),
+            [(r.id, r.title) for r in rows],
+        )
         problems = []
         for path in LIVING:
             problems += rules.check_refs(

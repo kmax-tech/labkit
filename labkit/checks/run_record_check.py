@@ -89,6 +89,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import gate_command, measure_anew
 
+LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_057 = cited_rule("LAB-057 One area per idea")
@@ -684,8 +685,9 @@ def source_finding(
     ignore it — held by the checksum alone, its source or access route
     owed in Data / scope —, or the ignore rule that keeps it out. Other
     bytes than the run read break LAB-041 Generate numbers, don't retype
-    them (a run freezes its data sources); the rule of the other two is not
-    decided yet (OPEN_RULE)."""
+    them (a run freezes its data sources), a source no ignore rule keeps out
+    of git LAB-017 The number of audits follows the cost tier; the rule of a
+    gone source is not decided yet (OPEN_RULE)."""
     if source.kind is None:
         return _gone(source.path, area), None
     if source.loose:
@@ -787,7 +789,7 @@ def _untracked_source(source: SourceNow) -> GateFinding:
         f"it (a `.gitignore` or `.git/info/exclude`) and its source or access "
         f"route and version in the protocol's Data / scope — finalize then holds "
         f"it to the checksum this run recorded, `sha256 {sha}`",
-        rule=OPEN_RULE,
+        rule=LAB_017,
     )
 
 

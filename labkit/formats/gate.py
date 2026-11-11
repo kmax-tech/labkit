@@ -124,25 +124,29 @@ OPEN_ASSIGNMENT = "open assignment"
 TECHNICAL_CONTRACT = "technical contract"
 NEW_CLASS = "new class"
 RULE_KINDS = (KNOWN_RULE, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT, NEW_CLASS)
-#: how a cited rule reads: `LAB-nnn <its name>`
-_CITED_RULE = re.compile(r"^(LAB-\d{3}) (\S.*)$")
+#: a rule id a finding site records: a rule of the lab standard (`LAB-nnn`) or
+#: of the code standard (`CODE-nnn`, docs/coding-style.md)
+_RULE_ID = r"(?:LAB|CODE)-\d{3}"
+#: how a cited rule reads: `LAB-nnn <its name>`, `CODE-nnn <its name>`
+_CITED_RULE = re.compile(rf"^({_RULE_ID}) (\S.*)$")
 
 
 @dataclass(frozen=True)
 class RuleAssignment:
-    """Which rule of the standard a finding holds, as data: KIND, one of
-    RULE_KINDS; for a KNOWN_RULE its RULE_ID (`LAB-nnn`) and NAME as cited,
+    """Which rule a finding holds, as data: KIND, one of RULE_KINDS; for a
+    KNOWN_RULE its RULE_ID (`LAB-nnn` of the lab standard, `CODE-nnn` of the
+    code standard) and NAME as cited,
     for every other kind neither — an open assignment names no rule, not
     even a proposed one, and recording it decides nothing. Raises ValueError
     for another kind, a malformed id, a known rule without its name, or an
-    id beside another kind. Whether the id and the name are the ledger's
-    active rule is held over the source, where they are written
-    (`rules.check_refs`, `tests/test_rules.py`): this module is core and
-    reads no ledger.
+    id beside another kind. Whether the id and the name are an active rule
+    of the ledger, or a head of the code standard, is held over the source,
+    where they are written (`rules.check_refs`, `tests/test_rules.py`): this
+    module is core and reads neither.
 
     Attributes:
         kind: KNOWN_RULE, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT or NEW_CLASS.
-        rule_id: `LAB-nnn` for KNOWN_RULE, else None.
+        rule_id: `LAB-nnn` or `CODE-nnn` for KNOWN_RULE, else None.
         name: The rule's name as cited for KNOWN_RULE, else None.
     """
 
@@ -156,9 +160,10 @@ class RuleAssignment:
                 f"a rule assignment is one of {RULE_KINDS}, not {self.kind!r}"
             )
         if self.kind == KNOWN_RULE:
-            if self.rule_id is None or not re.fullmatch(r"LAB-\d{3}", self.rule_id):
+            if self.rule_id is None or not re.fullmatch(_RULE_ID, self.rule_id):
                 raise ValueError(
-                    f"a known rule carries its id `LAB-nnn`, not {self.rule_id!r}"
+                    f"a known rule carries its id `LAB-nnn` or `CODE-nnn`, not "
+                    f"{self.rule_id!r}"
                 )
             if not (self.name or "").strip():
                 raise ValueError(f"a known rule carries its name: {self.rule_id}")
@@ -181,11 +186,14 @@ class RuleAssignment:
 
 def cited_rule(rule: str) -> RuleAssignment:
     """The KNOWN_RULE assignment of RULE as a site cites it, `LAB-nnn <its
-    name>` — the spelling `rules.check_refs` holds to the ledger. Raises
+    name>` or `CODE-nnn <its name>` — the spelling `rules.check_refs` holds to the ledger. Raises
     ValueError for any other shape."""
     m = _CITED_RULE.match(rule)
     if m is None:
-        raise ValueError(f"a cited rule reads `LAB-nnn <its name>`, not {rule!r}")
+        raise ValueError(
+            f"a cited rule reads `LAB-nnn <its name>` or `CODE-nnn <its name>`, "
+            f"not {rule!r}"
+        )
     return RuleAssignment(KNOWN_RULE, m.group(1), m.group(2))
 
 

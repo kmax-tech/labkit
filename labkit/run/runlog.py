@@ -535,7 +535,8 @@ class Run:
             "config": self._config,
         }
         # whole or not at all, like every record file: a listing reading
-        # config.json mid-write would see a damaged run (CODE-013)
+        # config.json mid-write would see a damaged run (CODE-013 Publish
+        # state atomically)
         write_atomic(
             self.dir / CONFIG_FILE, json.dumps(frozen, ensure_ascii=False, indent=2)
         )

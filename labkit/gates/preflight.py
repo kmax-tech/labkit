@@ -111,6 +111,7 @@ from labkit.formats.protocol_history import (
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
 
+CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_011 = cited_rule("LAB-011 Required-field check")
@@ -633,7 +634,7 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
             f"`.venv/bin/python -m pytest {files}` passes",
-            rule=OPEN_RULE,
+            rule=CODE_003,
         )
 
 

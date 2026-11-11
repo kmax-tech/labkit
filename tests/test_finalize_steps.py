@@ -407,7 +407,7 @@ class AHeadWithoutAProtocolId(unittest.TestCase):
         (f,) = found.found
         self.assertTrue(f.text.startswith("no stamped protocol id ([protocol] id)"))
         self.assertIn("labkit-init exp", f.fix or "")
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(f.rule, cited_rule("LAB-043 Runs go through `runlog`"))
 
     def test_the_twin_a_stamped_id_goes_on_to_the_choice(self):
         # nothing bound to the id: the choice's own blocker, not this one
@@ -475,7 +475,12 @@ class AreaTestsTold(unittest.TestCase):
     def test_failing_tests_block_naming_the_counts(self):
         (f,) = self._told("failed", ["FAILED test_x", "1 failed in 0.1s"]).found
         self.assertEqual(
-            (f.grade, f.check_outcome, f.rule), ("BLOCKER", VIOLATED, OPEN_RULE)
+            (f.grade, f.check_outcome, f.rule),
+            (
+                "BLOCKER",
+                VIOLATED,
+                cited_rule("CODE-003 Test the functions that produce numbers"),
+            ),
         )
         self.assertIn(
             "test_01_x.py failed (1 failed in 0.1s) — evaluate() lost its check", f.text

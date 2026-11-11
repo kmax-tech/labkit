@@ -436,7 +436,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"no answering run to hold it to — {ctx.why}",
             fix=f"measure: `{measure_command(ctx.area)}`, then audit that run",
             step=measure_command(ctx.area),
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     try:
         gap = audit_gaps.audit_coverage(
@@ -645,7 +645,7 @@ def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
             f"({pending_adoption(ctx.protocol).name} keeps it as it was before)",
             fix=f"`{adopt_command(ctx.protocol)}` puts it back first and adopts again",
             step=adopt_command(ctx.protocol),
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     ]
 

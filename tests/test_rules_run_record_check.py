@@ -37,6 +37,8 @@ pytestmark = pytest.mark.rule
 ITEMS = DataEntry("items", "data/items.jsonl", "ab", 12)
 ROWS = OutputEntry(Path("out.jsonl"), "cd", 12)
 
+LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
+
 
 class ACriterionDenominatorIsAnInputCount(unittest.TestCase):
     """A `criterion_<i>_n` that matches no input count the run recorded is a
@@ -202,14 +204,14 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
         self.assertIn("git checkout HEAD -- data/items.jsonl", f.fix or "")
 
     def test_an_untracked_file_blocks_though_its_bytes_match(self):
-        f = self._blocker(kind="file", loose=(self.SOURCE,), untracked=True)
+        f = self._blocker(LAB_017, kind="file", loose=(self.SOURCE,), untracked=True)
         self.assertIn("neither tracked in git nor ignored by a rule", f.text)
         self.assertIn("git add data/items.jsonl", f.fix or "")
         self.assertIn("sha256 ab12", f.fix or "")
 
     def test_an_untracked_directory_names_its_loose_files(self):
         loose = tuple(Path("data/d") / f"{n}.txt" for n in "abcd")
-        f = self._blocker(kind="dir", loose=loose, untracked=True)
+        f = self._blocker(LAB_017, kind="dir", loose=loose, untracked=True)
         self.assertIn("4 file(s) under it", f.text)
         self.assertIn(", …", f.text)
         self.assertIn(

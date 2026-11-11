@@ -361,7 +361,7 @@ class TheProtocolStepEndsEarly(unittest.TestCase):
             code, collected = self._collected(area)
         self.assertEqual(code, 2)
         (f,) = collected.found
-        self.assertEqual(f.rule, gate.OPEN_RULE)
+        self.assertEqual(f.rule, gate.TECHNICAL_RULE)
 
     def test_the_twin_a_readable_head_goes_past_step_0(self):
         with tempfile.TemporaryDirectory() as d:
