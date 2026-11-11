@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1 to 4 are built. Step 4 reviewed all 13 scenario files test by test (one row each in the [scenario review](2026-11-10-scenario-review.tsv)): 41 tests removed, each assertion with its named replacement, 66 moved to the fast tier, 378 kept; the correction conditions of `registration_hold` became rule tests first. Measured alternately, the slow tier fell from about 251 s to 220 s, the fast tier stayed at about 92 s ([before and after](#4-reduce-scenario-variants)). **Next:** step 5, the final inventory and review.
+**Status:** steps 1 to 5 are done ([step 5](#5-measure-and-review)). The full suite runs 13–14 % faster than at the baseline with 100 tests more; the timing targets are missed, by the author's decision, and three sites still wait for the second-review decision. **Open:** the review of the rule tests by someone other than their author; whether `check_inventory --account` goes.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -207,6 +207,30 @@ The slow tier lost 12 % of its wall time (251 → 220 s) and 6–7 % of its test
 ### 5. Measure and review
 
 Compare the inventories through the site account and resolve unexplained changes before claiming gains. Under comparable conditions, record the times of the full suite, the fast tier and the slow tier, the worker count, and the added and removed sites. Evaluate the [targets](#targets); keep the open rule assignments and the extraction exceptions visible. Close the temporary site account as [Site account](#site-account) specifies. The usage round stays a separate research task with its own prerequisites.
+
+**Step 5, done 2026-11-11.** The final comparison, its targets and the site account closed.
+
+- **The inventories agree.** `check_inventory --account` explains every site once the two hold sites that moved into `seen_hold` and `now_hold` are recorded. Read by today's scanner, the baseline `524b93ce` and the end of step 4 both hold 256 sites: none added, none removed, eight moved into pure checks (four of finalize's station 9, two of `run_record_check`, the two holds). The baseline's 226 counted with the scanner of its day, which missed 30 refusals (step 2b).
+- **Reach (`test_inventory` at `b5235238`).** Reached by no test: 5 sites (30 at the baseline); only through whole commands: 1 (19). Two of the five were real gaps the account had misnamed — the softer lines of a note (`notes_check.check_notes`, the named test reached only the unreadable branch) and the arm lines forwarded by finalize's station 1 — and got gate tests with twins, each turned red by removing its forwarding (`tests/test_check_stations.py::TheSofterLinesOfANoteWarn`, `tests/test_finalize_steps.py::Steps::test_station_1_forwards_the_arms_lines_as_guaranteed_warnings`). The other three are sites of `report_decisions.py` that wait for the second-review decision. The one command-only site stands in `code_check.main` itself, so every test that reaches it enters through the command.
+- **Timing, measured alternately** (the baseline and `b5235238` from worktrees, as in step 4; 11 cores, `-n auto`, load 3–22 at every start, two rounds, the order reversed in the second):
+
+| tier       | baseline `524b93ce`           | `b5235238`                    |
+|------------|-------------------------------|-------------------------------|
+| full suite | 521.6 / 481.2 s (3 234 tests) | 447.8 / 414.3 s (3 334 tests) |
+| fast tier  | 102.0 / 95.6 s                | 99.9 / 104.9 s                |
+| slow tier  | 258.7 / 290.0 s               | 243.8 / 241.3 s               |
+
+The full suite runs 13–14 % faster with 100 tests more; the fast tier, 134 tests larger, is unchanged within the spread of its runs; the slow tier is 6–17 % faster, its second baseline run an outlier the load does not explain. The machine runs slower than yesterday (the slow tier measured 220 s then), so only comparisons within one measurement hold.
+
+The targets:
+
+1. **Complete site account — met but for the ten sites that wait.** All 256 sites map to rule tests, gate tests or a stated reason; the ten sites of `report_decisions.py` wait for the six decisions on the second review (TODO 6b), three of them reached by no test.
+2. **Rule tests per condition — met but for the same ten.** Unreached 30 → 3, command-only 19 → 1 (above). Reach is measured; that each condition's twin passes is asserted by the tests the account names, not measured.
+3. **Explicit rule data — met.** Every gate finding site records its rule as `RuleAssignment`; 15 name a known rule, 179 stay open assignments, distinct from the technical contract and from the audit's new class. Recording an assignment approved none of them.
+4. **Preserved integration guarantees — met but for its review.** Every removed scenario assertion names its replacement (the [scenario review](2026-11-10-scenario-review.tsv)); the architecture guards pass their allowed and forbidden examples. A review of the rule tests' scientific adequacy by someone other than their author is still owed.
+5. **Timing — missed.** The fast tier stands at about 100 s against 90 s, the slow tier at about 240 s against 120 s. By the author's decision no assertion goes for them.
+
+**The site account, closed.** Frozen as evidence of the final comparison in the commit that carries this paragraph (its rows' source commits name where each site stood); later refactors need not maintain it. What it held that needs a home has one: the rule value in code (`GateFinding.rule`), each extraction exception's reason at its code (the docstring of `run_record_check.code_since_run`, a comment at `usability.stage`'s progress line), the sites that wait in TODO 6b, the open assignments in the [rule proposal](2026-11-09-rule-per-finding-proposal.md). Open for the author: whether `check_inventory --account`, which compares the source with the account, goes now that nothing maintains the account.
 
 ## Contracts used throughout
 
