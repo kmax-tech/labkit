@@ -562,7 +562,10 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     surfaces before the run rather than after it. Raises
     `scope_sha.SourceError` for a file of the area or an imported helper
     that cannot be read: no key is told as absent from code the search did
-    not see.
+    not see. With a `lib/` or `src/` in the repo the import walk
+    (`imported_repo_helpers`) reads and parses every one of them first and
+    raises there; the read here raises for an area file of a repo without
+    either.
     """
     hits: dict[str, list[str]] = {}
     # The imported repo-local code counts as the area's: a shared helper

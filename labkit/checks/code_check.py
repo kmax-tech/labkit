@@ -161,7 +161,8 @@ def check_intent_ids(area: Path, protocol: Path, text: str) -> list[GateFinding]
 
     `intent-check` asks the same question of the metrics at report time, when
     the tokens are already spent. Here the answer is still cheap. A file in
-    the scope that does not parse is one blocker, not a traceback.
+    the scope that cannot be read or does not parse is one blocker
+    (`unreadable_source`), not a traceback.
     """
     try:
         return _intent_id_findings(area, protocol, text)

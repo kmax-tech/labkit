@@ -130,6 +130,29 @@ class KeywordKeys(unittest.TestCase):
         with self.assertRaises(SourceError):
             code_ids(area)
 
+    def test_an_imported_helper_that_cannot_be_read_is_the_finding(self):
+        """With a `lib/` in the repo the import walk reads the helper first:
+        the helper sets both keys and is not UTF-8, and the one finding
+        names it."""
+        repo = Path(tempfile.mkdtemp()).resolve()
+        (repo / "tests").mkdir()  # what `layout_root` takes for the repo root
+        (repo / "lib").mkdir()
+        area = repo / "experiments" / "01-x"
+        (area / "scripts").mkdir(parents=True)
+        (area / "scripts" / "01_measure.py").write_text(
+            "from lib import report\nreport.write(r)\n", encoding="utf-8"
+        )
+        helper = repo / "lib" / "report.py"
+        helper.write_text("def write(r):\n    " + LITERAL, encoding="utf-8")
+        protocol = area / "PROTOCOL-x.md"
+        protocol.write_text(PROTOCOL, encoding="utf-8")
+        # the twin: read, the helper's literals answer both ids
+        self.assertEqual(check_intent_ids(area, protocol, PROTOCOL), [])
+        helper.write_bytes(helper.read_bytes() + b"# \xff\xfe\n")
+        (f,) = check_intent_ids(area, protocol, PROTOCOL)
+        self.assertIn("lib/report.py: cannot be read", f.text)
+        self.assertEqual((f.grade, f.outcome), (BLOCKER, VIOLATED))
+
     @unittest.skipIf(os.geteuid() == 0, "root reads every file")
     def test_a_script_refused_leaves_the_check_not_executed(self):
         area, protocol = area_with(LITERAL)
