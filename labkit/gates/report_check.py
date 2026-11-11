@@ -201,7 +201,9 @@ from labkit.gates.report_context import (
 from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
 from labkit.gates.report_replacement import replacement_gaps
 
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
 
 
@@ -369,7 +371,7 @@ def _registration_at(
                 f"read (LAB-003 No run without an intent paragraph)",
                 fix="fetch that commit from a clone that has it (`git fetch "
                 "--unshallow` in a shallow clone)",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     assert commit is not None, "a recorded commit the repository holds"
@@ -383,7 +385,7 @@ def _registration_at(
                 f"(`git fsck` names them) or fetch them from a clone that has them "
                 f"(`git fetch`), then `{gate_command('report-check', ctx.area)}`; "
                 f"where they are lost, {anew}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     if then.text is None:
@@ -394,7 +396,7 @@ def _registration_at(
                 f"commit of the first measurement holds (LAB-003 No run without an "
                 f"intent paragraph)",
                 fix=anew,
-                rule=OPEN_RULE,
+                rule=LAB_003,
             )
         ]
     missing = registration_missing(then.text, ctx.head.kind)
@@ -408,7 +410,7 @@ def _registration_at(
                 f"not restore what stood before the number (LAB-003 No run without "
                 f"an intent paragraph)",
                 fix=anew,
-                rule=OPEN_RULE,
+                rule=LAB_003,
             )
         ]
     return []
@@ -495,7 +497,7 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
                 f"record cannot be checked",
                 fix=f"measure through runlog: {measure}",
                 step=run,
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     owed = "a full run (run_kind='measurement')" + (
@@ -737,7 +739,7 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
                 f"{shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}` "
                 f"exits 0; a number in the protocol comes from `protocol-fill`, "
                 f"never typed",
-                rule=OPEN_RULE,
+                rule=LAB_041,
             )
         ]
         if failed

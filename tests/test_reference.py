@@ -18,7 +18,7 @@ from labkit.tools import protocol_result
 from labkit.gates import audit_prompt
 from labkit.formats import protocol_block, protocol_check, reference
 from labkit.formats.gate import TECHNICAL_RULE
-from labkit.formats.gate import OPEN_RULE, Findings
+from labkit.formats.gate import Findings
 from protocol_fixture import head  # noqa: E402
 
 WITHIN = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
@@ -209,7 +209,7 @@ class FinalizeForwardsTheHeadsGaps(unittest.TestCase):
             f.text.startswith('PROTOCOL-x.md: [reference] with kind = "fit"')
         )
         self.assertIn("repair the head", f.fix or "")
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(f.rule, TECHNICAL_RULE)
 
     def test_a_table_that_does_not_read_is_one_blocker(self):
         (f,) = self._held(compute('relation = "within"\ntolerance = 0.01\n'))

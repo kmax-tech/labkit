@@ -304,7 +304,7 @@ def report_binding_gap(
             f"— which one stood before the number cannot be told",
             fix=anew,
             step=handover,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     if not values:
         if head.report is not None and not bound.unread and measured.has_measured:

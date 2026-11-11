@@ -126,7 +126,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             f"the replacements run in a circle ({circle})",
             fix=f"let each name the one before it, then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     return hits[0]
 

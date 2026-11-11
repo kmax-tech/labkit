@@ -88,7 +88,7 @@ from pathlib import Path
 
 from labkit.formats.commands import gate_command
 from labkit.formats.area_state import state_of
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
@@ -249,7 +249,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     fix=f"name files that exist in [{p.id}]'s scope, then "
                     f"`{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
         out += constant_copies(area, protocol, p)

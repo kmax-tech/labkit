@@ -13,7 +13,6 @@ from labkit.checks.audit_binding import AuditError
 from labkit.formats.gate import (
     BLOCKER,
     NOT_EXECUTABLE,
-    OPEN_RULE,
     VIOLATED,
     TECHNICAL_RULE,
 )
@@ -87,7 +86,7 @@ class AnAnsweringRunWithoutItsRecord(unittest.TestCase):
             "r1: no config.json in this file state — the run's record cannot be checked",
         )
         self.assertIn("measure through runlog", f.fix or "")
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(f.rule, TECHNICAL_RULE)
 
     def test_the_twin_without_a_run_nothing_is_held(self):
         self.assertEqual(

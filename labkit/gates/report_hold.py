@@ -676,7 +676,7 @@ def discussion_sources(
                 blocker(
                     f"{at} names {d.protocol}, and there is no such protocol",
                     fix=f"{again}, the protocol named from the report",
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
         elif d.run_id not in {rd.dir.name for rd in state.runs}:
@@ -685,7 +685,7 @@ def discussion_sources(
                     f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
                     f"discussion names a run of its protocol's area",
                     fix=f"{again}, naming a run of that area",
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
     return gaps

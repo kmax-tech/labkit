@@ -200,7 +200,7 @@ class ADataEntryThatDoesNotRead(unittest.TestCase):
             blockers, _, _ = run_record_check.provenance_findings(Path(d), run)
         (f,) = blockers
         self.assertIn("data['broken'] in the run's record names no path", f.text)
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(f.rule, TECHNICAL_RULE)
 
 
 class ProtocolCheckTellsItsWarnings(unittest.TestCase):
@@ -216,7 +216,7 @@ class ProtocolCheckTellsItsWarnings(unittest.TestCase):
 
     def test_a_record_that_covers_no_full_run_warns_with_its_way_out(self):
         gap = audit_gaps.RecordGap(
-            "the record saw scope sha 000000000000", "audit again"
+            "the record saw scope sha 000000000000", "audit again", audit_gaps.LAB_015
         )
         told = self._told(audit_drift=gap)
         self.assertIn(

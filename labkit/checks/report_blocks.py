@@ -386,11 +386,11 @@ def cited_gaps(
         else:
             continue
         if n in structured:
-            gaps.append(blocker(why, fix=fix, rule=OPEN_RULE))
+            gaps.append(blocker(why, fix=fix, rule=LAB_104))
         else:
             gaps.append(
                 GateFinding(
-                    WARNING, why, fix=fix, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE
+                    WARNING, why, fix=fix, evidence_kind=STATIC_EVIDENCE, rule=LAB_104
                 )
             )
     return gaps

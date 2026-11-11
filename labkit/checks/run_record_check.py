@@ -312,7 +312,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"{rid} recorded no commit, or the area lies in no git repository "
                 f"now, so the helpers its script imports ({names}) cannot be compared",
                 fix=f"in the repository, {measure_anew(run_dir.parent.parent)}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             ),
         ], warnings
     if not commit_known(repo, cfg.git_full):
@@ -585,7 +585,7 @@ def _recorded_sources(
                 str(exc),
                 fix="pass every source in `data=` to runlog.run, then "
                 f"{measure_anew(area)}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     if not entries:

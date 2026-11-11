@@ -180,6 +180,7 @@ from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
 
+CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
 CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_011 = cited_rule("LAB-011 Required-field check")
@@ -578,6 +579,7 @@ def check_area_tests(findings: Findings, area: Path) -> None:
             tests,
             "the area's own checks of evaluate() (its resolution check, where "
             "it has a criterion) no longer hold",
+            CODE_003,
         )
 
 
@@ -595,14 +597,14 @@ def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateF
             fix=f"make the run's files readable (path and permissions), then "
             f"`{gate_command('finalize', area)}`",
             check_outcome=NOT_EXECUTABLE,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     return blocker(
         text,
         fix=f"measure anew (`{measure_command(area)}`) and audit that run; "
         f"the run's own files stay as they are",
         step=measure_command(area),
-        rule=OPEN_RULE,
+        rule=TECHNICAL_RULE,
     )
 
 
@@ -679,7 +681,7 @@ def check_reference(
             f"{protocol.name}: {gap}",
             fix=f"repair the head as the sentence says, then "
             f"`{gate_command('finalize', protocol.parent)}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
         return
     if kept_gaps(text, head):

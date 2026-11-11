@@ -455,7 +455,7 @@ class AreaTestsTold(unittest.TestCase):
     def _told(self, state: str, tail: list[str]) -> Findings:
         found = Findings(tell=None)
         tested = AreaTests("tests/test_01_*.py", [self.FILE], state, tail)
-        tell_test_run(found, tested, "evaluate() lost its check")
+        tell_test_run(found, tested, "evaluate() lost its check", finalize.CODE_003)
         return found
 
     def test_no_pytest_warns(self):
@@ -466,7 +466,8 @@ class AreaTestsTold(unittest.TestCase):
     def test_tests_that_did_not_run_block_as_not_executable(self):
         (f,) = self._told("not run", ["ERROR collecting", "1 error in 0.1s"]).found
         self.assertEqual(
-            (f.grade, f.check_outcome, f.rule), ("BLOCKER", NOT_EXECUTABLE, OPEN_RULE)
+            (f.grade, f.check_outcome, f.rule),
+            ("BLOCKER", NOT_EXECUTABLE, TECHNICAL_RULE),
         )
         self.assertIn("test_01_x.py did not run (1 error in 0.1s)", f.text)
 
@@ -477,7 +478,7 @@ class AreaTestsTold(unittest.TestCase):
             (
                 "BLOCKER",
                 VIOLATED,
-                OPEN_RULE,
+                finalize.CODE_003,
             ),
         )
         self.assertIn(
@@ -546,7 +547,7 @@ class CriterionNStation(unittest.TestCase):
             finalize.check_criterion_n(found, self._run(d, {"criterion_1_n": 12}))
             (f,) = found.found
             self.assertIn("the record of r1 does not read", f.text)
-            self.assertEqual(f.rule, OPEN_RULE)
+            self.assertEqual(f.rule, TECHNICAL_RULE)
 
     def test_the_twin_without_a_denominator_the_record_is_not_read(self):
         with tempfile.TemporaryDirectory() as d:

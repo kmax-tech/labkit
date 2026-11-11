@@ -16,7 +16,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises
-from labkit.formats.gate import BLOCKER, with_way_out
+from labkit.formats.gate import (
+    BLOCKER,
+    TECHNICAL_RULE,
+    RuleAssignment,
+    cited_rule,
+    with_way_out,
+)
 from labkit.formats.protocol_check import (
     check_fields,
     registration_drift,
@@ -156,14 +162,20 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
     return None
 
 
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
+
+
 @dataclass(frozen=True)
 class RecordGap:
     """Why the record a head names covers no full run (`audit_record_gap`),
-    and the step that closes it — the way out a gate tells beside the
-    sentence (`gate.with_way_out`)."""
+    the step that closes it — the way out a gate tells beside the sentence
+    (`gate.with_way_out`) — and the rule the cause breaks: the preflight
+    audit's, or the technical contract where the record or the area's
+    stamp does not read."""
 
     why: str
     fix: str
+    rule: RuleAssignment
 
 
 def audit_way(area: Path) -> str:
@@ -208,6 +220,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
             "tier lowered after the protocol's first commit is reported "
             "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)",
             audit,
+            LAB_015,
         )
     path = area / DIR / name
     if not path.is_file():
@@ -215,21 +228,25 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
             f"`preflight_audit` names {DIR}/{name}, and there is no such record in "
             f"this area — name the one `labkit-audit <area> --mode preflight` wrote",
             audit,
+            LAB_015,
         )
     try:
         record = read(path)
     except FindingsError as exc:
-        return RecordGap(str(exc), record_way(area))
+        return RecordGap(str(exc), record_way(area), TECHNICAL_RULE)
     if record.mode != PREFLIGHT_AUDIT:
         return RecordGap(
             f"{name} is a {record.mode} record — `preflight_audit` names the "
             "preflight audit",
             audit,
+            LAB_015,
         )
     try:
         now = area_stamp(area)[0]
     except (FileNotFoundError, ValueError) as exc:
-        return RecordGap(f"the area cannot be stamped now ({exc})", audit)
+        return RecordGap(
+            f"the area cannot be stamped now ({exc})", audit, TECHNICAL_RULE
+        )
     if record.scope_sha != now:
         return RecordGap(
             f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
@@ -237,15 +254,17 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
             f"(`labkit-audit <area> --mode preflight`); naming another record "
             f"without one is refused too{validation_note(area)}",
             audit,
+            LAB_015,
         )
     judged = _protocol_gap(record, name, text)
     if judged:
-        return RecordGap(judged, audit)
+        return RecordGap(judged[0], audit, judged[1])
     if record.open:
         return RecordGap(
             f"{len(record.open)} finding(s) of {name} still `open` — decide each "
             f"({DECIDED_LIST})",
             decide_ways(area, record),
+            LAB_015,
         )
     return None
 
@@ -281,20 +300,24 @@ def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
     return out
 
 
-def _protocol_gap(record: Record, name: str, text: str) -> str | None:
-    """Why RECORD (named NAME) judged another protocol than TEXT, or None:
-    another promise block (`block_sha`) or another registration — the kind,
-    the question or another field the kind owes (`registration`)."""
+def _protocol_gap(
+    record: Record, name: str, text: str
+) -> tuple[str, RuleAssignment] | None:
+    """Why RECORD (named NAME) judged another protocol than TEXT, with the
+    rule the cause breaks, or None: another promise block (`block_sha`) or
+    another registration — the kind, the question or another field the kind
+    owes (`registration`) —, the preflight audit's rule; a promise block
+    that does not read, the technical contract."""
     try:
         block = promises.block_stamp(text)
     except promises.PromiseError as exc:
-        return str(exc)
+        return str(exc), TECHNICAL_RULE
     if record.block_sha != block:
         return (
             f"the record {name} saw the promise block {record.block_sha}, the protocol "
             f"carries {block} now — a promise rewritten after the audit owes a new one"
-        )
+        ), LAB_015
     changed = registration_note([record], registration_stamp(text))
-    return (
-        f"the record {name} no longer covers the protocol{changed}" if changed else None
-    )
+    if not changed:
+        return None
+    return f"the record {name} no longer covers the protocol{changed}", LAB_015

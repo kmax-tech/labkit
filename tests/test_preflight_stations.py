@@ -55,6 +55,44 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertIn("not TOML", f.text)
 
+    RECORD = "2026-11-10T10-00-preflight.toml"
+
+    def _coverage(self, *, frozen: bool) -> Findings:
+        found = Findings(tell=None)
+        preflight.check_audit_coverage(found, self.area, self.RECORD, "", frozen=frozen)
+        return found
+
+    def test_a_named_record_that_is_not_there_breaks_the_audit_rule(self):
+        for frozen, grade in ((True, BLOCKER), (False, WARNING)):
+            with self.subTest(frozen=frozen):
+                (f,) = self._coverage(frozen=frozen).found
+                self.assertEqual((f.grade, f.rule), (grade, preflight.LAB_015))
+                self.assertIn("there is no such record", f.text)
+
+    def test_a_named_record_that_does_not_read_is_the_technical_contract(self):
+        (self.area / audit_findings.DIR).mkdir()
+        (self.area / audit_findings.DIR / self.RECORD).write_text("no = [toml\n")
+        (f,) = self._coverage(frozen=True).found
+        self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
+
+    def test_no_test_file_breaks_the_resolution_check_rule(self):
+        tests = preflight.AreaTests("tests/test_01_x.py", [], "none", [])
+        for frozen, grade in ((True, BLOCKER), (False, WARNING)):
+            with self.subTest(frozen=frozen):
+                found = Findings(tell=None)
+                preflight.check_tests_owed(found, tests, frozen=frozen)
+                (f,) = found.found
+                self.assertEqual((f.grade, f.rule), (grade, preflight.LAB_016))
+
+    def test_failing_tests_break_the_rule_the_gate_names(self):
+        tests = preflight.AreaTests(
+            "tests/test_01_x.py", [Path("test_01_x.py")], "failed", ["1 failed"]
+        )
+        found = Findings(tell=None)
+        preflight.check_tests_owed(found, tests, frozen=False)
+        (f,) = found.found
+        self.assertEqual((f.grade, f.rule), (BLOCKER, preflight.LAB_016))
+
     def test_the_twin_no_record_blocks_nothing(self):
         found = Findings(tell=None)
         self.assertEqual(

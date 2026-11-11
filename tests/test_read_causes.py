@@ -199,7 +199,9 @@ class TestRunOutcome(unittest.TestCase):
             "tests/test_01_x.py", [Path("test_01_x.py")], state, ["1 failed"]
         )
         findings = gate.Findings(None)
-        preflight.tell_test_run(findings, tests, "the resolution check")
+        preflight.tell_test_run(
+            findings, tests, "the resolution check", preflight.LAB_016
+        )
         (f,) = findings.found
         return f
 
@@ -226,6 +228,9 @@ class EvidenceComparison(unittest.TestCase):
         )
         self.assertEqual(unread.check_outcome, gate.NOT_EXECUTABLE)
         self.assertEqual(changed.check_outcome, gate.VIOLATED)
+        self.assertEqual(
+            (unread.rule, changed.rule), (gate.TECHNICAL_RULE, gate.OPEN_RULE)
+        )
 
 
 class NoteConventions(unittest.TestCase):

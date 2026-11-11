@@ -75,6 +75,7 @@ from labkit.formats.gate import (
     OPEN_RULE,
     STATIC_EVIDENCE,
     TECHNICAL_RULE,
+    RuleAssignment,
     cited_rule,
 )
 from labkit.checks.code_check import code_findings
@@ -114,6 +115,8 @@ from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
+LAB_016 = cited_rule("LAB-016 Resolution check before freezing")
 
 
 @dataclass(frozen=True)
@@ -436,13 +439,16 @@ def contract_hint(protocol: Path) -> str:
     return f"`{contract_command(protocol)}` names what each field owes"
 
 
-def _owed(findings: Findings, frozen: bool) -> Callable[[str, str], None]:
-    """How a gap the freeze owes is told, with its way out: a blocker once
-    FROZEN, else a warning — a mechanical fact either way (GUARANTEED)."""
+def _owed(
+    findings: Findings, frozen: bool, rule: RuleAssignment
+) -> Callable[[str, str], None]:
+    """How a gap the freeze owes is told, with its way out and the RULE the
+    caller's gap breaks: a blocker once FROZEN, else a warning — a
+    mechanical fact either way (GUARANTEED)."""
     if frozen:
-        return lambda msg, fix: findings.block(msg, fix=fix, rule=OPEN_RULE)
+        return lambda msg, fix: findings.block(msg, fix=fix, rule=rule)
     return lambda msg, fix: findings.warn(
-        msg, fix=fix, evidence_kind=GUARANTEED, rule=OPEN_RULE
+        msg, fix=fix, evidence_kind=GUARANTEED, rule=rule
     )
 
 
@@ -464,7 +470,7 @@ def check_audit_records(
         return []
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
-        _owed(findings, frozen)(
+        _owed(findings, frozen, LAB_015)(
             f"undecided in {u.line}", audit_findings.decide_way(area, u)
         )
     if undecided:
@@ -488,7 +494,7 @@ def check_audit_coverage(
     and blocks once FROZEN."""
     gap = audit_gaps.audit_record_gap(area, audit_line, text)
     if gap:
-        _owed(findings, frozen)(
+        _owed(findings, frozen, gap.rule)(
             f"preflight_audit: {gap.why} (LAB-015 Preflight audit before freezing)",
             gap.fix,
         )
@@ -595,11 +601,14 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
         )
 
 
-def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
+def tell_test_run(
+    findings: Findings, tests: AreaTests, failed: str, rule: RuleAssignment
+) -> None:
     """What running the area's tests (TESTS, with files) found, one
     rendering for preflight and finalize: ok a note, a missing pytest a
     warning, a failure a blocker naming the files, pytest's last line (the
-    counts) and FAILED, the gate's sentence on what no longer holds; a run
+    counts), FAILED, the gate's sentence on what no longer holds, and RULE,
+    the rule the calling gate holds the tests to; a run
     that did not test the code (pytest exit 2-5) a blocker too, told as a
     check not executed. The
     tail before it is a note; it reaches no collecting caller, so the
@@ -625,14 +634,14 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
                 f"dependency, no test collected) until "
                 f"`.venv/bin/python -m pytest {files}` passes",
                 check_outcome=NOT_EXECUTABLE,
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
             return
         findings.block(
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
             f"`.venv/bin/python -m pytest {files}` passes",
-            rule=OPEN_RULE,
+            rule=rule,
         )
 
 
@@ -643,7 +652,7 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
     resolution check is such a gap. A failing run blocks, with its last
     lines told; a missing pytest warns (`tell_test_run`)."""
     if not tests.files:
-        _owed(findings, frozen)(
+        _owed(findings, frozen, LAB_016)(
             f"no {tests.pattern} — the resolution check has no "
             f"permanent form (LAB-016 Resolution check before freezing)"
             + (" and frozen = true owes it" if frozen else ""),
@@ -655,6 +664,7 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
             findings,
             tests,
             "an unfilled or broken resolution check must not pass the freeze",
+            LAB_016,
         )
 
 
