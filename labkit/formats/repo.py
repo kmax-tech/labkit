@@ -435,6 +435,21 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     return r.stdout if r.returncode == 0 else None
 
 
+def ever_committed(repo: Path, path: Path) -> bool | None:
+    """Whether a commit in HEAD's history held a file at PATH's own path
+    (`own_path`) under REPO: True when one touched it; False when none did
+    and the history is whole (no commit yet and no git repository are
+    whole histories that hold nothing); None when none did in a shallow
+    clone, whose cut history cannot say. A file written and removed
+    without a commit in between leaves no trace and reads False."""
+    rel = own_path(path).relative_to(repo.resolve()).as_posix()
+    r = git_run(["log", "-1", "--format=%H", "--", rel], repo)
+    if r.returncode == 0 and r.stdout.strip():
+        return True
+    shallow = git_run(["rev-parse", "--is-shallow-repository"], repo)
+    return None if shallow.stdout.strip() == "true" else False
+
+
 def unreadable_at(repo: Path, path: Path, rev: str) -> str:
     """Git's words when it cannot read PATH at REV (a revision: a sha,
     HEAD; or INDEX_REV) in REPO — its tree, or the file it lists there; ""

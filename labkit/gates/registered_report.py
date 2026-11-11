@@ -28,6 +28,7 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks import report_blocks
 from labkit.formats.repo import (
+    ever_committed,
     git_root,
     own_path,
     protocols_in,
@@ -401,7 +402,9 @@ def missing_report(
     commit, or only in the local index). One blocker naming the two ways to
     write it:
     the adoption (its result block) and the handover (an end without a
-    result). None when nothing is registered, the report is there, or
+    result). A report no commit ever held records LAB_104, whose text names
+    a report never written; one a commit held, or one a shallow clone's
+    history cannot place, the open assignment (`repo.ever_committed`). None when nothing is registered, the report is there, or
     nothing was measured — before a measurement a report owes nothing. At
     the commit (STAGED) a report not yet written is held only where the
     commit removes one HEAD holds or the head has adopted a result
@@ -424,8 +427,18 @@ def missing_report(
         return None
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
+    # LAB_104's sentence names a report never written; one a commit held
+    # and the state lacks was written, and where a cut history cannot say
+    # (None) no rule is claimed either
+    held_before = ever_committed(repo, report)
+    rule = LAB_104 if held_before is False else OPEN_RULE
+    lacks = (
+        "which was written and is gone (a commit held it)"
+        if held_before
+        else "which is not written"
+    )
     what = (
-        f"{name_p} registers {name_r} as its report, which is not written, and "
+        f"{name_p} registers {name_r} as its report, {lacks}, and "
         f"its area holds a measurement of it — without its registered report "
         f"the delivery is incomplete"
     )
@@ -437,7 +450,7 @@ def missing_report(
             f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
             step=into,
-            rule=LAB_104,
+            rule=rule,
         )
     discuss = report_blocks.discuss_command(
         name_p, "<run_id>", name_r, report_blocks.WHY_PROGRESS
@@ -451,7 +464,7 @@ def missing_report(
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",
         step=discuss,
-        rule=LAB_104,
+        rule=rule,
     )
 
 
