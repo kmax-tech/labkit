@@ -151,6 +151,6 @@ def unreadable_source(exc: SourceError) -> GateFinding:
         f"{exc} · the code cannot be read, so no check over it holds",
         fix=f"repair or remove the file, then `code-check {AREA_SLOT}`",
         evidence_kind=GUARANTEED,
-        check_outcome=outcome_of_failed_read(exc),
+        stated_outcome=outcome_of_failed_read(exc),
         rule=TECHNICAL_RULE,
     )

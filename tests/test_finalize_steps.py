@@ -509,7 +509,7 @@ class AreaTestsTold(unittest.TestCase):
         self.assertEqual((f.grade, f.rule), ("WARNING", TECHNICAL_RULE))
         self.assertIn("pytest is not installed", f.text)
         # nothing was tested: the line says so, a failure's does not
-        self.assertEqual(f.check_outcome, NOT_EXECUTABLE)
+        self.assertEqual(f.outcome, NOT_EXECUTABLE)
         self.assertIn("WARNING (check not executable)", f.line)
         (failed,) = self._told("failed", ["1 failed"]).found
         self.assertNotIn("check not executable", failed.line)
@@ -517,7 +517,7 @@ class AreaTestsTold(unittest.TestCase):
     def test_tests_that_did_not_run_block_as_not_executable(self):
         (f,) = self._told("not run", ["ERROR collecting", "1 error in 0.1s"]).found
         self.assertEqual(
-            (f.grade, f.check_outcome, f.rule),
+            (f.grade, f.outcome, f.rule),
             ("BLOCKER", NOT_EXECUTABLE, TECHNICAL_RULE),
         )
         self.assertIn("test_01_x.py did not run (1 error in 0.1s)", f.text)
@@ -525,7 +525,7 @@ class AreaTestsTold(unittest.TestCase):
     def test_failing_tests_block_naming_the_counts(self):
         (f,) = self._told("failed", ["FAILED test_x", "1 failed in 0.1s"]).found
         self.assertEqual(
-            (f.grade, f.check_outcome, f.rule),
+            (f.grade, f.outcome, f.rule),
             (
                 "BLOCKER",
                 VIOLATED,

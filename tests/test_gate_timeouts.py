@@ -44,7 +44,7 @@ class Timeouts(unittest.TestCase):
                 (f,) = report_check.recomputation_findings(area, repo)
             self.assertIn("did not finish in 1 s", str(raised.exception))
             self.assertEqual(
-                (f.grade, f.check_outcome, f.rule),
+                (f.grade, f.outcome, f.rule),
                 (gate.BLOCKER, gate.NOT_EXECUTABLE, gate.TECHNICAL_RULE),
             )
             self.assertIn("did not finish in 1 s — no result", f.text)

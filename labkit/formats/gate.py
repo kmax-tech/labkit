@@ -72,26 +72,39 @@ GUARANTEED = "guaranteed"
 STATIC_EVIDENCE = "static evidence"
 EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 
-#: what a finding says about its check (`GateFinding.check_outcome`,
-#: docs/notes/2026-11-09-check-outcomes.md): the condition is violated — a
-#: required input missing or malformed is a violated condition too —, or the
-#: check could not be executed here (an access refused, a limit of the
-#: check). A BLOCKER blocks either way; the line tells them apart
+#: what a finding says about its check (`GateFinding.outcome`,
+#: docs/notes/2026-11-09-check-outcomes.md and
+#: docs/notes/2026-11-11-check-classification-sample.md): an exact check found
+#: a known rule or a technical contract breached — a required input missing
+#: or malformed is that too —; an exact check found the deviation it checks
+#: for, and its binding basis is not settled; a search found an indication,
+#: and no breach is established; or the check could not be executed here (an
+#: access refused, a limit of the check). Only the last is for a site to say
+#: (`GateFinding.stated_outcome`); the others follow from what carries the
+#: sentence and from the rule assignment (`derived_outcome`), and a site that
+#: states one of them otherwise is refused — VIOLATED on an open assignment
+#: raises. A BLOCKER blocks whatever its outcome, and the line names only a
+#: check not executed: VIOLATED, DEVIATION and SUSPECTED read alike there
 VIOLATED = "violated"
+DEVIATION = "deviation"
+SUSPECTED = "suspected"
 NOT_EXECUTABLE = "not executable"
-OUTCOMES = (VIOLATED, NOT_EXECUTABLE)
+OUTCOMES = (VIOLATED, DEVIATION, SUSPECTED, NOT_EXECUTABLE)
 #: how a line names a check not executed: `BLOCKER (check not executable): …`
 NOT_EXECUTABLE_MARK = "check not executable"
 
 
-def outcome_of_failed_read(exc: BaseException) -> str:
-    """Map a failed read EXC to the finding's check outcome — not to its
-    cause, which `files.read_cause` names: NOT_EXECUTABLE when the access
-    was refused (the input may be sound), else VIOLATED — a required input
-    missing or malformed is a defect found. Any exception a site catches
-    around a read goes in; only an OSError other than a missing file gives
+def outcome_of_failed_read(exc: BaseException) -> str | None:
+    """What a site states (`GateFinding.stated_outcome`) for a failed read
+    EXC: NOT_EXECUTABLE when the access was refused (the input may be
+    sound), else None — nothing. A missing or malformed input is a defect
+    found, so the finding's outcome is the derived one (`derived_outcome`):
+    VIOLATED where the site records a technical contract or a known rule,
+    DEVIATION where its assignment is open. Not the cause, which
+    `files.read_cause` names. Any exception a site catches around a read
+    goes in; only an OSError other than a missing file gives
     NOT_EXECUTABLE."""
-    return NOT_EXECUTABLE if read_cause(exc) == ACCESS else VIOLATED
+    return NOT_EXECUTABLE if read_cause(exc) == ACCESS else None
 
 
 #: how every line joins its fix to its text — `<what is refused and why>.
@@ -203,6 +216,42 @@ TECHNICAL_RULE = RuleAssignment(TECHNICAL_CONTRACT)
 NEW_CLASS_RULE = RuleAssignment(NEW_CLASS)
 
 
+#: the outcome of an exact check that found its condition, by the kind of
+#: its rule assignment (`derived_outcome`); None is a site that records no
+#: assignment. VIOLATED needs a decided basis; an open assignment may be a
+#: duty not decided or only a rule not yet entered, so DEVIATION claims
+#: neither. A new class and a site without an assignment name no decided
+#: basis either
+_EXACT_OUTCOME_BY_BASIS: dict[str | None, str] = {
+    KNOWN_RULE: VIOLATED,
+    TECHNICAL_CONTRACT: VIOLATED,
+    OPEN_ASSIGNMENT: DEVIATION,
+    NEW_CLASS: DEVIATION,
+    None: DEVIATION,
+}
+
+
+def derived_outcome(evidence_kind: str, rule: RuleAssignment | None) -> str:
+    """The outcome of a check that ran and found its condition, from what
+    carries the sentence (EVIDENCE_KIND) and the finding's RULE assignment —
+    the one home of the derivation; NOT_EXECUTABLE is never derived, the
+    site says it. STATIC_EVIDENCE gives SUSPECTED whatever the basis;
+    GUARANTEED gives VIOLATED for a known rule or a technical contract and
+    DEVIATION for an open assignment, a new class and no assignment
+    (`_EXACT_OUTCOME_BY_BASIS`). Raises ValueError for an evidence kind or a
+    rule kind it does not name, so a new one is decided here before any
+    finding is told as a breach. Pure."""
+    if evidence_kind == STATIC_EVIDENCE:
+        return SUSPECTED
+    basis = rule.kind if rule is not None else None
+    if evidence_kind != GUARANTEED or basis not in _EXACT_OUTCOME_BY_BASIS:
+        raise ValueError(
+            f"no check outcome is defined for evidence kind {evidence_kind!r} "
+            f"with rule kind {basis!r} (`gate.derived_outcome`)"
+        )
+    return _EXACT_OUTCOME_BY_BASIS[basis]
+
+
 @dataclass(frozen=True)
 class GateFinding:
     """One finding of a gate. The grade field decides what counts, never the
@@ -245,9 +294,11 @@ class GateFinding:
             changed since it ran (`withdrawn_first`); told
             as `WITHDRAW_FIRST` before `fix` in every form (`way`).
         evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
-        check_outcome: VIOLATED (the default) or NOT_EXECUTABLE (OUTCOMES): whether
-            the finding states a violated condition or a check that could
-            not be executed here; told in the line for NOT_EXECUTABLE.
+        stated_outcome: The outcome the site states, or None (the default)
+            where it states none — not the finding's outcome, which `outcome`
+            gives. A site states NOT_EXECUTABLE for a check that could not
+            run; another value of OUTCOMES is accepted only where it is the
+            derived one (`derived_outcome`), and refused otherwise.
         changed_since: The run whose code or declared scope this blocker
             found changed since it ran — set where the comparison found the
             difference (`run_record_check.code_since_run`,
@@ -267,7 +318,7 @@ class GateFinding:
     changed_since: str | None = field(default=None, kw_only=True)
     step: Command | None = field(default=None, kw_only=True)
     withdraw_first: Command | None = field(default=None, kw_only=True)
-    check_outcome: str = field(default=VIOLATED, kw_only=True)
+    stated_outcome: str | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.grade not in (BLOCKER, WARNING):
@@ -286,9 +337,16 @@ class GateFinding:
                 f"a gate finding's evidence kind is one of {EVIDENCE_KINDS}, "
                 f"not {self.evidence_kind!r}"
             )
-        if self.check_outcome not in OUTCOMES:
+        if self.stated_outcome is not None and self.stated_outcome not in OUTCOMES:
             raise ValueError(
-                f"a gate finding's outcome is one of {OUTCOMES}, not {self.check_outcome!r}"
+                f"a gate finding's outcome is one of {OUTCOMES}, not {self.stated_outcome!r}"
+            )
+        derived = derived_outcome(self.evidence_kind, self.rule)
+        if self.stated_outcome not in (None, NOT_EXECUTABLE, derived):
+            raise ValueError(
+                f"a gate finding states the outcome {self.stated_outcome!r}, and "
+                f"its evidence kind and rule assignment give {derived!r}: "
+                f"{self.text!r}"
             )
         if self.evidence_kind == STATIC_EVIDENCE and self.grade == BLOCKER:
             raise ValueError(
@@ -299,6 +357,16 @@ class GateFinding:
                 f"a BLOCKER names its way out (fix), and this one has none: "
                 f"{self.text!r}"
             )
+
+    @property
+    def outcome(self) -> str:
+        """What the finding says about its check, one of OUTCOMES:
+        NOT_EXECUTABLE where the site states it — it comes first, a check
+        that did not run found nothing —, else the outcome derived from the
+        evidence kind and the rule assignment (`derived_outcome`)."""
+        if self.stated_outcome == NOT_EXECUTABLE:
+            return NOT_EXECUTABLE
+        return derived_outcome(self.evidence_kind, self.rule)
 
     @property
     def way(self) -> str | None:
@@ -315,8 +383,9 @@ class GateFinding:
         reader of a code check's line sees it is an indication; a prefixed
         line stays `WARNING: …`, and the summary counts the kind. The way
         out (`way`) ends the line in every form: its own dotted part
-        (`Next: …`), else after `WAY_OUT`."""
-        unrun = NOT_EXECUTABLE_MARK if self.check_outcome == NOT_EXECUTABLE else None
+        (`Next: …`), else after `WAY_OUT`. Of the outcomes only
+        NOT_EXECUTABLE is named; a DEVIATION reads like a VIOLATED finding."""
+        unrun = NOT_EXECUTABLE_MARK if self.outcome == NOT_EXECUTABLE else None
         if self.form == DOTTED:
             kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
             fix = f"Next: {self.way}" if self.way else None
@@ -366,13 +435,14 @@ def blocker(
     *,
     fix: str,
     step: Command | None = None,
-    check_outcome: str = VIOLATED,
+    stated_outcome: str | None = None,
     rule: RuleAssignment | None = None,
 ) -> GateFinding:
     """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
     check returns as data for the gate that takes it (`Findings.take`).
-    CHECK_OUTCOME: VIOLATED, or NOT_EXECUTABLE for a check that could not run;
-    RULE: its rule assignment (`GateFinding.rule`)."""
+    STATED_OUTCOME: NOT_EXECUTABLE for a check that could not run, else None
+    (`GateFinding.stated_outcome`); RULE: its rule assignment
+    (`GateFinding.rule`)."""
     return GateFinding(
         BLOCKER,
         text,
@@ -380,7 +450,7 @@ def blocker(
         fix=fix,
         evidence_kind=GUARANTEED,
         step=step,
-        check_outcome=check_outcome,
+        stated_outcome=stated_outcome,
     )
 
 
@@ -392,7 +462,7 @@ def coded(
     evidence_kind: str,
     rule: RuleAssignment | None = None,
     fix: str | None = None,
-    check_outcome: str = VIOLATED,
+    stated_outcome: str | None = None,
 ) -> GateFinding:
     """A code check's finding (code-check, preflight's code station, the
     audit's tier note), told as `<grade> · <where> · <text> · <rule> · <fix>`
@@ -406,7 +476,7 @@ def coded(
         rule=rule,
         fix=fix,
         evidence_kind=evidence_kind,
-        check_outcome=check_outcome,
+        stated_outcome=stated_outcome,
     )
 
 
@@ -515,16 +585,16 @@ class Findings:
         *,
         fix: str,
         step: Command | None = None,
-        check_outcome: str = VIOLATED,
+        stated_outcome: str | None = None,
         rule: RuleAssignment | None = None,
     ) -> None:
         """A blocker: told as `BLOCKER: msg. Next: fix`, repeated in the
         summary, exit 1. Always GUARANTEED — static evidence never blocks.
         FIX is the way out (`GateFinding.fix`), required; STEP the command
-        it names, as data (`GateFinding.step`); CHECK_OUTCOME and RULE as
+        it names, as data (`GateFinding.step`); STATED_OUTCOME and RULE as
         `blocker`'s."""
         self.take(
-            blocker(msg, fix=fix, step=step, check_outcome=check_outcome, rule=rule)
+            blocker(msg, fix=fix, step=step, stated_outcome=stated_outcome, rule=rule)
         )
 
     def warn(
@@ -533,12 +603,12 @@ class Findings:
         *,
         evidence_kind: str,
         fix: str | None = None,
-        check_outcome: str = VIOLATED,
+        stated_outcome: str | None = None,
         rule: RuleAssignment | None = None,
     ) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own.
         EVIDENCE_KIND says what carries it (`GateFinding`); FIX, when given,
-        is told after it as for a blocker; CHECK_OUTCOME and RULE as
+        is told after it as for a blocker; STATED_OUTCOME and RULE as
         `blocker`'s."""
         self.take(
             GateFinding(
@@ -547,7 +617,7 @@ class Findings:
                 rule=rule,
                 fix=fix,
                 evidence_kind=evidence_kind,
-                check_outcome=check_outcome,
+                stated_outcome=stated_outcome,
             )
         )
 

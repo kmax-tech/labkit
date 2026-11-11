@@ -473,7 +473,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"the analysis audit cannot be held to the area: {exc}",
             fix=f"repair what the sentence names (a refused file: make it "
             f"readable), then {audit}",
-            check_outcome=outcome_of_failed_read(exc),
+            stated_outcome=outcome_of_failed_read(exc),
             rule=TECHNICAL_RULE,
         )
     if gap is None:
@@ -757,7 +757,7 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
                 f"{exc} — no result, the numbers are not held to the run",
                 fix=f"run {check} by hand and make it end, then "
                 f"`{gate_command('report-check', area)}`",
-                check_outcome=NOT_EXECUTABLE,
+                stated_outcome=NOT_EXECUTABLE,
                 rule=TECHNICAL_RULE,
             )
         ]

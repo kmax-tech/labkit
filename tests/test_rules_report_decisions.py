@@ -127,7 +127,7 @@ class ALimitHasItsEffect(unittest.TestCase):
             check_limit_effects_decided, rec, decide_again=self._decide_again
         )
         self.assertEqual(
-            (f.grade, f.evidence_kind, f.check_outcome), (BLOCKER, GUARANTEED, VIOLATED)
+            (f.grade, f.evidence_kind, f.outcome), (BLOCKER, GUARANTEED, VIOLATED)
         )
         self.assertEqual(f.rule, LAB_015)
         self.assertEqual(
@@ -186,7 +186,7 @@ class AStandsIsUpheld(unittest.TestCase):
         rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
         (f,) = _held(check_stands_upheld, rec)
         self.assertEqual(
-            (f.grade, f.evidence_kind, f.check_outcome), (BLOCKER, GUARANTEED, VIOLATED)
+            (f.grade, f.evidence_kind, f.outcome), (BLOCKER, GUARANTEED, VIOLATED)
         )
         self.assertEqual(f.rule, LAB_015)
         self.assertEqual(

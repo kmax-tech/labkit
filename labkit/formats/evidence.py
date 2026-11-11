@@ -57,7 +57,6 @@ from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import (
     NOT_EXECUTABLE,
-    VIOLATED,
     GateFinding,
     blocker,
     with_way_out,
@@ -383,9 +382,9 @@ def change_blockers(found: Sequence[tuple[str, str]]) -> list[GateFinding]:
     is a check not executed: nothing says the evidence changed."""
     return [
         # UNREAD_WAY is the way out only `unread_finding` gives
-        blocker(why, fix=fix, check_outcome=NOT_EXECUTABLE, rule=TECHNICAL_RULE)
+        blocker(why, fix=fix, stated_outcome=NOT_EXECUTABLE, rule=TECHNICAL_RULE)
         if fix == UNREAD_WAY
-        else blocker(why, fix=fix, check_outcome=VIOLATED, rule=OPEN_RULE)
+        else blocker(why, fix=fix, rule=OPEN_RULE)
         for why, fix in found
     ]
 

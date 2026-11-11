@@ -272,7 +272,7 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
                 fix="make the file readable (its path and permissions), then "
                 f"`{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
-                check_outcome=outcome_of_failed_read(exc),
+                stated_outcome=outcome_of_failed_read(exc),
                 rule=TECHNICAL_RULE,
             )
             continue

@@ -50,7 +50,7 @@ class QualityCheckReadsNotDone(unittest.TestCase):
                 {key: ("scripts/01_measure.py:3",)},
             )
         self.assertEqual(
-            (f.grade, f.check_outcome, f.rule), (WARNING, VIOLATED, TECHNICAL_RULE)
+            (f.grade, f.outcome, f.rule), (WARNING, VIOLATED, TECHNICAL_RULE)
         )
         self.assertIn(
             "quality-check keys: read check not done — x.py: invalid syntax", f.text
@@ -106,7 +106,7 @@ class ANoteThatCannotBeOpened(unittest.TestCase):
             notes_check.check_notes([Path("notes/a.md")], tell=lambda _: None)
         (f,) = found.found
         self.assertEqual(
-            (f.grade, f.check_outcome, f.rule),
+            (f.grade, f.outcome, f.rule),
             (WARNING, NOT_EXECUTABLE, TECHNICAL_RULE),
         )
 

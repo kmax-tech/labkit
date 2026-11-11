@@ -203,7 +203,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
             blocker(
                 f"the code {rid} ran cannot be read now: {exc}",
                 fix=f"repair what the error names, then `{gate_command('finalize', area)}`",
-                check_outcome=outcome_of_failed_read(exc),
+                stated_outcome=outcome_of_failed_read(exc),
                 rule=TECHNICAL_RULE,
             ),
         ], []

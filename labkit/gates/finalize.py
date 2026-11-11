@@ -617,7 +617,7 @@ def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateF
             text,
             fix=f"make the run's files readable (path and permissions), then "
             f"`{gate_command('finalize', area)}`",
-            check_outcome=NOT_EXECUTABLE,
+            stated_outcome=NOT_EXECUTABLE,
             rule=TECHNICAL_RULE,
         )
     return blocker(

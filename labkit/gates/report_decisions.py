@@ -87,7 +87,7 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                 f"the result cannot be rendered from {ctx.run.name}: {exc}",
                 fix=f"repair what the sentence names, then "
                 f"`{render_command(ctx.protocol)}` writes the result section",
-                check_outcome=outcome_of_failed_read(exc),
+                stated_outcome=outcome_of_failed_read(exc),
                 rule=TECHNICAL_RULE,
             )
         ]

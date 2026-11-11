@@ -72,7 +72,7 @@ class TheResultSectionCannotBeRendered(unittest.TestCase):
             f'--decide 1 limitation --why "<why>" --record {RECORD}', effect.fix or ""
         )
         self.assertEqual(
-            (f.grade, f.rule, f.check_outcome), (BLOCKER, TECHNICAL_RULE, VIOLATED)
+            (f.grade, f.rule, f.outcome), (BLOCKER, TECHNICAL_RULE, VIOLATED)
         )
         self.assertEqual(
             f.text,
@@ -82,7 +82,7 @@ class TheResultSectionCannotBeRendered(unittest.TestCase):
 
     def test_a_refused_access_leaves_the_check_not_executed(self):
         _, f = self._gaps(PermissionError("metrics.json refused"))
-        self.assertEqual(f.check_outcome, NOT_EXECUTABLE)
+        self.assertEqual(f.outcome, NOT_EXECUTABLE)
 
     def test_the_twin_nothing_reported_owes_no_rendering(self):
         with (
@@ -165,7 +165,7 @@ class TheCarriedFindingsFormNoChain(unittest.TestCase):
         ):
             (f,) = report_decisions.followup_findings(checked(REPORTED, run=RUN))
         self.assertEqual(
-            (f.grade, f.rule, f.check_outcome), (BLOCKER, TECHNICAL_RULE, VIOLATED)
+            (f.grade, f.rule, f.outcome), (BLOCKER, TECHNICAL_RULE, VIOLATED)
         )
         self.assertTrue(
             f.text.startswith("the carried findings of area do not form a chain: "),

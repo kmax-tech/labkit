@@ -622,7 +622,7 @@ def tell_test_run(
         findings.warn(
             "pytest is not installed in this interpreter — tests not run",
             evidence_kind=GUARANTEED,
-            check_outcome=NOT_EXECUTABLE,
+            stated_outcome=NOT_EXECUTABLE,
             rule=TECHNICAL_RULE,
         )
     else:
@@ -636,7 +636,7 @@ def tell_test_run(
                 fix=f"make them run (a collection or import error, a missing "
                 f"dependency, no test collected) until "
                 f"`.venv/bin/python -m pytest {files}` passes",
-                check_outcome=NOT_EXECUTABLE,
+                stated_outcome=NOT_EXECUTABLE,
                 rule=TECHNICAL_RULE,
             )
             return

@@ -399,7 +399,7 @@ def quality_check_reads(
                 f"quality-check keys: read check not done — {exc}",
                 fix="fix the file",
                 evidence_kind=GUARANTEED,
-                check_outcome=outcome_of_failed_read(exc),
+                stated_outcome=outcome_of_failed_read(exc),
                 rule=TECHNICAL_RULE,
             )
         ]

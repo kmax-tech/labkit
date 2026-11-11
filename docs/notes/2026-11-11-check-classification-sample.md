@@ -77,14 +77,16 @@ The author's decisions on the gaps: a suspicion is an outcome of its own (gap 1)
 
 **Proposal: outcome values.** Two values today, `violated` and `not executable`; 10 lines of `labkit/formats/gate.py` read the field, no other module does.
 
-| Outcome          | Says                                                             | Holds when                                       |
-|------------------|------------------------------------------------------------------|--------------------------------------------------|
-| `violated`       | an exact check found a decided requirement breached              | guaranteed, basis a rule or a technical contract |
-| `deviation`      | an exact check found its condition, and no decided duty names it | guaranteed, basis open                           |
-| `suspected`      | a search found an indication; nothing is established             | static evidence                                  |
-| `not executable` | the check could not run here                                     | any procedure                                    |
+| Outcome          | Says                                                                                                                  | Holds when                                                                   |
+|------------------|-----------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| `violated`       | an exact check found a known rule or a technical contract breached                                                    | guaranteed, basis a known rule or a technical contract                       |
+| `deviation`      | the checked deviation was found; its binding basis is not settled — the duty may be undecided, or only its assignment | guaranteed, basis an open assignment, a new class, or no assignment recorded |
+| `suspected`      | an indication was found; a breach of duty is not established                                                          | static evidence, any basis                                                   |
+| `not executable` | the check could not run here; it comes before every other outcome                                                     | any procedure, stated by the site                                            |
 
 Both new values follow from fields a finding already has (the procedure, the kind of basis). So the smaller build stores nothing new: one function in `gate.py` gives the outcome from the three fields, the line and the inventory read it, and no site is edited (17 static-evidence sites and 16 open sites today). Storing the value at each site would let the three fields disagree. Recommended: derive it. The words `deviation` and `suspected` are a suggestion; the name is the author's.
+
+Built 2026-11-11 as decided by the author: `gate.derived_outcome` is the one derivation and `GateFinding.outcome` what every reader takes. A site states only `not executable` (`GateFinding.stated_outcome`, until this build `check_outcome`, `None` by default, so a site that states nothing is told from one that states `violated`); a stated value that contradicts the derived one raises, and so does an evidence kind or a rule kind the derivation does not name. The one site that stated `violated` on an open assignment (`evidence.change_blockers`) states nothing now and reads `deviation`. A failed read states `not executable` or nothing (`gate.outcome_of_failed_read`). Two readings of this build, not decided by the author: a new class and a site without a recorded assignment read `deviation`, since neither names a decided basis; and no line changed — a line still names only a check not executed, so `deviation` and `suspected` are data for the inventory and for a count, not words a reader of a gate sees.
 
 **Proposal: several rules.** No format change now. The one case found (the registered comparison changed together with a field) is two causes printed in one hold, not one indivisible condition: by the author's own criterion each cause carries its assignment. The build is two findings from `seen_hold` and `now_hold`, the comparison under LAB-035 and the fields under LAB-003, each with its own way out. The rule field is read in nine modules (`gate`, `findings`, `check_inventory`, `answering_run`, `preflight`, `promises`, `followup`, `report_blocks`, `intent_check`); a field of several rules waits for a condition that cannot be split.
 

@@ -108,7 +108,7 @@ class SourceFiles(unittest.TestCase):
         with self.assertRaises(scope_sha.SourceError) as cm:
             scope_sha.read_source(self.src)
         finding = unreadable_source(cm.exception)
-        self.assertEqual(finding.check_outcome, gate.NOT_EXECUTABLE)
+        self.assertEqual(finding.outcome, gate.NOT_EXECUTABLE)
         self.assertIn("BLOCKER · check not executable · ", finding.line)
 
     def test_a_file_that_is_not_python_is_a_violated_condition(self) -> None:
@@ -116,39 +116,155 @@ class SourceFiles(unittest.TestCase):
         with self.assertRaises(scope_sha.SourceError) as cm:
             scope_sha.parse_text(scope_sha.read_source(self.src), self.src)
         finding = unreadable_source(cm.exception)
-        self.assertEqual(finding.check_outcome, gate.VIOLATED)
+        self.assertEqual(finding.outcome, gate.VIOLATED)
         self.assertNotIn("not executable", finding.line)
 
 
+LAB_003 = gate.cited_rule("LAB-003 No run without an intent paragraph")
+
+
 class Outcome(unittest.TestCase):
-    def test_a_finding_is_a_violation_unless_said_otherwise(self) -> None:
-        f = gate.blocker("x", fix="y")
-        self.assertEqual(f.check_outcome, gate.VIOLATED)
-        self.assertEqual(f.line, "BLOCKER: x. Next: y")
+    """`gate.derived_outcome` and `GateFinding.outcome`: what a finding says
+    about its check follows from the evidence kind and the rule assignment;
+    only a check not executed is said by the site."""
+
+    def warned(self, evidence_kind: str, rule: gate.RuleAssignment | None) -> str:
+        return gate.GateFinding(
+            gate.WARNING, "x", rule=rule, evidence_kind=evidence_kind
+        ).outcome
+
+    def test_an_exact_check_on_a_decided_basis_is_a_violation(self) -> None:
+        for rule in (LAB_003, gate.TECHNICAL_RULE):
+            with self.subTest(rule=rule.kind):
+                f = gate.blocker("x", fix="y", rule=rule)
+                self.assertEqual(f.outcome, gate.VIOLATED)
+                self.assertEqual(self.warned(gate.GUARANTEED, rule), gate.VIOLATED)
+        self.assertEqual(
+            gate.blocker("x", fix="y", rule=gate.TECHNICAL_RULE).line,
+            "BLOCKER: x. Next: y",
+        )
+
+    def test_an_exact_check_on_an_unsettled_basis_is_a_deviation(self) -> None:
+        """An open assignment, a new class and a site without an assignment
+        name no decided basis: none of them is told as a violation."""
+        for rule in (gate.OPEN_RULE, gate.NEW_CLASS_RULE, None):
+            with self.subTest(rule=rule):
+                f = gate.blocker("x", fix="y", rule=rule)
+                self.assertEqual(f.outcome, gate.DEVIATION)
+                self.assertEqual(f.line, "BLOCKER: x. Next: y")  # it blocks as before
+
+    def test_static_evidence_is_a_suspicion_whatever_its_basis(self) -> None:
+        for rule in (LAB_003, gate.TECHNICAL_RULE, gate.OPEN_RULE, None):
+            with self.subTest(rule=rule):
+                self.assertEqual(
+                    self.warned(gate.STATIC_EVIDENCE, rule), gate.SUSPECTED
+                )
+
+    def test_a_check_not_executed_comes_before_every_derived_outcome(self) -> None:
+        for kind, rule in (
+            (gate.GUARANTEED, LAB_003),
+            (gate.GUARANTEED, gate.OPEN_RULE),
+            (gate.STATIC_EVIDENCE, LAB_003),
+        ):
+            with self.subTest(kind=kind, rule=rule.kind):
+                f = gate.GateFinding(
+                    gate.WARNING,
+                    "x",
+                    rule=rule,
+                    evidence_kind=kind,
+                    stated_outcome=gate.NOT_EXECUTABLE,
+                )
+                self.assertEqual(f.outcome, gate.NOT_EXECUTABLE)
+
+    def test_a_stated_outcome_that_contradicts_the_derived_one_is_refused(
+        self,
+    ) -> None:
+        for kind, rule, stated in (
+            (gate.GUARANTEED, gate.OPEN_RULE, gate.VIOLATED),
+            (gate.GUARANTEED, None, gate.VIOLATED),
+            (gate.GUARANTEED, LAB_003, gate.DEVIATION),
+            (gate.STATIC_EVIDENCE, LAB_003, gate.VIOLATED),
+            (gate.GUARANTEED, LAB_003, gate.SUSPECTED),
+        ):
+            with self.subTest(kind=kind, rule=rule, stated=stated):
+                with self.assertRaisesRegex(ValueError, "states the outcome"):
+                    gate.GateFinding(
+                        gate.WARNING,
+                        "x",
+                        rule=rule,
+                        evidence_kind=kind,
+                        stated_outcome=stated,
+                    )
+
+    def test_the_twin_a_stated_outcome_that_is_the_derived_one_passes(self) -> None:
+        for kind, rule, stated in (
+            (gate.GUARANTEED, LAB_003, gate.VIOLATED),
+            (gate.GUARANTEED, gate.TECHNICAL_RULE, gate.VIOLATED),
+            (gate.GUARANTEED, gate.OPEN_RULE, gate.DEVIATION),
+            (gate.STATIC_EVIDENCE, gate.OPEN_RULE, gate.SUSPECTED),
+        ):
+            with self.subTest(kind=kind, rule=rule.kind, stated=stated):
+                f = gate.GateFinding(
+                    gate.WARNING,
+                    "x",
+                    rule=rule,
+                    evidence_kind=kind,
+                    stated_outcome=stated,
+                )
+                self.assertEqual(f.outcome, stated)
+
+    def test_a_site_that_states_nothing_is_told_from_one_that_states_violated(
+        self,
+    ) -> None:
+        unset = gate.blocker("x", fix="y", rule=LAB_003)
+        stated = gate.blocker("x", fix="y", rule=LAB_003, stated_outcome=gate.VIOLATED)
+        self.assertEqual(
+            (unset.stated_outcome, stated.stated_outcome), (None, gate.VIOLATED)
+        )
+        self.assertEqual(unset.outcome, stated.outcome)
+
+    def test_a_combination_the_derivation_does_not_name_raises(self) -> None:
+        """A new evidence kind or rule kind is decided in `derived_outcome`
+        before a finding of it is told as a violation."""
+        unnamed_basis = gate.RuleAssignment.__new__(gate.RuleAssignment)
+        object.__setattr__(unnamed_basis, "kind", "house rule")
+        for kind, rule in (("agent audit", LAB_003), (gate.GUARANTEED, unnamed_basis)):
+            with self.subTest(kind=kind, rule=rule.kind):
+                with self.assertRaisesRegex(ValueError, "no check outcome is defined"):
+                    gate.derived_outcome(kind, rule)
+
+    def test_every_rule_kind_has_its_outcome(self) -> None:
+        for kind in gate.RULE_KINDS:
+            rule = LAB_003 if kind == gate.KNOWN_RULE else gate.RuleAssignment(kind)
+            with self.subTest(kind=kind):
+                self.assertIn(
+                    gate.derived_outcome(gate.GUARANTEED, rule), gate.OUTCOMES
+                )
 
     def test_a_check_not_executed_says_so_in_every_form(self) -> None:
-        f = gate.blocker("x", fix="y", check_outcome=gate.NOT_EXECUTABLE)
+        f = gate.blocker("x", fix="y", stated_outcome=gate.NOT_EXECUTABLE)
         self.assertEqual(f.line, "BLOCKER (check not executable): x. Next: y")
         written = gate.GateFinding(
             gate.WARNING,
             "x",
             gate.AS_WRITTEN,
             evidence_kind=gate.GUARANTEED,
-            check_outcome=gate.NOT_EXECUTABLE,
+            stated_outcome=gate.NOT_EXECUTABLE,
         )
         self.assertEqual(written.line, "x (check not executable)")
 
     def test_an_unknown_outcome_is_refused(self) -> None:
         with self.assertRaisesRegex(ValueError, "outcome"):
-            gate.blocker("x", fix="y", check_outcome="skipped")
+            gate.blocker("x", fix="y", stated_outcome="skipped")
 
     def test_only_access_leaves_a_check_not_executed(self) -> None:
         self.assertEqual(
             gate.outcome_of_failed_read(PermissionError("x")), gate.NOT_EXECUTABLE
         )
+        # a missing or malformed input states nothing: its outcome is derived
         for exc in (FileNotFoundError("x"), ValueError("x")):
             with self.subTest(exc=type(exc).__name__):
-                self.assertEqual(gate.outcome_of_failed_read(exc), gate.VIOLATED)
+                self.assertIsNone(gate.outcome_of_failed_read(exc))
 
 
 class FinalizeStation(unittest.TestCase):
@@ -175,7 +291,7 @@ class FinalizeStation(unittest.TestCase):
     def test_a_malformed_file_is_a_defect_measured_anew(self) -> None:
         self.outputs.write_text("[not json", encoding="utf-8")
         (f,) = self.found()
-        self.assertEqual(f.check_outcome, gate.VIOLATED)
+        self.assertEqual(f.outcome, gate.VIOLATED)
         self.assertIn("measure anew", f.fix or "")
 
     @unittest.skipIf(AS_ROOT, "root reads every file")
@@ -184,7 +300,7 @@ class FinalizeStation(unittest.TestCase):
         unreadable(self.outputs)
         self.addCleanup(self.outputs.chmod, 0o644)
         (f,) = self.found()
-        self.assertEqual(f.check_outcome, gate.NOT_EXECUTABLE)
+        self.assertEqual(f.outcome, gate.NOT_EXECUTABLE)
         self.assertIn("make the run's files readable", f.fix or "")
         self.assertIsNone(f.step)
 
@@ -207,14 +323,12 @@ class TestRunOutcome(unittest.TestCase):
 
     def test_a_failed_run_is_violated(self) -> None:
         f = self.told("failed")
-        self.assertEqual((f.grade, f.check_outcome), (gate.BLOCKER, gate.VIOLATED))
+        self.assertEqual((f.grade, f.outcome), (gate.BLOCKER, gate.VIOLATED))
         self.assertIn("failed", f.text)
 
     def test_a_run_that_did_not_test_the_code_is_not_executed(self) -> None:
         f = self.told("not run")
-        self.assertEqual(
-            (f.grade, f.check_outcome), (gate.BLOCKER, gate.NOT_EXECUTABLE)
-        )
+        self.assertEqual((f.grade, f.outcome), (gate.BLOCKER, gate.NOT_EXECUTABLE))
         self.assertIn("did not run", f.text)
 
 
@@ -226,8 +340,9 @@ class EvidenceComparison(unittest.TestCase):
                 ("a record changed", "restore it"),
             ]
         )
-        self.assertEqual(unread.check_outcome, gate.NOT_EXECUTABLE)
-        self.assertEqual(changed.check_outcome, gate.VIOLATED)
+        self.assertEqual(unread.outcome, gate.NOT_EXECUTABLE)
+        # the changed record's rule is an open assignment: no violation is told
+        self.assertEqual(changed.outcome, gate.DEVIATION)
         self.assertEqual(
             (unread.rule, changed.rule), (gate.TECHNICAL_RULE, gate.OPEN_RULE)
         )

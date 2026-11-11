@@ -384,7 +384,7 @@ class NoFileAccessInGates(unittest.TestCase):
 #: what a forwarded gate finding keeps: a gate that passes a finding on
 #: (`dataclasses.replace(f, text=…)`) adds a prefix or a way out, never
 #: another grade, rule assignment, evidence kind or check outcome
-KEPT_WHEN_FORWARDED = {"grade", "rule", "evidence_kind", "check_outcome"}
+KEPT_WHEN_FORWARDED = {"grade", "rule", "evidence_kind", "stated_outcome"}
 #: (module, function) of an explicit transformation of one of them, each
 #: with its reason; none today
 FORWARDING_TRANSFORMATIONS: set[tuple[str, str]] = set()
@@ -434,6 +434,49 @@ class ForwardingKeepsWhatAFindingIs(unittest.TestCase):
         self.assertEqual(forwarding_changes(forbidden), [("forward", 2, ["rule"])])
         allowed = "def forward(f):\n    return replace(f, text='finalize: ' + f.text)\n"
         self.assertEqual(forwarding_changes(allowed), [])
+
+
+def stated_outcome_reads(source: str) -> list[int]:
+    """The lines of SOURCE that read a finding's `stated_outcome` — what the
+    site stated, None at most sites — where `outcome` is what the finding
+    says."""
+    return [
+        n.lineno
+        for n in ast.walk(ast.parse(source))
+        if isinstance(n, ast.Attribute)
+        and n.attr == "stated_outcome"
+        and isinstance(n.ctx, ast.Load)
+    ]
+
+
+class TheOutcomeIsReadDerived(unittest.TestCase):
+    """A finding's outcome has one reader's name, `GateFinding.outcome`
+    (`gate.derived_outcome`); `stated_outcome` is the site's statement and is
+    read only where the two are reconciled, in `gate`."""
+
+    def test_no_module_but_gate_reads_the_stated_outcome(self):
+        offenders = {
+            (m, line)
+            for m, p in sorted(module_paths().items())
+            if m != "gate"
+            for line in stated_outcome_reads(p.read_text(encoding="utf-8"))
+        }
+        self.assertEqual(offenders, set())
+
+    def test_the_guard_bites_and_lets_the_keyword_pass(self):
+        self.assertEqual(
+            stated_outcome_reads("def f(x):\n    return x.stated_outcome\n"), [2]
+        )
+        self.assertEqual(
+            stated_outcome_reads(
+                "def f(x):\n    return blocker(x, stated_outcome=NOT_EXECUTABLE)\n"
+            ),
+            [],
+        )
+        gate_reads = stated_outcome_reads(
+            module_paths()["gate"].read_text(encoding="utf-8")
+        )
+        self.assertTrue(gate_reads)  # the search finds the reads that exist
 
 
 class Packaging(unittest.TestCase):

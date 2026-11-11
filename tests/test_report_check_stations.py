@@ -57,9 +57,7 @@ class TheAnalysisAuditCannotBeHeld(unittest.TestCase):
                         "the analysis audit cannot be held to the area: "
                     )
                 )
-                self.assertEqual(
-                    (gap.check_outcome, gap.rule), (outcome, TECHNICAL_RULE)
-                )
+                self.assertEqual((gap.outcome, gap.rule), (outcome, TECHNICAL_RULE))
 
     def test_the_twin_no_run_names_the_measurement(self):
         gap = report_check.analysis_audit_gap(

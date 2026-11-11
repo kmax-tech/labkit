@@ -52,7 +52,7 @@ class AnAuditedRunIsKept(unittest.TestCase):
         self.assertEqual(len(found), 1)
         (f,) = found
         self.assertEqual(
-            (f.grade, f.evidence_kind, f.check_outcome), (BLOCKER, GUARANTEED, VIOLATED)
+            (f.grade, f.evidence_kind, f.outcome), (BLOCKER, GUARANTEED, VIOLATED)
         )
         self.assertEqual(f.rule, TECHNICAL_RULE)
         self.assertEqual(

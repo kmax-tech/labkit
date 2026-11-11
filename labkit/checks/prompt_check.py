@@ -78,7 +78,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     fix=f"repair it until `.venv/bin/python -m pytest "
                     f"{shlex.quote(shown(t, Path.cwd()))}` collects it",
                     evidence_kind=GUARANTEED,
-                    check_outcome=NOT_EXECUTABLE,
+                    stated_outcome=NOT_EXECUTABLE,
                     rule=TECHNICAL_RULE,
                 )
             )
