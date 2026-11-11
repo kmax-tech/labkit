@@ -53,7 +53,6 @@ from labkit.formats.protocol_check import (
 
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
-LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
 
 @dataclass(frozen=True)
@@ -359,7 +358,9 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                 "metrics.json and the records' limits)",
                 fix=f"`{RENDER}` writes it again",
                 step=RENDER,
-                rule=LAB_041,
+                # one equality over the whole generated line — verdicts,
+                # values, run id, limits note —, whichever part differs
+                rule=TECHNICAL_RULE,
             )
         )
     labels = [display_label(f.label) for f in fields(text)]

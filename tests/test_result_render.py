@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks import result_render  # noqa: E402
+from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from labkit.tools import protocol_result
 from protocol_fixture import (
@@ -251,10 +252,26 @@ class RenderGaps(unittest.TestCase):
         self.assertEqual(len(gaps), 2, gaps)
         self.assertIn("Recorded results line differs from its rendering", gaps[0].text)
         self.assertIn("differs from the record", gaps[1].text)
+        self.assertEqual(
+            [g.rule for g in gaps], [TECHNICAL_RULE, result_render.LAB_015]
+        )
         self.assertIn("--render", gaps[1].fix or "")
         rendered, written = protocol_result.render_result(edited, self.area)
         self.assertEqual(rendered, text)
         self.assertEqual(len(written), 2)
+
+    def test_a_part_of_the_line_that_is_no_number_differs_the_same_way(self):
+        """The line is held whole: a retyped run id is the gap a retyped
+        value is, under the same contract."""
+        text = self.written()
+        line = next(
+            ln for ln in text.splitlines() if result_render.RECORDED_RESULTS_LABEL in ln
+        )
+        self.assertIn("(run ", line)
+        edited = text.replace(line, line.replace("(run ", "(run 0"))
+        (gap,) = result_render.render_gaps(edited, self.expected)
+        self.assertIn("Recorded results line differs from its rendering", gap.text)
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
 
     def test_a_generated_label_written_twice_is_a_gap(self):
         """Every line of a label is held, not one per field: a wrong
