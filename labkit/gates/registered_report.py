@@ -16,7 +16,7 @@ from pathlib import Path, PurePosixPath
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import OPEN_RULE, cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -43,6 +43,8 @@ from labkit.formats.commands import (
     into_command,
     step_command,
 )
+
+LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 def report_file(root: Path, registered: str) -> Path:
@@ -185,7 +187,7 @@ def report_owed(
         f"it releases nothing and the result or the handover stays owed; "
         f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
         step=write_cmd,
-        rule=OPEN_RULE,
+        rule=LAB_104,
     )
 
 
@@ -429,7 +431,7 @@ def missing_report(
             f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
             step=into,
-            rule=OPEN_RULE,
+            rule=LAB_104,
         )
     discuss = report_blocks.discuss_command(
         name_p, "<run_id>", name_r, report_blocks.WHY_PROGRESS
@@ -443,7 +445,7 @@ def missing_report(
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",
         step=discuss,
-        rule=OPEN_RULE,
+        rule=LAB_104,
     )
 
 
@@ -469,7 +471,7 @@ def registered_review(
             f"{name_r}: its discussion blocks do not read — {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote "
             "them (`--discuss … --into` writes the block again)",
-            rule=OPEN_RULE,
+            rule=LAB_104,
         )
     return review_gap(
         report,

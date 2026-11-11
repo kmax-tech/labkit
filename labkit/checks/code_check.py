@@ -88,7 +88,7 @@ from pathlib import Path
 
 from labkit.formats.commands import gate_command
 from labkit.formats.area_state import state_of
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import OPEN_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
@@ -98,7 +98,6 @@ from labkit.formats.gate import (
     WARNING,
     Findings,
     GateFinding,
-    cited_rule,
     coded,
     outcome_of_failed_read,
 )
@@ -130,6 +129,8 @@ from labkit.checks.code_scan import (
 from labkit.checks.gate_label_scan import gate_labels
 from labkit.checks.import_check import stamp_coverage_findings
 from labkit.checks.prompt_check import check_parser_fixtures, check_prompt_drift
+
+LAB_103 = cited_rule("LAB-103 The audit reads by declared scope, not by import graph")
 
 
 # --- source analysis ------------------------------------------------------
@@ -250,7 +251,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     fix=f"name files that exist in [{p.id}]'s scope, then "
                     f"`{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
-                    rule=OPEN_RULE,
+                    rule=LAB_103,
                 )
             )
         out += constant_copies(area, protocol, p)
@@ -268,7 +269,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     fix=f"report '{p.key}' in the measure script or correct the key "
                     f"in [{p.id}], then `{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
-                    rule=OPEN_RULE,
+                    rule=ID_RULE,
                 )
             )
     return out

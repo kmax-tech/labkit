@@ -23,7 +23,7 @@ from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises, protocol_block
-from labkit.formats.gate import BLOCKER, GUARANTEED, OPEN_RULE, GateFinding
+from labkit.formats.gate import BLOCKER, GUARANTEED, OPEN_RULE, GateFinding, cited_rule
 from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.commands import Command, measure_command
 from labkit.formats.digests import digest
@@ -49,6 +49,8 @@ from labkit.formats.runs import (
     run_dirs,
     run_state,
 )
+
+LAB_009 = cited_rule("LAB-009 Verdict only at the registered tier")
 
 
 @dataclass(frozen=True)
@@ -640,7 +642,7 @@ class AnsweringRun:
                     fix=f"measure in full: `{measure_command(area)}` (no `--probe`, "
                     f"`--show` or `--eval-only`) writes the intent keys to metrics.json",
                     evidence_kind=GUARANTEED,
-                    rule=OPEN_RULE,
+                    rule=LAB_009,
                 ),
                 [],
             )

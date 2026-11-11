@@ -96,11 +96,12 @@ from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
     GUARANTEED,
     NOTE,
-    OPEN_RULE,
-    GateFinding,
-    STATIC_EVIDENCE,
     NOT_EXECUTABLE,
+    OPEN_RULE,
+    STATIC_EVIDENCE,
+    GateFinding,
     blocker,
+    cited_rule,
     outcome_of_failed_read,
     withdrawn_first,
 )
@@ -177,6 +178,11 @@ from labkit.checks.audit_binding import (
 from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
+
+LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
+LAB_103 = cited_rule("LAB-103 The audit reads by declared scope, not by import graph")
 
 
 def choose_answering_run(
@@ -452,7 +458,7 @@ def check_declared_scopes(
                 f"declared scope changed since {answering_run.name}: {d}",
                 fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
                 step=measure_command(area),
-                rule=OPEN_RULE,
+                rule=LAB_103,
             ),
             changed_since=answering_run.name,
         )
@@ -481,14 +487,14 @@ def check_open_fields(
         findings.warn(
             f"{protocol.name}:{lineno}: {label}",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
     repeated = repeated_findings(text)
     for twice in repeated:
         findings.block(
             f"{protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
     stale = readme_placeholders(protocol.parent)
     for line in stale:
@@ -529,7 +535,7 @@ def check_data_counts(
         why,
         fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {run_id}` "
         f"writes them from the run — never typed",
-        rule=OPEN_RULE,
+        rule=LAB_041,
     )
     return False
 
@@ -542,7 +548,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     b, w, outside = provenance_findings(area, answering_run)
     findings.take_all(b)
     for line in w:
-        findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.warn(line, evidence_kind=GUARANTEED, rule=LAB_017)
     for line in outside:
         findings.note(f"  {line}")
     if not b and not w:
@@ -670,7 +676,7 @@ def check_reference(
             f"{protocol.name}: {gap}",
             fix=f"repair the head as the sentence says, then "
             f"`{gate_command('finalize', protocol.parent)}`",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
         return
     if kept_gaps(text, head):
@@ -686,7 +692,7 @@ def check_reference(
             f"{protocol.name}: {exc}",
             fix=f"repair the [reference] and [kept] tables as the sentence says; "
             f"`{gate_command('protocol-check', protocol)}` shows them",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
         return
     # at kind compute the kept-number station reads the same metrics.json
@@ -753,7 +759,7 @@ def check_kept_number(
                 else f"repair the head as the sentence says, then "
                 f"`{gate_command('finalize', protocol.parent)}`"
             ),
-            rule=OPEN_RULE,
+            rule=LAB_041,
         )
     if gaps:
         return
@@ -924,7 +930,7 @@ def finalize_area(
                 f"{chosen.name}: {exc}",
                 fix=f"repair the head as the sentence says: "
                 f"`{contract_command(chosen)}` shows its fields",
-                rule=OPEN_RULE,
+                rule=LAB_011,
             )
         return 2
 
@@ -1010,7 +1016,7 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
     except protocol_block.BlockError as exc:
         return [
             blocker(
-                str(exc), fix=written, step=withdraw_command(protocol), rule=OPEN_RULE
+                str(exc), fix=written, step=withdraw_command(protocol), rule=LAB_011
             )
         ]
     return []

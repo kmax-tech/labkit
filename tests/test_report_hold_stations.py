@@ -12,7 +12,7 @@ from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.checks.audit_binding import AuditError
-from labkit.formats.gate import BLOCKER, OPEN_RULE
+from labkit.formats.gate import BLOCKER, OPEN_RULE, cited_rule
 from labkit.gates import report_hold
 from state_fixture import area_evidence, area_state
 
@@ -66,7 +66,15 @@ class AReportHold(unittest.TestCase):
             )
         ]
         (gap,) = report_hold.discussion_sources(self.report, found, self._sources())
-        self.assertEqual((gap.grade, gap.rule), (BLOCKER, OPEN_RULE))
+        self.assertEqual(
+            (gap.grade, gap.rule),
+            (
+                BLOCKER,
+                cited_rule(
+                    "LAB-104 A number leaves the area only through its adoption"
+                ),
+            ),
+        )
         self.assertIn(
             "names experiments/01-x/PROTOCOL-x.md, and there is no such protocol",
             gap.text,

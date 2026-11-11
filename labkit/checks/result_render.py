@@ -37,7 +37,7 @@ from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import state_of
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.commands import render_command
 from labkit.formats.protocol_check import (
@@ -49,6 +49,9 @@ from labkit.formats.protocol_check import (
     recorded_results_field,
     written_line,
 )
+
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
 
 @dataclass(frozen=True)
@@ -344,7 +347,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                 "the Recorded results line is not written",
                 fix=f"`{FROM_RUN}` writes it from the run",
                 step=FROM_RUN,
-                rule=OPEN_RULE,
+                rule=LAB_041,
             )
         )
     elif recorded_results != expected.recorded_results:
@@ -354,7 +357,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                 "metrics.json and the records' limits)",
                 fix=f"`{RENDER}` writes it again",
                 step=RENDER,
-                rule=OPEN_RULE,
+                rule=LAB_041,
             )
         )
     labels = [display_label(f.label) for f in fields(text)]
@@ -374,7 +377,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     fix="remove the extra line(s) by hand (`--render` rewrites one "
                     "and leaves the others)",
                     step=RENDER,
-                    rule=OPEN_RULE,
+                    rule=LAB_041,
                 )
             )
     have = {display_label(f.label): f.value for f in fields(text)}
@@ -386,7 +389,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     f'no "{label}" line — the limit\'s line belongs in the protocol',
                     fix=f"`{RENDER}` writes it from the record",
                     step=RENDER,
-                    rule=OPEN_RULE,
+                    rule=LAB_015,
                 )
             )
         elif got != value:
@@ -395,7 +398,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     f'"{label}" differs from the record',
                     fix=f"`{RENDER}` writes the record's line",
                     step=RENDER,
-                    rule=OPEN_RULE,
+                    rule=LAB_015,
                 )
             )
     expected_labels = {label for label, _ in expected.limits}
@@ -407,7 +410,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     f"by hand or from an older record",
                     fix=f"`{RENDER}` drops it",
                     step=RENDER,
-                    rule=OPEN_RULE,
+                    rule=LAB_015,
                 )
             )
     return gaps

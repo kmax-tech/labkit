@@ -20,7 +20,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
 from labkit.checks.report_blocks import discuss_command
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import OPEN_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
@@ -75,6 +75,10 @@ from labkit.formats.commands import (
 )
 from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
+
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 def held_place(repo: Path, path: Path) -> bool:
@@ -513,7 +517,7 @@ def owed_blocks(
                 f"adopted result is the generated one",
                 fix=f"`{into}` writes it",
                 step=into,
-                rule=OPEN_RULE,
+                rule=LAB_104,
             )
         )
     return out
@@ -604,7 +608,7 @@ def hold_report(
             f"{rel}: {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote them "
             "(`--into` for a result, `--discuss` for a discussion writes them again)",
-            rule=OPEN_RULE,
+            rule=LAB_104,
         )
         return out.report("report-check", "reporting")
 
@@ -625,7 +629,7 @@ def hold_report(
     out.take_all(report_review_owed(path, rel, text, discussed, sources))
     report_hints(out, rel, text, discussed)
     for line in replacement_hints(path, rel, text, repo, sources):
-        out.warn(line, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE)
+        out.warn(line, evidence_kind=STATIC_EVIDENCE, rule=LAB_003)
     out.take_all(undeclared_findings(path, rel, cited, discussed, sources))
     return out.report("report-check", "reporting")
 
@@ -672,7 +676,7 @@ def discussion_sources(
                 blocker(
                     f"{at} names {d.protocol}, and there is no such protocol",
                     fix=f"{again}, the protocol named from the report",
-                    rule=OPEN_RULE,
+                    rule=LAB_104,
                 )
             )
         elif d.run_id not in {rd.dir.name for rd in state.runs}:
@@ -681,7 +685,7 @@ def discussion_sources(
                     f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
                     f"discussion names a run of its protocol's area",
                     fix=f"{again}, naming a run of that area",
-                    rule=OPEN_RULE,
+                    rule=LAB_104,
                 )
             )
     return gaps
@@ -754,7 +758,7 @@ def report_hints(
             f"{len(unsourced)} line(s) — they stand outside every generated "
             f"result block (a hint, not a check of the numbers):",
             evidence_kind=STATIC_EVIDENCE,
-            rule=OPEN_RULE,
+            rule=LAB_104,
         )
         for n, numbers in unsourced:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
@@ -765,7 +769,7 @@ def report_hints(
             f"run — a discussed run's number in a report is a reported number "
             f"unless the sentence says what it is (a hint, not a check):",
             evidence_kind=STATIC_EVIDENCE,
-            rule=OPEN_RULE,
+            rule=LAB_104,
         )
         for n, numbers in beside:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
@@ -949,7 +953,7 @@ def review_hold(
             fix=f"change the report, or a source the reviewer read, so that "
             f"no claim holds, then review that state: {command} (another "
             f"draw on this state, `--again` included, releases nothing)",
-            rule=OPEN_RULE,
+            rule=LAB_104,
         )
     since = (
         f"; the last review ({stands.earlier.path.name}) read another state — "
@@ -963,7 +967,7 @@ def review_hold(
         f"presents nothing as a result the protocol has not adopted",
         fix=f"{command} (one model call) — last, after the report's text and "
         f"its blocks are final: a change after it owes another",
-        rule=OPEN_RULE,
+        rule=LAB_104,
     )
 
 
@@ -993,7 +997,7 @@ def undeclared_findings(
                     f"reported, but {named} has adopted it as its result",
                     fix="remove the discussion block — the generated result block "
                     f"shows the number —, then `report-check --if-reported {rel}`",
-                    rule=OPEN_RULE,
+                    rule=LAB_104,
                 )
             )
     said_so = {d.run_id for d in discussed}
@@ -1013,7 +1017,7 @@ def undeclared_findings(
                 fix=exc.fix
                 or "repair the head as the sentence says (`protocol-check "
                 "<PROTOCOL> --contract` shows its fields)",
-                rule=OPEN_RULE,
+                rule=LAB_011,
             )
         ]
     for run_id, protocol in promoted:
@@ -1055,7 +1059,7 @@ def undeclared_findings(
                 f"adoption still owes), then `--into {rel}` writes its block; a run "
                 f"this report looks at without reporting it stands in a discussion "
                 f"block: `{report_blocks.discuss_command(shown(protocol, Path.cwd()), run_id, rel)}`",
-                rule=OPEN_RULE,
+                rule=LAB_104,
             )
         )
     looked_at = [r for r in undeclared if r not in {r for r, _ in promoted}]
@@ -1069,7 +1073,7 @@ def undeclared_findings(
                 f"<PROTOCOL> --into {rel}`; an exploration's run is cited, not "
                 f"reported",
                 evidence_kind=GUARANTEED,
-                rule=OPEN_RULE,
+                rule=LAB_104,
             )
         )
     return out

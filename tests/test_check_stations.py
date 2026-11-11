@@ -23,6 +23,7 @@ from labkit.formats.gate import (
     GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
+    cited_rule,
     VIOLATED,
     WARNING,
     Findings,
@@ -134,7 +135,9 @@ class TheSofterLinesOfANoteWarn(unittest.TestCase):
                 WARNING,
                 "notes/a.md: line 3: a count without its run",
                 GUARANTEED,
-                OPEN_RULE,
+                cited_rule(
+                    "LAB-082 In `notes/messung/`, every note carries its kind in the meta line"
+                ),
             ),
         )
         self.assertNotIn("notes/a.md: OK", told)

@@ -42,7 +42,7 @@ import re
 from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import OPEN_RULE, cited_rule
 from labkit.formats.gate import (
     GUARANTEED,
     STATIC_EVIDENCE,
@@ -54,6 +54,10 @@ from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
 from pathlib import Path
+
+LAB_082 = cited_rule(
+    "LAB-082 In `notes/messung/`, every note carries its kind in the meta line"
+)
 
 # The contract: kind tokens as they appear in meta lines. German on purpose —
 # the notes are German and the tokens are greppable prose, not identifiers.
@@ -148,7 +152,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                 fix="write one under the title: *<Zweck> · <Sorte> · … · <Datum>*, "
                 f"then `{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
-                rule=OPEN_RULE,
+                rule=LAB_082,
             )
         )
         return gaps, softer
@@ -163,7 +167,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                 "Related-Lesart · Referenzkarte · Audit, then "
                 f"`{gate_command('notes-check', f)}`",
                 evidence_kind=GUARANTEED,
-                rule=OPEN_RULE,
+                rule=LAB_082,
             )
         )
     if not DATE.search(para):
@@ -182,7 +186,7 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                     "implements it, or declare it 'Instrument — Entwurf', then "
                     f"`{gate_command('notes-check', f)}`",
                     evidence_kind=STATIC_EVIDENCE,
-                    rule=OPEN_RULE,
+                    rule=LAB_082,
                 )
             )
         else:
@@ -246,7 +250,7 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
             continue
         findings.take_all(gaps)
         for line in softer:
-            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+            findings.warn(line, evidence_kind=GUARANTEED, rule=LAB_082)
         if not gaps and not softer:
             tell(f"{f}: OK")
     return findings.report("notes-check", "the note counts")

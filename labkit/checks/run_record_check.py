@@ -46,11 +46,11 @@ from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import promises, protocol_block
 from labkit.formats.gate import (
     OPEN_RULE,
-    cited_rule,
     STATIC_EVIDENCE,
     WARNING,
     GateFinding,
     blocker,
+    cited_rule,
     outcome_of_failed_read,
 )
 from labkit.formats.runs import (
@@ -87,6 +87,10 @@ from labkit.formats.repo import (
     tracked_under,
 )
 from labkit.formats.commands import gate_command, measure_anew
+
+LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
+LAB_057 = cited_rule("LAB-057 One area per idea")
 
 
 CRITERION_N = promises.CRITERION_N_KEY
@@ -180,7 +184,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                     f"came from other code",
                     fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(kept, here))} "
                     f"{shlex.quote(shown(script, here))}`)",
-                    rule=OPEN_RULE,
+                    rule=LAB_019,
                 ),
                 changed_since=rid,
             )
@@ -285,7 +289,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                             f"untracked; the run kept it as {shown(copy, here)})",
                             fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(copy, here))} "
                             f"{shlex.quote(shown(f, here))}`)",
-                            rule=OPEN_RULE,
+                            rule=LAB_019,
                         ),
                         changed_since=rid,
                     )
@@ -357,7 +361,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                         f"{shown(f, here)} changed since {rid} ran",
                         fix=f"{FIX_FIRST} (`git -C {shlex.quote(shown(repo, here))} "
                         f"cat-file blob {blob} > {shlex.quote(shown(f, here))}`)",
-                        rule=OPEN_RULE,
+                        rule=LAB_019,
                     ),
                     changed_since=rid,
                 )
@@ -595,7 +599,7 @@ def _recorded_sources(
                 fix="pass data={name: path} to runlog.run so sha and rows are "
                 f"recorded, or data=runlog.NO_INPUTS for a run that reads no "
                 f"input file, then {measure_anew(area)}",
-                rule=OPEN_RULE,
+                rule=LAB_041,
             )
         ]
     return [
@@ -677,8 +681,10 @@ def source_finding(
     no blocker, and the note for a source kept outside git: lying outside
     the repository (its resolved path), where git can neither track nor
     ignore it — held by the checksum alone, its source or access route
-    owed in Data / scope —, or the ignore rule that keeps it out. The rule
-    is not decided yet (OPEN_RULE)."""
+    owed in Data / scope —, or the ignore rule that keeps it out. Other
+    bytes than the run read break LAB-041 Generate numbers, don't retype
+    them (a run freezes its data sources); the rule of the other two is not
+    decided yet (OPEN_RULE)."""
     if source.kind is None:
         return _gone(source.path, area), None
     if source.loose:
@@ -691,7 +697,7 @@ def source_finding(
                 fix="restore the bytes the run read (from git where it tracks them, "
                 "else from the source or access route Data / scope names), or "
                 f"{measure_anew(area)}",
-                rule=OPEN_RULE,
+                rule=LAB_041,
             ),
             None,
         )
@@ -946,7 +952,7 @@ def row_provenance_findings(
                     f"script, e.g. `{next_output_name(entry.path)}`; keep "
                     f"{entry.path.name} and its runs, never delete it: those rows are "
                     f"the other runs' evidence",
-                    rule=OPEN_RULE,
+                    rule=LAB_057,
                 )
             )
         if entry.continues:
@@ -1085,6 +1091,6 @@ def kept_number_gaps(
             f"{measure_anew(area)}; when [kept] names the wrong number, set it "
             f"before the first measurement — after it, "
             + register_anew(per="per change, the [kept] among them", kind="compute"),
-            rule=OPEN_RULE,
+            rule=LAB_041,
         )
     ]

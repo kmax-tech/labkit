@@ -16,6 +16,7 @@ from labkit.formats.gate import (
     GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
+    cited_rule,
     STATIC_EVIDENCE,
     VIOLATED,
     Findings,
@@ -186,7 +187,7 @@ class DeclaredRunHint(unittest.TestCase):
         self.assertIn("no run id runlog writes", gap.text)
         self.assertIn("--withdraw", gap.fix or "")
         self.assertIn("labkit-adopt ", gap.fix or "")
-        self.assertEqual(gap.rule, OPEN_RULE)
+        self.assertEqual(gap.rule, cited_rule("LAB-011 Required-field check"))
         self.assertEqual(
             finalize.declared_run_gaps(
                 head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"), protocol
@@ -436,7 +437,9 @@ class DataCountsStation(unittest.TestCase):
         (f,) = found.found
         self.assertIn("names prepare run r9, which the area does not have", f.text)
         self.assertIn("--data-counts r9", f.fix or "")
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(
+            f.rule, cited_rule("LAB-041 Generate numbers, don't retype them")
+        )
 
     def test_the_twin_a_scope_without_generated_counts_passes(self):
         held, found = self._station("data/x.csv, 4 items")

@@ -18,6 +18,7 @@ from labkit.formats.gate import (
     OPEN_RULE,
     GateFinding,
     blocker,
+    cited_rule,
     withdrawn_first,
 )
 from labkit.formats import (
@@ -66,6 +67,8 @@ from labkit.formats.followup import (
     chain,
     released_corrections,
 )
+
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 
 
 def registration_changes(
@@ -122,7 +125,7 @@ def registration_changes(
                     "of the new protocol lists them)",
                 )
                 + f"; or {HANDOVER}",
-                rule=OPEN_RULE,
+                rule=LAB_003,
             )
         ]
     if not registered:
@@ -146,7 +149,7 @@ def registration_changes(
             f"when the registration cannot be answered as written, "
             + register_anew(pid)
             + " — the earlier protocol, its runs and their verdict stay",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
     ]
 
@@ -397,7 +400,7 @@ def seen_hold(
         f"result was seen does not answer the registered question",
         fix=fix,
         step=first.step,
-        rule=OPEN_RULE,
+        rule=LAB_003,
     )
 
 
@@ -466,7 +469,7 @@ def now_hold(
         f"carry the change",
         fix=fix,
         step=first.step,
-        rule=OPEN_RULE,
+        rule=LAB_003,
     )
     return withdrawn_first([finding], withdraw)
 

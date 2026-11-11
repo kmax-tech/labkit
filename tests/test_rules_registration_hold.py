@@ -27,7 +27,7 @@ from labkit.formats.followup import (
     chain,
     released_corrections,
 )
-from labkit.formats.gate import BLOCKER, OPEN_RULE
+from labkit.formats.gate import BLOCKER, cited_rule
 from labkit.formats.protocol_history import STANDS_AS_REGISTERED, scope_differences
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import registration_hold
@@ -390,7 +390,14 @@ class TheHoldAsTheRunSawIt(unittest.TestCase):
 
     def test_a_decided_correction_leads_with_the_follow_up_on_this_run(self):
         f = pure_call(seen_hold, PID, "r2", FIRST, SCOPE, [REF], ANALYSIS)
-        self.assertEqual((f.grade, f.rule, f.step), (BLOCKER, OPEN_RULE, FIRST.step))
+        self.assertEqual(
+            (f.grade, f.rule, f.step),
+            (
+                BLOCKER,
+                cited_rule("LAB-003 No run without an intent paragraph"),
+                FIRST.step,
+            ),
+        )
         self.assertIn(
             f"after the first measurement {FIRST.run_id}: Data / scope", f.text
         )

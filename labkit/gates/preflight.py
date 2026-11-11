@@ -69,7 +69,13 @@ from pathlib import Path
 
 from labkit.formats.commands import contract_command, fill_command, gate_command
 from labkit.formats.repo import area_args
-from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE, OPEN_RULE, STATIC_EVIDENCE
+from labkit.formats.gate import (
+    GUARANTEED,
+    NOT_EXECUTABLE,
+    OPEN_RULE,
+    STATIC_EVIDENCE,
+    cited_rule,
+)
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
     audit_gaps,
@@ -103,6 +109,11 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
+
+LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
+LAB_010 = cited_rule("LAB-010 Commit before the run")
+LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 
 
 @dataclass(frozen=True)
@@ -242,7 +253,7 @@ def preflight_area(
         findings.block(
             f"HEAD (must): {report.head_error}",
             fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
@@ -320,35 +331,35 @@ def check_protocol_fields(
         findings.block(
             f"MISSING (must): {label}",
             fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
     for twice in report.repeated:
         findings.block(
             f"REPEATED (must): {twice}",
             fix=f"{protocol_check.REPEATED_WAY_OUT}; then "
             f"`{gate_command('protocol-check', protocol)}`",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
     for n, label in report.must_holes:
         findings.block(
             f"{protocol.name}:{n}: PLACEHOLDER (must): {label}",
             fix=f"replace the placeholder with this protocol's own text; "
             f"{contract_hint(protocol)}",
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
     for finding in id_findings:
         findings.take(finding)
     if lowered:
-        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE)
+        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=LAB_017)
     for label in report.missing_should:
         findings.warn(
-            f"missing (should): {label}", evidence_kind=GUARANTEED, rule=OPEN_RULE
+            f"missing (should): {label}", evidence_kind=GUARANTEED, rule=LAB_011
         )
     for n, label in report.soft_holes:
         findings.warn(
             f"{protocol.name}:{n}: placeholder (should): {label}",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=LAB_011,
         )
     if not (
         report.missing_must
@@ -389,7 +400,7 @@ def check_promise_sentences(
             f"(`{fill_command(protocol, '<id> sentence=<the promise>')}`); "
             f"{contract_hint(protocol)}",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=LAB_004,
         )
 
 
@@ -560,7 +571,7 @@ def check_working_tree(findings: Findings, repo: Path) -> None:
         findings.warn(
             f"uncommitted changes in {repo} (commit or stash before the run)",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=LAB_010,
         )
     else:
         findings.note("  clean")
@@ -572,7 +583,7 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
     the hooks (or with an older labkit's) runs on good intentions only."""
     gaps = install_hooks.check(git_repo)
     for g in gaps:
-        findings.warn(g, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.warn(g, evidence_kind=GUARANTEED, rule=LAB_011)
     if gaps:
         findings.note("  fix with  .venv/bin/labkit-hooks install")
     else:

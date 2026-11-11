@@ -25,6 +25,7 @@ from labkit.formats.gate import (
     GUARANTEED,
     KNOWN_RULE,
     OPEN_RULE,
+    cited_rule,
     STATIC_EVIDENCE,
     WARNING,
     RuleAssignment,
@@ -185,13 +186,13 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
         now = SourceNow(self.SOURCE, self.SHA, **facts)  # type: ignore[arg-type] — the facts per case
         return pure_call(source_finding, now, self.AREA)
 
-    def _blocker(self, **facts: object):
+    def _blocker(self, rule: RuleAssignment = OPEN_RULE, **facts: object):
         found, note = self._decided(**facts)
         assert found is not None
         self.assertIsNone(note)
         self.assertEqual(
             (found.grade, found.evidence_kind, found.rule),
-            (BLOCKER, GUARANTEED, OPEN_RULE),
+            (BLOCKER, GUARANTEED, rule),
         )
         return found
 
@@ -217,7 +218,11 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
         )
 
     def test_other_bytes_block(self):
-        f = self._blocker(kind="file", drift="its sha256 is now cd34")
+        f = self._blocker(
+            cited_rule("LAB-041 Generate numbers, don't retype them"),
+            kind="file",
+            drift="its sha256 is now cd34",
+        )
         self.assertIn("is not the bytes the run read: its sha256 is now cd34", f.text)
 
     def test_a_source_kept_out_by_a_rule_or_outside_the_repo_is_a_note(self):

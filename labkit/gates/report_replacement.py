@@ -13,7 +13,7 @@ from labkit.formats.commands import gate_command
 from labkit.formats.area_state import state_of
 from labkit.formats.area_state import FileState
 from labkit.formats import evidence
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import OPEN_RULE, cited_rule
 from labkit.formats.gate import (
     GateFinding,
     blocker,
@@ -31,6 +31,8 @@ from labkit.gates import ways_out
 from labkit.formats.repo import git_root
 from labkit.formats.commands import decide_command, handover_command
 from labkit.gates.report_context import Checked
+
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 
 
 def replacement_gaps(ctx: Checked) -> list[GateFinding]:
@@ -78,7 +80,7 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
                 f'{name}: [protocol] type = "{ctx.head.type}" — a protocol that replaces '
                 f"another answers a new, post-hoc question",
                 fix='set `type = "exploratory"` in its head',
-                rule=OPEN_RULE,
+                rule=LAB_003,
             )
         )
     out += [
@@ -106,7 +108,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             "[replaces] protocol is its own id",
             fix=f"name the protocol it replaces in [replaces] protocol, then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
     hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
     if len(hits) != 1:
@@ -115,7 +117,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
             fix="name the one protocol of this repo it replaces, kept as it "
             f"is, then `{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
     circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.file_state)
     if circle:
@@ -123,7 +125,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             f"the replacements run in a circle ({circle})",
             fix=f"let each name the one before it, then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
     return hits[0]
 
@@ -179,7 +181,7 @@ def _undeclared_changes(
             fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
             f'{s(x)}, to = {s(y)}, why = "…"; then '
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
         for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
@@ -191,7 +193,7 @@ def _undeclared_changes(
             f"(the predecessor {against}, this protocol {new_where})",
             fix=f"remove that [[replaces.change]], then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
         for what, x, y in sorted(listed - set(computed))
     ]
