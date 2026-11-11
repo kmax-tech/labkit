@@ -41,7 +41,7 @@ from labkit.formats.evidence import AreaEvidence
 from labkit.formats.gate import (
     BLOCKER,
     GUARANTEED,
-    OPEN_RULE,
+    TECHNICAL_RULE,
     WARNING,
     GateFinding,
     blocker,
@@ -362,9 +362,10 @@ def check_audit_records_read(
     (`AreaEvidence.unreadable`, its sentence): a record nobody can read is not
     "no findings". The way out restores it or audits again
     (`findings.record_way` for the area of STATE). [] when every record
-    reads. The rule is not decided yet (OPEN_RULE)."""
+    reads. That a record reads is its format's condition, not the
+    standard's (TECHNICAL_RULE)."""
     return [
-        blocker(why, fix=findings.record_way(state.area), rule=OPEN_RULE)
+        blocker(why, fix=findings.record_way(state.area), rule=TECHNICAL_RULE)
         for why in evidence.unreadable
     ]
 

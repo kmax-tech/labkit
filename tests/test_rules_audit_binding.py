@@ -24,7 +24,7 @@ from labkit.formats.gate import (
     GUARANTEED,
     KNOWN_RULE,
     NOTE,
-    OPEN_RULE,
+    TECHNICAL_RULE,
     VIOLATED,
     WARNING,
     GateFinding,
@@ -122,7 +122,7 @@ class AnAuditRecordReads(unittest.TestCase):
         self.assertEqual(
             (f.grade, f.text), (BLOCKER, "audits/x.toml: not TOML (line 1)")
         )
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(f.rule, TECHNICAL_RULE)
         assert f.fix is not None
         self.assertIn("restore the record as labkit-audit wrote it", f.fix)
 

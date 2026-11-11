@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import partial
 
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.gate import (
     BLOCKER,
@@ -208,7 +208,8 @@ def check_decision_reviews_read(evidence: AreaEvidence) -> list[GateFinding]:
     """The area's decision reviews read: a file that does not
     (`AreaEvidence.reviews_unread`) is a WARNING naming why. It releases
     nothing — EVIDENCE then holds no review, so every decision is judged as
-    unreviewed. The rule is not decided yet (OPEN_RULE)."""
+    unreviewed. That a file reads is its format's condition, not the
+    standard's (TECHNICAL_RULE)."""
     if not evidence.reviews_unread:
         return []
     return [
@@ -216,7 +217,7 @@ def check_decision_reviews_read(evidence: AreaEvidence) -> list[GateFinding]:
             WARNING,
             f"a review nobody can read: {evidence.reviews_unread}",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     ]
 

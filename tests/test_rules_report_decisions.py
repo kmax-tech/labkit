@@ -19,7 +19,7 @@ from labkit.formats.gate import (
     BLOCKER,
     GUARANTEED,
     KNOWN_RULE,
-    OPEN_RULE,
+    TECHNICAL_RULE,
     VIOLATED,
     WARNING,
     GateFinding,
@@ -162,7 +162,7 @@ class TheDecisionReviewsRead(unittest.TestCase):
         )
         (f,) = pure_call(check_decision_reviews_read, evidence)
         self.assertEqual(
-            (f.grade, f.evidence_kind, f.rule), (WARNING, GUARANTEED, OPEN_RULE)
+            (f.grade, f.evidence_kind, f.rule), (WARNING, GUARANTEED, TECHNICAL_RULE)
         )
         self.assertEqual(
             f.text, "a review nobody can read: audits/reviews/x.toml: not TOML"
