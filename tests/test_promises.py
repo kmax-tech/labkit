@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import intent_check, recheck  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
+from labkit.formats.gate import OPEN_RULE  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 MEASURE = """\
@@ -517,7 +518,23 @@ class Chain(unittest.TestCase):
         self.assertEqual(promises.scope_drift(None, self.area), [])
         self.assertIsNone(promises.block_drift(None, None))
         rec = {"block_sha": "abc", "ids": {}}
-        self.assertIn("now carries none", promises.block_drift(rec, None) or "")
+        removed = promises.block_drift(rec, None)
+        assert removed is not None
+        self.assertIn("now carries none", removed.why)
+        self.assertEqual(removed.rule, promises.LAB_003)
+
+    def test_block_drift_carries_the_rule_of_its_cause(self):
+        block = promises.parse_block(self.protocol.read_text(encoding="utf-8"))
+        assert block is not None
+        same = {"block_sha": block.sha, "digest": promises.DIGEST_FORMAT, "ids": {}}
+        self.assertIsNone(promises.block_drift(same, block))
+        changed = promises.block_drift({**same, "block_sha": "abc"}, block)
+        unrecorded = promises.block_drift(None, block)
+        assert changed is not None and unrecorded is not None
+        self.assertIn("changed after the run", changed.why)
+        self.assertEqual(changed.rule, promises.LAB_003)
+        self.assertIn("recorded no promise block", unrecorded.why)
+        self.assertEqual(unrecorded.rule, OPEN_RULE)
 
     def test_finalize_blocks_a_changed_scope(self):
         """A scope edited after the run is a finalize blocker, not only

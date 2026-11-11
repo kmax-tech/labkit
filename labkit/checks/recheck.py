@@ -184,7 +184,7 @@ def block_unchanged(run: Path, area: Path) -> None:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     drift = promises.block_drift(cfg.promises, block)
     if drift:
-        raise SystemExit(f"recheck: run {run.name} {drift}")
+        raise SystemExit(f"recheck: run {run.name} {drift.why}")
 
 
 def rows_of(out: Path) -> list[dict]:

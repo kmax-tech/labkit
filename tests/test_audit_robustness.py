@@ -12,6 +12,7 @@ from pathlib import Path
 from labkit.checks import intent_check, recheck
 from labkit.run import runlog
 from labkit.formats import promises, protocol_block, protocol_check
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.checks import protocol_report
 from protocol_fixture import PID, head
 
@@ -83,9 +84,11 @@ class PromiseBlockShape(unittest.TestCase):
     def test_a_run_from_the_earlier_digest_is_told_apart(self):
         block = promises.parse_block(head(promises=C1))
         old = {"block_sha": "0123abcd0123", "ids": {}}  # no "digest": labkit 0.46/0.47
-        msg = promises.block_drift(old, block) or ""
-        self.assertIn("labkit 0.46/0.47", msg)
-        self.assertNotIn("promises changed", msg)
+        drift = promises.block_drift(old, block)
+        assert drift is not None
+        self.assertIn("labkit 0.46/0.47", drift.why)
+        self.assertNotIn("promises changed", drift.why)
+        self.assertEqual(drift.rule, TECHNICAL_RULE)
 
 
 class NestedFences(unittest.TestCase):

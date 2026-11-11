@@ -60,6 +60,7 @@ from pathlib import Path
 
 from labkit.formats import digests
 from labkit.formats import files, protocol_block, runs
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment, cited_rule
 
 #: the kinds of promise — each one an id's stem: `criterion-1`
 PROMISE_KINDS = ("criterion", "quality-check", "branch")
@@ -148,6 +149,8 @@ _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 #: what `block_sha` is a digest of — recorded with it, so a run from an
 #: earlier format is told apart instead of reported as changed promises
 DIGEST_FORMAT = "promises-normalized-json"
+
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 #: what an audit record names as the promise block of a protocol that
 #: declares no [[promise]] tables (a computation at low repeat cost)
 NO_BLOCK = "none"
@@ -855,32 +858,58 @@ def scope_drift(recorded: dict | None, base: Path) -> list[str]:
     return out
 
 
-def block_drift(recorded: dict | None, block: PromiseTables | None) -> str | None:
+@dataclass(frozen=True)
+class BlockDrift:
+    """Why a protocol's promise block is not the one a run recorded.
+
+    Attributes:
+        why: The sentence, without the run's name.
+        rule: The rule assignment of this cause: promises removed or
+            changed after the run LAB-003 No run without an intent
+            paragraph ("so does a promise's sentence, key or constant"), a
+            digest that cannot be compared the technical contract, a run
+            that recorded no block open.
+    """
+
+    why: str
+    rule: RuleAssignment
+
+
+def block_drift(
+    recorded: dict | None, block: PromiseTables | None
+) -> BlockDrift | None:
     """Why the protocol's promise block (`block`, as parsed now) is not the
-    one the run recorded, or None when it is (or neither side has one)."""
+    one the run recorded, with the rule of that cause, or None when it is
+    (or neither side has one)."""
     if recorded is None:
         return (
             None
             if block is None
-            else f"the run recorded no promise block — it ran before the block "
-            f"existed or outside runlog; rerun so the number is bound to "
-            f"the promises (block {block.sha})"
+            else BlockDrift(
+                f"the run recorded no promise block — it ran before the block "
+                f"existed or outside runlog; rerun so the number is bound to "
+                f"the promises (block {block.sha})",
+                OPEN_RULE,
+            )
         )
     if block is None:
-        return (
+        return BlockDrift(
             f"the run ran under promise block {recorded['block_sha']}, the "
             f"protocol now carries none — the promises were removed after "
-            f"the run"
+            f"the run",
+            LAB_003,
         )
     if recorded.get("digest") != DIGEST_FORMAT:
-        return (
+        return BlockDrift(
             "the run recorded its promises with labkit 0.46/0.47 (digest over "
-            "the block text, not comparable) — compare with labkit 0.47 or rerun"
+            "the block text, not comparable) — compare with labkit 0.47 or rerun",
+            TECHNICAL_RULE,
         )
     if block.sha != recorded["block_sha"]:
-        return (
+        return BlockDrift(
             f"ran under promise block {recorded['block_sha']}, the protocol "
-            f"now carries {block.sha} — the promises changed after the run"
+            f"now carries {block.sha} — the promises changed after the run",
+            LAB_003,
         )
     return None
 

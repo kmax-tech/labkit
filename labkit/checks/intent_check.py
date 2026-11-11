@@ -48,7 +48,6 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import AREA_SLOT, cited_rule
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
@@ -284,14 +283,12 @@ def hold(
     except ValueError as exc:  # MetricsError, RunConfigError
         raise console.Refused("intent-check", str(exc)) from exc
     found = [
-        blocker(m, fix=INTENT_FIX, rule=OPEN_RULE)
+        blocker(m, fix=INTENT_FIX, rule=LAB_004)
         for m in _key_mismatch(protocol, mpath, reg, metrics)
-        + (check_block_against_run(block, mpath, metrics) if block is not None else [])
-    ] + (
-        unregistered_outcomes(block, metrics, mpath.parent.name)
-        if block is not None
-        else []
-    )
+    ]
+    if block is not None:
+        found += check_block_against_run(block, mpath, metrics)
+        found += unregistered_outcomes(block, metrics, mpath.parent.name)
     if found:
         return Held(notes, found, "")
     summary = (
@@ -307,29 +304,41 @@ def hold(
 
 def check_block_against_run(
     block: "promises.PromiseTables", mpath: Path, metrics: dict
-) -> list[str]:
+) -> list[GateFinding]:
     """Guaranteed-tier findings for a protocol WITH a promise block.
 
     Two things the prose check cannot see: every declared key is reported
     exactly (a `criterion_1_pass` promise is not answered by `criterion_1_debug`), and the
     run recorded THIS block — same constants, same scopes, same keys. A
     block edited after the run would otherwise hold today's thresholds
-    against yesterday's number.
+    against yesterday's number. A key not reported and a constant that
+    differs or is absent record LAB-004 Identifiers make the intent
+    addressable; a block that is not the run's records the rule of its
+    cause (`promises.BlockDrift.rule`).
     """
-    out = []
-    for p in block.promises:
-        if p.key not in metrics:
-            out.append(
-                f"{mpath}: [{p.id}] declares key '{p.key}', which the "
-                f"run does not report."
-            )
+    out = [
+        blocker(
+            f"{mpath}: [{p.id}] declares key '{p.key}', which the run does not report.",
+            fix=INTENT_FIX,
+            rule=LAB_004,
+        )
+        for p in block.promises
+        if p.key not in metrics
+    ]
     cfg = read_run_config(mpath.parent)
     drift = promises.block_drift(cfg.promises if cfg else None, block)
     if drift:
-        out.append(f"{mpath.parent.name}: {drift}.")
-    out += promised_constant_mismatches(
-        block, cfg.config if cfg else {}, mpath.parent.name
-    )
+        out.append(
+            blocker(
+                f"{mpath.parent.name}: {drift.why}.", fix=INTENT_FIX, rule=drift.rule
+            )
+        )
+    out += [
+        blocker(m, fix=INTENT_FIX, rule=LAB_004)
+        for m in promised_constant_mismatches(
+            block, cfg.config if cfg else {}, mpath.parent.name
+        )
+    ]
     return out
 
 
