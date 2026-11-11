@@ -71,15 +71,16 @@ from labkit.formats.followup import (
 )
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-#: the head tables the scope hold compares that no sentence of its rule names
-UNNAMED_TABLES = ("[kept]", "[reference]")
+#: the parts of the head the scope hold compares that no sentence of its
+#: rule names, as `protocol_history.scope_differences` labels them
+UNNAMED_HEAD_PARTS = ("kind", "[kept]", "[reference]")
 
 
 def scope_rule(diffs: list[tuple[str, str, str]]) -> RuleAssignment:
     """The rule a scope hold on DIFFS records: LAB_003 where the rule's text
     names every changed field; an open assignment as soon as one difference
-    is in a table of UNNAMED_TABLES — the hold blocks either way. Pure."""
-    if any(what in UNNAMED_TABLES for what, _, _ in diffs):
+    is in a part of UNNAMED_HEAD_PARTS — the hold blocks either way. Pure."""
+    if any(what in UNNAMED_HEAD_PARTS for what, _, _ in diffs):
         return OPEN_RULE
     return LAB_003
 
