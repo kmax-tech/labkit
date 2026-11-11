@@ -226,13 +226,15 @@ The targets:
 
 1. **Complete site account — met but for the ten sites that wait.** All 256 sites map to rule tests, gate tests or a stated reason; the ten sites of `report_decisions.py` wait for the six decisions on the second review (TODO 6b), three of them reached by no test.
 2. **Rule tests per condition — met but for the same ten.** Unreached 30 → 3, command-only 19 → 1 (above). Reach is measured; that each condition's twin passes is asserted by the tests the account names, not measured.
-3. **Explicit rule data — met.** Every gate finding site records its rule as `RuleAssignment`; 15 name a known rule, 179 stay open assignments, distinct from the technical contract and from the audit's new class. Recording an assignment approved none of them.
+3. **Explicit rule data — met.** Every gate finding site records its rule as `RuleAssignment`; 14 name a known rule, one passes on the rule it is given, 179 stay open assignments, distinct from the technical contract and from the audit's new class. Recording an assignment approved none of them.
 4. **Preserved integration guarantees — open after independent review, 2026-11-11.** Every removed scenario assertion names its replacement (the [scenario review](2026-11-10-scenario-review.tsv)); the architecture guards pass their allowed and forbidden examples. The [independent review](2026-11-11-test-model-review.md) reproduced one insufficient replacement: a field edited after the answering run is tested only with a supplied set of changed fields, so an error in the caller's comparison remains undetected. Restore that gate assertion and its valid twin before closing this target.
 5. **Timing — missed.** The fast tier stands at about 100 s against 90 s, the slow tier at about 240 s against 120 s. By the author's decision no assertion goes for them.
 
 **The site account, closed.** Frozen as evidence of the final comparison in the commit that carries this paragraph (its rows' source commits name where each site stood); later refactors need not maintain it. What it held that needs a home has one: the rule value in code (`GateFinding.rule`), each extraction exception's reason at its code (the docstring of `run_record_check.code_since_run`, a comment at `usability.stage`'s progress line), the sites that wait in TODO 6b, the open assignments in the [rule proposal](2026-11-09-rule-per-finding-proposal.md). The comparison itself, `check_inventory --account`, went with the account's closing (decided by the author, 2026-11-11): nothing maintains the account, so every later refactor would have shown as a difference nobody is to resolve. It stands last in `00aaeaad`, where the final comparison can be repeated.
 
 ## Contracts used throughout
+
+> What holds today stands in [the architecture](../architecture.md#checks-and-their-tests), "Checks and their tests": the check contract, the rule assignment, the test layers and the guards. The sections below are the contracts as the plan agreed them, kept as its record; where the two differ, the architecture holds.
 
 ### The model
 

@@ -413,8 +413,8 @@ def forwarding_changes(source: str) -> list[tuple[str, int, list[str]]]:
 
 
 class ForwardingKeepsWhatAFindingIs(unittest.TestCase):
-    """The forwarding guard of docs/notes/2026-11-10-test-model.md: a
-    finding passed on keeps its grade, rule assignment, evidence kind and
+    """The forwarding guard (docs/architecture.md, "Checks and their
+    tests"): a finding passed on keeps its grade, rule assignment, evidence kind and
     check outcome, but for a named transformation."""
 
     def test_no_forwarding_changes_what_a_finding_is(self):

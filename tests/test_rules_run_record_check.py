@@ -1,6 +1,6 @@
 """Rule tests of `run_record_check`'s pure checks: each condition from typed
-data in memory, its violation and its valid twin (docs/notes/2026-11-10-test-model.md,
-"The model"). The gate that composes them is finalize
+data in memory, its violation and its valid twin (docs/architecture.md,
+"Checks and their tests"). The gate that composes them is finalize
 (`tests/test_finalize_steps.py` for its stations).
 """
 

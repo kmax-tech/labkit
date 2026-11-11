@@ -1,5 +1,5 @@
 """An area's state and audit evidence built from data, for rule tests
-(docs/notes/2026-11-10-test-model.md, step 1).
+(docs/architecture.md, "Checks and their tests").
 
 `area_state` and `area_evidence` build `AreaState` and `AreaEvidence` as
 the test writes them: every field it names is taken as given, every field it

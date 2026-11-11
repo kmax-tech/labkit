@@ -1,6 +1,6 @@
 """Rule tests of `audit_binding`'s pure checks: each condition from typed
-data in memory, its violation and its valid twin (docs/notes/2026-11-10-test-model.md,
-"The model"). The gate that composes them is `finalize`'s station 9
+data in memory, its violation and its valid twin (docs/architecture.md,
+"Checks and their tests"). The gate that composes them is `finalize`'s station 9
 (`tests/test_finalize_open_findings.py`).
 """
 

@@ -25,7 +25,7 @@ records' (`findings.Finding`). Contract and rationale: `docs/promise-block.md`.
 
 | File | For |
 |---|---|
-| `docs/architecture.md` | the model (rules, checks, gates, lane), layers, the chain from promise to number (module, command, tier), one home per question |
+| `docs/architecture.md` | the model (rules, checks, gates, lane), what a check is and at which layer its test stands, layers, the chain from promise to number (module, command, tier), one home per question |
 | `docs/workflow.md` | the steps from a registered question to a kept number — command, files, preconditions, what clean means; `docs/examples/count-walkthrough.sh` walks them |
 | `README.md` | console commands, the coined terms (one word, one thing) |
 | `TODO.md` | the work order and why (German); top section "Reihenfolge" decides what is next |
@@ -101,7 +101,10 @@ until that tag is pushed, that `pip install` fails.
 - **One home per logic.** The id alphabet lives in `labkit/formats/promises.py`;
   other modules import it. A second use means moving code, not copying it.
 - **Every number-producing function gets a test.** A gate that blocks gets
-  a twin test: the correct variant must pass (no false blocker).
+  a twin test: the correct variant must pass (no false blocker). A
+  condition is tested once, from data in memory, in a rule test; a gate
+  test holds what the gate adds, a scenario test what one command passes
+  to the next (`docs/architecture.md`, "Checks and their tests").
 - **Language.** Code, identifiers, docstrings, docs in `docs/`, commit
   messages: English. Talk to the user, and write `TODO.md` entries, in
   German.

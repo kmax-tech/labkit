@@ -1,6 +1,6 @@
 # Architecture
 
-Where what happens in labkit: the model of rules, checks and gates, the layers, the chain from promise to reported number, and the one home of each recurring question. Terms are coined in the README; the promise block in `docs/promise-block.md`.
+Where what happens in labkit: the model of rules, checks and gates, what a check is and where its test stands, the layers, the chain from promise to reported number, and the one home of each recurring question. Terms are coined in the README; the promise block in `docs/promise-block.md`.
 
 ## Rules, checks and gates
 
@@ -27,7 +27,39 @@ lane: which duties a protocol owes at all (its repeat cost)
 | Gate         | the order of the stations and what each holds; a finding's grade decides block or warn, the gate decides when it is asked                                                                    | [The gates in order](#the-gates-in-order)                                                                       |
 | Lane         | the duties of a repeat cost: freeze, registration, which audits, provenance                                                                                                                  | `standard_contract.Lane`                                                                                        |
 
-Two limits stand today. A mechanical finding names its rule only where its message cites one — 26 of 227 finding sites (`python -m labkit.tools.check_inventory`; the mapping of the rest is proposed in [the rule-per-finding note](notes/2026-11-09-rule-per-finding-proposal.md)). And nothing switches a check off: a rule leaves by a release on measured evidence, and comes — from the audits' `new class` findings — only with its grounds ([note](notes/2026-11-09-checks-have-no-switches.md)).
+Two limits stand today. Every gate finding records its rule as data (`GateFinding.rule`, a `gate.RuleAssignment`), but for most the rule is not decided: of the 194 sites that build a gate finding, 14 name a rule of the standard, 179 carry an open assignment and one passes on the rule it is given; 8 of the 97 active rules are named by a site (`python -m labkit.tools.check_inventory` computes the counts; the proposed mapping of the rest stands in [the rule-per-finding note](notes/2026-11-09-rule-per-finding-proposal.md)). And nothing switches a check off: a rule leaves by a release on measured evidence, and comes — from the audits' `new class` findings — only with its grounds ([note](notes/2026-11-09-checks-have-no-switches.md)).
+
+## Checks and their tests
+
+What a check is, how its finding names its rule, and at which layer a test stands. How this came about, with the migration's counts and timings: [the test-model plan](notes/2026-11-10-test-model.md).
+
+**A pure check** decides one condition from typed data. Its reference form is `check_<condition>(state: AreaState, *, evidence: AreaEvidence) -> list[GateFinding]`, with smaller explicitly typed inputs where they suffice; a check of a run receives the run's records, never a directory to read. It returns `[]` on valid input, else findings with grade, rule assignment, cause, `evidence_kind`, `check_outcome` and the way out. It opens no file and no repository, starts no process, prints nothing, raises no `SystemExit` and does not change its input; it receives no `Findings` collector and no gate-layer `Checked`. Invalid data from the caller raises a named error. The gate decides whether and when the check runs and takes its result with `Findings.take_all`. There is no check registry and no wrapper around checks.
+
+The contract holds for validation, not for every function. An operation whose purpose is to read, write or run something stays a named reader, writer or execution boundary and is tested with its real side effects; only a condition of it that is useful on its own becomes a pure check. The pure checks today are the ones the rule tests call under `pure_call` (in `audit_binding`, `run_record_check`, `registration_hold` and `followup`); a station function that takes a `Findings` collector composes and reports, and is tested at the gate layer.
+
+**The rule a finding names** is one validated value, `gate.RuleAssignment`, of four kinds (`gate.RULE_KINDS`) — the same value in a gate finding and in an audit record's finding:
+
+| Kind               | Meaning                                                             |
+|--------------------|---------------------------------------------------------------------|
+| known rule         | carries the rule id and its name as cited                           |
+| open assignment    | the rule is not decided yet; names no rule, not even a proposed one |
+| technical contract | a technical condition that no rule of the standard covers           |
+| new class          | the agent audit found a fault that no existing rule names           |
+
+Recording an open assignment approves nothing. A finding passed on keeps its grade, rule assignment, evidence kind and check outcome, but for a named transformation (`tests/test_architecture.py`, `ForwardingKeepsWhatAFindingIs`).
+
+**Where a test stands.** At each caller, test only what the caller adds:
+
+| Layer    | What its tests establish                                                                                                       | Setup                                                                                           | Where                                                                  |
+|----------|--------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| reader   | conversion between file and object, the causes of a failed read, the round trip with the writer                                | a temporary file; no gate, no repository, no command                                            | the format's own test file                                             |
+| rule     | one condition: grade, rule assignment and cause; the valid twin passes; `not executable` told from `violated` where it applies | typed data in memory (`tests/state_fixture.py`); no repository, no command                      | `tests/test_rules_<module>.py`, marked `pytestmark = pytest.mark.rule` |
+| gate     | composition, order, withdrawal and the choice of file state                                                                    | state in memory; a repository only to test the index against the working tree; no whole command | the gate's own test file                                               |
+| scenario | the state one command passes to the next, and repairs across gates                                                             | a lab repository and real commands                                                              | a scenario file, marked `pytestmark = pytest.mark.slow`                |
+
+A condition gets its violation and its valid twin at the rule layer, once; several finding sites that share a condition share its tests. A site that only composes or forwards is tested at the gate layer and needs no twin of its own. A scenario test that repeats what a rule test asserts is removed only with its replacement named. The tests of the repository's architecture and of its ledgers are a group of their own.
+
+Two guards hold the rule layer to its setup (`tests/check_guards.py`, each with a forbidden and an allowed example in `tests/test_check_guards.py`): the mark `rule` runs the whole test with no process started and no console command entered, and `pure_call` calls one check with no file opened, listed or stat'ed. They enforce the boundary a test exercises — not that a condition is the right one, and not purity for every possible execution. Which test reaches which finding site, and through which layer, `python -m labkit.tools.test_inventory` measures; reach is not an assertion, and only reading a test establishes what it holds.
 
 ## Layers
 

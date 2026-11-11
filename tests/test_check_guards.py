@@ -1,7 +1,7 @@
 """The guards of the rule layer (`tests/check_guards.py`) and the state
 builder (`tests/state_fixture.py`), each with a forbidden example it rejects
-and an allowed one it passes (docs/notes/2026-11-10-test-model.md,
-"Architecture guards").
+and an allowed one it passes (docs/architecture.md,
+"Checks and their tests").
 """
 
 from __future__ import annotations

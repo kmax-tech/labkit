@@ -1,5 +1,5 @@
 """Guards that hold a rule test and a pure check to their layer
-(docs/notes/2026-11-10-test-model.md, "Architecture guards").
+(docs/architecture.md, "Checks and their tests").
 
 - `no_process_or_command`: what the pytest mark `rule` switches on for the
   whole test (`conftest._rule_test_guard`). No process starts — and a

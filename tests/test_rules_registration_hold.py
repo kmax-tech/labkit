@@ -4,8 +4,8 @@ about a follow-up's `resolved` releases (`followup.released_corrections`,
 judge (`followup.awaited_corrections`, `registration_hold.waiting_refs`),
 and the way out each scope hold names first (`registration_hold.seen_hold`,
 `now_hold`, `description_added`) — each condition from typed data in
-memory, the release and its refusals (docs/notes/2026-11-10-test-model.md,
-"The model"). The gate that reads the records and the protocol texts is
+memory, the release and its refusals (docs/architecture.md,
+"Checks and their tests"). The gate that reads the records and the protocol texts is
 `registration_hold.scope_changes`, finalize's station 2; the route through
 the commands: tests/test_end_to_end.py, `CorrectedDescription` and
 `CorrectionThenNewRun`.
