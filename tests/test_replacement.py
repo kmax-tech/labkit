@@ -25,6 +25,7 @@ from labkit.tools import report_command
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import (  # noqa: E402
     findings,
+    gate,
     handovers,
     protocol_block,
     protocol_history,
@@ -272,6 +273,18 @@ class Gate(_Areas):
         self.assertIn(
             "declares a change the registrations do not show: quality-check-1 sentence x → y",
             gap,
+        )
+
+    def test_the_change_list_is_a_technical_contract_in_both_directions(self):
+        """A change not declared and a declared change that is none: the
+        list departs from the differences computed, no rule of the standard."""
+        self._b(replaces(A_ID, ("quality-check-1 sentence", "x", "y")))
+        ctx = report_context.checked(self.b, self.b / "PROTOCOL-x.md")
+        undeclared, unshown = report_replacement.replacement_gaps(ctx)
+        self.assertIn("not declared", undeclared.text)
+        self.assertIn("do not show", unshown.text)
+        self.assertEqual(
+            (undeclared.rule, unshown.rule), (gate.TECHNICAL_RULE, gate.TECHNICAL_RULE)
         )
 
     def test_a_replacement_is_exploratory(self):

@@ -182,6 +182,10 @@ def _undeclared_changes(
             computed.setdefault(change, old_where)
     listed = {(c.what, c.from_, c.to) for c in rep.changes}
     s = protocol_block.toml_string
+    # the change list is a format convention (labkit/docs/agent-guide.md): it
+    # equals the differences `registration_differences` computes, no more
+    # and no fewer — a technical contract; whether a change's reason
+    # suffices is not judged here
     out = [
         blocker(
             f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
@@ -189,7 +193,7 @@ def _undeclared_changes(
             fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
             f'{s(x)}, to = {s(y)}, why = "…"; then '
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
         for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
@@ -201,7 +205,7 @@ def _undeclared_changes(
             f"(the predecessor {against}, this protocol {new_where})",
             fix=f"remove that [[replaces.change]], then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
         for what, x, y in sorted(listed - set(computed))
     ]
