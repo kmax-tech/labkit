@@ -14,7 +14,7 @@ State after the split of the mixed sites (`python -m labkit.tools.check_inventor
 | several causes at one site, split by cause | 15              | entered, 16 causes stay open  |
 | methodical duty no decided rule states     | 15              | open, the author decides each |
 
-No site was found whose check has no grounds at all. One part of a mixed site is a candidate: the README's route block (`finalize.check_open_fields`), which no rule names and no code reads.
+No site was found whose check has no grounds at all. The README's route block (`finalize.check_open_fields`) looked like one — no rule names it and no code reads it —, but the stamp writes it on purpose; it is a format convention (see the end of the section on the causes left open).
 
 ## Entered: technical contract (21)
 
@@ -121,7 +121,7 @@ Each of these sites forwarded messages whose causes break different rules or non
 |                                          | an arm's profile file is not there                                                | technical contract (a reference that leads nowhere)                                                                                                 |
 |                                          | an arm's fingerprint is not in the run's record                                   | open (nearest: LAB-067, "frozen per run … the profile fingerprint covers named files")                                                              |
 | `labkit/gates/finalize.py:519`           | `scripts/01_measure.py` missing, or without `evaluate_rows`                       | CODE-016 The experiment area reconstructs itself: "`evaluate_rows` in `01_measure.py` is the one place"                                             |
-|                                          | no route block; the block does not name the protocol; it does not name a station  | open, three sites — no rule names the block and no code reads it: a candidate for removal                                                           |
+|                                          | no route block; the block does not name the protocol; it does not name a station  | technical contract, three sites: a format convention the stamp writes (taken over by the author)                                                    |
 | `labkit/gates/finalize.py:539`           | the generated counts differ from the run's record                                 | LAB-041 Generate numbers, don't retype them (its head)                                                                                              |
 |                                          | the named run is not in the area, or is no completed preparation run with counts  | technical contract                                                                                                                                  |
 | `labkit/gates/finalize.py:556`           | no git repository                                                                 | technical contract                                                                                                                                  |
@@ -171,9 +171,9 @@ Nine are finding sites of their own now, seven are causes a site receives (with 
 
 | Cause                                                                                     | Where the rule is set                              | Nearest sentence, or what is missing                                         |
 |-------------------------------------------------------------------------------------------|----------------------------------------------------|------------------------------------------------------------------------------|
-| the README's route block missing; protocol not named; a station not named (3 sites)       | `labkit/checks/readme_check.py:96`, `:109`, `:119` | none; no code reads the block — a candidate for removal                      |
+| the README's route block missing; protocol not named; a station not named (3 sites)       | `labkit/checks/readme_check.py:96`, `:109`, `:119` | entered since as the technical contract of a format convention               |
 | a note without a date; named scripts that do not resolve; `related-*` of another kind (3) | `labkit/checks/notes_check.py:181`, `:211`, `:224` | LAB-082 names a "schema above" the standard does not contain                 |
-| no `outputs.json`; an output not yet tracked (2 sites)                                    | `labkit/checks/run_record_check.py:553`, `:587`    | LAB-024 Reproducible and LAB-010 Commit before the run, thematic             |
+| an output not yet tracked; no `outputs.json` (entered since: technical contract)          | `labkit/checks/run_record_check.py:553`, `:587`    | LAB-024 Reproducible and LAB-010 Commit before the run, thematic             |
 | an arm's fingerprint not in the run's record (1 site)                                     | `labkit/checks/run_record_check.py:1099`           | LAB-067: "frozen per run … the profile fingerprint covers named files"       |
 | a run acknowledged over an unfrozen protocol cannot be reported                           | `finalize.UNREPORTABLE_RULES`                      | LAB-015: "acknowledges it with `LABKIT_UNFROZEN=1`, its number unreportable" |
 | the run recorded no promise block                                                         | `promises.block_drift`                             | LAB-043 Runs go through `runlog`, no exact sentence                          |
@@ -188,6 +188,8 @@ What a look at the code and the standard adds to four of these (2026-11-11, afte
 - **No `outputs.json`.** Four checks read the file and treat its absence as "no output registered" (`output_record_findings`, the row provenance, the audit binding, `recheck`). The warning is the one place that says so. It states that these checks had nothing to hold, a missing basis — not that a run owes an output.
 - **An output not in git.** No check needs it; it is a duty of keeping (the fix says "before the commit that cites the number").
 - **The registered report.** The duty does not start with the file: a report draft before the first measurement owes nothing, and after one a progress account passes (`registered_report.report_owed`). What is held is a written report once a measurement or an adoption exists, without the result block, the handover block or the account.
+
+Taken over by the author, 2026-11-11, and entered: a run that registered no output is the technical contract (a missing basis; the warning stays); the three warnings on the README's route block stay and are the technical contract of a format convention — the stamp writes the block (`labkit/tools/scaffold.py`), it answers a measured problem of orientation, and `labkit/docs/agent-guide.md`, step 1, states the names it must hold; the two references that do not resolve (an `annotation_validity` id of no protocol, an arm's missing profile file) are technical contracts. "No code reads the block" above was half the picture: the search looked for readers and missed the writer. With this the inventory counts 84 technical contracts and 20 open sites, 29 open assignments in all. For the other causes of this section no assignment is released; the grounds or the methodical decision are outstanding. LAB-082's "schema above" stays an open error of the standard's text, changed only from its source.
 
 ## Open: methodical duty no decided rule states (15)
 
