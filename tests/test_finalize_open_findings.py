@@ -70,7 +70,7 @@ def _finalize(area: Path) -> tuple[int, str]:
 def _report_check(area: Path) -> tuple[int, str]:
     """The other stations stand in: the run station is the one under test."""
     buf = io.StringIO()
-    no_gaps = SimpleNamespace(missing_must=[], must_holes=[], repeated=[])
+    no_gaps = SimpleNamespace(must_gaps=[], must_holes=[], repeated=[])
     with (
         mock.patch.object(report_check, "check_fields", return_value=no_gaps),
         mock.patch.object(report_check, "finalize_area", return_value=0),

@@ -37,7 +37,7 @@ from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import state_of
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.commands import render_command
@@ -379,7 +379,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     fix="remove the extra line(s) by hand (`--render` rewrites one "
                     "and leaves the others)",
                     step=RENDER,
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
     have = {display_label(f.label): f.value for f in fields(text)}

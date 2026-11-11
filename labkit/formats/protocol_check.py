@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Protocol
 
 from labkit.formats import markdown
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment, cited_rule
 from labkit.formats import digests
 from labkit import PACKAGE_DIR
 from labkit.formats import (
@@ -49,6 +50,10 @@ from labkit.formats import (
     standard_contract,
     answering_run,
 )
+
+LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
+LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 @dataclass(frozen=True)
@@ -659,13 +664,40 @@ def placeholder_fields(text: str) -> list[tuple[int, str]]:
 
 
 @dataclass(frozen=True)
+class MustGap:
+    """One entry of what a protocol must carry and does not (`check_fields`),
+    with the rule its cause breaks.
+
+    Attributes:
+        label: The field's label, or the sentence naming the gap.
+        rule: The rule assignment of the cause — a required field absent
+            is the required-field rule's, a table that does not read the
+            technical contract.
+    """
+
+    label: str
+    rule: RuleAssignment
+
+
+def head_rule(exc: protocol_block.BlockError) -> RuleAssignment:
+    """The rule a head that raised EXC breaks: the required-field rule for
+    a part that is not there (`protocol_block.HeadPartMissing`), the
+    technical contract for a head that does not read."""
+    return (
+        LAB_011 if isinstance(exc, protocol_block.HeadPartMissing) else TECHNICAL_RULE
+    )
+
+
+@dataclass(frozen=True)
 class FieldReport:
     """What one protocol owes and lacks. `head_error` set means the head
-    could not be read — every other list is then empty."""
+    could not be read — `head_rule` then names the rule that breaks
+    (`head_rule`), and every list is empty."""
 
     head: protocol_block.Head | None
     head_error: str | None
-    missing_must: list[str]
+    head_rule: RuleAssignment | None
+    must_gaps: list[MustGap]
     missing_should: list[str]
     must_holes: list[tuple[int, str]]
     soft_holes: list[tuple[int, str]]
@@ -673,6 +705,11 @@ class FieldReport:
     #: missing, the copies disagree on which is registered — a must finding
     #: of its own, whose way out is keeping one copy
     repeated: list[str] = field(default_factory=list)
+
+    @property
+    def missing_must(self) -> list[str]:
+        """The labels of `must_gaps`, in their order."""
+        return [g.label for g in self.must_gaps]
 
     @property
     def frozen(self) -> bool:
@@ -928,72 +965,70 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
     )
 
 
-def kept_gaps(text: str, head: protocol_block.Head) -> list[str]:
+def kept_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
     """What the head owes or refuses of its `[kept]` table by its kind, one
-    entry each, or []: a computation names its kept number there — the
+    entry each with the rule its cause breaks, or []: a computation names its kept number there — the
     table missing, or a value still the placeholder (`[kept]
     key`, `[kept] unit`, unfilled fields); a fit or an apply binds its
     answer through its promise keys, so the table is refused there; a
-    table that does not read is named by its sentence. Nothing while the
-    kind is undecided. The one answer `protocol-check`, the start of a low
+    table that does not read is named by its sentence. A table or value
+    that is owed and missing breaks the required-field rule; a table that
+    does not read or has no place on the kind, the technical contract.
+    Nothing while the kind is undecided. The one answer `protocol-check`, the start of a low
     run (`low_registration_missing`) and finalize read."""
     try:
         k = protocol_block.kept(text)
     except protocol_block.BlockError as exc:
-        return [str(exc)]
+        return [MustGap(str(exc), TECHNICAL_RULE)]
     if head.kind is None:
         return []
     if head.kind != standard_contract.COMPUTE_KIND:
         if k is None:
             return []
         return [
-            f'[kept] with kind = "{head.kind}" — a {head.kind} binds its answer '
-            f"through its promise keys (`[[promise]] key`), so the kept number a "
-            f"computation names has no place here; drop the table"
+            MustGap(
+                f'[kept] with kind = "{head.kind}" — a {head.kind} binds its answer '
+                f"through its promise keys (`[[promise]] key`), so the kept number a "
+                f"computation names has no place here; drop the table",
+                TECHNICAL_RULE,
+            )
         ]
     if k is None:
         return [
-            '[kept] — kind = "compute" names its kept number in the head: '
-            '`[kept]` with `key = "<metrics.json key>"` and `unit = "<unit>"` '
-            '("1" for a dimensionless number); the run must hold that key as a '
-            "finite number"
+            MustGap(
+                '[kept] — kind = "compute" names its kept number in the head: '
+                '`[kept]` with `key = "<metrics.json key>"` and `unit = "<unit>"` '
+                '("1" for a dimensionless number); the run must hold that key as a '
+                "finite number",
+                LAB_011,
+            )
         ]
-    return k.placeholders
+    return [MustGap(label, LAB_011) for label in k.placeholders]
 
 
-def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
-    """The field findings of one protocol: head, missing fields (absent from
-    the text, `missing_must`), placeholders (`must_holes`); ADOPTING judges
-    the state an adoption makes (`owed`)."""
-    try:
-        head = protocol_block.head(text)
-    except protocol_block.BlockError as exc:
-        return FieldReport(None, str(exc), [], [], [], [])
-    must, should = owed(text, head, adopting=adopting)
-    present = {f.name for f in fields(text)}
-    missing_must = [f.label for f in must if f.label.casefold() not in present]
-    missing_should = [f.label for f in should if f.label.casefold() not in present]
-    missing_must += [f"[protocol] {name}" for name in head.placeholders]
-    for contradiction in (kind_gap(text, head), reference_gap(text, head)):
-        if contradiction:
-            missing_must.append(contradiction)
-    missing_must += kept_gaps(text, head)
-    earlier = promises.earlier_ids(text)
-    if earlier:
-        missing_must.append(
-            f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}"
-        )
+def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
+    """What the head's freeze and repeat cost owe and TEXT lacks, each with
+    the rule its cause breaks: `frozen = true` where nothing freezes, a
+    freeze without its preflight record named, the `[[promise]]` tables
+    owed (`promises.promise_tables_owed`) or not reading."""
+    must_gaps: list[MustGap] = []
     # Frozen means audited first (LAB-015 Preflight audit before freezing); at low repeat cost nothing freezes, so a
     # frozen flag there would claim a freeze no gate held.
     lane = standard_contract.lane(head.repeat_cost)
     if head.frozen and not lane.freeze:
-        missing_must.append(
-            f'[protocol] frozen = true at repeat_cost = "{head.repeat_cost}" — nothing '
-            "freezes there; set frozen = false or choose high repeat cost"
+        must_gaps.append(
+            MustGap(
+                f'[protocol] frozen = true at repeat_cost = "{head.repeat_cost}" — nothing '
+                "freezes there; set frozen = false or choose high repeat cost",
+                OPEN_RULE,
+            )
         )
     elif head.frozen and not head.preflight_audit:
-        missing_must.append(
-            "[protocol] preflight_audit (frozen = true without the decided preflight record named)"
+        must_gaps.append(
+            MustGap(
+                "[protocol] preflight_audit (frozen = true without the decided preflight record named)",
+                LAB_015,
+            )
         )
     # Whether the tables are owed is decided in ONE place,
     # promises.promise_tables_owed: frozen, or at low repeat cost (every run there is
@@ -1006,9 +1041,48 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
             registers=kind_registers(head.kind, text),
         )
     except promises.PromiseError as exc:
-        tables_gap = f"[[promise]] tables: {exc}"
-    if tables_gap:
-        missing_must.append(tables_gap)
+        must_gaps.append(MustGap(f"[[promise]] tables: {exc}", TECHNICAL_RULE))
+    else:
+        if tables_gap:
+            must_gaps.append(MustGap(tables_gap, LAB_004))
+    return must_gaps
+
+
+def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
+    """The field findings of one protocol: head, missing fields (absent from
+    the text, `must_gaps`, each with the rule its cause breaks),
+    placeholders (`must_holes`); ADOPTING judges the state an adoption
+    makes (`owed`)."""
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError as exc:
+        return FieldReport(None, str(exc), head_rule(exc), [], [], [], [])
+    must, should = owed(text, head, adopting=adopting)
+    present = {f.name for f in fields(text)}
+    must_gaps = [
+        MustGap(f.label, LAB_011) for f in must if f.label.casefold() not in present
+    ]
+    missing_should = [f.label for f in should if f.label.casefold() not in present]
+    must_gaps += [MustGap(f"[protocol] {name}", LAB_011) for name in head.placeholders]
+    # a claim about the model on the wrong kind is a duty no decided rule
+    # states; a [reference] where a criterion judges can never be evaluated
+    for contradiction, rule in (
+        (kind_gap(text, head), OPEN_RULE),
+        (reference_gap(text, head), TECHNICAL_RULE),
+    ):
+        if contradiction:
+            must_gaps.append(MustGap(contradiction, rule))
+    must_gaps += kept_gaps(text, head)
+    earlier = promises.earlier_ids(text)
+    if earlier:
+        # a form labkit no longer reads
+        must_gaps.append(
+            MustGap(
+                f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}",
+                TECHNICAL_RULE,
+            )
+        )
+    must_gaps += freeze_must_gaps(text, head)
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
     for line, label in open_holes(text, head, adopting=adopting):
@@ -1018,7 +1092,8 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
     return FieldReport(
         head,
         None,
-        missing_must,
+        None,
+        must_gaps,
         missing_should,
         must_holes,
         soft_holes,
@@ -1062,7 +1137,11 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
     contradictions = (kind_gap(text, head), reference_gap(text, head))
-    return missing + [c for c in contradictions if c] + kept_gaps(text, head)
+    return (
+        missing
+        + [c for c in contradictions if c]
+        + [g.label for g in kept_gaps(text, head)]
+    )
 
 
 #: the key of the kind in a registration stamp, beside the field labels

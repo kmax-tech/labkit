@@ -164,6 +164,10 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             any("declares no [[promise]]" in m for m in report.missing_must),
             report.missing_must,
         )
+        self.assertEqual(
+            [g.rule for g in report.must_gaps if "[[promise]]" in g.label],
+            [protocol_check.LAB_004],
+        )
         # the twin: a computation names no id and owes no table
         report = protocol_check.check_fields(head(repeat_cost="low", promises=None))
         self.assertFalse(

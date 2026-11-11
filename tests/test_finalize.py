@@ -351,7 +351,7 @@ class TheProtocolStepEndsEarly(unittest.TestCase):
         (f,) = collected.found
         self.assertTrue(f.text.startswith("PROTOCOL-x.md: "), f.text)
         self.assertIn("shows its fields", f.fix or "")
-        self.assertEqual(f.rule, gate.OPEN_RULE)
+        self.assertEqual(f.rule, gate.TECHNICAL_RULE)
 
     def test_two_protocols_and_none_named_is_one_blocker(self):
         with tempfile.TemporaryDirectory() as d:

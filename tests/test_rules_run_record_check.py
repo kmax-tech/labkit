@@ -25,6 +25,7 @@ from labkit.formats.gate import (
     GUARANTEED,
     KNOWN_RULE,
     OPEN_RULE,
+    TECHNICAL_RULE,
     cited_rule,
     STATIC_EVIDENCE,
     WARNING,
@@ -188,7 +189,7 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
         now = SourceNow(self.SOURCE, self.SHA, **facts)  # type: ignore[arg-type] — the facts per case
         return pure_call(source_finding, now, self.AREA)
 
-    def _blocker(self, rule: RuleAssignment = OPEN_RULE, **facts: object):
+    def _blocker(self, rule: RuleAssignment, **facts: object):
         found, note = self._decided(**facts)
         assert found is not None
         self.assertIsNone(note)
@@ -199,7 +200,7 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
         return found
 
     def test_a_gone_source_blocks(self):
-        f = self._blocker(kind=None)
+        f = self._blocker(TECHNICAL_RULE, kind=None)
         self.assertIn("is not at its recorded path on this machine", f.text)
         self.assertIn("git checkout HEAD -- data/items.jsonl", f.fix or "")
 

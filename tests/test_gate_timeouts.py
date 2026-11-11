@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from labkit.formats import gate
 from labkit.gates import preflight, report_check
 
 
@@ -29,7 +30,7 @@ class Timeouts(unittest.TestCase):
             self.assertEqual(result.state, "failed")
             self.assertIn("timed out after 1 s", result.tail[0])
 
-    def test_a_hanging_check_is_a_failed_check(self):
+    def test_a_hanging_check_is_a_check_not_executed(self):
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d)
             area = repo / "experiments" / "01-x"
@@ -38,9 +39,15 @@ class Timeouts(unittest.TestCase):
                 "import time\ntime.sleep(30)\n", encoding="utf-8"
             )
             with mock.patch.object(report_check, "CHECK_TIMEOUT_S", 1.0):
-                gap = report_check.check_analysis_script(area, repo)
-            self.assertIsNotNone(gap)
-            self.assertIn("did not finish in 1 s", gap or "")
+                with self.assertRaises(report_check.CheckUnfinished) as raised:
+                    report_check.check_analysis_script(area, repo)
+                (f,) = report_check.recomputation_findings(area, repo)
+            self.assertIn("did not finish in 1 s", str(raised.exception))
+            self.assertEqual(
+                (f.grade, f.check_outcome, f.rule),
+                (gate.BLOCKER, gate.NOT_EXECUTABLE, gate.TECHNICAL_RULE),
+            )
+            self.assertIn("did not finish in 1 s — no result", f.text)
 
 
 if __name__ == "__main__":

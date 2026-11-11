@@ -96,7 +96,23 @@ class OwedByKind(unittest.TestCase):
     protocol-check and at the start of a low run."""
 
     def gaps(self, text: str) -> list[str]:
-        return protocol_check.kept_gaps(text, protocol_block.head(text))
+        return [
+            g.label for g in protocol_check.kept_gaps(text, protocol_block.head(text))
+        ]
+
+    def rules(self, text: str) -> list[gate.RuleAssignment]:
+        return [
+            g.rule for g in protocol_check.kept_gaps(text, protocol_block.head(text))
+        ]
+
+    def test_an_owed_table_or_value_breaks_the_required_field_rule(self):
+        for text in (compute(None), compute(("<metrics key>", "ms"))):
+            with self.subTest(text=text[-60:]):
+                self.assertEqual(self.rules(text), [protocol_check.LAB_011])
+
+    def test_a_table_on_a_fit_is_the_technical_contract(self):
+        text = with_table('key = "n"\nunit = "1"\n', kind="fit")
+        self.assertEqual(self.rules(text), [gate.TECHNICAL_RULE])
 
     def test_a_computation_without_the_table_owes_it(self):
         text = compute(None)
@@ -207,7 +223,7 @@ class HeldToTheRun(unittest.TestCase):
                 self.assertIn("measure anew", gap.fix or "")
                 self.assertEqual(
                     gap.rule,
-                    gate.OPEN_RULE,
+                    gate.cited_rule("LAB-041 Generate numbers, don't retype them"),
                 )
         (gap,) = kept_number_gaps("HRV_MeanNN", {"hrv_computed": True}, RUN, area)
         self.assertIn("it holds hrv_computed = True", gap.text)

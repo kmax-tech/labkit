@@ -95,8 +95,8 @@ from pathlib import Path
 
 from labkit.formats import commands
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
-from labkit.formats.gate import GUARANTEED
-from labkit.formats.runs import RunDir
+from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE
+from labkit.formats.runs import NO_GIT, RunDir
 from labkit.formats.gate import (
     BLOCKER,
     WARNING,
@@ -202,6 +202,7 @@ from labkit.gates.report_decisions import followup_findings, limit_gaps, review_
 from labkit.gates.report_replacement import replacement_gaps
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
@@ -211,10 +212,16 @@ LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
 CHECK_TIMEOUT_S = 300.0
 
 
+class CheckUnfinished(RuntimeError):
+    """The analysis script's check did not end within CHECK_TIMEOUT_S: no
+    result was found, neither a pass nor a failure."""
+
+
 def check_analysis_script(area: Path, repo: Path) -> str | None:
     """Why the area's check (`standard_contract.check_command`: the analysis
     script's `--check`, stamped by every skeleton) does not pass, or None:
-    no script, or a nonzero exit with the last lines it printed."""
+    no script, or a nonzero exit with the last lines it printed. Raises
+    CheckUnfinished when the check does not end within CHECK_TIMEOUT_S."""
     script = CHECK_SCRIPT
     if area / script not in area_files(area):
         return (
@@ -233,8 +240,10 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
             # codec reads must not raise out of the gate
             timeout=CHECK_TIMEOUT_S,
         )
-    except subprocess.TimeoutExpired:
-        return f"{script} --check did not finish in {CHECK_TIMEOUT_S:g} s"
+    except subprocess.TimeoutExpired as exc:
+        raise CheckUnfinished(
+            f"{script} --check did not finish in {CHECK_TIMEOUT_S:g} s"
+        ) from exc
     if r.returncode == 0:
         return None
     tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]
@@ -264,8 +273,8 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
     )
     report = check_fields(ctx.text)
     gaps += [
-        blocker(f"{name}: {label}", fix=f"write the field; {fields}", rule=OPEN_RULE)
-        for label in report.missing_must
+        blocker(f"{name}: {gap.label}", fix=f"write the field; {fields}", rule=gap.rule)
+        for gap in report.must_gaps
     ]
     # a must field still holding its `<…>` placeholder blocks here as
     # protocol-check and preflight refuse it
@@ -288,7 +297,7 @@ def repeated_gaps(ctx: Checked) -> list[GateFinding]:
         blocker(
             f"{ctx.protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `{gate_command('protocol-check', ctx.protocol)}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
         for twice in check_fields(ctx.text).repeated
     ]
@@ -353,15 +362,17 @@ def _registration_at(
         f"{ways_out.HANDOVER}"
     )
     if then.cause == NO_COMMIT:
-        return [
-            blocker(
-                f"{at} recorded no commit ({cfg.git!r}{among}) — the registration "
-                f"cannot be held to what stood before the number (LAB-003 No run "
-                f"without an intent paragraph)",
-                fix=anew,
-                rule=OPEN_RULE,
-            )
-        ]
+        why = (
+            f"{at} recorded no commit ({cfg.git!r}{among}) — the registration "
+            f"cannot be held to what stood before the number (LAB-003 No run "
+            f"without an intent paragraph)"
+        )
+        # NO_GIT is the run's own word that it started outside the history;
+        # a record that names no commit otherwise only leaves the check
+        # without its basis
+        if cfg.git == NO_GIT:
+            return [blocker(why, fix=anew, rule=LAB_010)]
+        return [blocker(why, fix=anew, rule=TECHNICAL_RULE)]
     if then.cause == UNKNOWN_COMMIT:
         return [
             blocker(
@@ -729,16 +740,28 @@ def analysis_findings(
 
 
 def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
-    """Run the analysis script's check and return its failure as a blocker."""
-    failed = check_analysis_script(area, repo)
+    """Run the analysis script's check and return its failure as a blocker;
+    a check that did not end (`CheckUnfinished`) as a check not executed —
+    nothing was found, and the release waits all the same."""
+    check = f"`.venv/bin/python {shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}`"
+    try:
+        failed = check_analysis_script(area, repo)
+    except CheckUnfinished as exc:
+        return [
+            blocker(
+                f"{exc} — no result, the numbers are not held to the run",
+                fix=f"run {check} by hand and make it end, then "
+                f"`{gate_command('report-check', area)}`",
+                check_outcome=NOT_EXECUTABLE,
+                rule=TECHNICAL_RULE,
+            )
+        ]
     return (
         [
             blocker(
                 f"{failed} (LAB-041 Generate numbers, don't retype them)",
-                fix=f"fix what the check names until `.venv/bin/python "
-                f"{shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}` "
-                f"exits 0; a number in the protocol comes from `protocol-fill`, "
-                f"never typed",
+                fix=f"fix what the check names until {check} exits 0; a number "
+                f"in the protocol comes from `protocol-fill`, never typed",
                 rule=LAB_041,
             )
         ]

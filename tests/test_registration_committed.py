@@ -64,7 +64,7 @@ def _git(cwd: Path, *args: str) -> str:
 def _report_check(area: Path) -> tuple[int, str]:
     """The other stations stand in: station 1's registration is under test."""
     buf = io.StringIO()
-    no_gaps = SimpleNamespace(missing_must=[], must_holes=[], repeated=[])
+    no_gaps = SimpleNamespace(must_gaps=[], must_holes=[], repeated=[])
     with (
         mock.patch.object(report_check, "check_fields", return_value=no_gaps),
         mock.patch.object(report_check, "finalize_area", return_value=0),
@@ -306,6 +306,10 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertEqual(code, 1, out)
         self.assertIn(f"the first measurement {RUN} recorded no commit ('no-git')", out)
         self.assertEqual(protocol_history.registration_in_commit(self.proto, sha), [])
+        # the record says the run started outside the history
+        ctx = report_context.checked(self.area, self.proto)
+        (gap,) = report_check.registration_gaps(ctx)
+        self.assertEqual(gap.rule, report_check.LAB_010)
 
     def test_recorded_commit_is_the_full_sha_the_record_names(self):
         def cfg(git: str, git_full: str) -> runs.RunConfig:

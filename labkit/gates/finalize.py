@@ -149,6 +149,7 @@ from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
     REPEATED_WAY_OUT,
+    head_rule,
     kept_gaps,
     named_field,
     open_holes,
@@ -498,7 +499,7 @@ def check_open_fields(
         findings.block(
             f"{protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     stale = readme_placeholders(protocol.parent)
     for line in stale:
@@ -754,17 +755,17 @@ def check_kept_number(
     for gap in gaps:
         # an unfilled value is the stamp's placeholder, which protocol-fill
         # sets; every other gap is a table to add, drop or repair by hand
-        unfilled = gap in {f"[kept] {f}" for f in protocol_block.KEPT_KEYS}
+        unfilled = gap.label in {f"[kept] {f}" for f in protocol_block.KEPT_KEYS}
         findings.block(
-            f"{protocol.name}: {gap}"
+            f"{protocol.name}: {gap.label}"
             + (" is still the placeholder" if unfilled else ""),
             fix=(
-                f"`{fill_command(protocol, f'kept.{gap.removeprefix("[kept] ")}=<value>')}`"
+                f"`{fill_command(protocol, f'kept.{gap.label.removeprefix("[kept] ")}=<value>')}`"
                 if unfilled
                 else f"repair the head as the sentence says, then "
                 f"`{gate_command('finalize', protocol.parent)}`"
             ),
-            rule=OPEN_RULE,
+            rule=gap.rule,
         )
     if gaps:
         return
@@ -935,7 +936,7 @@ def finalize_area(
                 f"{chosen.name}: {exc}",
                 fix=f"repair the head as the sentence says: "
                 f"`{contract_command(chosen)}` shows its fields",
-                rule=OPEN_RULE,
+                rule=head_rule(exc),
             )
         return 2
 

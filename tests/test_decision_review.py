@@ -164,7 +164,7 @@ def run_review(area: Path, answer: str, *extra: str) -> tuple[int, str, str, lis
 def gate(area: Path) -> tuple[int, str]:
     """report-check with finalize and recomputation stood in."""
     buf = io.StringIO()
-    no_gaps = SimpleNamespace(missing_must=[], must_holes=[], repeated=[])
+    no_gaps = SimpleNamespace(must_gaps=[], must_holes=[], repeated=[])
     with (
         mock.patch.object(report_check, "check_fields", return_value=no_gaps),
         mock.patch.object(report_check, "finalize_area", return_value=0),

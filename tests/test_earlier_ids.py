@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import intent_check
-from labkit.formats import promises, protocol_check
+from labkit.formats import gate, promises, protocol_check
 from protocol_fixture import head
 
 TEXT = head() + "- **Inference criterion:** [K1] accuracy >= 0.8; [S1] stop on errors\n"
@@ -23,8 +23,13 @@ class EarlierIds(unittest.TestCase):
         )
 
     def test_protocol_check_makes_them_a_must_finding(self):
-        missing = protocol_check.check_fields(TEXT).missing_must
+        report = protocol_check.check_fields(TEXT)
+        missing = report.missing_must
         self.assertTrue(any("K1, S1" in m and "0.47" in m for m in missing), missing)
+        self.assertEqual(
+            [g.rule for g in report.must_gaps if "K1, S1" in g.label],
+            [gate.TECHNICAL_RULE],
+        )
 
     def test_intent_check_refuses_instead_of_passing(self):
         with tempfile.TemporaryDirectory() as d:

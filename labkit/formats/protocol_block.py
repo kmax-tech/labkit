@@ -104,6 +104,11 @@ class BlockError(ValueError):
     """The protocol's TOML block is missing or malformed; the message names the field."""
 
 
+class HeadPartMissing(BlockError):
+    """A required part of the head is not there — the `[protocol]` table or
+    a key of it. Every other BlockError is a head that does not read."""
+
+
 @dataclass(frozen=True)
 class Head:
     """The `[protocol]` table. None marks a field still holding its placeholder."""
@@ -887,10 +892,11 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
 def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's head. Raises BlockError when the block or the
     `[protocol]` table is missing, a field is missing or unknown, or a
-    value has the wrong type or is outside its choices."""
+    value has the wrong type or is outside its choices — HeadPartMissing
+    for the table or a key that is not there."""
     data = parse_toml_block(text)
     if "protocol" not in data:
-        raise BlockError(
+        raise HeadPartMissing(
             f"no [protocol] table — the head ({', '.join(PROTOCOL_HEAD_KEYS)}) "
             f"lives in the ```toml block; protocols with a prose head "
             f"are read by labkit 0.47"
@@ -922,7 +928,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         )
     missing = [f for f in PROTOCOL_HEAD_KEYS if f not in table]
     if missing:
-        raise BlockError(f"[protocol]: missing {', '.join(missing)}")
+        raise HeadPartMissing(f"[protocol]: missing {', '.join(missing)}")
     pid = table["id"]
     if not isinstance(pid, str):
         raise BlockError(f"[protocol] id = {pid!r} — a string")

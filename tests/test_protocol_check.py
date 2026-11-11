@@ -1188,6 +1188,7 @@ class TestTerms(unittest.TestCase):
         )
         report = protocol_check.check_fields(text)
         self.assertEqual(report.missing_must, ["Terms of this protocol"])
+        self.assertEqual([g.rule for g in report.must_gaps], [protocol_check.LAB_011])
         self.assertEqual([lb for _, lb in report.soft_holes], ["Clarified terms"])
 
 

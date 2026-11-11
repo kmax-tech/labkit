@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import protocol_check  # noqa: E402
+from labkit.formats import gate, protocol_check  # noqa: E402
 from labkit.tools import scaffold, protocol_cuts  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
@@ -108,6 +108,7 @@ class Cut(unittest.TestCase):
         report = protocol_check.check_fields(text)
         self.assertEqual(len(report.missing_must), 1, report.missing_must)
         self.assertIn('frozen = true at repeat_cost = "low"', report.missing_must[0])
+        self.assertEqual(report.must_gaps[0].rule, gate.OPEN_RULE)
         self.assertEqual(report.missing_should, [])
         self.assertEqual(report.missing_should, [])
 

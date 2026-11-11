@@ -12,7 +12,6 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.formats import findings as audit_findings
-from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import (
     BLOCKER,
     WARNING,
@@ -40,7 +39,16 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
         (f,) = found.found
         self.assertTrue(f.text.startswith("HEAD (must): "), f.text)
-        self.assertEqual((f.grade, f.rule), (BLOCKER, OPEN_RULE))
+        self.assertEqual((f.grade, f.rule), (BLOCKER, preflight.LAB_011))
+
+    def test_a_head_that_does_not_parse_is_the_technical_contract(self):
+        (self.area / "PROTOCOL-x.md").write_text(
+            "# Experiment protocol: x\n\n```toml\n[protocol\n```\n"
+        )
+        found = Findings(tell=None)
+        self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
+        (f,) = found.found
+        self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
 
     def test_an_audit_record_that_does_not_read_blocks(self):
         (self.area / audit_findings.DIR).mkdir()

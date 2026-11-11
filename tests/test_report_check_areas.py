@@ -98,7 +98,7 @@ class ReportCheck(unittest.TestCase):
         """FINALIZE and CHECK stand in for their stations; the fixture's
         protocol is a bare head, so its field gaps count only with FIELDS."""
         out = io.StringIO()
-        no_gaps = SimpleNamespace(missing_must=[], must_holes=[], repeated=[])
+        no_gaps = SimpleNamespace(must_gaps=[], must_holes=[], repeated=[])
 
         def fake_finalize(
             area_: Path, protocol: Path | None, collected, *, state=None, held=None

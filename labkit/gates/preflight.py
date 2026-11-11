@@ -256,7 +256,7 @@ def preflight_area(
         findings.block(
             f"HEAD (must): {report.head_error}",
             fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
-            rule=OPEN_RULE,
+            rule=report.head_rule,
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
@@ -330,18 +330,18 @@ def check_protocol_fields(
         protocol, text, ids
     )
     lowered = repeat_cost_lowered(protocol, head)
-    for label in report.missing_must:
+    for gap in report.must_gaps:
         findings.block(
-            f"MISSING (must): {label}",
+            f"MISSING (must): {gap.label}",
             fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
-            rule=OPEN_RULE,
+            rule=gap.rule,
         )
     for twice in report.repeated:
         findings.block(
             f"REPEATED (must): {twice}",
             fix=f"{protocol_check.REPEATED_WAY_OUT}; then "
             f"`{gate_command('protocol-check', protocol)}`",
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     for n, label in report.must_holes:
         findings.block(

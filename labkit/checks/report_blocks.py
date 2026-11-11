@@ -589,7 +589,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
                     f"{at} repeats the block at line {seen[key]} — one block per "
                     f"protocol and run",
                     fix=f"remove one, then {REPORT_CHECK_AGAIN}",
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
         else:

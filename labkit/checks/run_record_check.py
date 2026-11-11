@@ -89,6 +89,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import gate_command, measure_anew
 
+LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_057 = cited_rule("LAB-057 One area per idea")
@@ -306,15 +307,16 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         return out, warnings
     names = ", ".join(shown(f, here) for f in in_git)
     if repo is None or not cfg.git_full or cfg.git_full == NO_GIT:
-        return [
-            *out,
-            blocker(
-                f"{rid} recorded no commit, or the area lies in no git repository "
-                f"now, so the helpers its script imports ({names}) cannot be compared",
-                fix=f"in the repository, {measure_anew(run_dir.parent.parent)}",
-                rule=TECHNICAL_RULE,
-            ),
-        ], warnings
+        why = (
+            f"{rid} recorded no commit, or the area lies in no git repository "
+            f"now, so the helpers its script imports ({names}) cannot be compared"
+        )
+        fix = f"in the repository, {measure_anew(run_dir.parent.parent)}"
+        # NO_GIT is the run's own word that it started outside the history;
+        # every other cause only leaves the comparison without its basis
+        if repo is not None and cfg.git == NO_GIT:
+            return [*out, blocker(why, fix=fix, rule=LAB_010)], warnings
+        return [*out, blocker(why, fix=fix, rule=TECHNICAL_RULE)], warnings
     if not commit_known(repo, cfg.git_full):
         return [
             *out,
@@ -348,10 +350,12 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             out.append(
                 blocker(
                     f"{shown(f, here)} is in neither {rid}'s commit nor its "
-                    f"uncommitted.patch — untracked when the run started, or not yet "
-                    f"there — so what the run imported is not recorded",
+                    f"uncommitted.patch, so it cannot be compared with what the "
+                    f"run imported — untracked when the run started, or not yet "
+                    f"there: the record does not say which, nor whether the run "
+                    f"used it",
                     fix=f"commit {shown(f, here)}, then {measure_anew(run_dir.parent.parent)}",
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                 )
             )
         elif then[f] != now[f]:
@@ -843,7 +847,7 @@ def _gone(f: Path, area: Path) -> GateFinding:
         fix=f"restore it (`{checkout_command(f)}` where git "
         f"holds it; else get it again from the source or access route Data / "
         f"scope names), or {measure_anew(area)}",
-        rule=OPEN_RULE,
+        rule=TECHNICAL_RULE,
     )
 
 
@@ -1093,6 +1097,6 @@ def kept_number_gaps(
             f"{measure_anew(area)}; when [kept] names the wrong number, set it "
             f"before the first measurement — after it, "
             + register_anew(per="per change, the [kept] among them", kind="compute"),
-            rule=OPEN_RULE,
+            rule=LAB_041,
         )
     ]

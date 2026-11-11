@@ -29,7 +29,7 @@ from __future__ import annotations
 from labkit.formats.commands import register_anew
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import AREA_SLOT
-from labkit.formats.gate import OPEN_RULE, GateFinding, blocker
+from labkit.formats.gate import OPEN_RULE, GateFinding, blocker, cited_rule
 from labkit.formats.protocol_block import (
     AT_LEAST,
     AT_MOST,
@@ -38,6 +38,8 @@ from labkit.formats.protocol_block import (
     finite_number,
 )
 from labkit.formats.runs import as_stored
+
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
 #: the keys the verdict writes into metrics.json, beside the kept number's
 STATE_KEY = "ref_state"
@@ -204,7 +206,7 @@ def comparison_gaps(
                 f"key the head's [kept] names, which the compute skeleton reads), "
                 f"measure anew and audit that run; a [kept] key that names the "
                 f"wrong number is a new registration",
-                rule=OPEN_RULE,
+                rule=LAB_041,
             )
         ]
     if metrics[STATE_KEY] != COMPARED or metrics.get(MET_KEY) not in (True, False):

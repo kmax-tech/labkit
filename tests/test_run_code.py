@@ -184,6 +184,9 @@ class CodeSinceRun(unittest.TestCase):
         run = self.run_now()
         (line,) = self.held(run)
         self.assertIn("extra.py is in neither", line)
+        self.assertIn("cannot be compared with what the run imported", line)
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertEqual(found.rule, gate.TECHNICAL_RULE)
 
     def test_an_untracked_sibling_is_compared_with_the_runs_copy(self) -> None:
         local = self.script.parent / "local.py"
@@ -329,6 +332,14 @@ class CodeSinceRun(unittest.TestCase):
         self._record(run, git_full=runs.NO_GIT)
         (line,) = self.held(run)
         self.assertIn("recorded no commit, or the area lies in no git repository", line)
+        # a record that only lacks the commit leaves the comparison without
+        # its basis; `git` NO_GIT is the run's word that it started outside
+        # the history
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertEqual(found.rule, gate.TECHNICAL_RULE)
+        self._record(run, git=runs.NO_GIT, git_full="")
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertEqual(found.rule, gate.cited_rule("LAB-010 Commit before the run"))
         self._record(run, git_full="f" * 40)
         (line,) = self.held(run)
         self.assertIn(
