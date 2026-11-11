@@ -504,10 +504,15 @@ class AreaTestsTold(unittest.TestCase):
         tell_test_run(found, tested, "evaluate() lost its check", finalize.CODE_003)
         return found
 
-    def test_no_pytest_warns(self):
+    def test_no_pytest_warns_as_a_check_not_executed(self):
         (f,) = self._told("no-pytest", []).found
         self.assertEqual((f.grade, f.rule), ("WARNING", TECHNICAL_RULE))
         self.assertIn("pytest is not installed", f.text)
+        # nothing was tested: the line says so, a failure's does not
+        self.assertEqual(f.check_outcome, NOT_EXECUTABLE)
+        self.assertIn("WARNING (check not executable)", f.line)
+        (failed,) = self._told("failed", ["1 failed"]).found
+        self.assertNotIn("check not executable", failed.line)
 
     def test_tests_that_did_not_run_block_as_not_executable(self):
         (f,) = self._told("not run", ["ERROR collecting", "1 error in 0.1s"]).found

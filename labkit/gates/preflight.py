@@ -608,7 +608,7 @@ def tell_test_run(
 ) -> None:
     """What running the area's tests (TESTS, with files) found, one
     rendering for preflight and finalize: ok a note, a missing pytest a
-    warning, a failure a blocker naming the files, pytest's last line (the
+    warning told as a check not executed, a failure a blocker naming the files, pytest's last line (the
     counts), FAILED, the gate's sentence on what no longer holds, and RULE,
     the rule the calling gate holds the tests to; a run
     that did not test the code (pytest exit 2-5) a blocker too, told as a
@@ -622,6 +622,7 @@ def tell_test_run(
         findings.warn(
             "pytest is not installed in this interpreter — tests not run",
             evidence_kind=GUARANTEED,
+            check_outcome=NOT_EXECUTABLE,
             rule=TECHNICAL_RULE,
         )
     else:
