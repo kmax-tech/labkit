@@ -34,6 +34,7 @@ from protocol_fixture import (
 
 from labkit.formats import (
     findings,
+    gate,
     promises,
     scope_sha,
     standard_contract,
@@ -374,7 +375,13 @@ class ReportCheck(unittest.TestCase):
             seen["stdout_untouched"] = sys.stdout is out  # this test's, no other
             seen["silent"] = collected._tell is None
             collected.note("── completion ──")
-            collected.block("no completed run bound to p-x", fix="measure: `x`")
+            # the basis of the finding this stands in for
+            # (`answering_run`, a technical contract)
+            collected.block(
+                "no completed run bound to p-x",
+                fix="measure: `x`",
+                rule=gate.TECHNICAL_RULE,
+            )
             return collected.report("finalize", "reporting")
 
         with (
@@ -402,7 +409,9 @@ class ReportCheck(unittest.TestCase):
         def warning_finalize(
             area_: Path, protocol: Path | None, collected, *, state=None, held=None
         ) -> int:
-            collected.warn("one draw only", evidence_kind="guaranteed")
+            collected.warn(
+                "one draw only", evidence_kind="guaranteed", rule=gate.TECHNICAL_RULE
+            )
             return 0
 
         out = io.StringIO()

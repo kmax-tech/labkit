@@ -727,7 +727,9 @@ class Withdraw(CountCommands):
         self.assertIn("withdraw the adoption first", out)
         self.assertIn(f"{run_a}: completed (adopted in [result]", out)
         self.assertIn(
-            f"WARNING: {run_b}: bound to this protocol and newer by name", out
+            f"WARNING (suspected, static evidence): {run_b}: bound to this protocol "
+            "and newer by name",
+            out,
         )
         wrong = (
             f"BLOCKER · PROTOCOL-lines.md:1 · statement · the head has adopted run {run_a}, "

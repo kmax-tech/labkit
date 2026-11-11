@@ -198,8 +198,12 @@ class UnreportableRun(unittest.TestCase):
         completed_run(self.area, "r1", metrics=METRICS, unfrozen_ack=True)
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)
+        # no rule states the duty for every acknowledged run
+        # (`finalize.UNREPORTABLE_RULES`): an open assignment, so a deviation
         self.assertIn(
-            "WARNING: the answering run r1: a full run acknowledged over", out
+            "WARNING (deviation, basis not settled): the answering run r1: "
+            "a full run acknowledged over",
+            out,
         )
         code, out = _report_check(self.area)
         self.assertEqual(code, 1, out)

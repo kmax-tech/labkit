@@ -70,7 +70,9 @@ class Gates(unittest.TestCase):
         self.assertEqual(
             found[0].rule, cited_rule("LAB-041 Generate numbers, don't retype them")
         )
-        self.assertTrue(f[0].startswith("WARNING · static evidence · "), f[0])
+        self.assertTrue(
+            f[0].startswith("WARNING · suspected, static evidence · "), f[0]
+        )
 
     def test_a_name_in_a_comment_string_or_import_is_no_test(self):
         """A mention alone never silences the check."""

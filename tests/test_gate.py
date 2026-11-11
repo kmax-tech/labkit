@@ -67,7 +67,7 @@ class HelpStatesTheExitContract(unittest.TestCase):
 
 class EvidenceKind(unittest.TestCase):
     """`evidence_kind` says what carries a finding's sentence, given at every
-    site: static evidence warns and never blocks, the dotted form names it,
+    site: static evidence warns and never blocks, every form names it,
     the summary counts it."""
 
     def test_static_evidence_never_blocks(self):
@@ -89,20 +89,27 @@ class EvidenceKind(unittest.TestCase):
         f.block("z", fix="do w")  # a blocker is always guaranteed
         self.assertEqual(f.found[0].evidence_kind, gate.GUARANTEED)
 
-    def test_the_dotted_form_names_static_evidence_only(self):
+    def test_every_form_names_static_evidence_as_a_suspicion(self):
         self.assertEqual(
             gate.coded(
                 "WARNING", "a.py:1", "z", evidence_kind=gate.STATIC_EVIDENCE
             ).line,
-            "WARNING · static evidence · a.py:1 · z",
-        )
-        self.assertEqual(
-            gate.coded("WARNING", "a.py:1", "z", evidence_kind=gate.GUARANTEED).line,
-            "WARNING · a.py:1 · z",
+            "WARNING · suspected, static evidence · a.py:1 · z",
         )
         self.assertEqual(
             gate.GateFinding("WARNING", "z", evidence_kind=gate.STATIC_EVIDENCE).line,
-            "WARNING: z",
+            "WARNING (suspected, static evidence): z",
+        )
+        # the twin: an exact check on a decided basis names neither
+        self.assertEqual(
+            gate.coded(
+                "WARNING",
+                "a.py:1",
+                "z",
+                evidence_kind=gate.GUARANTEED,
+                rule=gate.TECHNICAL_RULE,
+            ).line,
+            "WARNING · a.py:1 · z",
         )
 
     def test_the_summary_counts_static_evidence_among_the_warnings(self):
@@ -127,7 +134,7 @@ class Findings(unittest.TestCase):
         and in the summary. Without an area the slot stays."""
         step = f"`labkit-audit {gate.AREA_SLOT} --mode analysis` follows it up"
         f = gate.Findings(tell=None, area="experiments/01-x")
-        f.block(f"{gate.AREA_SLOT}: x", fix=step)
+        f.block(f"{gate.AREA_SLOT}: x", fix=step, rule=gate.TECHNICAL_RULE)
         f.take(
             gate.coded(
                 gate.WARNING, "a.py:1", "x", evidence_kind=gate.GUARANTEED, fix=step
@@ -142,15 +149,15 @@ class Findings(unittest.TestCase):
         )
         self.assertIn("labkit-audit experiments/01-x --mode", f.warned[0])
         bare = gate.Findings(tell=None)
-        bare.block("x", fix=step)
+        bare.block("x", fix=step, rule=gate.TECHNICAL_RULE)
         self.assertEqual(bare.blocked, [f"x{gate.WAY_OUT}{step}"])
 
     def test_a_blocker_is_exit_1_and_named_again(self):
         f = gate.Findings()
         code, out = run(
             lambda: (
-                f.block("x failed", fix="mend x"),
-                f.warn("y", evidence_kind=gate.GUARANTEED),
+                f.block("x failed", fix="mend x", rule=gate.TECHNICAL_RULE),
+                f.warn("y", evidence_kind=gate.GUARANTEED, rule=gate.TECHNICAL_RULE),
                 f.report("t", "freezing"),
             )[-1]
         )
@@ -212,7 +219,12 @@ class Findings(unittest.TestCase):
         )
         self.assertEqual(
             gate.coded(
-                "BLOCKER", None, "x", evidence_kind=gate.GUARANTEED, fix="y"
+                "BLOCKER",
+                None,
+                "x",
+                evidence_kind=gate.GUARANTEED,
+                fix="y",
+                rule=gate.TECHNICAL_RULE,
             ).line,
             "BLOCKER · x · Next: y",
         )
@@ -248,12 +260,16 @@ class Silent(unittest.TestCase):
         code, out = run(
             lambda: (
                 f.note("── station ──"),
-                f.block("x failed", fix="mend x"),
-                f.warn("y", evidence_kind=gate.GUARANTEED),
+                f.block("x failed", fix="mend x", rule=gate.TECHNICAL_RULE),
+                f.warn("y", evidence_kind=gate.GUARANTEED, rule=gate.TECHNICAL_RULE),
                 f.take_all(
                     [
                         gate.coded(
-                            "WARNING", "a.py:2", "z", evidence_kind=gate.GUARANTEED
+                            "WARNING",
+                            "a.py:2",
+                            "z",
+                            evidence_kind=gate.GUARANTEED,
+                            rule=gate.TECHNICAL_RULE,
                         )
                     ]
                 ),
@@ -270,13 +286,17 @@ class Silent(unittest.TestCase):
         told = gate.Findings()
         quiet = gate.Findings(tell=None)
         for f in (told, quiet):
-            f.block("x failed", fix="mend x")
-            f.warn("y", evidence_kind=gate.GUARANTEED)
+            f.block("x failed", fix="mend x", rule=gate.TECHNICAL_RULE)
+            f.warn("y", evidence_kind=gate.GUARANTEED, rule=gate.TECHNICAL_RULE)
         _, out = run(lambda: told.report("t", "freezing"))
         self.assertEqual(out.strip().splitlines()[-3:], quiet.summary("t", "freezing"))
         self.assertEqual(
             gate.GateFinding(
-                "BLOCKER", "x", fix="y", evidence_kind=gate.GUARANTEED
+                "BLOCKER",
+                "x",
+                fix="y",
+                evidence_kind=gate.GUARANTEED,
+                rule=gate.TECHNICAL_RULE,
             ).line,
             "BLOCKER: x. Next: y",
         )
@@ -286,6 +306,7 @@ class Silent(unittest.TestCase):
                 "WARNING · a · b",
                 gate.AS_WRITTEN,
                 evidence_kind=gate.GUARANTEED,
+                rule=gate.TECHNICAL_RULE,
             ).line,
             "WARNING · a · b",
         )
@@ -294,7 +315,7 @@ class Silent(unittest.TestCase):
         lines: list[str] = []
         f = gate.Findings(tell=lines.append)
         f.note("── x ──")
-        f.block("b", fix="c")
+        f.block("b", fix="c", rule=gate.TECHNICAL_RULE)
         f.report("t", "x")
         self.assertEqual(lines[:2], ["── x ──", "  BLOCKER: b. Next: c"])
         self.assertIn(
@@ -364,7 +385,9 @@ class TheWayAsData(unittest.TestCase):
         withdrawal = commands.Command(
             commands.WITHDRAW, 'protocol-fill P --withdraw --why "<why>"'
         )
-        held = gate.blocker("the code changed", fix="measure anew")
+        held = gate.blocker(
+            "the code changed", fix="measure anew", rule=gate.TECHNICAL_RULE
+        )
         warned = gate.GateFinding(
             gate.WARNING, "a note", fix="read it", evidence_kind=gate.GUARANTEED
         )

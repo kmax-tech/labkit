@@ -306,7 +306,8 @@ class TestPreflight(unittest.TestCase):
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)  # the prompt's blocker
         self.assertIn(
-            "WARNING · static evidence · 01_measure.py · parse_answer() is called by no test",
+            "WARNING · suspected, static evidence · 01_measure.py · "
+            "parse_answer() is called by no test",
             out,
         )
         self.assertIn("PROMPT", out)

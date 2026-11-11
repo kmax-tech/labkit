@@ -28,9 +28,14 @@ A mechanical gate finding carries `evidence_kind` as required data
 statement in `text`, not its subject: checking that an audit record holds
 an undecided BLOCKER is a guaranteed register check; the agent's judgement
 remains in the audit record (`findings.Finding`). Static evidence cannot
-have grade BLOCKER. The dotted code-check output labels static evidence;
-prefixed lines stay `WARNING: …`, and the summary counts static evidence
-among the warnings. Individual messages do not always print the kind.
+have grade BLOCKER. Every line of a static-evidence finding says so: the
+dotted code-check output as its own part (`WARNING · suspected, static
+evidence · …`), a prefixed line after the grade (`WARNING (suspected,
+static evidence): …`); the summary counts static evidence among the
+warnings. A line of a guaranteed finding names its check outcome where it
+is not a breach of a known rule or a technical contract: `(deviation,
+basis not settled)` for an exact check whose rule is not assigned, `(check
+not executable)` for a check that could not run (`gate.OUTCOME_MARKS`).
 
 ## Three kinds of promise
 

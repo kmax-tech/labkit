@@ -467,7 +467,8 @@ class TestStampCoverage(unittest.TestCase):
             all(
                 # static evidence says so in the line
                 f.startswith(
-                    "WARNING · static evidence · experiments/01-x/scripts/01_measure.py:"
+                    "WARNING · suspected, static evidence · "
+                    "experiments/01-x/scripts/01_measure.py:"
                 )
                 for f in found
             )

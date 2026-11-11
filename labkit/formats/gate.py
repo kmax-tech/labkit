@@ -83,15 +83,24 @@ EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 #: (`GateFinding.stated_outcome`); the others follow from what carries the
 #: sentence and from the rule assignment (`derived_outcome`), and a site that
 #: states one of them otherwise is refused — VIOLATED on an open assignment
-#: raises. A BLOCKER blocks whatever its outcome, and the line names only a
-#: check not executed: VIOLATED, DEVIATION and SUSPECTED read alike there
+#: raises. A BLOCKER blocks whatever its outcome; a line names its outcome
+#: unless it is VIOLATED (OUTCOME_MARKS)
 VIOLATED = "violated"
 DEVIATION = "deviation"
 SUSPECTED = "suspected"
 NOT_EXECUTABLE = "not executable"
 OUTCOMES = (VIOLATED, DEVIATION, SUSPECTED, NOT_EXECUTABLE)
-#: how a line names a check not executed: `BLOCKER (check not executable): …`
+#: how a line names an outcome, in every form and in the summary
+#: (`GateFinding.outcome_mark`): `BLOCKER (deviation, basis not settled): …`.
+#: VIOLATED has no mark — a line without one states a breach of a known
+#: rule or a technical contract. One wording per outcome, set here; no site
+#: words its outcome itself
 NOT_EXECUTABLE_MARK = "check not executable"
+OUTCOME_MARKS = {
+    DEVIATION: "deviation, basis not settled",
+    SUSPECTED: "suspected, static evidence",
+    NOT_EXECUTABLE: NOT_EXECUTABLE_MARK,
+}
 
 
 def outcome_of_failed_read(exc: BaseException) -> str | None:
@@ -383,39 +392,56 @@ class GateFinding:
         return WITHDRAW_FIRST.format(command=self.withdraw_first) + self.fix
 
     @property
+    def outcome_mark(self) -> str | None:
+        """How the line and the summary name this finding's outcome
+        (OUTCOME_MARKS); None for VIOLATED, which is told without a mark."""
+        return OUTCOME_MARKS.get(self.outcome)
+
+    @property
     def line(self) -> str:
-        """The finding as a gate tells it, without the indent. The dotted
-        form names static evidence (`WARNING · static evidence · …`) so a
-        reader of a code check's line sees it is an indication; a prefixed
-        line stays `WARNING: …`, and the summary counts the kind. The way
-        out (`way`) ends the line in every form: its own dotted part
-        (`Next: …`), else after `WAY_OUT`. Of the outcomes only
-        NOT_EXECUTABLE is named; a DEVIATION reads like a VIOLATED finding."""
-        unrun = NOT_EXECUTABLE_MARK if self.outcome == NOT_EXECUTABLE else None
+        """The finding as a gate tells it, without the indent. Every form
+        names the outcome where it is not a breach (`outcome_mark`):
+        prefixed `BLOCKER (deviation, basis not settled): …`, as written
+        `<text> (<mark>)`, dotted as its own part after the grade
+        (`WARNING · suspected, static evidence · …`). The dotted form names
+        static evidence also where the mark does not, on a check not
+        executed. The way out (`way`) ends the line in every form: its own
+        dotted part (`Next: …`), else after `WAY_OUT`."""
+        mark = self.outcome_mark
         if self.form == DOTTED:
-            kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
+            # SUSPECTED's mark says "static evidence" already; the kind is
+            # told beside the mark only on a static check not executed
+            # (`WARNING · static evidence · check not executable · …`)
+            kind = (
+                STATIC_EVIDENCE
+                if self.evidence_kind == STATIC_EVIDENCE and self.outcome != SUSPECTED
+                else None
+            )
             fix = f"Next: {self.way}" if self.way else None
             rule = self.rule.line_part if self.rule is not None else None
-            parts = (self.grade, kind, unrun, self.where, self.text, rule, fix)
+            parts = (self.grade, kind, mark, self.where, self.text, rule, fix)
             return " · ".join(p for p in parts if p)
         if self.form == AS_WRITTEN:
-            told = f"{self.text} ({unrun})" if unrun else self.text
+            told = f"{self.text} ({mark})" if mark else self.text
         else:
             told = (
-                f"{self.grade} ({unrun}): {self.text}"
-                if unrun
+                f"{self.grade} ({mark}): {self.text}"
+                if mark
                 else f"{self.grade}: {self.text}"
             )
         return with_way_out(told, self.way)
 
     @property
     def message(self) -> str:
-        """What the summary repeats: the text with its way out, and for a
-        DOTTED finding the whole line — its text alone would lose where it
-        points and the fix."""
+        """What the summary repeats. PREFIXED and AS_WRITTEN: the text with
+        its way out, the outcome named first where it is not a breach
+        (`(<mark>) <text>` — also for AS_WRITTEN, whose `line` names it
+        last). DOTTED: the whole line, the mark where the line has it — its
+        text alone would lose where it points and the fix."""
         if self.form == DOTTED:
             return self.line
-        return with_way_out(self.text, self.way)
+        mark = self.outcome_mark
+        return with_way_out(f"({mark}) {self.text}" if mark else self.text, self.way)
 
 
 def withdrawn_first(

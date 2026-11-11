@@ -315,7 +315,9 @@ class TheFinding(unittest.TestCase):
                 gate.GateFinding(
                     gate.BLOCKER, "x", fix=fix, evidence_kind=gate.GUARANTEED
                 )
-        warning = gate.GateFinding(gate.WARNING, "x", evidence_kind=gate.GUARANTEED)
+        warning = gate.GateFinding(
+            gate.WARNING, "x", evidence_kind=gate.GUARANTEED, rule=gate.TECHNICAL_RULE
+        )
         self.assertEqual(warning.line, "WARNING: x")
 
     def test_every_form_tells_the_fix(self):
@@ -332,6 +334,7 @@ class TheFinding(unittest.TestCase):
                 where="a.py:1" if form == gate.DOTTED else None,
                 fix=fix,
                 evidence_kind=gate.GUARANTEED,
+                rule=gate.TECHNICAL_RULE,
             )
             self.assertEqual(f.line, line)
             self.assertIn(fix, f.message)
@@ -339,7 +342,11 @@ class TheFinding(unittest.TestCase):
     def test_the_summary_repeats_the_fix_and_the_area_slot_is_filled(self):
         told: list[str] = []
         out = gate.Findings(told.append, area="experiments/01-x")
-        out.block("x", fix=f"run `labkit-audit {gate.AREA_SLOT} --findings`")
+        out.block(
+            "x",
+            fix=f"run `labkit-audit {gate.AREA_SLOT} --findings`",
+            rule=gate.TECHNICAL_RULE,
+        )
         out.report("tool", "reporting")
         want = "x. Next: run `labkit-audit experiments/01-x --findings`"
         self.assertIn(f"  BLOCKER: {want}", told)

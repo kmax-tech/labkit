@@ -91,7 +91,9 @@ class PromisePreflight(unittest.TestCase):
         findings = intent_id_lines(*area_with(label_only))
         self.assertEqual(len(findings), 1, findings)
         self.assertTrue(
-            findings[0].startswith("WARNING · static evidence · 01_measure.py:"),
+            findings[0].startswith(
+                "WARNING · suspected, static evidence · 01_measure.py:"
+            ),
             findings,
         )
         self.assertIn(

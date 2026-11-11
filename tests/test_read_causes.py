@@ -146,12 +146,85 @@ class Outcome(unittest.TestCase):
 
     def test_an_exact_check_on_an_unsettled_basis_is_a_deviation(self) -> None:
         """An open assignment, a new class and a site without an assignment
-        name no decided basis: none of them is told as a violation."""
+        name no decided basis: none of them is told as a violation, and the
+        line says so. It blocks as before."""
         for rule in (gate.OPEN_RULE, gate.NEW_CLASS_RULE, None):
             with self.subTest(rule=rule):
                 f = gate.blocker("x", fix="y", rule=rule)
                 self.assertEqual(f.outcome, gate.DEVIATION)
-                self.assertEqual(f.line, "BLOCKER: x. Next: y")  # it blocks as before
+                self.assertEqual(f.grade, gate.BLOCKER)
+                self.assertEqual(
+                    f.line, "BLOCKER (deviation, basis not settled): x. Next: y"
+                )
+
+    def test_every_form_and_the_summary_name_an_outcome_that_is_no_breach(
+        self,
+    ) -> None:
+        """One wording per outcome (`gate.OUTCOME_MARKS`), in the prefixed
+        line, the line as written, the dotted line and the summary's
+        message."""
+        for rule, kind, mark in (
+            (gate.OPEN_RULE, gate.GUARANTEED, "deviation, basis not settled"),
+            (LAB_003, gate.STATIC_EVIDENCE, "suspected, static evidence"),
+        ):
+            with self.subTest(mark=mark):
+                prefixed = gate.GateFinding(
+                    gate.WARNING, "x", rule=rule, fix="y", evidence_kind=kind
+                )
+                self.assertEqual(prefixed.line, f"WARNING ({mark}): x. Next: y")
+                self.assertEqual(prefixed.message, f"({mark}) x. Next: y")
+                written = gate.GateFinding(
+                    gate.WARNING, "x", gate.AS_WRITTEN, rule=rule, evidence_kind=kind
+                )
+                self.assertEqual(written.line, f"x ({mark})")
+                self.assertEqual(written.message, f"({mark}) x")
+                dotted = gate.coded(
+                    gate.WARNING, "a.py:1", "x", rule=rule, evidence_kind=kind
+                )
+                self.assertTrue(
+                    dotted.line.startswith(f"WARNING · {mark} · a.py:1 · x"),
+                    dotted.line,
+                )
+                self.assertEqual(dotted.message, dotted.line)
+
+    def test_the_twin_a_breach_is_told_without_a_mark_in_every_form(self) -> None:
+        for rule in (LAB_003, gate.TECHNICAL_RULE):
+            with self.subTest(rule=rule.kind):
+                prefixed = gate.GateFinding(
+                    gate.WARNING, "x", rule=rule, evidence_kind=gate.GUARANTEED
+                )
+                self.assertEqual((prefixed.line, prefixed.message), ("WARNING: x", "x"))
+                self.assertIsNone(prefixed.outcome_mark)
+                written = gate.GateFinding(
+                    gate.WARNING,
+                    "x",
+                    gate.AS_WRITTEN,
+                    rule=rule,
+                    evidence_kind=gate.GUARANTEED,
+                )
+                self.assertEqual((written.line, written.message), ("x", "x"))
+                dotted = gate.coded(
+                    gate.WARNING,
+                    "a.py:1",
+                    "x",
+                    rule=rule,
+                    evidence_kind=gate.GUARANTEED,
+                )
+                self.assertTrue(dotted.line.startswith("WARNING · a.py:1 · x"))
+
+    def test_a_static_check_not_executed_names_the_kind_beside_the_mark(
+        self,
+    ) -> None:
+        f = gate.coded(
+            gate.WARNING,
+            "a.py:1",
+            "x",
+            evidence_kind=gate.STATIC_EVIDENCE,
+            stated_outcome=gate.NOT_EXECUTABLE,
+        )
+        self.assertEqual(
+            f.line, "WARNING · static evidence · check not executable · a.py:1 · x"
+        )
 
     def test_static_evidence_is_a_suspicion_whatever_its_basis(self) -> None:
         for rule in (LAB_003, gate.TECHNICAL_RULE, gate.OPEN_RULE, None):
