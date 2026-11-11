@@ -107,12 +107,12 @@ B uses the existing writers, report checks and next-step logic. Each command che
 
 ## Acceptance and verification
 
-| B case               | Required outcome                                                                                                             | Tests                                                                                                                               |
-|----------------------|------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Save progress        | A discussion of the current run passes the staged commit; the stop hook reminds once; no adoption and no extra model review. | `tests/test_next_step.py::ProgressAccount`, the registered-report pairs in `tests/test_report_check.py`                             |
-| Survive interruption | An interrupted audit leaves a readable report and a valid next step, and claims no success.                                  | `ProgressAccount`, `tests/test_attempts.py`                                                                                         |
-| Retain protection    | Open BLOCKERs, changed evidence, stale references and malformed blocks still block where they apply.                         | `ProgressAccount`, `tests/test_report_check.py`, `tests/test_registration_committed.py`                                             |
-| Finish cleanly       | The matching discussion is replaced, unrelated content stays, the final review is due; a negative result works the same way. | `tests/test_report_blocks.py::AdoptionReplacesTheAccount`, `tests/test_report_review.py`, `tests/test_counter_cases.py::HonestMiss` |
+| B case               | Required outcome                                                                                                             | Tests                                                                                                                                    |
+|----------------------|------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| Save progress        | A discussion of the current run passes the staged commit; the stop hook reminds once; no adoption and no extra model review. | `tests/test_next_step.py::ProgressAccount`, the registered-report pairs in `tests/test_report_check.py`                                  |
+| Survive interruption | An interrupted audit leaves a readable report and a valid next step, and claims no success.                                  | `ProgressAccount`, `tests/test_attempts.py`                                                                                              |
+| Retain protection    | Open BLOCKERs, changed evidence, stale references and malformed blocks still block where they apply.                         | `ProgressAccount`, `tests/test_report_check.py`, `tests/test_registration_committed.py`                                                  |
+| Finish cleanly       | The matching discussion is replaced, unrelated content stays, the final review is due; a negative result works the same way. | `tests/test_report_blocks_text.py::AdoptionReplacesTheAccount`, `tests/test_report_review.py`, `tests/test_counter_cases.py::HonestMiss` |
 
 The combined local probe ran real commands on a registered count protocol, in this order:
 
