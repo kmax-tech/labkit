@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_check  # noqa: E402
-from labkit.formats.gate import BLOCKER  # noqa: E402
+from labkit.formats.gate import BLOCKER, cited_rule  # noqa: E402
 
 SCRIPT = """
 PROMPT = ("Judge the claim: {claim}\\n\\n"
@@ -62,9 +62,14 @@ class Gates(unittest.TestCase):
         (self.repo / "tests" / "test_01_x.py").write_text(
             "from x import parse_answer\nparse_answer('Yes')\n", encoding="utf-8"
         )
-        f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
+        found = prompt_check.check_parser_fixtures(self.area, self.repo)
+        f = [x.line for x in found]
         self.assertEqual(len(f), 1)
         self.assertIn("parse_score()", f[0])
+        # the rule whose text asks every parser for a test with raw answers
+        self.assertEqual(
+            found[0].rule, cited_rule("LAB-041 Generate numbers, don't retype them")
+        )
         self.assertTrue(f[0].startswith("WARNING · static evidence · "), f[0])
 
     def test_a_name_in_a_comment_string_or_import_is_no_test(self):
@@ -131,6 +136,10 @@ class Gates(unittest.TestCase):
         self.with_block("<the real prompt — it belongs here>")
         (f,) = prompt_check.check_prompt_drift(self.area, self.protocol)
         self.assertEqual(f.grade, BLOCKER)
+        # the rule whose text asks for the prompt verbatim in the protocol
+        self.assertEqual(
+            f.rule, cited_rule("LAB-067 A prompt has one home, which the run freezes")
+        )
 
     def test_no_prompt_constant_means_nothing_to_hold(self):
         (self.area / "scripts" / "01_measure.py").write_text(

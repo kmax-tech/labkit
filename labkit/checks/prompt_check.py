@@ -99,7 +99,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     sp.name,
                     f"{name}() is called by no test under tests/ · a parser "
                     f"fails silently into a wrong number",
-                    rule=cited_rule("LAB-016 Resolution check before freezing"),
+                    rule=cited_rule("LAB-041 Generate numbers, don't retype them"),
                     fix=f"give it a test with real raw answers under tests/, "
                     f"then `{gate_command('code-check', area)}`",
                     evidence_kind=STATIC_EVIDENCE,
@@ -254,7 +254,9 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
                     protocol.name,
                     f"prompt block drifted from {name}: {len(missing)} of "
                     f"{len(fixed)} fixed line(s) missing, e.g. {missing[0][:60]!r}",
-                    rule=cited_rule("LAB-007 Render check before the instrument check"),
+                    rule=cited_rule(
+                        "LAB-067 A prompt has one home, which the run freezes"
+                    ),
                     fix="paste the rendered `--show` output, not a transcript",
                     evidence_kind=GUARANTEED,
                 )
