@@ -61,7 +61,9 @@ MIGRATION = (
     "holds on a reported number their own rule (LAB-104 A number leaves the area "
     "only through its adoption), 0.28 states that a computation registers a "
     "comparison the task specifies in `[reference]` before the first measurement "
-    "(LAB-035 Thresholds belong to the run, not to the measure)"
+    "(LAB-035 Thresholds belong to the run, not to the measure) and that a run "
+    "which required a freeze is reported only while its protocol carries it "
+    "(LAB-104 A number leaves the area only through its adoption)"
 )
 TYPES = ("exploratory", "confirmatory")
 #: what the kept number asserts: a computation judges no
