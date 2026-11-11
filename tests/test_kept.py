@@ -207,7 +207,7 @@ class HeldToTheRun(unittest.TestCase):
                 self.assertIn("measure anew", gap.fix or "")
                 self.assertEqual(
                     gap.rule,
-                    gate.cited_rule("LAB-041 Generate numbers, don't retype them"),
+                    gate.OPEN_RULE,
                 )
         (gap,) = kept_number_gaps("HRV_MeanNN", {"hrv_computed": True}, RUN, area)
         self.assertIn("it holds hrv_computed = True", gap.text)

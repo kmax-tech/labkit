@@ -32,6 +32,7 @@ from labkit.formats.repo import git_root
 from labkit.formats.commands import decide_command, handover_command
 from labkit.gates.report_context import Checked
 
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 
 
@@ -80,7 +81,7 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
                 f'{name}: [protocol] type = "{ctx.head.type}" — a protocol that replaces '
                 f"another answers a new, post-hoc question",
                 fix='set `type = "exploratory"` in its head',
-                rule=LAB_003,
+                rule=OPEN_RULE,
             )
         )
     out += [
@@ -117,7 +118,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
             fix="name the one protocol of this repo it replaces, kept as it "
             f"is, then `{gate_command('report-check', ctx.area)}`",
-            rule=LAB_003,
+            rule=OPEN_RULE,
         )
     circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.file_state)
     if circle:
@@ -125,7 +126,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             f"the replacements run in a circle ({circle})",
             fix=f"let each name the one before it, then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=LAB_003,
+            rule=OPEN_RULE,
         )
     return hits[0]
 
@@ -181,7 +182,7 @@ def _undeclared_changes(
             fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
             f'{s(x)}, to = {s(y)}, why = "…"; then '
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=LAB_003,
+            rule=OPEN_RULE,
         )
         for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
@@ -193,7 +194,7 @@ def _undeclared_changes(
             f"(the predecessor {against}, this protocol {new_where})",
             fix=f"remove that [[replaces.change]], then "
             f"`{gate_command('report-check', ctx.area)}`",
-            rule=LAB_003,
+            rule=OPEN_RULE,
         )
         for what, x, y in sorted(listed - set(computed))
     ]
@@ -234,7 +235,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
                 fix=f"decide it (`{decide}`), or hand the predecessor over, "
                 f"replaced by {ctx.head.id}: `{handover_command(pred)}`",
                 step=decide,
-                rule=OPEN_RULE,
+                rule=LAB_015,
             )
         )
     return out

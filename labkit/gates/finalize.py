@@ -183,10 +183,8 @@ from labkit.formats.scope_sha import SourceError
 CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
-LAB_103 = cited_rule("LAB-103 The audit reads by declared scope, not by import graph")
 
 
 def choose_answering_run(
@@ -462,7 +460,7 @@ def check_declared_scopes(
                 f"declared scope changed since {answering_run.name}: {d}",
                 fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
                 step=measure_command(area),
-                rule=LAB_103,
+                rule=LAB_041,
             ),
             changed_since=answering_run.name,
         )
@@ -485,8 +483,8 @@ def check_open_fields(
     state: AreaState,
 ) -> None:
     """Station 5: fields of the protocol still empty or a placeholder, and
-    the README's placeholders and route block (CODE-016 The experiment area
-    reconstructs itself)."""
+    the README's placeholders (CODE-016 The experiment area reconstructs
+    itself) and route block."""
     holes = open_holes(text, head)
     for lineno, label in holes:
         findings.warn(
@@ -499,7 +497,7 @@ def check_open_fields(
         findings.block(
             f"{protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
     stale = readme_placeholders(protocol.parent)
     for line in stale:
@@ -516,7 +514,7 @@ def check_open_fields(
         route = [str(exc)]
     else:
         for line in route:
-            findings.warn(line, evidence_kind=GUARANTEED, rule=CODE_016)
+            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")
@@ -540,7 +538,7 @@ def check_data_counts(
         why,
         fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {run_id}` "
         f"writes them from the run — never typed",
-        rule=LAB_041,
+        rule=OPEN_RULE,
     )
     return False
 
@@ -553,7 +551,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     b, w, outside = provenance_findings(area, answering_run)
     findings.take_all(b)
     for line in w:
-        findings.warn(line, evidence_kind=GUARANTEED, rule=LAB_017)
+        findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
     for line in outside:
         findings.note(f"  {line}")
     if not b and not w:
@@ -681,7 +679,7 @@ def check_reference(
             f"{protocol.name}: {gap}",
             fix=f"repair the head as the sentence says, then "
             f"`{gate_command('finalize', protocol.parent)}`",
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
         return
     if kept_gaps(text, head):
@@ -697,7 +695,7 @@ def check_reference(
             f"{protocol.name}: {exc}",
             fix=f"repair the [reference] and [kept] tables as the sentence says; "
             f"`{gate_command('protocol-check', protocol)}` shows them",
-            rule=LAB_011,
+            rule=TECHNICAL_RULE,
         )
         return
     # at kind compute the kept-number station reads the same metrics.json
@@ -764,7 +762,7 @@ def check_kept_number(
                 else f"repair the head as the sentence says, then "
                 f"`{gate_command('finalize', protocol.parent)}`"
             ),
-            rule=LAB_041,
+            rule=OPEN_RULE,
         )
     if gaps:
         return
@@ -935,7 +933,7 @@ def finalize_area(
                 f"{chosen.name}: {exc}",
                 fix=f"repair the head as the sentence says: "
                 f"`{contract_command(chosen)}` shows its fields",
-                rule=LAB_011,
+                rule=OPEN_RULE,
             )
         return 2
 
@@ -1021,7 +1019,10 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
     except protocol_block.BlockError as exc:
         return [
             blocker(
-                str(exc), fix=written, step=withdraw_command(protocol), rule=LAB_011
+                str(exc),
+                fix=written,
+                step=withdraw_command(protocol),
+                rule=TECHNICAL_RULE,
             )
         ]
     return []

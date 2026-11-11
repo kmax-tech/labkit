@@ -111,11 +111,9 @@ from labkit.formats.protocol_history import (
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
 
-CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 
 
 @dataclass(frozen=True)
@@ -255,7 +253,7 @@ def preflight_area(
         findings.block(
             f"HEAD (must): {report.head_error}",
             fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
@@ -333,14 +331,14 @@ def check_protocol_fields(
         findings.block(
             f"MISSING (must): {label}",
             fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
     for twice in report.repeated:
         findings.block(
             f"REPEATED (must): {twice}",
             fix=f"{protocol_check.REPEATED_WAY_OUT}; then "
             f"`{gate_command('protocol-check', protocol)}`",
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
     for n, label in report.must_holes:
         findings.block(
@@ -352,7 +350,7 @@ def check_protocol_fields(
     for finding in id_findings:
         findings.take(finding)
     if lowered:
-        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=LAB_017)
+        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE)
     for label in report.missing_should:
         findings.warn(
             f"missing (should): {label}", evidence_kind=GUARANTEED, rule=LAB_011
@@ -634,7 +632,7 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
             f"`.venv/bin/python -m pytest {files}` passes",
-            rule=CODE_003,
+            rule=OPEN_RULE,
         )
 
 

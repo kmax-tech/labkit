@@ -42,6 +42,7 @@ import re
 from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import (
     GUARANTEED,
@@ -250,7 +251,7 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
             continue
         findings.take_all(gaps)
         for line in softer:
-            findings.warn(line, evidence_kind=GUARANTEED, rule=LAB_082)
+            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
         if not gaps and not softer:
             tell(f"{f}: OK")
     return findings.report("notes-check", "the note counts")

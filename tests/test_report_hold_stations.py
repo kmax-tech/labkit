@@ -12,7 +12,8 @@ from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.checks.audit_binding import AuditError
-from labkit.formats.gate import BLOCKER, cited_rule, TECHNICAL_RULE
+from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import BLOCKER, TECHNICAL_RULE
 from labkit.gates import report_hold
 from state_fixture import area_evidence, area_state
 
@@ -70,9 +71,7 @@ class AReportHold(unittest.TestCase):
             (gap.grade, gap.rule),
             (
                 BLOCKER,
-                cited_rule(
-                    "LAB-104 A number leaves the area only through its adoption"
-                ),
+                OPEN_RULE,
             ),
         )
         self.assertIn(

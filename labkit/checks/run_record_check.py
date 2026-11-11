@@ -90,7 +90,6 @@ from labkit.formats.repo import (
 from labkit.formats.commands import gate_command, measure_anew
 
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
-LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_057 = cited_rule("LAB-057 One area per idea")
 
@@ -162,7 +161,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
             blocker(
                 f"{rid} recorded no script — the code behind its number cannot be compared",
                 fix=measure_anew(area),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ], []
     script = script_of(area, cfg)
@@ -186,7 +185,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                     f"came from other code",
                     fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(kept, here))} "
                     f"{shlex.quote(shown(script, here))}`)",
-                    rule=LAB_019,
+                    rule=LAB_041,
                 ),
                 changed_since=rid,
             )
@@ -291,7 +290,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                             f"untracked; the run kept it as {shown(copy, here)})",
                             fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(copy, here))} "
                             f"{shlex.quote(shown(f, here))}`)",
-                            rule=LAB_019,
+                            rule=LAB_041,
                         ),
                         changed_since=rid,
                     )
@@ -363,7 +362,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                         f"{shown(f, here)} changed since {rid} ran",
                         fix=f"{FIX_FIRST} (`git -C {shlex.quote(shown(repo, here))} "
                         f"cat-file blob {blob} > {shlex.quote(shown(f, here))}`)",
-                        rule=LAB_019,
+                        rule=LAB_041,
                     ),
                     changed_since=rid,
                 )
@@ -684,10 +683,10 @@ def source_finding(
     the repository (its resolved path), where git can neither track nor
     ignore it — held by the checksum alone, its source or access route
     owed in Data / scope —, or the ignore rule that keeps it out. Other
-    bytes than the run read break LAB-041 Generate numbers, don't retype
-    them (a run freezes its data sources), a source no ignore rule keeps out
-    of git LAB-017 The number of audits follows the cost tier; the rule of a
-    gone source is not decided yet (OPEN_RULE)."""
+    bytes than the run recorded, and a source no ignore rule keeps out of
+    git, break LAB-017 The number of audits follows the cost tier (what
+    `finalize` refuses at low repeat cost); the rule of a gone source is not
+    decided yet (OPEN_RULE)."""
     if source.kind is None:
         return _gone(source.path, area), None
     if source.loose:
@@ -700,7 +699,7 @@ def source_finding(
                 fix="restore the bytes the run read (from git where it tracks them, "
                 "else from the source or access route Data / scope names), or "
                 f"{measure_anew(area)}",
-                rule=LAB_041,
+                rule=LAB_017,
             ),
             None,
         )
@@ -1094,6 +1093,6 @@ def kept_number_gaps(
             f"{measure_anew(area)}; when [kept] names the wrong number, set it "
             f"before the first measurement — after it, "
             + register_anew(per="per change, the [kept] among them", kind="compute"),
-            rule=LAB_041,
+            rule=OPEN_RULE,
         )
     ]

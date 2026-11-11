@@ -201,9 +201,7 @@ from labkit.gates.report_context import (
 from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
 from labkit.gates.report_replacement import replacement_gaps
 
-LAB_009 = cited_rule("LAB-009 Verdict only at the registered tier")
 LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
 
 
@@ -258,13 +256,13 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
                 f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
                 f"then `{freeze_command(ctx.protocol)}`",
                 step=freeze_command(ctx.protocol),
-                rule=LAB_015,
+                rule=OPEN_RULE,
             )
         ]
     )
     report = check_fields(ctx.text)
     gaps += [
-        blocker(f"{name}: {label}", fix=f"write the field; {fields}", rule=LAB_011)
+        blocker(f"{name}: {label}", fix=f"write the field; {fields}", rule=OPEN_RULE)
         for label in report.missing_must
     ]
     # a must field still holding its `<…>` placeholder blocks here as
@@ -288,7 +286,7 @@ def repeated_gaps(ctx: Checked) -> list[GateFinding]:
         blocker(
             f"{ctx.protocol.name}: {twice}",
             fix=f"{REPEATED_WAY_OUT}; then `{gate_command('protocol-check', ctx.protocol)}`",
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
         for twice in check_fields(ctx.text).repeated
     ]
@@ -509,7 +507,7 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
             f"reported; a reported number owes {owed}",
             fix=f"measure in full{' after the freeze' if freeze_owed else ''}: "
             f"{measure}, then audit that run",
-            rule=LAB_009,
+            rule=OPEN_RULE,
         )
         for mark in unreportable(cfg)
     ]
@@ -662,7 +660,7 @@ def declaration_gaps(ctx: Checked) -> list[GateFinding]:
             f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
             f"`[result]` table for it",
             step=withdraw_command(ctx.protocol),
-            rule=LAB_011,
+            rule=TECHNICAL_RULE,
         )
     ]
 

@@ -48,6 +48,7 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import AREA_SLOT, cited_rule
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
@@ -283,7 +284,7 @@ def hold(
     except ValueError as exc:  # MetricsError, RunConfigError
         raise console.Refused("intent-check", str(exc)) from exc
     found = [
-        blocker(m, fix=INTENT_FIX, rule=LAB_004)
+        blocker(m, fix=INTENT_FIX, rule=OPEN_RULE)
         for m in _key_mismatch(protocol, mpath, reg, metrics)
         + (check_block_against_run(block, mpath, metrics) if block is not None else [])
     ] + (

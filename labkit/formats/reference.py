@@ -27,7 +27,8 @@ be rendered. Pure: nothing here reads or writes a file.
 from __future__ import annotations
 
 from labkit.formats.commands import register_anew
-from labkit.formats.gate import AREA_SLOT, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE
+from labkit.formats.gate import AREA_SLOT
 from labkit.formats.gate import OPEN_RULE, GateFinding, blocker
 from labkit.formats.protocol_block import (
     AT_LEAST,
@@ -37,8 +38,6 @@ from labkit.formats.protocol_block import (
     finite_number,
 )
 from labkit.formats.runs import as_stored
-
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 
 #: the keys the verdict writes into metrics.json, beside the kept number's
 STATE_KEY = "ref_state"
@@ -216,7 +215,7 @@ def comparison_gaps(
                 f"written beside the number, not by `reference.with_verdict`",
                 fix="let the compute skeleton's `metrics_of()` write the verdict, "
                 "measure anew and audit that run",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     now = reference_verdict(0, ref)
@@ -234,7 +233,7 @@ def comparison_gaps(
                 f"result was seen does not answer the registered question",
                 fix="restore the [reference] the run compared with, or "
                 + register_anew(per="per change, the [reference] among them"),
-                rule=LAB_003,
+                rule=OPEN_RULE,
             )
         ]
     return []

@@ -17,7 +17,8 @@ from pathlib import Path
 from labkit.tools import protocol_result
 from labkit.gates import audit_prompt
 from labkit.formats import protocol_block, protocol_check, reference
-from labkit.formats.gate import OPEN_RULE, Findings, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE
+from labkit.formats.gate import OPEN_RULE, Findings
 from protocol_fixture import head  # noqa: E402
 
 WITHIN = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
@@ -208,14 +209,14 @@ class FinalizeForwardsTheHeadsGaps(unittest.TestCase):
             f.text.startswith('PROTOCOL-x.md: [reference] with kind = "fit"')
         )
         self.assertIn("repair the head", f.fix or "")
-        self.assertEqual(f.rule, cited_rule("LAB-011 Required-field check"))
+        self.assertEqual(f.rule, OPEN_RULE)
 
     def test_a_table_that_does_not_read_is_one_blocker(self):
         (f,) = self._held(compute('relation = "within"\ntolerance = 0.01\n'))
         self.assertTrue(f.text.startswith("PROTOCOL-x.md: "))
         self.assertIn("missing `value`", f.text)
         self.assertIn("repair the [reference] and [kept] tables", f.fix or "")
-        self.assertEqual(f.rule, cited_rule("LAB-011 Required-field check"))
+        self.assertEqual(f.rule, TECHNICAL_RULE)
 
     def test_the_twin_a_sound_head_yields_no_head_finding(self):
         # the run's metrics do not read here; at kind compute the kept-number
@@ -453,7 +454,7 @@ class ComparisonGaps(unittest.TestCase):
                 )
                 self.assertIn("the verdict in metrics.json does not read", gap.text)
                 self.assertIn("metrics_of()", gap.fix or "")
-                self.assertEqual(gap.rule, OPEN_RULE)
+                self.assertEqual(gap.rule, TECHNICAL_RULE)
 
     def test_a_reference_changed_after_the_run_blocks(self):
         ref = ref_of(WITHIN)

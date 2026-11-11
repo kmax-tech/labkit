@@ -20,6 +20,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
 from labkit.checks.report_blocks import discuss_command
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path
@@ -77,7 +78,6 @@ from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
@@ -608,7 +608,7 @@ def hold_report(
             f"{rel}: {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote them "
             "(`--into` for a result, `--discuss` for a discussion writes them again)",
-            rule=LAB_104,
+            rule=OPEN_RULE,
         )
         return out.report("report-check", "reporting")
 
@@ -676,7 +676,7 @@ def discussion_sources(
                 blocker(
                     f"{at} names {d.protocol}, and there is no such protocol",
                     fix=f"{again}, the protocol named from the report",
-                    rule=LAB_104,
+                    rule=OPEN_RULE,
                 )
             )
         elif d.run_id not in {rd.dir.name for rd in state.runs}:
@@ -685,7 +685,7 @@ def discussion_sources(
                     f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
                     f"discussion names a run of its protocol's area",
                     fix=f"{again}, naming a run of that area",
-                    rule=LAB_104,
+                    rule=OPEN_RULE,
                 )
             )
     return gaps
@@ -997,7 +997,7 @@ def undeclared_findings(
                     f"reported, but {named} has adopted it as its result",
                     fix="remove the discussion block — the generated result block "
                     f"shows the number —, then `report-check --if-reported {rel}`",
-                    rule=LAB_104,
+                    rule=OPEN_RULE,
                 )
             )
     said_so = {d.run_id for d in discussed}
@@ -1017,7 +1017,7 @@ def undeclared_findings(
                 fix=exc.fix
                 or "repair the head as the sentence says (`protocol-check "
                 "<PROTOCOL> --contract` shows its fields)",
-                rule=LAB_011,
+                rule=TECHNICAL_RULE,
             )
         ]
     for run_id, protocol in promoted:

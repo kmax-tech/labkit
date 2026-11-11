@@ -81,6 +81,7 @@ from labkit.formats.comment_blocks import (
     opener,
     with_comment_block,
 )
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import OPEN_RULE, cited_rule
 from labkit.formats.gate import STATIC_EVIDENCE, WARNING, GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
@@ -289,7 +290,7 @@ def block_gaps(
                     "(`labkit-adopt <area> <run_id>`) "
                     "and write it again",
                     step=adopt_command(report.parent / b.protocol),
-                    rule=LAB_104,
+                    rule=OPEN_RULE,
                 )
             )
         elif s.run_id != b.run_id:
@@ -308,7 +309,7 @@ def block_gaps(
                     fix=f"repair what the sentence names in the protocol, then "
                     f"{into} writes the block again",
                     step=into_cmd,
-                    rule=LAB_104,
+                    rule=TECHNICAL_RULE,
                 )
             )
         elif b.body != s.body:
@@ -588,7 +589,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
                     f"{at} repeats the block at line {seen[key]} — one block per "
                     f"protocol and run",
                     fix=f"remove one, then {REPORT_CHECK_AGAIN}",
-                    rule=LAB_104,
+                    rule=OPEN_RULE,
                 )
             )
         else:

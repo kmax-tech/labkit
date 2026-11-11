@@ -12,7 +12,7 @@ from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import BLOCKER, cited_rule, TECHNICAL_RULE
+from labkit.formats.gate import BLOCKER, TECHNICAL_RULE
 from labkit.gates import registered_report
 from protocol_fixture import PID, head
 
@@ -65,7 +65,7 @@ class AReportBinding(unittest.TestCase):
         self.assertIn("its discussion blocks do not read — line 4", gap.text)
         self.assertEqual(
             gap.rule,
-            cited_rule("LAB-104 A number leaves the area only through its adoption"),
+            TECHNICAL_RULE,
         )
 
 

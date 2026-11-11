@@ -187,7 +187,7 @@ def report_owed(
         f"it releases nothing and the result or the handover stays owed; "
         f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
         step=write_cmd,
-        rule=LAB_104,
+        rule=OPEN_RULE,
     )
 
 
@@ -471,7 +471,7 @@ def registered_review(
             f"{name_r}: its discussion blocks do not read — {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote "
             "them (`--discuss … --into` writes the block again)",
-            rule=LAB_104,
+            rule=TECHNICAL_RULE,
         )
     return review_gap(
         report,

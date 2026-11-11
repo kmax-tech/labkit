@@ -37,6 +37,7 @@ from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import state_of
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.commands import render_command
@@ -50,6 +51,7 @@ from labkit.formats.protocol_check import (
     written_line,
 )
 
+LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
@@ -347,7 +349,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                 "the Recorded results line is not written",
                 fix=f"`{FROM_RUN}` writes it from the run",
                 step=FROM_RUN,
-                rule=LAB_041,
+                rule=LAB_011,
             )
         )
     elif recorded_results != expected.recorded_results:
@@ -377,7 +379,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     fix="remove the extra line(s) by hand (`--render` rewrites one "
                     "and leaves the others)",
                     step=RENDER,
-                    rule=LAB_041,
+                    rule=OPEN_RULE,
                 )
             )
     have = {display_label(f.label): f.value for f in fields(text)}

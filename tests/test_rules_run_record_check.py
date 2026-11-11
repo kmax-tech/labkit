@@ -221,7 +221,7 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
 
     def test_other_bytes_block(self):
         f = self._blocker(
-            cited_rule("LAB-041 Generate numbers, don't retype them"),
+            LAB_017,
             kind="file",
             drift="its sha256 is now cd34",
         )

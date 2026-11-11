@@ -351,7 +351,7 @@ class TheProtocolStepEndsEarly(unittest.TestCase):
         (f,) = collected.found
         self.assertTrue(f.text.startswith("PROTOCOL-x.md: "), f.text)
         self.assertIn("shows its fields", f.fix or "")
-        self.assertEqual(f.rule, gate.cited_rule("LAB-011 Required-field check"))
+        self.assertEqual(f.rule, gate.OPEN_RULE)
 
     def test_two_protocols_and_none_named_is_one_blocker(self):
         with tempfile.TemporaryDirectory() as d:
@@ -425,9 +425,7 @@ class DeclaredScopeSinceTheRun(unittest.TestCase):
                 (f.changed_since, f.rule),
                 (
                     "r1",
-                    gate.cited_rule(
-                        "LAB-103 The audit reads by declared scope, not by import graph"
-                    ),
+                    gate.cited_rule("LAB-041 Generate numbers, don't retype them"),
                 ),
             )
             assert f.step is not None

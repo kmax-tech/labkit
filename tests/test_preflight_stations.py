@@ -12,11 +12,11 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.formats import findings as audit_findings
+from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import (
     BLOCKER,
     WARNING,
     Findings,
-    cited_rule,
     TECHNICAL_RULE,
 )
 from labkit.gates import preflight
@@ -40,9 +40,7 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
         (f,) = found.found
         self.assertTrue(f.text.startswith("HEAD (must): "), f.text)
-        self.assertEqual(
-            (f.grade, f.rule), (BLOCKER, cited_rule("LAB-011 Required-field check"))
-        )
+        self.assertEqual((f.grade, f.rule), (BLOCKER, OPEN_RULE))
 
     def test_an_audit_record_that_does_not_read_blocks(self):
         (self.area / audit_findings.DIR).mkdir()
