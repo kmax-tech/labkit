@@ -121,3 +121,42 @@ The review above read the 91 sites entered on 2026-11-11. The inventory before t
 | `labkit/gates/audit.py:171`             | a preflight audit at `repeat_cost = "low"` before any completed run        | LAB-017 The number of audits follows the cost tier             | holds       | the tier table's row for `low`: "no agent audit, `preflight_audit` stays empty; the first run replaces the instrument check"                                                                            |
 
 Ten hold, two name another rule's duty, one has no sentence, one is mixed. Seen beside the question and not judged: `code_check.py:190` blocks on a key the script assembles at run time, as its message says — a correct script can be held there.
+
+## Second pass, per cause — 2026-11-11
+
+*Three independent readers with a fresh context, on a frozen copy of 9f50046d (before the corrections of the same day); their verdicts are theirs. The ordering session checked four claims at the code and the standard: three held, one did not (named below). Reports and worklists: `~/projects/labkit-evidence/2026-11-11-rule-assignment-review/second-pass/`, not committed there.*
+
+The first pass judged per site. A site can hold several causes or several fields, and the rule's text may name only some: the registration's scope hold was judged "holds" although the rule's text does not name the head's `[kept]` and `[reference]`. The author asked for two things: the 14 sites above read again by an independent reader, and the 43 sites judged "holds" screened for several causes, with a judgement per cause only where several were found.
+
+### The 14 sites, read independently
+
+The reader's verdicts: 9 hold, 3 other rule, 1 no sentence, 1 mixed. They agree with the table above on the record of a run that is gone (no sentence), the promise block (mixed), the prompt block (LAB-067 A prompt has one home, which the run freezes) and nine of the ten "holds". Two differ:
+
+| Site                                | Table above                            | Independent reader                                           | What decides                                                                                                                                                                                                                                                             |
+|-------------------------------------|----------------------------------------|--------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `labkit/checks/code_check.py:190`   | holds, LAB-004                         | other rule, LAB-018 Routine check after every implementation | LAB-018 says "Every identifier appears as a key literal in the scripts", the condition word for word; LAB-004 states the contract for `metrics.json` of the run. Whether a sentence that describes what `code-check` decides states a duty is the author's to say.       |
+| `labkit/checks/prompt_check.py:102` | other rule, LAB-041 (entered a9cb1d81) | other rule, LAB-018                                          | The reader found no sentence that a parser owes a test outside LAB-015's scar table. That is refuted: LAB-041 Generate numbers, don't retype them says "Every parser that turns model output into data has a test with real raw answers". LAB-018 describes the warning. |
+
+Also from this reader: `labkit/checks/code_check.py:204` is marked guaranteed, but a key literal in the source is an indication for the contract on `metrics.json`, not proof; the messages at `labkit/checks/import_check.py:211` and `:231` state as fact what the condition only makes possible.
+
+### The 43 sites judged "holds", screened for several causes
+
+27 hold one cause. 16 hold several; at 13 of them the entered rule's text does not state every cause (readers' verdicts, sites as the readers found them in the frozen copy).
+
+| Site                                            | Entered rule | Causes the rule's text does not state                                                                                                           |
+|-------------------------------------------------|--------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| `labkit/checks/result_render.py:357`            | LAB-041      | the rendered line's promise verdicts, run id, limits note (LAB-015 states that one) and predecessor verdict; the rule names numbers             |
+| `labkit/gates/finalize.py:512`                  | LAB-011      | a placeholder in a field the protocol does not owe                                                                                              |
+| `labkit/gates/registration_hold.py:154`         | LAB-003      | a promise's declared scope; a promise id added or dropped                                                                                       |
+| `labkit/gates/registration_hold.py:409`, `:477` | `scope_rule` | the head's `kind` records LAB-003, and the rule's text does not name it (checked: `scope_differences` yields `kind`, `UNNAMED_TABLES` lacks it) |
+| `labkit/gates/report_check.py:496`              | LAB-050      | state changed after the audit; findings still open — both only through "the same procedure as LAB-015"                                          |
+| `labkit/gates/report_hold.py:773`               | LAB-104      | a number inside a discussion block's reason                                                                                                     |
+| `labkit/gates/report_hold.py:970`               | LAB-104      | draws from `--again` only; a review record missing from the index; changed inputs that are not the report                                       |
+| `labkit/gates/registered_report.py:434`, `:445` | LAB-104      | a report removed after it was written; the hold at the commit                                                                                   |
+| `labkit/gates/preflight.py:359`                 | LAB-011      | the sixteen fields the template marks "should", not yet required                                                                                |
+| `labkit/gates/preflight.py:363`                 | LAB-011      | should-, report- and after-fields, fields the kind does not owe, twelve template labels outside the field list                                  |
+| `labkit/gates/preflight.py:592`                 | LAB-011      | every gap of the hook installation (checked: `check_hooks` warns each under LAB-011 Required-field check, and a hook is no field)               |
+
+Covered in every cause: `labkit/gates/report_hold.py:956`, the three LAB-004 sites of `labkit/checks/intent_check.py`, and `labkit/gates/preflight.py:348` (by the general sentence on required fields only).
+
+Nothing is changed by this pass. Each row is a site to split by cause or to re-assign, the author's decision.
