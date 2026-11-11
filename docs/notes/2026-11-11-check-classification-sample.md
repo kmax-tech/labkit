@@ -67,4 +67,28 @@ The subject took seven values in 21 rows: protocol text or head, generated line,
 - whether a blocker may stand on an unsettled basis, and how the outcome is worded then (gap 4);
 - whether the review's claim and the printed warnings get the fields, or stay outside by intent (gap 5).
 
-Nothing is changed in the code. The two sites of gap 8 are small corrections waiting for the author's go.
+Nothing is changed in the code by the sample itself; what followed is below.
+
+## Decided 2026-11-11, and a proposal
+
+The author's decisions on the gaps: a suspicion is an outcome of its own (gap 1); several rules are possible in principle where one indivisible condition touches several duties, not where several causes are printed together, and the field's readers are listed before a format change (gap 3); a blocker on an unsettled basis stays for now and is decided one by one, "violated" is too strong there, and the open basis stays visible (gap 4); the kinds of finding stay apart, the classification shows them together with fields marked not applicable (gap 5); the inventory tells a value fixed in the source from one computed at run time (gap 2); the two sites of gap 8 are corrected.
+
+**The two sites.** The missing pytest records "not executable" and its line says so (1cfe744e). The registered id without a key literal is **not changed, and row 8 above is corrected here**: the author's condition for a hint was that keys assembled at run time are allowed, and they are not. The message says so ("a key assembled at run time is not seen, and blocks here too"), LAB-018 Routine check after every implementation describes the check as "Every identifier appears as a key literal in the scripts", and CODE-016 The experiment area reconstructs itself states it as a duty: "Every registered key is set in the area script", as literal strings. For that duty the check is exact. What does not fit is the recorded rule: LAB-004 states the contract on `metrics.json`, for which a literal in the source is an indication. The open question is the assignment (CODE-016 by wording, or LAB-018), the author's; it was step 2 of the earlier order.
+
+**Proposal: outcome values.** Two values today, `violated` and `not executable`; 10 lines of `labkit/formats/gate.py` read the field, no other module does.
+
+| Outcome          | Says                                                             | Holds when                                       |
+|------------------|------------------------------------------------------------------|--------------------------------------------------|
+| `violated`       | an exact check found a decided requirement breached              | guaranteed, basis a rule or a technical contract |
+| `deviation`      | an exact check found its condition, and no decided duty names it | guaranteed, basis open                           |
+| `suspected`      | a search found an indication; nothing is established             | static evidence                                  |
+| `not executable` | the check could not run here                                     | any procedure                                    |
+
+Both new values follow from fields a finding already has (the procedure, the kind of basis). So the smaller build stores nothing new: one function in `gate.py` gives the outcome from the three fields, the line and the inventory read it, and no site is edited (17 static-evidence sites and 16 open sites today). Storing the value at each site would let the three fields disagree. Recommended: derive it. The words `deviation` and `suspected` are a suggestion; the name is the author's.
+
+**Proposal: several rules.** No format change now. The one case found (the registered comparison changed together with a field) is two causes printed in one hold, not one indivisible condition: by the author's own criterion each cause carries its assignment. The build is two findings from `seen_hold` and `now_hold`, the comparison under LAB-035 and the fields under LAB-003, each with its own way out. The rule field is read in nine modules (`gate`, `findings`, `check_inventory`, `answering_run`, `preflight`, `promises`, `followup`, `report_blocks`, `intent_check`); a field of several rules waits for a condition that cannot be split.
+
+**Proposal: the inventory.** One more column, the outcome: the value where the site writes a constant, `computed` where it calls `outcome_of_failed_read`, and the derived value otherwise.
+
+Limits of the classification that stay as they are: the review's claim, the audit's finding and what is printed or refused without a finding keep their own types; a gate's note is no finding; the unit "cause" is listed only where a site receives its rule.
+
