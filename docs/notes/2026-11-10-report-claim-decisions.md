@@ -1,6 +1,6 @@
 # Decisions on report-review claims — the contract (2026-11-10)
 
-> Status: proposal for the author's decision; nothing built. Depends on the open question of the second review (TODO.md, „Analyse 2026-11-10", point 1): the confirmation path below is the recommendation, the alternative is named.
+> Status: decided by the author on 2026-11-11, with three corrections from an independent reading (the confirmation by a second reviewer is the rule, the way on after a rejection, the old records); nothing built. The rule: LAB-015 Preflight audit before freezing, "A decision that releases a BLOCKER is confirmed by a second auditor".
 
 ## The problem
 
@@ -20,11 +20,9 @@ That is right for a true claim and wrong for a false one. When the reader misrea
 
 4. **What releases a state.** At least one review that is no `--again` draw saw the state, and every claim any review of that state named — an `--again` draw's included — is decided `false-positive` and upheld (point 5). An open claim holds; a new draw can add a claim, never remove one.
 
-5. **Confirmation of a `false-positive` (recommended: a second reviewer).** `labkit-audit AREA --review --record <report-review file>` hands a cold reviewer the claim, the reason, the report lines and the inputs the first reader saw, and writes `audits/report-reviews/<minute>-claim-review.toml`: `record`, `fingerprint`, and per claim `claim`, `decision_sha`, `verdict` (`upheld` | `rejected` | `insufficient`), `why`. It upholds a decision when it names that record, saw that fingerprint, judged the decision as it stands (`decision_sha`) and says `upheld`, and is no `--again` draw. `rejected` and `insufficient` never release; once a review of a state did not uphold a decision, no later draw does (`reviews` „contested", same rule). One model call per contested report, none otherwise.
+5. **Confirmation of a `false-positive` by a second reviewer.** `labkit-audit AREA --review --record <report-review file>` hands a cold reviewer the claim, the reason, the report lines and the inputs the first reader saw, and writes `audits/report-reviews/<minute>-claim-review.toml`: `record`, `fingerprint`, and per claim `claim`, `decision_sha`, `verdict` (`upheld` | `rejected` | `insufficient`), `why`. It upholds a decision when it names that record, saw that fingerprint, judged the decision as it stands (`decision_sha`) and says `upheld`, and is no `--again` draw. `rejected` and `insufficient` never release, and no further call releases the same decision: once a review did not uphold a decision as it stands (`decision_sha`), no later draw on that decision does. The way on is a decision with a revised reason. It is a new decision with a new digest and owes a confirmation of its own; the earlier rejection stays in its claim-review record and `held_by` names it. The other way stays the changed report or source and a review of the new state. One model call per contested report, none otherwise.
 
-   Alternative, if the author settles the second review as a house rule, not a lab rule: the reason alone releases, and report-check names every such release as a WARNING „released on the author's word". Cheaper by one call; the deciding agent then releases its own blocker, which `first_dismissals` refuses for audit findings.
-
-6. **Format break.** `[[claim]]` gains `status` and `reason`; a record without them is no longer read (announced in `CHANGELOG.md`, „Breaking", naming the last release that reads it). A review costs one call, so the old records are reviewed again rather than read by a second path.
+6. **Format break.** `[[claim]]` gains `status` and `reason`; a record without them is no longer read (announced in `CHANGELOG.md`, „Breaking", naming the last release that reads it). A review costs one call, so the old records are reviewed again rather than read by a second path. The command reads every report review of the area before it writes a new one and refuses when one does not read (`report_review.report_reviews_of`), so an old record in place would refuse the very review that replaces it. The refusal therefore names the step: move the old record with `git mv` into `audits/report-reviews/superseded/`, a folder the reader does not list. The record is kept and the new review runs. To check while building: whether a hold on lost audit evidence (`undecided`) reads the moved record as lost; if it does, the folder is a named exception there, with its test.
 
 ## What changes in code
 
@@ -36,6 +34,8 @@ That is right for a true claim and wrong for a false one. When the reader misrea
 | `labkit/gates/report_hold.py` `review_hold`                | the fix names the two ways: change the text or a source and review that state, or decide `false-positive` and have it upheld |
 | `labkit/gates/audit.py`, `labkit/gates/audit_decisions.py` | `--decide` with `--report-review`; `--review` on a report-review record                                                      |
 
+The last sentence of the rule's paragraph in `labkit/docs/standard.md` ("That decision is not built …") goes in the commit that builds this, so rule and code do not contradict.
+
 No second status logic beside the findings': the status words, the decision digest, the contested rule and the `--again` rule are the ones audit findings use, read from their home where they can be.
 
 ## Acceptance
@@ -46,4 +46,5 @@ Through the real commands, each with its twin:
 2. A real `result` claim stays held: `limitation` and `fixed` are refused with their sentence, and a `false-positive` the reviewer rejects holds.
 3. A changed report line or source after the decision makes it stale: the state is held until a review of the new state.
 4. An `--again` draw does not release an open claim, and a claim it adds holds until decided.
-5. A record without `status` is refused with the sentence naming the version that reads it.
+5. A record without `status` is refused with the sentence naming the version that reads it and the move that keeps it; after the move the new review runs, and no gate holds the moved record as lost.
+6. A `false-positive` the reviewer rejected is not released by another draw; the same claim decided again with a revised reason is released once a review upholds that decision, and the earlier rejection still reads in its record.
