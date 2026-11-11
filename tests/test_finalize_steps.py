@@ -348,7 +348,7 @@ class ReadmeRoute(unittest.TestCase):
             got = readme_check.readme_route(area, "PROTOCOL-a.md")
             self.assertEqual(len(got), 1)
             self.assertIn("no <!-- labkit:route -->", got[0].text)
-            self.assertEqual(got[0].rule, OPEN_RULE)
+            self.assertEqual(got[0].rule, TECHNICAL_RULE)  # the format convention
 
     def test_a_missing_station_or_wrong_protocol_is_named(self):
         with tempfile.TemporaryDirectory() as d:
@@ -361,7 +361,7 @@ class ReadmeRoute(unittest.TestCase):
                     "README.md route: does not name labkit-params",
                 ],
             )
-            self.assertEqual({g.rule for g in got}, {OPEN_RULE})
+            self.assertEqual({g.rule for g in got}, {TECHNICAL_RULE})
 
     def test_a_script_without_evaluate_rows_is_named(self):
         with tempfile.TemporaryDirectory() as d:

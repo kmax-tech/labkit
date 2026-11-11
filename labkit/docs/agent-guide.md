@@ -67,6 +67,8 @@ State each promise value in its sentence before the commit. `margin` is the smal
 - At `fit`, the null lane refits on permuted labels in every fold: twice per fold at `low` (3 folds), five times at `high` (5 folds). The plan is in the measurement script's head (`FIT_PLAN`) and in the run's config. Give the band a reasoned value. At `high`, you can use the spread of those refits over a few `--seed` values of `--probe`.
 - Write the Timebox as a duration first (`45 min — then record and ask`). A fit times its first fold and stops before the budget when the projection exceeds it, with the numbers and the way out.
 
+The area's `README.md` is stamped with a route block between `<!-- labkit:route -->` and `<!-- /labkit:route -->`. Keep the block, and keep these names in it: the protocol's file name, `runlog`, `labkit-params`, `scripts/01_measure.py:evaluate_rows` and `config.json`. They tell a reader where the contract, the runs, the effective values, the decision of each id and the record are. The block points and copies no question, answer, run id or threshold. `finalize` warns when the block or one of the names is missing.
+
 After the first measurement, these values stay fixed, and so do the question, its terms, the data, the exclusions, the unit and the head's `[kept]` and `[reference]`: finalize holds a run whose protocol changed them. If the number misses, report the miss. A changed question is a new protocol. Decide a finding about them by the ways under "When you are stuck".
 
 ### 2. Implement and test the instrument

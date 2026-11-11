@@ -15,7 +15,7 @@ from pathlib import Path
 
 from labkit.formats.gate import (
     GUARANTEED,
-    OPEN_RULE,
+    TECHNICAL_RULE,
     WARNING,
     GateFinding,
     cited_rule,
@@ -62,7 +62,10 @@ ROUTE_END = "<!-- /labkit:route -->"
 #: the protocol — which run (`runlog`), which values (`labkit-params`), where
 #: the ids are decided, the proof (CODE-016 The experiment area reconstructs
 #: itself). The README points; it copies no question, answer, run id or
-#: threshold — each has its one home, and a copy goes stale.
+#: threshold — each has its one home, and a copy goes stale. The block and
+#: these names are a format convention the stamp writes
+#: (`scaffold`; stated in labkit/docs/agent-guide.md, step 1): a README
+#: without them breaks the technical contract, no rule of the standard.
 ROUTE_STATIONS = (
     "runlog",
     "labkit-params",
@@ -81,7 +84,8 @@ def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
     The block is checked, never written — finalize reads only; the stamp
     writes it. A script that is missing or defines no `evaluate_rows`
     records CODE-016 The experiment area reconstructs itself; the block and
-    its stations record an open assignment — no rule names them.
+    its stations record the technical contract — the format convention of
+    ROUTE_STATIONS.
 
     Raises:
         SourceError: `scripts/01_measure.py` does not parse — the gate
@@ -98,7 +102,7 @@ def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
                 f"README.md: no {ROUTE_START} … {ROUTE_END} block — the route "
                 f"(protocol · runlog · labkit-params · evaluate_rows · config.json) "
                 f"is what a reader opens first",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -109,7 +113,7 @@ def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
             GateFinding(
                 WARNING,
                 f"README.md route: does not name {protocol_name}",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
                 evidence_kind=GUARANTEED,
             )
         )
@@ -119,7 +123,7 @@ def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
                 GateFinding(
                     WARNING,
                     f"README.md route: does not name {station}",
-                    rule=OPEN_RULE,
+                    rule=TECHNICAL_RULE,
                     evidence_kind=GUARANTEED,
                 )
             )

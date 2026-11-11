@@ -231,6 +231,11 @@ class Provenance(unittest.TestCase):
             b, _, _ = run_record_check.provenance_findings(area, run)
             self.assertEqual(len(b), 1)
             self.assertIn("is not the bytes the run read", b[0].text)
+            # a run that registered no output: the checks on outputs have no basis
+            (run / "outputs.json").unlink()
+            _, w, _ = run_record_check.provenance_findings(area, run)
+            self.assertIn("no outputs.json", w[0].text)
+            self.assertEqual(w[0].rule, TECHNICAL_RULE)
 
     def test_untracked_source_is_a_blocker(self):
         self._run(SHORT, self._frozen(), commit=False)

@@ -534,9 +534,10 @@ def provenance_findings(
     in that error, not in a blocker with a way out that may not lead out.
     A `data=` entry naming no path blocks. Outside a git repository every
     source is still held to its record; git's half is skipped with a
-    warning, a check that cannot run and the technical contract. The two
-    warnings on the outputs (none registered, one untracked) record an open
-    assignment: no rule's sentence states either."""
+    warning, a check that cannot run and the technical contract. A run that
+    registered no output is the technical contract too: the checks that
+    hold an output to its run have nothing to hold. An output not yet
+    tracked records an open assignment: no rule's sentence states it."""
     sources, blockers = _recorded_sources(area, answering_run)
     warnings: list[GateFinding] = []
     outside: list[str] = []
@@ -553,7 +554,7 @@ def provenance_findings(
             GateFinding(
                 WARNING,
                 "no outputs.json — the run registered no output file (run.output)",
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
                 evidence_kind=GUARANTEED,
             )
         )
