@@ -113,7 +113,8 @@ def review(
 
 
 class ALimitHasItsEffect(unittest.TestCase):
-    """A BLOCKER decided `limitation` owes its effect on the verdicts
+    """LAB-015 Preflight audit before freezing: a BLOCKER decided
+    `limitation` carries its effect on the verdicts
     (`check_limit_effects_decided`)."""
 
     @staticmethod
@@ -128,7 +129,7 @@ class ALimitHasItsEffect(unittest.TestCase):
         self.assertEqual(
             (f.grade, f.evidence_kind, f.check_outcome), (BLOCKER, GUARANTEED, VIOLATED)
         )
-        self.assertEqual(f.rule, OPEN_RULE)
+        self.assertEqual(f.rule, LAB_015)
         self.assertEqual(
             f.text,
             f"Limitation (audit {rec.path.stem} #1): a BLOCKER decided limitation "
@@ -398,8 +399,8 @@ class ACarriedClosingIsUpheld(unittest.TestCase):
 
 
 class AnEarlierBlockerIsReleased(unittest.TestCase):
-    """An earlier decided BLOCKER holds the state reported now until a
-    follow-up releases it (`check_earlier_blockers_released`, the rule in
+    """LAB-015 Preflight audit before freezing: an earlier decided BLOCKER
+    holds the state reported now until a follow-up releases it (`check_earlier_blockers_released`, the rule in
     `followup.release_holds`)."""
 
     def test_one_never_followed_up_blocks_with_the_follow_up_audit(self):
@@ -409,7 +410,7 @@ class AnEarlierBlockerIsReleased(unittest.TestCase):
             check_earlier_blockers_released, [earlier, cover], [cover], None
         )
         self.assertEqual(
-            (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, OPEN_RULE)
+            (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, LAB_015)
         )
         self.assertEqual(
             f.text,

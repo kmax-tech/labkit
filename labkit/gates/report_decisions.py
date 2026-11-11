@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import partial
 
-from labkit.formats.gate import OPEN_RULE
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.gate import (
     BLOCKER,
@@ -52,9 +52,10 @@ from labkit.formats.commands import (
 from labkit.formats.evidence import AreaEvidence
 from labkit.gates.report_context import Checked
 
-#: the rule of a decision a second auditor has not confirmed: the paragraph
-#: "A decision that releases a BLOCKER is confirmed by a second auditor"
-SECOND_AUDITOR_RULE = cited_rule("LAB-015 Preflight audit before freezing")
+#: the rule of a decision that does not release yet: a limitation carries
+#: its effect on the verdicts, and a decision that releases a BLOCKER is
+#: confirmed by a second auditor or judged by the follow-up analysis audit
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 def limit_gaps(ctx: Checked) -> list[GateFinding]:
@@ -87,7 +88,7 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                 fix=f"repair what the sentence names, then "
                 f"`{render_command(ctx.protocol)}` writes the result section",
                 check_outcome=outcome_of_failed_read(exc),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     return gaps + render_gaps(ctx.text, expected)
@@ -167,7 +168,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
             blocker(
                 f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
                 fix=findings.record_way(ctx.area, ctx.protocol),
-                rule=OPEN_RULE,
+                rule=TECHNICAL_RULE,
             )
         ]
     # review_findings names a file that does not read; unreviewed holds here
@@ -196,7 +197,7 @@ def check_limit_effects_decided(
             f"{findings.limit_label(record, n)}: a BLOCKER decided limitation "
             "owes its effect on the verdicts",
             fix=f"decide it again: `{decide_again(n)}`",
-            rule=OPEN_RULE,
+            rule=LAB_015,
         )
         for n, f in record.limits()
         if not f.effect
@@ -207,7 +208,7 @@ def check_decision_reviews_read(evidence: AreaEvidence) -> list[GateFinding]:
     """The area's decision reviews read: a file that does not
     (`AreaEvidence.reviews_unread`) is a WARNING naming why. It releases
     nothing — EVIDENCE then holds no review, so every decision is judged as
-    unreviewed."""
+    unreviewed. The rule is not decided yet (OPEN_RULE)."""
     if not evidence.reviews_unread:
         return []
     return [
@@ -250,7 +251,7 @@ def check_stands_upheld(
             fix=f"{review_way()} asks a second auditor (owed at "
             f"every repeat cost); after a rejection, decide again",
             evidence_kind=GUARANTEED,
-            rule=SECOND_AUDITOR_RULE,
+            rule=LAB_015,
         )
         for n, f in record.limits()
         if f.effect == findings.EFFECT_STANDS
@@ -289,7 +290,7 @@ def check_contested_closings_upheld(
                 fix=f"{review_way()} asks a second auditor whether the "
                 f"reason shows it {_closing_question(f.status)}",
                 evidence_kind=GUARANTEED,
-                rule=SECOND_AUDITOR_RULE,
+                rule=LAB_015,
             )
         )
     return out
@@ -327,7 +328,7 @@ def check_repaired_claims_upheld(
                 f"Conclusion as it stands no longer makes the claim the finding "
                 f"names; no new measurement and no analysis audit",
                 evidence_kind=GUARANTEED,
-                rule=SECOND_AUDITOR_RULE,
+                rule=LAB_015,
             )
         )
     return out
@@ -366,7 +367,7 @@ def check_first_dismissals_upheld(
                 fix=f"{review_way()} asks a second auditor whether the reason "
                 f"shows it {_closing_question('false-positive')}",
                 evidence_kind=GUARANTEED,
-                rule=SECOND_AUDITOR_RULE,
+                rule=LAB_015,
             )
         )
     return out
@@ -391,7 +392,7 @@ def check_earlier_blockers_released(
         blocker(
             f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",
             fix=h.step,
-            rule=OPEN_RULE,
+            rule=LAB_015,
         )
         for h in followup.release_holds(records, covering, evidence)
         if covering or h.step != followup.STEP_AUDIT
@@ -418,7 +419,7 @@ def check_carried_closings_upheld(
             f"(LAB-015 Preflight audit before freezing)",
             fix=f"{review_way()} asks a second auditor whether "
             f"the reason shows it {_closing_question(f.status)}",
-            rule=SECOND_AUDITOR_RULE,
+            rule=LAB_015,
         )
         for n, f in enumerate(record.findings, 1)
         if findings.carried_and_closed(f)

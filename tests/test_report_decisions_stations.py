@@ -12,7 +12,13 @@ import unittest
 from unittest import mock
 
 from labkit.formats import findings, followup
-from labkit.formats.gate import BLOCKER, NOT_EXECUTABLE, OPEN_RULE, VIOLATED, WARNING
+from labkit.formats.gate import (
+    BLOCKER,
+    NOT_EXECUTABLE,
+    TECHNICAL_RULE,
+    VIOLATED,
+    WARNING,
+)
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import report_decisions
 from protocol_fixture import head
@@ -66,7 +72,7 @@ class TheResultSectionCannotBeRendered(unittest.TestCase):
             f'--decide 1 limitation --why "<why>" --record {RECORD}', effect.fix or ""
         )
         self.assertEqual(
-            (f.grade, f.rule, f.check_outcome), (BLOCKER, OPEN_RULE, VIOLATED)
+            (f.grade, f.rule, f.check_outcome), (BLOCKER, TECHNICAL_RULE, VIOLATED)
         )
         self.assertEqual(
             f.text,
@@ -159,7 +165,7 @@ class TheCarriedFindingsFormNoChain(unittest.TestCase):
         ):
             (f,) = report_decisions.followup_findings(checked(REPORTED, run=RUN))
         self.assertEqual(
-            (f.grade, f.rule, f.check_outcome), (BLOCKER, OPEN_RULE, VIOLATED)
+            (f.grade, f.rule, f.check_outcome), (BLOCKER, TECHNICAL_RULE, VIOLATED)
         )
         self.assertTrue(
             f.text.startswith("the carried findings of area do not form a chain: "),
