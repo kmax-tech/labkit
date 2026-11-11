@@ -751,13 +751,11 @@ class RegisteredReport(unittest.TestCase):
         self.assertIn(self.UNREVIEWED, out)
         self.assertIn("changed since", out)
 
-    def test_a_registered_report_a_commit_held_is_told_as_gone_not_as_unwritten(self):
-        """The rule's sentence names a report never written. One a commit
-        held is told as written and gone and claims no rule — removed in
-        the tree, staged as removed, or removed by an earlier commit; the
-        twin never written is the test below."""
-        from labkit.formats.gate import OPEN_RULE
-
+    def test_a_missing_registered_report_says_whether_a_commit_contains_it(self):
+        """The finding names the state and the history, and claims no rule:
+        a report a commit contains is told so — removed in the tree, staged
+        as removed, or removed by an earlier commit; the twin no commit
+        contains is the test below."""
         area = self._area(git=True)
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
@@ -779,10 +777,11 @@ class RegisteredReport(unittest.TestCase):
             with self.subTest(staged=staged):
                 found = gap(staged=staged)
                 self.assertEqual(found.rule, OPEN_RULE)
-                self.assertIn("which was written and is gone", found.text)
-                self.assertNotIn("not written", found.text)
+                self.assertIn(
+                    "the report is missing (a commit contains it)", found.text
+                )
         self._git(root, "commit", "-q", "-m", "report removed")
-        self.assertEqual(gap().rule, OPEN_RULE)
+        self.assertIn("(a commit contains it)", gap().text)
 
     def test_a_registered_report_never_written_is_an_incomplete_delivery(self):
         """The registered report owes its review, written or not: once the
@@ -810,8 +809,12 @@ class RegisteredReport(unittest.TestCase):
             proto, text, root, measured=_measured(proto)
         )
         assert gap is not None
-        self.assertIn("REPORT.md as its report, which is not written", gap.text)
-        self.assertEqual(gap.rule, registered_report.LAB_104)
+        self.assertIn(
+            "REPORT.md as its report; the report is missing (no commit in the "
+            "available history contains it)",
+            gap.text,
+        )
+        self.assertEqual(gap.rule, OPEN_RULE)
         self.assertIn("labkit-adopt", gap.fix or "")
         self.assertIn("--handover", gap.fix or "")
         # the stop holds on that finding and prints `labkit-next`'s step for

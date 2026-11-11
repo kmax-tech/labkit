@@ -506,14 +506,16 @@ class RegisteredReportRepairs(StagedLab):
             "git", "commit", "-q", "-m", "drop", "--", "REPORT.md", ok=False
         )
         self.assertIn(
-            "registers REPORT.md as its report, which was written and is gone", refused
+            "registers REPORT.md as its report; the report is missing (a commit contains it)",
+            refused,
         )
         self.assertIn(
-            "registers REPORT.md as its report, which was written and is gone",
+            "registers REPORT.md as its report; the report is missing (a commit contains it)",
             self.run_(".venv/bin/report-check", AREA, ok=False),
         )
         self.assertIn(
-            "which was written and is gone", self.run_(".venv/bin/labkit-next", AREA)
+            "the report is missing (a commit contains it)",
+            self.run_(".venv/bin/labkit-next", AREA),
         )
         stop = self.run_(
             ".venv/bin/python",
@@ -521,7 +523,7 @@ class RegisteredReportRepairs(StagedLab):
             "from pathlib import Path; from labkit.gates import agent_hooks; "
             "r = Path('.').resolve(); print(agent_hooks.missing_reports(r, [r / 'REPORT.md']).steps)",
         )
-        self.assertIn("which was written and is gone", stop)
+        self.assertIn("the report is missing (a commit contains it)", stop)
         self.run_("git", "checkout", "HEAD", "--", "REPORT.md")
         self.run_(".venv/bin/report-check", AREA)
 
@@ -535,7 +537,8 @@ class RegisteredReportRepairs(StagedLab):
             "git", "commit", "-q", "-m", "drop", "--", "REPORT.md", ok=False
         )
         self.assertIn(
-            "registers REPORT.md as its report, which was written and is gone", refused
+            "registers REPORT.md as its report; the report is missing (a commit contains it)",
+            refused,
         )
 
     def test_a_handover_with_its_report_review_stays_a_handover(self):

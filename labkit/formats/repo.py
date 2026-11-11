@@ -435,19 +435,15 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     return r.stdout if r.returncode == 0 else None
 
 
-def ever_committed(repo: Path, path: Path) -> bool | None:
-    """Whether a commit in HEAD's history held a file at PATH's own path
-    (`own_path`) under REPO: True when one touched it; False when none did
-    and the history is whole (no commit yet and no git repository are
-    whole histories that hold nothing); None when none did in a shallow
-    clone, whose cut history cannot say. A file written and removed
-    without a commit in between leaves no trace and reads False."""
+def ever_committed(repo: Path, path: Path) -> bool:
+    """Whether a commit in the history git has of HEAD under REPO contains
+    a file at PATH's own path (`own_path`). False says only that: none of
+    the available commits does — no commit yet, no git repository, a
+    shallow clone's cut history, and a file written and removed without a
+    commit in between all read False."""
     rel = own_path(path).relative_to(repo.resolve()).as_posix()
     r = git_run(["log", "-1", "--format=%H", "--", rel], repo)
-    if r.returncode == 0 and r.stdout.strip():
-        return True
-    shallow = git_run(["rev-parse", "--is-shallow-repository"], repo)
-    return None if shallow.stdout.strip() == "true" else False
+    return r.returncode == 0 and bool(r.stdout.strip())
 
 
 def unreadable_at(repo: Path, path: Path, rev: str) -> str:

@@ -330,7 +330,7 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
-- **A registered report a commit held is told as gone, not as unwritten.** The hold on a registered report the state lacks said "which is not written" for a report removed after it was written too. It now reads the history: a report a commit held is "written and is gone (a commit held it)", one no commit ever held stays "not written" (`repo.ever_committed`). The hold blocks as before.
+- **A missing registered report says what was checked.** The hold on a registered report the state lacks said "which is not written", also for a report removed after it was written. It now names the state and the history: "the report is missing (a commit contains it)" or "(no commit in the available history contains it)" (`repo.ever_committed`). The hold blocks as before.
 
 - **The hint beside a discussed run no longer counts the block's own why.** `report_blocks.numbers_beside_discussed` named numbers in a discussion block's reason too. The reason says what was found, numbers included; the hint now lists the paragraphs right above and below the block only, and its sentence reads "beside a discussed run". Whether a reason reports a result is the report review's question.
 

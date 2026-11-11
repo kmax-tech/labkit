@@ -16,7 +16,7 @@ from pathlib import Path, PurePosixPath
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -44,8 +44,6 @@ from labkit.formats.commands import (
     into_command,
     step_command,
 )
-
-LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 def report_file(root: Path, registered: str) -> Path:
@@ -402,9 +400,11 @@ def missing_report(
     commit, or only in the local index). One blocker naming the two ways to
     write it:
     the adoption (its result block) and the handover (an end without a
-    result). A report no commit ever held records LAB_104, whose text names
-    a report never written; one a commit held, or one a shallow clone's
-    history cannot place, the open assignment (`repo.ever_committed`). None when nothing is registered, the report is there, or
+    result). The finding says what was checked: the report is missing, and
+    whether a commit of the available history contains it
+    (`repo.ever_committed`). It records the open assignment either way: the
+    standard names a report "never written", which no history shows, and
+    states no duty for one written and removed. None when nothing is registered, the report is there, or
     nothing was measured — before a measurement a report owes nothing. At
     the commit (STAGED) a report not yet written is held only where the
     commit removes one HEAD holds or the head has adopted a result
@@ -427,20 +427,15 @@ def missing_report(
         return None
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
-    # LAB_104's sentence names a report never written; one a commit held
-    # and the state lacks was written, and where a cut history cannot say
-    # (None) no rule is claimed either
-    held_before = ever_committed(repo, report)
-    rule = LAB_104 if held_before is False else OPEN_RULE
-    lacks = (
-        "which was written and is gone (a commit held it)"
-        if held_before
-        else "which is not written"
+    history = (
+        "a commit contains it"
+        if ever_committed(repo, report)
+        else "no commit in the available history contains it"
     )
     what = (
-        f"{name_p} registers {name_r} as its report, {lacks}, and "
-        f"its area holds a measurement of it — without its registered report "
-        f"the delivery is incomplete"
+        f"{name_p} registers {name_r} as its report; the report is missing "
+        f"({history}), and its area holds a measurement of it — without its "
+        f"registered report the delivery is incomplete"
     )
     if declared is not None:
         into = into_command(protocol, report)
@@ -450,7 +445,7 @@ def missing_report(
             f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
             step=into,
-            rule=rule,
+            rule=OPEN_RULE,
         )
     discuss = report_blocks.discuss_command(
         name_p, "<run_id>", name_r, report_blocks.WHY_PROGRESS
@@ -464,7 +459,7 @@ def missing_report(
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",
         step=discuss,
-        rule=rule,
+        rule=OPEN_RULE,
     )
 
 
