@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import intent_check, recheck  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
-from labkit.formats.gate import OPEN_RULE  # noqa: E402
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 MEASURE = """\
@@ -866,6 +866,43 @@ class Outcomes(unittest.TestCase):
         b = parsed(protocol_text(C1, stamped))
         self.assertEqual(b.by_id()["branch-1"].outcomes, ())
         self.assertEqual(promises.placeholder_sentences(b), ["branch-1"])
+
+
+class TheRuleARefusedBlockNames(unittest.TestCase):
+    """`PromiseError.rule`: the requirement a block breaks names its rule
+    where the block is read — the rule whose sentence states it, a technical
+    contract for a form no reader can take, open where neither is decided."""
+
+    def _rule(self, text: str):
+        with self.assertRaises(promises.PromiseError) as cm:
+            promises.parse_block(text)
+        return cm.exception.rule
+
+    def test_a_block_that_does_not_parse_is_a_technical_contract(self):
+        self.assertEqual(self._rule("```toml\n[[promise]\n```\n"), TECHNICAL_RULE)
+        self.assertEqual(
+            self._rule(block(C1.replace("constants", "extra"))), TECHNICAL_RULE
+        )
+
+    def test_what_the_identifier_rule_states_records_that_rule(self):
+        for broken in (
+            C1.replace('key = "criterion_1_pass"\n', ""),
+            C1.replace("criterion-1", "K1"),
+            C1.replace("criterion_1_pass", "accuracy_ok"),
+            C1.replace("min_acc = 0.7", "MinAcc = 0.7"),
+            B1.replace("→ generalises: used on the next cohort", "→ generalises"),
+        ):
+            with self.subTest(broken=broken[:60]):
+                self.assertEqual(self._rule(block(broken)), promises.LAB_004)
+
+    def test_a_requirement_no_sentence_states_stays_open(self):
+        self.assertEqual(self._rule(block(C1, C1)), OPEN_RULE)
+        self.assertEqual(
+            self._rule(block(B1.replace("→ noisy:", "→ generalises:"))), OPEN_RULE
+        )
+
+    def test_the_twin_a_block_that_reads_raises_nothing(self):
+        self.assertEqual(len(parsed(block(C1, A1, B1)).promises), 3)
 
 
 class KeyKind(unittest.TestCase):

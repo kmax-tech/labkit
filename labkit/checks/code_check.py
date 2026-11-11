@@ -226,7 +226,8 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                 BLOCKER,
                 protocol.name,
                 f"promise block: {exc}",
-                rule=ID_RULE,
+                # the requirement broken names its rule where the block is read
+                rule=exc.rule,
                 fix=f"repair the [[promise]] tables as the sentence says, then "
                 f"`{gate_command('code-check', area)}`",
                 evidence_kind=GUARANTEED,

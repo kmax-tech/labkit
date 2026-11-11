@@ -195,8 +195,21 @@ def block_stamp(text: str) -> str:
     return NO_BLOCK if block is None else block.sha
 
 
+#: the rule whose text states what a promise table carries and how a
+#: branch's sentence lists its outcomes
+LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
+
+
 class PromiseError(ValueError):
-    """The promise block is malformed; the message names the field."""
+    """The promise block is malformed; the message names the field. RULE is
+    the assignment of the requirement the block breaks, set where the cause
+    is found: LAB_004 where a sentence of that rule states the requirement,
+    TECHNICAL_RULE for a block or a value that does not have the form a
+    reader needs, OPEN_RULE where neither is decided."""
+
+    def __init__(self, message: str, *, rule: RuleAssignment = OPEN_RULE) -> None:
+        super().__init__(message)
+        self.rule = rule
 
 
 @dataclass(frozen=True)
@@ -251,7 +264,7 @@ def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome
     outcome stands, so a PART without an arrow may be the tail of a
     consequence that held a `;`."""
     if not part:
-        raise PromiseError(f"outcome {n} is empty — {OUTCOMES_FORM}")
+        raise PromiseError(f"outcome {n} is empty — {OUTCOMES_FORM}", rule=LAB_004)
     arrows = part.count(ARROW)
     if arrows != 1:
         if not arrows and "->" in part:
@@ -264,12 +277,15 @@ def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome
         else:
             hint = ""
         raise PromiseError(
-            f"outcome {n} {part!r} holds {arrows} `→`, not one{hint} — {OUTCOMES_FORM}"
+            f"outcome {n} {part!r} holds {arrows} `→`, not one{hint} — {OUTCOMES_FORM}",
+            rule=LAB_004,
         )
     condition, _, rest = (side.strip() for side in part.partition(ARROW))
     name, mark, consequence = (s.strip() for s in rest.partition(CONSEQUENCE_MARK))
     if not condition:
-        raise PromiseError(f"outcome {n} {part!r} has no condition — {OUTCOMES_FORM}")
+        raise PromiseError(
+            f"outcome {n} {part!r} has no condition — {OUTCOMES_FORM}", rule=LAB_004
+        )
     if condition == OTHERWISE and not last:
         raise PromiseError(
             f"outcome {n} {part!r} is `otherwise` but not the last outcome — "
@@ -283,7 +299,8 @@ def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome
     if not mark or not consequence:
         raise PromiseError(
             f"outcome {n} {part!r} names no consequence — what does {name!r} "
-            f"permit? `{name}: <consequence>`; {OUTCOMES_FORM}"
+            f"permit? `{name}: <consequence>`; {OUTCOMES_FORM}",
+            rule=LAB_004,
         )
     return BranchOutcome(condition, name, consequence)
 
@@ -380,12 +397,14 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
     try:
         data = protocol_block.parse_toml_block(text)
     except protocol_block.BlockError as exc:
-        raise PromiseError(str(exc)) from exc
+        raise PromiseError(str(exc), rule=TECHNICAL_RULE) from exc
     if "promise" not in data:
         return None
     entries = data["promise"]
     if not isinstance(entries, list):
-        raise PromiseError("`promise` must be an array of tables: [[promise]]")
+        raise PromiseError(
+            "`promise` must be an array of tables: [[promise]]", rule=TECHNICAL_RULE
+        )
 
     out: list[Promise] = []
     seen: set[str] = set()
@@ -395,17 +414,19 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         if not isinstance(e, dict):
             raise PromiseError(
                 f"{where}: {e!r} is not a table — each promise is a "
-                f"[[promise]] table with id, key, sentence, scope"
+                f"[[promise]] table with id, key, sentence, scope",
+                rule=TECHNICAL_RULE,
             )
         unknown = set(e) - _ALLOWED_FIELDS
         if unknown:
             raise PromiseError(
                 f"{where}: unknown field(s) {sorted(unknown)}; "
-                f"allowed: {sorted(_ALLOWED_FIELDS)}"
+                f"allowed: {sorted(_ALLOWED_FIELDS)}",
+                rule=TECHNICAL_RULE,
             )
         for field in ("id", "key", "sentence", "scope"):
             if field not in e:
-                raise PromiseError(f"{where}: missing `{field}`")
+                raise PromiseError(f"{where}: missing `{field}`", rule=LAB_004)
         pid = e["id"]
         if not isinstance(pid, str) or not _BLOCK_ID.match(pid):
             hint = (
@@ -415,7 +436,8 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
             )
             raise PromiseError(
                 f"{where}: id {pid!r} is not criterion-<n>, quality-check-<n> "
-                f"or branch-<n>{hint}"
+                f"or branch-<n>{hint}",
+                rule=LAB_004,
             )
         where = f"[[promise]] {pid}"
         if pid in seen:
@@ -426,11 +448,12 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         if not isinstance(key, str) or (key != stem and not key.startswith(stem + "_")):
             raise PromiseError(
                 f"{where}: key {key!r} is outside the id's "
-                f"namespace — expected '{stem}' or '{stem}_<suffix>'"
+                f"namespace — expected '{stem}' or '{stem}_<suffix>'",
+                rule=LAB_004,
             )
         sentence = e["sentence"]
         if not isinstance(sentence, str) or not sentence.strip():
-            raise PromiseError(f"{where}: `sentence` is empty")
+            raise PromiseError(f"{where}: `sentence` is empty", rule=LAB_004)
         sentence = sentence.strip()
         outcomes: tuple[BranchOutcome, ...] = ()
         if kind_of(pid) == "branch" and not protocol_block.is_stamp_placeholder(
@@ -439,7 +462,9 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
             try:
                 outcomes = parse_outcomes(sentence)
             except PromiseError as exc:
-                raise PromiseError(f"{where}: `sentence`: {exc}") from exc
+                raise PromiseError(
+                    f"{where}: `sentence`: {exc}", rule=exc.rule
+                ) from exc
         scope = e["scope"]
         if (
             not isinstance(scope, list)
@@ -455,26 +480,32 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
             raise PromiseError(
                 f"{where}: scope {absolute} is absolute — scopes are "
                 f"relative to the protocol's directory, so the "
-                f"declaration travels with the repo"
+                f"declaration travels with the repo",
+                rule=TECHNICAL_RULE,
             )
         constants = e.get("constants", {})
         if not isinstance(constants, dict):
-            raise PromiseError(f"{where}: `constants` must be a table")
+            raise PromiseError(
+                f"{where}: `constants` must be a table", rule=TECHNICAL_RULE
+            )
         for name, value in constants.items():
             if not isinstance(value, (int, float, str, bool)):
                 raise PromiseError(
-                    f"{where}: constant {name} is {type(value).__name__} — only scalars"
+                    f"{where}: constant {name} is {type(value).__name__} — only scalars",
+                    rule=TECHNICAL_RULE,
                 )
             if not CONSTANT_NAME.match(name):
                 raise PromiseError(
                     f"{where}: constant {name!r} — a constant is named like the "
                     f"config key it is recorded under: lowercase snake_case "
-                    f"(`margin`, `max_empty`)"
+                    f"(`margin`, `max_empty`)",
+                    rule=LAB_004,
                 )
             if name in constant_home:
                 raise PromiseError(
                     f"{where}: constant {name} already stands in [[promise]] "
-                    f"{constant_home[name]} — a constant has one home"
+                    f"{constant_home[name]} — a constant has one home",
+                    rule=LAB_004,
                 )
             constant_home[name] = pid
         out.append(
