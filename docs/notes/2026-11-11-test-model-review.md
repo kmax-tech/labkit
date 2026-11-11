@@ -1,6 +1,8 @@
 # Independent review of the rule tests (2026-11-11)
 
 > Review of `00aaeaad`, against the baseline `524b93ce` and the [test-model plan](2026-11-10-test-model.md). The reviewer did not author the migration. Verdict: the review is complete, but target 4 remains open because one removed assertion has no adequate replacement. This review approves neither the open rule assignments nor the undecided second-review policy.
+>
+> Since `29290169` the assertion is restored ([Correction](#correction-2026-11-11)); one related call stays without a test.
 
 ## Finding: medium — a removed scenario's replacement misses its caller
 
@@ -29,3 +31,11 @@ The ten deferred sites in `report_decisions.py`, the 179 open rule assignments, 
 - Mutated process: the 76-test selection above passed; the restored historical test passed without the mutation and failed with it.
 
 The temporary reproduction runner is `/tmp/labkit-review-mutation.py`; it restores the historical method with Python's AST and installs the mutation in the test process only. No package or test file was changed.
+
+## Correction (2026-11-11)
+
+A second session repeated the mutation on the whole suite at `00aaeaad`, not only on the 76 selected tests: with `registration_hold.moved_fields` answering the empty set, 3 333 tests passed and none failed (exit 0). No test held the comparison.
+
+`29290169` adds the required test, `tests/test_rules_registration_hold.py::TheReleaseReadsWhichFieldTheRunSawOtherwise`. It passes two protocol texts through `released_fields` and stubs only `resolved_corrections`. A field edited after the run stays held although its correction is resolved; the twin with equal texts releases it; an edit of another field releases it too. Under the mutation the first test fails (1 failed, 2 passed); on the unchanged code all three pass.
+
+Still without a test: `scope_changes` calls `moved_fields` a second time (`labkit/gates/registration_hold.py:284`) and hands the result to `waiting_refs`, which decides whether a hold leads with the follow-up audit as its way out. The same mutation covers that call, and the suite stayed green. The call decides the way out a hold names first, not whether the field is held. A test of it needs `scope_changes` with a first measurement in a repository.
