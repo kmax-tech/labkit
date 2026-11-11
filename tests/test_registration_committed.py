@@ -33,7 +33,7 @@ from labkit.gates import registration_hold
 from labkit.tools import report_command
 from labkit.formats import area_state, protocol_history, runs
 from labkit.formats import protocol_block
-from labkit.formats.gate import Findings
+from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check
 from labkit.gates import report_context
@@ -678,7 +678,8 @@ class ScopeAsFirstMeasured(_Repository):
     ):
         """The first runs started on a commit whose [reference] does not
         parse, the table repaired, the fields rewritten later: the fields are
-        compared whatever the head held then."""
+        compared whatever the head held then, and the comparison is a hold
+        of its own."""
         broken = (
             'value = 0.62\ntolerance = 0.01\nrelation = "within"\nunit = "fraction"\n'
         )
@@ -687,10 +688,39 @@ class ScopeAsFirstMeasured(_Repository):
             "roads.geojson and", "roads.geojson (BR highways only) and"
         )
         self._run(self._register(narrowed), RUN)
-        (line,) = self._changes()
-        self.assertIn("Data / scope", line)
-        self.assertIn("[reference]", line)
-        self.assertIn("does not read", line)
+        fields, comparison = self._changes()
+        self.assertIn("Data / scope", fields)
+        self.assertNotIn("[reference]", fields)
+        self.assertIn("[reference]", comparison)
+        self.assertIn("does not read", comparison)
+
+    def test_a_reference_moved_together_with_a_field_is_two_holds(self):
+        """Each cause under the rule that names it, each a blocker with its
+        own way back; finalize holds on both."""
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        narrowed = ALL_ROADS.replace(
+            "roads.geojson and", "roads.geojson (BR highways only) and"
+        )
+        self._run(
+            self._register(narrowed, reference=REFERENCE.replace("0.62", "0.48")), RUN
+        )
+        fields, comparison = _registration_changes(self.area, self.proto)
+        self.assertEqual(
+            [(f.grade, f.rule, f.outcome) for f in (fields, comparison)],
+            [
+                (BLOCKER, registration_hold.LAB_003, VIOLATED),
+                (BLOCKER, registration_hold.LAB_035, VIOLATED),
+            ],
+        )
+        self.assertIn(
+            f"Next: restore Data / scope as {self.FIRST} registered them", fields.line
+        )
+        self.assertNotIn("[reference]", fields.line)
+        self.assertIn(
+            f"Next: restore [reference] as {self.FIRST} registered them",
+            comparison.line,
+        )
+        self.assertIn("value = 0.48", comparison.line)
 
     def test_the_twin_a_script_repaired_under_the_same_scope_passes(self):
         """The code changed and measured again under unchanged fields: what

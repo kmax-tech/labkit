@@ -90,6 +90,8 @@ Built 2026-11-11 as decided by the author: `gate.derived_outcome` is the one der
 
 **Proposal: several rules.** No format change now. The one case found (the registered comparison changed together with a field) is two causes printed in one hold, not one indivisible condition: by the author's own criterion each cause carries its assignment. The build is two findings from `seen_hold` and `now_hold`, the comparison under LAB-035 and the fields under LAB-003, each with its own way out. The rule field is read in nine modules (`gate`, `findings`, `check_inventory`, `answering_run`, `preflight`, `promises`, `followup`, `report_blocks`, `intent_check`); a field of several rules waits for a condition that cannot be split.
 
+Built 2026-11-11: `registration_hold.by_cause` parts the differences, both holds tell one BLOCKER per cause, and `scope_rule` refuses the comparison beside another part instead of recording an open assignment. A hold of one cause is unchanged, byte for byte (five cases compared against the previous module). One behaviour follows from the split and was not asked for by name: a field whose correction is decided leads its own finding with the follow-up audit, where the joint hold led with the restore because the comparison has no correction.
+
 **Proposal: the inventory.** One more column, the outcome: the value where the site writes a constant, `computed` where it calls `outcome_of_failed_read`, and the derived value otherwise.
 
 Limits of the classification that stay as they are: the review's claim, the audit's finding and what is printed or refused without a finding keep their own types; a gate's note is no finding; the unit "cause" is listed only where a site receives its rule.

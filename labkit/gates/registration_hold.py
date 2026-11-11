@@ -81,20 +81,41 @@ REFERENCE_PART = "[reference]"
 
 
 def scope_rule(diffs: list[tuple[str, str, str]]) -> RuleAssignment:
-    """The rule a scope hold on DIFFS records, one for the whole hold:
-    LAB_003 where its text names every changed field; LAB_035 where every
-    difference is the registered comparison (REFERENCE_PART) — a changed
-    one is reported as exploratory, which the hold's last way out, the
-    exploratory successor, is; an open assignment as soon as one
-    difference is in a part of UNNAMED_HEAD_PARTS, and where the
-    comparison changed together with a field, since one finding records
-    one rule. The hold blocks either way. Pure."""
+    """The rule a scope hold records for DIFFS, which must be the
+    differences of one cause (`by_cause`; the comparison beside another
+    part raises): LAB_035 where they are the registered comparison
+    (REFERENCE_PART) — a changed one is reported as exploratory, which the
+    hold's last way out, the exploratory successor, is; LAB_003 where its
+    text names every changed field; an open assignment as soon as one
+    difference is in a part of UNNAMED_HEAD_PARTS. The hold blocks either
+    way. Raises ValueError for the comparison together with another part:
+    two causes are two findings. Pure."""
     changed = {what for what, _, _ in diffs}
-    if changed & set(UNNAMED_HEAD_PARTS):
-        return OPEN_RULE
-    if REFERENCE_PART not in changed:
-        return LAB_003
-    return LAB_035 if changed == {REFERENCE_PART} else OPEN_RULE
+    if REFERENCE_PART in changed:
+        if changed != {REFERENCE_PART}:
+            raise ValueError(
+                f"a scope hold records one rule, and {sorted(changed)} holds the "
+                f"registered comparison beside another part (`by_cause` parts them)"
+            )
+        return LAB_035
+    return OPEN_RULE if changed & set(UNNAMED_HEAD_PARTS) else LAB_003
+
+
+def by_cause(
+    diffs: list[tuple[str, str, str]], refs: list[str | None]
+) -> list[tuple[list[tuple[str, str, str]], list[str | None]]]:
+    """DIFFS (what, from, to) with their REFS (`waiting_refs`, one per
+    difference) as the causes a scope hold tells one finding each for: the
+    fields and head parts first, then the registered comparison
+    (REFERENCE_PART) — another rule fixes it (`scope_rule`) and no
+    correction releases it, so its way out is its own. A cause without a
+    difference is left out. Pure."""
+    pairs = list(zip(diffs, refs, strict=True))
+    groups = (
+        [(d, r) for d, r in pairs if d[0] != REFERENCE_PART],
+        [(d, r) for d, r in pairs if d[0] == REFERENCE_PART],
+    )
+    return [([d for d, _ in g], [r for _, r in g]) for g in groups if g]
 
 
 def registration_rule(was: dict, now: dict) -> RuleAssignment:
@@ -322,24 +343,27 @@ def _scope_held(
                     awaiting_followup(area, protocol, text, run, held),
                     moved_fields(seen, text),
                 )
-                return [
-                    seen_hold(
-                        pid,
-                        run.name,
-                        first_measurement(protocol, first, root),
-                        diffs,
-                        refs,
-                        audit_command(area, "--mode", "analysis", protocol=protocol),
-                    )
-                ]
+                return seen_hold(
+                    pid,
+                    run.name,
+                    first_measurement(protocol, first, root),
+                    diffs,
+                    refs,
+                    audit_command(area, "--mode", "analysis", protocol=protocol),
+                )
     now = scope_now(area, protocol, pid, run, root, measured, state, held)
     if now is None or not now.kept:
         return []
     text = state.text_of(protocol)
     refs = waiting_refs(now.kept, awaiting_followup(area, protocol, text, run, held))
-    # the code's state is read only where the way depends on it: every held
-    # field's correction decided
-    code_changed = all(refs) and code_since_run(area, run)[0]
+    # the code's state is read only where a way depends on it: at least one
+    # cause has every held field's correction decided. `measure` and
+    # `withdraw` below are one answer for the whole hold; `now_hold` uses
+    # `measure` only in the way of a cause decided like that
+    any_cause_decided = any(
+        all(cause_refs) for _, cause_refs in by_cause(now.kept, refs)
+    )
+    code_changed = any_cause_decided and code_since_run(area, run)[0]
     declaring = declaring_protocol(protocol, text, run, state) if code_changed else None
     return now_hold(
         pid,
@@ -399,45 +423,52 @@ def seen_hold(
     diffs: list[tuple[str, str, str]],
     refs: list[str | None],
     analysis: Command,
-) -> GateFinding:
-    """The BLOCKER on DIFFS — what the number is about, changed since FIRST,
-    as the answering run RUN_ID saw the protocol — with its way out: where
-    every difference's correction is decided (REFS, `waiting_refs`), the
-    follow-up audit on RUN_ID (ANALYSIS) that judges them, since a verdict
-    on an earlier run releases nothing for this one; otherwise the restore
-    and measuring again, with the correction route for the fields that
-    have one (`correction_way`). Registering anew is always the last way.
+) -> list[GateFinding]:
+    """The BLOCKERs on DIFFS — what the number is about, changed since
+    FIRST, as the answering run RUN_ID saw the protocol —, one per cause
+    (`by_cause`: the fields, the registered comparison), each with its rule
+    (`scope_rule`) and its own way out: where every difference of the
+    cause has its correction decided (REFS, `waiting_refs`), the follow-up
+    audit on RUN_ID (ANALYSIS) that judges them, since a verdict on an
+    earlier run releases nothing for this one; otherwise the restore and
+    measuring again, with the correction route for the fields that have
+    one (`correction_way`). Registering anew is always the last way.
     Pure."""
-    labels = _labels(diffs)
-    restore = (
-        f"restore {labels} as {first.run_id} registered them"
-        f"{first.shown}, and measure again, then "
-        f"audit that run (the earlier runs stay)"
-    ) + description_added(diffs)
-    if all(refs):
-        # run B measured under a correction released for an earlier
-        # run: the follow-up on B judges it again
-        fix = (
-            f"the follow-up analysis audit on {run_id} "
-            f"(`{analysis}`) "
-            f"judges {', '.join(r for r in refs if r)}, decided `fixed` "
-            f"as a correction of {labels} in place — only its `resolved` "
-            f"on that finding, judged on this run and this text, releases "
-            f"the change; a verdict on an earlier run releases nothing "
-            f"for this one; or, a changed definition, population or "
-            f"question is no correction: {restore}; or, {anew_way(pid)}"
+    found: list[GateFinding] = []
+    for cause, cause_refs in by_cause(diffs, refs):
+        labels = _labels(cause)
+        restore = (
+            f"restore {labels} as {first.run_id} registered them"
+            f"{first.shown}, and measure again, then "
+            f"audit that run (the earlier runs stay)"
+        ) + description_added(cause)
+        if all(cause_refs):
+            # run B measured under a correction released for an earlier
+            # run: the follow-up on B judges it again
+            fix = (
+                f"the follow-up analysis audit on {run_id} "
+                f"(`{analysis}`) "
+                f"judges {', '.join(r for r in cause_refs if r)}, decided `fixed` "
+                f"as a correction of {labels} in place — only its `resolved` "
+                f"on that finding, judged on this run and this text, releases "
+                f"the change; a verdict on an earlier run releases nothing "
+                f"for this one; or, a changed definition, population or "
+                f"question is no correction: {restore}; or, {anew_way(pid)}"
+            )
+        else:
+            fix = f"{restore}{correction_way(cause)}; or, {anew_way(pid)}"
+        found.append(
+            blocker(
+                f"what the number is about changed after the first measurement "
+                f"{first.run_id}: {quoted_changes(cause)} (as the answering "
+                f"run {run_id} saw the protocol) — a scope set after a "
+                f"result was seen does not answer the registered question",
+                fix=fix,
+                step=first.step,
+                rule=scope_rule(cause),
+            )
         )
-    else:
-        fix = f"{restore}{correction_way(diffs)}; or, {anew_way(pid)}"
-    return blocker(
-        f"what the number is about changed after the first measurement "
-        f"{first.run_id}: {quoted_changes(diffs)} (as the answering "
-        f"run {run_id} saw the protocol) — a scope set after a "
-        f"result was seen does not answer the registered question",
-        fix=fix,
-        step=first.step,
-        rule=scope_rule(diffs),
-    )
+    return found
 
 
 def now_hold(
@@ -451,63 +482,73 @@ def now_hold(
     measure: Command | None,
     withdraw: Command | None,
 ) -> list[GateFinding]:
-    """The BLOCKER on KEPT — what the number is about, changed since FIRST
-    in the protocol as it stands, no run measured under it — with its way
-    out: where every held field's correction is decided (REFS,
-    `waiting_refs`) and the measuring code changed since RUN_ID (MEASURE,
-    the command that measures again), the new run and its follow-up
-    (ANALYSIS) that judges the corrections; decided and the code
-    unchanged, the follow-up on the run as it stands, no new measurement
-    owed; otherwise the restore, with the correction route for the fields
-    that have one (`correction_way`). Registering anew is always the last
-    way. WITHDRAW, the withdrawal of a standing adoption, comes first
+    """The BLOCKERs on KEPT — what the number is about, changed since FIRST
+    in the protocol as it stands, no run measured under it —, one per cause
+    (`by_cause`: the fields, the registered comparison), each with its rule
+    (`scope_rule`) and its own way out: where every held field of the
+    cause has its correction decided (REFS, `waiting_refs`) and the
+    measuring code changed since RUN_ID (MEASURE, the command that measures
+    again), the new run and its follow-up (ANALYSIS) that judges the
+    corrections; decided and the code unchanged, the follow-up on the run
+    as it stands, no new measurement owed; otherwise the restore, with the
+    correction route for the fields that have one (`correction_way`).
+    Registering anew is always the last way. MEASURE is one command for
+    the whole hold, used only in the way of a cause whose every correction
+    is decided. WITHDRAW, the withdrawal of a standing adoption, comes
+    first in every finding returned, not only the first
     (`gate.withdrawn_first`). Pure."""
-    labels = _labels(kept)
-    restore = (
-        f"restore {labels} as {first.run_id} registered them"
-        f"{first.shown} — the runs measured under them "
-        f"stay; an audit that read the rewritten fields is owed again "
-        f"(`labkit-next` names it)"
-    ) + description_added(kept)
-    if all(refs) and measure is not None:
-        # a code repair after the correction: the run that answers was measured
-        # by other code, so a new run comes first and its follow-up judges the
-        # correction on it — a follow-up of the old run would be held by the
-        # changed code
-        fix = (
-            f"the measuring code changed since {run_id} ran: measure again "
-            f"(`{measure}`), then the follow-up analysis audit on that "
-            f"run (`{analysis}`) judges {', '.join(r for r in refs if r)}, decided "
-            f"`fixed` as a correction of {labels} in place, beside the repair — only "
-            f"its `resolved` on that finding, judged on the new run and this text, "
-            f"releases the change; or, a changed definition, population or question "
-            f"is no correction: {restore}; or, {anew_way(pid)}"
+    found: list[GateFinding] = []
+    for cause, cause_refs in by_cause(kept, refs):
+        labels = _labels(cause)
+        restore = (
+            f"restore {labels} as {first.run_id} registered them"
+            f"{first.shown} — the runs measured under them "
+            f"stay; an audit that read the rewritten fields is owed again "
+            f"(`labkit-next` names it)"
+        ) + description_added(cause)
+        if all(cause_refs) and measure is not None:
+            # a code repair after the correction: the run that answers was measured
+            # by other code, so a new run comes first and its follow-up judges the
+            # correction on it — a follow-up of the old run would be held by the
+            # changed code
+            fix = (
+                f"the measuring code changed since {run_id} ran: measure again "
+                f"(`{measure}`), then the follow-up analysis audit on that "
+                f"run (`{analysis}`) judges "
+                f"{', '.join(r for r in cause_refs if r)}, decided "
+                f"`fixed` as a correction of {labels} in place, beside the repair — "
+                f"only its `resolved` on that finding, judged on the new run and "
+                f"this text, releases the change; or, a changed definition, "
+                f"population or question is no correction: {restore}; or, "
+                f"{anew_way(pid)}"
+            )
+        elif all(cause_refs):
+            # each held field's correction is decided: the follow-up that judges
+            # it comes first, the way back after it
+            fix = (
+                f"the follow-up analysis audit on the run as it stands "
+                f"(`{analysis}`) "
+                f"judges {', '.join(r for r in cause_refs if r)}, decided `fixed` "
+                f"as a correction of {labels} in place — only its `resolved` on "
+                f"that finding, for exactly this text, releases the change, and no "
+                f"new measurement is owed; or, a changed definition, population or "
+                f"question is no correction: {restore}; or, {anew_way(pid)}"
+            )
+        else:
+            fix = f"{restore}{correction_way(cause)}; or, {anew_way(pid)}"
+        found.append(
+            blocker(
+                f"what the number is about changed after the first measurement "
+                f"{first.run_id}: {quoted_changes(cause)} (as the protocol stands "
+                f"now; no run measured under it yet) — a scope set after a result "
+                f"was seen does not answer the registered question, and a new "
+                f"measurement would carry the change",
+                fix=fix,
+                step=first.step,
+                rule=scope_rule(cause),
+            )
         )
-    elif all(refs):
-        # each held field's correction is decided: the follow-up that judges
-        # it comes first, the way back after it
-        fix = (
-            f"the follow-up analysis audit on the run as it stands "
-            f"(`{analysis}`) "
-            f"judges {', '.join(r for r in refs if r)}, decided `fixed` as a "
-            f"correction of {labels} in place — only its `resolved` on that "
-            f"finding, for exactly this text, releases the change, and no new "
-            f"measurement is owed; or, a changed definition, population or question "
-            f"is no correction: {restore}; or, {anew_way(pid)}"
-        )
-    else:
-        fix = f"{restore}{correction_way(kept)}; or, {anew_way(pid)}"
-    finding = blocker(
-        f"what the number is about changed after the first measurement "
-        f"{first.run_id}: {quoted_changes(kept)} (as the protocol stands "
-        f"now; no run measured under it yet) — a scope set after a result was seen "
-        f"does not answer the registered question, and a new measurement would "
-        f"carry the change",
-        fix=fix,
-        step=first.step,
-        rule=scope_rule(kept),
-    )
-    return withdrawn_first([finding], withdraw)
+    return withdrawn_first(found, withdraw)
 
 
 def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:

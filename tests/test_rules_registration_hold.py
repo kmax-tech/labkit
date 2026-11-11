@@ -388,8 +388,9 @@ class TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands(unittest.TestCase):
 class TheRuleAScopeHoldRecords(unittest.TestCase):
     """`scope_rule`: LAB-003's text names the fields, LAB-035's the
     registered comparison; the head's `kind` and `[kept]` no rule's — a
-    hold on those records an open assignment, and so does a hold that
-    would owe two rules."""
+    hold on those records an open assignment. The comparison beside
+    another part is two causes, refused here and parted before
+    (`by_cause`)."""
 
     LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
     LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
@@ -407,30 +408,113 @@ class TheRuleAScopeHoldRecords(unittest.TestCase):
                 self.assertEqual(
                     registration_hold.scope_rule([*SCOPE, diff]), OPEN_RULE
                 )
-                self.assertEqual(
-                    registration_hold.scope_rule([self.REFERENCE, diff]), OPEN_RULE
-                )
 
     def test_the_comparison_alone_records_the_rule_that_fixes_it(self):
         self.assertEqual(registration_hold.scope_rule([self.REFERENCE]), self.LAB_035)
 
-    def test_the_comparison_changed_with_a_field_claims_neither_rule(self):
-        self.assertEqual(
-            registration_hold.scope_rule([*SCOPE, self.REFERENCE]), OPEN_RULE
-        )
+    def test_the_comparison_beside_another_part_is_refused_as_two_causes(self):
+        for other in (*SCOPE, ("kind", "a", "b")):
+            with self.subTest(other=other[0]):
+                with self.assertRaisesRegex(ValueError, "records one rule"):
+                    registration_hold.scope_rule([other, self.REFERENCE])
 
     def test_the_hold_blocks_whatever_rule_it_records(self):
-        f = pure_call(
+        (f,) = pure_call(
             seen_hold, PID, "r2", FIRST, [("[kept]", "a", "b")], [None], ANALYSIS
         )
         self.assertEqual((f.grade, f.rule), (BLOCKER, OPEN_RULE))
+
+
+class TheComparisonAndTheFieldsAreTwoFindings(unittest.TestCase):
+    """`by_cause`, and both holds through it: the registered comparison
+    changed together with a field is two findings — the fields under
+    LAB-003, the comparison under LAB-035 —, each a BLOCKER with its own
+    way out; one cause stays one finding."""
+
+    LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+    LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
+    REFERENCE = ("[reference]", "0.70", "0.60")
+
+    def both(self, diffs, refs, *, measure=None, withdraw=None):
+        seen = pure_call(seen_hold, PID, "r2", FIRST, diffs, refs, ANALYSIS)
+        now = pure_call(
+            now_hold,
+            PID,
+            "r1",
+            FIRST,
+            diffs,
+            refs,
+            ANALYSIS,
+            measure=measure,
+            withdraw=withdraw,
+        )
+        return seen, now
+
+    def test_the_refs_stay_with_their_differences(self):
+        mixed = [self.REFERENCE, *SCOPE, ("kind", "a", "b")]
+        self.assertEqual(
+            registration_hold.by_cause(mixed, [None, REF, None]),
+            [
+                ([*SCOPE, ("kind", "a", "b")], [REF, None]),
+                ([self.REFERENCE], [None]),
+            ],
+        )
+        self.assertEqual(registration_hold.by_cause([], []), [])
+        with self.assertRaises(ValueError):  # a ref per difference
+            registration_hold.by_cause(SCOPE, [])
+
+    def test_each_cause_blocks_under_its_rule_with_its_own_way_out(self):
+        for held in self.both([*SCOPE, self.REFERENCE], [None, None]):
+            with self.subTest(held=held[0].text[-40:]):
+                fields, comparison = held
+                self.assertEqual(
+                    [(f.grade, f.rule) for f in held],
+                    [(BLOCKER, self.LAB_003), (BLOCKER, self.LAB_035)],
+                )
+                self.assertIn("Data / scope", fields.text)
+                self.assertNotIn("[reference]", fields.text)
+                self.assertIn('[reference] "0.70" → "0.60"', comparison.text)
+                self.assertNotIn("Data / scope", comparison.text)
+                assert fields.fix is not None and comparison.fix is not None
+                self.assertTrue(fields.fix.startswith("restore Data / scope as"))
+                self.assertIn(CORRECTION_ROUTE, fields.fix)
+                # the comparison has no correction in place: restore or anew
+                self.assertTrue(comparison.fix.startswith("restore [reference] as"))
+                self.assertNotIn(CORRECTION_ROUTE, comparison.fix)
+                self.assertIn("register anew", comparison.fix)
+
+    def test_a_decided_correction_leads_its_own_cause_only(self):
+        """The field's correction is decided: its finding leads with the
+        follow-up, the comparison's still with the restore."""
+        for fields, comparison in self.both([*SCOPE, self.REFERENCE], [REF, None]):
+            assert fields.fix is not None and comparison.fix is not None
+            self.assertTrue(fields.fix.startswith("the follow-up analysis audit on"))
+            self.assertIn(REF, fields.fix)
+            self.assertTrue(comparison.fix.startswith("restore [reference] as"))
+            self.assertNotIn(REF, comparison.fix)
+
+    def test_a_head_part_beside_the_comparison_keeps_its_open_assignment(self):
+        seen, now = self.both([("kind", "a", "b"), self.REFERENCE], [None, None])
+        for held in (seen, now):
+            self.assertEqual([f.rule for f in held], [OPEN_RULE, self.LAB_035])
+
+    def test_a_standing_adoption_is_withdrawn_first_in_each(self):
+        withdraw = Command(WITHDRAW, "protocol-fill --withdraw")
+        _, now = self.both([*SCOPE, self.REFERENCE], [None, None], withdraw=withdraw)
+        self.assertEqual([f.withdraw_first for f in now], [withdraw, withdraw])
+
+    def test_the_twin_one_cause_is_one_finding(self):
+        for diffs, rule in ((SCOPE, self.LAB_003), ([self.REFERENCE], self.LAB_035)):
+            with self.subTest(rule=rule.rule_id):
+                for held in self.both(diffs, [None] * len(diffs)):
+                    self.assertEqual([f.rule for f in held], [rule])
 
 
 class TheHoldAsTheRunSawIt(unittest.TestCase):
     """`seen_hold`: a change the answering run measured under."""
 
     def test_a_decided_correction_leads_with_the_follow_up_on_this_run(self):
-        f = pure_call(seen_hold, PID, "r2", FIRST, SCOPE, [REF], ANALYSIS)
+        (f,) = pure_call(seen_hold, PID, "r2", FIRST, SCOPE, [REF], ANALYSIS)
         self.assertEqual(
             (f.grade, f.rule, f.step),
             (
@@ -457,14 +541,14 @@ class TheHoldAsTheRunSawIt(unittest.TestCase):
     def test_the_twin_a_field_without_a_correction_leads_with_the_restore(self):
         """The question has no correction in place: the hold leads with the
         way back and says the question stands as registered."""
-        f = pure_call(seen_hold, PID, "r2", FIRST, QUESTION, [None], ANALYSIS)
+        (f,) = pure_call(seen_hold, PID, "r2", FIRST, QUESTION, [None], ANALYSIS)
         assert f.fix is not None
         self.assertTrue(f.fix.startswith("restore Question / hypothesis"), f.fix)
         self.assertNotIn("the follow-up analysis audit on", f.fix)
         self.assertIn(f"Question / hypothesis {STANDS_AS_REGISTERED}", f.fix)
         self.assertIn("register anew", f.fix)
         # a correctable field held without a decided correction: the route named
-        f = pure_call(seen_hold, PID, "r2", FIRST, SCOPE, [None], ANALYSIS)
+        (f,) = pure_call(seen_hold, PID, "r2", FIRST, SCOPE, [None], ANALYSIS)
         assert f.fix is not None
         self.assertIn(
             f"Data / scope misdescribing the unchanged run: {CORRECTION_ROUTE}", f.fix
@@ -607,7 +691,7 @@ class TheWayBackNamesWhatEachFieldHas(unittest.TestCase):
     beside one with it leads with the restore, not the follow-up."""
 
     def ways(self, diffs, refs) -> list[str]:
-        seen = pure_call(seen_hold, PID, "r2", FIRST, diffs, refs, ANALYSIS)
+        (seen,) = pure_call(seen_hold, PID, "r2", FIRST, diffs, refs, ANALYSIS)
         (now,) = pure_call(
             now_hold,
             PID,
