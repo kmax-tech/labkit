@@ -562,6 +562,8 @@ def stage(
     if problem and problem[0] == "refuse":
         raise console.Refused("usability", problem[1])
     if problem:
+        # a progress line of a command that builds a venv, left in place: its
+        # condition is `labkit_spec_problem`'s, tested on its own
         console.progress("usability", f"WARNING: {problem[1]}")
     sha = scaffold_sha()
     root.mkdir(parents=True, exist_ok=True)

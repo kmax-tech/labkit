@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from protocol_fixture import PID, head, run_record  # noqa: E402
 from state_fixture import AREA, area_state
@@ -12,6 +13,7 @@ from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
 from labkit.formats import protocol_block, repo
 from labkit.formats.gate import (
+    GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
     STATIC_EVIDENCE,
@@ -96,6 +98,33 @@ class Steps(unittest.TestCase):
         self.assertIn("no run in its lineage recorded models_resolved", warned[0].text)
         self.assertIn("is one draw — no spread", warned[1].text)
         self.assertEqual({f.rule for f in warned}, {OPEN_RULE})
+
+    def test_station_1_forwards_the_arms_lines_as_guaranteed_warnings(self):
+        """What the station adds to `arm_findings` (its conditions:
+        tests/test_arm_lines.py): each line a guaranteed WARNING with its
+        rule open. The twin: no line, no such warning."""
+        for lines in (["arm b: 3 of 12 rows without a prediction"], []):
+            with self.subTest(lines=lines), tempfile.TemporaryDirectory() as d:
+                protocol = self._area(d, None)
+                text = protocol.read_text(encoding="utf-8")
+                found = Findings(tell=None)
+                with mock.patch.object(finalize, "arm_findings", return_value=lines):
+                    finalize.check_answering_run(
+                        found,
+                        protocol.parent,
+                        protocol,
+                        text,
+                        protocol_block.head(text).id,
+                        state_of(protocol.parent),
+                    )
+                forwarded = [
+                    (f.grade, f.evidence_kind, f.rule)
+                    for f in found.found
+                    if f.text in lines
+                ]
+                self.assertEqual(
+                    forwarded, [("WARNING", GUARANTEED, OPEN_RULE)] * len(lines)
+                )
 
     def test_an_adopted_run_with_no_directory_is_one_blocker(self):
         with tempfile.TemporaryDirectory() as d:

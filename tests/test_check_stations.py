@@ -19,7 +19,14 @@ from labkit.checks import code_check, notes_check, protocol_report, run_record_c
 from labkit.formats import audit_gaps, promises, protocol_block, protocol_history
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 from labkit.gates import audit
-from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, VIOLATED, WARNING, Findings
+from labkit.formats.gate import (
+    GUARANTEED,
+    NOT_EXECUTABLE,
+    OPEN_RULE,
+    VIOLATED,
+    WARNING,
+    Findings,
+)
 from protocol_fixture import PID, head, run_record
 
 
@@ -100,6 +107,41 @@ class ANoteThatCannotBeOpened(unittest.TestCase):
         self.assertEqual(
             (f.grade, f.check_outcome, f.rule), (WARNING, NOT_EXECUTABLE, OPEN_RULE)
         )
+
+
+class TheSofterLinesOfANoteWarn(unittest.TestCase):
+    """`check_notes` forwards each softer line `check_file` returns as a
+    guaranteed WARNING with its rule open, and tells the note `OK` only when
+    neither a gap nor a softer line stands — what the caller adds to the
+    note's own checks (tests/test_read_causes.py, `NoteConventions`)."""
+
+    def checked(self, softer: list[str]) -> tuple[Findings, list[str]]:
+        found, told = Findings(tell=None), []
+        with (
+            mock.patch.object(notes_check, "Findings", return_value=found),
+            mock.patch.object(notes_check, "check_file", return_value=([], softer)),
+        ):
+            code = notes_check.check_notes([Path("notes/a.md")], tell=told.append)
+        self.assertEqual(code, 0)
+        return found, told
+
+    def test_a_softer_line_is_a_guaranteed_warning(self):
+        found, told = self.checked(["notes/a.md: line 3: a count without its run"])
+        (f,) = found.found
+        self.assertEqual(
+            (f.grade, f.text, f.evidence_kind, f.rule),
+            (
+                WARNING,
+                "notes/a.md: line 3: a count without its run",
+                GUARANTEED,
+                OPEN_RULE,
+            ),
+        )
+        self.assertNotIn("notes/a.md: OK", told)
+
+    def test_the_twin_a_clean_note_is_told_ok(self):
+        found, told = self.checked([])
+        self.assertEqual((found.found, told), ([], ["notes/a.md: OK"]))
 
 
 class AProtocolIdChangedAgainstHead(unittest.TestCase):
