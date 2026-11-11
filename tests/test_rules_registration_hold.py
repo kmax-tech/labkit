@@ -642,3 +642,47 @@ class TheWayBackNamesWhatEachFieldHas(unittest.TestCase):
                 )
                 self.assertNotIn("the follow-up analysis audit on", fix)
                 self.assertIn(f"Question / hypothesis {STANDS_AS_REGISTERED}", fix)
+
+
+class TheRuleAChangedRegistrationRecords(unittest.TestCase):
+    """`registration_rule`: the rule's text names a promise's sentence, key
+    and constant; a changed declared scope is named by no sentence of it."""
+
+    LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+
+    @staticmethod
+    def snap(sha: str, **ids: dict) -> dict:
+        return {"block_sha": sha, "ids": ids}
+
+    C1 = {"key": "criterion_1_pass", "constants": {"margin": 0.1}, "scope": ["a.py"]}
+
+    def rule(self, **now_ids: dict):
+        was = self.snap("s1", **{"criterion-1": self.C1})
+        return registration_hold.registration_rule(was, self.snap("s2", **now_ids))
+
+    def test_a_constant_a_key_or_a_sentence_changed_records_the_rule(self):
+        for part, value in (
+            ("constants", {"margin": 0.2}),
+            ("key", "criterion_1_ok"),
+            ("scope", ["a.py"]),  # only the sentence differs: the block's sha
+        ):
+            with self.subTest(part=part):
+                changed = {"criterion-1": {**self.C1, part: value}}
+                self.assertEqual(self.rule(**changed), self.LAB_003)
+
+    def test_a_promise_added_or_dropped_records_the_rule(self):
+        added = {"criterion-1": self.C1, "criterion-2": {**self.C1, "scope": ["b.py"]}}
+        self.assertEqual(self.rule(**added), self.LAB_003)
+        self.assertEqual(self.rule(), self.LAB_003)
+
+    def test_a_declared_scope_changed_is_open_alone_or_beside_a_constant(self):
+        moved = {**self.C1, "scope": ["b.py"]}
+        self.assertEqual(self.rule(**{"criterion-1": moved}), OPEN_RULE)
+        both = {**moved, "constants": {"margin": 0.2}}
+        self.assertEqual(self.rule(**{"criterion-1": both}), OPEN_RULE)
+
+    def test_the_twin_the_same_paths_in_another_order_are_no_scope_change(self):
+        two = {**self.C1, "scope": ["a.py", "b.py"]}
+        was = self.snap("s1", **{"criterion-1": two})
+        now = self.snap("s2", **{"criterion-1": {**two, "scope": ["b.py", "a.py"]}})
+        self.assertEqual(registration_hold.registration_rule(was, now), self.LAB_003)

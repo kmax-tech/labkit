@@ -181,9 +181,21 @@ def snapshot_changes(was: dict, now: dict) -> list[str]:
                 out.append(
                     f"[{i}] {name} {ca.get(name, '(none)')} → {cb.get(name, '(none)')}"
                 )
-        if sorted(a.get("scope") or []) != sorted(b.get("scope") or []):
+        if i in scope_changed_ids(was, now):
             out.append(f"[{i}] scope {a.get('scope')} → {b.get('scope')}")
     return out or ["a promise's sentence"]
+
+
+def scope_changed_ids(was: dict, now: dict) -> list[str]:
+    """The ids both promise snapshots WAS and NOW hold (`snapshot`) whose
+    declared scope differs — the paths the promise names, in any order; not
+    the code under them (`declared_scope_sha`). Sorted. Pure."""
+    old, new = was.get("ids") or {}, now.get("ids") or {}
+    return [
+        i
+        for i in sorted(set(old) & set(new))
+        if sorted(old[i].get("scope") or []) != sorted(new[i].get("scope") or [])
+    ]
 
 
 def block_stamp(text: str) -> str:

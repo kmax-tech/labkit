@@ -85,6 +85,16 @@ def scope_rule(diffs: list[tuple[str, str, str]]) -> RuleAssignment:
     return LAB_003
 
 
+def registration_rule(was: dict, now: dict) -> RuleAssignment:
+    """The rule the hold on a changed registration records, from the promise
+    snapshots WAS (the first measurement's) and NOW (the answering run's):
+    LAB_003, whose text names a promise's sentence, key and constant — an
+    id added or dropped changes those —; an open assignment as soon as a
+    promise's declared scope changed, which no sentence of it names. The
+    hold blocks either way. Pure."""
+    return OPEN_RULE if promises.scope_changed_ids(was, now) else LAB_003
+
+
 def registration_changes(
     area: Path,
     protocol: Path,
@@ -163,7 +173,7 @@ def registration_changes(
             f"when the registration cannot be answered as written, "
             + register_anew(pid)
             + " — the earlier protocol, its runs and their verdict stay",
-            rule=LAB_003,
+            rule=registration_rule(snap, now),
         )
     ]
 
