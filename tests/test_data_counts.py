@@ -15,6 +15,7 @@ from pathlib import Path
 from protocol_fixture import run_record  # noqa: E402
 from labkit.checks import data_counts
 from labkit.formats.area_state import state_of
+from labkit.formats.gate import TECHNICAL_RULE
 
 RUN = "2026-01-01T00-00-00_0001"
 
@@ -104,12 +105,14 @@ class HeldToTheRun(unittest.TestCase):
         typed = written.replace("3 labelled", "4 labelled")
         gap = data_counts.counts_gap(self.area, typed, state_of(self.area))
         assert gap is not None
-        self.assertIn("the counts differ", gap[0])
-        self.assertEqual(gap[1], RUN)
+        self.assertIn("the counts differ", gap.why)
+        self.assertEqual(gap.run_id, RUN)
+        self.assertEqual(gap.rule, data_counts.LAB_041)
         gone = written.replace(RUN, "2026-01-01T00-00-00_0009")
         gap = data_counts.counts_gap(self.area, gone, state_of(self.area))
         assert gap is not None
-        self.assertIn("which the area does not have", gap[0])
+        self.assertIn("which the area does not have", gap.why)
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
 
 
 if __name__ == "__main__":

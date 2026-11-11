@@ -17,10 +17,12 @@ the total alone registers counts the data does not hold.
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import runs
 from labkit.formats.area_state import AreaState
+from labkit.formats.gate import TECHNICAL_RULE, RuleAssignment, cited_rule
 from labkit.formats.protocol_block import COUNTS, is_stamp_placeholder
 
 #: the label of the field the counts stand in
@@ -102,30 +104,57 @@ def with_counts(value: str, counts: str) -> str:
     return f"{flat.rstrip(' .;')} · {counts}"
 
 
-def counts_gap(area: Path, value: str, state: AreaState) -> tuple[str, str] | None:
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
+
+
+@dataclass(frozen=True)
+class CountsGap:
+    """Why the generated counts of Data / scope do not hold.
+
+    Attributes:
+        why: The sentence.
+        run_id: The preparation run the part names — what writes the
+            counts again.
+        rule: The rule assignment of this cause: counts that differ from
+            the run's record LAB-041 Generate numbers, don't retype them; a
+            named run the area does not have, or one that is no completed
+            preparation run with its counts, the technical contract — the
+            part cannot be held to a run.
+    """
+
+    why: str
+    run_id: str
+    rule: RuleAssignment
+
+
+def counts_gap(area: Path, value: str, state: AreaState) -> CountsGap | None:
     """Why the generated counts in Data / scope VALUE do not hold, with the
-    command that writes them again: (sentence, run id) — the run the part
-    names is not a completed preparation run of AREA, or the part differs
-    from what that run recorded (`counts_text`): typed or stale. None when
-    VALUE holds no generated part, or it holds."""
+    run that writes them again and the rule of the cause (`CountsGap`) —
+    the run the part names is not a completed preparation run of AREA, or
+    the part differs from what that run recorded (`counts_text`): typed or
+    stale. None when VALUE holds no generated part, or it holds."""
     m = COUNTS.search(" ".join(value.split()))
     if m is None:
         return None
     run_id = m.group("run")
     run_dir = runs.run_path(area, run_id)
     if run_id not in {rd.dir.name for rd in state.runs}:
-        return (
+        return CountsGap(
             f"{FIELD} names prepare run {run_id}, which the area does not have",
             run_id,
+            TECHNICAL_RULE,
         )
     try:
         expected = counts_text(run_dir)
     except ValueError as exc:
-        return f"{FIELD} names prepare run {run_id}: {exc}", run_id
+        return CountsGap(
+            f"{FIELD} names prepare run {run_id}: {exc}", run_id, TECHNICAL_RULE
+        )
     if m.group(0) != expected:
-        return (
+        return CountsGap(
             f"{FIELD}: the counts differ from what prepare run {run_id} recorded "
             f"— typed or stale (it records: {expected})",
             run_id,
+            LAB_041,
         )
     return None

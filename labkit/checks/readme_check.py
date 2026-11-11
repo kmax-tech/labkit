@@ -13,6 +13,14 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.gate import (
+    GUARANTEED,
+    OPEN_RULE,
+    WARNING,
+    GateFinding,
+    RuleAssignment,
+    cited_rule,
+)
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files, readme_text, parse_source
 
 
@@ -64,12 +72,21 @@ ROUTE_STATIONS = (
 )
 
 
-def readme_route(area: Path, protocol_name: str) -> list[str]:
-    """Why the README's route block cannot lead a reader: no block between
-    the markers, the protocol or a station not named, or
+CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
+
+
+def _route_warning(text: str, rule: RuleAssignment) -> GateFinding:
+    return GateFinding(WARNING, text, rule=rule, evidence_kind=GUARANTEED)
+
+
+def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
+    """Why the README's route block cannot lead a reader, each a warning:
+    no block between the markers, the protocol or a station not named, or
     `scripts/01_measure.py` without an `evaluate_rows`. No README: nothing.
     The block is checked, never written — finalize reads only; the stamp
-    writes it.
+    writes it. A script that is missing or defines no `evaluate_rows`
+    records CODE-016 The experiment area reconstructs itself; the block and
+    its stations record an open assignment — no rule names them.
 
     Raises:
         SourceError: `scripts/01_measure.py` does not parse — the gate
@@ -81,23 +98,39 @@ def readme_route(area: Path, protocol_name: str) -> list[str]:
     start, end = text.find(ROUTE_START), text.find(ROUTE_END)
     if start < 0 or end < start:
         return [
-            f"README.md: no {ROUTE_START} … {ROUTE_END} block — the route "
-            f"(protocol · runlog · labkit-params · evaluate_rows · config.json) "
-            f"is what a reader opens first"
+            _route_warning(
+                f"README.md: no {ROUTE_START} … {ROUTE_END} block — the route "
+                f"(protocol · runlog · labkit-params · evaluate_rows · config.json) "
+                f"is what a reader opens first",
+                OPEN_RULE,
+            )
         ]
     block = text[start:end]
     out = []
     if protocol_name not in block:
-        out.append(f"README.md route: does not name {protocol_name}")
+        out.append(
+            _route_warning(f"README.md route: does not name {protocol_name}", OPEN_RULE)
+        )
     for station in ROUTE_STATIONS:
         if station not in block:
-            out.append(f"README.md route: does not name {station}")
+            out.append(
+                _route_warning(f"README.md route: does not name {station}", OPEN_RULE)
+            )
     script = area / "scripts" / "01_measure.py"
     if script not in area_files(area, (SCRIPT_GLOB,)):
-        out.append("README.md route: scripts/01_measure.py does not exist")
+        out.append(
+            _route_warning(
+                "README.md route: scripts/01_measure.py does not exist", CODE_016
+            )
+        )
     elif not any(
         isinstance(n, ast.FunctionDef) and n.name == "evaluate_rows"
         for n in parse_source(script).body
     ):
-        out.append("README.md route: scripts/01_measure.py defines no evaluate_rows")
+        out.append(
+            _route_warning(
+                "README.md route: scripts/01_measure.py defines no evaluate_rows",
+                CODE_016,
+            )
+        )
     return out

@@ -20,7 +20,9 @@ from labkit.formats.gate import (
     cited_rule,
     STATIC_EVIDENCE,
     VIOLATED,
+    WARNING,
     Findings,
+    GateFinding,
 )
 from labkit.gates.preflight import AreaTests, tell_test_run
 from labkit.formats.scope_sha import SourceError
@@ -77,7 +79,8 @@ class Steps(unittest.TestCase):
     def test_station_1_tells_the_run_checks_sentences_as_warnings(self):
         """The station forwards the run checks' sentences about the chosen
         run: a model run whose lineage recorded no models_resolved, and its
-        single draw, are guaranteed warnings with their rule open."""
+        single draw, are guaranteed warnings, each with the rule of its
+        cause."""
         with tempfile.TemporaryDirectory() as d:
             protocol = self._area(d, None)
             chosen = protocol.parent / "runs" / "2026-10-07T10-00-00_aa11"
@@ -99,18 +102,27 @@ class Steps(unittest.TestCase):
         self.assertEqual(len(warned), 2, [f.text for f in found.found])
         self.assertIn("no run in its lineage recorded models_resolved", warned[0].text)
         self.assertIn("is one draw — no spread", warned[1].text)
-        self.assertEqual({f.rule for f in warned}, {OPEN_RULE})
+        self.assertEqual(
+            [f.rule for f in warned],
+            [run_record_check.LAB_027, run_record_check.LAB_036],
+        )
 
     def test_station_1_forwards_the_arms_lines_as_guaranteed_warnings(self):
         """What the station adds to `arm_findings` (its conditions:
-        tests/test_arm_lines.py): each line a guaranteed WARNING with its
-        rule open. The twin: no line, no such warning."""
+        tests/test_arm_lines.py): nothing — each warning is told as the
+        check built it, its rule the cause's. The twin: no warning, none
+        told."""
+        rule = cited_rule("LAB-027 Model discipline")
         for lines in (["arm b: 3 of 12 rows without a prediction"], []):
             with self.subTest(lines=lines), tempfile.TemporaryDirectory() as d:
                 protocol = self._area(d, None)
                 text = protocol.read_text(encoding="utf-8")
                 found = Findings(tell=None)
-                with mock.patch.object(finalize, "arm_findings", return_value=lines):
+                built = [
+                    GateFinding(WARNING, line, rule=rule, evidence_kind=GUARANTEED)
+                    for line in lines
+                ]
+                with mock.patch.object(finalize, "arm_findings", return_value=built):
                     finalize.check_answering_run(
                         found,
                         protocol.parent,
@@ -125,7 +137,7 @@ class Steps(unittest.TestCase):
                     if f.text in lines
                 ]
                 self.assertEqual(
-                    forwarded, [("WARNING", GUARANTEED, OPEN_RULE)] * len(lines)
+                    forwarded, [("WARNING", GUARANTEED, rule)] * len(lines)
                 )
 
     def test_an_adopted_run_with_no_directory_is_one_blocker(self):
@@ -220,11 +232,13 @@ class ModelProvenanceGap(unittest.TestCase):
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"criterion_1_pass": True, "llm_retries": 0}, {})
-            gap = run_record_check.model_provenance_gap(run) or ""
+            gap = run_record_check.model_provenance_gap(run)
+            assert gap is not None
             self.assertIn(
                 "called a model, but no run in its lineage recorded models_resolved",
-                gap,
+                gap.text,
             )
+            self.assertEqual(gap.rule, run_record_check.LAB_027)
 
     def test_a_model_run_with_models_resolved_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
@@ -333,26 +347,31 @@ class ReadmeRoute(unittest.TestCase):
             area = self._area(d, "# x\n\nDie Zahlen entstehen in comparison.py.\n")
             got = readme_check.readme_route(area, "PROTOCOL-a.md")
             self.assertEqual(len(got), 1)
-            self.assertIn("no <!-- labkit:route -->", got[0])
+            self.assertIn("no <!-- labkit:route -->", got[0].text)
+            self.assertEqual(got[0].rule, OPEN_RULE)
 
     def test_a_missing_station_or_wrong_protocol_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, ROUTE.replace("`labkit-params .`", "`params`"))
+            got = readme_check.readme_route(area, "PROTOCOL-b.md")
             self.assertEqual(
-                readme_check.readme_route(area, "PROTOCOL-b.md"),
+                [g.text for g in got],
                 [
                     "README.md route: does not name PROTOCOL-b.md",
                     "README.md route: does not name labkit-params",
                 ],
             )
+            self.assertEqual({g.rule for g in got}, {OPEN_RULE})
 
     def test_a_script_without_evaluate_rows_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, ROUTE, script="def evaluate(rows):\n    return {}\n")
+            got = readme_check.readme_route(area, "PROTOCOL-a.md")
             self.assertEqual(
-                readme_check.readme_route(area, "PROTOCOL-a.md"),
+                [g.text for g in got],
                 ["README.md route: scripts/01_measure.py defines no evaluate_rows"],
             )
+            self.assertEqual(got[0].rule, readme_check.CODE_016)
 
     def test_a_script_that_does_not_parse_raises_naming_it(self):
         # an unterminated f-string, as a sed edit leaves one: an error naming
@@ -438,7 +457,8 @@ class DataCountsStation(unittest.TestCase):
         (f,) = found.found
         self.assertIn("names prepare run r9, which the area does not have", f.text)
         self.assertIn("--data-counts r9", f.fix or "")
-        self.assertEqual(f.rule, OPEN_RULE)
+        # a named run the area does not have: the cause's rule, not the station's
+        self.assertEqual(f.rule, TECHNICAL_RULE)
 
     def test_the_twin_a_scope_without_generated_counts_passes(self):
         held, found = self._station("data/x.csv, 4 items")

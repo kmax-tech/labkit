@@ -45,6 +45,7 @@ from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import promises, protocol_block
 from labkit.formats.gate import (
+    GUARANTEED,
     OPEN_RULE,
     STATIC_EVIDENCE,
     TECHNICAL_RULE,
@@ -91,6 +92,8 @@ from labkit.formats.commands import gate_command, measure_anew
 
 LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
+LAB_027 = cited_rule("LAB-027 Model discipline")
+LAB_036 = cited_rule("LAB-036 Validate, don't trust a single run")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_057 = cited_rule("LAB-057 One area per idea")
 
@@ -516,7 +519,7 @@ def _criterion_n_warning(text: str) -> GateFinding:
 
 def provenance_findings(
     area: Path, answering_run: Path
-) -> tuple[list[GateFinding], list[str], list[str]]:
+) -> tuple[list[GateFinding], list[GateFinding], list[str]]:
     """(blockers, warnings, outside) for a run at low repeat cost: every
     source the run read is frozen in its record (`data=`), its bytes now
     are the ones the record's sha256 names, and in the repository git
@@ -531,9 +534,11 @@ def provenance_findings(
     in that error, not in a blocker with a way out that may not lead out.
     A `data=` entry naming no path blocks. Outside a git repository every
     source is still held to its record; git's half is skipped with a
-    warning."""
+    warning, a check that cannot run and the technical contract. The two
+    warnings on the outputs (none registered, one untracked) record an open
+    assignment: no rule's sentence states either."""
     sources, blockers = _recorded_sources(area, answering_run)
-    warnings: list[str] = []
+    warnings: list[GateFinding] = []
     outside: list[str] = []
     cfg = read_run_config(answering_run)
     if not sources and not blockers and cfg is not None:
@@ -545,7 +550,12 @@ def provenance_findings(
     outputs: list[Path] = [o.path for o in registered or []]
     if registered is None:
         warnings.append(
-            "no outputs.json — the run registered no output file (run.output)"
+            GateFinding(
+                WARNING,
+                "no outputs.json — the run registered no output file (run.output)",
+                rule=OPEN_RULE,
+                evidence_kind=GUARANTEED,
+            )
         )
     repo = git_root(area)
     # outside a repository the bytes are still held to the record; only
@@ -558,7 +568,13 @@ def provenance_findings(
             outside.append(note)
     if repo is None:
         warnings.append(
-            "not a git repository — cannot tell whether source and output are committed"
+            GateFinding(
+                WARNING,
+                "not a git repository — cannot tell whether source and output "
+                "are committed",
+                rule=TECHNICAL_RULE,
+                evidence_kind=GUARANTEED,
+            )
         )
         return blockers, warnings, outside
     # The output rows are born after the run, so on every first pass they are
@@ -568,8 +584,13 @@ def provenance_findings(
     for f in outputs:
         if path_kind(f) is not None and not tracked(repo, f):
             warnings.append(
-                f"output {f.name} is not yet tracked — `git add {f}` before "
-                f"the commit that cites the number"
+                GateFinding(
+                    WARNING,
+                    f"output {f.name} is not yet tracked — `git add {f}` before "
+                    f"the commit that cites the number",
+                    rule=OPEN_RULE,
+                    evidence_kind=GUARANTEED,
+                )
             )
     return blockers, warnings, outside
 
@@ -863,46 +884,64 @@ def called_a_model(answering_run: Path) -> bool:
     return "llm_retries" in metrics or (isinstance(calls, int) and calls > 0)
 
 
-def single_draw(area: Path, answering_run: Path) -> str | None:
+def single_draw(area: Path, answering_run: Path) -> GateFinding | None:
     """Why the number shows no spread, or None: the run asked a model and
     has no repeat (`runlog` repeat_of). One draw per item cannot show how
-    far the number moves. A warning, never a blocker: whether a spread is owed is the protocol's.
+    far the number moves — LAB-036 Validate, don't trust a single run. A
+    warning, never a blocker: whether a spread is owed is the protocol's.
     A run in the area that cannot say whether it is a draw (unreadable, a
-    broken or doubled draw number) is said here, not raised past."""
+    broken or doubled draw number) is said here, not raised past: a record
+    that does not read, the technical contract."""
     if not called_a_model(answering_run):
         return None
     try:
         if repeats_of(area, answering_run.name):
             return None
     except RunConfigError as exc:
-        return f"the draws of {answering_run.name} cannot be counted: {exc}"
-    return (
+        return GateFinding(
+            WARNING,
+            f"the draws of {answering_run.name} cannot be counted: {exc}",
+            rule=TECHNICAL_RULE,
+            evidence_kind=GUARANTEED,
+        )
+    return GateFinding(
+        WARNING,
         f"{answering_run.name} is one draw — no spread: `scripts/01_measure.py "
         f"--repeat-of {answering_run.name}` draws it again, `02_analyze.py "
-        f"--draws` shows how far the number moves"
+        f"--draws` shows how far the number moves",
+        rule=LAB_036,
+        evidence_kind=GUARANTEED,
     )
 
 
-def model_provenance_gap(answering_run: Path) -> str | None:
-    """Why the run's model cannot be named from its record, or None: its
-    metrics show model calls (`llm_retries` recorded, or `model_calls` > 0)
-    while no run in its lineage recorded `models_resolved` — the alias was
-    not under `model`/`*_model`, the keys runlog resolves (one recorded as
-    `judge` is not resolved). Static evidence:
-    a run without those keys may still have called a model."""
+def model_provenance_gap(answering_run: Path) -> GateFinding | None:
+    """Why the run's model cannot be named from its record, a warning, or
+    None: its metrics show model calls (`llm_retries` recorded, or
+    `model_calls` > 0) while no run in its lineage recorded
+    `models_resolved` — the alias was not under `model`/`*_model`, the keys
+    runlog resolves (one recorded as `judge` is not resolved): LAB-027
+    Model discipline. A lineage that does not read is the technical
+    contract. Its limit: a run without those metrics keys may still have
+    called a model."""
     if not called_a_model(answering_run):
         return None
     try:
         if model_provenance_run(answering_run) is not None:
             return None
     except ValueError as exc:
-        return (
-            f"model provenance: the lineage of {answering_run.name} is broken — {exc}"
+        return GateFinding(
+            WARNING,
+            f"model provenance: the lineage of {answering_run.name} is broken — {exc}",
+            rule=TECHNICAL_RULE,
+            evidence_kind=GUARANTEED,
         )
-    return (
+    return GateFinding(
+        WARNING,
         f"{answering_run.name} called a model, but no run in its lineage recorded "
         f"models_resolved — record the alias under `model` (runlog resolves it); "
-        f"a spec under another key is not provenance labkit can hold"
+        f"a spec under another key is not provenance labkit can hold",
+        rule=LAB_027,
+        evidence_kind=GUARANTEED,
     )
 
 
@@ -1021,15 +1060,18 @@ def _rows_carry_code(path: Path) -> bool:
     )
 
 
-def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:
+def arm_findings(text: str, area: Path, answering_run: Path) -> list[GateFinding]:
     """Warnings: every arm the head declares (`[model.arms.<arm>]`: profile,
     fingerprint, alias — `protocol_block.model`) is held to the answering
     run — the profile file exists in the repo, and fingerprint and alias
     stand somewhere in the run's config.json. The table is what a reader of
     the protocol gets instead of opening the register. No arms, no `[model]`, or a
     head that does not read (the head check names that): nothing claimed,
-    nothing checked."""
-    out: list[str] = []
+    nothing checked. Each warning records the rule of its cause: an alias
+    the run did not record LAB-027 Model discipline, a profile file that is
+    not there the technical contract (a reference that leads nowhere), a
+    fingerprint the run did not record open."""
+    out: list[GateFinding] = []
     try:
         declared = protocol_block.model(text)
     except protocol_block.BlockError:
@@ -1044,18 +1086,34 @@ def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:
     for arm, a in declared.arms.items():
         if path_kind(root / a.profile) != "file":
             out.append(
-                f"arm `{arm}`: the protocol names {a.profile}, no such file under {root}"
+                GateFinding(
+                    WARNING,
+                    f"arm `{arm}`: the protocol names {a.profile}, no such file "
+                    f"under {root}",
+                    rule=TECHNICAL_RULE,
+                    evidence_kind=GUARANTEED,
+                )
             )
         if a.fingerprint not in recorded:
             out.append(
-                f"arm `{arm}`: the protocol names fingerprint {a.fingerprint}, the "
-                f"answering run recorded no such value — the profile changed after the "
-                f"stamp, or the run did not record its fingerprints"
+                GateFinding(
+                    WARNING,
+                    f"arm `{arm}`: the protocol names fingerprint {a.fingerprint}, the "
+                    f"answering run recorded no such value — the profile changed after the "
+                    f"stamp, or the run did not record its fingerprints",
+                    rule=OPEN_RULE,
+                    evidence_kind=GUARANTEED,
+                )
             )
         if a.alias and a.alias not in recorded:
             out.append(
-                f"arm `{arm}`: the protocol names alias {a.alias}, the answering run "
-                f"recorded no such alias"
+                GateFinding(
+                    WARNING,
+                    f"arm `{arm}`: the protocol names alias {a.alias}, the answering run "
+                    f"recorded no such alias",
+                    rule=LAB_027,
+                    evidence_kind=GUARANTEED,
+                )
             )
     return out
 

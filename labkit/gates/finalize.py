@@ -100,6 +100,7 @@ from labkit.formats.gate import (
     OPEN_RULE,
     STATIC_EVIDENCE,
     TECHNICAL_RULE,
+    WARNING,
     GateFinding,
     blocker,
     cited_rule,
@@ -117,6 +118,8 @@ from labkit.formats import (
 from labkit.formats.standard_contract import COMPUTE_KIND, lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
+    NO_MEASUREMENT,
+    UNFROZEN_ACK,
     ArtefactError,
     MetricsError,
     kept_jsonl_rows,
@@ -187,6 +190,7 @@ LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
+LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 def choose_answering_run(
@@ -303,25 +307,41 @@ def check_answering_run(
             *unreportable_warnings(answering_run),
         ):
             if warning:
-                findings.warn(warning, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+                findings.take(warning)
         blockers, notes = row_provenance_findings(answering_run)
         findings.take_all(blockers)
         for n in notes:
             findings.note(f"  {n}")
-        for w in arm_findings(text, area, answering_run):
-            findings.warn(w, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.take_all(arm_findings(text, area, answering_run))
     return answering_run
 
 
-def unreportable_warnings(answering_run: Path) -> list[str]:
+#: the rule assignment of each cause that makes a run's number unreportable
+#: (`runs.Unreportable.cause`): a run that is no measurement breaks LAB-104
+#: A number leaves the area only through its adoption ("that run is a full
+#: run"); for a run acknowledged over an unfrozen protocol no sentence
+#: states it for every such run
+UNREPORTABLE_RULES = {
+    NO_MEASUREMENT: LAB_104,
+    UNFROZEN_ACK: OPEN_RULE,
+}
+
+
+def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
     """Why the answering run's number cannot be reported (`runs.unreportable`),
-    each a warning here: finalize holds the run, report-check refuses the report."""
+    each a warning here with the rule of its cause: finalize holds the run,
+    report-check refuses the report."""
     cfg = read_run_config(answering_run)
     if cfg is None:
         return []
     return [
-        f"the answering run {answering_run.name}: {mark} — its number cannot "
-        f"be reported (report-check refuses it)"
+        GateFinding(
+            WARNING,
+            f"the answering run {answering_run.name}: {mark.why} — its number "
+            f"cannot be reported (report-check refuses it)",
+            rule=UNREPORTABLE_RULES[mark.cause],
+            evidence_kind=GUARANTEED,
+        )
         for mark in unreportable(cfg)
     ]
 
@@ -515,8 +535,7 @@ def check_open_fields(
         findings.take(unreadable_source(exc))
         route = [str(exc)]
     else:
-        for line in route:
-            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.take_all(route)
     counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")
@@ -535,12 +554,11 @@ def check_data_counts(
     gap = data_counts.counts_gap(protocol.parent, hit.value if hit else "", state)
     if gap is None:
         return True
-    why, run_id = gap
     findings.block(
-        why,
-        fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {run_id}` "
+        gap.why,
+        fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {gap.run_id}` "
         f"writes them from the run — never typed",
-        rule=OPEN_RULE,
+        rule=gap.rule,
     )
     return False
 
@@ -552,8 +570,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     an untracked one a warning (`provenance_findings`)."""
     b, w, outside = provenance_findings(area, answering_run)
     findings.take_all(b)
-    for line in w:
-        findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+    findings.take_all(w)
     for line in outside:
         findings.note(f"  {line}")
     if not b and not w:

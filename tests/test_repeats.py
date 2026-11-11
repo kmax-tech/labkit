@@ -25,6 +25,7 @@ from labkit.formats.area_state import state_of
 from labkit.checks import recheck
 from labkit.run import runlog, provenance
 from labkit.formats import runs, answering_run
+from labkit.formats.gate import TECHNICAL_RULE
 
 
 def _read(table: dict) -> runs.RunConfig:
@@ -112,10 +113,10 @@ class Repeats(unittest.TestCase):
         metrics = primary / "metrics.json"
         m = json.loads(metrics.read_text())
         metrics.write_text(json.dumps({**m, "llm_retries": 0}), encoding="utf-8")
-        self.assertIn(
-            "is one draw — no spread",
-            run_record_check.single_draw(self.area, primary) or "",
-        )
+        one = run_record_check.single_draw(self.area, primary)
+        assert one is not None
+        self.assertIn("is one draw — no spread", one.text)
+        self.assertEqual(one.rule, run_record_check.LAB_036)
         self._run(repeat_of=first)
         self.assertIsNone(run_record_check.single_draw(self.area, primary))
 
@@ -359,13 +360,16 @@ class Repeats(unittest.TestCase):
         (run / "metrics.json").write_text(
             json.dumps({"criterion_1_pass": True, "model_calls": 2}), encoding="utf-8"
         )
-        self.assertIn("is one draw", run_record_check.single_draw(self.area, run) or "")
+        one = run_record_check.single_draw(self.area, run)
+        assert one is not None
+        self.assertIn("is one draw", one.text)
         bad = self.area / "runs" / "2026-10-15T00-00-00_dead"
         bad.mkdir()
         (bad / "config.json").write_text("{not json", encoding="utf-8")
-        self.assertIn(
-            "cannot be counted", run_record_check.single_draw(self.area, run) or ""
-        )
+        uncounted = run_record_check.single_draw(self.area, run)
+        assert uncounted is not None
+        self.assertIn("cannot be counted", uncounted.text)
+        self.assertEqual(uncounted.rule, TECHNICAL_RULE)
 
     def test_a_derived_run_needs_a_completed_primary_parent(self):
         """Every kind of parent a derived run can name. A derived run is no

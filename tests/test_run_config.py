@@ -78,7 +78,9 @@ class Fields(unittest.TestCase):
         (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
         cfg = runs.read_run_config(run)
         assert cfg is not None
-        self.assertIn("LABKIT_UNFROZEN=1", " ".join(runs.unreportable(cfg)))
+        self.assertIn(
+            "LABKIT_UNFROZEN=1", " ".join(m.why for m in runs.unreportable(cfg))
+        )
         del record["unfrozen_ack"]
         (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
         with self.assertRaisesRegex(runs.RunConfigError, "unfrozen_ack missing"):

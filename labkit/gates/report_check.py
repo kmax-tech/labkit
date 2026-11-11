@@ -142,7 +142,11 @@ from labkit.checks.audit_binding import (
     analysis_now,
     covering_analysis,
 )
-from labkit.gates.finalize import finalize_area, unreportable_warnings
+from labkit.gates.finalize import (
+    UNREPORTABLE_RULES,
+    finalize_area,
+    unreportable_warnings,
+)
 from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
 from labkit.gates.report_hold import (
@@ -516,11 +520,11 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
     )
     return [
         blocker(
-            f"the answering run {ctx.run.name}: {mark} — its number cannot be "
+            f"the answering run {ctx.run.name}: {mark.why} — its number cannot be "
             f"reported; a reported number owes {owed}",
             fix=f"measure in full{' after the freeze' if freeze_owed else ''}: "
             f"{measure}, then audit that run",
-            rule=OPEN_RULE,
+            rule=UNREPORTABLE_RULES[mark.cause],
         )
         for mark in unreportable(cfg)
     ]
@@ -637,7 +641,7 @@ def without_unreportable_warnings(
     run."""
     if run is None:
         return finalized
-    told = {FINALIZE + line for line in unreportable_warnings(run)}
+    told = {FINALIZE + w.text for w in unreportable_warnings(run)}
     return [f for f in finalized if not (f.grade == WARNING and f.text in told)]
 
 

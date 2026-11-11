@@ -749,18 +749,47 @@ def _repeat_shape_problem(cfg: JsonObject) -> str | None:
     return None
 
 
-def unreportable(cfg: RunConfig) -> list[str]:
-    """Reasons this run cannot supply a reported result.
+#: why a run cannot supply a reported result (`Unreportable.cause`)
+NO_MEASUREMENT = "no measurement"
+UNFROZEN_ACK = "unfrozen acknowledgement"
+
+
+@dataclass(frozen=True)
+class Unreportable:
+    """One reason a run cannot supply a reported result.
+
+    Attributes:
+        cause: NO_MEASUREMENT or UNFROZEN_ACK — what a gate reads its rule
+            assignment from (`finalize.UNREPORTABLE_RULES`), never the words.
+        why: The mark, as a gate's sentence continues it.
+    """
+
+    cause: str
+    why: str
+
+
+def unreportable(cfg: RunConfig) -> list[Unreportable]:
+    """Reasons this run cannot supply a reported result, each with its
+    cause as data.
 
     Only a measurement without an unfrozen acknowledgement is eligible;
     the release gate checks completion, audits and recomputation separately.
     """
-    marks: list[str] = []
+    marks: list[Unreportable] = []
     if cfg.run_kind != MEASUREMENT:
-        marks.append(f"a {cfg.run_kind} (run_kind={cfg.run_kind!r}), not a measurement")
+        marks.append(
+            Unreportable(
+                NO_MEASUREMENT,
+                f"a {cfg.run_kind} (run_kind={cfg.run_kind!r}), not a measurement",
+            )
+        )
     if cfg.unfrozen_ack:
         marks.append(
-            "a full run acknowledged over an unfrozen protocol with LABKIT_UNFROZEN=1"
+            Unreportable(
+                UNFROZEN_ACK,
+                "a full run acknowledged over an unfrozen protocol with "
+                "LABKIT_UNFROZEN=1",
+            )
         )
     return marks
 

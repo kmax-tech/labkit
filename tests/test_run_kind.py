@@ -71,7 +71,7 @@ class RunKind(unittest.TestCase):
             cfg = runs.read_run_config(run.dir)
             assert cfg is not None
             self.assertEqual(cfg.run_kind, "preparation")
-            self.assertIn("not a measurement", runs.unreportable(cfg)[0])
+            self.assertIn("not a measurement", runs.unreportable(cfg)[0].why)
 
     def test_current_records_require_a_valid_kind_and_reject_the_old_schema(self):
         for kind in (None, "other", True, "preparation", "probe", "measurement"):

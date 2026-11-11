@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, runs  # noqa: E402
 from labkit.gates import finalize, report_check  # noqa: E402
+from labkit.formats.gate import OPEN_RULE  # noqa: E402
 from protocol_fixture import (
     protocol_id_of,
     registration_of,
@@ -234,6 +235,14 @@ class UnreportableRun(unittest.TestCase):
         )
         both = runs.unreportable(record(run_kind="probe", unfrozen_ack=True))
         self.assertEqual(len(both), 2)
+        # the cause is data, and the gates read the rule from it
+        self.assertEqual(
+            [m.cause for m in both], [runs.NO_MEASUREMENT, runs.UNFROZEN_ACK]
+        )
+        self.assertEqual(
+            [finalize.UNREPORTABLE_RULES[m.cause] for m in both],
+            [finalize.LAB_104, OPEN_RULE],
+        )
         with self.assertRaises(runs.RunConfigError):  # refused where it is read
             record(run_kind="yes")
 

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from protocol_fixture import head, run_record  # noqa: E402
 from labkit.checks import run_record_check
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
 ALIAS = "gpt-oss-20b-leguin"
@@ -80,8 +81,9 @@ class ArmLines(unittest.TestCase):
             got = run_record_check.arm_findings(TEXT, area, run)
             self.assertEqual(len(got), 1)
             self.assertIn(
-                f"arm `after`: the protocol names fingerprint {SHA_A}", got[0]
+                f"arm `after`: the protocol names fingerprint {SHA_A}", got[0].text
             )
+            self.assertEqual(got[0].rule, OPEN_RULE)
 
     def test_a_missing_profile_and_an_unrecorded_alias_are_named(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -94,14 +96,18 @@ class ArmLines(unittest.TestCase):
                 1,
             )
             got = run_record_check.arm_findings(text, area, run)
-            self.assertTrue(
-                any("names register/profiles/a.toml, no such file" in g for g in got),
-                got,
-            )
-            self.assertTrue(
-                any("arm `before`: the protocol names alias haiku" in g for g in got),
-                got,
-            )
+            rules = {
+                g.rule
+                for g in got
+                if "names register/profiles/a.toml, no such file" in g.text
+            }
+            self.assertEqual(rules, {TECHNICAL_RULE}, got)
+            rules = {
+                g.rule
+                for g in got
+                if "arm `before`: the protocol names alias haiku" in g.text
+            }
+            self.assertEqual(rules, {run_record_check.LAB_027}, got)
 
     def test_no_arm_line_claims_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as d:
