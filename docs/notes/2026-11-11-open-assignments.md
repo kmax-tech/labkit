@@ -1,18 +1,18 @@
 # The 68 open rule assignments, site by site — 2026-11-11
 
-*Working note · read by one session, decided by the author where the text says so, not reviewed by a second reader · sites as at 91f9a1c6*
+*Working note · read by one session, decided by the author where the text says so, not reviewed by a second reader · sites as at 91f9a1c6; the split of the mixed sites and the two open lists as at 28dd8000*
 
 The [review of the rule assignments](2026-11-11-rule-assignment-review.md) left 68 finding sites with an open assignment. The author's work order (TODO, "Arbeitsauftrag für die 68 offenen Zuordnungen") asks for each site one of four findings: a technical contract with the contract named, a methodical duty with the sentence of the rule that states it, a methodical duty no decided rule states, or a check without grounds. A site that forwards several causes gets its assignment where the cause is found. An open assignment weakens no gate: every check blocks or warns as before. Two messages changed their wording, no check changed its grade.
 
-State (`python -m labkit.tools.check_inventory`): 260 finding sites, 83 with a known rule, 76 technical contracts, 30 open, 9 whose rule the cause passes in. Before the pass: 256, 73, 52, 68, 1. The site count rose because four sites that told two causes are two sites each now.
+State after the split of the mixed sites (`python -m labkit.tools.check_inventory`, 28dd8000): 278 finding sites, 92 with a known rule, 80 technical contracts, 24 open, 20 whose rule the cause passes in. After the first pass (91f9a1c6): 260, 83, 76, 30, 9. Before it: 256, 73, 52, 68, 1. The site count rises where a site that told several causes is one site per cause now. Open causes are counted apart from open sites: `OPEN_RULE` stands 33 times in the package's code outside its definition — at the 24 open sites and at 9 causes a site receives its rule from (counted by hand with `grep`; the inventory does not count them yet).
 
-| Finding                                       | Sites of the 68 | State                         |
-|-----------------------------------------------|-----------------|-------------------------------|
-| technical contract, contract named            | 21              | entered                       |
-| known rule, sentence named                    | 8               | entered                       |
-| the cause names the rule, at the source       | 9               | entered                       |
-| several causes at one site, split still to do | 15              | open, next step               |
-| methodical duty no decided rule states        | 15              | open, the author decides each |
+| Finding                                    | Sites of the 68 | State                         |
+|--------------------------------------------|-----------------|-------------------------------|
+| technical contract, contract named         | 21              | entered                       |
+| known rule, sentence named                 | 8               | entered                       |
+| the cause names the rule, at the source    | 9               | entered                       |
+| several causes at one site, split by cause | 15              | entered, 16 causes stay open  |
+| methodical duty no decided rule states     | 15              | open, the author decides each |
 
 No site was found whose check has no grounds at all. One part of a mixed site is a candidate: the README's route block (`finalize.check_open_fields`), which no rule names and no code reads.
 
@@ -91,27 +91,72 @@ These sites told several duties under one assignment. The cause now carries the 
 
 Two causes in the field list stay open and no longer show in the inventory's count of open sites: the model claim on the wrong kind (`protocol_check.kind_gap`) and `frozen = true` at low repeat cost.
 
-## Open: several causes at one site (15)
+## Entered: several causes at one site, split by cause (15)
 
-Each forwards messages whose causes break different rules or none. The causes per site stand in the readers' tables of the review (`labkit-evidence`, folder `2026-11-11-rule-assignment-review`).
+Each of these sites forwarded messages whose causes break different rules or none. Now the code that finds the cause names its rule, and the site tells the finding as built (commits 152f8ac7, 0926caa9, 28dd8000). The causes per site come from the readers' tables of the review (`labkit-evidence`, folder `2026-11-11-rule-assignment-review`); each quoted sentence was read again in `labkit/docs/standard.md`. No message and no grade changed. A cause stays open where the readers found no sentence, or only a nearest one.
 
-| Site                                     | What it forwards                                                                                                                     |
-|------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `labkit/checks/intent_check.py:287`      | key mismatch and constant mismatch (LAB-004), promises changed after the run (LAB-003), an old digest format (technical)             |
-| `labkit/checks/notes_check.py:254`       | four softer note conventions, one of them stated by LAB-082                                                                          |
-| `labkit/checks/report_blocks.py:287`     | a block's protocol: head does not read (technical), no protocol there, no result adopted (LAB-104)                                   |
-| `labkit/formats/answering_run.py:622`    | no run stands: nothing measured, a newer run unreadable, two runs in one second (technical), the adopted run cannot answer (LAB-043) |
-| `labkit/formats/protocol_history.py:391` | `annotation_validity` not bound: three causes without a sentence, one technical                                                      |
-| `labkit/gates/finalize.py:306`           | model not recorded (LAB-027), a single draw (LAB-036), a run that cannot be reported                                                 |
-| `labkit/gates/finalize.py:312`           | per declared arm: profile file missing, fingerprint or alias not in the run's record                                                 |
-| `labkit/gates/finalize.py:519`           | the README's route block and its stations (no rule, no reader), `evaluate_rows` missing                                              |
-| `labkit/gates/finalize.py:539`           | generated counts differ from the run (LAB-041), the named run is not there or no preparation run                                     |
-| `labkit/gates/finalize.py:556`           | no `outputs.json`, no git repository (technical), an output untracked                                                                |
-| `labkit/gates/report_check.py:518`       | the answering run is no measurement, or acknowledged an unfrozen protocol                                                            |
-| `labkit/gates/registered_report.py:177`  | the registered report owes its result or handover block; the report or its blocks do not read                                        |
-| `labkit/gates/report_hold.py:607`        | a block that does not parse (technical), a discussion head lacking a key (LAB-104)                                                   |
-| `labkit/gates/report_replacement.py:65`  | `[replaces]` does not read (technical), a change without its reason                                                                  |
-| `labkit/gates/report_replacement.py:116` | no protocol carries the predecessor's id, or several do (a doubled id, technical)                                                    |
+| Site before the split                    | Cause                                                                             | Rule now                                                                                                                                            |
+|------------------------------------------|-----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `labkit/checks/intent_check.py:287`      | an id without its key, a key without its id, a declared key not reported          | LAB-004 Identifiers make the intent addressable: "set equality in both directions"                                                                  |
+|                                          | a declared constant differs or is absent in the run's record                      | LAB-004: "a run whose config omits a registered constant or records a different value"                                                              |
+|                                          | the promises were removed or changed after the run                                | LAB-003 No run without an intent paragraph: "so does a promise's sentence, key or constant"                                                         |
+|                                          | the run's digest is of the earlier format                                         | technical contract                                                                                                                                  |
+|                                          | the run recorded no promise block                                                 | open (nearest: LAB-043 Runs go through `runlog`)                                                                                                    |
+| `labkit/checks/notes_check.py:254`       | `Related-Lesart` without its cite-key                                             | LAB-082: "name the cite-key"                                                                                                                        |
+|                                          | no date in the meta line; no named script resolves; `related-*` with another kind | open, three sites                                                                                                                                   |
+| `labkit/checks/report_blocks.py:287`     | the block's protocol has a head that does not read                                | technical contract                                                                                                                                  |
+|                                          | no protocol there; the protocol has adopted no result                             | LAB-104 A number leaves the area only through its adoption: "only as the result a protocol adopted"                                                 |
+| `labkit/formats/answering_run.py:622`    | nothing measured; a newer run does not read; two runs in one second               | technical contract                                                                                                                                  |
+|                                          | the adopted run is not there, did not complete, or is bound elsewhere or to none  | LAB-043: "run_ids instead of typed-in numbers", "no number is reported from an aborted run", "the checks pair protocol and run via this identifier" |
+|                                          | the adopted run's record does not read                                            | technical contract                                                                                                                                  |
+|                                          | the adopted run is a repeat                                                       | open                                                                                                                                                |
+| `labkit/formats/protocol_history.py:391` | the id names no protocol or several; the protocol does not read                   | technical contract (a reference that leads nowhere, a doubled id, an input that does not read)                                                      |
+|                                          | the bound protocol is no apply; it has adopted no result                          | open: `annotation_validity` is not in the standard                                                                                                  |
+| `labkit/gates/finalize.py:306`           | no `models_resolved` in the run's lineage                                         | LAB-027 Model discipline: "it belongs in the runlog config, so that `runs.tsv` records which model answered"                                        |
+|                                          | one draw                                                                          | LAB-036 Validate, don't trust a single run (its head)                                                                                               |
+|                                          | the lineage is broken; the draws cannot be counted                                | technical contract                                                                                                                                  |
+|                                          | the run is no measurement                                                         | LAB-104: "that run is a full run"                                                                                                                   |
+|                                          | the run was acknowledged over an unfrozen protocol                                | open (nearest: LAB-015, "acknowledges it with `LABKIT_UNFROZEN=1`, its number unreportable", said of a backend that does not answer)                |
+| `labkit/gates/finalize.py:312`           | an arm's alias is not in the run's record                                         | LAB-027                                                                                                                                             |
+|                                          | an arm's profile file is not there                                                | technical contract (a reference that leads nowhere)                                                                                                 |
+|                                          | an arm's fingerprint is not in the run's record                                   | open (nearest: LAB-067, "frozen per run … the profile fingerprint covers named files")                                                              |
+| `labkit/gates/finalize.py:519`           | `scripts/01_measure.py` missing, or without `evaluate_rows`                       | CODE-016 The experiment area reconstructs itself: "`evaluate_rows` in `01_measure.py` is the one place"                                             |
+|                                          | no route block; the block does not name the protocol; it does not name a station  | open, three sites — no rule names the block and no code reads it: a candidate for removal                                                           |
+| `labkit/gates/finalize.py:539`           | the generated counts differ from the run's record                                 | LAB-041 Generate numbers, don't retype them (its head)                                                                                              |
+|                                          | the named run is not in the area, or is no completed preparation run with counts  | technical contract                                                                                                                                  |
+| `labkit/gates/finalize.py:556`           | no git repository                                                                 | technical contract                                                                                                                                  |
+|                                          | no `outputs.json`; an output not yet tracked                                      | open, two sites (LAB-024 and LAB-010 are thematic only)                                                                                             |
+| `labkit/gates/report_check.py:518`       | the answering run is no measurement                                               | LAB-104: "that run is a full run"                                                                                                                   |
+|                                          | it was acknowledged over an unfrozen protocol                                     | open, as at finalize                                                                                                                                |
+| `labkit/gates/registered_report.py:177`  | the report or its blocks do not read                                              | technical contract                                                                                                                                  |
+|                                          | the written report owes its result or handover block                              | open: LAB-104 says "never written after a measurement is an incomplete delivery", not what a written one owes                                       |
+| `labkit/gates/report_hold.py:607`        | a discussion head lacks a key                                                     | LAB-104: "protocol, run and why in its head"                                                                                                        |
+|                                          | a block that does not read                                                        | technical contract                                                                                                                                  |
+| `labkit/gates/report_replacement.py:65`  | `[replaces]` does not read                                                        | technical contract                                                                                                                                  |
+|                                          | a change whose `why` is empty                                                     | open (nearest: LAB-003, "on grounds the new registration states")                                                                                   |
+| `labkit/gates/report_replacement.py:116` | no protocol carries the predecessor's id                                          | LAB-003: "a successor that names this protocol in `[replaces]`"                                                                                     |
+|                                          | several protocols carry it                                                        | technical contract (a doubled id)                                                                                                                   |
+
+How the rule travels: a pure check returns the finding with its rule (`run_record_check`, `readme_check`, `notes_check`), or a value that carries the rule beside the sentence (`promises.BlockDrift`, `data_counts.CountsGap`, `protocol_history.NotBound`, `report_blocks.BlockSource.rule`, `AnsweringRun.rule`), or an exception class tells the cause and one function reads the rule from it (`report_blocks.DiscussionKeyMissing` with `unread_rule`, `protocol_block.ChangeReasonMissing`). One exception: `runs` cannot import the gate module without an import cycle, so a run that cannot be reported names its cause as data (`runs.Unreportable.cause`) and the gates read the rule from `finalize.UNREPORTABLE_RULES`.
+
+Two assignments follow the author's earlier decisions and not a reader's recommendation: an `annotation_validity` id of no protocol, and an arm's missing profile file, are technical contracts as "a reference that leads nowhere" (decided for the dead references of a discussion block).
+
+## Open: causes the split left without a rule (16)
+
+Nine are finding sites of their own now, seven are causes a site receives (with the two of the field list, nine such causes in the code).
+
+| Cause                                                                                     | Where the rule is set                              | Nearest sentence, or what is missing                                         |
+|-------------------------------------------------------------------------------------------|----------------------------------------------------|------------------------------------------------------------------------------|
+| the README's route block missing; protocol not named; a station not named (3 sites)       | `labkit/checks/readme_check.py:96`, `:109`, `:119` | none; no code reads the block — a candidate for removal                      |
+| a note without a date; named scripts that do not resolve; `related-*` of another kind (3) | `labkit/checks/notes_check.py:181`, `:211`, `:224` | LAB-082 names a "schema above" the standard does not contain                 |
+| no `outputs.json`; an output not yet tracked (2 sites)                                    | `labkit/checks/run_record_check.py:553`, `:587`    | LAB-024 Reproducible and LAB-010 Commit before the run, thematic             |
+| an arm's fingerprint not in the run's record (1 site)                                     | `labkit/checks/run_record_check.py:1099`           | LAB-067: "frozen per run … the profile fingerprint covers named files"       |
+| a run acknowledged over an unfrozen protocol cannot be reported                           | `finalize.UNREPORTABLE_RULES`                      | LAB-015: "acknowledges it with `LABKIT_UNFROZEN=1`, its number unreportable" |
+| the run recorded no promise block                                                         | `promises.block_drift`                             | LAB-043 Runs go through `runlog`, no exact sentence                          |
+| the adopted run is a repeat                                                               | `answering_run.cannot_answer_rule`                 | none                                                                         |
+| the validation protocol is no apply; it has adopted no result (2 causes)                  | `protocol_history.bound_validation`                | `annotation_validity` is not in the standard                                 |
+| a written registered report owes its result or handover block                             | `registered_report.report_owed`                    | LAB-104 states the neighbouring duty, for a report never written             |
+| a `[[replaces.change]]` without its reason                                                | `report_replacement.replacement_gaps`              | LAB-003: "on grounds the new registration states"                            |
 
 ## Open: methodical duty no decided rule states (15)
 
@@ -119,18 +164,18 @@ Provisional finding, in the work order's words: a methodical duty without a deci
 
 | Group                 | Site                                     | Duty the check holds                                                              | The author's note, 2026-11-11                                  |
 |-----------------------|------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------|
-| registration          | `labkit/gates/report_check.py:263`       | a reported number at high repeat cost owes `frozen = true`                        |                                                                |
-|                       | `labkit/gates/report_replacement.py:80`  | a protocol that replaces another is exploratory                                   |                                                                |
-|                       | `labkit/gates/report_replacement.py:179` | every difference against the predecessor is declared                              |                                                                |
-|                       | `labkit/gates/report_replacement.py:192` | a declared change shows in the two registrations                                  |                                                                |
-|                       | `labkit/gates/registered_report.py:328`  | the registered report stays as the first measurement's commit registered it       | no sufficient scientific ground seen for a fixed report target |
+| registration          | `labkit/gates/report_check.py:267`       | a reported number at high repeat cost owes `frozen = true`                        |                                                                |
+|                       | `labkit/gates/report_replacement.py:83`  | a protocol that replaces another is exploratory                                   |                                                                |
+|                       | `labkit/gates/report_replacement.py:186` | every difference against the predecessor is declared                              |                                                                |
+|                       | `labkit/gates/report_replacement.py:199` | a declared change shows in the two registrations                                  |                                                                |
+|                       | `labkit/gates/registered_report.py:334`  | the registered report stays as the first measurement's commit registered it       | no sufficient scientific ground seen for a fixed report target |
 | result comparison     | `labkit/formats/reference.py:171`        | a comparison in the result is registered in `[reference]`                         |                                                                |
 |                       | `labkit/formats/reference.py:185`        | a registered comparison gets its verdict from the run                             |                                                                |
 |                       | `labkit/formats/reference.py:231`        | the reference stays as the run compared with it                                   |                                                                |
-| provenance of outputs | `labkit/checks/run_record_check.py:830`  | an output file is the one the run recorded                                        |                                                                |
-|                       | `labkit/checks/run_record_check.py:1000` | a continued output holds no rows of a run with other code                         |                                                                |
+| provenance of outputs | `labkit/checks/run_record_check.py:851`  | an output file is the one the run recorded                                        |                                                                |
+|                       | `labkit/checks/run_record_check.py:1039` | a continued output holds no rows of a run with other code                         |                                                                |
 | evidence              | `labkit/formats/evidence.py:388`         | committed evidence does not change beyond what labkit writes (the rule candidate) | needs the ways of correction that stay allowed, stated         |
-| report                | `labkit/gates/report_hold.py:995`        | an adopted run is not discussed as not reported                                   |                                                                |
-| warnings              | `labkit/gates/finalize.py:242`           | runs newer than the adopted one                                                   | each needs a bounded statement of the suspicion it gives       |
+| report                | `labkit/gates/report_hold.py:1000`       | an adopted run is not discussed as not reported                                   |                                                                |
+| warnings              | `labkit/gates/finalize.py:246`           | runs newer than the adopted one                                                   | each needs a bounded statement of the suspicion it gives       |
 |                       | `labkit/gates/preflight.py:356`          | the repeat cost was lowered after the first commit                                | the same                                                       |
-|                       | `labkit/checks/run_record_check.py:514`  | a criterion's denominator matches no recorded count                               | the same                                                       |
+|                       | `labkit/checks/run_record_check.py:517`  | a criterion's denominator matches no recorded count                               | the same                                                       |
