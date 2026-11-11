@@ -896,6 +896,22 @@ def open_holes(
     return [(f.line, f.label) for f in lines if f.placeholder]
 
 
+def must_and_soft_holes(
+    text: str, head: protocol_block.Head, *, adopting: bool = False
+) -> tuple[list[tuple[int, str]], list[tuple[int, str]]]:
+    """The placeholders still to fill (`open_holes`, each as (line, label))
+    in two lists: those in a field the protocol owes as a must now (`owed`),
+    and those in every other field. ADOPTING as in `owed`."""
+    must, _ = owed(text, head, adopting=adopting)
+    must_names = {f.label.casefold() for f in must}
+    must_holes, soft_holes = [], []
+    for line, label in open_holes(text, head, adopting=adopting):
+        (must_holes if field_name(label) in must_names else soft_holes).append(
+            (line, label)
+        )
+    return must_holes, soft_holes
+
+
 def owed(
     text: str, head: protocol_block.Head, *, adopting: bool = False
 ) -> tuple[list[Field], list[Field]]:
@@ -1083,12 +1099,7 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
             )
         )
     must_gaps += freeze_must_gaps(text, head)
-    must_names = {f.label.casefold() for f in must}
-    must_holes, soft_holes = [], []
-    for line, label in open_holes(text, head, adopting=adopting):
-        (must_holes if field_name(label) in must_names else soft_holes).append(
-            (line, label)
-        )
+    must_holes, soft_holes = must_and_soft_holes(text, head, adopting=adopting)
     return FieldReport(
         head,
         None,

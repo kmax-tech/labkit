@@ -293,6 +293,32 @@ class ReadmePlaceholders(unittest.TestCase):
             (blank,) = [f for f in found.found if "stamped placeholder" in f.text]
             self.assertEqual(blank.evidence_kind, STATIC_EVIDENCE)
 
+    def test_a_placeholder_records_the_field_rule_only_in_a_must_field(self):
+        with tempfile.TemporaryDirectory() as d:
+            text = (
+                head(repeat_cost="high")
+                + "- **Unit:** <one file>\n- **Problem in one sentence:** <which>\n"
+            )
+            protocol = Path(d) / "PROTOCOL-a.md"
+            protocol.write_text(text, encoding="utf-8")
+            found = Findings(tell=None)
+            finalize.check_open_fields(
+                found,
+                protocol,
+                text,
+                protocol_block.head(text),
+                state_of(protocol.parent),
+            )
+            rules = {
+                f.text.rsplit(": ", 1)[1]: f.rule
+                for f in found.found
+                if f.text.startswith("PROTOCOL-a.md:")
+            }
+            self.assertEqual(
+                rules,
+                {"Unit": finalize.LAB_011, "Problem in one sentence": OPEN_RULE},
+            )
+
     def test_angle_brackets_inside_code_spans_are_examples_not_blanks(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)

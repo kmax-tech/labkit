@@ -238,6 +238,24 @@ class OpenHolesFollowTheCut(unittest.TestCase):
     def test_the_full_form_lists_every_placeholder(self):
         self.assertEqual(self.labels("high"), ["Unit", "Free knobs"])
 
+    SPLIT = "- **Unit:** <one file>\n- **Problem in one sentence:** <which>\n"
+
+    def split(self, *, frozen: bool) -> tuple[list[str], list[str]]:
+        text = head(repeat_cost="high", frozen=frozen) + self.SPLIT
+        block = protocol_check.protocol_block.head(text)
+        must, soft = protocol_check.must_and_soft_holes(text, block)
+        return [lbl for _, lbl in must], [lbl for _, lbl in soft]
+
+    def test_a_placeholder_is_a_must_hole_only_in_a_field_owed_as_a_must(self):
+        self.assertEqual(
+            self.split(frozen=False), (["Unit"], ["Problem in one sentence"])
+        )
+
+    def test_the_freeze_makes_the_should_field_a_must_hole(self):
+        self.assertEqual(
+            self.split(frozen=True), (["Unit", "Problem in one sentence"], [])
+        )
+
     def test_the_last_line_names_the_must_finding(self):
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "PROTOCOL-x.md"

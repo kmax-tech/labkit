@@ -154,8 +154,8 @@ from labkit.formats.protocol_check import (
     REPEATED_WAY_OUT,
     head_rule,
     kept_gaps,
+    must_and_soft_holes,
     named_field,
-    open_holes,
     reference_gap,
     repeated_findings,
 )
@@ -504,15 +504,18 @@ def check_open_fields(
     head: protocol_block.Head,
     state: AreaState,
 ) -> None:
-    """Station 5: fields of the protocol still empty or a placeholder, and
-    the README's placeholders (CODE-016 The experiment area reconstructs
-    itself) and route block."""
-    holes = open_holes(text, head)
+    """Station 5: fields of the protocol still empty or a placeholder — in
+    a field owed as a must under LAB_011, in any other as an open
+    assignment —, and the README's placeholders (CODE-016 The experiment
+    area reconstructs itself) and route block."""
+    must_holes, soft_holes = must_and_soft_holes(text, head)
+    holes = sorted(must_holes + soft_holes)
     for lineno, label in holes:
         findings.warn(
             f"{protocol.name}:{lineno}: {label}",
             evidence_kind=GUARANTEED,
-            rule=LAB_011,
+            # LAB_011 names the required fields, no rule the others
+            rule=LAB_011 if (lineno, label) in must_holes else OPEN_RULE,
         )
     repeated = repeated_findings(text)
     for twice in repeated:
