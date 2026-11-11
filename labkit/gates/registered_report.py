@@ -110,11 +110,16 @@ def report_owed(
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
     why: list[str] = []
+    # a report or blocks that do not read: what the report owes could not be
+    # looked for, the technical contract; else the duty itself, which no
+    # rule's sentence states for a written report (an open assignment)
+    rule = OPEN_RULE
     try:
         written = state_text(repo, report, staged=staged)
     except UnicodeDecodeError as exc:
         written = ""
         why.append(f"it does not read: {exc}")
+        rule = TECHNICAL_RULE
     if written is None:
         return None
     block_owner = report_blocks.path_from_report(protocol, report)
@@ -124,6 +129,7 @@ def report_owed(
     except (report_blocks.ReportBlockError, handovers.HandoverError) as exc:
         blocks, handed = [], []
         why.append(f"its blocks do not read: {exc}")
+        rule = TECHNICAL_RULE
 
     if declared is not None and any(
         b.protocol == block_owner and b.run_id == declared for b in blocks
@@ -187,7 +193,7 @@ def report_owed(
         f"it releases nothing and the result or the handover stays owed; "
         f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
         step=write_cmd,
-        rule=OPEN_RULE,
+        rule=rule,
     )
 
 

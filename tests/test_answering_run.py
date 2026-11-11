@@ -14,6 +14,8 @@ from pathlib import Path
 
 from protocol_fixture import run_record  # noqa: E402
 from labkit.formats import runs, answering_run
+from labkit.formats.answering_run import RunFacts
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.area_state import state_of
 
 PID = "p-0001"
@@ -311,6 +313,7 @@ class Explain(unittest.TestCase):
             (answering_run.RunExclusion(Path("r/x"), "bound to p-b"),),
             "no completed run bound to p-a",
             way_out="measure",
+            rule=TECHNICAL_RULE,
         )
         blocker, lines = choice.explain(True)
         assert blocker is not None
@@ -323,6 +326,20 @@ class Explain(unittest.TestCase):
                 ["x: bound to p-b"],
             ),
         )
+        self.assertEqual(blocker.rule, TECHNICAL_RULE)  # the choice's, as given
+
+    def test_an_adopted_run_that_cannot_answer_names_the_rule_of_its_cause(self):
+        def left_out(state: runs.RunState, repeat_of: str | None = None) -> RunFacts:
+            binding = runs.ProtocolBinding("p-b", None)
+            return RunFacts(Path("r/x"), state, binding, repeat_of=repeat_of)
+
+        rule = answering_run.cannot_answer_rule
+        self.assertEqual(rule(None), answering_run.LAB_043)  # no such run
+        self.assertEqual(rule(left_out(runs.UNREADABLE)), TECHNICAL_RULE)
+        self.assertEqual(rule(left_out("crashed")), answering_run.LAB_043)
+        self.assertEqual(rule(left_out(runs.COMPLETED, "r0")), OPEN_RULE)
+        # completed, no repeat: bound to another protocol or to none
+        self.assertEqual(rule(left_out(runs.COMPLETED)), answering_run.LAB_043)
 
     def test_a_probe_run_blocks_only_when_ids_are_registered(self):
         choice = answering_run.AnsweringRun(

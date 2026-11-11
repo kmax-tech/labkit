@@ -109,6 +109,11 @@ class HeadPartMissing(BlockError):
     a key of it. Every other BlockError is a head that does not read."""
 
 
+class ChangeReasonMissing(BlockError):
+    """A `[[replaces.change]]` whose `why` is empty: the table reads, the
+    change states no reason."""
+
+
 @dataclass(frozen=True)
 class Head:
     """The `[protocol]` table. None marks a field still holding its placeholder."""
@@ -805,7 +810,8 @@ def replaces(text: str) -> Replaces | None:
     `[[replaces.change]]` per declared difference (CHANGE_KEYS, `why` not
     empty) —, or None without one: a protocol that replaces nothing.
     Raises BlockError on a non-table, an unknown key, an id not in the
-    shape labkit stamps, or a change missing a field or its reason."""
+    shape labkit stamps, or a change missing a field; ChangeReasonMissing
+    on a change whose `why` is empty."""
     data = parse_toml_block(text)
     if "replaces" not in data:
         return None
@@ -835,7 +841,7 @@ def replaces(text: str) -> Replaces | None:
             )
         what, from_, to, why = (str(values[k]) for k in CHANGE_KEYS)
         if not why.strip():
-            raise BlockError(
+            raise ChangeReasonMissing(
                 f"[[replaces.change]] #{i}: `why` is empty — a change owes its reason"
             )
         changes.append(Change(what, from_, to, why))

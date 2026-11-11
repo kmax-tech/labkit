@@ -61,12 +61,15 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     try:
         rep = protocol_block.replaces(ctx.text)
     except protocol_block.BlockError as exc:
+        # a change without its reason is a duty no rule's sentence states
+        # (an open assignment); every other error is a table that does not read
+        unreasoned = isinstance(exc, protocol_block.ChangeReasonMissing)
         return [
             blocker(
                 f"{name}: {exc}",
                 fix='write `[replaces]` as the head reads it: `protocol = "<id>"` '
                 "and one `[[replaces.change]]` (what, from, to, why) per change",
-                rule=OPEN_RULE,
+                rule=OPEN_RULE if unreasoned else TECHNICAL_RULE,
             )
         ]
     if rep is None or ctx.head.id is None:
@@ -113,12 +116,16 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
         )
     hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
     if len(hits) != 1:
+        # no protocol carries the id: the successor does not name its
+        # predecessor (LAB-003 No run without an intent paragraph: "a
+        # successor that names this protocol in `[replaces]`"); several do:
+        # a doubled id, and the predecessor cannot be told
         return blocker(
             f"[replaces] protocol = {pid} names "
             + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
             fix="name the one protocol of this repo it replaces, kept as it "
             f"is, then `{gate_command('report-check', ctx.area)}`",
-            rule=OPEN_RULE,
+            rule=LAB_003 if not hits else TECHNICAL_RULE,
         )
     circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.file_state)
     if circle:

@@ -305,10 +305,11 @@ def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
     repo = layout_root(area)
     bound = bound_validation(text, repo_protocol_ids(area))
     if not isinstance(bound, BoundValidation):
+        assert bound is not None  # a computation naming a protocol, as checked above
         return (
             (
                 "EVIDENCE: annotation_validity",
-                f"protocol = {m.annotation_validity.value} — NOT BOUND: {bound}. "
+                f"protocol = {m.annotation_validity.value} — NOT BOUND: {bound.why}. "
                 "No validation is shown; nothing here supports the annotator.",
             ),
         )

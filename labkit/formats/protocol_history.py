@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 from labkit.formats import runs
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
@@ -317,14 +317,32 @@ class BoundValidation(NamedTuple):
     run: str
 
 
+@dataclass(frozen=True)
+class NotBound:
+    """Why `[model] annotation_validity = { protocol = … }` is not bound.
+
+    Attributes:
+        why: The sentence, as a gate's line continues it.
+        rule: The rule assignment of this cause: an id that names no
+            protocol or several, and a protocol that does not read, the
+            technical contract (a reference that leads nowhere, a doubled
+            id, an input that does not read); a protocol that is no apply
+            or has adopted no result open — no rule's sentence states
+            what evidence an annotator owes.
+    """
+
+    why: str
+    rule: RuleAssignment
+
+
 def bound_validation(
     text: str, ids: dict[str, list[Path]]
-) -> BoundValidation | str | None:
+) -> BoundValidation | NotBound | None:
     """The one binding of `[model] annotation_validity = { protocol = "p-…" }`
     against IDS (`protocol_block.repo_protocol_ids` of the repo): the id names exactly one
     protocol, an apply (`kind = "apply"`, the model judged as it is used
     here) with a declared result (`[result] run`). The bound validation, or
-    why it is not bound (a sentence), or None when the protocol names no
+    why it is not bound (`NotBound`), or None when the protocol names no
     such evidence (not a computation, no `[model]`, a DOI, an unreadable
     head — the head check names that). The gate (`check_annotation_validity`)
     and the audit's evidence pieces (`audit_prompt.validity_evidence`) read this."""
@@ -342,14 +360,15 @@ def bound_validation(
         return None
     hits = ids.get(m.annotation_validity.value, [])
     if len(hits) != 1:
-        return (
+        return NotBound(
             "names "
             + (
                 "no protocol of this repo"
                 if not hits
                 else f"{len(hits)} protocols ({', '.join(str(h) for h in hits)})"
             )
-            + "; the evidence must be one apply protocol here, or a DOI"
+            + "; the evidence must be one apply protocol here, or a DOI",
+            TECHNICAL_RULE,
         )
     bound = hits[0]
     try:
@@ -357,16 +376,18 @@ def bound_validation(
         bound_kind = protocol_block.head(bound_text).kind
         bound_run = protocol_block.declared_run(bound_text)
     except (OSError, protocol_block.BlockError) as exc:
-        return f"{bound} does not read: {exc}"
+        return NotBound(f"{bound} does not read: {exc}", TECHNICAL_RULE)
     if bound_kind != standard_contract.APPLY_KIND:
-        return (
+        return NotBound(
             f'{bound} has kind = "{bound_kind}"; the evidence that an annotator '
-            "suits is an apply: the model, used unchanged, judged against gold labels"
+            "suits is an apply: the model, used unchanged, judged against gold labels",
+            OPEN_RULE,
         )
     if bound_run is None:
-        return (
+        return NotBound(
             f"{bound} has adopted no result yet ([result] run); a validation "
-            "without its number is no evidence"
+            "without its number is no evidence",
+            OPEN_RULE,
         )
     return BoundValidation(bound, bound_text, bound_run)
 
@@ -380,7 +401,7 @@ def check_annotation_validity(
     the audit's. A DOI is held to its form by the head parser and bound to
     nothing here."""
     bound = bound_validation(text, ids)
-    if not isinstance(bound, str):
+    if not isinstance(bound, NotBound):
         return []
     m = protocol_block.model(text)
     assert m is not None and m.annotation_validity is not None  # bound said so
@@ -390,12 +411,12 @@ def check_annotation_validity(
     return [
         GateFinding(
             BLOCKER,
-            f"{where} — {bound}",
+            f"{where} — {bound.why}",
             form=AS_WRITTEN,
             fix="bind it to one apply protocol of this repo whose head has adopted "
             "its result (`[result] run`, adopted there first), or name a DOI",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=bound.rule,
         )
     ]
 

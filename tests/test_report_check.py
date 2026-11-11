@@ -58,6 +58,8 @@ from labkit.formats import (
 )
 from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
+from labkit.checks import report_blocks
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -639,6 +641,13 @@ class RegisteredReport(unittest.TestCase):
         (gap,) = report_check.report_findings(ctx)
         self.assertEqual(gap.grade, "BLOCKER")
         self.assertIn(self.OWED, gap.text)
+        self.assertEqual(gap.rule, OPEN_RULE)
+        # blocks that do not read: what the report owes could not be looked for
+        report.write_text("# Report\n\n" + report_blocks.CLOSE + "\n", encoding="utf-8")
+        ctx = report_context.checked(area, area / "PROTOCOL-x.md")
+        (gap,) = report_check.report_findings(ctx)
+        self.assertIn("its blocks do not read", gap.text)
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
 
     def test_the_adoption_is_not_held_against_itself(self):
         """With the registered REPORT.md already in the tree (no block yet),

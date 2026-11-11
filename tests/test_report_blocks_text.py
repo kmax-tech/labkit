@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 from labkit.checks import report_blocks
+from labkit.formats.gate import TECHNICAL_RULE
 
 RUN = "2026-10-07T10-00-00_ab12"
 P = "experiments/01-x/PROTOCOL-x.md"
@@ -94,11 +95,17 @@ class Blocks(unittest.TestCase):
             f"`protocol-fill {P} --into REPORT.md` replaces the block", gap.line
         )
         (gap,) = report_blocks.block_gaps(
-            found, {P: BlockSource(None, None, "it has adopted no result")}, report
+            found,
+            {P: BlockSource(None, None, "it has adopted no result", TECHNICAL_RULE)},
+            report,
         )
         self.assertIn(
             "it has adopted no result — a block shows an adopted result only", gap.line
         )
+        # the rule is the source's, whatever it names
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
+        with self.assertRaises(ValueError):
+            BlockSource(None, None, "it has adopted no result")
 
     def test_cited_ids_must_name_runs_of_the_repo(self):
         text = (
@@ -243,6 +250,21 @@ class Discussions(unittest.TestCase):
         ):
             with self.assertRaisesRegex(report_blocks.ReportBlockError, said):
                 report_blocks.discussions(text)
+
+    def test_a_head_lacking_a_key_is_told_apart_from_one_that_does_not_read(self):
+        lines = report_blocks.discussion_lines(P, RUN, "a")
+        lacking = "\n".join([lines[0], 'protocol = "x"', 'run = "y"', "-->", "z"])
+        with self.assertRaises(report_blocks.DiscussionKeyMissing) as caught:
+            report_blocks.discussions(lacking)
+        self.assertEqual(
+            report_blocks.unread_rule(caught.exception), report_blocks.LAB_104
+        )
+        # the twin: a head that is no TOML is a block that does not read
+        broken = "\n".join([lines[0], "protocol = ", *lines[4:]])
+        with self.assertRaises(report_blocks.ReportBlockError) as caught:
+            report_blocks.discussions(broken)
+        self.assertNotIsInstance(caught.exception, report_blocks.DiscussionKeyMissing)
+        self.assertEqual(report_blocks.unread_rule(caught.exception), TECHNICAL_RULE)
 
     def test_numbers_in_and_beside_stop_at_a_blank_line_and_a_block(self):
         result = report_blocks.with_block("", P, RUN, "auc = 0.69")

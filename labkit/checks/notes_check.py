@@ -138,11 +138,16 @@ def collect_notes(paths: list[str]) -> list[Path]:
     return files
 
 
-def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
+def check_file(f: Path) -> tuple[list[GateFinding], list[GateFinding]]:
     """Return (the convention's gaps as warnings with their way out, the
-    softer warnings as printable lines) for one note."""
+    softer warnings without one) for one note. A softer warning records the
+    rule of its cause: a `Related-Lesart` without its cite-key LAB-082 In
+    `notes/messung/`, every note carries its kind in the meta line ("name
+    the cite-key"); no date in the meta line, named scripts that do not
+    resolve and a `related-*` file of another kind record an open
+    assignment — no sentence of the rule states them."""
     gaps: list[GateFinding] = []
-    softer: list[str] = []
+    softer: list[GateFinding] = []
     text = f.read_text(encoding="utf-8")
     meta = meta_paragraph(text)
     if meta is None:
@@ -172,7 +177,14 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
             )
         )
     if not DATE.search(para):
-        softer.append(f"{f}:{n}: warning: no date in the meta line")
+        softer.append(
+            GateFinding(
+                WARNING,
+                f"{f}:{n}: warning: no date in the meta line",
+                rule=OPEN_RULE,
+                evidence_kind=GUARANTEED,
+            )
+        )
     if IMPLEMENTED.search(para):
         if not CODE.search(text):
             # a name pattern over the note's text: a function named with
@@ -196,21 +208,36 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                 set(m.group(0).lstrip("./") for m in PY_FILE.finditer(text))
             ):
                 softer.append(
-                    f"{f}:{n}: warning: none of the named scripts "
-                    f"resolve in the repo ({', '.join(rotten[:3])}"
-                    f"{' …' if len(rotten) > 3 else ''}) — code "
-                    f"paths may have rotted"
+                    GateFinding(
+                        WARNING,
+                        f"{f}:{n}: warning: none of the named scripts "
+                        f"resolve in the repo ({', '.join(rotten[:3])}"
+                        f"{' …' if len(rotten) > 3 else ''}) — code "
+                        f"paths may have rotted",
+                        rule=OPEN_RULE,
+                        evidence_kind=GUARANTEED,
+                    )
                 )
     if f.name.startswith("related-"):
         if kind and "Related-Lesart" not in kind.group(0):
             softer.append(
-                f"{f}:{n}: warning: filename says related-* but the "
-                f"declared kind is {kind.group(0)!r}"
+                GateFinding(
+                    WARNING,
+                    f"{f}:{n}: warning: filename says related-* but the "
+                    f"declared kind is {kind.group(0)!r}",
+                    rule=OPEN_RULE,
+                    evidence_kind=GUARANTEED,
+                )
             )
         elif "Related-Lesart" in para and not RELATED_WITH_KEY.search(para):
             softer.append(
-                f"{f}:{n}: warning: Related-Lesart without a citekey "
-                f"— write 'Related-Lesart (<citekey>)'"
+                GateFinding(
+                    WARNING,
+                    f"{f}:{n}: warning: Related-Lesart without a citekey "
+                    f"— write 'Related-Lesart (<citekey>)'",
+                    rule=LAB_082,
+                    evidence_kind=GUARANTEED,
+                )
             )
     return gaps, softer
 
@@ -250,8 +277,7 @@ def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
             )
             continue
         findings.take_all(gaps)
-        for line in softer:
-            findings.warn(line, evidence_kind=GUARANTEED, rule=OPEN_RULE)
+        findings.take_all(softer)
         if not gaps and not softer:
             tell(f"{f}: OK")
     return findings.report("notes-check", "the note counts")

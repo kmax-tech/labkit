@@ -458,15 +458,20 @@ def block_sources(
         p = block_protocol(report, b)
         if p in sources.unreadable:
             out[b.protocol] = report_blocks.BlockSource(
-                None, None, f"its head does not read: {sources.unreadable[p]}"
+                None,
+                None,
+                f"its head does not read: {sources.unreadable[p]}",
+                TECHNICAL_RULE,
             )
+        # LAB-104 A number leaves the area only through its adoption: "a
+        # report shows a run's number only as the result a protocol adopted"
         elif p not in sources.texts:
             out[b.protocol] = report_blocks.BlockSource(
-                None, None, "no protocol of the repo there"
+                None, None, "no protocol of the repo there", LAB_104
             )
         elif (run_id := sources.declared[p]) is None:
             out[b.protocol] = report_blocks.BlockSource(
-                None, None, "it has adopted no result"
+                None, None, "it has adopted no result", LAB_104
             )
         else:
             try:
@@ -608,7 +613,7 @@ def hold_report(
             f"{rel}: {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote them "
             "(`--into` for a result, `--discuss` for a discussion writes them again)",
-            rule=OPEN_RULE,
+            rule=report_blocks.unread_rule(exc),
         )
         return out.report("report-check", "reporting")
 

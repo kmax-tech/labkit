@@ -15,6 +15,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import notes_check
+from labkit.formats.gate import OPEN_RULE
 
 
 # Verbatim head of counterstory-messprotokoll.md (counterfactual-worlds),
@@ -172,12 +173,14 @@ class TestCheckFile(unittest.TestCase):
         must, warn = self.check("related-eichel23-plausibilitaet.md", RELATED_NO_KEY)
         self.assertEqual(must, [])
         self.assertEqual(len(warn), 1)
-        self.assertIn("citekey", warn[0])
+        self.assertIn("citekey", warn[0].text)
+        self.assertEqual(warn[0].rule, notes_check.LAB_082)
 
     def test_related_kind_mismatch_warns(self):
         must, warn = self.check("related-foo.md", STAMPED_DRAFT)
         self.assertEqual(must, [])
-        self.assertTrue(any("filename says related-*" in w for w in warn))
+        rules = {w.rule for w in warn if "filename says related-*" in w.text}
+        self.assertEqual(rules, {OPEN_RULE})
 
 
 class TestMain(unittest.TestCase):

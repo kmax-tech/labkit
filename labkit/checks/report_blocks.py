@@ -82,7 +82,7 @@ from labkit.formats.comment_blocks import (
     with_comment_block,
 )
 from labkit.formats.gate import TECHNICAL_RULE
-from labkit.formats.gate import OPEN_RULE, cited_rule
+from labkit.formats.gate import RuleAssignment, cited_rule
 from labkit.formats.gate import STATIC_EVIDENCE, WARNING, GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.commands import (
@@ -106,6 +106,19 @@ OPEN_NOTE = "protocol-fill --into; edit the protocol, not this block"
 class ReportBlockError(ValueError):
     """A block that does not read: opened and never closed, closed without
     opening, nested. The message names the line."""
+
+
+class DiscussionKeyMissing(ReportBlockError):
+    """A discussion block's head lacks one of its three keys. Every other
+    ReportBlockError is a block that does not read."""
+
+
+def unread_rule(exc: ReportBlockError) -> RuleAssignment:
+    """The rule a report whose blocks raised EXC breaks: LAB-104 A number
+    leaves the area only through its adoption for a discussion head lacking
+    a key ("protocol, run and why in its head"), the technical contract for
+    a block that does not read."""
+    return LAB_104 if isinstance(exc, DiscussionKeyMissing) else TECHNICAL_RULE
 
 
 @dataclass(frozen=True)
@@ -259,12 +272,22 @@ def withdraw_result_blocks(text: str, protocol: Path, report: Path) -> str:
 @dataclass(frozen=True)
 class BlockSource:
     """What a block's protocol says now: the run it declares (None: no
-    result declared, or no protocol there — WHY says which) and the body it
-    renders for that run (None when it cannot be rendered — WHY says why)."""
+    result declared, or no protocol there — WHY says which, RULE the rule
+    assignment of that cause) and the body it renders for that run (None
+    when it cannot be rendered — WHY says why). Raises ValueError for a
+    source without a declared run that names no rule."""
 
     run_id: str | None
     body: str | None
     why: str = ""
+    rule: RuleAssignment | None = None
+
+    def __post_init__(self) -> None:
+        if self.run_id is None and self.rule is None:
+            raise ValueError(
+                f"a block source without a declared run names the rule of its "
+                f"cause (rule): {self.why!r}"
+            )
 
 
 def block_gaps(
@@ -290,7 +313,7 @@ def block_gaps(
                     "(`labkit-adopt <area> <run_id>`) "
                     "and write it again",
                     step=adopt_command(report.parent / b.protocol),
-                    rule=OPEN_RULE,
+                    rule=s.rule,
                 )
             )
         elif s.run_id != b.run_id:
@@ -508,7 +531,7 @@ def _discussion_head(head: list[str], at: int) -> tuple[str, str, str]:
     missing = [k for k in DISCUSS_KEYS if k not in data]
     unknown = sorted(set(data) - set(DISCUSS_KEYS))
     if missing or unknown:
-        raise ReportBlockError(
+        raise (DiscussionKeyMissing if missing else ReportBlockError)(
             f"line {at}: the discussion block's head holds "
             f"{', '.join(DISCUSS_KEYS)}"
             + (f" — missing {', '.join(missing)}" if missing else "")

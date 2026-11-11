@@ -25,7 +25,7 @@ from labkit.formats import (
     protocol_history,
     standard_contract,
 )
-from labkit.formats.gate import BLOCKER  # noqa: E402
+from labkit.formats.gate import BLOCKER, OPEN_RULE, TECHNICAL_RULE  # noqa: E402
 from labkit.probes import usability  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head, run_record  # noqa: E402
@@ -198,6 +198,7 @@ class Binding(unittest.TestCase):
             found = self._findings(d, ids, f'{{ protocol = "{VALIDATION_ID}" }}')
         self.assertEqual([f.grade for f in found], [BLOCKER])
         self.assertIn('kind = "compute"', found[0].text)
+        self.assertEqual(found[0].rule, OPEN_RULE)
 
     def test_an_apply_without_its_number_is_no_evidence(self):
         with tempfile.TemporaryDirectory() as d:
@@ -205,12 +206,15 @@ class Binding(unittest.TestCase):
             found = self._findings(d, ids, f'{{ protocol = "{VALIDATION_ID}" }}')
         self.assertEqual([f.grade for f in found], [BLOCKER])
         self.assertIn("has adopted no result", found[0].text)
+        self.assertEqual(found[0].rule, OPEN_RULE)
 
     def test_an_id_of_no_protocol_here_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             found = self._findings(d, {}, f'{{ protocol = "{VALIDATION_ID}" }}')
         self.assertEqual([f.grade for f in found], [BLOCKER])
         self.assertIn("no protocol of this repo", found[0].text)
+        # a reference that leads nowhere: the cause's rule, not the site's
+        self.assertEqual(found[0].rule, TECHNICAL_RULE)
 
     def test_a_doi_is_bound_to_nothing(self):
         with tempfile.TemporaryDirectory() as d:

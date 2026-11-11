@@ -23,7 +23,15 @@ from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises, protocol_block
-from labkit.formats.gate import BLOCKER, GUARANTEED, OPEN_RULE, GateFinding, cited_rule
+from labkit.formats.gate import (
+    BLOCKER,
+    GUARANTEED,
+    OPEN_RULE,
+    TECHNICAL_RULE,
+    GateFinding,
+    RuleAssignment,
+    cited_rule,
+)
 from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.commands import Command, measure_command
 from labkit.formats.digests import digest
@@ -51,6 +59,7 @@ from labkit.formats.runs import (
 )
 
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
+LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
 
 
 @dataclass(frozen=True)
@@ -589,6 +598,10 @@ class AnsweringRun:
             run whose binding cannot be read, or an adopted run that cannot
             answer — or None.
         way_out: What closes `blocker` (`GateFinding.fix`); set with it.
+        rule: The rule assignment of `blocker`'s cause, set with it: the
+            technical contract where nothing is measured yet, a newer run
+            does not read or two runs started in one second; for an adopted
+            run that cannot answer, what `cannot_answer_rule` says.
         step: The command the way out names, as data (`GateFinding.step`):
             the measurement where no run stands yet.
         adopted: The run is the protocol's `[result] run`, not the newest
@@ -605,6 +618,7 @@ class AnsweringRun:
     reports_intent_keys: bool = True
     way_out: str | None = None
     step: Command | None = None
+    rule: RuleAssignment | None = None
     adopted: bool = False
     newer_by_name: tuple[str, ...] = ()
 
@@ -616,8 +630,13 @@ class AnsweringRun:
         reports no intent key while the protocol registers ids is a blocker
         here, everywhere: a probe or producer run is not an answer."""
         if self.run_dir is None:
-            assert self.blocker is not None and self.way_out is not None, (
-                "bound_answering_run sets a blocker and its way out whenever no run stands"
+            assert (
+                self.blocker is not None
+                and self.way_out is not None
+                and self.rule is not None
+            ), (
+                "bound_answering_run sets a blocker, its way out and its rule "
+                "whenever no run stands"
             )
             return GateFinding(
                 BLOCKER,
@@ -625,7 +644,7 @@ class AnsweringRun:
                 fix=self.way_out,
                 evidence_kind=GUARANTEED,
                 step=self.step,
-                rule=OPEN_RULE,
+                rule=self.rule,
             ), [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
         if ids_registered and not self.reports_intent_keys:
             area = self.run_dir.parent.parent
@@ -704,11 +723,12 @@ def bound_answering_run(
             f"no completed run bound to {pid} — no runs/ directory in {area}",
             way_out=measure,
             step=run,
+            rule=TECHNICAL_RULE,
         )
     taken, rest = bound_runs(facts, pid)
     exclusions = tuple(RunExclusion(f.dir, f.why or f.state) for f in rest)
     if adopted is not None:
-        return _adopted_choice(area, pid, adopted, taken, exclusions)
+        return _adopted_choice(area, pid, adopted, taken, rest, exclusions)
     if not taken:
         return AnsweringRun(
             None,
@@ -717,6 +737,7 @@ def bound_answering_run(
             f"no completed run bound to {pid}",
             way_out=measure,
             step=run,
+            rule=TECHNICAL_RULE,
         )
     mpath, skipped, has_keys = newest_with_intent_keys(taken)
     assert mpath is not None, "taken is non-empty, so a metrics file exists"
@@ -730,6 +751,7 @@ def bound_answering_run(
             unreadable,
             has_keys,
             way_out=f"repair or move them aside before {mpath.parent.name} may answer",
+            rule=TECHNICAL_RULE,
         )
     if rival:
         return AnsweringRun(
@@ -739,8 +761,28 @@ def bound_answering_run(
             rival,
             has_keys,
             way_out="move the one that does not answer out of runs/",
+            rule=TECHNICAL_RULE,
         )
     return AnsweringRun(mpath.parent, skipped, exclusions, None, has_keys)
+
+
+def cannot_answer_rule(left_out: RunFacts | None) -> RuleAssignment:
+    """The rule assignment of an adopted run that cannot answer, by its
+    cause — LEFT_OUT its facts as `bound_runs` left it out, None when the
+    area holds no such run. LAB-043 Runs go through `runlog` for a run id
+    without a run ("run_ids instead of typed-in numbers"), a run that did
+    not complete ("no number is reported from an aborted run") and a run
+    bound to another protocol or to none ("the checks pair protocol and run
+    via this identifier"); the technical contract for a record that does
+    not read; open for a repeat — no sentence states that a repeat never
+    answers."""
+    if left_out is None:
+        return LAB_043
+    if left_out.state == UNREADABLE:
+        return TECHNICAL_RULE
+    if left_out.state != COMPLETED:
+        return LAB_043
+    return OPEN_RULE if left_out.repeat_of is not None else LAB_043
 
 
 def _adopted_choice(
@@ -748,11 +790,14 @@ def _adopted_choice(
     pid: str,
     adopted: str,
     taken: list[RunFacts],
+    rest: list[RunFacts],
     exclusions: tuple[RunExclusion, ...],
 ) -> AnsweringRun:
     """The adopted run ADOPTED as the choice, when it is among TAKEN (the
     completed runs bound to PID); else a blocker naming why it cannot
-    answer — its exclusion, or no such run directory. The bound runs of the
+    answer — its exclusion (REST: the runs left out, EXCLUSIONS their
+    reasons), or no such run directory — with the rule of that cause
+    (`cannot_answer_rule`). The bound runs of the
     same standing (reporting an intent key, if the adopted one does) whose
     ids sort after it are `newer_by_name`."""
     hit = next((f for f in taken if f.dir.name == adopted), None)
@@ -769,6 +814,9 @@ def _adopted_choice(
             f"[result] names {adopted}, which cannot answer for {pid}: {why}",
             way_out=f"withdraw the adoption (`protocol-fill <PROTOCOL> --withdraw "
             f'--why "<why>"`), audit a completed run bound to {pid}, then adopt it',
+            rule=cannot_answer_rule(
+                next((f for f in rest if f.dir.name == adopted), None)
+            ),
             adopted=True,
         )
     has_keys = bool(promises.reported_ids(read_metrics(hit.metrics)))
