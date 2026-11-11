@@ -160,3 +160,17 @@ Also from this reader: `labkit/checks/code_check.py:204` is marked guaranteed, b
 Covered in every cause: `labkit/gates/report_hold.py:956`, the three LAB-004 sites of `labkit/checks/intent_check.py`, and `labkit/gates/preflight.py:348` (by the general sentence on required fields only).
 
 Nothing is changed by this pass. Each row is a site to split by cause or to re-assign, the author's decision.
+
+### Entered after the second pass: four of the 13 sites
+
+Four sites record the open assignment for the causes their rule's text does not state (a3e8f3cf, 77e759d4, 6f9c85a1). An open assignment decides nothing; every check blocks or warns as before.
+
+| Site                                                       | What changed                                                                                                                                                |
+|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `labkit/gates/registration_hold.py`, `scope_rule`          | a changed `kind` of the head records the open assignment, like `[kept]` and `[reference]` (`UNNAMED_HEAD_PARTS`)                                            |
+| `labkit/gates/preflight.py`, `check_protocol_fields` (two) | a missing "should" field and a placeholder in a field not owed as a must record the open assignment; LAB-011 Required-field check names the required fields |
+| `labkit/gates/finalize.py`, `check_open_fields`            | a placeholder records LAB-011 only in a field owed as a must (`protocol_check.must_and_soft_holes`), the open assignment in every other                     |
+
+Not changed, against the reading above: the hook installation (`preflight.check_hooks`). The table says "a hook is no field", which is true of the rule's name. The rule's text states the warning: "All hooks come with the pinned labkit: `.venv/bin/labkit-hooks install` writes them along with `core.hooksPath` and is run again after every bump of the pin; `preflight` warns if they are missing or come from a different labkit version." Every gap `install_hooks.check` names is a hook missing or from another labkit. Whether that sentence states a duty or describes the tool is the question the author keeps for each site (the same one as at `labkit/checks/code_check.py:190`), so the site stays under LAB-011 until it is answered.
+
+Inventory after the three commits: 278 finding sites, 88 with a rule, 88 a technical contract, 16 open, 24 a rule the cause passes in; open assignments in all 28.
