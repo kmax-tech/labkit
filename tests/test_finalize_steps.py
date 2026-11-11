@@ -548,5 +548,35 @@ class CriterionNStation(unittest.TestCase):
             self.assertEqual(found.found, [])
 
 
+class NullLaneStation(unittest.TestCase):
+    """finalize's null-lane station (station 8) hands on what the kept rows
+    show: the warning of an unmoved null lane reaches the findings (the
+    condition itself: `tests/test_rules_run_record_check.py`). The reader of
+    the run's outputs is given."""
+
+    def _found(self, null_pred) -> Findings:
+        from labkit.formats.runs import KeptRows, OutputEntry
+
+        gold = [0, 1, 0, 1]
+        rows: list[dict[str, object]] = [
+            {"lane": lane, "item": str(i), "pred": pred(g), "gold": g}
+            for lane, pred in (("registered", lambda g: g), ("null", null_pred))
+            for i, g in enumerate(gold)
+        ]
+        kept = [KeptRows(OutputEntry(Path("out/rows.jsonl"), None, len(rows)), rows)]
+        found = Findings(tell=None)
+        with mock.patch.object(finalize, "kept_jsonl_rows", return_value=kept):
+            finalize.check_null_lane(found, AREA / "runs" / "r1")
+        return found
+
+    def test_an_unmoved_null_lane_reaches_the_findings_as_a_warning(self):
+        (f,) = self._found(lambda g: g).found
+        self.assertEqual((f.grade, f.evidence_kind), ("WARNING", STATIC_EVIDENCE))
+        self.assertIn("the null lane's answer and gold equal", f.text)
+
+    def test_the_twin_a_moved_null_lane_leaves_no_finding(self):
+        self.assertEqual(self._found(lambda g: 0).found, [])
+
+
 if __name__ == "__main__":
     unittest.main()
