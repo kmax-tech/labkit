@@ -78,6 +78,7 @@ from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
@@ -935,8 +936,9 @@ def review_hold(
     """The BLOCKER of a report no review releases: first, while the area's
     audit evidence is gone, that no review can run and the way out that
     works (`lost_evidence` — before any claims of this state, since no
-    review can answer them then); else the claims that hold this state;
-    else that it has no clean review. REL is the report, HELD_FOR why it
+    review can answer them then); else the claims that hold this state
+    (LAB_015: no further draw releases it); else that it has no clean
+    review (LAB_104). REL is the report, HELD_FOR why it
     owes a review of PROTOCOL's area (its discussion, or the head
     registering it), STANDS where the report stands, PARTS the state's
     fingerprint parts, COMMAND the review to run.
@@ -958,7 +960,9 @@ def review_hold(
             fix=f"change the report, or a source the reviewer read, so that "
             f"no claim holds, then review that state: {command} (another "
             f"draw on this state, `--again` included, releases nothing)",
-            rule=LAB_104,
+            # LAB_015's text states it: a claim the report review names
+            # holds until the report or what it cites changes
+            rule=LAB_015,
         )
     since = (
         f"; the last review ({stands.earlier.path.name}) read another state — "
