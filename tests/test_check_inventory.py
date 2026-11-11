@@ -192,6 +192,81 @@ class RecordedRule(unittest.TestCase):
         self.assertEqual((s.rules, s.assignment), (("LAB-003",), inv.NOT_RECORDED))
 
 
+class CheckOutcome(unittest.TestCase):
+    """The outcome column (`site_outcome`): a constant the call states, a
+    value computed at run time, else what `gate.derived_outcome` gives for
+    the evidence kind and the rule assignment the scan read."""
+
+    OUTCOMES = module(
+        "labkit.checks.outcomes",
+        """
+        from labkit.formats.gate import (
+            GUARANTEED, NOT_EXECUTABLE, OPEN_RULE, STATIC_EVIDENCE, TECHNICAL_RULE,
+            cited_rule, outcome_of_failed_read,
+        )
+
+
+        def told(out, exc, why, kind):
+            out.block("rule", fix="x", rule=cited_rule("LAB-034 Null condition in the same run"))
+            out.block("contract", fix="x", rule=TECHNICAL_RULE)
+            out.block("open", fix="x", rule=OPEN_RULE)
+            out.block("no assignment", fix="x")
+            out.warn("hint", evidence_kind=STATIC_EVIDENCE, rule=TECHNICAL_RULE)
+            out.warn("hint, rule passed in", evidence_kind=STATIC_EVIDENCE, rule=why.rule)
+            out.block("unrun", fix="x", stated_outcome=NOT_EXECUTABLE, rule=OPEN_RULE)
+            out.block("read", fix="x", stated_outcome=outcome_of_failed_read(exc), rule=TECHNICAL_RULE)
+            out.block("stated nothing", fix="x", stated_outcome=None, rule=TECHNICAL_RULE)
+            out.block("rule passed in", fix="x", rule=why.rule)
+            out.warn("kind passed in", evidence_kind=kind, rule=TECHNICAL_RULE)
+            raise SystemExit("refused")
+        """,
+    )
+
+    def test_each_site_reads_as_its_outcome(self) -> None:
+        sites = sorted(inv.finding_sites([self.OUTCOMES]), key=lambda s: s.line)
+        self.assertEqual(
+            [(s.wording, s.outcome) for s in sites],
+            [
+                ("rule", gate.VIOLATED),
+                ("contract", gate.VIOLATED),
+                ("open", gate.DEVIATION),
+                ("no assignment", gate.DEVIATION),
+                ("hint", gate.SUSPECTED),
+                ("hint, rule passed in", gate.SUSPECTED),
+                ("unrun", gate.NOT_EXECUTABLE),
+                ("read", inv.COMPUTED),
+                ("stated nothing", gate.VIOLATED),
+                ("rule passed in", "variable"),
+                ("kind passed in", "variable"),
+                ("refused", "none"),
+            ],
+        )
+
+    def test_the_table_and_the_count_line_tell_it(self) -> None:
+        text = inv.render_inventory(inv.finding_sites([self.OUTCOMES]), [], {}, [])
+        self.assertIn(
+            "Check outcome of the 11 gate findings (`GateFinding.outcome`): "
+            "3 violated, 2 deviation, 2 suspected, 1 not executable, 1 computed, "
+            "2 variable",
+            text,
+        )
+        self.assertIn("| Rule (data) | Check outcome | Cited in the text |", text)
+        row = next(line for line in text.splitlines() if line.endswith("| unrun |"))
+        self.assertIn("| open assignment | not executable |", row)
+
+    def test_the_package_has_every_kind_of_outcome(self) -> None:
+        """A known positive on the real source, and the sum: every gate
+        finding has an outcome, an exit and a printed line none."""
+        sites = inv.finding_sites(inv.read_modules(PACKAGE_DIR))
+        found = {s.outcome for s in sites if s.channel == "finding"}
+        self.assertEqual(found, {*gate.OUTCOMES, inv.COMPUTED, "variable"})
+        self.assertEqual({s.outcome for s in sites if s.channel != "finding"}, {"none"})
+        (read,) = [
+            s for s in sites if s.unit == "labkit.checks.code_scan.unreadable_source"
+        ]
+        self.assertEqual(read.outcome, inv.COMPUTED)
+
+
 class Reach(unittest.TestCase):
     def test_a_command_reaches_a_check_through_a_module_alias(self) -> None:
         graph = inv.call_graph([CHECKS, GATE])

@@ -25,6 +25,15 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
     rule ids the call's strings cite — its own literals, the module
     constants it names, what is assigned to a local name it passes —, a
     citation in the text, not a record
+  - its check outcome (`gate.GateFinding.outcome`) is the value the call
+    states as a constant (`stated_outcome=NOT_EXECUTABLE`); `computed`
+    where it states an expression, known only at run time
+    (`gate.outcome_of_failed_read`: not executable, or the derived one);
+    otherwise the outcome derived from its evidence kind and its rule
+    assignment (`gate.derived_outcome`; a site without `rule=` is a
+    deviation), `variable` where the cause passes the rule or the evidence
+    kind in, so the scan cannot derive it (`site_outcome` has the order);
+    `none` for an exit or a printed line
   - an open cause a site receives is a place the code names `OPEN_RULE`
     that is not the rule argument of a finding site itself: the value of a
     cause's record, a table, a function's result, or one arm of a
@@ -63,7 +72,13 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, findings
-from labkit.formats.gate import NEW_CLASS, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT
+from labkit.formats import gate
+from labkit.formats.gate import (
+    KNOWN_RULE,
+    NEW_CLASS,
+    OPEN_ASSIGNMENT,
+    TECHNICAL_CONTRACT,
+)
 from labkit.formats.rules import CODE_RE, load_ledger
 
 USAGE = (
@@ -127,6 +142,9 @@ class FindingSite:
             `printed` site, and a gate finding the migration has not
             visited); `variable` where it passes a value the scan cannot
             follow. The rule tables count by it.
+        outcome: The check outcome (`site_outcome`): one of
+            `gate.OUTCOMES`, COMPUTED, `variable`, or `none` for an exit
+            or a printed line.
     """
 
     unit: str
@@ -139,6 +157,7 @@ class FindingSite:
     rules: tuple[str, ...]
     wording: str
     assignment: str = ""
+    outcome: str = "none"
 
 
 #: a site that records no rule assignment as data
@@ -148,6 +167,22 @@ _RULE_CONSTANTS = {
     "OPEN_RULE": OPEN_ASSIGNMENT,
     "TECHNICAL_RULE": TECHNICAL_CONTRACT,
     "NEW_CLASS_RULE": NEW_CLASS,
+}
+
+
+#: a site whose stated outcome is an expression: the value exists at run time
+COMPUTED = "computed"
+#: the outcome constants of `gate` a site states by name
+_OUTCOME_CONSTANTS = {
+    "VIOLATED": gate.VIOLATED,
+    "DEVIATION": gate.DEVIATION,
+    "SUSPECTED": gate.SUSPECTED,
+    "NOT_EXECUTABLE": gate.NOT_EXECUTABLE,
+}
+#: the evidence kinds as `_grade_name` reads them from a call
+_EVIDENCE_CONSTANTS = {
+    "GUARANTEED": gate.GUARANTEED,
+    "STATIC_EVIDENCE": gate.STATIC_EVIDENCE,
 }
 
 
@@ -438,6 +473,52 @@ def _call_assignment(
     return ids[0] if len(ids) == 1 else "variable"
 
 
+def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
+    """The check outcome of a gate finding built by CALL
+    (`FindingSite.outcome`), EVIDENCE_KIND and ASSIGNMENT as the scan read
+    them. In this order:
+
+    1. `stated_outcome=` names a gate constant (`NOT_EXECUTABLE`): that
+       value — `gate.GateFinding` refuses a stated value that contradicts
+       the derived one, so it is the outcome.
+    2. `stated_outcome=` is anything else but a literal None — a call, a
+       local name, an attribute: COMPUTED. The site decides at run time
+       whether its check ran; the scan does not follow the expression.
+    3. Nothing stated, static evidence: `suspected`, whatever the rule —
+       also where the rule is `variable`.
+    4. Nothing stated, an exact check: the outcome `gate.derived_outcome`
+       gives for the assignment — `violated` for a rule id or a technical
+       contract, `deviation` for an open assignment, a new class and a
+       site without `rule=` (NOT_RECORDED).
+    5. `variable` where 4 cannot be read from the source: the cause passes
+       the rule in (ASSIGNMENT `variable`), or the evidence kind
+       (EVIDENCE_KIND `variable`). Unlike COMPUTED, the site states
+       nothing; a fixed derivation waits for an input the scan lacks."""
+    stated = next((k.value for k in call.keywords if k.arg == "stated_outcome"), None)
+    if stated is not None and not (
+        isinstance(stated, ast.Constant) and stated.value is None
+    ):
+        name = (
+            stated.id
+            if isinstance(stated, ast.Name)
+            else stated.attr
+            if isinstance(stated, ast.Attribute)
+            else None
+        )
+        return _OUTCOME_CONSTANTS.get(name or "", COMPUTED)
+    if evidence_kind not in _EVIDENCE_CONSTANTS:
+        return "variable"
+    kind = _EVIDENCE_CONSTANTS[evidence_kind]
+    if kind == gate.STATIC_EVIDENCE:
+        return gate.derived_outcome(kind, None)
+    if assignment == "variable":
+        return "variable"
+    if assignment == NOT_RECORDED:
+        return gate.derived_outcome(kind, None)
+    basis = KNOWN_RULE if RULE_ID.fullmatch(assignment) else assignment
+    return gate.derived_outcome(kind, basis)
+
+
 def _refusal_message(n: ast.AST) -> ast.AST | None:
     """The message of a `raise SystemExit(<message>)` — for
     `SystemExit(with_way_out(<message>, <fix>))` its first argument; None
@@ -530,6 +611,16 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
                 if (m.path, line, channel) in seen:
                     continue
                 seen.add((m.path, line, channel))
+                # a gate finding records a rule assignment and has a check
+                # outcome; an exit and a printed line carry neither
+                assignment, outcome = NOT_RECORDED, "none"
+                if channel == "finding" and isinstance(n, ast.Call):
+                    ctor = _constructor(n)
+                    assert ctor is not None, "a finding site is a constructor call"
+                    assignment = _call_assignment(
+                        _rule_argument(n, ctor), assigned, constants, m.name, imports
+                    )
+                    outcome = site_outcome(n, evidence_kind, assignment)
                 out.append(
                     FindingSite(
                         unit=unit,
@@ -543,19 +634,8 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
                             n, skip, assigned, constants, m.name, imports
                         ),
                         wording=short(wording(msg, assigned)),
-                        assignment=(
-                            _call_assignment(
-                                _rule_argument(n, ctor),
-                                assigned,
-                                constants,
-                                m.name,
-                                imports,
-                            )
-                            if channel == "finding"
-                            and isinstance(n, ast.Call)
-                            and (ctor := _constructor(n)) is not None
-                            else NOT_RECORDED
-                        ),
+                        assignment=assignment,
+                        outcome=outcome,
                     )
                 )
     return out
@@ -760,6 +840,12 @@ def render_inventory(
     cited = sum(1 for s in sites if RULE_ID.fullmatch(s.assignment))
     by_kind = Counter(s.assignment for s in sites)
     held = [u for u in uses if u.sites]
+    by_outcome = Counter(s.outcome for s in sites if s.channel == "finding")
+    outcomes = ", ".join(
+        f"{by_outcome[o]} {o}"
+        for o in (*gate.OUTCOMES, COMPUTED, "variable")
+        if by_outcome[o]
+    )
     lines = [
         "# Check inventory",
         "",
@@ -773,6 +859,11 @@ def render_inventory(
         f"{by_kind[OPEN_ASSIGNMENT] + len(causes)} — at the "
         f"{by_kind[OPEN_ASSIGNMENT]} open sites and at {len(causes)} causes a "
         "site receives (last table). "
+        f"Check outcome of the {sum(by_outcome.values())} gate findings "
+        f"(`GateFinding.outcome`): {outcomes or 'none'} — `computed`: the site "
+        "states it from an error at run time; `variable`: the site states "
+        "nothing and the cause passes in the rule or the evidence kind it "
+        "is derived from. "
         "Read from the source, not run: `python -m labkit.tools.check_inventory` "
         "(its docstring says what counts and how far the estimate reaches).",
         "",
@@ -791,13 +882,14 @@ def render_inventory(
         "",
         "## Finding sites",
         "",
-        "| Site | Function | Channel | Grade | Evidence kind | Rule (data) | Cited in the text | Commands | Wording |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Site | Function | Channel | Grade | Evidence kind | Rule (data) | Check outcome | Cited in the text | Commands | Wording |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for s in sites:
         lines.append(
             f"| `{s.path}:{s.line}` | `{short_unit(s.unit)}` | {s.channel} | {s.grade} "
-            f"| {s.evidence_kind} | {s.assignment} | {', '.join(s.rules) or '—'} | {cmds(s.unit)} "
+            f"| {s.evidence_kind} | {s.assignment} | {s.outcome} "
+            f"| {', '.join(s.rules) or '—'} | {cmds(s.unit)} "
             f"| {s.wording} |"
         )
     lines += [

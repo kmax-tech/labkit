@@ -226,19 +226,19 @@ class Outcome(unittest.TestCase):
     def test_a_combination_the_derivation_does_not_name_raises(self) -> None:
         """A new evidence kind or rule kind is decided in `derived_outcome`
         before a finding of it is told as a violation."""
-        unnamed_basis = gate.RuleAssignment.__new__(gate.RuleAssignment)
-        object.__setattr__(unnamed_basis, "kind", "house rule")
-        for kind, rule in (("agent audit", LAB_003), (gate.GUARANTEED, unnamed_basis)):
-            with self.subTest(kind=kind, rule=rule.kind):
+        for kind, basis in (
+            ("agent audit", gate.KNOWN_RULE),
+            (gate.GUARANTEED, "house rule"),
+        ):
+            with self.subTest(kind=kind, basis=basis):
                 with self.assertRaisesRegex(ValueError, "no check outcome is defined"):
-                    gate.derived_outcome(kind, rule)
+                    gate.derived_outcome(kind, basis)
 
     def test_every_rule_kind_has_its_outcome(self) -> None:
-        for kind in gate.RULE_KINDS:
-            rule = LAB_003 if kind == gate.KNOWN_RULE else gate.RuleAssignment(kind)
-            with self.subTest(kind=kind):
+        for basis in gate.RULE_KINDS:
+            with self.subTest(basis=basis):
                 self.assertIn(
-                    gate.derived_outcome(gate.GUARANTEED, rule), gate.OUTCOMES
+                    gate.derived_outcome(gate.GUARANTEED, basis), gate.OUTCOMES
                 )
 
     def test_a_check_not_executed_says_so_in_every_form(self) -> None:

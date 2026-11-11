@@ -231,10 +231,12 @@ _EXACT_OUTCOME_BY_BASIS: dict[str | None, str] = {
 }
 
 
-def derived_outcome(evidence_kind: str, rule: RuleAssignment | None) -> str:
+def derived_outcome(evidence_kind: str, basis: str | None) -> str:
     """The outcome of a check that ran and found its condition, from what
-    carries the sentence (EVIDENCE_KIND) and the finding's RULE assignment —
-    the one home of the derivation; NOT_EXECUTABLE is never derived, the
+    carries the sentence (EVIDENCE_KIND) and the kind of the finding's rule
+    assignment (BASIS, one of RULE_KINDS, None without an assignment) —
+    the one home of the derivation, for a finding and for the inventory
+    that reads a site from the source; NOT_EXECUTABLE is never derived, the
     site says it. STATIC_EVIDENCE gives SUSPECTED whatever the basis;
     GUARANTEED gives VIOLATED for a known rule or a technical contract and
     DEVIATION for an open assignment, a new class and no assignment
@@ -243,7 +245,6 @@ def derived_outcome(evidence_kind: str, rule: RuleAssignment | None) -> str:
     finding is told as a breach. Pure."""
     if evidence_kind == STATIC_EVIDENCE:
         return SUSPECTED
-    basis = rule.kind if rule is not None else None
     if evidence_kind != GUARANTEED or basis not in _EXACT_OUTCOME_BY_BASIS:
         raise ValueError(
             f"no check outcome is defined for evidence kind {evidence_kind!r} "
@@ -341,7 +342,7 @@ class GateFinding:
             raise ValueError(
                 f"a gate finding's outcome is one of {OUTCOMES}, not {self.stated_outcome!r}"
             )
-        derived = derived_outcome(self.evidence_kind, self.rule)
+        derived = derived_outcome(self.evidence_kind, self._basis)
         if self.stated_outcome not in (None, NOT_EXECUTABLE, derived):
             raise ValueError(
                 f"a gate finding states the outcome {self.stated_outcome!r}, and "
@@ -366,7 +367,12 @@ class GateFinding:
         evidence kind and the rule assignment (`derived_outcome`)."""
         if self.stated_outcome == NOT_EXECUTABLE:
             return NOT_EXECUTABLE
-        return derived_outcome(self.evidence_kind, self.rule)
+        return derived_outcome(self.evidence_kind, self._basis)
+
+    @property
+    def _basis(self) -> str | None:
+        """The kind of the rule assignment, None without one."""
+        return self.rule.kind if self.rule is not None else None
 
     @property
     def way(self) -> str | None:
