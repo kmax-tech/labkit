@@ -12,13 +12,16 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.formats import findings as audit_findings
+from labkit.formats import protocol_block, protocol_check
 from labkit.formats.gate import (
     BLOCKER,
+    OPEN_RULE,
     WARNING,
     Findings,
     TECHNICAL_RULE,
 )
 from labkit.gates import preflight
+from protocol_fixture import head
 from state_fixture import area_evidence, audit_record
 
 
@@ -49,6 +52,38 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
         (f,) = found.found
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
+
+    def _field_findings(self, **lists: list) -> Findings:
+        """Station 1 on a field report holding only LISTS."""
+        text = head()
+        protocol = self.area / "PROTOCOL-x.md"
+        protocol.write_text(text, encoding="utf-8")
+        parsed = protocol_block.head(text)
+        report = protocol_check.FieldReport(
+            parsed,
+            None,
+            None,
+            must_gaps=[],
+            missing_should=lists.get("missing_should", []),
+            must_holes=lists.get("must_holes", []),
+            soft_holes=lists.get("soft_holes", []),
+            repeated=[],
+        )
+        found = Findings(tell=None)
+        preflight.check_protocol_fields(found, protocol, text, report, parsed)
+        return found
+
+    def test_a_field_not_owed_as_a_must_warns_as_an_open_assignment(self):
+        found = self._field_findings(
+            missing_should=["Problem in one sentence"], soft_holes=[(7, "Unit")]
+        )
+        self.assertEqual(
+            [(f.grade, f.rule) for f in found.found], [(WARNING, OPEN_RULE)] * 2
+        )
+
+    def test_the_twin_a_must_placeholder_breaks_the_required_field_rule(self):
+        (f,) = self._field_findings(must_holes=[(7, "Unit")]).found
+        self.assertEqual((f.grade, f.rule), (BLOCKER, preflight.LAB_011))
 
     def test_an_audit_record_that_does_not_read_blocks(self):
         (self.area / audit_findings.DIR).mkdir()

@@ -323,8 +323,8 @@ def check_protocol_fields(
     the repo's others and the bound annotation evidence
     (`check_annotation_validity`), a repeat cost lowered since the first commit. A must
     gap or a must placeholder blocks; a should gap, a should placeholder
-    and a lowered tier warn; an id finding carries its grade (a changed id
-    warns, a doubled one blocks)."""
+    and a lowered tier warn, each as an open assignment; an id finding
+    carries its grade (a changed id warns, a doubled one blocks)."""
     ids = repo_protocol_ids(protocol)
     id_findings = check_protocol_id(protocol, head, ids) + check_annotation_validity(
         protocol, text, ids
@@ -354,15 +354,17 @@ def check_protocol_fields(
         findings.take(finding)
     if lowered:
         findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE)
+    # LAB_011 names the required fields; no decided rule states that a
+    # field not owed as a must is written
     for label in report.missing_should:
         findings.warn(
-            f"missing (should): {label}", evidence_kind=GUARANTEED, rule=LAB_011
+            f"missing (should): {label}", evidence_kind=GUARANTEED, rule=OPEN_RULE
         )
     for n, label in report.soft_holes:
         findings.warn(
             f"{protocol.name}:{n}: placeholder (should): {label}",
             evidence_kind=GUARANTEED,
-            rule=LAB_011,
+            rule=OPEN_RULE,
         )
     if not (
         report.missing_must
