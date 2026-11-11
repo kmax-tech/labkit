@@ -84,6 +84,15 @@ Sites in the code, not findings counted in use.
 | LAB-051 Judge instance, not model name                                    | 1                        | 0                |
 | LAB-052 Instance gate before registered use                               | 1                        | 0                |
 
+## Decided 2026-11-11
+
+The author decided the proposal in blocks; the sites were joined to its rows by function and wording, since the line numbers below are those of 2026-11-09. `python -m labkit.tools.check_inventory` counts what the code records today: 256 finding sites, 106 with a known rule, 36 technical contracts, 51 open assignments (168 before).
+
+1. **Possible violation, sure: taken.** 85 sites record the rule of their row (`a8dc057a`), three of them renamed or split since (`run_record_check.source_finding` for other bytes, `registration_hold.seen_hold`, `registration_hold.now_hold`). Five sure rows stay open, because an assignment holds one LAB rule (`gate.cited_rule`): three name a CODE rule (`labkit/gates/finalize.py`, the two reconstruction sites; `labkit/gates/preflight.py`, the failed test run), two name LAB-015 Preflight audit before freezing and LAB-016 Resolution check before freezing at once (`labkit/gates/preflight.py`).
+2. **Possible violation, likely: row by row.** 21 sites, open until the author has seen each.
+3. **A check left open is a technical contract.** The 32 sites classed mixed handler, check not executable or input defect record `gate.TECHNICAL_RULE` (`73b79808`), not the rule of the check they leave open as the "Checks left open" table below proposed: a site that reports a check could not run, or an input missing or malformed, states no rule of the standard broken. The same decision, the same day, for the inputs that do not read in `report_decisions` and `audit_binding` (`ece9ed88`). Whether the check ran stays a datum of its own (`GateFinding.check_outcome`).
+4. **Open beside these:** the 8 sites without a rule (protocol id, preconditions of a check), the rule candidate (changed records), and 16 sites built or rebuilt after the proposal, which have no row.
+
 ## Review 2026-11-09
 
 Four points checked at the code; each row they change is marked `R` in the table below.
