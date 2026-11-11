@@ -54,14 +54,11 @@ class AnAuditedRunIsKept(unittest.TestCase):
         self.assertEqual(
             (f.grade, f.evidence_kind, f.check_outcome), (BLOCKER, GUARANTEED, VIOLATED)
         )
-        self.assertEqual(
-            f.rule, RuleAssignment(KNOWN_RULE, "LAB-043", "Runs go through `runlog`")
-        )
+        self.assertEqual(f.rule, TECHNICAL_RULE)
         self.assertEqual(
             f.text,
             f"{RECORD}: names r0 as the run it read, and there is no runs/r0/ in "
-            f"this area — a run an audit read is a kept run (LAB-043 Runs go "
-            f"through `runlog`)",
+            f"this area — the run the record refers to cannot be read",
         )
         # no commit holds r0: the way out hands over or registers anew; a new
         # measurement leaves the record standing and is never offered

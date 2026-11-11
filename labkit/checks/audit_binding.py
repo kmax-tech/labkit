@@ -394,9 +394,10 @@ def check_audited_runs_kept(
     state: AreaState, *, evidence: AreaEvidence
 ) -> list[GateFinding]:
     """A blocker per analysis record of EVIDENCE that names a run STATE no
-    longer holds (`audit_gaps.records_of_gone_runs` over `state.runs`): a
-    run an audit read is a kept run (LAB-043 Runs go through `runlog`), and
-    the record of a run deleted after its audit would otherwise read as
+    longer holds (`audit_gaps.records_of_gone_runs` over `state.runs`): the
+    record refers to a run that cannot be read, a technical contract — no
+    rule of the standard states that an audited run is kept —, and the
+    record of a run deleted after its audit would otherwise read as
     "every finding decided". [] when every named run stands; a record of no
     run (`findings.NO_RUN`) and a preflight record name none. The way out is
     `gone_run_way`'s. Pure: reads STATE and EVIDENCE only — but the way out
@@ -410,11 +411,11 @@ def check_audited_runs_kept(
         out.append(
             blocker(
                 f"{rec.path.name}: names {rec.run_id} as the run it read, and "
-                f"there is no runs/{rec.run_id}/ in this area — a run an audit "
-                f"read is a kept run (LAB-043 Runs go through `runlog`)",
+                f"there is no runs/{rec.run_id}/ in this area — the run the "
+                f"record refers to cannot be read",
                 fix=way,
                 step=handover,
-                rule=cited_rule("LAB-043 Runs go through `runlog`"),
+                rule=TECHNICAL_RULE,
             )
         )
     return out

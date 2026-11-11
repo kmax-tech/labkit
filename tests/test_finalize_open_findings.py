@@ -157,7 +157,7 @@ class OpenFindings(unittest.TestCase):
         self.assertIn(
             f"{path.name}: names r0 as the run it read, and there is no runs/r0/", out
         )
-        self.assertIn("a run an audit read is a kept run", out)
+        self.assertIn("the run the record refers to cannot be read", out)
         # the way out lifts the blocker: git where a commit holds the run, a
         # handover or a new registration — never "measure anew", which leaves
         # the record standing; r0 no commit ever held, so no checkout is offered
