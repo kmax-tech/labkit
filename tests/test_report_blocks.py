@@ -471,7 +471,7 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertNotIn("BLOCKER", out)
         self.assertNotIn("which no protocol has adopted", out)
-        self.assertNotIn("in or beside a discussed run", out)
+        self.assertNotIn("beside a discussed run", out)
 
     def test_a_claim_holds_and_a_later_clean_draw_does_not_release(self):
         area = self._area(
@@ -651,8 +651,8 @@ class ReportFiles(unittest.TestCase):
             f"experiments/01-x/PROTOCOL-x.md's area has no runs/{other}/", out
         )
 
-    def test_numbers_in_and_beside_a_discussion_are_a_hint(self):
-        """Static evidence: the discussion and the paragraphs around it are
+    def test_numbers_beside_a_discussion_are_a_hint(self):
+        """Static evidence: the paragraphs around a discussion are
         named when they state numbers; a number in another paragraph is only
         among the unsourced ones. Nothing blocks."""
         area = self._area(
@@ -667,9 +667,7 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area)
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
-        self.assertIn(
-            "REPORT.md: numbers on 1 line(s) in or beside a discussed run", out
-        )
+        self.assertIn("REPORT.md: numbers on 1 line(s) beside a discussed run", out)
         self.assertIn("    REPORT.md:10: 0.80\n", out)
         self.assertIn("no assigned source found for the numbers on 2 line(s)", out)
 

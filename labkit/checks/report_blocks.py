@@ -48,9 +48,9 @@ here states, and no more:
   in `handovers` (the stop and the commit read it), here its lines count
   as generated (`generated_lines`).
 - `numbers_beside_discussed` (static evidence, never blocks): the numbers
-  in a discussion block and the paragraphs around it — a discussed run's
-  number in a report is a reported number unless the sentence says what
-  it is.
+  in the paragraphs around a discussion block — a discussed run's number
+  in a report is a reported number unless the sentence says what it is.
+  The block's own why may state what was found.
 - `unsourced_numbers` (static evidence, never blocks): numbers outside every
   block — no source is assigned to them. A number that happens to equal a
   value of the run is named too: equal values do not show where a number
@@ -643,11 +643,13 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
 def numbers_beside_discussed(
     text: str, found: list[Discussion]
 ) -> list[tuple[int, list[str]]]:
-    """(line, numbers) of every line that states a number in a discussion
-    block of FOUND (its line, the why included) or in the paragraph right
-    above or below it — the non-blank lines up to a blank line or another
-    generated block. Static evidence: a hint at a discussed run's number
-    presented in a report, never a blocker."""
+    """(line, numbers) of every line that states a number in the paragraph
+    right above or below a discussion block of FOUND — the non-blank lines
+    up to a blank line or another generated block. Not the block's own
+    lines: its why says what was found, numbers included, and whether it
+    reports a result is a question of content, the report review's. Static
+    evidence: a hint at a discussed run's number presented in a report,
+    never a blocker."""
     lines = text.split("\n")
     inside = generated_lines(text)
 
@@ -656,18 +658,17 @@ def numbers_beside_discussed(
 
     wanted: set[int] = set()
     for d in found:
-        wanted.update(range(d.first, d.last + 1))
         lo = d.first
         while in_paragraph(lo - 1):
             lo -= 1
         hi = d.last
         while in_paragraph(hi + 1):
             hi += 1
-        wanted.update(range(lo, hi + 1))
+        wanted.update(n for n in range(lo, hi + 1) if not d.first <= n <= d.last)
     out: list[tuple[int, list[str]]] = []
     for n in sorted(wanted):
         numbers = _numbers_in(lines[n - 1])
-        if numbers and not _discussion_head_line(lines[n - 1]):
+        if numbers:
             out.append((n, numbers))
     return out
 
@@ -683,12 +684,6 @@ def generated_lines(text: str) -> set[int]:
     except handovers.HandoverError as exc:
         raise ReportBlockError(str(exc)) from exc
     return {n for first, last in spans for n in range(first, last + 1)}
-
-
-def _discussion_head_line(line: str) -> bool:
-    """Is LINE a key of a discussion block's head (its numbers are the
-    block's data, shown again on its line)?"""
-    return line.split("=", 1)[0].strip() in DISCUSS_KEYS and "=" in line
 
 
 #: what is not a stated number before the scan: comments (a block's own

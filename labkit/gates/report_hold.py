@@ -587,7 +587,7 @@ def hold_report(
     run of a protocol that declares no result is not cited undiscussed
     (`promotions` — the number of a full run presented without the
     adoption; blockers); any other cited run no protocol declares a
-    WARNING (guaranteed); the numbers outside every block, and those in and
+    WARNING (guaranteed); the numbers outside every block, and those
     beside a discussion, a WARNING that is static evidence — a hint at
     where to look, not a check of them; a report discussing a run owes a
     report review of its state that names no claim (`report_review_owed`,
@@ -755,7 +755,7 @@ def report_hints(
     discussed: list[report_blocks.Discussion],
 ) -> None:
     """Tell OUT the hints on the report REL (its TEXT, its DISCUSSED runs):
-    the numbers outside every block and those in and beside a discussion —
+    the numbers outside every block and those beside a discussion —
     WARNINGs that are static evidence, a place to look, not a check."""
     unsourced = report_blocks.unsourced_numbers(text)
     if unsourced:
@@ -771,7 +771,7 @@ def report_hints(
     beside = report_blocks.numbers_beside_discussed(text, discussed)
     if beside:
         out.warn(
-            f"{rel}: numbers on {len(beside)} line(s) in or beside a discussed "
+            f"{rel}: numbers on {len(beside)} line(s) beside a discussed "
             f"run — a discussed run's number in a report is a reported number "
             f"unless the sentence says what it is (a hint, not a check):",
             evidence_kind=STATIC_EVIDENCE,

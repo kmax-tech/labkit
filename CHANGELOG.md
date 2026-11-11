@@ -330,6 +330,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A registered report a commit held is told as gone, not as unwritten.** The hold on a registered report the state lacks said "which is not written" for a report removed after it was written too. It now reads the history: a report a commit held is "written and is gone (a commit held it)", one no commit ever held stays "not written" (`repo.ever_committed`). The hold blocks as before.
+
+- **The hint beside a discussed run no longer counts the block's own why.** `report_blocks.numbers_beside_discussed` named numbers in a discussion block's reason too. The reason says what was found, numbers included; the hint now lists the paragraphs right above and below the block only, and its sentence reads "beside a discussed run". Whether a reason reports a result is the report review's question.
+
 - **An analysis check that does not end is a check not executed.** When `02_analyze.py --check` does not end within its time, report-check told it as a failed check under LAB-041 Generate numbers, don't retype them. Nothing was found: the blocker now reads `BLOCKER (check not executed)` and says so (`report_check.CheckUnfinished`); the release waits as before.
 
 - **A helper that cannot be compared says what is shown.** A module the script imports that is in neither the run's commit nor its `uncommitted.patch` blocked with "what the run imported is not recorded". The blocker now says that the file cannot be compared with what the run imported, and that the record tells neither why nor whether the run used it.

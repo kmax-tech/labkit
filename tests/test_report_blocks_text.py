@@ -266,7 +266,7 @@ class Discussions(unittest.TestCase):
         self.assertNotIsInstance(caught.exception, report_blocks.DiscussionKeyMissing)
         self.assertEqual(report_blocks.unread_rule(caught.exception), TECHNICAL_RULE)
 
-    def test_numbers_in_and_beside_stop_at_a_blank_line_and_a_block(self):
+    def test_numbers_beside_stop_at_a_blank_line_and_a_block_and_skip_the_why(self):
         result = report_blocks.with_block("", P, RUN, "auc = 0.69")
         block = "\n".join(report_blocks.discussion_lines(P, RUN, "12 of 30 kept"))
         text = (
@@ -276,8 +276,10 @@ class Discussions(unittest.TestCase):
         found = report_blocks.discussions(text)
         self.assertEqual(
             report_blocks.numbers_beside_discussed(text, found),
-            [(3, ["12"]), (9, ["12", "30"]), (11, ["0.80"])],
+            [(3, ["12"]), (11, ["0.80"])],
         )
+        # the why says what was found ("12 of 30 kept", line 9): no hint
+        self.assertIn("12 of 30 kept", text.split("\n")[8])
         # the block's own lines are generated: no unsourced number there
         self.assertNotIn(9, [n for n, _ in report_blocks.unsourced_numbers(text)])
 
