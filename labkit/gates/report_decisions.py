@@ -102,9 +102,9 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     finding's: a BLOCKER limitation's `stands` no review upholds — never
     reviewed, rejected, insufficient, contested, or reviewed as another
     decision or claim — is a BLOCKER (a severe finding is not settled by
-    a reason alone), an
-    `limitation` WARNING's a WARNING for now (the release does not yet hang
-    on every lesser limit). A finding a review of the record once did not
+    a reason alone), a
+    WARNING limitation's a WARNING (not every lesser limit owes a second
+    auditor; LAB-015 Preflight audit before freezing, "By risk"). A finding a review of the record once did not
     uphold (`reviews.once_not_upheld`) and that is now `false-positive`, `fixed`
     (`findings.CLOSING`) is held the same way until a review
     upholds the new decision: closing it is not settling it. A BLOCKER decided `false-positive` (`first_dismissals`) and
