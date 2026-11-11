@@ -27,7 +27,7 @@ from labkit.formats.followup import (
     chain,
     released_corrections,
 )
-from labkit.formats.gate import BLOCKER, cited_rule
+from labkit.formats.gate import BLOCKER, OPEN_RULE, cited_rule
 from labkit.formats.protocol_history import STANDS_AS_REGISTERED, scope_differences
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import registration_hold
@@ -383,6 +383,31 @@ class TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands(unittest.TestCase):
         edited = TEXT.replace("one document of", "one text document of")
         self.assertNotEqual(edited, TEXT)
         self.assertTrue(self.fix(edited).startswith(self.LEADS), self.fix(edited))
+
+
+class TheRuleAScopeHoldRecords(unittest.TestCase):
+    """`scope_rule`: the rule's text names the fields, not the head's `[kept]`
+    and `[reference]` tables — a hold on those records an open assignment."""
+
+    LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+
+    def test_a_field_the_rule_names_records_the_rule(self):
+        self.assertEqual(registration_hold.scope_rule(SCOPE), self.LAB_003)
+
+    def test_a_table_the_rule_does_not_name_is_open_alone_or_among_fields(self):
+        for table in registration_hold.UNNAMED_TABLES:
+            diff = (table, "a", "b")
+            with self.subTest(table=table):
+                self.assertEqual(registration_hold.scope_rule([diff]), OPEN_RULE)
+                self.assertEqual(
+                    registration_hold.scope_rule([*SCOPE, diff]), OPEN_RULE
+                )
+
+    def test_the_hold_blocks_whatever_rule_it_records(self):
+        f = pure_call(
+            seen_hold, PID, "r2", FIRST, [("[reference]", "a", "b")], [None], ANALYSIS
+        )
+        self.assertEqual((f.grade, f.rule), (BLOCKER, OPEN_RULE))
 
 
 class TheHoldAsTheRunSawIt(unittest.TestCase):

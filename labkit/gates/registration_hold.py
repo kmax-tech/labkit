@@ -15,8 +15,10 @@ from pathlib import Path
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
+    OPEN_RULE,
     TECHNICAL_RULE,
     GateFinding,
+    RuleAssignment,
     blocker,
     cited_rule,
     withdrawn_first,
@@ -69,6 +71,17 @@ from labkit.formats.followup import (
 )
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+#: the head tables the scope hold compares that no sentence of its rule names
+UNNAMED_TABLES = ("[kept]", "[reference]")
+
+
+def scope_rule(diffs: list[tuple[str, str, str]]) -> RuleAssignment:
+    """The rule a scope hold on DIFFS records: LAB_003 where the rule's text
+    names every changed field; an open assignment as soon as one difference
+    is in a table of UNNAMED_TABLES — the hold blocks either way. Pure."""
+    if any(what in UNNAMED_TABLES for what, _, _ in diffs):
+        return OPEN_RULE
+    return LAB_003
 
 
 def registration_changes(
@@ -400,7 +413,7 @@ def seen_hold(
         f"result was seen does not answer the registered question",
         fix=fix,
         step=first.step,
-        rule=LAB_003,
+        rule=scope_rule(diffs),
     )
 
 
@@ -469,7 +482,7 @@ def now_hold(
         f"carry the change",
         fix=fix,
         step=first.step,
-        rule=LAB_003,
+        rule=scope_rule(kept),
     )
     return withdrawn_first([finding], withdraw)
 
