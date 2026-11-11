@@ -20,8 +20,11 @@ command:
      intent addressable, GUARANTEED), when the protocol has one: the block
      parses (else one blocker), every declared scope resolves, every
      declared key appears as a literal in a script. Then, block or not,
-     every id registered in the prose appears as a key literal, and every
-     key in the intent-id namespace has a registered id (a WARNING).
+     and only where the prose registers an id: every such id appears as a
+     key literal (that one finding records CODE-016 The experiment area
+     reconstructs itself, which states the duty), and every key in the
+     intent-id namespace has a registered id (a WARNING, under the rule
+     of the block's findings).
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
   1a. **Quality-check keys decide something** (STATIC EVIDENCE; with a
@@ -134,8 +137,20 @@ LAB_018 = cited_rule("LAB-018 Routine check after every implementation")
 # --- source analysis ------------------------------------------------------
 
 
-#: the rule every intent-id finding cites
+#: the rule this module's own findings on ids and keys cite — a key nobody
+#: registered, a declared key or scope the code lacks, a quality-check key
+#: never tested —, but for the registered id without a key literal
+#: (KEY_LITERAL_RULE). A promise block that does not parse brings its rule
+#: with the error (`promises.PromiseError.rule`)
 ID_RULE = cited_rule("LAB-004 Identifiers make the intent addressable")
+#: the rule a registered id without a key literal records: its text states
+#: the duty the check decides exactly ("Every registered key is set in the
+#: area script", as a literal string). ID_RULE states the contract on
+#: metrics.json, for which a literal in the source is only an indication.
+#: The check is narrower than the duty — a literal in an imported helper
+#: or a keyword argument passes (`intent_check.code_keys`) —, so every
+#: finding is a breach of it and not every breach is found
+KEY_LITERAL_RULE = cited_rule("CODE-016 The experiment area reconstructs itself")
 
 
 # --- gate-label extraction ------------------------------------------------
@@ -187,7 +202,7 @@ def _intent_id_findings(area: Path, protocol: Path, text: str) -> list[GateFindi
                 f"assembled at run time is not seen, and blocks here too) · the run "
                 f"may report nothing for this promise, and the metrics check fails "
                 f"after the tokens are spent",
-                rule=ID_RULE,
+                rule=KEY_LITERAL_RULE,
                 fix=f"report the key in the measure script or drop [{i}] from the "
                 f"block, then `{gate_command('code-check', area)}`",
                 evidence_kind=GUARANTEED,

@@ -94,5 +94,7 @@ Built 2026-11-11: `registration_hold.by_cause` parts the differences, both holds
 
 **Proposal: the inventory.** One more column, the outcome: the value where the site writes a constant, `computed` where it calls `outcome_of_failed_read`, and the derived value otherwise.
 
+**The registered id without a key literal, entered 2026-11-11.** The site records CODE-016 The experiment area reconstructs itself instead of LAB-004 and blocks as before. Checked first, as the author asked, whether the condition is exactly the literal duty: it is narrower. `intent_check.code_keys` counts a literal in an imported helper under `src/` or `lib/` and a keyword argument of a call, and CODE-016 wants the literal in the area script. So every finding of the check is a breach of the duty, and a key set only in a shared helper is a breach the check does not find. The assignment follows without a further decision; the gap is the check's reach, not the rule's. LAB-018 Routine check after every implementation still names LAB-004 beside this check in its own text; the rule's text is unchanged here.
+
 Limits of the classification that stay as they are: the review's claim, the audit's finding and what is printed or refused without a finding keep their own types; a gate's note is no finding; the unit "cause" is listed only where a site receives its rule.
 

@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks.code_check import check_intent_ids  # noqa: E402
 from labkit.checks.intent_check import code_ids  # noqa: E402
+from labkit.formats.gate import BLOCKER, VIOLATED, WARNING, cited_rule  # noqa: E402
 
 PROTOCOL = "Criterion [criterion-1]; admissibility [quality-check-1].\n"
 LITERAL = 'r.metrics(**{"criterion_1_pass": ok, "quality_check_1_anchor_ok": a})\n'
@@ -65,6 +66,36 @@ class KeywordKeys(unittest.TestCase):
         ]
         self.assertEqual(len(findings), 1)
         self.assertIn("[criterion-1] is registered, but no script names", findings[0])
+
+    def test_a_registered_id_without_a_key_literal_records_the_literal_duty(self):
+        """CODE-016 states the duty the check decides exactly; the reverse
+        direction, a key nobody registered, stays under LAB-004."""
+        area, protocol = area_with(
+            "r.metrics(criterion_2_pass=ok, quality_check_1_anchor_ok=a)\n"
+        )
+        missing, unregistered = check_intent_ids(
+            area, protocol, protocol.read_text(encoding="utf-8")
+        )
+        self.assertIn("[criterion-1] is registered, but no script names", missing.text)
+        self.assertEqual(
+            (missing.grade, missing.rule, missing.outcome),
+            (
+                BLOCKER,
+                cited_rule("CODE-016 The experiment area reconstructs itself"),
+                VIOLATED,
+            ),
+        )
+        self.assertIn("CODE-016 The experiment area reconstructs itself", missing.line)
+        self.assertIn(
+            "'criterion_2_*' is in the intent-id namespace", unregistered.text
+        )
+        self.assertEqual(
+            (unregistered.grade, unregistered.rule),
+            (
+                WARNING,
+                cited_rule("LAB-004 Identifiers make the intent addressable"),
+            ),
+        )
 
     def test_suffixed_only_drops_a_bare_keyword(self):
         area, _ = area_with("f(quality_check_65=1, criterion_1_pass=2)\n")
