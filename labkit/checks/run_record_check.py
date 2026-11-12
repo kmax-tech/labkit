@@ -850,17 +850,21 @@ class OutputDrift:
 
 def output_drift(output: OutputNow) -> OutputDrift | None:
     """Why the file of a registered OUTPUT is not the one the run recorded
-    in outputs.json, or None when it is. In this order: the run ended
-    without it (no sha256 recorded — whatever stands at the path now, the
-    record holds nothing to compare it with), the file is gone, or its
-    sha256 now differs from the record. The record is the run's, taken
+    in outputs.json, or None when it is. In this order: the record holds no
+    sha256 for it (whatever stands at the path now, there is nothing to
+    compare it with; why none was recorded is the record's own note, quoted
+    where it has one — the missing field alone does not show that the run
+    ended without the file), the file is gone, or its sha256 now differs
+    from the record. The record is the run's, taken
     after the run (`runlog.Run._finalize`); the tree at check time is only
     compared, never trusted."""
     recorded = output.entry.sha256
     if recorded is None:
+        noted = (
+            f'; the record notes: "{output.entry.note}"' if output.entry.note else ""
+        )
         return OutputDrift(
-            OUTPUT_UNRECORDED,
-            "the run ended without it (outputs.json records no sha256)",
+            OUTPUT_UNRECORDED, f"outputs.json records no sha256 for it{noted}"
         )
     if not output.stands:
         return OutputDrift(OUTPUT_GONE, "the file is gone")
@@ -1085,7 +1089,13 @@ def _continued_with_other_code(
     the file is not the recorded one then, which `output_record_findings`
     holds (runlog names as continued only a run whose rows stand in the
     file at its end). A run whose record does not read is left to the
-    record checks."""
+    record checks. Limits: the two runs' script digests are compared, not
+    the `code_sha` the rows carry — a module the script imports, changed
+    between the two runs, is not seen here; the estimator skeleton refuses
+    it in the script (`batch.Store` with `instrument=` at the resume, the
+    ledger's `expect` before a number), and a script that writes no such
+    row identity is not covered. Code loaded another way than by import
+    is in no digest."""
     own = read_run_config(answering_run)
     if own is None or not _rows_carry_code(path):
         return []

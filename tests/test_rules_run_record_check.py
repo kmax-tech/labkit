@@ -156,7 +156,7 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
         )
 
     def test_a_gone_an_unrecorded_and_a_changed_file_block(self):
-        unrecorded = "the run ended without it (outputs.json records no sha256)"
+        unrecorded = "outputs.json records no sha256 for it"
         for now, recorded, stands, said in (
             (None, "ab12", False, "the file is gone"),
             # nothing recorded to compare with: the file is not read, and
@@ -195,6 +195,21 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
             with self.subTest(recorded=recorded):
                 (f,) = self._held(now, recorded, stands)
                 self.assertNotIn("restore", f.fix or "")
+
+    def test_why_no_sha256_was_recorded_is_the_records_note_not_the_checks_claim(self):
+        """A missing sha256 alone does not show that the run ended without
+        the file; where runlog noted it, the note is quoted."""
+        entry = OutputEntry(
+            self.RECORDED.path, None, None, "registered, but absent at end of run"
+        )
+        (f,) = pure_call(
+            output_record_findings, [OutputNow(entry, False, None)], "r1", self.AREA
+        )
+        self.assertEqual(
+            f.text,
+            "out/rows.jsonl: not the file run r1 recorded — outputs.json records "
+            'no sha256 for it; the record notes: "registered, but absent at end of run"',
+        )
 
     def test_the_twin_the_recorded_bytes_pass(self):
         self.assertEqual(self._held("ab12" + "0" * 60), [])
