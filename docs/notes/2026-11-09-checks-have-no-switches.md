@@ -1,5 +1,7 @@
 # Checks have no switches — 2026-11-09
 
+> `LABKIT_PREFLIGHT=skip` is not a switch in this note's sense: it leaves out the preflight the pre-run hook runs unasked and lifts no duty ([architecture](../architecture.md#rules-checks-and-gates)).
+
 Decided 2026-11-09 by the author: no check of labkit can be switched off, not by a setting, not per area, not per line. During an experiment nothing of the harness can be changed by the agent that uses it. Whether a rule earns its place is a question about labkit, answered by measuring, and answered in labkit's code.
 
 ## Why
