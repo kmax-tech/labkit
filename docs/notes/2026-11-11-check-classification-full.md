@@ -2,7 +2,7 @@
 
 *Every gate finding labkit tells, by function and cause, in the four dimensions of [the sample](2026-11-11-check-classification-sample.md): 216 finding sites of the inventory (`python -m labkit.tools.check_inventory`) as 288 causes (262 until bundled rows were split on 2026-11-12). Basis, procedure, outcome and effect are read from the source by the inventory; the subject and the causes of the 25 sites that receive their rule are one reader's reading at the code, not checked independently. A first full draft, not a checked stock. No new round on the reasons: where a basis is open it stays open.*
 
-*Revised 2026-11-12, seven times: two independent readers read a sample of 40 causes under the schema of objects and property (section "The sample read by two readers"). Before that: the rows with a mark of doubt were sorted, eight more bundled rows split, and a schema of objects and relation tried as a working hypothesis, by which the twelve subjects below may go (sections "The units corrected" and "A working hypothesis"). Before that: the fifteen rows on which the readers differed were read at the code — eleven settled, five split into sixteen, four open, after the author's answer (section "The fifteen open rows read at the code"). Before that: every row has since been assigned by two independent readers, and the table says per row how its subject came about (section "The whole table read by two readers"). Before that: the subjects' definitions were rewritten after the second reading and tested on a new sample (section "A third reading"). Before that: two independent readers assigned a sample of 41 causes (section "A second reading"), and the table carries what they agreed on. Before that the seven points under "What does not fit" were worked through. Three were faults in the code and are fixed there, the subjects got a definition each and were applied again, and the table and the counts below show the state after that.*
+*Revised 2026-11-12, eight times: the author's answer to the sample stands in a second version of the definitions (section "The author's answer to the sample, and a second version of the definitions"). Before that: two independent readers read a sample of 40 causes under the schema of objects and property (section "The sample read by two readers"). Before that: the rows with a mark of doubt were sorted, eight more bundled rows split, and a schema of objects and relation tried as a working hypothesis, by which the twelve subjects below may go (sections "The units corrected" and "A working hypothesis"). Before that: the fifteen rows on which the readers differed were read at the code — eleven settled, five split into sixteen, four open, after the author's answer (section "The fifteen open rows read at the code"). Before that: every row has since been assigned by two independent readers, and the table says per row how its subject came about (section "The whole table read by two readers"). Before that: the subjects' definitions were rewritten after the second reading and tested on a new sample (section "A third reading"). Before that: two independent readers assigned a sample of 41 causes (section "A second reading"), and the table carries what they agreed on. Before that the seven points under "What does not fit" were worked through. Three were faults in the code and are fixed there, the subjects got a definition each and were applied again, and the table and the counts below show the state after that.*
 
 ## What was added to the inventory's columns
 
@@ -429,6 +429,38 @@ Three kinds return in this list: the bare presence of a mark or a file, the form
 **Forwarded.** Reader A marks ten rows, reader B seven; they differ on three, where a helper returns a cause it tested itself and the site only words it. Both mark the two rows of the sample this note already calls forwarded (`report_decisions.limit_gaps`, `report_blocks.block_gaps`).
 
 **What this shows, and what not.** With objects and property apart, two readers reach the same property on 38 of 40 rows and the same answer in all three on 30, in a sample where 24 rows were chosen or drawn as hard. Every difference in the objects but one is a question of counting that the definitions leave open. It is one sample of 40 with two readers of the same kind; it says nothing on the 248 rows outside it, and the comparison of versions is by kind, not by the commit named. No number here compares with the 247 of 262 rows the readers of the twelve subjects agreed on: that was one value per row over the whole table.
+
+## The author's answer to the sample, and a second version of the definitions, 2026-11-12
+
+The author's answer: the schema works better than the twelve subjects and is not finished. Agreement alone does not carry it — two readers can agree on a weak category. Three decisions follow, and no further general round on the definitions.
+
+**Objects are listed by role.** A decision and the review that confirms it are two roles of one kind of record, not the same object counted once or twice. A bare precondition is no object of the check. An object that is fixed only when the check runs may stand; its role can be known before.
+
+**The values.**
+
+- "Form" is taken in, narrow: the forms a value or a file may have in its place.
+- "Uniqueness" is taken in: a field written twice, the choice of a protocol.
+- "Presence" is not taken in. A required element that is missing is completeness already; an unfrozen mark that is there describes a state.
+- "Equality" is no value. It is part of many comparisons and is not put together with duplication. The null lane is not placed by its test for equality: what the hint says about the measurement decides, not the operator.
+
+**Nothing is forced on the rows left over.** Numbers without an assigned source may be about an assignment or a binding. The audit before the cheap first run tests a combination of the cost tier and the state of the runs and need not be a test of time. "Forwarded" says only where a condition is tested and where its finding is told; it is no category of the classification. "Does not fit" stays an answer: the values need not take every cause.
+
+**The second version** is `docs/notes/2026-11-12-subject-readings/object-property-definitions-2.md`; the first stays beside it as the state the sample was read under. What it changes:
+
+| The first version                                   | The second version                                                                                                                                           |
+|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| "one object, or the two that are compared"          | one entry per role; the roles follow from the property (the two sides of an agreement, the decision and its confirmation)                                    |
+| nothing on preconditions                            | what must be there before the condition can be tested, and is not tested itself, goes into a field of its own                                                |
+| nothing on an object decided at run time            | answered as such, with the kinds it can be and its role                                                                                                      |
+| eight values                                        | ten: "form" and "uniqueness" added, each with what it does not hold                                                                                          |
+| completeness: "there and filled"                    | set apart from a mark or a file that is there and records a state                                                                                            |
+| order in time: "did one thing stand before another" | only where the condition reads two points in time or an order; two states read now and combined are not it                                                   |
+| `"forwarded": true`                                 | two places, where the condition is tested and where it is told; a site that tells several conditions as one lists them and may answer that the unit is wrong |
+| nothing on the operator                             | a condition is not classified by the comparison it is written with                                                                                           |
+
+One point of the second version is this session's reading and not the author's wording: the author's sentence on the null lane names what the hint says, and the standard of the classification says not to judge by the wording of the message. The second version states it as "what the test establishes about the objects", which is read from the condition. No row is decided by it.
+
+**The rows to be read again** under the second version are those the answer touches, 18 of the 40 (numbers as in `object-sample-1-given.json`): the eight with different objects (5, 8, 19, 21, 24, 25, 30, 31), the two with a different property (35, 39), the four both readers answered "no" for (2, 15, 30, 38) and the six a reader called weak (1, 7, 16, 20, 36, 39). The other 22 are not read again; their answers lack the roles and the two places.
 
 ## What "exact" covers
 
