@@ -156,8 +156,11 @@ KEY_LITERAL_RULE = cited_rule("CODE-016 The experiment area reconstructs itself"
 # --- gate-label extraction ------------------------------------------------
 
 
-def check_intent_ids(area: Path, protocol: Path, text: str) -> list[GateFinding]:
+def check_intent_ids(
+    area: Path, protocol: Path, text: str, *, block_told: bool = False
+) -> list[GateFinding]:
     """Registered promises against the code, before any run exists.
+    BLOCK_TOLD as `promise_block_findings` takes it.
 
     `intent-check` asks the same question of the metrics at report time, when
     the tokens are already spent. Here the answer is still cheap. A file in
@@ -165,29 +168,34 @@ def check_intent_ids(area: Path, protocol: Path, text: str) -> list[GateFinding]
     (`unreadable_source`), not a traceback.
     """
     try:
-        return _intent_id_findings(area, protocol, text)
+        return _intent_id_findings(area, protocol, text, block_told=block_told)
     except SourceError as exc:
         return [unreadable_source(exc)]
 
 
 def code_findings(
-    area: Path, protocol: Path, text: str, repo: Path
+    area: Path, protocol: Path, text: str, repo: Path, *, block_told: bool
 ) -> list[GateFinding]:
     """The automated checks 1–1d, in order, as finding lines: the promise
     block and the intent ids (with the quality-check key reads and constant copies),
     parser fixtures, prompt drift, stamp coverage. The one list both
     `code-check` and preflight's code station report, each finding with its
-    grade and evidence kind as data."""
+    grade and evidence kind as data. BLOCK_TOLD: the caller's field report
+    has told a promise block that does not read
+    (`protocol_check.MustGap.block_unread`); that one finding is left to
+    it, every other finding stands."""
     return (
-        check_intent_ids(area, protocol, text)
+        check_intent_ids(area, protocol, text, block_told=block_told)
         + check_parser_fixtures(area, repo)
         + check_prompt_drift(area, protocol)
         + stamp_coverage_findings(area, repo)
     )
 
 
-def _intent_id_findings(area: Path, protocol: Path, text: str) -> list[GateFinding]:
-    findings = promise_block_findings(area, protocol, text)
+def _intent_id_findings(
+    area: Path, protocol: Path, text: str, *, block_told: bool
+) -> list[GateFinding]:
+    findings = promise_block_findings(area, protocol, text, block_told=block_told)
     registered = {m.group(1) for m in ID_IN_PROTOCOL.finditer(text)}
     if not registered:
         return findings
@@ -225,7 +233,9 @@ def _intent_id_findings(area: Path, protocol: Path, text: str) -> list[GateFindi
     return findings
 
 
-def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFinding]:
+def promise_block_findings(
+    area: Path, protocol: Path, text: str, *, block_told: bool = False
+) -> list[GateFinding]:
     """The promise block against the code, before any run (guaranteed tier).
 
     Three things a run would otherwise discover after the tokens are spent:
@@ -233,10 +243,17 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
     (runlog refuses the run), a declared key appears nowhere in the code
     (intent-check fails after the run). Exact key, not id: `"criterion_1_passed"`
     does not answer a promise declaring `criterion_1_pass`.
+
+    BLOCK_TOLD: a gate that ran the field report before this check has told
+    a block that does not parse (`protocol_check.MustGap.block_unread`);
+    then nothing is returned for that cause — one cause, told once. The
+    block's other findings need a block that parses, so none is lost.
     """
     try:
         block = promises.parse_block(text)
     except promises.PromiseError as exc:
+        if block_told:
+            return []
         return [
             coded(
                 BLOCKER,
@@ -728,7 +745,8 @@ def main(argv: list[str]) -> int:
     repo = layout_root(area)
     text = state_of(area).text_of(protocol)
     findings = Findings()
-    for finding in code_findings(area, protocol, text, repo):
+    # code-check alone runs no field report: the block's finding is told here
+    for finding in code_findings(area, protocol, text, repo, block_told=False):
         findings.take(finding)
     if bundle_to is not None:
         n, unreadable = write_bundle(area, repo, protocol, bundle_to, text)

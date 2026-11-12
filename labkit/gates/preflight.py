@@ -289,7 +289,14 @@ def preflight_area(
 
     # 4. code-check — always
     findings.header("code-check: intent ids, stamp coverage")
-    check_code(findings, area, protocol, repo, text)
+    check_code(
+        findings,
+        area,
+        protocol,
+        repo,
+        text,
+        block_told=any(gap.block_unread for gap in report.must_gaps),
+    )
 
     # 5. scope-sha — always; told
     findings.header("scope-sha")
@@ -336,7 +343,7 @@ def check_protocol_fields(
     for gap in report.must_gaps:
         findings.block(
             f"MISSING (must): {gap.label}",
-            fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
+            fix=f"{gap.repair} in {protocol.name}; {contract_hint(protocol)}",
             rule=gap.rule,
         )
     for twice in report.repeated:
@@ -552,12 +559,21 @@ def check_handed_over_elsewhere(
 
 
 def check_code(
-    findings: Findings, area: Path, protocol: Path, repo: Path, text: str
+    findings: Findings,
+    area: Path,
+    protocol: Path,
+    repo: Path,
+    text: str,
+    *,
+    block_told: bool,
 ) -> None:
     """Station 4: code-check's automated checks (`code_check.code_findings`:
     intent ids, parser fixtures, prompt drift, stamp coverage), each with
-    its grade as data and counted once — here, not again by code-check."""
-    found = code_findings(area, protocol, text, repo)
+    its grade as data and counted once — here, not again by code-check.
+    BLOCK_TOLD: station 1 told a promise block that does not read
+    (`MustGap.block_unread`), so that one cause is not told again here;
+    every other finding of code-check is."""
+    found = code_findings(area, protocol, text, repo, block_told=block_told)
     for finding in found:
         findings.take(finding)
     if not found:

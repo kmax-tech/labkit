@@ -675,10 +675,28 @@ class MustGap:
             the kind the technical contract, a promise block that does
             not read the rule its error names
             (`promises.PromiseError.rule`).
+        way: What closes the gap where writing the field does not — a
+            promise block that does not read is repaired (REPAIR_TABLES);
+            None for a field to write. A teller reads `repair`.
+        block_unread: Whether the gap is the promise block that does not
+            read — the cause code-check tells too
+            (`code_check.promise_block_findings`), so a gate that runs
+            both tells it once, here.
     """
 
     label: str
     rule: RuleAssignment
+    way: str | None = None
+    block_unread: bool = False
+
+    @property
+    def repair(self) -> str:
+        """The way out as a teller starts it: `way`, else writing the field."""
+        return self.way or "write the field"
+
+
+#: the way out of a promise block that does not read, as a gap tells it
+REPAIR_TABLES = "repair the [[promise]] tables as the sentence says"
 
 
 def head_rule(exc: protocol_block.BlockError) -> RuleAssignment:
@@ -1061,7 +1079,14 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
         )
     except promises.PromiseError as exc:
         # the requirement broken names its rule where the block is read
-        must_gaps.append(MustGap(f"[[promise]] tables: {exc}", exc.rule))
+        must_gaps.append(
+            MustGap(
+                f"[[promise]] tables: {exc}",
+                exc.rule,
+                way=REPAIR_TABLES,
+                block_unread=True,
+            )
+        )
     else:
         if tables_gap:
             must_gaps.append(MustGap(tables_gap, LAB_004))

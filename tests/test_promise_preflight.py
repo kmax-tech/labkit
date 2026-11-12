@@ -235,6 +235,43 @@ class PromiseSentencesBeforeTheFreeze(unittest.TestCase):
         found = self._preflight(self.BLOCK)
         self.assertFalse(any("[[promise]]" in w for w in found.warned), found.warned)
 
+    def test_a_block_that_does_not_read_is_told_once_with_its_repair(self):
+        """Station 1 and code-check both read the block; preflight tells
+        the one cause once, with the repair of the block, not "write the
+        field". code-check's other findings stand beside it: the script's
+        key nobody can hold to a block is still told."""
+        twice = self.BLOCK + self.BLOCK  # every id doubled
+        found = self._preflight(twice)
+        told = [f for f in found.found if "duplicate id" in f.text]
+        self.assertEqual(len(told), 1, [f.line for f in told])
+        (block,) = told
+        self.assertIn("MISSING (must): [[promise]] tables:", block.text)
+        assert block.fix is not None
+        self.assertTrue(
+            block.fix.startswith(
+                "repair the [[promise]] tables as the sentence says in PROTOCOL-x.md"
+            ),
+            block.fix,
+        )
+        self.assertNotIn("write the field", block.fix)
+        self.assertEqual((block.grade, block.rule), (gate.BLOCKER, gate.OPEN_RULE))
+
+    def test_the_twin_code_check_alone_tells_the_block_itself(self):
+        # a script that reports no key of [criterion-1]: a finding of its own
+        area, protocol = area_with(SCRIPT.replace("criterion_1_", "score_"))
+        text = protocol.read_text(encoding="utf-8").replace(
+            'id = "quality-check-1"', 'id = "K1"'
+        )
+        alone = check_intent_ids(area, protocol, text)
+        self.assertEqual(len([f for f in alone if "promise block:" in f.text]), 1)
+        # told by the field report already: only that finding is left out
+        beside = check_intent_ids(area, protocol, text, block_told=True)
+        self.assertEqual(
+            [f.line for f in beside],
+            [f.line for f in alone if "promise block:" not in f.text],
+        )
+        self.assertTrue(beside, "the ids against the code are still told")
+
 
 if __name__ == "__main__":
     unittest.main()

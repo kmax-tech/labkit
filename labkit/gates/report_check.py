@@ -278,7 +278,7 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
     )
     report = check_fields(ctx.text)
     gaps += [
-        blocker(f"{name}: {gap.label}", fix=f"write the field; {fields}", rule=gap.rule)
+        blocker(f"{name}: {gap.label}", fix=f"{gap.repair}; {fields}", rule=gap.rule)
         for gap in report.must_gaps
     ]
     # a must field still holding its `<…>` placeholder blocks here as
