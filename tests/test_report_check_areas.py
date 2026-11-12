@@ -36,9 +36,11 @@ from labkit.formats import (
     findings,
     gate,
     promises,
+    runs,
     scope_sha,
     standard_contract,
 )
+from labkit.gates import finalize
 from labkit.gates import report_check
 from labkit.gates import report_context
 
@@ -466,6 +468,26 @@ class ReportCheck(unittest.TestCase):
         marked = [
             f for f in found if "acknowledged over an unfrozen protocol" in f.text
         ]
+        self.assertEqual(
+            [f.grade for f in marked], ["BLOCKER"], [f.text for f in found]
+        )
+
+    def test_a_reworded_unreportable_mark_is_still_one_blocker(self):
+        """The counter-test of the one above: finalize's warning is left
+        out by its sentence (`without_unreportable_warnings`), and both
+        sentences come from the one mark — other words leave one blocker."""
+        area = self._area(repeat_cost="low", frozen=False)
+        run = self._answered(area)
+        self._audited(area, run)
+        reworded = [runs.Unreportable(runs.UNFROZEN_ACK, "a mark in other words")]
+        with (
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+            mock.patch.object(finalize, "unreportable", return_value=reworded),
+            mock.patch.object(report_check, "unreportable", return_value=reworded),
+        ):
+            ctx = report_context.checked(area, area / "PROTOCOL-x.md")
+            found = report_check.chain_gaps(ctx).found
+        marked = [f for f in found if "a mark in other words" in f.text]
         self.assertEqual(
             [f.grade for f in marked], ["BLOCKER"], [f.text for f in found]
         )
