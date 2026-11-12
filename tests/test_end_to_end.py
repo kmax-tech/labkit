@@ -1657,7 +1657,10 @@ class Judge(unittest.TestCase):
 class AdoptedRunWithoutIntentKeys(unittest.TestCase):
     """An adopted run whose metrics report no intent key is no answer
     (`AnsweringRun.explain`); its way out, taken step by step on the judge
-    area. A lab of its own: the scenario withdraws the adoption `Judge`'s
+    area. What it shows is the order of the commands: the audit step is a
+    decided record written in its place (`Lab.record`), not a run of
+    `labkit-audit`, and the starting state is built, not reached by a
+    command. A lab of its own: the scenario withdraws the adoption `Judge`'s
     tests share. It borrows `Judge`'s faked model, measurement and adoption,
     which read `lab`, `area`, `protocol`, `measure` and `run_id` off the
     class — set here as `Judge.setUpClass` sets them."""
