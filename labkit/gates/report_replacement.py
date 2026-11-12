@@ -59,8 +59,9 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     exploratory or confirmatory turns on whether its data were already
     evaluated for the changed question, which no comparison of bytes
     tells. It is left to the analysis audit (`labkit/docs/agent-guide.md`,
-    "an invalid registration"), which is shown the successor's area only:
-    nothing shows it the predecessor's runs yet. Nothing without `[replaces]`: an undeclared successor is
+    "an invalid registration"), which is shown the predecessor's
+    registration and both protocols' recorded inputs for it
+    (`audit_prompt.predecessor_evidence`). Nothing without `[replaces]`: an undeclared successor is
     indicated at the report (`replacement_hints`), never held here."""
     name = ctx.protocol.name
     try:

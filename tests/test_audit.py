@@ -158,7 +158,7 @@ class Audit(unittest.TestCase):
         # the standard: the cited rules' text, not the whole document
         self.assertIn(
             "===== FILE: labkit/docs/standard.md (LAB-103, LAB-015, LAB-017, LAB-004, LAB-050, "
-            "LAB-003 — the rules this audit cites) =====",
+            "LAB-003, LAB-009 — the rules this audit cites) =====",
             prompt,
         )
         for head in (
@@ -173,7 +173,15 @@ class Audit(unittest.TestCase):
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
             audit_prompt.cited_rules("preflight"),
-            ["LAB-103", "LAB-015", "LAB-017", "LAB-004", "LAB-050", "LAB-003"],
+            [
+                "LAB-103",
+                "LAB-015",
+                "LAB-017",
+                "LAB-004",
+                "LAB-050",
+                "LAB-003",
+                "LAB-009",
+            ],
         )
         # what binds after the first measurement comes with its rule
         self.assertIn("Incomplete at the first measurement", prompt)

@@ -32,7 +32,7 @@ from labkit.formats import (  # noqa: E402
 )
 from labkit.gates import report_check, report_hold  # noqa: E402
 from labkit.gates import report_context
-from labkit.gates import report_replacement
+from labkit.gates import audit_prompt, report_replacement
 from protocol_fixture import (
     completed_run,
     head,
@@ -294,6 +294,41 @@ class Gate(_Areas):
             replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")), type="confirmatory"
         )
         self.assertEqual(self.gaps(), [])
+
+    def test_the_audit_of_a_confirmatory_successor_is_shown_its_predecessor(self):
+        """No gate holds the type, so the audit gets what it needs to judge
+        it: the predecessor's registration as first measured and the
+        inputs the runs of both recorded."""
+        declared = replaces(A_ID, ("criterion-1 margin", "0.25", "0.15"))
+        proto = self._b(declared, type="confirmatory")
+        pieces = audit_prompt.predecessor_evidence(
+            self.b, proto.read_text(encoding="utf-8")
+        )
+        (registration, inputs) = pieces
+        self.assertIn("PREDECESSOR: experiments/01-a/PROTOCOL-x.md", registration[0])
+        self.assertIn(A_RUN, registration[0])
+        self.assertIn("margin = 0.25", registration[1])
+        self.assertTrue(inputs[1].startswith(audit_prompt.INPUTS_SHOW))
+        self.assertIn(f"predecessor {A_ID}, experiments/01-a run {A_RUN}", inputs[1])
+        self.assertIn(f"successor {B_ID}, experiments/02-b run {B_RUN}", inputs[1])
+
+    def test_the_twin_an_exploratory_successor_is_shown_nothing_more(self):
+        declared = replaces(A_ID, ("criterion-1 margin", "0.25", "0.15"))
+        proto = self._b(declared)
+        self.assertEqual(
+            audit_prompt.predecessor_evidence(
+                self.b, proto.read_text(encoding="utf-8")
+            ),
+            (),
+        )
+
+    def test_a_predecessor_no_protocol_carries_is_said_not_passed_over(self):
+        proto = self._b(replaces("p-cccccccccccccccc"), type="confirmatory")
+        ((label, said),) = audit_prompt.predecessor_evidence(
+            self.b, proto.read_text(encoding="utf-8")
+        )
+        self.assertIn("p-cccccccccccccccc", label)
+        self.assertIn("NOT SHOWN: 0 protocols", said)
 
     def test_itself_an_unknown_predecessor_and_a_circle_are_named(self):
         for extra, said in (

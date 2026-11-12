@@ -36,7 +36,7 @@ from labkit.formats import (
     rules,
     scope_sha,
 )
-from labkit.formats.runs import recorded_models
+from labkit.formats.runs import ArtefactError, read_data, recorded_models
 from labkit.formats.prompts import prompt_body
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_history import (
@@ -88,7 +88,10 @@ INLINE_NOTE = (
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`, and for a computation over a model's annotations the "
     "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
-    "(the bound apply protocol and its result as FILE lines), and the area's "
+    "(the bound apply protocol and its result as FILE lines), for a "
+    "confirmatory protocol that replaces another the predecessor's "
+    "registration and the inputs both protocols' runs recorded under "
+    "`===== PREDECESSOR: … =====` lines, and the area's "
     "earlier decided BLOCKERs and corrections under one `===== EARLIER DECIDED "
     "BLOCKERS AND CORRECTIONS =====` line. Nothing else is in scope."
 )
@@ -251,12 +254,13 @@ class Source(NamedTuple):
     pieces whose digest the record carries), and the evidence an annotator
     suits (`validity_evidence`; read from outside the area, covered by the
     record's `scope_sha` through `scope_sha.validation_basis`, so a changed
-    validation stales the record — a DOI by its string only)."""
+    validation stales the record — a DOI by its string only) and, for a
+    confirmatory successor, its predecessor (`predecessor_evidence`)."""
 
     protocol_text: str
     read: Callable[[Path], str]
     run: tuple[tuple[str, str], ...] = ()
-    evidence: tuple[tuple[str, str], ...] = ()  # `validity_evidence`
+    evidence: tuple[tuple[str, str], ...] = ()  # validity, predecessor
     fixes: tuple[tuple[str, str], ...] = ()  # `earlier_piece`, MODE analysis
 
 
@@ -314,6 +318,99 @@ def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
             ),
         )
     return _bound_pieces(bound, repo)
+
+
+#: what the listed inputs do and do not show, the head of their piece
+INPUTS_SHOW = (
+    "Each line: protocol, run, key, recorded path, sha256 as recorded, rows; "
+    "every run of each protocol, probes and repeats included. An equal "
+    "sha256 is the same bytes. It does not show whether those data were "
+    "evaluated for the changed question, and another sha256 can hold the "
+    "same observations in another form."
+)
+
+
+def _recorded_inputs(area: Path, pid: str, role: str, repo: Path) -> list[str]:
+    """One line per input every run of AREA bound to PID recorded
+    (`runs.read_data`), oldest run first — every run of it, probes and
+    repeats included (`area_state.Measured.runs`); each line names ROLE
+    (predecessor or successor) and PID, since both protocols may share an
+    area. A run whose record does not read, or that named no input, is
+    said, never skipped."""
+    lines = []
+    for rd in state_of(area).measured_of(pid).runs:
+        run = f"{role} {pid}, {shown(area, repo)} run {rd.dir.name}"
+        try:
+            entries = read_data(rd.dir)
+        except ArtefactError as exc:
+            lines.append(f"{run}: its inputs do not read ({exc})")
+            continue
+        if entries is None:
+            lines.append(f"{run}: no readable record")
+        elif not entries:
+            lines.append(f"{run}: recorded no input")
+        for e in entries or []:
+            lines.append(
+                f"{run}: {e.key} = {e.recorded} · sha256 {e.sha256} · rows {e.rows}"
+            )
+    return lines
+
+
+def predecessor_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
+    """What the audit is shown to judge a successor that calls itself
+    confirmatory (`[replaces]` with `type = "confirmatory"`; no gate holds
+    the type, `report_replacement.replacement_gaps`): the predecessor's
+    registration as each of its first measurements saw it — one piece per
+    distinct text, or its text as it stands when it has not measured, the
+    label saying which (`registrations_as_first_measured`) —, and the
+    inputs every run of both protocols recorded, under INPUTS_SHOW. The pieces let the auditor judge
+    whether the changed question meets data already evaluated; they prove
+    neither. A predecessor that is not exactly one protocol of the repo, or
+    whose registration cannot be read back: one line saying so. The pieces
+    are not covered by the record's `scope_sha`: a later run of the
+    predecessor does not stale the record. () for every other protocol,
+    and for a head that does not read or carries no id — `bound_prompt`
+    refuses both before it renders. Raises RuntimeError when git fails."""
+    try:
+        rep = protocol_block.replaces(text)
+        head = protocol_block.head(text)
+    except protocol_block.BlockError:
+        return ()
+    if rep is None or head.type != "confirmatory" or head.id is None:
+        return ()
+    repo = layout_root(area)
+    hits = repo_protocol_ids(area).get(rep.protocol, [])
+    if len(hits) != 1:
+        return (
+            (
+                f"PREDECESSOR: {rep.protocol}",
+                f"NOT SHOWN: {len(hits)} protocols of this repo carry that id. "
+                "Nothing here supports that the data are unseen.",
+            ),
+        )
+    pred = hits[0]
+    theirs = state_of(pred.parent).measured_of(rep.protocol)
+    texts, missing = registrations_as_first_measured(
+        pred, theirs.first_groups, git_root(pred)
+    )
+    pieces = [
+        (f"PREDECESSOR: {shown(pred, repo)}, its registration {where}", then)
+        for then, where in texts
+    ] or [
+        (
+            f"PREDECESSOR: {shown(pred, repo)}",
+            f"NOT SHOWN: its registration cannot be read back — {missing}",
+        )
+    ]
+    inputs = _recorded_inputs(pred.parent, rep.protocol, "predecessor", repo)
+    inputs += _recorded_inputs(area, head.id, "successor", repo)
+    pieces.append(
+        (
+            "PREDECESSOR: inputs the runs of both protocols recorded",
+            f"{INPUTS_SHOW}\n" + ("\n".join(inputs) or "no run of either protocol"),
+        )
+    )
+    return tuple(pieces)
 
 
 def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], ...]:
@@ -747,7 +844,7 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
                 text,
                 snap.text,
                 shown.pieces if shown else (),
-                validity_evidence(area, text),
+                validity_evidence(area, text) + predecessor_evidence(area, text),
                 earlier_piece(earlier_repairs) if mode == ANALYSIS else (),
             ),
         )
