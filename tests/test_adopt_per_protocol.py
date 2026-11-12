@@ -5,15 +5,24 @@ An audit record names the protocol it audited (`[audit] protocol`), and the
 follow-up, the release and the adoption read the records of their own
 protocol (`followup.protocol_records`). The conditions from data in memory:
 tests/test_audit.py (the follow-up shown, the release held, the carry across
-protocols refused); here what the commands pass on — the adoption
+protocols refused; tests/test_rules_audit_binding.py: an undecided finding
+holds its own protocol); here what the commands pass on — the adoption
 (`labkit-adopt AREA RUN --protocol FILE`) of one protocol is neither
-released nor, once every finding is decided, held by the other's records.
+released nor held by the other's records, decided or not, while a change of
+the area's shared code is held for each by its own audit coverage.
+
+One coupling stays (TODO.md, 6b): `scripts/02_analyze.py --check` belongs to
+the first protocol and finalize runs it for every protocol of the area, so
+the second is adopted only after the first — the order every scenario here
+keeps.
 """
 
 from __future__ import annotations
 
 import contextlib
 import io
+import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -22,7 +31,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import protocol_block  # noqa: E402
+from labkit.formats import findings, protocol_block  # noqa: E402
+from labkit.gates import audit  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
 from test_end_to_end import CountCommands  # noqa: E402
 
@@ -174,3 +184,74 @@ class EachProtocolAdoptsItsOwn(CountCommands):
         self.assertEqual(rc, 0, out)
         rc, out = self.labkit_adopt(self.first, self.run_first)
         self.assertEqual(rc, 0, out)
+
+    def test_an_undecided_finding_holds_its_own_protocol_alone(self):
+        """The second protocol's BLOCKER left undecided: the first, repaired
+        and followed up, is adopted all the same. The twin: the second's own
+        adoption is held by it, and the decide line the hold prints names
+        the protocol and runs as printed, its confirmation whole."""
+        of_first = self.audited(self.first)
+        of_second = self.audited(self.second)  # stays undecided
+        self.lab.fill(self.first, "--force", f"Data / scope={RIGHT}")
+        self.decide(of_first, 1, "fixed", "Data / scope now says 3", self.first)
+        rc, out, _ = self.follow_up(self.first, of_first)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.labkit_adopt(self.first, self.run_first)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(of_second.name, out)
+
+        rc, out = self.labkit_adopt(self.second, self.run_second)
+        self.assertEqual(rc, 1, out)
+        printed = re.search(
+            rf"`(labkit-audit [^`]*--decide 1 STATUS [^`]*{re.escape(of_second.name)})`",
+            out,
+        )
+        assert printed is not None, out
+        self.assertIn(f"--protocol experiments/01-lines/{self.second.name}", printed[1])
+        words = [
+            {"STATUS": "fixed", "<why>": "Data / scope now says 3"}.get(w, w)
+            for w in shlex.split(printed[1])[1:]
+        ]
+        said = io.StringIO()
+        with (
+            contextlib.chdir(self.lab.root),
+            contextlib.redirect_stdout(said),
+            contextlib.redirect_stderr(said),
+        ):
+            rc = audit.main(words)
+        self.assertEqual(rc, 0, said.getvalue())
+        # without the protocol the confirmation cannot say what `fixed` owes
+        self.assertNotIn("could not be read", said.getvalue())
+        self.assertEqual(findings.read(of_second).findings[0].status, "fixed")
+
+    def test_a_change_of_the_shared_code_is_held_for_each_by_its_own_coverage(self):
+        """Both protocols audited without a finding, the first adopted; then
+        the first's measuring script changes — code the area's stamp covers
+        for both. Each protocol is held by its own analysis coverage; a new
+        audit of the first covers nothing of the second, the second's own
+        audit does."""
+        for protocol in (self.first, self.second):
+            rc, out, _ = self.analysis(self.clean, protocol)
+            self.assertEqual(rc, 0, out)
+        rc, out = self.labkit_adopt(self.first, self.run_first)
+        self.assertEqual(rc, 0, out)
+        self.change_code()
+        uncovered = "no analysis audit saw the area as it is now"
+
+        rc, out = self.labkit_adopt(self.first, self.run_first)
+        self.assertEqual(rc, 1, out)  # the adoption stands, its check holds
+        rc, out = self.labkit_adopt(self.second, self.run_second)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(uncovered, out)
+
+        rc, out, _ = self.analysis(self.clean, self.first)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.labkit_adopt(self.second, self.run_second)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(uncovered, out)
+
+        rc, out, _ = self.analysis(self.clean, self.second)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.labkit_adopt(self.second, self.run_second)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared_run(self.second), self.run_second)

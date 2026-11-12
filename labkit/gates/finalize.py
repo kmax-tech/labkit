@@ -111,6 +111,7 @@ from labkit.formats.runs import metrics_path, metrics_text, read_data, read_metr
 from labkit.formats import (
     console,
     findings as audit_findings,
+    followup,
     promises,
     protocol_block,
     reference,
@@ -347,12 +348,20 @@ def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
 
 
 def check_open_audit_findings(
-    findings: Findings, area: Path, state: AreaState, held: evidence.AreaEvidence
+    findings: Findings,
+    area: Path,
+    state: AreaState,
+    held: evidence.AreaEvidence,
+    protocol: Path,
+    protocol_id: str | None,
 ) -> None:
-    """Station 9: every finding still `open` in the area's audit records, any
+    """Station 9: every finding still `open` in the audit records of
+    PROTOCOL (those that name PROTOCOL_ID, `followup.records_of`), any
     mode (`findings.open_findings`, with the table of the gates' rules) — a
     BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
-    its file; and every analysis record names a run the area still holds
+    its file; a finding on another protocol of the area holds nothing here,
+    and a head without an id (PROTOCOL_ID None) has no record to hold it.
+    And every analysis record of the area names a run the area still holds
     (`audit_binding.check_audited_runs_kept`): a run an audit read is a kept run,
     and its deleted directory is a blocker where the record stands. A
     record nobody can read is a blocker, not "no findings" — and while one
@@ -363,19 +372,23 @@ def check_open_audit_findings(
     if held.unreadable:
         findings.take_all(check_audit_records_read(state, evidence=held))
         return
+    # the runs: every record of the area; the findings: this protocol's
     gone = check_audited_runs_kept(state, evidence=held)
-    undecided = check_audit_findings_decided(state, evidence=held)
+    undecided = check_audit_findings_decided(
+        state, evidence=held, protocol=protocol, protocol_id=protocol_id
+    )
     findings.take_all([*gone, *undecided])
+    own = followup.records_of(held.records, protocol_id)
     notes = 0
-    for u in audit_findings.open_findings(held.records):
+    for u in audit_findings.open_findings(own):
         if u.grade == NOTE:  # no gate finding: told, never counted
             notes += 1
             findings.note(f"  {u.line} — {UNDECIDED}")
     if not gone and not undecided and not notes:
         findings.note(
-            f"  every finding decided ({len(held.records)} record(s))"
-            if held.records
-            else "  no audit record in audits/"
+            f"  every finding decided ({len(own)} audit record(s) on {protocol.name})"
+            if own
+            else f"  no audit record on {protocol.name} in audits/"
         )
 
 
@@ -941,7 +954,8 @@ def finalize_area(
        computation's run without its `[kept] key` as a finite number blocks, a
        registered reference the run cannot compare (the key absent or no
        finite number) blocks — a missed one is a result.
-    9. audit findings — always: an `open` BLOCKER in `audits/` blocks.
+    9. audit findings — always: an `open` BLOCKER in a record of this
+       protocol blocks; one on another protocol of the area does not.
 
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
@@ -1033,9 +1047,9 @@ def finalize_area(
         findings.header("reference comparison")
         check_reference(findings, chosen, text, head, answering_run)
 
-    # 9. audit findings — always
+    # 9. audit findings — always; a head without an id has no record
     findings.header("audit findings")
-    check_open_audit_findings(findings, area, state, held)
+    check_open_audit_findings(findings, area, state, held, chosen, head.id)
 
     return report(findings)  # 1 if any step found a blocker, else 0
 

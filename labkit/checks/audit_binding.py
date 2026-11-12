@@ -30,6 +30,7 @@ from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
     findings,
+    followup,
     jsonl,
     promises,
     protocol_block,
@@ -371,20 +372,36 @@ def check_audit_records_read(
 
 
 def check_audit_findings_decided(
-    state: AreaState, *, evidence: AreaEvidence
+    state: AreaState,
+    *,
+    evidence: AreaEvidence,
+    protocol: Path,
+    protocol_id: str | None,
 ) -> list[GateFinding]:
-    """finalize's row of `findings.open_findings`' table: every finding of
-    EVIDENCE's records still `open`, any mode, as a gate finding of its
-    record's grade (LAB-015 Preflight audit before freezing) — a BLOCKER
-    blocks with its `--decide` way out (`findings.decide_way` for the area
-    of STATE), a WARNING warns. A NOTE is no gate finding and gives none:
-    the gate tells it. [] when every finding is decided."""
+    """finalize's row of `findings.open_findings`' table: every finding
+    still `open`, any mode, in those of EVIDENCE's records that audited
+    PROTOCOL (by PROTOCOL_ID, the id its head stamps: `followup.records_of`;
+    None, a head without one, has no record), as a gate
+    finding of its record's grade (LAB-015 Preflight audit before freezing)
+    — a BLOCKER blocks with its `--decide` way out (`findings.decide_way`
+    for the area of STATE, naming PROTOCOL where the area holds several), a
+    WARNING warns. A NOTE is no gate finding and gives none: the gate tells
+    it. [] when every finding of them is decided. A finding on another
+    protocol of the area is that protocol's to decide and holds nothing
+    here; a change of the area's code is held for every protocol by its own
+    audit coverage, not by this."""
     out: list[GateFinding] = []
-    for u in findings.open_findings(evidence.records):
+    own = followup.records_of(evidence.records, protocol_id)
+    # STATE knows whether the area holds several protocols: with one, the
+    # line names none, and the command builder lists no directory
+    named = protocol if len(state.protocols) > 1 else None
+    for u in findings.open_findings(own):
         line = f"{u.line} — {UNDECIDED}"
         rule = cited_rule("LAB-015 Preflight audit before freezing")
         if u.grade == BLOCKER:
-            out.append(blocker(line, fix=findings.decide_way(state.area, u), rule=rule))
+            out.append(
+                blocker(line, fix=findings.decide_way(state.area, u, named), rule=rule)
+            )
         elif u.grade == WARNING:
             out.append(GateFinding(WARNING, line, rule=rule, evidence_kind=GUARANTEED))
     return out

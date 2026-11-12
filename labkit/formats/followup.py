@@ -31,7 +31,7 @@ Pure: records in, data out. The audit shows and writes
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -94,6 +94,14 @@ def protocol_records(area: Path, pid: str | None) -> list[Record]:
     do not form a chain (`chain`: a carry across protocols among them)."""
     records = area_records(area)
     chain(records)
+    return records_of(records, pid)
+
+
+def records_of(records: Iterable[Record], pid: str | None) -> list[Record]:
+    """Those of RECORDS that audited the protocol with stamped id PID, in
+    their order; none for PID None. The one home of "whose record is this"
+    — `protocol_records` reads an area's through it, a gate that holds the
+    records already read (finalize's undecided findings) filters them here."""
     return [r for r in records if pid is not None and r.protocol_id == pid]
 
 

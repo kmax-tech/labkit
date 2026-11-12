@@ -131,7 +131,7 @@ class OpenFindings(unittest.TestCase):
         )
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)
-        self.assertIn("every finding decided (1 record(s))", out)
+        self.assertIn("every finding decided (1 audit record(s) on PROTOCOL-x.md)", out)
         self.assertIn("all clear", out)
 
     def test_an_unreadable_record_is_a_blocker(self):
@@ -178,7 +178,7 @@ class OpenFindings(unittest.TestCase):
         )
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)
-        self.assertIn("every finding decided (2 record(s))", out)
+        self.assertIn("every finding decided (2 audit record(s) on PROTOCOL-x.md)", out)
 
 
 class UnreportableRun(unittest.TestCase):

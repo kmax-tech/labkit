@@ -998,7 +998,8 @@ def open_findings(
         (runlog, preflight,                             refuses, preflight warns unfrozen and blocks frozen,
         protocol-check)                                 protocol-check reports — the named record stands
                                                         for the frozen state, decided whole
-        finalize                     every mode         its grade: BLOCKER blocks, WARNING warns, NOTE is told
+        finalize                     every mode, the    its grade: BLOCKER blocks, WARNING warns, NOTE is told
+                                     protocol's own     — a finding on another protocol of the area holds nothing
         claude-hook stop / undecided every mode, the    a BLOCKER only — the hook says what the commit would be
                                      areas the session  refused for and nags for nothing less (`open_blockers`)
                                      touched

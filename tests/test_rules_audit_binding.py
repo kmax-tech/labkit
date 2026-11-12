@@ -31,6 +31,7 @@ from labkit.formats.gate import (
     RuleAssignment,
 )
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
+from protocol_fixture import PID
 from state_fixture import AREA, area_evidence, area_state, audit_record, run_dir
 
 pytestmark = pytest.mark.rule
@@ -137,14 +138,32 @@ class AnAuditFindingIsDecided(unittest.TestCase):
     nobody decided at its record's grade (`check_audit_findings_decided`)."""
 
     LAB_015 = RuleAssignment(KNOWN_RULE, "LAB-015", "Preflight audit before freezing")
+    #: the stamped id of another protocol of the same area
+    OTHER = "p-ffffffffffffffff"
 
-    def _found(self, *found: findings.Finding) -> list[GateFinding]:
+    def _found(
+        self, *found: findings.Finding, audited: str = PID, held: str | None = PID
+    ) -> list[GateFinding]:
+        """The rule's findings for the protocol with id HELD over one record
+        that audited the protocol with id AUDITED and holds FOUND."""
         evidence = area_evidence(
             records=[
-                audit_record(RECORD, mode=PREFLIGHT_AUDIT, run_id=None, found=found)
+                audit_record(
+                    RECORD,
+                    mode=PREFLIGHT_AUDIT,
+                    run_id=None,
+                    found=found,
+                    protocol_id=audited,
+                )
             ]
         )
-        return pure_call(check_audit_findings_decided, area_state(), evidence=evidence)
+        return pure_call(
+            check_audit_findings_decided,
+            area_state(),
+            evidence=evidence,
+            protocol=AREA / "PROTOCOL-x.md",
+            protocol_id=held,
+        )
 
     def test_an_open_blocker_blocks_with_its_decision_command(self):
         (f,) = self._found(_finding(BLOCKER))
@@ -167,6 +186,15 @@ class AnAuditFindingIsDecided(unittest.TestCase):
 
     def test_the_twin_a_decided_finding_passes(self):
         self.assertEqual(self._found(_finding(BLOCKER, status="false-positive")), [])
+
+    def test_an_open_blocker_on_another_protocol_holds_nothing(self):
+        """A record names the protocol it audited: its open BLOCKER is that
+        protocol's to decide. The twin: the same record on this protocol
+        blocks (`test_an_open_blocker_blocks_with_its_decision_command`)."""
+        self.assertEqual(self._found(_finding(BLOCKER), audited=self.OTHER), [])
+
+    def test_a_protocol_without_an_id_has_no_record(self):
+        self.assertEqual(self._found(_finding(BLOCKER), held=None), [])
 
 
 if __name__ == "__main__":
