@@ -618,11 +618,14 @@ class CountCommands(unittest.TestCase):
     def records(self) -> set[Path]:
         return set((self.area / "audits").glob("*-analysis*.toml"))
 
-    def analysis(self, answer: str) -> tuple[int, str, str]:
+    def analysis(
+        self, answer: str, protocol: Path | None = None
+    ) -> tuple[int, str, str]:
         """`labkit-audit AREA --mode analysis`, the model's answer ANSWER:
         (exit, output, the prompt sent); the record it wrote is `self.record`
         — by the set of records, not by name order (`…-analysis-2.toml`
-        sorts before `…-analysis.toml`)."""
+        sorts before `…-analysis.toml`). PROTOCOL is named with `--protocol`,
+        which an area of several protocols owes."""
         before = self.records()
         sent: list[str] = []
 
@@ -637,13 +640,29 @@ class CountCommands(unittest.TestCase):
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(io.StringIO()),
         ):
-            rc = audit.main([str(self.area), "--mode", "analysis"])
+            rc = audit.main(
+                [
+                    str(self.area),
+                    "--mode",
+                    "analysis",
+                    *(["--protocol", str(protocol)] if protocol else []),
+                ]
+            )
         written = self.records() - before
         self.record = written.pop() if len(written) == 1 else None
         return rc, out.getvalue(), sent[0] if sent else ""
 
-    def decide(self, record: Path, n: int, status: str, reason: str) -> str:
-        """`labkit-audit AREA --decide N`: its output, the decision's line."""
+    def decide(
+        self,
+        record: Path,
+        n: int,
+        status: str,
+        reason: str,
+        protocol: Path | None = None,
+    ) -> str:
+        """`labkit-audit AREA --decide N`: its output, the decision's line.
+        PROTOCOL is named with `--protocol`, as the decide line is printed
+        in an area of several protocols."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             rc = audit.main(
@@ -654,6 +673,7 @@ class CountCommands(unittest.TestCase):
                     *decide_words(status, reason),
                     "--record",
                     str(record),
+                    *(["--protocol", str(protocol)] if protocol else []),
                 ]
             )
         self.assertEqual(rc, 0, out.getvalue())
