@@ -904,6 +904,28 @@ class TheRuleARefusedBlockNames(unittest.TestCase):
     def test_the_twin_a_block_that_reads_raises_nothing(self):
         self.assertEqual(len(parsed(block(C1, A1, B1)).promises), 3)
 
+    def test_a_declared_scope_that_cannot_be_hashed_is_a_technical_contract(self):
+        """Every cause the scope readers raise sets the rule itself; none
+        is left to the default, an open assignment."""
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            (base / "m.py").write_text("def score():\n    return 2\n")
+            (base / "twice.py").write_text("def score():\n    pass\nscore = None\n")
+            (base / "broken.py").write_text("def score(:\n")
+            for entry in (
+                "gone.py",
+                "gone.py:score",
+                "m.py:absent",
+                "twice.py:score",
+                "broken.py:score",
+            ):
+                with self.subTest(entry=entry):
+                    with self.assertRaises(promises.PromiseError) as cm:
+                        promises.declared_scope_sha(base, (entry,))
+                    self.assertEqual(cm.exception.rule, TECHNICAL_RULE)
+            # the twin: a scope that reads raises nothing
+            promises.declared_scope_sha(base, ("m.py", "m.py:score"))
+
 
 class KeyKind(unittest.TestCase):
     """`promises.key_kind` is the one way to ask a key's letter."""

@@ -138,9 +138,9 @@ LAB_018 = cited_rule("LAB-018 Routine check after every implementation")
 
 
 #: the rule this module's own findings on ids and keys cite — a key nobody
-#: registered, a declared key or scope the code lacks, a quality-check key
-#: never tested —, but for the registered id without a key literal
-#: (KEY_LITERAL_RULE). A promise block that does not parse brings its rule
+#: registered, a quality-check key never tested —, but for the registered
+#: id without a key literal (KEY_LITERAL_RULE). A promise block that does
+#: not parse and a declared scope that cannot be hashed bring their rule
 #: with the error (`promises.PromiseError.rule`)
 ID_RULE = cited_rule("LAB-004 Identifiers make the intent addressable")
 #: the rule a registered id without a key literal records: its text states
@@ -266,7 +266,8 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     fix=f"name files that exist in [{p.id}]'s scope, then "
                     f"`{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
-                    rule=TECHNICAL_RULE,
+                    # the cause names its rule where the scope is read
+                    rule=exc.rule,
                 )
             )
         out += constant_copies(area, protocol, p)

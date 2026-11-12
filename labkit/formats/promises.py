@@ -217,7 +217,9 @@ class PromiseError(ValueError):
     the assignment of the requirement the block breaks, set where the cause
     is found: LAB_004 where a sentence of that rule states the requirement,
     TECHNICAL_RULE for a block or a value that does not have the form a
-    reader needs, OPEN_RULE where neither is decided."""
+    reader needs and for a declared scope that cannot be hashed
+    (`scope_sources`), OPEN_RULE where neither is decided. Who tells the
+    error as a finding passes this rule on and sets none of its own."""
 
     def __init__(self, message: str, *, rule: RuleAssignment = OPEN_RULE) -> None:
         super().__init__(message)
@@ -783,7 +785,8 @@ def _function_source(path: Path, name: str) -> str:
     except (OSError, UnicodeDecodeError, SyntaxError) as exc:
         raise PromiseError(
             f"{path}: cannot read {name!r} from it ({exc.__class__.__name__}: "
-            f"{exc}) — the declared scope must be parseable code"
+            f"{exc}) — the declared scope must be parseable code",
+            rule=TECHNICAL_RULE,
         ) from exc
     defs = [
         node
@@ -797,7 +800,8 @@ def _function_source(path: Path, name: str) -> str:
             f"{path}: {name!r} is bound {len(bound)} times at the top level "
             f"(lines {', '.join(map(str, bound))}) — Python runs the last one; "
             f"the declared scope must name one definition, so remove or rename "
-            f"the others"
+            f"the others",
+            rule=TECHNICAL_RULE,
         )
     if defs:
         node = defs[0]
@@ -808,7 +812,8 @@ def _function_source(path: Path, name: str) -> str:
         return "\n".join(source.splitlines()[first - 1 : node.end_lineno])
     raise PromiseError(
         f"{path}: no top-level function or class {name!r} — the "
-        f"declared scope names code that does not exist"
+        f"declared scope names code that does not exist",
+        rule=TECHNICAL_RULE,
     )
 
 
@@ -816,14 +821,18 @@ def scope_sources(base: Path, scope: tuple[str, ...]) -> list[tuple[str, bytes]]
     """(entry, content) of ONE promise's declared scope, entries resolved
     against `base` and sorted: a `file` entry is the file's bytes, a
     `file:function` entry that function's source, decorators included. A
-    missing file or function is a PromiseError, never an empty entry. The
-    one resolution `declared_scope_sha` and `unmentioned_constants` share."""
+    missing file or function is a PromiseError, never an empty entry — a
+    technical contract (`PromiseError.rule`): a scope that cannot be read
+    has no hash, whatever rule the promise serves. The one resolution
+    `declared_scope_sha` and `unmentioned_constants` share."""
     entries: list[tuple[str, bytes]] = []
     for entry in sorted(scope):
         file_part, _, func = entry.partition(":")
         path = base / file_part
         if not path.is_file():
-            raise PromiseError(f"scope entry {entry!r}: no such file {path}")
+            raise PromiseError(
+                f"scope entry {entry!r}: no such file {path}", rule=TECHNICAL_RULE
+            )
         try:
             content = (
                 _function_source(path, func).encode("utf-8")
@@ -831,7 +840,9 @@ def scope_sources(base: Path, scope: tuple[str, ...]) -> list[tuple[str, bytes]]
                 else path.read_bytes()
             )
         except OSError as exc:
-            raise PromiseError(f"scope entry {entry!r}: {exc}") from exc
+            raise PromiseError(
+                f"scope entry {entry!r}: {exc}", rule=TECHNICAL_RULE
+            ) from exc
         entries.append((entry, content))
     return entries
 

@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks.code_check import check_intent_ids  # noqa: E402
+from labkit.formats import gate  # noqa: E402
 from labkit.formats.gate import Findings  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from protocol_fixture import head  # noqa: E402
@@ -163,6 +164,25 @@ class PromisePreflight(unittest.TestCase):
             *area_with(SCRIPT.replace("def evaluate", "def score"))
         )
         self.assertTrue(any("declared scope" in f for f in findings), findings)
+
+    def test_a_dangling_scope_is_told_under_the_rule_its_cause_names(self):
+        """The scope reader names the rule (`promises.PromiseError.rule`, a
+        technical contract); the finding passes it on and so reads as a
+        breach, not as a deviation on an open assignment."""
+        area, protocol = area_with(SCRIPT.replace("def evaluate", "def score"))
+        scopes = [
+            f
+            for f in check_intent_ids(
+                area, protocol, protocol.read_text(encoding="utf-8")
+            )
+            if "declared scope" in f.text
+        ]
+        self.assertTrue(scopes)
+        for f in scopes:
+            self.assertEqual(
+                (f.grade, f.rule, f.outcome),
+                (gate.BLOCKER, gate.TECHNICAL_RULE, gate.VIOLATED),
+            )
 
     def test_malformed_block_blocks(self):
         findings = intent_id_lines(
