@@ -324,8 +324,10 @@ class ThePackage(unittest.TestCase):
             for line in text.splitlines()
             if "`gates.report_check._registration_at`" in line
             and "recorded no commit" in line
+            and "outside the history" in line
         )
-        self.assertIn("| LAB-003 |", row)
+        # the rule as data and the rule the sentence cites, the same one
+        self.assertIn("| LAB-010 | violated | LAB-010 |", row)
         self.assertIn("report-check", row)
 
     def test_out_writes_the_file_and_a_wrong_line_is_refused(self) -> None:

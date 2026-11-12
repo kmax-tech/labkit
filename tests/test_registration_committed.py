@@ -310,6 +310,24 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         ctx = report_context.checked(self.area, self.proto)
         (gap,) = report_check.registration_gaps(ctx)
         self.assertEqual(gap.rule, report_check.LAB_010)
+        # the sentence cites the rule the finding records, and no other
+        self.assertIn("(LAB-010 Commit before the run)", gap.text)
+        self.assertNotIn("LAB-003", gap.text)
+
+    def test_a_record_that_names_no_commit_cites_no_rule(self):
+        """A record without a commit that does not say `no-git`: the basis
+        is unknown, a technical contract — the sentence names no rule."""
+        self._commit(REGISTRATION)
+        run = self._run(None)
+        cfg = run / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["git"] = "abc1234"
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        ctx = report_context.checked(self.area, self.proto)
+        (gap,) = report_check.registration_gaps(ctx)
+        self.assertEqual(gap.rule, gate.TECHNICAL_RULE)
+        self.assertIn("recorded no commit ('abc1234')", gap.text)
+        self.assertNotIn("LAB-", gap.text)
 
     def test_recorded_commit_is_the_full_sha_the_record_names(self):
         def cfg(git: str, git_full: str) -> runs.RunConfig:

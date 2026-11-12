@@ -368,17 +368,28 @@ def _registration_at(
         f"{ways_out.HANDOVER}"
     )
     if then.cause == NO_COMMIT:
-        why = (
-            f"{at} recorded no commit ({cfg.git!r}{among}) — the registration "
-            f"cannot be held to what stood before the number (LAB-003 No run "
-            f"without an intent paragraph)"
-        )
         # NO_GIT is the run's own word that it started outside the history;
         # a record that names no commit otherwise only leaves the check
-        # without its basis
+        # without its basis, and its sentence cites no rule
         if cfg.git == NO_GIT:
-            return [blocker(why, fix=anew, rule=LAB_010)]
-        return [blocker(why, fix=anew, rule=TECHNICAL_RULE)]
+            return [
+                blocker(
+                    f"{at} recorded no commit ({cfg.git!r}{among}) — it started "
+                    f"outside the history, so the registration cannot be held to "
+                    f"what stood before the number (LAB-010 Commit before the run)",
+                    fix=anew,
+                    rule=LAB_010,
+                )
+            ]
+        return [
+            blocker(
+                f"{at} recorded no commit ({cfg.git!r}{among}) — what the run "
+                f"started from is unknown, so the registration cannot be held to "
+                f"what stood before the number",
+                fix=anew,
+                rule=TECHNICAL_RULE,
+            )
+        ]
     if then.cause == UNKNOWN_COMMIT:
         return [
             blocker(
