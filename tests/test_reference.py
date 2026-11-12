@@ -224,6 +224,50 @@ class FinalizeForwardsTheHeadsGaps(unittest.TestCase):
         self.assertEqual(self._held(compute(WITHIN)), [])
 
 
+class TheKeptNumberStationHoldsWhatTheReferenceStationLeaves(unittest.TestCase):
+    """One cause, one blocker, and the blocker exists: where finalize's
+    reference station only notes a cause as the kept-number station's, that
+    station blocks on the same head and run. (The third such cause, a kept
+    key the metrics lack, runs end to end in test_reference_end_to_end.)"""
+
+    PROTOCOL = Path("area") / "PROTOCOL-x.md"
+    RUN = Path("area") / "runs" / "r1"  # no such directory: no metrics.json
+
+    def _stations(self, text: str) -> tuple[list[str], list, list]:
+        """(the reference station's notes, its findings, the kept-number
+        station's findings) for TEXT and RUN."""
+        from labkit.gates import finalize
+
+        head_ = protocol_block.head(text)
+        notes: list[str] = []
+        compared = Findings(tell=notes.append)
+        finalize.check_reference(compared, self.PROTOCOL, text, head_, self.RUN)
+        kept = Findings(tell=None)
+        finalize.check_kept_number(kept, self.PROTOCOL, text, head_, self.RUN)
+        return notes, compared.found, kept.found
+
+    def test_a_kept_table_gap_is_the_kept_number_stations_blocker(self):
+        notes, compared, kept = self._stations(compute(WITHIN, kept=None))
+        self.assertEqual(compared, [])
+        self.assertIn(
+            "not read — the kept-number station names the [kept] gap", "".join(notes)
+        )
+        self.assertTrue(kept)
+        for f in kept:
+            self.assertEqual(f.grade, "BLOCKER")
+            self.assertIn("PROTOCOL-x.md: [kept]", f.text)
+
+    def test_metrics_that_do_not_read_are_the_kept_number_stations_blocker(self):
+        notes, compared, kept = self._stations(compute(WITHIN))
+        self.assertEqual(compared, [])
+        self.assertIn(
+            "not read — the kept-number station names the metrics", "".join(notes)
+        )
+        (f,) = kept
+        self.assertEqual(f.grade, "BLOCKER")
+        self.assertIn("the metrics of r1 do not read", f.text)
+
+
 class RegistrationStamp(unittest.TestCase):
     """The stated value is part of the registration an audit judged: a
     change, an addition or a drop after the audit is drift; a protocol
