@@ -138,7 +138,14 @@ def report_owed(
             if review
             else None
         )
-    own_handovers = (h for h in handed if h.protocol == block_owner)
+    # by the id its record names, so a protocol renamed since the handover
+    # is still the one handed over (`handovers.owns_block`)
+    own_handovers = (
+        h
+        for h in handed
+        if head.id is not None
+        and handovers.owns_block(h, block_owner, head.id, report, root, staged=staged)
+    )
     for h in own_handovers:
         gap = handovers.block_mismatch(h, report, root, staged=staged)
         if gap is None:

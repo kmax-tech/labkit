@@ -3,7 +3,11 @@ never an approval of evidence.
 
 Each immutable JSON record in audits/handovers binds one unresolved end:
 its protocol without a result, the findings left open, and
-every available audit file by blob id. The report carries the record's
+every available audit file by blob id. The record names the protocol by
+its stamped id (which protocol ended; a rename or a move inside the area
+keeps the handover), by a fingerprint of its text (what was handed over;
+an edit ends it) and by the path it had then (orientation, and what the
+block shows). A deleted protocol is handed over by no record. The report carries the record's
 projection as a handover block, one per protocol, beside any other prose
 or block:
 
@@ -79,9 +83,11 @@ from labkit.formats.repo import (
 )
 
 DIRECTORY = "handovers"
-SCHEMA = 2
+SCHEMA = 3
 #: the last labkit that reads a schema-1 record (no run account)
 SCHEMA_1_READ_BY = "0.103.0"
+#: the last labkit that reads a schema-2 record (no protocol id)
+SCHEMA_2_READ_BY = "0.112.0"
 
 KIND = "handover"
 OPEN = opener(KIND)
@@ -126,11 +132,15 @@ class HandoverError(ValueError):
 @dataclass(frozen=True)
 class Handover:
     """One unresolved end and its exact evidence state; no finding is resolved.
-    REMAINING names each finding left open as `<record file>
-    #<n> (<grade>, <status>)`."""
+    PROTOCOL_ID, the protocol's stamped id, says which protocol ended: it
+    survives a rename or a move. PROTOCOL is the path it had at the
+    handover, kept for orientation and as the block shows it; PROTOCOL_SHA
+    holds the text that was handed over. REMAINING names each finding left
+    open as `<record file> #<n> (<grade>, <status>)`."""
 
     schema: int
     protocol: str
+    protocol_id: str
     protocol_sha: str
     report: str
     why: str
@@ -302,10 +312,19 @@ def build(
     will stand (no result), REPORT, WHY and TRIED, the findings RECORDS
     leave unsettled, the area's audit files as the tree holds them now,
     the EXPECTED paths, the PROBLEMS found and the run ACCOUNT. Raises
-    HandoverError on a field the record cannot hold (`read_handover`)."""
+    HandoverError on a protocol without a stamped id — the record names the
+    protocol by it — and on a field the record cannot hold
+    (`read_handover`)."""
+    pid = protocol_block.id_of(protocol_text)
+    if pid is None:
+        raise HandoverError(
+            f"{protocol.name} carries no stamped id ([protocol] id): a handover "
+            "names the protocol it ends by its id"
+        )
     record = Handover(
         SCHEMA,
         rel_posix(protocol, root),
+        pid,
         protocol_fingerprint(protocol_text),
         rel_posix(report, root),
         why.strip(),
@@ -345,12 +364,13 @@ def read_handover(path: Path, text: str | None = None) -> Handover:
         or type(raw.get("schema")) is not int
         or raw["schema"] != SCHEMA
     ):
-        older = (
-            f" (a schema-1 record, without the run account, is read by labkit "
-            f"{SCHEMA_1_READ_BY})"
-            if isinstance(raw, dict) and raw.get("schema") == 1
-            else ""
-        )
+        was = raw.get("schema") if isinstance(raw, dict) else None
+        older = {
+            1: f" (a schema-1 record, without the run account, is read by labkit "
+            f"{SCHEMA_1_READ_BY})",
+            2: f" (a schema-2 record, without the protocol's id, is read by "
+            f"labkit {SCHEMA_2_READ_BY}; hand the protocol over again)",
+        }.get(was if type(was) is int else 0, "")
         raise HandoverError(
             f"{path}: handover fields must match schema {SCHEMA}{older}"
         )
@@ -367,6 +387,7 @@ def read_handover(path: Path, text: str | None = None) -> Handover:
     return Handover(
         SCHEMA,
         _relative(raw["protocol"], "protocol"),
+        _string(raw["protocol_id"], "protocol_id"),
         _string(raw["protocol_sha"], "protocol_sha"),
         _relative(raw["report"], "report"),
         _message(raw["why"], "why"),
@@ -575,13 +596,56 @@ def block_mismatch(
     return None
 
 
+def block_protocol_id(
+    block: HandoverBlock, report: Path, root: Path, *, staged: bool
+) -> str | None:
+    """The id of the protocol BLOCK, found in REPORT, hands over, as the
+    record it names says (`Handover.protocol_id`) — how a block is matched
+    to a protocol renamed since, whose path the block still shows. None
+    when the record lies outside ROOT or does not read; `block_mismatch`
+    names that."""
+    path = own_path(report.parent / block.record)
+    if not under_root(root, path):
+        return None
+    try:
+        return read_record(root, path, staged=staged).protocol_id
+    except HandoverError:
+        return None
+
+
+def owns_block(
+    block: HandoverBlock,
+    shown: str,
+    pid: str,
+    report: Path,
+    root: Path,
+    *,
+    staged: bool,
+) -> bool:
+    """Is BLOCK, found in REPORT, the handover block of the protocol with
+    id PID, which stands at SHOWN (its path relative to the report)? By the
+    id its record names (`block_protocol_id`): a block of a protocol
+    renamed since is its own, and a block of another protocol that once
+    stood at SHOWN is not. Only a block whose record does not read is told
+    by the path it shows — `block_mismatch` then names what is wrong with
+    it."""
+    named = block_protocol_id(block, report, root, staged=staged)
+    return named == pid if named is not None else block.protocol == shown
+
+
 def with_handover_block(text: str, record: Handover, root: Path, path: Path) -> str:
     """TEXT with RECORD's handover block: the one block of its protocol
-    replaced in place, or one appended at the end; everything else stays
+    (`owns_block`, the earlier records read from the tree) replaced in
+    place, or one appended at the end; everything else stays
     (`with_comment_block`). Raises HandoverError on a block that does not
     read or on two blocks of the same protocol."""
     protocol = _shown(record, root, path)[0]
-    matching = {b.first for b in handover_blocks(text) if b.protocol == protocol}
+    report = root / record.report
+    matching = {
+        b.first
+        for b in handover_blocks(text)
+        if owns_block(b, protocol, record.protocol_id, report, root, staged=False)
+    }
     try:
         return with_comment_block(
             text,
@@ -660,6 +724,20 @@ def _protocols(area: Path, root: Path, *, staged: bool) -> list[Path]:
     return area_protocols(area)
 
 
+def protocols_carrying(area: Path, root: Path, pid: str, *, staged: bool) -> list[Path]:
+    """AREA's protocols whose head carries the id PID in the tree or,
+    STAGED, the index. A protocol that does not read carries none here."""
+    out = []
+    for p in _protocols(area, root, staged=staged):
+        try:
+            text = state_text(root, p, staged=staged)
+        except UnicodeError:
+            continue
+        if text is not None and protocol_block.id_of(text) == pid:
+            out.append(p)
+    return out
+
+
 def declared_results(area: Path, root: Path, *, staged: bool = False) -> list[Path]:
     """The protocols of AREA, in the tree or STAGED the index, that declare
     a result: none may, while the area is handed over. Raises HandoverError
@@ -684,20 +762,25 @@ def _protocol_mismatch(
     area: Path, root: Path, record: Handover, *, staged: bool, state: AreaRuns
 ) -> str | None:
     """Why RECORD's protocol no longer stands as handed over in the tree
-    or, STAGED, the index — not one of AREA's, a symbolic link, changed
-    since, or a protocol of the area declaring a result — or None."""
-    protocol = root / record.protocol
-    if protocol not in _protocols(area, root, staged=staged):
+    or, STAGED, the index — no one protocol of AREA carries its id, a
+    symbolic link, its text changed since, or a protocol of the area
+    declaring a result — or None. The id finds the protocol, so a rename
+    or a move inside the area keeps the handover; the fingerprint holds
+    the text, so an edit ends it."""
+    carrying = protocols_carrying(area, root, record.protocol_id, staged=staged)
+    if len(carrying) != 1:
         return (
-            f"its protocol {record.protocol} is not a protocol of the area in "
-            f"the {_state(staged)}"
+            f"{len(carrying)} protocols of the area carry its protocol's id "
+            f"{record.protocol_id} in the {_state(staged)} (handed over as "
+            f"{record.protocol})"
         )
+    (protocol,) = carrying
     link = protocol_links(root, [protocol], staged=staged)
     if link:
         return link[protocol]
     text = state_text(root, protocol, staged=staged)
     if text is None or protocol_fingerprint(text) != record.protocol_sha:
-        return f"{record.protocol} changed since the handover"
+        return f"{rel_posix(protocol, root)} changed since the handover"
     declaring = declared_results(area, root, staged=staged)
     if declaring:
         return f"{rel_posix(declaring[0], root)} has adopted a result"
@@ -829,19 +912,28 @@ def protocol_handed_over(
     area: Path, protocol: Path, state: AreaRuns, *, staged: bool = False
 ) -> bool:
     """Whether a current handover of AREA (`mismatch` None) in the tree
-    or index (STAGED) ends PROTOCOL — the record names that protocol, not only one beside it
-    in the same area. STATE is the area's state, built once by the caller.
-    False outside a git repository. Raises HandoverError when the area's
-    handover records cannot be listed."""
+    or index (STAGED) ends PROTOCOL — the record names that protocol's id
+    (`Handover.protocol_id`), not only one beside it in the same area, at
+    whatever path it stands now. STATE is the area's state, built once by
+    the caller. False outside a git repository and for a protocol whose
+    text or id does not read. Raises HandoverError when the area's
+    handover records cannot be listed, GitError when git cannot read the
+    index."""
     area = area.resolve()
     root = git_root(area)
     if root is None:
         return False
-    rel = rel_posix(protocol, root)
+    try:
+        text = state_text(root, protocol, staged=staged)
+    except UnicodeError:
+        return False
+    pid = protocol_block.id_of(text) if text is not None else None
+    if pid is None:
+        return False
     for path in record_paths(area, staged=staged):
         if mismatch(area, root, path, staged=staged, area_state=state) is not None:
             continue
-        if read_record(root, path, staged=staged).protocol == rel:
+        if read_record(root, path, staged=staged).protocol_id == pid:
             return True
     return False
 

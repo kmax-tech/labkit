@@ -531,6 +531,11 @@ class HandoverRecovery(cases._Chain):
             ({"run": None}, "a run is named unless none was measured"),
             ({"run_state": "measured"}, "is not one of"),
             ({"schema": 1}, f"read by labkit {handovers.SCHEMA_1_READ_BY}"),
+            (
+                {"schema": 2},
+                f"without the protocol's id, is read by labkit "
+                f"{handovers.SCHEMA_2_READ_BY}",
+            ),
         ):
             with self.subTest(change):
                 with self.assertRaisesRegex(handovers.HandoverError, said):
@@ -553,10 +558,39 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("is handed over", step.where)
         # the twin: another protocol of the area, the area's handover current
         other = self.area / "PROTOCOL-s2-other.md"
-        other.write_text(self.protocol.read_text(encoding="utf-8"), encoding="utf-8")
+        text = self.protocol.read_text(encoding="utf-8")
+        pid = protocol_block.id_of(text)
+        assert pid is not None
+        other.write_text(text.replace(pid, "p-00000000000000ff"), encoding="utf-8")
+        self.assertTrue(handovers.valid(self.area, state_of(self.area)))
         self.assertFalse(
             handovers.protocol_handed_over(self.area, other, state_of(self.area))
         )
+
+    def test_a_renamed_protocol_stays_handed_over_and_an_edited_one_does_not(self):
+        """The record names the protocol by its id, so the path may change;
+        the fingerprint holds the text that was handed over."""
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        (path,) = handovers.record_paths(self.area)
+        self.assertEqual(
+            handovers.read_handover(path).protocol_id,
+            protocol_block.id_of(self.protocol.read_text(encoding="utf-8")),
+        )
+        renamed = self.area / "PROTOCOL-renamed.md"
+        self.protocol.rename(renamed)
+        state = state_of(self.area)
+        self.assertEqual(handovers.acknowledgement(self.area, state).refused, {})
+        self.assertTrue(handovers.protocol_handed_over(self.area, renamed, state))
+        # the twin: the same file with another text is no longer what was handed over
+        renamed.write_text(
+            renamed.read_text(encoding="utf-8") + "\nAn afterthought.\n",
+            encoding="utf-8",
+        )
+        state = state_of(self.area)
+        (why,) = handovers.acknowledgement(self.area, state).refused.values()
+        self.assertIn("PROTOCOL-renamed.md changed since the handover", why)
+        self.assertFalse(handovers.protocol_handed_over(self.area, renamed, state))
 
     def test_a_handover_record_deleted_only_in_the_tree_ends_the_protocol_at_the_commit(
         self,

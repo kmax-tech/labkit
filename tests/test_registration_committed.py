@@ -1297,6 +1297,37 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
             )
         )
 
+    def test_a_handover_block_still_ends_a_protocol_renamed_since(self):
+        """The block shows the path at the handover; its record names the
+        id, and by it the registered report finds the block of a protocol
+        renamed since — only the report review stays owed."""
+        from labkit.tools import protocol_fill
+
+        self._run(self._register("REPORT.md"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = protocol_fill.main(
+                [
+                    str(self.proto),
+                    "--handover",
+                    "--why",
+                    "the data cannot be had",
+                    "--tried",
+                    "asked for it",
+                    "--into",
+                    str(self.root / "REPORT.md"),
+                ]
+            )
+        self.assertEqual(code, 0, out.getvalue())
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "handed over", "--no-verify")
+        _git(self.root, "mv", str(self.proto), str(self.area / "PROTOCOL-y.md"))
+        _git(self.root, "commit", "-qm", "renamed", "--no-verify")
+        code, said = _report_check(self.area)
+        self.assertEqual(code, 1, said)
+        self.assertIn("has no clean report review of this state", said)
+        self.assertNotIn("ends the protocol without a result", said)
+
     def test_a_handover_ends_a_changed_binding_without_releasing_a_result(self):
         from labkit.tools import protocol_fill
 
