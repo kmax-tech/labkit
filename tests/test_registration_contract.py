@@ -208,6 +208,31 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
                     [rule],
                 )
 
+    def test_a_gap_says_what_is_the_matter_missing_placeholder_or_invalid(self) -> None:
+        """The mark comes from the cause (`MustGap.state`), not from the
+        field report it stands in: tables that are not there, a sentence
+        still the stamp's, a block that does not read."""
+        stamped = C1.replace('"accuracy >= min_acc"', '"<…>"')
+        for tables, state in (
+            (None, protocol_check.MISSING),
+            (stamped, protocol_check.PLACEHOLDER),
+            (C1 + C1, protocol_check.INVALID),
+        ):
+            with self.subTest(state=state):
+                report = protocol_check.check_fields(
+                    BODY + head(frozen=True, preflight_audit=AUDIT, promises=tables)
+                )
+                (gap,) = [g for g in report.must_gaps if "[[promise]]" in g.label]
+                self.assertEqual(gap.state, state)
+                self.assertTrue(gap.told.startswith(f"{state} (must): "), gap.told)
+        # the twin: tables that read and are written leave no gap
+        report = protocol_check.check_fields(
+            BODY + head(frozen=True, preflight_audit=AUDIT, promises=C1)
+        )
+        self.assertEqual([g for g in report.must_gaps if "[[promise]]" in g.label], [])
+        with self.assertRaisesRegex(ValueError, "state is one of"):
+            protocol_check.MustGap("x", gate.TECHNICAL_RULE, "BROKEN")
+
 
 class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
     def _run(self, area: Path, recorded: dict | None) -> Path:

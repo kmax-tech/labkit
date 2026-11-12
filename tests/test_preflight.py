@@ -235,7 +235,7 @@ class TestPreflight(unittest.TestCase):
             area, _ = _area(d, protocol_text=unstamped)
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("MISSING (must): [protocol] id", out)
+        self.assertIn("PLACEHOLDER (must): [protocol] id", out)
         self.assertIn("blocker", out)
 
     def test_prose_head_is_rejected_loudly(self):
@@ -278,7 +278,7 @@ class TestPreflight(unittest.TestCase):
             area, _ = _area(d, protocol_text=_protocol(id="<protocol-id>"))
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("BLOCKER: MISSING (must): [protocol] id", out)
+        self.assertIn("BLOCKER: PLACEHOLDER (must): [protocol] id", out)
         for station in (
             "── repeat cost ──",
             "── audit findings ──",

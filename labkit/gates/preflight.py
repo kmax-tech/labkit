@@ -342,7 +342,7 @@ def check_protocol_fields(
     lowered = repeat_cost_lowered(protocol, head)
     for gap in report.must_gaps:
         findings.block(
-            f"MISSING (must): {gap.label}",
+            gap.told,
             fix=f"{gap.repair} in {protocol.name}; {contract_hint(protocol)}",
             rule=gap.rule,
         )

@@ -245,7 +245,8 @@ class PromiseSentencesBeforeTheFreeze(unittest.TestCase):
         told = [f for f in found.found if "duplicate id" in f.text]
         self.assertEqual(len(told), 1, [f.line for f in told])
         (block,) = told
-        self.assertIn("MISSING (must): [[promise]] tables:", block.text)
+        # there and not readable: not "MISSING"
+        self.assertIn("INVALID (must): [[promise]] tables:", block.text)
         assert block.fix is not None
         self.assertTrue(
             block.fix.startswith(

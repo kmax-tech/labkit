@@ -24,6 +24,9 @@ from labkit.formats.gate import (
     with_way_out,
 )
 from labkit.formats.protocol_check import (
+    INVALID,
+    MISSING,
+    PLACEHOLDER,
     check_fields,
     registration_drift,
     registration_stamp,
@@ -48,6 +51,14 @@ from labkit.formats.findings import (
     read,
     record_way,
 )
+
+
+#: how the writer's refusal names a must gap's state (`protocol_check.MustGap.state`)
+_STATE_WORDS = {
+    MISSING: "absent",
+    PLACEHOLDER: "still a placeholder",
+    INVALID: "invalid",
+}
 
 
 def covering_records(records: list[Record], now: AuditedState) -> list[Record]:
@@ -283,7 +294,9 @@ def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
     when a record of the area does not read."""
     report = check_fields(text)
     out = [f"{report.head_error}"] if report.head_error else []
-    out += [f"MUST field absent: {label}" for label in report.missing_must]
+    out += [
+        f"MUST field {_STATE_WORDS[gap.state]}: {gap.label}" for gap in report.must_gaps
+    ]
     out += [
         f"MUST field still a placeholder: {label} (line {n})"
         for n, label in report.must_holes

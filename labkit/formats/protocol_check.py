@@ -663,6 +663,15 @@ def placeholder_fields(text: str) -> list[tuple[int, str]]:
     return [(f.line, f.label) for f in fields(text) if f.placeholder]
 
 
+#: what is the matter with a thing a protocol must carry (`MustGap.state`),
+#: each the word its line starts with: not there; there and still the
+#: stamp's placeholder; there and not usable as it stands
+MISSING = "MISSING"
+PLACEHOLDER = "PLACEHOLDER"
+INVALID = "INVALID"
+MUST_STATES = (MISSING, PLACEHOLDER, INVALID)
+
+
 @dataclass(frozen=True)
 class MustGap:
     """One entry of what a protocol must carry and does not (`check_fields`),
@@ -675,6 +684,11 @@ class MustGap:
             the kind the technical contract, a promise block that does
             not read the rule its error names
             (`promises.PromiseError.rule`).
+        state: What is the matter with the owed thing, said by the cause:
+            MISSING (it is not there), PLACEHOLDER (it still holds the
+            stamp's `<…>`) or INVALID (it is there and does not read, has
+            no place on this kind, or contradicts another part of the
+            head). The mark a teller prints (`told`) follows from it.
         way: What closes the gap where writing the field does not — a
             promise block that does not read is repaired (REPAIR_TABLES);
             None for a field to write. A teller reads `repair`.
@@ -686,8 +700,20 @@ class MustGap:
 
     label: str
     rule: RuleAssignment
+    state: str
     way: str | None = None
     block_unread: bool = False
+
+    def __post_init__(self) -> None:
+        if self.state not in MUST_STATES:
+            raise ValueError(
+                f"a must gap's state is one of {MUST_STATES}, not {self.state!r}"
+            )
+
+    @property
+    def told(self) -> str:
+        """The gap as a line names it: `<STATE> (must): <label>`."""
+        return f"{self.state} (must): {self.label}"
 
     @property
     def repair(self) -> str:
@@ -728,8 +754,14 @@ class FieldReport:
 
     @property
     def missing_must(self) -> list[str]:
-        """The labels of `must_gaps`, in their order."""
+        """The labels of `must_gaps`, in their order — every gap, whatever
+        its state (`MustGap.state`)."""
         return [g.label for g in self.must_gaps]
+
+    @property
+    def must_told(self) -> list[str]:
+        """`must_gaps` as lines name them (`MustGap.told`), in their order."""
+        return [g.told for g in self.must_gaps]
 
     @property
     def frozen(self) -> bool:
@@ -834,6 +866,56 @@ def owed_fields(
     return tuple(f for f in FIELDS if full_owed(f, kind, model))
 
 
+def _kind_gap(text: str, head: protocol_block.Head) -> tuple[str, str] | None:
+    """`kind_gap`'s sentence with the state its cause names (`MustGap.state`):
+    a key that has no place on the kind or claims more than the number
+    is INVALID, a key the kind owes and lacks is MISSING. None without a
+    gap."""
+    try:
+        m = protocol_block.model(text)
+    except protocol_block.BlockError:
+        return None
+    if m is None or head.kind is None:
+        return None
+    if head.kind != standard_contract.COMPUTE_KIND:
+        if m.claim_keys:
+            return (
+                f"[model] {', '.join(sorted(m.claim_keys))} with kind = "
+                f'"{head.kind}" — a fit or an apply judges the model itself, so '
+                "what a computation over its outputs claims has no place here; "
+                "drop the key(s)"
+            ), INVALID
+        return None
+    if m.number_describes is None:
+        return (
+            '[model] number_describes — kind = "compute" with a [model] table '
+            'says what the number describes: "model_outputs" (what the model '
+            'marked) or "target_property" (a property of the data, the model as '
+            "annotator)"
+        ), MISSING
+    if (
+        m.number_describes == protocol_block.TARGET_PROPERTY
+        and m.annotation_validity is None
+    ):
+        return (
+            '[model] annotation_validity — number_describes = "target_property" '
+            "claims a property of the data through the model's annotations; name "
+            'the evidence the annotator suits: { protocol = "p-…" } (an apply '
+            'protocol of this repo with an adopted result) or { doi = "10.…" }'
+        ), MISSING
+    if (
+        m.number_describes == protocol_block.MODEL_OUTPUTS
+        and m.annotation_validity is not None
+    ):
+        return (
+            '[model] annotation_validity with number_describes = "model_outputs" '
+            "— the number describes the model's outputs, so evidence about the "
+            "data claims more than it; drop it or set number_describes = "
+            '"target_property"'
+        ), INVALID
+    return None
+
+
 def kind_gap(text: str, head: protocol_block.Head) -> str | None:
     """Why the head's `kind` contradicts its `[model]` table, or None. A
     computation over a model's outputs says what its number describes
@@ -848,49 +930,8 @@ def kind_gap(text: str, head: protocol_block.Head) -> str | None:
     which reads the repo; whether the evidence carries the annotation stays
     the audit's. Loud, never a fallback: a malformed table is the head
     check's."""
-    try:
-        m = protocol_block.model(text)
-    except protocol_block.BlockError:
-        return None
-    if m is None or head.kind is None:
-        return None
-    if head.kind != standard_contract.COMPUTE_KIND:
-        if m.claim_keys:
-            return (
-                f"[model] {', '.join(sorted(m.claim_keys))} with kind = "
-                f'"{head.kind}" — a fit or an apply judges the model itself, so '
-                "what a computation over its outputs claims has no place here; "
-                "drop the key(s)"
-            )
-        return None
-    if m.number_describes is None:
-        return (
-            '[model] number_describes — kind = "compute" with a [model] table '
-            'says what the number describes: "model_outputs" (what the model '
-            'marked) or "target_property" (a property of the data, the model as '
-            "annotator)"
-        )
-    if (
-        m.number_describes == protocol_block.TARGET_PROPERTY
-        and m.annotation_validity is None
-    ):
-        return (
-            '[model] annotation_validity — number_describes = "target_property" '
-            "claims a property of the data through the model's annotations; name "
-            'the evidence the annotator suits: { protocol = "p-…" } (an apply '
-            'protocol of this repo with an adopted result) or { doi = "10.…" }'
-        )
-    if (
-        m.number_describes == protocol_block.MODEL_OUTPUTS
-        and m.annotation_validity is not None
-    ):
-        return (
-            '[model] annotation_validity with number_describes = "model_outputs" '
-            "— the number describes the model's outputs, so evidence about the "
-            "data claims more than it; drop it or set number_describes = "
-            '"target_property"'
-        )
-    return None
+    gap = _kind_gap(text, head)
+    return gap[0] if gap else None
 
 
 def open_holes(
@@ -1016,7 +1057,7 @@ def kept_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
     try:
         k = protocol_block.kept(text)
     except protocol_block.BlockError as exc:
-        return [MustGap(str(exc), TECHNICAL_RULE)]
+        return [MustGap(str(exc), TECHNICAL_RULE, INVALID)]
     if head.kind is None:
         return []
     if head.kind != standard_contract.COMPUTE_KIND:
@@ -1028,6 +1069,7 @@ def kept_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
                 f"through its promise keys (`[[promise]] key`), so the kept number a "
                 f"computation names has no place here; drop the table",
                 TECHNICAL_RULE,
+                INVALID,
             )
         ]
     if k is None:
@@ -1038,9 +1080,10 @@ def kept_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
                 '("1" for a dimensionless number); the run must hold that key as a '
                 "finite number",
                 LAB_011,
+                MISSING,
             )
         ]
-    return [MustGap(label, LAB_011) for label in k.placeholders]
+    return [MustGap(label, LAB_011, PLACEHOLDER) for label in k.placeholders]
 
 
 def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
@@ -1058,6 +1101,7 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
                 f'[protocol] frozen = true at repeat_cost = "{head.repeat_cost}" — nothing '
                 "freezes there; set frozen = false or choose high repeat cost",
                 OPEN_RULE,
+                INVALID,
             )
         )
     elif head.frozen and not head.preflight_audit:
@@ -1065,14 +1109,16 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
             MustGap(
                 "[protocol] preflight_audit (frozen = true without the decided preflight record named)",
                 LAB_015,
+                MISSING,
             )
         )
     # Whether the tables are owed is decided in ONE place,
     # promises.promise_tables_owed: frozen, or at low repeat cost (every run there is
     # the full run). No condition repeated here.
     try:
+        block = promises.parse_block(text)
         tables_gap = promises.promise_tables_owed(
-            promises.parse_block(text),
+            block,
             frozen=head.frozen,
             full_run=lane.registration,
             registers=kind_registers(head.kind, text),
@@ -1083,13 +1129,18 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
             MustGap(
                 f"[[promise]] tables: {exc}",
                 exc.rule,
+                INVALID,
                 way=REPAIR_TABLES,
                 block_unread=True,
             )
         )
     else:
         if tables_gap:
-            must_gaps.append(MustGap(tables_gap, LAB_004))
+            # owed with a block: only a sentence still the stamp's `<…>`
+            # (`promises.promise_tables_owed`); without one, no tables
+            must_gaps.append(
+                MustGap(tables_gap, LAB_004, MISSING if block is None else PLACEHOLDER)
+            )
     return must_gaps
 
 
@@ -1105,18 +1156,23 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
     must, should = owed(text, head, adopting=adopting)
     present = {f.name for f in fields(text)}
     must_gaps = [
-        MustGap(f.label, LAB_011) for f in must if f.label.casefold() not in present
+        MustGap(f.label, LAB_011, MISSING)
+        for f in must
+        if f.label.casefold() not in present
     ]
     missing_should = [f.label for f in should if f.label.casefold() not in present]
-    must_gaps += [MustGap(f"[protocol] {name}", LAB_011) for name in head.placeholders]
+    must_gaps += [
+        MustGap(f"[protocol] {name}", LAB_011, PLACEHOLDER)
+        for name in head.placeholders
+    ]
     # a claim about the model on the wrong kind is a duty no decided rule
     # states; a [reference] where a criterion judges can never be evaluated
-    for contradiction, rule in (
-        (kind_gap(text, head), OPEN_RULE),
-        (reference_gap(text, head), TECHNICAL_RULE),
-    ):
-        if contradiction:
-            must_gaps.append(MustGap(contradiction, rule))
+    kind = _kind_gap(text, head)
+    if kind:
+        must_gaps.append(MustGap(kind[0], OPEN_RULE, kind[1]))
+    reference = reference_gap(text, head)
+    if reference:  # a table that has no place on the kind
+        must_gaps.append(MustGap(reference, TECHNICAL_RULE, INVALID))
     must_gaps += kept_gaps(text, head)
     earlier = promises.earlier_ids(text)
     if earlier:
@@ -1125,6 +1181,7 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
             MustGap(
                 f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}",
                 TECHNICAL_RULE,
+                INVALID,
             )
         )
     must_gaps += freeze_must_gaps(text, head)

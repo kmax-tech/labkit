@@ -538,6 +538,8 @@ class FileReport:
     answer_unbound: str | None = None  # a WARNING: an Recorded results without a run_id
     pilot_note: str = ""
     missing_must: list[str] = field(default_factory=list)
+    #: the same gaps as their lines name them (`protocol_check.MustGap.told`)
+    must_told: list[str] = field(default_factory=list)
     #: bound fields written more than once (`protocol_check.repeated_fields`)
     repeated: list[str] = field(default_factory=list)
     #: owed should-fields; unfrozen they fold into the pilot note, frozen
@@ -706,6 +708,7 @@ def check_protocol(
         answer_unbound=recorded_results_without_run(text),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
+        must_told=report.must_told,
         repeated=report.repeated,
         missing_should=missing_should,
         must_holes=report.must_holes,
@@ -765,8 +768,8 @@ def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  #
         return
     if r.pilot_note:
         tell(f"{f}: {r.pilot_note}")
-    for label in r.missing_must:
-        tell(f"{f}: MISSING (must): {label}")
+    for told in r.must_told:
+        tell(f"{f}: {told}")
     for twice in r.repeated:
         tell(f"{f}: REPEATED (must): {twice}")
     # no `missing (should)` lines: unfrozen they are named in the pilot

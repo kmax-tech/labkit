@@ -70,7 +70,7 @@ class TestFieldIsDue(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = _protocol(d, pid="<protocol-id>")
             code, out = _check([p])
-        self.assertIn("MISSING (must): [protocol] id", out)
+        self.assertIn("PLACEHOLDER (must): [protocol] id", out)
         self.assertEqual(code, 1)
 
     def test_prose_mentioning_protocol_id_does_not_satisfy_the_field(self):
@@ -84,7 +84,7 @@ class TestFieldIsDue(unittest.TestCase):
                 "Protocol id will be added later.\n",
             )
             _, out = _check([p])
-        self.assertIn("MISSING (must): [protocol] id", out)
+        self.assertIn("PLACEHOLDER (must): [protocol] id", out)
 
     def test_a_prose_head_is_rejected(self):
         """The id as a prose line is no id: the protocol fails on its
