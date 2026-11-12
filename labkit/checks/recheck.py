@@ -126,7 +126,7 @@ def pin(run: Path, out: Path) -> None:
     if drift is not None:
         raise SystemExit(
             f"recheck: {out.name} is not the file run {run.name} recorded — "
-            f"{drift}; rerun the script or name that run"
+            f"{drift.why}; rerun the script or name that run"
         )
 
 

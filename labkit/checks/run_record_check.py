@@ -825,25 +825,70 @@ def _untracked_source(source: SourceNow) -> GateFinding:
     )
 
 
-def output_drift(output: OutputNow) -> str | None:
+#: the causes `output_drift` tells apart: the run recorded no sha256 for
+#: the file (whatever stands at its path now); the file the run recorded
+#: with a sha256 is gone; it stands with other bytes
+OUTPUT_UNRECORDED = "no sha256 recorded"
+OUTPUT_GONE = "gone"
+OUTPUT_CHANGED = "changed"
+
+
+@dataclass(frozen=True)
+class OutputDrift:
+    """Why the file of a registered output is not the one its run recorded
+    (`output_drift`).
+
+    Attributes:
+        cause: OUTPUT_UNRECORDED, OUTPUT_GONE or OUTPUT_CHANGED — what a
+            way out is chosen by (`output_record_findings`).
+        why: The cause as a clause of a message.
+    """
+
+    cause: str
+    why: str
+
+
+def output_drift(output: OutputNow) -> OutputDrift | None:
     """Why the file of a registered OUTPUT is not the one the run recorded
-    in outputs.json, or None when it is: the file is gone, the run ended
-    without it (no sha256 recorded), or its sha256 now differs from the
-    record. The record is the run's, taken after the run
-    (`runlog.Run._finalize`); the tree at check time is only compared,
-    never trusted."""
+    in outputs.json, or None when it is. In this order: the run ended
+    without it (no sha256 recorded — whatever stands at the path now, the
+    record holds nothing to compare it with), the file is gone, or its
+    sha256 now differs from the record. The record is the run's, taken
+    after the run (`runlog.Run._finalize`); the tree at check time is only
+    compared, never trusted."""
     recorded = output.entry.sha256
-    if not output.stands:
-        return "the file is gone"
     if recorded is None:
-        return "the run ended without it (outputs.json records no sha256)"
+        return OutputDrift(
+            OUTPUT_UNRECORDED,
+            "the run ended without it (outputs.json records no sha256)",
+        )
+    if not output.stands:
+        return OutputDrift(OUTPUT_GONE, "the file is gone")
     assert output.sha256 is not None, "output_now hashes a standing recorded file"
     if not output.sha256.startswith(recorded):
-        return (
+        return OutputDrift(
+            OUTPUT_CHANGED,
             f"its sha256 {output.sha256[: len(recorded)]} is not the recorded "
-            f"{recorded}"
+            f"{recorded}",
         )
     return None
+
+
+def _output_way_out(output: OutputNow, drift: OutputDrift, area: Path) -> str:
+    """The way out of a registered OUTPUT of AREA's run that is not the
+    recorded file (DRIFT). Every cause: measure anew. A gone file may also
+    be restored, held to the recorded sha256 by the next check — and said
+    as what it is: the bytes of that run, without whatever was written to
+    the file after it. A file that stands with other bytes gets no
+    restoring way out: it would overwrite what stands there."""
+    if drift.cause == OUTPUT_GONE:  # gone, and a sha256 to hold a restored file to
+        return (
+            f"{measure_anew(area)}; or restore the file from a commit or a copy "
+            f"that holds the bytes the run recorded (sha256 {output.entry.sha256}) — "
+            f"this check then holds it to that checksum, and rows written to the "
+            f"file after the run are not in those bytes"
+        )
+    return measure_anew(area)
 
 
 def output_record_findings(
@@ -854,15 +899,16 @@ def output_record_findings(
     `runs.outputs_now` gives them): the number's rows, and a deliverable
     the run wrote for an external task, are pinned to the run by path and
     sha256 — a file swapped, edited or removed after the run is no longer
-    what the run produced. [] when every file is as recorded."""
+    what the run produced. The way out follows the cause
+    (`_output_way_out`). [] when every file is as recorded."""
     return [
         blocker(
-            f"{o.entry.path}: not the file run {run_id} recorded — {why}",
-            fix=measure_anew(area),
+            f"{o.entry.path}: not the file run {run_id} recorded — {drift.why}",
+            fix=_output_way_out(o, drift, area),
             rule=OPEN_RULE,
         )
         for o in outputs
-        if (why := output_drift(o)) is not None
+        if (drift := output_drift(o)) is not None
     ]
 
 

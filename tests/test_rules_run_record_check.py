@@ -142,27 +142,36 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
     AREA = Path("area")
     RECORDED = OutputEntry(Path("out/rows.jsonl"), "ab12", 4)
 
-    def _held(self, now: str | None, recorded: str | None = "ab12"):
+    def _held(
+        self,
+        now: str | None,
+        recorded: str | None = "ab12",
+        stands: bool | None = None,
+    ):
         entry = OutputEntry(self.RECORDED.path, recorded, 4)
+        if stands is None:
+            stands = now is not None or recorded is None
         return pure_call(
-            output_record_findings,
-            [OutputNow(entry, now is not None or recorded is None, now)],
-            "r1",
-            self.AREA,
+            output_record_findings, [OutputNow(entry, stands, now)], "r1", self.AREA
         )
 
     def test_a_gone_an_unrecorded_and_a_changed_file_block(self):
-        for now, recorded, said in (
-            (None, "ab12", "the file is gone"),
+        unrecorded = "the run ended without it (outputs.json records no sha256)"
+        for now, recorded, stands, said in (
+            (None, "ab12", False, "the file is gone"),
+            # nothing recorded to compare with: the file is not read, and
+            # whether one stands at the path now does not change the cause
+            (None, None, True, unrecorded),
+            (None, None, False, unrecorded),
             (
-                None,  # nothing recorded to compare with: the file is not read
-                None,
-                "the run ended without it (outputs.json records no sha256)",
+                "cd34" + "0" * 60,
+                "ab12",
+                True,
+                "its sha256 cd34 is not the recorded ab12",
             ),
-            ("cd34" + "0" * 60, "ab12", "its sha256 cd34 is not the recorded ab12"),
         ):
-            with self.subTest(said=said):
-                (f,) = self._held(now, recorded)
+            with self.subTest(said=said, stands=stands):
+                (f,) = self._held(now, recorded, stands)
                 self.assertEqual(
                     (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, OPEN_RULE)
                 )
@@ -170,6 +179,22 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
                     f.text, f"out/rows.jsonl: not the file run r1 recorded — {said}"
                 )
                 self.assertIn("measure anew", f.fix or "")
+
+    def test_only_a_gone_file_may_be_restored_and_only_to_the_recorded_bytes(self):
+        """Restoring is a way out where nothing stands to be overwritten
+        and a checksum holds the restored file; it is not told as a repair
+        without loss."""
+        (gone,) = self._held(None, "ab12", False)
+        self.assertIn("restore the file", gone.fix or "")
+        self.assertIn("sha256 ab12", gone.fix or "")
+        self.assertIn("rows written to the file after the run", gone.fix or "")
+        for now, recorded, stands in (
+            (None, None, False),  # no checksum a restored file could be held to
+            ("cd34" + "0" * 60, "ab12", True),  # a restore would overwrite it
+        ):
+            with self.subTest(recorded=recorded):
+                (f,) = self._held(now, recorded, stands)
+                self.assertNotIn("restore", f.fix or "")
 
     def test_the_twin_the_recorded_bytes_pass(self):
         self.assertEqual(self._held("ab12" + "0" * 60), [])
