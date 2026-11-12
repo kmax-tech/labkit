@@ -671,8 +671,10 @@ class MustGap:
     Attributes:
         label: The field's label, or the sentence naming the gap.
         rule: The rule assignment of the cause — a required field absent
-            is the required-field rule's, a table that does not read the
-            technical contract.
+            is the required-field rule's, a table that has no place on
+            the kind the technical contract, a promise block that does
+            not read the rule its error names
+            (`promises.PromiseError.rule`).
     """
 
     label: str
@@ -989,7 +991,8 @@ def kept_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
     answer through its promise keys, so the table is refused there; a
     table that does not read is named by its sentence. A table or value
     that is owed and missing breaks the required-field rule; a table that
-    does not read or has no place on the kind, the technical contract.
+    has no place on the kind, the technical contract; a promise block that
+    does not read, the rule its error names (`promises.PromiseError.rule`).
     Nothing while the kind is undecided. The one answer `protocol-check`, the start of a low
     run (`low_registration_missing`) and finalize read."""
     try:
@@ -1057,7 +1060,8 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
             registers=kind_registers(head.kind, text),
         )
     except promises.PromiseError as exc:
-        must_gaps.append(MustGap(f"[[promise]] tables: {exc}", TECHNICAL_RULE))
+        # the requirement broken names its rule where the block is read
+        must_gaps.append(MustGap(f"[[promise]] tables: {exc}", exc.rule))
     else:
         if tables_gap:
             must_gaps.append(MustGap(tables_gap, LAB_004))

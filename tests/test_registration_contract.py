@@ -22,7 +22,7 @@ from protocol_fixture import run_record, PID, head, scope_file
 
 from labkit.gates import finalize
 from labkit.run import runlog
-from labkit.formats import protocol_check
+from labkit.formats import gate, promises, protocol_check
 
 AUDIT = "n/a — contract test, no code to audit"
 C1 = """[[promise]]
@@ -189,6 +189,24 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
                 for m in report.missing_must
             )
         )
+
+    def test_a_malformed_block_keeps_the_rule_its_cause_names(self) -> None:
+        """The gap passes the error's rule on (`promises.PromiseError.rule`):
+        the identifier rule, the technical contract, or an open assignment —
+        as code-check tells the same cause."""
+        for broken, rule in (
+            (C1.replace("min_acc", "MIN_ACC"), promises.LAB_004),
+            (C1.replace("constants", "extra"), gate.TECHNICAL_RULE),
+            (C1 + C1, gate.OPEN_RULE),
+        ):
+            with self.subTest(rule=rule.kind):
+                report = protocol_check.check_fields(
+                    head(frozen=True, preflight_audit=AUDIT, promises=broken)
+                )
+                self.assertEqual(
+                    [g.rule for g in report.must_gaps if "[[promise]]" in g.label],
+                    [rule],
+                )
 
 
 class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
