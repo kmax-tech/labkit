@@ -1,0 +1,254 @@
+[
+ {
+  "n": 2,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 7,
+  "readers": "completeness",
+  "now": "agreement",
+  "kind": "ruling",
+  "why": "a part the protocol registers is not in the run: agreement with the registration, both sides are needed to tell it (the author's ruling)"
+ },
+ {
+  "n": 8,
+  "readers": "completeness",
+  "now": "agreement",
+  "kind": "ruling",
+  "why": "a part the protocol registers is not in the run: agreement with the registration, both sides are needed to tell it (the author's ruling)"
+ },
+ {
+  "n": 10,
+  "readers": "completeness",
+  "now": "audit coverage",
+  "kind": "ruling",
+  "why": "an open finding leaves the record complete; the condition reads its decision status, the release half of audit coverage (the author's ruling; fit weak)"
+ },
+ {
+  "n": 11,
+  "readers": "completeness",
+  "now": "audit coverage",
+  "kind": "ruling",
+  "why": "an open finding leaves the record complete; the condition reads its decision status, the release half of audit coverage (the author's ruling; fit weak)"
+ },
+ {
+  "n": 13,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 17,
+  "readers": "readability",
+  "now": "—",
+  "kind": "mixed",
+  "why": "mixed unit: a file that is missing (completeness), access refused (limit of the execution), text that is not UTF-8 or not Python (readability)"
+ },
+ {
+  "n": 24,
+  "readers": "readability",
+  "now": "—",
+  "kind": "mixed",
+  "why": "mixed unit: a file that is missing (completeness), access refused (limit of the execution), text that is not UTF-8 or not Python (readability)"
+ },
+ {
+  "n": 25,
+  "readers": "readability",
+  "now": "—",
+  "kind": "mixed",
+  "why": "mixed unit: a file that is missing (completeness), access refused (limit of the execution), text that is not UTF-8 or not Python (readability)"
+ },
+ {
+  "n": 26,
+  "readers": "readability",
+  "now": "—",
+  "kind": "limit",
+  "why": "git fails: a limit of the execution, nothing shown about the object; the check that did not run compares the evidence with HEAD"
+ },
+ {
+  "n": 51,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 52,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 58,
+  "readers": "readability",
+  "now": "—",
+  "kind": "limit",
+  "why": "access to a file of the run refused: a limit of the execution, nothing shown about the file"
+ },
+ {
+  "n": 67,
+  "readers": "completeness",
+  "now": "agreement",
+  "kind": "ruling",
+  "why": "a part the protocol registers is not in the run: agreement with the registration, both sides are needed to tell it (the author's ruling)"
+ },
+ {
+  "n": 78,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 80,
+  "readers": "readability",
+  "now": "—",
+  "kind": "mixed",
+  "why": "mixed unit: the note's file missing (completeness) or access refused (limit of the execution)"
+ },
+ {
+  "n": 83,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 140,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 143,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 161,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 162,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "aggregated, two conditions: the protocol named is not held, or it declares no result; in both the thing named is not there"
+ },
+ {
+  "n": 172,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 173,
+  "readers": "readability",
+  "now": "—",
+  "kind": "limit",
+  "why": "git cannot read the commit's tree or file: a limit of the execution"
+ },
+ {
+  "n": 174,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 200,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 220,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 221,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 231,
+  "readers": "readability",
+  "now": "—",
+  "kind": "limit",
+  "why": "a git call fails: a limit of the execution; the catch is by the error's type"
+ },
+ {
+  "n": 232,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 244,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 266,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ },
+ {
+  "n": 267,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 278,
+  "readers": "readability",
+  "now": "—",
+  "kind": "mixed",
+  "why": "mixed unit: a file that is missing (completeness), access refused (limit of the execution), text that is not UTF-8 or not Python (readability)"
+ },
+ {
+  "n": 280,
+  "readers": "binding",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the thing named is not there; binding is between things that are there"
+ },
+ {
+  "n": 284,
+  "readers": "binding",
+  "now": "—",
+  "kind": "mixed",
+  "why": "mixed unit: the kept key is not in the run's metrics (agreement with the registration) or its value is no finite number (form)"
+ },
+ {
+  "n": 290,
+  "readers": "readability",
+  "now": "completeness",
+  "kind": "absent",
+  "why": "the object is not there; readability asks about an object that is there"
+ }
+]
