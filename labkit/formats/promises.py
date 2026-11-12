@@ -218,10 +218,10 @@ class PromiseError(ValueError):
     is found: LAB_004 where a sentence of that rule states the requirement,
     TECHNICAL_RULE for a block or a value that does not have the form a
     reader needs, for a declared scope that cannot be hashed
-    (`scope_sources`) and for what a script's own call asks of a protocol
-    that does not hold it (`load`, `constants`, `with_constant` — raised
-    in the lab's script, told by no gate), OPEN_RULE where neither is
-    decided. Every cause says which; there is no default, so a rule left
+    (`scope_sources`) and for a call whose own contract the protocol does
+    not meet — each named where it is raised: what `load` returns, the id
+    `constants` is asked for, the one line `with_constant` edits and its
+    read-back —, OPEN_RULE where neither is decided. Every cause says which; there is no default, so a rule left
     out is not read as an open one. Who tells the error as a finding
     passes this rule on and sets none of its own."""
 
@@ -614,6 +614,8 @@ def load(protocol: Path) -> PromiseTables:
     """
     block = parse_block(protocol.read_text(encoding="utf-8"))
     if block is None:
+        # the contract: `load` returns the block; a caller that asks for
+        # one reads registered values from it and gets no empty stand-in
         raise PromiseError(
             f"{protocol}: no [[promise]] tables in its ```toml block",
             rule=TECHNICAL_RULE,
@@ -625,6 +627,7 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
     """The constants one promise declares, read from the protocol."""
     by_id = load(protocol).by_id()
     if promise_id not in by_id:
+        # the contract: PROMISE_ID is an id the block declares
         raise PromiseError(
             f"{protocol}: no promise {promise_id!r}; declared: {sorted(by_id)}",
             rule=TECHNICAL_RULE,
@@ -650,6 +653,7 @@ def with_constant(text: str, name: str, value: float) -> str:
     line holds NAME, or the read-back differs."""
     span = protocol_block.toml_block_span(text)
     if span is None:
+        # the contract: TEXT carries the TOML block the edit is made in
         raise PromiseError("no ```toml block to set a constant in", rule=TECHNICAL_RULE)
     lines = text.split("\n")
     pattern = re.compile(
@@ -657,6 +661,9 @@ def with_constant(text: str, name: str, value: float) -> str:
     )
     hits = [i for i in range(*span) if pattern.search(lines[i])]
     if len(hits) != 1:
+        # the contract: the edit is one substitution in the one
+        # `constants = { … }` line that holds NAME — none, or a table
+        # written over several lines, is outside what it can edit
         raise PromiseError(
             f"{len(hits)} constants lines hold {name!r} — one table registers a constant",
             rule=TECHNICAL_RULE,
@@ -667,6 +674,8 @@ def with_constant(text: str, name: str, value: float) -> str:
     new = "\n".join(lines)
     block = parse_block(new)
     if block is None or all_constants(block).get(name) != value:
+        # the contract: what was written reads back as VALUE (the edit's
+        # own postcondition, checked before anything is returned)
         raise PromiseError(
             f"{name} did not read back as {value!r}", rule=TECHNICAL_RULE
         )
