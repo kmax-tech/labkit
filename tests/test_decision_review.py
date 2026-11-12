@@ -170,6 +170,8 @@ def gate(area: Path) -> tuple[int, str]:
         mock.patch.object(report_check, "finalize_area", return_value=0),
         mock.patch.object(report_check, "check_analysis_script", return_value=None),
         mock.patch.object(report_check, "registration_gaps", return_value=[]),
+        # the fixture's run names a commit no repository holds
+        mock.patch.object(report_check, "report_binding_gaps", return_value=[]),
         contextlib.redirect_stdout(buf),
     ):
         code = report_check.protocol_verdict(area).exit

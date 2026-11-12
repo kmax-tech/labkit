@@ -1131,6 +1131,72 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         assert gap is not None
         self.assertIn(f"before its first measurement {RUN}", gap)
 
+    def _finding(self, proto: Path) -> gate.GateFinding | None:
+        text = proto.read_text(encoding="utf-8")
+        return registered_report.report_binding_gap(
+            proto, text, measured=_measured(proto, text)
+        )
+
+    def test_a_shallow_clone_does_not_rule_out_a_duty_begun_outside_it(self):
+        """The entry and its removal lie below the clone's cut: the commits
+        the clone holds show no report, and that is not "no duty"."""
+        self._run(self._register(None))
+        for report, said in (("REPORT.md", "entered late"), (None, "removed")):
+            self._head_now(report)
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", said, "--no-verify")
+        clone = Path(tempfile.mkdtemp()) / "clone"
+        _git(self.root, "clone", "-q", "--depth", "1", self.root.as_uri(), str(clone))
+        gap = self._finding(clone / self.proto.relative_to(self.root))
+        assert gap is not None
+        self.assertEqual(
+            (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn("this clone is shallow", gap.text)
+
+    def test_a_first_measurement_off_heads_history_leaves_the_duty_open(self):
+        """The run started on a branch HEAD does not contain: what that
+        branch registered after it is in no commit HEAD reaches, so "found
+        in none" does not tell."""
+        self._register(None)
+        main = _git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
+        _git(self.root, "checkout", "-q", "--orphan", "side")
+        # its own message: the same tree under the same message and second
+        # would be main's commit again
+        _git(self.root, "commit", "-qm", "the protocol, on a line of its own")
+        side = _git(self.root, "rev-parse", "HEAD")
+        _git(self.root, "checkout", "-q", "-f", main)
+        self._run(side)
+        gap = self._finding(self.proto)
+        assert gap is not None
+        self.assertEqual(
+            (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn("no commit HEAD reaches registered one", gap.text)
+        self.assertIn("not in HEAD's history", gap.text)
+        # the twin: the same run on HEAD's own line, nothing ever registered
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        self.assertIsNone(self._finding(self.proto))
+
+    def test_a_report_entered_and_removed_on_a_merged_branch_still_binds(self):
+        """The merge's own diff shows no report; the branch's commits do,
+        and they came after the first measurement."""
+        self._run(self._register(None))
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the run")
+        main = _git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
+        _git(self.root, "checkout", "-q", "-b", "side")
+        for report, said in (("REPORT.md", "entered late"), (None, "removed")):
+            self._head_now(report)
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", said, "--no-verify")
+        _git(self.root, "checkout", "-q", main)
+        _git(self.root, "merge", "-q", "--no-ff", "-m", "merged", "side")
+        gap = self._finding(self.proto)
+        assert gap is not None
+        self.assertEqual(gap.rule, gate.OPEN_RULE)
+        self.assertIn("registered REPORT.md as its report in commit ", gap.text)
+
     def test_the_gate_reaches_a_protocol_whose_head_no_longer_names_the_report(self):
         """Selection by the area: the commit that drops the report touches
         the protocol, an exploration, whose head names no report now."""

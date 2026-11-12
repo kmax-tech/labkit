@@ -33,6 +33,7 @@ from labkit.checks.audit_binding import (
 from labkit.checks import report_blocks
 from labkit.formats.repo import (
     ever_committed,
+    commit_known,
     git_root,
     head_sha,
     is_ancestor,
@@ -286,6 +287,40 @@ def committed_report(root: Path, pid: str) -> str | None:
         return None
 
 
+def _first_commits(
+    measured: Measured, bound: BoundReports, root: Path
+) -> tuple[list[str], str | None]:
+    """(starts, incomplete) for `report_duty`: the commits of MEASURED's
+    first measurements that HEAD descends from and whose protocol reads
+    there (BOUND) — what "since the first measurement" is cut at —, and why
+    the commits HEAD reaches may not be all that could have bound, or None:
+    a first measurement whose commit the repository ROOT does not hold, or
+    one on a line HEAD does not contain (it cuts nothing off HEAD's own
+    line, and what its branch registered after it is not in HEAD's
+    history)."""
+    head = head_sha(root)
+    starts: list[str] = []
+    incomplete: str | None = None
+    for rd in measured.firsts:
+        commit = recorded_commit(rd.config) if rd.config is not None else None
+        if commit is None:
+            continue
+        if not commit_known(root, commit):
+            incomplete = (
+                f"its first measurement {rd.dir.name} recorded commit "
+                f"{commit[:12]}, which this repository does not hold (a rewritten "
+                f"history, a branch not fetched)"
+            )
+        elif not is_ancestor(root, commit, head):
+            incomplete = (
+                f"its first measurement {rd.dir.name} started at commit "
+                f"{commit[:12]}, which is not in HEAD's history (a branch not merged)"
+            )
+        elif rd.dir.name in bound.registered:
+            starts.append(commit)
+    return starts, incomplete
+
+
 @dataclass(frozen=True)
 class ReportDuty:
     """The report a protocol owes by what git holds (`report_duty`).
@@ -307,8 +342,8 @@ class ReportDuty:
 
 def report_duty(measured: Measured, pid: str, root: Path) -> ReportDuty | None:
     """The report the protocol with id PID owes by what git holds, or None
-    when it owes none — the one reading every gate uses (`report_binding_gap`,
-    `orphaned_report_duties`). The duty hangs on the id, not on a path, and
+    when it owes none — the one reading every gate uses
+    (`report_binding_gap`, `orphaned_report_duties`). The duty hangs on the id, not on a path, and
     starts with a commit once the area has measured (MEASURED,
     `area_state.Measured.has_measured`): a report committed before the
     first measurement binds at that measurement (`bound_reports`, read by
@@ -324,7 +359,10 @@ def report_duty(measured: Measured, pid: str, root: Path) -> ReportDuty | None:
     (before the measurement or after it, it stands committed with a
     measurement); a report only an earlier commit registered may have been
     removed before the measurement, and that cannot be told (UNREAD); none
-    in any commit is no duty. A shallow clone is UNREAD. Raises
+    in any commit is no duty only where HEAD's history is all there is —
+    a first measurement whose commit the repository does not hold, or one
+    on a branch HEAD does not contain, leaves commits unseen, and then
+    "found in none" is UNREAD too. A shallow clone is UNREAD. Raises
     RuntimeError when git fails."""
     if not measured.has_measured:
         return None
@@ -334,21 +372,9 @@ def report_duty(measured: Measured, pid: str, root: Path) -> ReportDuty | None:
     for run, report in bound.registered.items():
         if report is not None:
             return ReportDuty(report, f"before its first measurement {run}")
-    starts = [
-        commit
-        for rd in measured.firsts
-        if rd.dir.name in bound.registered
-        and rd.config is not None
-        and (commit := recorded_commit(rd.config)) is not None
-    ]
-    head = head_sha(root)
-    # a start HEAD does not descend from cuts nothing off HEAD's own line:
-    # an entry before that measurement would read as one after it
+    starts, incomplete = _first_commits(measured, bound, root)
     delimited = (
-        bool(starts)
-        and not bound.unread
-        and not measured.lost
-        and all(is_ancestor(root, c, head) for c in starts)
+        bool(starts) and incomplete is None and not bound.unread and not measured.lost
     )
     found = protocol_history.reports_registered_since(
         root, pid, starts if delimited else []
@@ -360,26 +386,35 @@ def report_duty(measured: Measured, pid: str, root: Path) -> ReportDuty | None:
             "this clone is shallow, and a commit it lacks may have registered one "
             "(`git fetch --unshallow`)",
         )
-    if not found:
-        return None
-    commit, report = found[-1]  # the oldest: the commit the duty began with
-    if delimited:
+    if found and delimited:
+        commit, report = found[-1]  # the oldest: the commit the duty began with
         return ReportDuty(
             report, f"in commit {commit[:12]}, after its first measurement"
         )
-    if committed_report(root, pid) is not None:
-        return ReportDuty(report, "in its last commit, with a measurement in its area")
-    why = (
-        bound.unread[0][1]
-        if bound.unread
-        else "its first measurement is lost, deleted without a commit"
-    )
-    return ReportDuty(
-        None,
-        "",
-        f"commit {commit[:12]} registered {report}, and whether that still stood "
-        f"at its first measurement cannot be read — {why}",
-    )
+    if delimited:
+        return None
+    late = committed_report(root, pid)
+    if late is not None:
+        return ReportDuty(late, "in its last commit, with a measurement in its area")
+    if found:
+        commit, report = found[-1]
+        why = incomplete or (
+            bound.unread[0][1]
+            if bound.unread
+            else "its first measurement is lost, deleted without a commit"
+        )
+        return ReportDuty(
+            None,
+            "",
+            f"commit {commit[:12]} registered {report}, and whether that still "
+            f"stood at its first measurement cannot be read — {why}",
+        )
+    if incomplete is not None:
+        # "found in no commit HEAD reaches" is not "no commit registered one"
+        return ReportDuty(
+            None, "", f"no commit HEAD reaches registered one, and {incomplete}"
+        )
+    return None
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:

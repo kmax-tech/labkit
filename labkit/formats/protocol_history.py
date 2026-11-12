@@ -203,6 +203,10 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     return None
 
 
+#: a head's `report` entry as a line of the protocol's TOML block, for git's -G
+REPORT_LINE = r"^report[[:space:]]*="
+
+
 def reports_registered_since(
     root: Path, pid: str, after: Sequence[str]
 ) -> list[tuple[str, str]] | None:
@@ -211,7 +215,9 @@ def reports_registered_since(
     history) that changed a `PROTOCOL-*.md` and in which the protocol
     carrying the id PID registers a report (`protocol_path_at`: found by
     id, so a rename or a move is followed; the head read as TOML only, as
-    there). How a report duty is read from where it began and not from the
+    there). Git names the commits to read: those whose diff adds or
+    removes a `report =` line in a protocol (REPORT_LINE) — a commit that
+    carries an entry unchanged is not listed, the one that added it is. How a report duty is read from where it began and not from the
     last commit alone: an entry a later commit removed is still found.
     None when the history cannot be read whole — a shallow clone, whose
     cut hides commits; [] before the first commit. Raises GitError when
@@ -221,14 +227,29 @@ def reports_registered_since(
     shallow = git_run(["rev-parse", "--is-shallow-repository"], root)
     if shallow.returncode != 0 or shallow.stdout.strip() != "false":
         return None
+    # the candidates are the commits whose diff adds or removes a `report =`
+    # line in a protocol: a report a commit registers was added by it or by
+    # an earlier one of the range (one present at a start is that
+    # measurement's own, `registered_report.bound_reports`), and reading
+    # every protocol of every commit costs minutes on a lab's history.
     # --full-history: without it git prunes a side branch that registered a
-    # report and removed it again before its merge
-    args = ["rev-list", "--full-history", "HEAD", *(f"^{c}" for c in after)]
+    # report and removed it again before its merge; -m: a merge is diffed
+    # against each parent
+    args = [
+        "log",
+        "--full-history",
+        "-m",
+        "--format=%H",
+        "-G",
+        REPORT_LINE,
+        "HEAD",
+        *(f"^{c}" for c in after),
+    ]
     listed = git_run([*args, "--", ":(glob)**/PROTOCOL-*.md"], root)
     if listed.returncode != 0:
         raise GitError(f"git {' '.join(args)} in {root}: {listed.stderr.strip()}")
     out = []
-    for commit in listed.stdout.split():
+    for commit in dict.fromkeys(listed.stdout.split()):  # -m repeats a merge
         then = protocol_path_at(root, commit, pid)
         text = text_at(root, then, commit) if then is not None else None
         if text is None:
