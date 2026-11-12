@@ -1,7 +1,7 @@
 """K1 (docs/notes/2026-10-27-new-registration-contracts.md): a protocol that
-declares `[replaces]` answers a new, post-hoc question, and the declaration
+declares `[replaces]` registers anew against a predecessor, and the declaration
 binds it — every change of the registration against its predecessor
-declared, `type = "exploratory"`, the predecessor's open BLOCKERs decided,
+declared, the predecessor's open BLOCKERs decided,
 its verdict rendered first. The repair case: a second area lowers the
 criterion's margin 0.25 → 0.15 and declares nothing; a report that switches
 its citations from the old area to the new one is a hint, never a block
@@ -287,12 +287,13 @@ class Gate(_Areas):
             (undeclared.rule, unshown.rule), (gate.TECHNICAL_RULE, gate.TECHNICAL_RULE)
         )
 
-    def test_a_replacement_is_exploratory(self):
+    def test_the_type_of_a_replacement_is_not_held(self):
+        """Exploratory or confirmatory is the audit's to judge: the gate
+        compares registrations, not whether the data were evaluated."""
         self._b(
             replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")), type="confirmatory"
         )
-        (gap,) = self.gaps()
-        self.assertIn('type = "exploratory"', gap)
+        self.assertEqual(self.gaps(), [])
 
     def test_itself_an_unknown_predecessor_and_a_circle_are_named(self):
         for extra, said in (
@@ -619,8 +620,8 @@ class AChangedComparison(unittest.TestCase):
     """A computation's registered comparison (`[reference]`) changed after
     its first measurement is held in that protocol (tests/
     test_registration_committed.py); the way on the hold names is walked
-    here: a successor that declares the change passes, only as an
-    exploratory protocol, and the earlier registration stays as it was."""
+    here: a successor that declares the change passes,
+    whatever its type, and the earlier registration stays as it was."""
 
     def setUp(self) -> None:
         self.root = Path(tempfile.mkdtemp())
@@ -698,6 +699,5 @@ class AChangedComparison(unittest.TestCase):
         self.assertIn("value = 0.62", gap)
         self.assertIn("value = 0.48", gap)
 
-    def test_the_twin_a_confirmatory_successor_is_held(self):
-        (gap,) = self._successor(declared=True, type="confirmatory")
-        self.assertIn('type = "exploratory"', gap)
+    def test_a_confirmatory_successor_that_declares_the_change_passes(self):
+        self.assertEqual(self._successor(declared=True, type="confirmatory"), [])

@@ -1,6 +1,6 @@
 """The replacement station of `report_check`: a protocol that declares
-`[replaces]` answers a new, post-hoc question, and the declaration binds
-it to one predecessor of the repo (`replacement_gaps`).
+`[replaces]` registers anew against one predecessor of the repo, and the
+declaration binds it to that predecessor (`replacement_gaps`).
 """
 
 from __future__ import annotations
@@ -38,10 +38,10 @@ LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 
 def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     """A protocol that declares `[replaces]` (K1,
-    docs/notes/2026-10-27-new-registration-contracts.md) answers a new,
-    post-hoc question, and the declaration binds it, exactly: the
+    docs/notes/2026-10-27-new-registration-contracts.md) registers anew
+    against a predecessor, and the declaration binds it, exactly: the
     predecessor is one protocol of the repo, not itself, and the chain of
-    replacements has no circle; the protocol is `type = "exploratory"`;
+    replacements has no circle;
     every difference of its registration against the predecessor's — each
     as its first measurements saw it (`protocol_history.
     registrations_as_first_measured`; against each when they saw several,
@@ -55,7 +55,11 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     judges the index it carries, the stop and the console the tree (the
     replacement's own area is report-check's first station). Blockers,
     each with the line or command
-    that clears it. Nothing without `[replaces]`: an undeclared successor is
+    that clears it. The head's `type` is not held: whether a successor is
+    exploratory or confirmatory turns on whether its data were already
+    evaluated for the changed question, which no comparison of bytes
+    tells — the audit judges it (`labkit/docs/agent-guide.md`, "an invalid
+    registration"). Nothing without `[replaces]`: an undeclared successor is
     indicated at the report (`replacement_hints`), never held here."""
     name = ctx.protocol.name
     try:
@@ -77,17 +81,7 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     pred = _predecessor(ctx, rep.protocol)
     if isinstance(pred, GateFinding):
         return [replace(pred, text=f"{name}: {pred.text}")]
-    out = []
-    if ctx.head.type != "exploratory":
-        out.append(
-            blocker(
-                f'{name}: [protocol] type = "{ctx.head.type}" — a protocol that replaces '
-                f"another answers a new, post-hoc question",
-                fix='set `type = "exploratory"` in its head',
-                rule=OPEN_RULE,
-            )
-        )
-    out += [
+    out = [
         replace(f, text=f"{name}: {f.text}")
         for f in _undeclared_changes(ctx, rep, pred)
     ]

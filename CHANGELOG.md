@@ -330,6 +330,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A successor protocol is no longer held to `type = "exploratory"`.** report-check blocked every protocol with `[replaces]` whose head said `confirmatory`. The ban was wider than its ground: a successor is confirmatory when its data were not yet evaluated for the changed question and its registration is complete before its first measurement, and no comparison of files tells that — equal checksums prove equal bytes, not that the data were evaluated; other checksums can hold the same observations. The gate still holds the predecessor, the declared changes in both directions and the predecessor's open BLOCKERs; the type is the analysis audit's to judge (the scar "Exploratory reported as confirmatory"). `labkit/docs/agent-guide.md` says when a successor may be confirmatory.
+
 - **A missing registered report says what was checked.** The hold on a registered report the state lacks said "which is not written", also for a report removed after it was written. It now names the state and the history: "the report is missing (a commit contains it)" or "(no commit in the available history contains it)" (`repo.ever_committed`). The hold blocks as before.
 
 - **The hint beside a discussed run no longer counts the block's own why.** `report_blocks.numbers_beside_discussed` named numbers in a discussion block's reason too. The reason says what was found, numbers included; the hint now lists the paragraphs right above and below the block only, and its sentence reads "beside a discussed run". Whether a reason reports a result is the report review's question.

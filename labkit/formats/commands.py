@@ -362,13 +362,16 @@ def decide_command(
 
 def register_anew(pid: str = "<id>", per: str = "per change", kind: str = "…") -> str:
     """The way out of a registration that cannot be answered as written
-    (K1): a new exploratory protocol of KIND naming the earlier one PID, its
+    (K1): a new protocol of KIND naming the earlier one PID, exploratory
+    unless its data are unseen for the changed question (no gate holds the
+    type, `report_replacement.replacement_gaps`), its
     changes declared PER what the caller names — the one wording every
     layer prints for it: the ways out, report-check's and finalize's holds,
     the reference and kept-number checks."""
     return (
         f"register anew: a new protocol (`labkit-init exp <new-name> --kind {kind}`), "
-        '`type = "exploratory"`, committed before its own first run, naming the '
+        '`type = "exploratory"` (`confirmatory` only on data not yet evaluated for '
+        "the changed question), committed before its own first run, naming the "
         f'earlier one in `[replaces] protocol = "{pid}"` with one '
         f"`[[replaces.change]]` (what, from, to, why) {per}"
     )
