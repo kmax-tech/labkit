@@ -203,22 +203,31 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     return None
 
 
-#: a head's `report` entry as a line of the protocol's TOML block, for git's -G
-REPORT_LINE = r"^report[[:space:]]*="
-
-
 def reports_registered_since(
     root: Path, pid: str, after: Sequence[str]
 ) -> list[tuple[str, str]] | None:
-    """(commit, report), newest first: every commit of the repository ROOT
-    reachable from HEAD and from none of AFTER (full shas; empty: the whole
-    history) that changed a `PROTOCOL-*.md` and in which the protocol
-    carrying the id PID registers a report (`protocol_path_at`: found by
-    id, so a rename or a move is followed; the head read as TOML only, as
-    there). Git names the commits to read: those whose diff adds or
-    removes a `report =` line in a protocol (REPORT_LINE) — a commit that
-    carries an entry unchanged is not listed, the one that added it is. How a report duty is read from where it began and not from the
-    last commit alone: an entry a later commit removed is still found.
+    """(commit, report), newest first as git lists them: every commit of
+    the repository ROOT reachable from HEAD and from none of AFTER (full
+    shas; empty: the whole history) that changed a protocol file so that
+    the file, as that commit holds it, carries the id PID and registers a
+    report (the head read as TOML only, as `protocol_path_at` reads it: an
+    older commit holds an older standard). How a report duty is read from
+    where it began and not from the last commit alone: an entry a later
+    commit removed is still found.
+
+    Only the files a commit changed are read, in that commit: a protocol
+    comes to register a report under PID by a change of its file, whatever
+    the change is — the entry, the id (a restamp), the block that makes
+    both readable, a rename. A commit that carries such a file unchanged
+    is not listed; the one that brought it into that state is. A state
+    that stood at a commit of AFTER and never changed since is not listed
+    either: it is that measurement's own reading
+    (`registered_report.bound_reports`). Where two files carry PID, either
+    one registering counts — a doubled id is held where ids are checked,
+    and a duty is not read away by it. A merge is compared with each
+    parent (-m), a side branch that registered and removed an entry before
+    its merge is kept (--full-history), the first commit counts (--root).
+
     None when the history cannot be read whole — a shallow clone, whose
     cut hides commits; [] before the first commit. Raises GitError when
     git fails."""
@@ -227,41 +236,54 @@ def reports_registered_since(
     shallow = git_run(["rev-parse", "--is-shallow-repository"], root)
     if shallow.returncode != 0 or shallow.stdout.strip() != "false":
         return None
-    # the candidates are the commits whose diff adds or removes a `report =`
-    # line in a protocol: a report a commit registers was added by it or by
-    # an earlier one of the range (one present at a start is that
-    # measurement's own, `registered_report.bound_reports`), and reading
-    # every protocol of every commit costs minutes on a lab's history.
-    # --full-history: without it git prunes a side branch that registered a
-    # report and removed it again before its merge; -m: a merge is diffed
-    # against each parent
     args = [
         "log",
         "--full-history",
         "-m",
-        "--format=%H",
-        "-G",
-        REPORT_LINE,
+        "--root",
+        "--no-renames",
+        "--name-only",
+        "-z",
+        "--format=%x01%H",
         "HEAD",
         *(f"^{c}" for c in after),
     ]
-    listed = git_run([*args, "--", ":(glob)**/PROTOCOL-*.md"], root)
+    listed = git_run([*args, "--", ":(glob)**/PROTOCOL-*"], root)
     if listed.returncode != 0:
         raise GitError(f"git {' '.join(args)} in {root}: {listed.stderr.strip()}")
+    changed: dict[str, list[str]] = {}
+    for chunk in listed.stdout.split("\x01")[1:]:  # -m: one chunk per parent
+        commit, _, names = chunk.partition("\0")
+        files = changed.setdefault(commit.strip(), [])
+        # git puts one newline between the header and the first name; a
+        # newline further in is part of a path
+        listed_names = names.removeprefix("\n").split("\0")
+        files += [n for n in listed_names if n and n not in files]
     out = []
-    for commit in dict.fromkeys(listed.stdout.split()):  # -m repeats a merge
-        then = protocol_path_at(root, commit, pid)
-        text = text_at(root, then, commit) if then is not None else None
-        if text is None:
-            continue
-        try:
-            table = protocol_block.parse_toml_block(text).get("protocol", {})
-        except protocol_block.BlockError:
-            continue  # `protocol_path_at` read this block; kept for the type
-        report = table.get("report") if isinstance(table, dict) else None
-        if isinstance(report, str) and report.strip():
-            out.append((commit, report))
+    for commit, files in changed.items():
+        for rel in files:
+            if rel and (report := _report_under(root, rel, commit, pid)) is not None:
+                out.append((commit, report))
+                break
     return out
+
+
+def _report_under(root: Path, rel: str, commit: str, pid: str) -> str | None:
+    """The report the protocol file REL registers in COMMIT while its head
+    carries the id PID; None when the commit does not hold the file (it
+    deleted it), its block does not parse, it carries another id or
+    registers none."""
+    text = text_at(root, root / rel, commit)
+    if text is None:
+        return None
+    try:
+        table = protocol_block.parse_toml_block(text).get("protocol", {})
+    except protocol_block.BlockError:
+        return None
+    if not isinstance(table, dict) or table.get("id") != pid:
+        return None
+    report = table.get("report")
+    return report if isinstance(report, str) and report.strip() else None
 
 
 def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:

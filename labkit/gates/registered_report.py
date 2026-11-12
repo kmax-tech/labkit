@@ -455,9 +455,10 @@ def report_binding_gap(
         return _undetermined_duty(
             name_p,
             duty,
-            f"make the history readable, or register a report in the head of "
-            f'{name_p} (`report = "REPORT.md"`) — a head that names one drops '
-            f"no duty; then `{step_command(protocol.parent)}`",
+            f"make the history readable — that settles what it owed; or register "
+            f'a report in the head of {name_p} now (`report = "REPORT.md"`) — '
+            f"that repairs no history: it takes the duty on from here, whatever "
+            f"stood before; then `{step_command(protocol.parent)}`",
         )
     handover = handover_command(protocol, duty.report)
     return blocker(

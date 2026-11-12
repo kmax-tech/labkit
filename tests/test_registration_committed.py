@@ -1137,6 +1137,77 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
             proto, text, measured=_measured(proto, text)
         )
 
+    def test_an_entry_git_would_not_find_at_the_line_start_still_binds(self):
+        """TOML takes an indented entry; no spelling of the entry decides
+        which commits are read."""
+        self._run(self._register(None))
+        entered = self._head_now("REPORT.md").replace(
+            'report = "REPORT.md"', '    report = "REPORT.md"'
+        )
+        self.assertEqual(protocol_block.head(entered).report, "REPORT.md")
+        self.proto.write_text(entered, encoding="utf-8")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "entered late, indented", "--no-verify")
+        self._head_now(None)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "removed", "--no-verify")
+        gap = self._finding(self.proto)
+        assert gap is not None
+        self.assertIn("registered REPORT.md as its report in commit ", gap.text)
+
+    def test_an_entry_in_a_block_that_reads_only_later_binds_from_then(self):
+        """The report line was written into a block that did not parse; the
+        commit that repaired the block changed no report line, and it is
+        the one in which the protocol came to register the report."""
+        self._run(self._register(None))
+        entered = self._head_now("REPORT.md")
+        self.proto.write_text(entered.replace("[protocol]", "[protocol", 1), "utf-8")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "entered into a broken block", "--no-verify")
+        for text, said in ((entered, "block repaired"), (None, "removed")):
+            if text is None:
+                self._head_now(None)
+            else:
+                self.proto.write_text(text, encoding="utf-8")
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", said, "--no-verify")
+        gap = self._finding(self.proto)
+        assert gap is not None
+        self.assertIn("registered REPORT.md as its report in commit ", gap.text)
+
+    def test_an_entry_older_than_the_protocols_id_binds_from_the_restamp(self):
+        """The report stood under another id; the restamp to this one
+        changed no report line, and it is the commit in which this id came
+        to register the report."""
+        other = "p-00000000000000aa"
+        self.proto.write_text(
+            self._head_now("REPORT.md").replace(PID, other), encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "registered under another id")
+        for report, said in (("REPORT.md", "restamped"), (None, "removed")):
+            self._head_now(report)
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", said, "--no-verify")
+        self._run("0" * 40)  # undelimited: the whole history is read
+        gap = self._finding(self.proto)
+        assert gap is not None
+        self.assertEqual(gap.outcome, gate.NOT_EXECUTABLE)
+        self.assertIn("registered REPORT.md, and whether that still stood", gap.text)
+
+    def test_the_two_ways_out_of_an_untold_duty_are_told_apart(self):
+        self._register("REPORT.md")
+        self._register(None)
+        self._run("0" * 40)
+        gap = self._finding(self.proto)
+        assert gap is not None
+        self.assertIn(
+            "make the history readable — that settles what it owed", gap.fix or ""
+        )
+        self.assertIn(
+            "that repairs no history: it takes the duty on from here", gap.fix or ""
+        )
+
     def test_a_shallow_clone_does_not_rule_out_a_duty_begun_outside_it(self):
         """The entry and its removal lie below the clone's cut: the commits
         the clone holds show no report, and that is not "no duty"."""
