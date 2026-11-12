@@ -8,11 +8,12 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import BLOCKER, OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import BLOCKER, NOT_EXECUTABLE, TECHNICAL_RULE
 from labkit.gates import registered_report
 from protocol_fixture import PID, head
 
@@ -30,9 +31,13 @@ class AReportBinding(unittest.TestCase):
 
     def _gap(self, lost: tuple[str, ...], text: str):
         measured = Measured(self.protocol.parent, PID, (), lost, (), ())
-        return registered_report.report_binding_gap(
-            self.protocol, text, measured=measured
-        )
+        # the working tree's state lists the same runs as lost: the duty
+        # asks it, since a state of the index calls an unstaged run lost
+        tree = SimpleNamespace(measured_of=lambda pid: measured)
+        with mock.patch.object(registered_report, "state_of", return_value=tree):
+            return registered_report.report_binding_gap(
+                self.protocol, text, measured=measured
+            )
 
     def _commit(self) -> None:
         """The protocol registering REPORT.md, committed."""
@@ -44,17 +49,19 @@ class AReportBinding(unittest.TestCase):
         ):
             subprocess.run(["git", *args], cwd=root, check=True)
 
-    def test_a_committed_report_is_owed_once_the_area_measured(self):
-        """A lost first measurement leaves no commit to read; the report
-        HEAD registers binds, and a head without one drops it."""
+    def test_a_lost_measurement_leaves_the_duty_untold(self):
+        """A lost measurement names no commit to read its registration
+        from: a head without a report is a check not executable, never "no
+        duty"."""
         self._commit()
         lost = ("2026-11-10T10-00-00_lost",)
         gap = self._gap(lost, head(repeat_cost="low", report=None))
         assert gap is not None
-        self.assertEqual((gap.grade, gap.rule), (BLOCKER, OPEN_RULE))
-        self.assertIn("registered REPORT.md as its report in its last commit", gap.text)
-        self.assertIn("name another file there", gap.fix or "")
-        self.assertIn("--handover", gap.fix or "")
+        self.assertEqual(
+            (gap.grade, gap.rule, gap.outcome),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+        )
+        self.assertIn("a measurement of it is lost (2026-11-10T10-00-00_lost", gap.text)
         # the twins: a head that registers a report, here or elsewhere
         self.assertIsNone(self._gap(lost, self.text))
         self.assertIsNone(

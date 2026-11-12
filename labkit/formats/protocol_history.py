@@ -41,7 +41,6 @@ from labkit.formats.repo import (
     commit_known,
     git_root,
     git_run,
-    head_sha,
     text_at,
     unreadable_at,
 )
@@ -201,89 +200,6 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
         if isinstance(table, dict) and table.get("id") == pid:
             return root / rel
     return None
-
-
-def reports_registered_since(
-    root: Path, pid: str, after: Sequence[str]
-) -> list[tuple[str, str]] | None:
-    """(commit, report), newest first as git lists them: every commit of
-    the repository ROOT reachable from HEAD and from none of AFTER (full
-    shas; empty: the whole history) that changed a protocol file so that
-    the file, as that commit holds it, carries the id PID and registers a
-    report (the head read as TOML only, as `protocol_path_at` reads it: an
-    older commit holds an older standard). How a report duty is read from
-    where it began and not from the last commit alone: an entry a later
-    commit removed is still found.
-
-    Only the files a commit changed are read, in that commit: a protocol
-    comes to register a report under PID by a change of its file, whatever
-    the change is — the entry, the id (a restamp), the block that makes
-    both readable, a rename. A commit that carries such a file unchanged
-    is not listed; the one that brought it into that state is. A state
-    that stood at a commit of AFTER and never changed since is not listed
-    either: it is that measurement's own reading
-    (`registered_report.bound_reports`). Where two files carry PID, either
-    one registering counts — a doubled id is held where ids are checked,
-    and a duty is not read away by it. A merge is compared with each
-    parent (-m), a side branch that registered and removed an entry before
-    its merge is kept (--full-history), the first commit counts (--root).
-
-    None when the history cannot be read whole — a shallow clone, whose
-    cut hides commits; [] before the first commit. Raises GitError when
-    git fails."""
-    if not head_sha(root):
-        return []
-    shallow = git_run(["rev-parse", "--is-shallow-repository"], root)
-    if shallow.returncode != 0 or shallow.stdout.strip() != "false":
-        return None
-    args = [
-        "log",
-        "--full-history",
-        "-m",
-        "--root",
-        "--no-renames",
-        "--name-only",
-        "-z",
-        "--format=%x01%H",
-        "HEAD",
-        *(f"^{c}" for c in after),
-    ]
-    listed = git_run([*args, "--", ":(glob)**/PROTOCOL-*"], root)
-    if listed.returncode != 0:
-        raise GitError(f"git {' '.join(args)} in {root}: {listed.stderr.strip()}")
-    changed: dict[str, list[str]] = {}
-    for chunk in listed.stdout.split("\x01")[1:]:  # -m: one chunk per parent
-        commit, _, names = chunk.partition("\0")
-        files = changed.setdefault(commit.strip(), [])
-        # git puts one newline between the header and the first name; a
-        # newline further in is part of a path
-        listed_names = names.removeprefix("\n").split("\0")
-        files += [n for n in listed_names if n and n not in files]
-    out = []
-    for commit, files in changed.items():
-        for rel in files:
-            if rel and (report := _report_under(root, rel, commit, pid)) is not None:
-                out.append((commit, report))
-                break
-    return out
-
-
-def _report_under(root: Path, rel: str, commit: str, pid: str) -> str | None:
-    """The report the protocol file REL registers in COMMIT while its head
-    carries the id PID; None when the commit does not hold the file (it
-    deleted it), its block does not parse, it carries another id or
-    registers none."""
-    text = text_at(root, root / rel, commit)
-    if text is None:
-        return None
-    try:
-        table = protocol_block.parse_toml_block(text).get("protocol", {})
-    except protocol_block.BlockError:
-        return None
-    if not isinstance(table, dict) or table.get("id") != pid:
-        return None
-    report = table.get("report")
-    return report if isinstance(report, str) and report.strip() else None
 
 
 def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:

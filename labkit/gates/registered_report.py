@@ -1,10 +1,11 @@
 """registered_report — what the report a protocol's head registers
 (`[protocol] report`) owes: its result block or the protocol's handover
 block once delivered (`report_owed`), the account of a measured run before
-any adoption (`progress_account`), the duty to report that a commit
-started once the area measured — hung on the protocol's id, free to move
-to another file, not ended by removing the entry or the protocol
-(`report_duty`, `report_binding_gap`, `orphaned_report_duties`) —, and a
+any adoption (`progress_account`), the duty to report that the first
+measurement's commit started — the report registered before the result
+was known, hung on the protocol's id, free to move to another file, not
+ended by removing the entry or the protocol (`report_duty`,
+`report_binding_gap`, `orphaned_report_duties`) —, and a
 report not written though the area measured or removed by a commit
 (`missing_report`). Read-only; report-check, the stop and `labkit-next`
 hold and name these. Reports outside the protocol: `report_hold`.
@@ -18,9 +19,8 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
-from labkit.formats.area_state import Measured
+from labkit.formats.area_state import Measured, state_of
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
-from labkit.formats.runs import recorded_commit
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
     handovers,
@@ -33,10 +33,7 @@ from labkit.checks.audit_binding import (
 from labkit.checks import report_blocks
 from labkit.formats.repo import (
     ever_committed,
-    commit_known,
     git_root,
-    head_sha,
-    is_ancestor,
     own_path,
     protocols_in,
     report_place,
@@ -228,7 +225,7 @@ def progress_account(written: str, owner: str, run_id: str) -> bool:
 @dataclass(frozen=True)
 class BoundReports:
     """What the commits of a protocol's first measurements registered as its
-    report (`committed_at`), on both lanes: REGISTERED run id → report path
+    report (`committed_at`): REGISTERED run id → report path
     (None: none registered); UNREAD (run id, why) for a first measurement
     whose commit cannot be read."""
 
@@ -249,8 +246,8 @@ _UNREAD = {
 def bound_reports(protocol: Path, measured: Measured, root: Path) -> BoundReports:
     """The reports PROTOCOL registered before its first measurements
     (MEASURED, `area_state.Measured.firsts`), as each one's commit in
-    the repository ROOT holds it (`protocol_history.committed_at`), at
-    both repeat costs. A committed head that does not read is unread.
+    the repository ROOT holds it (`protocol_history.committed_at`), one
+    entry per first position. A committed head that does not read is unread.
     Raises RuntimeError when git fails."""
     registered: dict[str, str | None] = {}
     unread: list[tuple[str, str]] = []
@@ -269,58 +266,6 @@ def bound_reports(protocol: Path, measured: Measured, root: Path) -> BoundReport
     return BoundReports(registered, unread)
 
 
-def committed_report(root: Path, pid: str) -> str | None:
-    """The report the protocol carrying the id PID registers in HEAD of the
-    repository ROOT, found by its id (`protocol_history.protocol_path_at`:
-    a rename keeps it); None when HEAD holds no such protocol, its head
-    does not read or registers none, or there is no commit yet. Raises
-    GitError when git cannot run."""
-    if not head_sha(root):
-        return None
-    then = protocol_history.protocol_path_at(root, "HEAD", pid)
-    text = text_at(root, then, "HEAD") if then is not None else None
-    if text is None:
-        return None
-    try:
-        return protocol_block.head(text).report
-    except protocol_block.BlockError:
-        return None
-
-
-def _first_commits(
-    measured: Measured, bound: BoundReports, root: Path
-) -> tuple[list[str], str | None]:
-    """(starts, incomplete) for `report_duty`: the commits of MEASURED's
-    first measurements that HEAD descends from and whose protocol reads
-    there (BOUND) — what "since the first measurement" is cut at —, and why
-    the commits HEAD reaches may not be all that could have bound, or None:
-    a first measurement whose commit the repository ROOT does not hold, or
-    one on a line HEAD does not contain (it cuts nothing off HEAD's own
-    line, and what its branch registered after it is not in HEAD's
-    history)."""
-    head = head_sha(root)
-    starts: list[str] = []
-    incomplete: str | None = None
-    for rd in measured.firsts:
-        commit = recorded_commit(rd.config) if rd.config is not None else None
-        if commit is None:
-            continue
-        if not commit_known(root, commit):
-            incomplete = (
-                f"its first measurement {rd.dir.name} recorded commit "
-                f"{commit[:12]}, which this repository does not hold (a rewritten "
-                f"history, a branch not fetched)"
-            )
-        elif not is_ancestor(root, commit, head):
-            incomplete = (
-                f"its first measurement {rd.dir.name} started at commit "
-                f"{commit[:12]}, which is not in HEAD's history (a branch not merged)"
-            )
-        elif rd.dir.name in bound.registered:
-            starts.append(commit)
-    return starts, incomplete
-
-
 @dataclass(frozen=True)
 class ReportDuty:
     """The report a protocol owes by what git holds (`report_duty`).
@@ -330,9 +275,9 @@ class ReportDuty:
             whether a duty began cannot be told (UNREAD).
         since: When the duty began, as a clause of a message; "" with
             UNREAD.
-        unread: Why the history does not tell whether a duty began, or
-            None when it does — a check that could not run, never "no
-            duty".
+        unread: Why the registration of the first measurement does not
+            tell whether a duty began, or None when it does — a check that
+            could not run, never "no duty".
     """
 
     report: str | None
@@ -340,30 +285,29 @@ class ReportDuty:
     unread: str | None = None
 
 
-def report_duty(measured: Measured, pid: str, root: Path) -> ReportDuty | None:
-    """The report the protocol with id PID owes by what git holds, or None
-    when it owes none — the one reading every gate uses
-    (`report_binding_gap`, `orphaned_report_duties`). The duty hangs on the id, not on a path, and
-    starts with a commit once the area has measured (MEASURED,
-    `area_state.Measured.has_measured`): a report committed before the
-    first measurement binds at that measurement (`bound_reports`, read by
-    id); one entered later binds with the commit that carries it, read
-    from every commit since the first measurements
-    (`protocol_history.reports_registered_since`), so an entry a later
-    commit removed still binds, whether or not a hook ran. An edit of the
-    working tree binds nothing.
+def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
+    """The report a protocol owes for good, by what git holds, or None when
+    it owes none — the one reading every gate uses (`report_binding_gap`,
+    `orphaned_report_duties`). What binds for good is the promise given
+    before the result was known: the report the protocol registered in the
+    commit of a first measurement (MEASURED, `bound_reports`, read by the
+    id the run recorded, so the protocol's path then and now does not
+    matter). The duty hangs on the protocol, not on the report's path. A
+    report entered after the first measurement starts no such duty: while
+    the head names it, the checks of a registered report hold it
+    (`report_owed`, `missing_report`); taking it out again ends those, and
+    nothing else — an adopted result, a written report and the audit
+    records keep their own holds.
 
-    Where the history does not delimit "since" — a first measurement lost,
-    or its commit not recorded, not held by this clone, not holding the
-    protocol or not an ancestor of HEAD — the whole history is read: a report HEAD registers binds
-    (before the measurement or after it, it stands committed with a
-    measurement); a report only an earlier commit registered may have been
-    removed before the measurement, and that cannot be told (UNREAD); none
-    in any commit is no duty only where HEAD's history is all there is —
-    a first measurement whose commit the repository does not hold, or one
-    on a branch HEAD does not contain, leaves commits unseen, and then
-    "found in none" is UNREAD too. A shallow clone is UNREAD. Raises
-    RuntimeError when git fails."""
+    Where no first measurement's registration reads — its commit not
+    recorded, not held by the repository or not holding the protocol, or
+    the measurement lost — that is UNREAD, never "no duty". A lost
+    measurement, and a run of the area whose record does not read (its
+    binding and its commit are unknowable), are UNREAD beside readable
+    ones too: either may have been the first, and no other station holds
+    an unreadable run for a protocol that has adopted nothing. A readable
+    first measurement that registered a report settles the duty whatever
+    else does not read. Raises RuntimeError when git fails."""
     if not measured.has_measured:
         return None
     # no path of today: at a path the commit does not hold, `committed_at`
@@ -372,49 +316,43 @@ def report_duty(measured: Measured, pid: str, root: Path) -> ReportDuty | None:
     for run, report in bound.registered.items():
         if report is not None:
             return ReportDuty(report, f"before its first measurement {run}")
-    starts, incomplete = _first_commits(measured, bound, root)
-    delimited = (
-        bool(starts) and incomplete is None and not bound.unread and not measured.lost
-    )
-    found = protocol_history.reports_registered_since(
-        root, pid, starts if delimited else []
-    )
-    if found is None:
+    if bound.unread:
+        run, why = bound.unread[0]
         return ReportDuty(
             None,
             "",
-            "this clone is shallow, and a commit it lacks may have registered one "
-            "(`git fetch --unshallow`)",
+            f"what it registered at its first measurement {run} cannot be read — {why}",
         )
-    if found and delimited:
-        commit, report = found[-1]  # the oldest: the commit the duty began with
-        return ReportDuty(
-            report, f"in commit {commit[:12]}, after its first measurement"
-        )
-    if delimited:
-        return None
-    late = committed_report(root, pid)
-    if late is not None:
-        return ReportDuty(late, "in its last commit, with a measurement in its area")
-    if found:
-        commit, report = found[-1]
-        why = incomplete or (
-            bound.unread[0][1]
-            if bound.unread
-            else "its first measurement is lost, deleted without a commit"
-        )
+    unreadable = [rd.dir.name for rd in measured.runs if rd.error is not None]
+    if unreadable:
         return ReportDuty(
             None,
             "",
-            f"commit {commit[:12]} registered {report}, and whether that still "
-            f"stood at its first measurement cannot be read — {why}",
+            f"the record of run {unreadable[0]} does not read, so it may have "
+            f"been the first measurement, and what stood registered then is not "
+            f"told (restore its config.json from a commit or a copy that holds "
+            f"it; a record written anew from memory settles nothing)",
         )
-    if incomplete is not None:
-        # "found in no commit HEAD reaches" is not "no commit registered one"
+    lost = _lost_in_the_tree_too(measured)
+    if lost:
         return ReportDuty(
-            None, "", f"no commit HEAD reaches registered one, and {incomplete}"
+            None,
+            "",
+            f"a measurement of it is lost ({', '.join(lost)}: deleted without a "
+            f"commit, only the run index lists it), and with it the commit that "
+            f"says what stood registered then",
         )
     return None
+
+
+def _lost_in_the_tree_too(measured: Measured) -> list[str]:
+    """MEASURED's lost runs that the working tree lacks as well. A state of
+    the index calls a run lost that stands in the tree and is not staged;
+    such a run is not gone, and the tree's own state reads it."""
+    if not measured.lost:
+        return []
+    tree = state_of(measured.area).measured_of(measured.pid).lost
+    return [run for run in measured.lost if run in tree]
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:
@@ -439,7 +377,9 @@ def report_binding_gap(
     stays held by the checks of every report. Only a head that registers
     none while the duty stands is held, with the ways out: restore the
     entry, name another file, or end the protocol by a handover; and one
-    whose duty the history does not tell, as a check not executable.
+    whose first measurement's registration does not read, as a check not
+    executable. A head that dropped a report entered after the first
+    measurement is not held.
     Nothing outside a repository, without a stamped id or before a
     measurement. Raises `protocol_block.BlockError` on a head that does
     not read, RuntimeError when git fails."""
@@ -447,7 +387,7 @@ def report_binding_gap(
     root = git_root(protocol)
     if root is None or not head.id or head.report is not None:
         return None
-    duty = report_duty(measured, head.id, root)
+    duty = report_duty(measured, root)
     if duty is None:
         return None
     name_p = shown(protocol, Path.cwd())
@@ -455,10 +395,13 @@ def report_binding_gap(
         return _undetermined_duty(
             name_p,
             duty,
-            f"make the history readable — that settles what it owed; or register "
+            f"make that registration readable from what git or a copy still "
+            f"holds, without filling in what is not known — it settles what was "
+            f"owed; or register "
             f'a report in the head of {name_p} now (`report = "REPORT.md"`) — '
-            f"that repairs no history: it takes the duty on from here, whatever "
-            f"stood before; then `{step_command(protocol.parent)}`",
+            f"that tells nothing of what was owed before: the head then names a "
+            f"report, and its checks hold it while it does; then "
+            f"`{step_command(protocol.parent)}`",
         )
     handover = handover_command(protocol, duty.report)
     return blocker(
@@ -480,8 +423,8 @@ def orphaned_report_duties(
 ) -> list[GateFinding]:
     """One BLOCKER per protocol id AREA measured (MEASURED, id → what it
     measured) that no protocol of the area carries now (CARRIED) while it
-    owes a report (`report_duty`) or the history does not tell whether it
-    does: deleting a protocol, or putting another in its place, does not
+    owes a report (`report_duty`) or its first measurement's registration
+    does not read: deleting a protocol, or putting another in its place, does not
     end the report it owes. A measured id that owed no report is passed
     over — a run of a protocol that is gone is no finding by itself. The
     one way out is the protocol's return: no handover ends a protocol that
@@ -495,7 +438,7 @@ def orphaned_report_duties(
         f"then `{step_command(area)}`"
     )
     for pid in sorted(set(measured) - carried):
-        duty = report_duty(measured[pid], pid, root)
+        duty = report_duty(measured[pid], root)
         if duty is None:
             continue
         if duty.report is None:

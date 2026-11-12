@@ -267,7 +267,13 @@ class Session(unittest.TestCase):
         hook_session.keep_stop_base(self.root, self.event)  # the first Bash command
 
     def _stop(self) -> tuple[int, str]:
-        rc, _, err = _run(agent_hooks.stop, self.event)
+        # the fixture's run record is a stub that never read (`_run_dir`);
+        # what an unreadable run means for the report a protocol owes is
+        # another question, held in tests/test_registration_committed.py
+        with mock.patch.object(
+            agent_hooks.report_check, "report_binding_gap", return_value=None
+        ):
+            rc, _, err = _run(agent_hooks.stop, self.event)
         return rc, err
 
     def _commit(self, message: str, *args: str) -> None:

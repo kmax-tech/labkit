@@ -1035,38 +1035,18 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._run(self._register("REPORT.md"))
         self.assertIsNone(self._gap(self._head_now("docs/OTHER.md")))
 
-    def test_a_report_entered_late_binds_with_its_commit_not_with_the_edit(self):
+    def test_a_report_entered_after_the_first_measurement_may_go_again(self):
+        """What binds for good is the promise given before the result was
+        known. A later entry is held while the head names it; committed or
+        not, taking it out again ends that, by the hook or past it."""
         self._run(self._register(None))
-        self.assertIsNone(self._gap(self._head_now(None)))
-        # entered in the working tree: free, and free to take out again
         self.assertIsNone(self._gap(self._head_now("REPORT.md")))
         self.assertIsNone(self._gap(self._head_now(None)))
-        # committed: the duty stands, and removing the entry is held
-        self._head_now("REPORT.md")
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "the report, entered late")
-        gap = self._gap(self._head_now(None))
-        assert gap is not None
-        self.assertIn("registered REPORT.md as its report in commit ", gap)
-        self.assertIn(", after its first measurement", gap)
-        # the twin: moved instead of removed
-        self.assertIsNone(self._gap(self._head_now("docs/OTHER.md")))
-
-    def test_a_late_report_removed_by_a_commit_past_the_hook_still_binds(self):
-        """The duty is read from where it began, not from the last commit:
-        a commit that removed the entry, whatever let it through, ends
-        nothing."""
-        self._run(self._register(None))
         for report, said in (("REPORT.md", "entered late"), (None, "removed")):
             self._head_now(report)
             _git(self.root, "add", "-A")
             _git(self.root, "commit", "-qm", said, "--no-verify")
-        gap = self._gap(self.proto.read_text(encoding="utf-8"))
-        assert gap is not None
-        self.assertIn("registered REPORT.md as its report in commit ", gap)
-        self.assertIn("its head now registers none", gap)
-        # the twin: named again, at another path
-        self.assertIsNone(self._gap(self._head_now("docs/OTHER.md")))
+            self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
 
     def test_the_twin_a_report_removed_before_the_first_measurement_binds_nothing(
         self,
@@ -1074,26 +1054,6 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._register("REPORT.md")
         self._run(self._register(None))
         self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
-
-    def test_a_history_that_does_not_tell_the_duty_is_a_check_not_executable(self):
-        """A report an earlier commit registered, and a first measurement
-        whose commit this clone does not hold: whether the entry stood then
-        cannot be read, and that is not "no duty"."""
-        self._register("REPORT.md")
-        self._register(None)
-        self._run("0" * 40)
-        text = self.proto.read_text(encoding="utf-8")
-        gap = registered_report.report_binding_gap(
-            self.proto, text, measured=_measured(self.proto, text)
-        )
-        assert gap is not None
-        self.assertEqual(
-            (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
-        )
-        self.assertIn("whether it owes a report cannot be told", gap.text)
-        self.assertIn("registered REPORT.md", gap.text)
-        # the twins: no commit ever registered one; or the head names one
-        self.assertIsNone(self._gap(self._head_now("REPORT.md")))
 
     def test_the_twin_a_report_committed_before_any_measurement_binds_nothing(self):
         self._register("REPORT.md")
@@ -1103,16 +1063,28 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._run(self._register("REPORT.md", repeat_cost="low"))
         self.assertIsNotNone(self._gap(self._head_now(None, repeat_cost="high")))
 
-    def test_an_unreadable_first_measurement_leaves_the_last_commit_to_bind(self):
+    def test_a_first_measurement_whose_registration_does_not_read_is_no_no_duty(
+        self,
+    ):
+        """Its commit is not in the repository: what it registered cannot
+        be read, and a head without a report is then a check not
+        executable — with its two ways out told apart."""
         self._register("REPORT.md")
         self._run("0" * 40)  # a commit this clone does not hold
         # a head that registers a report drops no duty, whatever stood then
         self.assertIsNone(self._gap(self._head_now("REPORT.md")))
-        # what that measurement stood under cannot be read; HEAD registers
-        # the report, and removing the entry is held by that
-        gap = self._gap(self._head_now(None))
+        text = self._head_now(None)
+        gap = registered_report.report_binding_gap(
+            self.proto, text, measured=_measured(self.proto, text)
+        )
         assert gap is not None
-        self.assertIn("in its last commit, with a measurement in its area", gap)
+        self.assertEqual(
+            (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn("what it registered at its first measurement", gap.text)
+        self.assertIn("does not hold", gap.text)
+        self.assertIn("without filling in what is not known", gap.fix or "")
+        self.assertIn("that tells nothing of what was owed before", gap.fix or "")
 
     def test_one_first_measurement_with_a_report_is_enough_for_the_duty(self):
         first = self._register("REPORT.md")
@@ -1137,136 +1109,36 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
             proto, text, measured=_measured(proto, text)
         )
 
-    def test_an_entry_git_would_not_find_at_the_line_start_still_binds(self):
-        """TOML takes an indented entry; no spelling of the entry decides
-        which commits are read."""
+    def test_a_measurement_only_the_run_index_lists_leaves_the_duty_untold(self):
+        """Deleted without a commit: the index says it was measured, and no
+        record is left to name the commit it stood under."""
+        import shutil
+
+        from labkit.run import runlog
+
         self._run(self._register(None))
-        entered = self._head_now("REPORT.md").replace(
-            'report = "REPORT.md"', '    report = "REPORT.md"'
-        )
-        self.assertEqual(protocol_block.head(entered).report, "REPORT.md")
-        self.proto.write_text(entered, encoding="utf-8")
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "entered late, indented", "--no-verify")
-        self._head_now(None)
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "removed", "--no-verify")
+        runlog.reindex(self.area)
+        shutil.rmtree(self.area / "runs")
         gap = self._finding(self.proto)
-        assert gap is not None
-        self.assertIn("registered REPORT.md as its report in commit ", gap.text)
-
-    def test_an_entry_in_a_block_that_reads_only_later_binds_from_then(self):
-        """The report line was written into a block that did not parse; the
-        commit that repaired the block changed no report line, and it is
-        the one in which the protocol came to register the report."""
-        self._run(self._register(None))
-        entered = self._head_now("REPORT.md")
-        self.proto.write_text(entered.replace("[protocol]", "[protocol", 1), "utf-8")
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "entered into a broken block", "--no-verify")
-        for text, said in ((entered, "block repaired"), (None, "removed")):
-            if text is None:
-                self._head_now(None)
-            else:
-                self.proto.write_text(text, encoding="utf-8")
-            _git(self.root, "add", "-A")
-            _git(self.root, "commit", "-qm", said, "--no-verify")
-        gap = self._finding(self.proto)
-        assert gap is not None
-        self.assertIn("registered REPORT.md as its report in commit ", gap.text)
-
-    def test_an_entry_older_than_the_protocols_id_binds_from_the_restamp(self):
-        """The report stood under another id; the restamp to this one
-        changed no report line, and it is the commit in which this id came
-        to register the report."""
-        other = "p-00000000000000aa"
-        self.proto.write_text(
-            self._head_now("REPORT.md").replace(PID, other), encoding="utf-8"
-        )
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "registered under another id")
-        for report, said in (("REPORT.md", "restamped"), (None, "removed")):
-            self._head_now(report)
-            _git(self.root, "add", "-A")
-            _git(self.root, "commit", "-qm", said, "--no-verify")
-        self._run("0" * 40)  # undelimited: the whole history is read
-        gap = self._finding(self.proto)
-        assert gap is not None
-        self.assertEqual(gap.outcome, gate.NOT_EXECUTABLE)
-        self.assertIn("registered REPORT.md, and whether that still stood", gap.text)
-
-    def test_the_two_ways_out_of_an_untold_duty_are_told_apart(self):
-        self._register("REPORT.md")
-        self._register(None)
-        self._run("0" * 40)
-        gap = self._finding(self.proto)
-        assert gap is not None
-        self.assertIn(
-            "make the history readable — that settles what it owed", gap.fix or ""
-        )
-        self.assertIn(
-            "that repairs no history: it takes the duty on from here", gap.fix or ""
-        )
-
-    def test_a_shallow_clone_does_not_rule_out_a_duty_begun_outside_it(self):
-        """The entry and its removal lie below the clone's cut: the commits
-        the clone holds show no report, and that is not "no duty"."""
-        self._run(self._register(None))
-        for report, said in (("REPORT.md", "entered late"), (None, "removed")):
-            self._head_now(report)
-            _git(self.root, "add", "-A")
-            _git(self.root, "commit", "-qm", said, "--no-verify")
-        clone = Path(tempfile.mkdtemp()) / "clone"
-        _git(self.root, "clone", "-q", "--depth", "1", self.root.as_uri(), str(clone))
-        gap = self._finding(clone / self.proto.relative_to(self.root))
         assert gap is not None
         self.assertEqual(
             (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
         )
-        self.assertIn("this clone is shallow", gap.text)
+        self.assertIn(f"a measurement of it is lost ({RUN}", gap.text)
 
-    def test_a_first_measurement_off_heads_history_leaves_the_duty_open(self):
-        """The run started on a branch HEAD does not contain: what that
-        branch registered after it is in no commit HEAD reaches, so "found
-        in none" does not tell."""
+    def test_a_first_measurement_off_heads_history_is_read_at_its_own_commit(self):
+        """The run started on a line HEAD does not contain; its commit is in
+        the repository, and what it registered there is what binds."""
         self._register(None)
         main = _git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
         _git(self.root, "checkout", "-q", "--orphan", "side")
-        # its own message: the same tree under the same message and second
-        # would be main's commit again
-        _git(self.root, "commit", "-qm", "the protocol, on a line of its own")
-        side = _git(self.root, "rev-parse", "HEAD")
+        side = self._register("REPORT.md")
         _git(self.root, "checkout", "-q", "-f", main)
         self._run(side)
         gap = self._finding(self.proto)
         assert gap is not None
-        self.assertEqual(
-            (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
-        )
-        self.assertIn("no commit HEAD reaches registered one", gap.text)
-        self.assertIn("not in HEAD's history", gap.text)
-        # the twin: the same run on HEAD's own line, nothing ever registered
-        self._run(_git(self.root, "rev-parse", "HEAD"))
-        self.assertIsNone(self._finding(self.proto))
-
-    def test_a_report_entered_and_removed_on_a_merged_branch_still_binds(self):
-        """The merge's own diff shows no report; the branch's commits do,
-        and they came after the first measurement."""
-        self._run(self._register(None))
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "the run")
-        main = _git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
-        _git(self.root, "checkout", "-q", "-b", "side")
-        for report, said in (("REPORT.md", "entered late"), (None, "removed")):
-            self._head_now(report)
-            _git(self.root, "add", "-A")
-            _git(self.root, "commit", "-qm", said, "--no-verify")
-        _git(self.root, "checkout", "-q", main)
-        _git(self.root, "merge", "-q", "--no-ff", "-m", "merged", "side")
-        gap = self._finding(self.proto)
-        assert gap is not None
         self.assertEqual(gap.rule, gate.OPEN_RULE)
-        self.assertIn("registered REPORT.md as its report in commit ", gap.text)
+        self.assertIn(f"before its first measurement {RUN}", gap.text)
 
     def test_the_gate_reaches_a_protocol_whose_head_no_longer_names_the_report(self):
         """Selection by the area: the commit that drops the report touches
@@ -1682,6 +1554,51 @@ class ReportOwedByADeletedProtocol(_Repository):
             with self.subTest(staged=staged):
                 _, out = self._hold([self.proto, renamed], staged=staged)
                 self.assertNotIn("no protocol of the area carries", out)
+
+    def _unreadable_run_beside(self, report: str | None) -> None:
+        """The protocol registering REPORT, a readable measurement at that
+        commit, and an older run of the area whose record does not read."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=report) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        broken = self.area / "runs" / "2026-10-01T10-00-00_bad0"
+        broken.mkdir(parents=True)
+        (broken / "config.json").write_text("{not json", encoding="utf-8")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the runs", "--no-verify")
+
+    def test_an_unreadable_run_may_have_been_the_first_measurement(self):
+        """Its binding and its commit are unknowable; beside a readable
+        measurement that registered no report, "no duty" is not told — at
+        report-check, at the stop and at the commit."""
+        self._unreadable_run_beside(None)
+        for staged in (True, False):
+            with self.subTest(staged=staged):
+                code, out = self._hold([self.proto], staged=staged)
+                self.assertEqual(code, 1, out)
+                self.assertIn("check not executable", out)
+                self.assertIn("2026-10-01T10-00-00_bad0 does not read", out)
+                self.assertIn("written anew from memory settles nothing", out)
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("2026-10-01T10-00-00_bad0 does not read", out)
+
+    def test_the_twin_a_report_the_head_names_or_a_first_measurement_promised(self):
+        """Either settles this decision, whatever else does not read: the
+        readable first measurement registered the report, and the head
+        still names one."""
+        self._unreadable_run_beside("REPORT.md")
+        text = self.proto.read_text(encoding="utf-8")
+        measured = _measured(self.proto, text)
+        self.assertIsNone(
+            registered_report.report_binding_gap(self.proto, text, measured=measured)
+        )
+        duty = registered_report.report_duty(measured, self.root)
+        assert duty is not None
+        self.assertEqual((duty.report, duty.unread), ("REPORT.md", None))
 
     def test_the_twin_a_deleted_protocol_that_owed_no_report_is_passed_over(self):
         self.proto.write_text(
