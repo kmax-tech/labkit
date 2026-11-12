@@ -1414,42 +1414,38 @@ class ReportSetter(unittest.TestCase):
                 self.assertEqual(self._fill(proto, f"report={bad}")[0], 2)
                 self.assertEqual(proto.read_text(encoding="utf-8"), before)
 
-    def test_after_the_first_measurement_no_fill_moves_the_bound_report(self):
+    def test_after_the_first_measurement_the_report_moves_as_before_it(self):
+        """The report duty hangs on the protocol, not on the path: another
+        file needs --force, as before a measurement, and nothing more."""
         area, proto = self._area()
         self._fill(proto, "report=REPORT.md")
         self._measurement(area, "2026-01-01T00-00-00_0001")
         before = proto.read_text(encoding="utf-8")
-        for args in (("report=OTHER.md",), ("report=OTHER.md", "--force")):
-            with self.subTest(args=args):
-                code, out = self._fill(proto, *args)
-                self.assertEqual(code, 2)
-                self.assertIn("before its first measurement", out)
-                self.assertIn("--handover", out)
-                self.assertEqual(proto.read_text(encoding="utf-8"), before)
-        # the twin: the same file is no change and passes
-        self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
+        code, out = self._fill(proto, "report=OTHER.md")
+        self.assertEqual(code, 2)
+        self.assertIn("--force", out)
+        self.assertEqual(proto.read_text(encoding="utf-8"), before)
+        self.assertEqual(self._fill(proto, "report=OTHER.md", "--force")[0], 0)
+        self.assertEqual(
+            protocol_block.head(proto.read_text("utf-8")).report, "OTHER.md"
+        )
 
-    def test_after_the_first_measurement_none_is_registered_late(self):
-        """Registration after the first measurement is not supported yet:
-        refused, also when the run's directory is gone and runs.tsv lists it."""
+    def test_after_the_first_measurement_a_report_is_entered_late(self):
+        """A report may be entered after the first measurement, also when
+        the run's directory is gone and runs.tsv lists it."""
         import shutil
 
         from labkit.run import runlog
-        from protocol_fixture import completed_run
 
         area, proto = self._area()
         self._measurement(area, "2026-01-01T00-00-00_0001", metrics={"n": 1})
         runlog.reindex(area)
         shutil.rmtree(area / "runs")
-        before = proto.read_text(encoding="utf-8")
         code, out = self._fill(proto, "report=REPORT.md")
-        self.assertEqual(code, 2)
-        self.assertIn("first measurement is missing", out)
-        self.assertEqual(proto.read_text(encoding="utf-8"), before)
-        # the twin: a probe is no measurement; nothing binds yet
-        (area / run_index.RUN_INDEX).unlink()
-        completed_run(area, "2026-01-01T00-00-00_0002", run_kind="probe")
-        self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            protocol_block.head(proto.read_text("utf-8")).report, "REPORT.md"
+        )
 
     def test_a_short_index_row_refuses_the_registration_instead_of_hiding_a_run(self):
         """runs.tsv truncated to the run id of a deleted measurement is not

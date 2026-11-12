@@ -164,6 +164,7 @@ from labkit.gates.report_hold import (
 from labkit.gates.registered_report import (
     formerly_registering,
     missing_report,
+    orphaned_report_duties,
     report_binding_gap,
     report_owed,
 )
@@ -683,17 +684,24 @@ def declaration_gaps(ctx: Checked) -> list[GateFinding]:
     ]
 
 
-def report_binding_gaps(ctx: Checked, *, unread: bool) -> list[GateFinding]:
-    """The report CTX's head registers against the one its first
-    measurements stood under (`registered_report.report_binding_gap`, UNREAD
-    passed on), as a list."""
+def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
+    """The report duties of CTX's area that its state drops: the protocol's
+    own, when its head registers no report though it owes one
+    (`registered_report.report_binding_gap`), and those of protocols the
+    area measured under and no longer holds
+    (`registered_report.orphaned_report_duties`). Nothing outside a
+    repository."""
+    state = ctx.area_state
     gap = report_binding_gap(
-        ctx.protocol,
-        ctx.text,
-        measured=ctx.area_state.measured_of(ctx.head.id),
-        unread=unread,
+        ctx.protocol, ctx.text, measured=state.measured_of(ctx.head.id)
     )
-    return [] if gap is None else [gap]
+    out = [] if gap is None else [gap]
+    if state.repo is not None:
+        carried = {protocol_block.id_of(t) for t in state.protocol_texts.values()}
+        out += orphaned_report_duties(
+            ctx.area, state.measured, {c for c in carried if c}, state.repo
+        )
+    return out
 
 
 def finalize_findings(
@@ -804,8 +812,9 @@ def chain_gaps(
     1. Declaration: an unreadable `[result]` blocks.
     2. Registration: the freeze where the lane owes it, else the first
        measurement's committed registration where the lane owes that; a
-       declared replacement's changes; the report registered before the
-       first measurement (`registered_report.report_binding_gap`).
+       declared replacement's changes; the report duties the state drops
+       (`report_binding_gaps`: a head without the report it owes, a
+       measured protocol gone from the area).
     3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it,
@@ -854,9 +863,7 @@ def chain_gaps(
     elif ln.registration:
         out += registration_gaps(ctx)
     out += replacement_gaps(ctx)
-    # the commits the registration station names unreadable are its to name
-    # where it ran (`report_binding_gap`'s UNREAD)
-    out += report_binding_gaps(ctx, unread=not ln.registration)
+    out += report_binding_gaps(ctx)
     # 3. finalize — always; the unreportable marks this chain's full-run
     # station holds as blockers are not told again as finalize's warnings
     # where it read this text
@@ -1294,11 +1301,7 @@ def hold_registered(
     ended = handovers.protocol_handed_over(
         protocol.parent, protocol, state, staged=staged
     )
-    binding = (
-        None
-        if ended
-        else report_binding_gap(protocol, text, measured=measured, unread=True)
-    )
+    binding = None if ended else report_binding_gap(protocol, text, measured=measured)
     # the commit lacks the registered report while the area measured: that
     # is the finding, and report_owed finds no file to read
     missing = (

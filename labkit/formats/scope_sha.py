@@ -592,7 +592,9 @@ def predecessor_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
     does not read (its binding is unknowable). The record holds the inputs
     the run read and the commit it started from, which fixes the
     registration a first measurement saw; a new run of the predecessor adds
-    an entry. Not covered: the predecessor's protocol file as it stands,
+    an entry. That is all the stamp follows: it is no detection of every
+    change in what is known about the data. Not covered: the predecessor's
+    protocol file as it stands,
     its metrics and its report — the audit is not shown them. Never raises
     for a protocol it cannot read — the head check names that."""
     root = layout_root(area)

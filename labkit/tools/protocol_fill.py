@@ -1043,9 +1043,7 @@ def report_bound(
         return None
     proposed = fill_many(text, wanted, force=True)
     measured = state_of(protocol.parent).measured_of(protocol_block.head(proposed).id)
-    gap = registered_report.report_binding_gap(
-        protocol, proposed, measured=measured, unread=True
-    )
+    gap = registered_report.report_binding_gap(protocol, proposed, measured=measured)
     return with_way_out(gap.text, gap.fix) if gap is not None else None
 
 

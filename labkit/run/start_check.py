@@ -179,8 +179,8 @@ def _committed_registration(
                 f"commit holds; commit the written registration, then start the run "
                 f"(LAB-003 No run without an intent paragraph)"
             ]
-    # the report registered before the first measurement is bound to what its
-    # commit holds (`registered_report.report_binding_gap`): uncommitted, it binds nothing
+    # the report duty starts from what the first measurement's commit holds
+    # (`registered_report.report_duty`): uncommitted, the entry binds nothing
     then = protocol_block.head(committed).report if committed is not None else None
     if head.report != then:
         return [
