@@ -66,3 +66,13 @@ These strengths support local maintenance. They do not make the full package sma
 Focused suite: `.venv/bin/pytest -q tests/test_gate.py tests/test_rules_report_decisions.py tests/test_report_decisions_stations.py tests/test_area_state.py tests/test_architecture.py` — 110 passed, 51 subtests passed, exit 0. The inventory command exited 0. Its output was read, including its summary and explicit estimate limits. The architectural guard's direct-file-access detector was read with its known-positive test; it does not prove absence of transitive reads through format helpers.
 
 No full suite, real model call, concurrent edit experiment or exhaustive review of runlog, backends and writers was performed. The four findings are not instructions to start another general refactoring round. The concrete observations above can guide a separately chosen change; the usage round remains a separate research task.
+
+## Decided by the author on 2026-11-12
+
+The review shows maintenance risks; it does not justify a new abstraction. No wrong release and no diverging observation was reproduced, and the repeated reads were not measured.
+
+1. **The architecture note is corrected.** Its entry no longer repeats counts that change with every decision; it points to `python -m labkit.tools.check_inventory` and the open-assignments note.
+2. **A shared audit coverage is deferred.** No work before the usage round. It is taken up again on measured cost, on observations that contradict each other, or on a concrete maintenance problem.
+3. **The station dependency is documented, not enforced by the interface** — the precise reading of the second finding. A gate test now holds it: on an area whose coverage does not read, `limit_gaps`, `review_findings` and `followup_findings` give `[]` and `analysis_audit_gap` is the blocker (`tests/test_report_check_stations.py`, `TheDecisionStationsLeaveUnreadableCoverageToTheAuditGap`). Before it, `analysis_audit_gap` was tested alone, and no test held the two halves on one input.
+4. **The state rebuilt for the next step at the hook** stays a recorded observation.
+
