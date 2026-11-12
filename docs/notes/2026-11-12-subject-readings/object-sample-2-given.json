@@ -1,0 +1,92 @@
+[
+ {
+  "n": 1,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names no record"
+ },
+ {
+  "n": 2,
+  "function": "report_check.unreportable_gaps",
+  "cause": "a full run acknowledged over an unfrozen protocol"
+ },
+ {
+  "n": 5,
+  "function": "report_decisions.limit_gaps",
+  "cause": "the result cannot be rendered from …: …"
+ },
+ {
+  "n": 7,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "… is not statically readable (a call or a format spec this check does not compute) · pr…"
+ },
+ {
+  "n": 8,
+  "function": "preflight._owed",
+  "cause": "the area cannot be stamped now, so the record cannot be held to it"
+ },
+ {
+  "n": 15,
+  "function": "report_check.cut_off_adoption_gaps",
+  "cause": "…: an adoption was cut off during its check — the protocol may hold a proposal no check…"
+ },
+ {
+  "n": 16,
+  "function": "report_hold.link_gap",
+  "cause": "…: a symbolic link to … — a report is held as a file at its own path, never through a…"
+ },
+ {
+  "n": 19,
+  "function": "report_decisions.check_first_dismissals_upheld",
+  "cause": "audit … #…: `false-positive` on a BLOCKER … — a blocking finding is not released by…"
+ },
+ {
+  "n": 20,
+  "function": "audit.early_for_tier",
+  "cause": "repeat_cost = \"low\" and no completed run · the first run is the cheaper probe; one audit …"
+ },
+ {
+  "n": 21,
+  "function": "report_decisions.check_stands_upheld",
+  "cause": "…: `stands` on a … decided limitation … — no decision review upholds that the repor…"
+ },
+ {
+  "n": 24,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurement is missing — the report binding cannot be read"
+ },
+ {
+  "n": 25,
+  "function": "code_check.main",
+  "cause": "bundle: … could not be read — the reader sees `not readable` in its place"
+ },
+ {
+  "n": 30,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds several protocols and none is named"
+ },
+ {
+  "n": 31,
+  "function": "report_decisions.check_carried_closings_upheld",
+  "cause": "audit … #…: a carried finding (from …) `…` — the follow-up did not find the fault…"
+ },
+ {
+  "n": 35,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the run: a registered output of the run is gone"
+ },
+ {
+  "n": 36,
+  "function": "run_record_check.null_lane_findings",
+  "cause": "…: the null lane's answer and gold equal the registered lane's on every item — if the n…"
+ },
+ {
+  "n": 38,
+  "function": "report_hold.report_hints",
+  "cause": "…: no assigned source found for the numbers on … line(s) — they stand outside every g…"
+ },
+ {
+  "n": 39,
+  "function": "report_check.repeated_gaps",
+  "cause": "a bound field is written twice"
+ }
+]

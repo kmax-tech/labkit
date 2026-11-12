@@ -1,0 +1,437 @@
+[
+ {
+  "n": 1,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's preflight_audit field is not empty"
+  ],
+  "property": "form",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:221",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "condition": "The value of the head's preflight_audit field does not match the file-name pattern of a written preflight record (regex in findings.names_preflight_record); nothing is looked up."
+ },
+ {
+  "n": 2,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run is chosen and its config.json reads"
+  ],
+  "property": "none of the values: a flag in the run's config (unfrozen_ack) is set; it records that the run started with an acknowledgement over an unfrozen protocol",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:786",
+  "told_at": "labkit/gates/report_check.py:523",
+  "bundled": [],
+  "condition": "The answering run's config carries unfrozen_ack = true."
+ },
+ {
+  "n": 5,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run is chosen",
+   "the head declares a result"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "bundle, if rendering raises a ValueError or OSError from something other than the run's metrics.json (not traced to the end)",
+  "tested_at": "labkit/checks/result_render.py:239",
+  "told_at": "labkit/gates/report_decisions.py:86",
+  "bundled": [
+   "metrics.json of the run missing or refused (OSError)",
+   "metrics.json is not JSON",
+   "metrics.json is no JSON object"
+  ],
+  "condition": "Rendering the result section raises OSError or ValueError; the errors traced come from reading the answering run's metrics.json."
+ },
+ {
+  "n": 7,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the script parses"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "fits no: the file reads and parses; the check's own static evaluator cannot compute the PROMPT constant to a string (a limit of the check, stated as 'unchecked')",
+  "tested_at": "labkit/checks/prompt_check.py:183",
+  "told_at": "labkit/checks/prompt_check.py:233",
+  "bundled": [],
+  "condition": "A PROMPT / PROMPT_<VARIANT> constant in an area script does not compute to a string under the check's static evaluation (_value_of)."
+ },
+ {
+  "n": 8,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "preflight_audit names a preflight record that exists, reads and is of mode preflight"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "bundle, if area_stamp's ValueError can also come from the protocol's declared scopes (not traced to the end)",
+  "tested_at": "labkit/formats/audit_gaps.py:256",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [
+   "no script to stamp in the area (ValueError)",
+   "a source file of the scope gone (FileNotFoundError)",
+   "a source file that does not read or parse (ValueError)"
+  ],
+  "condition": "Stamping the area's code now (scope_sha.area_stamp) raises FileNotFoundError or ValueError, so the record's scope sha cannot be compared."
+ },
+ {
+  "n": 15,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the file state checked is not the adoption's own proposal"
+  ],
+  "property": "none of the values: a file labkit keeps during an adoption (.<protocol>.before-adoption) is there; it records that an adoption did not finish its check",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/area_state.py:368",
+  "told_at": "labkit/gates/report_check.py:658",
+  "bundled": [],
+  "condition": "The before-adoption copy of the protocol exists in the tree (the protocol's content is not read)."
+ },
+ {
+  "n": 16,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "form",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding: the code also follows the link chain and refuses only when its end is no place a report is held (or the chain is a circle); a link ending at a held place passes",
+  "tested_at": "labkit/gates/report_hold.py:105",
+  "told_at": "labkit/gates/report_hold.py:656",
+  "bundled": [],
+  "condition": "The report's path is a symbolic link in the file state (tree or index) and the chain does not end at a place where a report is held."
+ },
+ {
+  "n": 19,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an analysis record covers the answering run"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:354",
+  "told_at": "labkit/gates/report_decisions.py:362",
+  "bundled": [],
+  "condition": "A BLOCKER of a covering record is decided false-positive, is not carried, was never not-upheld, and no decision review of that record (same scope and shown sha, claim digest of the protocol now, decision digest now, not only --again draws) says upheld throughout."
+ },
+ {
+  "n": 20,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the audit is asked in mode preflight",
+   "the head reads"
+  ],
+  "property": "none of the values: two states read now and combined — the head's repeat_cost puts the protocol on the lane that owes no preflight audit, and the area holds no completed run",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/audit.py:163",
+  "told_at": "labkit/gates/audit.py:166",
+  "bundled": [],
+  "condition": "Mode preflight is not among the audits the head's repeat cost owes and the area has no completed run."
+ },
+ {
+  "n": 21,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an analysis record covers the answering run"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:258",
+  "told_at": "labkit/gates/report_decisions.py:246",
+  "bundled": [],
+  "condition": "A limit of a covering record has the effect `stands` and no decision review of that record, of the decision as it stands and under the protocol's claim now, upholds it (reviews.upholding)."
+ },
+ {
+  "n": 24,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol lies in a git repository and has a stamped id",
+   "the head registers a report",
+   "no first measurement's commit is unread"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness of the run record (the first measurement as an owed part that is missing)",
+  "tested_at": "labkit/gates/registered_report.py:315",
+  "told_at": "labkit/gates/registered_report.py:316",
+  "bundled": [],
+  "condition": "The area has measured the protocol (a measurement run, an unreadable one, or one only the run index lists) but no first measurement with a readable record is there to read the registered report from."
+ },
+ {
+  "n": 25,
+  "objects": [
+   {
+    "object": "decided at run time",
+    "role": "tested",
+    "version": "as it stands",
+    "candidates": [
+     "protocol",
+     "area code",
+     "area checks"
+    ]
+   }
+  ],
+  "preconditions": [
+   "--bundle was asked"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/code_check.py:647",
+  "told_at": "labkit/checks/code_check.py:758",
+  "bundled": [
+   "the file is gone or refused (OSError)",
+   "the file is not UTF-8"
+  ],
+  "condition": "A file of the bundle (the protocol, a script, an analysis file or an imported helper) raises SourceError in read_source."
+ },
+ {
+  "n": 30,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "no protocol is named on the call"
+  ],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "bundle, if the unit is the telling site: finalize.py:945 tells every ProtocolChoiceError with one line of code (named file missing, a protocol that is a symbolic link, no protocol in the area, several and none named)",
+  "tested_at": "labkit/formats/repo.py:1250",
+  "told_at": "labkit/gates/finalize.py:945",
+  "bundled": [],
+  "condition": "The area holds more than one PROTOCOL-*.md and the caller named none."
+ },
+ {
+  "n": 31,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an analysis record covers the answering run",
+   "the area's records form a chain"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:426",
+  "told_at": "labkit/gates/report_decisions.py:416",
+  "bundled": [],
+  "condition": "A carried finding of a covering record is closed false-positive and no decision review upholds that decision as it stands under the protocol's claim now."
+ },
+ {
+  "n": 35,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run is chosen"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness of the run record (a kept output as an owed part that is missing)",
+  "tested_at": "labkit/checks/audit_binding.py:124",
+  "told_at": "labkit/gates/report_check.py:463",
+  "bundled": [],
+  "condition": "A path the run's outputs.json registers is no regular file in the tree now."
+ },
+ {
+  "n": 36,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "a kept JSONL output holds rows of both lanes (registered and null)"
+  ],
+  "property": "none of the values: within one kept output, every null-lane row's answer and gold are the same as the registered-lane row's for that item — a finding told because two parts are the same",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "inner consistency, weak (two parts of one object compared, but sameness fires, not contradiction)",
+  "tested_at": "labkit/checks/run_record_check.py:409",
+  "told_at": "labkit/checks/run_record_check.py:447",
+  "bundled": [],
+  "condition": "For every item of the null lane, (pred or answer, gold) equals the registered lane's pair for that item."
+ },
+ {
+  "n": 38,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the report's generated blocks read"
+  ],
+  "property": "none of the values: a line of the report outside every generated block states a number; no source is looked up",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:726",
+  "told_at": "labkit/gates/report_hold.py:762",
+  "bundled": [],
+  "condition": "At least one line of the report outside the result, discussion and handover blocks matches the number pattern."
+ },
+ {
+  "n": 39,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:233",
+  "told_at": "labkit/gates/report_check.py:302",
+  "bundled": [],
+  "condition": "One of the bound fields is written more than once in the protocol text (the copies' values are not compared)."
+ }
+]
