@@ -470,6 +470,31 @@ class ReportCheck(unittest.TestCase):
             [f.grade for f in marked], ["BLOCKER"], [f.text for f in found]
         )
 
+    def test_a_result_table_that_does_not_read_is_one_blocker(self):
+        """The declaration station's blocker, with the withdrawal as its
+        step — finalize, which read the same text, tells it no second time."""
+        area = self._area(repeat_cost="low", frozen=False)
+        run = self._answered(area)
+        self._audited(area, run)
+        protocol = area / "PROTOCOL-x.md"
+        text = protocol.read_text(encoding="utf-8")
+        typed = text.replace(
+            'preflight_audit = "n/a — test"\n',
+            'preflight_audit = "n/a — test"\n\n[result]\n'
+            'run = "2026-10-07T10-00-00_final"\n',
+        )
+        self.assertNotEqual(typed, text)
+        protocol.write_text(typed, encoding="utf-8")
+        with mock.patch.object(
+            report_check, "check_analysis_script", return_value=None
+        ):
+            ctx = report_context.checked(area, protocol)
+            found = report_check.chain_gaps(ctx).found
+        (told,) = [f for f in found if "no run id runlog writes" in f.text]
+        self.assertEqual(told.grade, "BLOCKER")
+        self.assertTrue(told.text.startswith("PROTOCOL-x.md: "), told.text)
+        self.assertIn("--withdraw", str(told.step))
+
     def test_a_field_written_twice_is_one_blocker_at_the_freeze(self):
         area = self._area()
         protocol = area / "PROTOCOL-x.md"

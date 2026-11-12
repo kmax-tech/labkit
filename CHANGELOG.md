@@ -400,6 +400,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A `[result]` table that does not read is one blocker in report-check.**
+  The declaration station and the nested finalize each told it, so one
+  typed run id stood as two blockers. Where finalize read the text the
+  chain holds, its copy is left out
+  (`report_check.without_declaration_blocker`); an adoption's proposal,
+  which finalize reads from the tree, keeps both readings.
+
+- **A first measurement without a commit cites the rule its finding
+  records.** The registration station's sentence cited LAB-003 No run without an intent paragraph
+  for both causes. A run that recorded `no-git` now cites
+  LAB-010 Commit before the run, the rule the finding records; a record
+  that merely names no commit cites none (a technical contract). No duty
+  changes.
+
 - **An output that cannot be compared is told as that.** A registered output whose record holds no sha256, or whose file is gone, was reported as a deviation with an open rule assignment, like a file with other bytes. Both now record the technical contract and the outcome "check not executable": the comparison could not run, and nothing says the bytes changed or a format duty was broken (runlog itself records an output absent at the end of the run without a sha256). Other bytes than the recorded stay a deviation with an open assignment. The blocker and its ways out are unchanged.
 
 - **A continued run with no row in the file is no longer told as mixed code.** The row provenance check (`run_record_check.row_provenance_findings`) blocked a run that continues another run's file under a different script also when no row of the continued run stood in the file ("0 row(s) come from …, counts that code's rows as its own"). Through `runlog` that state is reached only by editing the file after the run — `continues` names a run only while its rows stand in the file at the run's end —, and the output record check blocks the edited file by its sha256. The continued run without a row is passed over; rows of other code that stand in the file block as before.

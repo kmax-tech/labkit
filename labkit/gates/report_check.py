@@ -145,6 +145,7 @@ from labkit.checks.audit_binding import (
 from labkit.gates.finalize import (
     UNREPORTABLE_RULES,
     finalize_area,
+    declared_run_gaps,
     unreportable_warnings,
 )
 from labkit.gates.preflight import area_test_python, contract_hint
@@ -668,6 +669,19 @@ def without_unreportable_warnings(
     return [f for f in finalized if not (f.grade == WARNING and f.text in told)]
 
 
+def without_declaration_blocker(
+    finalized: list[GateFinding], ctx: Checked
+) -> list[GateFinding]:
+    """FINALIZED, finalize's findings (`finalize_findings`), without the
+    blocker it tells for a `[result]` table that does not read
+    (`finalize.declared_run_gaps`, the one spelling) — the declaration
+    station holds the same table as its blocker (`declaration_gaps`). Only
+    for a text finalize read too: CTX's text is the one given to
+    `declared_run_gaps`."""
+    told = {FINALIZE + g.text for g in declared_run_gaps(ctx.text, ctx.protocol)}
+    return [f for f in finalized if not (f.grade == BLOCKER and f.text in told)]
+
+
 def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
     """A blocker while an adoption was cut off during its check: the head may
     hold a proposal no check passed (`repo.pending_adoption`);
@@ -866,8 +880,9 @@ def chain_gaps(
     a cause finalize already holds is not held a second time — no answering
     run (left out of station 5), a field written twice (left out of station
     2), the marks that make a run unreportable (finalize's warning left out
-    beside station 4's blocker). Finalize's own stations are named by what
-    they check, never by number, here.
+    beside station 4's blocker), a `[result]` table that does not read
+    (finalize's blocker left out beside station 1's). Finalize's own stations
+    are named by what they check, never by number, here.
     UNDECLARED (no run adopted yet, the one a next step asks about):
     the stations the adoption writes and holds on its proposal — the result
     section (`report_decisions.limit_gaps`), the recomputation, the report —
@@ -895,11 +910,12 @@ def chain_gaps(
         out += registration_gaps(ctx)
     out += replacement_gaps(ctx)
     out += report_binding_gaps(ctx)
-    # 3. finalize — always; the unreportable marks this chain's full-run
-    # station holds as blockers are not told again as finalize's warnings
-    # where it read this text
+    # 3. finalize — always; where it read this text, what this chain's own
+    # stations hold is not told again as finalize's: the `[result]` table
+    # that does not read (station 1) and the unreportable marks (station 4)
     finalized = finalize_findings(ctx.area, ctx.protocol, ctx.area_state, ctx.evidence)
     if same_text:
+        finalized = without_declaration_blocker(finalized, ctx)
         finalized = without_unreportable_warnings(finalized, ctx.run)
     out += finalized
     held_by = held_declaration(ctx, finalized)
