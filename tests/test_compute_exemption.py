@@ -39,8 +39,9 @@ class CountExemption(unittest.TestCase):
 
     def test_the_contract_states_it_too(self):
         text = (ROOT / "docs" / "promise-block.md").read_text(encoding="utf-8")
+        text = " ".join(text.split())  # the sentence, however the source wraps it
         self.assertIn("registers nothing and owes no tables", text)
-        self.assertIn("A computation owes no success\ncriterion at any tier", text)
+        self.assertIn("A computation owes no success criterion at any tier", text)
 
 
 if __name__ == "__main__":

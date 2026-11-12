@@ -1,83 +1,40 @@
 # Promise block
 
-What a protocol promises the code, as data instead of prose, and what the
-checks built on it may claim. Code: `labkit/formats/promises.py`; tests:
-`tests/test_promises.py`. Terms (`protocol`, `run`, `metrics`, `intent id`)
-are coined in the README.
+What a protocol promises the code, as data instead of prose, and what the checks built on it may claim. Code: `labkit/formats/promises.py`; tests: `tests/test_promises.py`. Terms (`protocol`, `run`, `metrics`, `intent id`) are coined in the README.
 
 ## Claim and check tiers
 
-labkit's claim: **it detects violations of explicitly encoded scientific
-intent across implementation, execution and reporting.** The chain:
+labkit's claim: **it detects violations of explicitly encoded scientific intent across implementation, execution and reporting.** The chain:
 
     scientific intent → explicit promise → code realization → execution → reported result
 
 The three evidence kinds describe what supports a check's statement:
 
-| Tier | Claims | Examples |
-|---|---|---|
-| **guaranteed** | exact and mechanical; silent on a correct input | block parses, prose and block name the same ids, the declared key is reported exactly, the run recorded this block, the declared scope is unchanged |
-| **static evidence** | an indication; warns, never blocks | a key is written but never read; planned, not built: a scope function calls repo code outside the declared scope (the table below) |
-| **agent audit** | semantic agreement of intent and code | `labkit-audit` (the experiment-preflight instructions, one model call); outside labkit, an agent the lab runs on a `code-check --bundle` |
+| Tier                | Claims                                          | Examples                                                                                                                                            |
+|---------------------|-------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| **guaranteed**      | exact and mechanical; silent on a correct input | block parses, prose and block name the same ids, the declared key is reported exactly, the run recorded this block, the declared scope is unchanged |
+| **static evidence** | an indication; warns, never blocks              | a key is written but never read; planned, not built: a scope function calls repo code outside the declared scope (the table below)                  |
+| **agent audit**     | semantic agreement of intent and code           | `labkit-audit` (the experiment-preflight instructions, one model call); outside labkit, an agent the lab runs on a `code-check --bundle`            |
 
-A static check is never presented as proof of semantics. Everything in
-`promises.py` is the guaranteed tier.
+A static check is never presented as proof of semantics. Everything in `promises.py` is the guaranteed tier.
 
-A mechanical gate finding carries `evidence_kind` as required data
-(`gate.GateFinding`): `guaranteed` or `static evidence`. It classifies the
-statement in `text`, not its subject: checking that an audit record holds
-an undecided BLOCKER is a guaranteed register check; the agent's judgement
-remains in the audit record (`findings.Finding`). Static evidence cannot
-have grade BLOCKER. Every line of a static-evidence finding says so: the
-dotted code-check output as its own part (`WARNING · suspected, static
-evidence · …`), a prefixed line after the grade (`WARNING (suspected,
-static evidence): …`); the summary counts static evidence among the
-warnings. A line of a guaranteed finding names its check outcome where it
-is not a breach of a known rule or a technical contract: `(deviation,
-basis not settled)` for an exact check whose rule is not assigned, `(check
-not executable)` for a check that could not run (`gate.OUTCOME_MARKS`).
+A mechanical gate finding carries `evidence_kind` as required data (`gate.GateFinding`): `guaranteed` or `static evidence`. It classifies the statement in `text`, not its subject: checking that an audit record holds an undecided BLOCKER is a guaranteed register check; the agent's judgement remains in the audit record (`findings.Finding`). Static evidence cannot have grade BLOCKER. Every line of a static-evidence finding says so: the dotted code-check output as its own part (`WARNING · suspected, static evidence · …`), a prefixed line after the grade (`WARNING (suspected, static evidence): …`); the summary counts static evidence among the warnings. A line of a guaranteed finding names its check outcome where it is not a breach of a known rule or a technical contract: `(deviation, basis not settled)` for an exact check whose rule is not assigned, `(check not executable)` for a check that could not run (`gate.OUTCOME_MARKS`).
 
 ## Three kinds of promise
 
-An id is the kind and a number — `[criterion-1]`, `[quality-check-2]`,
-`[branch-1]` — and its metrics key is the id with underscores and
-a suffix (`criterion_1_pass`), so a person reading a protocol, a report or
-a run's metrics.json needs no legend.
+An id is the kind and a number — `[criterion-1]`, `[quality-check-2]`, `[branch-1]` — and its metrics key is the id with underscores and a suffix (`criterion_1_pass`), so a person reading a protocol, a report or a run's metrics.json needs no legend.
 
-| Kind | One sentence |
-|---|---|
-| `criterion` | an **inference criterion**: the registered condition on the result that decides which conclusion the run supports; a missed criterion is a valid result (OSF preregistration: *inference criteria*) |
+| Kind            | One sentence                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `criterion`     | an **inference criterion**: the registered condition on the result that decides which conclusion the run supports; a missed criterion is a valid result (OSF preregistration: *inference criteria*)                                                                                                                                                                                                                                                           |
 | `quality-check` | assesses whether the measurement can support the intended inference, rather than whether the result supports the hypothesis; its condition is specified before the result is known (control, anchor, yield, coverage, resolution). If any quality check is not met or cannot be assessed, no inference criterion receives a verdict; measured values may still be reported descriptively (Registered Reports: *outcome-neutral conditions*, *quality checks*) |
-| `branch` | a **registered branch**: a pre-specified mapping from conditions on the results to named outcomes and their consequences (COS: a decision tree of IF-THEN rules; PCI RR: *contingent interpretation given different outcomes*) |
+| `branch`        | a **registered branch**: a pre-specified mapping from conditions on the results to named outcomes and their consequences (COS: a decision tree of IF-THEN rules; PCI RR: *contingent interpretation given different outcomes*)                                                                                                                                                                                                                                |
 
-**Separation rule: a criterion judges, a quality check releases the
-judgement, a branch says what follows from it.** Whether something is a
-quality check is decided by its function, not by when it was written: a
-criterion, too, is specified before the result. A quality check asks
-whether the measurement can support the inference at all; a criterion
-asks which inference the result supports. "Outcome-neutral" means the
-check is fixed before the result is known and not by the direction
-anyone wants — not that passing it is statistically independent of the
-hypothesis. A comparator without a target
-value (a baseline the traces are read against) is no promise; it belongs
-in the text of the criterion it serves.
+**Separation rule: a criterion judges, a quality check releases the judgement, a branch says what follows from it.** Whether something is a quality check is decided by its function, not by when it was written: a criterion, too, is specified before the result. A quality check asks whether the measurement can support the inference at all; a criterion asks which inference the result supports. "Outcome-neutral" means the check is fixed before the result is known and not by the direction anyone wants — not that passing it is statistically independent of the hypothesis. A comparator without a target value (a baseline the traces are read against) is no promise; it belongs in the text of the criterion it serves.
 
-Two refinements (review 2026-10-08). A quality check names *why* its
-failure makes the measurement uninterpretable — the instrument's yield, an
-anchor, a control at its expected value — never a value the hypothesis
-needs: that threshold is a criterion, and filed as a quality check it
-would turn a clean negative result into "no verdict". A failed quality
-check withholds the verdict, not the data: descriptive readings may
-follow, labelled as such. A branch is decided on its own
-condition, not on the verdict: a stop rule fires during the run or on a
-run whose quality check failed too (`verdict()` sets the criterion keys to None, never
-the branch's). "n/a — only one outcome" is the honest
-branch when the answer to "and if [criterion-…] fails?" is not
-known before the run — then no `[branch-…]` id is written; a
-decision taken afterwards is reported as taken afterwards.
+Two refinements (review 2026-10-08). A quality check names *why* its failure makes the measurement uninterpretable — the instrument's yield, an anchor, a control at its expected value — never a value the hypothesis needs: that threshold is a criterion, and filed as a quality check it would turn a clean negative result into "no verdict". A failed quality check withholds the verdict, not the data: descriptive readings may follow, labelled as such. A branch is decided on its own condition, not on the verdict: a stop rule fires during the run or on a run whose quality check failed too (`verdict()` sets the criterion keys to None, never the branch's). "n/a — only one outcome" is the honest branch when the answer to "and if [criterion-…] fails?" is not known before the run — then no `[branch-…]` id is written; a decision taken afterwards is reported as taken afterwards.
 
-**A branch's outcomes.** Its sentence lists its outcomes in order, each
-`<condition> → <outcome>: <consequence>`, separated by `;`:
+**A branch's outcomes.** Its sentence lists its outcomes in order, each `<condition> → <outcome>: <consequence>`, separated by `;`:
 
 ```toml
 [[promise]]
@@ -87,57 +44,19 @@ sentence = "quality-check-1 not met → noisy: no verdict, the parser is repaire
 scope = ["scripts/01_measure.py:evaluate"]
 ```
 
-- **condition** — a condition on the results that selects an outcome; a
-  final `otherwise` covers the cases no earlier condition matched. The
-  conditions are read in order and the first that holds selects the
-  outcome. They are the author's words: labkit does not evaluate them;
-  the run's code selects, and the agent audit judges whether it keeps the
-  order.
-- **outcome** — a named possible result of the branch: lowercase letters,
-  digits and hyphens (`[a-z0-9][a-z0-9-]*`), unique in the sentence. The
-  run records the name its condition selected under the promise's key.
-- **consequence** — what the selected outcome permits: an interpretation,
-  an action, or an explicitly justified non-action. It is owed, and holds
-  no `;` (write it with commas): an outcome without one registers a label,
-  not what the result permits.
+- **condition** — a condition on the results that selects an outcome; a final `otherwise` covers the cases no earlier condition matched. The conditions are read in order and the first that holds selects the outcome. They are the author's words: labkit does not evaluate them; the run's code selects, and the agent audit judges whether it keeps the order.
+- **outcome** — a named possible result of the branch: lowercase letters, digits and hyphens (`[a-z0-9][a-z0-9-]*`), unique in the sentence. The run records the name its condition selected under the promise's key.
+- **consequence** — what the selected outcome permits: an interpretation, an action, or an explicitly justified non-action. It is owed, and holds no `;` (write it with commas): an outcome without one registers a label, not what the result permits.
 
-`promises.parse_outcomes` reads it; `parse_block` refuses a branch whose
-sentence is not in this form, naming the promise and the outcome: fewer
-than two outcomes (one registers no branch), not exactly one `→` (U+2192 —
-`->` is refused, not read as a second spelling), an empty condition,
-`otherwise` before the last outcome, a name outside the alphabet or used
-twice, a missing consequence. `intent-check` (so `finalize`) blocks a run
-whose key records a name that is none of the outcomes, naming them: a name
-chosen after the run has no registered condition the reader could find. The stamp's `<…>` placeholder parses without outcomes;
-`promise_tables_owed` refuses it once frozen or in a full run. Criteria
-and quality checks keep a free sentence.
+`promises.parse_outcomes` reads it; `parse_block` refuses a branch whose sentence is not in this form, naming the promise and the outcome: fewer than two outcomes (one registers no branch), not exactly one `→` (U+2192 — `->` is refused, not read as a second spelling), an empty condition, `otherwise` before the last outcome, a name outside the alphabet or used twice, a missing consequence. `intent-check` (so `finalize`) blocks a run whose key records a name that is none of the outcomes, naming them: a name chosen after the run has no registered condition the reader could find. The stamp's `<…>` placeholder parses without outcomes; `promise_tables_owed` refuses it once frozen or in a full run. Criteria and quality checks keep a free sentence.
 
-**Earlier letters.** The letters `C`, `A`, `B` (labkit 0.48 to 0.103.0)
-and, before them, `K`, `S`, `W`, `N` (up to 0.47) are not read: a protocol
-carrying them is refused with a sentence naming the version that reads
-it. Nothing translates them — K/S/W/N did not even map one-to-one onto
-C/A/B (tested against 16 earlier protocols, the separation rule assigned
-six ids differently from their letter). Frozen protocols are registrations
-and are not rewritten; they are read with the labkit they were written
-for.
+**Earlier letters.** The letters `C`, `A`, `B` (labkit 0.48 to 0.103.0) and, before them, `K`, `S`, `W`, `N` (up to 0.47) are not read: a protocol carrying them is refused with a sentence naming the version that reads it. Nothing translates them — K/S/W/N did not even map one-to-one onto C/A/B (tested against 16 earlier protocols, the separation rule assigned six ids differently from their letter). Frozen protocols are registrations and are not rewritten; they are read with the labkit they were written for.
 
-**Not a kind:** a descriptive quantity reported in every branch, without a
-criterion. It is a report line, not a promise — until a second case shows
-it needs its own kind.
+**Not a kind:** a descriptive quantity reported in every branch, without a criterion. It is a report line, not a promise — until a second case shows it needs its own kind.
 
 ## The block
 
-The protocol's one fenced TOML block holds the head (`[protocol]`, see
-`labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`;
-its optional `report = "REPORT.md"` names the report file, relative to
-the repository root, that owes this protocol's result once it exists —
-`labkit-init exp --report-file` stamps it, `docs/workflow.md` section 8
-says what releases it), the
-`[[promise]]` tables and — once a number is reported — the `[result]` table
-naming the run (`protocol_block.declared_run`, written by `protocol-fill
---from-run`; the binding document says what the gates hold it to). A
-computation (`kind = "compute"`) carries the `[kept]` table (standard 0.24)
-— the number it reports, by its metrics key and unit:
+The protocol's one fenced TOML block holds the head (`[protocol]`, see `labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`; its optional `report = "REPORT.md"` names the report file, relative to the repository root, that owes this protocol's result once it exists — `labkit-init exp --report-file` stamps it, `docs/workflow.md` section 8 says what releases it), the `[[promise]]` tables and — once a number is reported — the `[result]` table naming the run (`protocol_block.declared_run`, written by `protocol-fill --from-run`; the binding document says what the gates hold it to). A computation (`kind = "compute"`) carries the `[kept]` table (standard 0.24) — the number it reports, by its metrics key and unit:
 
 ```toml
 [kept]
@@ -145,30 +64,11 @@ key = "deforestation_rate"   # the metrics.json key of the kept number
 unit = "1"                   # its unit, a short text ("ms", "documents"); "1" for a dimensionless number
 ```
 
-`protocol_block.kept` reads it exactly or refuses it by name; a value in
-angle brackets is a placeholder, named unfilled by `protocol-check`
-(`labkit-init exp --kind compute` stamps both as placeholders unless
-`--kept KEY --unit UNIT` names them; `protocol-fill <PROTOCOL>
-"kept.key=…" "kept.unit=…"` fills them). It is owed by a computation and
-refused on a fit or an apply, which bind their answer through their promise
-keys (`protocol_check.kept_gaps`). The compute skeleton reads the key from
-here (`metric_key()`), never from a constant of its own; finalize holds the
-answering run — and so the adoption, whose check runs finalize on the
-proposal — to it: metrics.json must hold the key as a finite number, else a
-guaranteed blocker names the key, the run and what it holds instead
-(`run_record_check.kept_number_gaps`). The Recorded results line names the
-kept number first, with its unit (`kept number: deforestation_rate = 0.48;
-also recorded: …`). The registration stamp digests the table, and a key
-changed after the first measurement is held like the scope.
+`protocol_block.kept` reads it exactly or refuses it by name; a value in angle brackets is a placeholder, named unfilled by `protocol-check` (`labkit-init exp --kind compute` stamps both as placeholders unless `--kept KEY --unit UNIT` names them; `protocol-fill <PROTOCOL> "kept.key=…" "kept.unit=…"` fills them). It is owed by a computation and refused on a fit or an apply, which bind their answer through their promise keys (`protocol_check.kept_gaps`). The compute skeleton reads the key from here (`metric_key()`), never from a constant of its own; finalize holds the answering run — and so the adoption, whose check runs finalize on the proposal — to it: metrics.json must hold the key as a finite number, else a guaranteed blocker names the key, the run and what it holds instead (`run_record_check.kept_number_gaps`). The Recorded results line names the kept number first, with its unit (`kept number: deforestation_rate = 0.48; also recorded: …`). The registration stamp digests the table, and a key changed after the first measurement is held like the scope.
 
-**What it does not prove.** The check binds the key, not its meaning: a run
-that stores a wrong computation under the registered key passes it. Whether
-the number under the key is the one the Unit field and the question
-describe is the area's test's and the analysis audit's to judge
-(docs/notes/2026-11-01-kept-key-in-the-head.md).
+**What it does not prove.** The check binds the key, not its meaning: a run that stores a wrong computation under the registered key passes it. Whether the number under the key is the one the Unit field and the question describe is the area's test's and the analysis audit's to judge (docs/notes/2026-11-01-kept-key-in-the-head.md).
 
-A computation may carry one more optional table, `[reference]` — the stated
-value its kept number (the `[kept]` key) is compared with:
+A computation may carry one more optional table, `[reference]` — the stated value its kept number (the `[kept]` key) is compared with:
 
 ```toml
 [reference]
@@ -178,17 +78,7 @@ relation = "within"          # within | at_least | at_most (the last two carry n
 source = "the project's expectation (task text)"   # who states the value; optional
 ```
 
-`protocol_block.reference` reads it exactly or refuses it by name — without
-`[kept]` beside it, too (the key compared lives there); on a
-fit or an apply it is refused naming the criterion — those kinds compare in a
-criterion (`protocol_check.reference_gap`). It is no promise and no bar:
-the compute skeleton writes the verdict (`ref_state`, `ref_met`,
-`ref_distance`, …; `formats/reference`) beside the number, `02_analyze.py
---check` recomputes it, the Recorded results line carries it generated,
-and finalize blocks a reference the run cannot compare (the kept key
-absent from metrics.json, or no finite number) — a `not met` is a valid outcome.
-The registration stamp digests the table: a value changed after the audit
-is drift (docs/notes/2026-10-29-reference-comparison.md).
+`protocol_block.reference` reads it exactly or refuses it by name — without `[kept]` beside it, too (the key compared lives there); on a fit or an apply it is refused naming the criterion — those kinds compare in a criterion (`protocol_check.reference_gap`). It is no promise and no bar: the compute skeleton writes the verdict (`ref_state`, `ref_met`, `ref_distance`, …; `formats/reference`) beside the number, `02_analyze.py --check` recomputes it, the Recorded results line carries it generated, and finalize blocks a reference the run cannot compare (the kept key absent from metrics.json, or no finite number) — a `not met` is a valid outcome. The registration stamp digests the table: a value changed after the audit is drift (docs/notes/2026-10-29-reference-comparison.md).
 
 The head and the tables:
 
@@ -210,91 +100,48 @@ scope = ["scripts/01_measure.py:evaluate", "scripts/01_measure.py:filter_items"]
 constants = { min_f1 = 0.70 }
 ```
 
-| Field | Rule |
-|---|---|
-| `id` | `criterion-<n>`, `quality-check-<n>` or `branch-<n>`, unique; also named in the prose |
-| `key` | the metrics key reporting it: the id with underscores (`quality_check_2`) or that stem and `_<suffix>` |
-| `sentence` | the promise in one sentence; a branch's as its outcomes, `<condition> → <outcome>: <consequence>; …` (above) |
-| `scope` | non-empty list of `file` or `file:function` (top-level function or class), relative to the protocol's directory |
+| Field       | Rule                                                                                                                                                                                                                                   |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`        | `criterion-<n>`, `quality-check-<n>` or `branch-<n>`, unique; also named in the prose                                                                                                                                                  |
+| `key`       | the metrics key reporting it: the id with underscores (`quality_check_2`) or that stem and `_<suffix>`                                                                                                                                 |
+| `sentence`  | the promise in one sentence; a branch's as its outcomes, `<condition> → <outcome>: <consequence>; …` (above)                                                                                                                           |
+| `scope`     | non-empty list of `file` or `file:function` (top-level function or class), relative to the protocol's directory                                                                                                                        |
 | `constants` | scalars the code reads from here instead of a second copy in the script — `promises.all_constants(promises.load(PROTOCOL))` into the script's config object; a name is lowercase snake_case and stands in exactly one promise (0.71.0) |
 
-TOML, not YAML: labkit is stdlib-only, and `tomllib` is in the standard
-library.
+TOML, not YAML: labkit is stdlib-only, and `tomllib` is in the standard library.
 
 ## Constants: the name is the mapping
 
-A registered constant is named like the config key it is recorded under
-(`min_f1`, `margin`, `max_empty` — `^[a-z][a-z0-9_]*$`), and it stands in
-exactly one `[[promise]]` table; `parse_block` refuses `MIN_F1` and a name
-declared twice. The name is the whole mapping between protocol and run
-record: no second table says which key answers which constant, and a
-heuristic ("sounds alike") would be evidence, not a check. The script
-builds its config from the block — `MeasureConfig(model=MODEL,
-**promises.all_constants(promises.load(PROTOCOL)))` — and records that
-object whole; `runlog` refuses, before the run directory exists, a config
-that lacks a registered constant or carries it with another value
-(type-strict: `True` is not `1`, `1` is not `1.0`). The guarantee behind
-the record is therefore: *a run under a block recorded every registered
-constant unchanged*. Whether `evaluate_rows` uses the value right is the
-agent audit's question, not a mechanical one. A frozen protocol, and
-every measurement, including at `repeat_cost = "low"`, owes the block
-(`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
-reports a MUST failure (frozen or low), `preflight` and `finalize`
-block, and no measurement starts under it. The one exception: a
-computation (`kind = "compute"`) whose prose names no promise id
-registers nothing and owes no tables, including when frozen at `high`.
-Its freeze still requires the completed registration and covering preflight
-audit. A computation owes no success
-criterion at any tier (`standard_contract.has_bar`); its
-`[protocol]` head and the release of its number (the analysis audit,
-`report-check`) stay owed. Unfrozen preparation and
-probe runs can start without tables; low permits no separate probe. The low cut IS the registration — in
-prose and in tables, so the machine chain (block digest, scope hashes,
-constants) holds for every reportable run, not only for frozen ones. Mechanically guaranteed is the one home of a
-*name*; that two differently named constants mean the same threshold no
-parser can see.
+A registered constant is named like the config key it is recorded under (`min_f1`, `margin`, `max_empty` — `^[a-z][a-z0-9_]*$`), and it stands in exactly one `[[promise]]` table; `parse_block` refuses `MIN_F1` and a name declared twice. The name is the whole mapping between protocol and run record: no second table says which key answers which constant, and a heuristic ("sounds alike") would be evidence, not a check. The script builds its config from the block — `MeasureConfig(model=MODEL, **promises.all_constants(promises.load(PROTOCOL)))` — and records that object whole; `runlog` refuses, before the run directory exists, a config that lacks a registered constant or carries it with another value (type-strict: `True` is not `1`, `1` is not `1.0`). The guarantee behind the record is therefore: *a run under a block recorded every registered constant unchanged*. Whether `evaluate_rows` uses the value right is the agent audit's question, not a mechanical one. A frozen protocol, and every measurement, including at `repeat_cost = "low"`, owes the block (`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check` reports a MUST failure (frozen or low), `preflight` and `finalize` block, and no measurement starts under it. The one exception: a computation (`kind = "compute"`) whose prose names no promise id registers nothing and owes no tables, including when frozen at `high`. Its freeze still requires the completed registration and covering preflight audit. A computation owes no success criterion at any tier (`standard_contract.has_bar`); its `[protocol]` head and the release of its number (the analysis audit, `report-check`) stay owed. Unfrozen preparation and probe runs can start without tables; low permits no separate probe. The low cut IS the registration — in prose and in tables, so the machine chain (block digest, scope hashes, constants) holds for every reportable run, not only for frozen ones. Mechanically guaranteed is the one home of a *name*; that two differently named constants mean the same threshold no parser can see.
 
 ## What the declared-scope hash states
 
-`declared_scope_sha` hashes one promise's declared scope — the README's
-*scope hash*. It is not the area's audit *stamp* (`scope-sha`, README:
-*stamp*), which covers a whole area for an audit and binds to no promise.
+`declared_scope_sha` hashes one promise's declared scope — the README's *scope hash*. It is not the area's audit *stamp* (`scope-sha`, README: *stamp*), which covers a whole area for an audit and binds to no promise.
 
-> **The implementation region declared for this promise was byte-identical
-> in the run that produced the reported number.**
+> **The implementation region declared for this promise was byte-identical in the run that produced the reported number.**
 
-It does **not** state that the region is all the code the number depends
-on, nor that the code implements the promise correctly.
+It does **not** state that the region is all the code the number depends on, nor that the code implements the promise correctly.
 
-The counterexample that fixes this: `compute_score()` writes `criterion_1_accuracy`
-and calls `filter_items()`. An edit to `filter_items` (now dropping empty
-answers instead of counting them wrong) moves the number.
+The counterexample that fixes this: `compute_score()` writes `criterion_1_accuracy` and calls `filter_items()`. An edit to `filter_items` (now dropping empty answers instead of counting them wrong) moves the number.
 
-| Version | Sees the edit? | Why |
-|---|---|---|
-| hash over the function that writes the key | no | `compute_score` itself is unchanged — a stamp that misses exactly the interesting change |
-| declared scope, `filter_items` declared | yes (guaranteed) | region changed → hash changed |
-| declared scope, `filter_items` not declared | no; a warning is planned (static evidence) | the scope calls repo code outside itself |
-| area audit stamp (`scope-sha`) | yes, if in the area | but not per promise: any edit anywhere changes it |
+| Version                                     | Sees the edit?                             | Why                                                                                      |
+|---------------------------------------------|--------------------------------------------|------------------------------------------------------------------------------------------|
+| hash over the function that writes the key  | no                                         | `compute_score` itself is unchanged — a stamp that misses exactly the interesting change |
+| declared scope, `filter_items` declared     | yes (guaranteed)                           | region changed → hash changed                                                            |
+| declared scope, `filter_items` not declared | no; a warning is planned (static evidence) | the scope calls repo code outside itself                                                 |
+| area audit stamp (`scope-sha`)              | yes, if in the area                        | but not per promise: any edit anywhere changes it                                        |
 
-Hence: **scope is declared, not derived.** The author says which region a
-promise rests on; the hash makes that statement checkable. A call-closure
-warning may help with declaring; it does not replace it.
+Hence: **scope is declared, not derived.** The author says which region a promise rests on; the hash makes that statement checkable. A call-closure warning may help with declaring; it does not replace it.
 
-Details: a `file:function` entry hashes the function's source segment
-(decorators included), so edits to neighbouring functions leave the stamp
-alone; each entry contributes its spelling and its content digest, so
-adding, dropping or renaming an entry changes the stamp; a missing file or
-function is an error, never an empty digest. Module-level constants
-outside a declared function are not covered — read them from the block.
+Details: a `file:function` entry hashes the function's source segment (decorators included), so edits to neighbouring functions leave the stamp alone; each entry contributes its spelling and its content digest, so adding, dropping or renaming an entry changes the stamp; a missing file or function is an error, never an empty digest. Module-level constants outside a declared function are not covered — read them from the block.
 
 ## Along the chain
 
-| Link | Who | Refuses or reports |
-|---|---|---|
-| promise | `intent-check` | block malformed; prose and block name different ids |
-| execution | `runlog` | malformed block, dangling scope, a missing table where promises are owed, or a config missing or contradicting a registered constant → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
-| report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run"); a run from labkit 0.46/0.47 is told apart by its digest format, not reported as changed |
-| recomputation | `recheck.holds` | a declared scope changed since the run, per promise |
+| Link          | Who             | Refuses or reports                                                                                                                                                                                                                                                                                                                                                                                        |
+|---------------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| promise       | `intent-check`  | block malformed; prose and block name different ids                                                                                                                                                                                                                                                                                                                                                       |
+| execution     | `runlog`        | malformed block, dangling scope, a missing table where promises are owed, or a config missing or contradicting a registered constant → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
+| report        | `intent-check`  | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run"); a run from labkit 0.46/0.47 is told apart by its digest format, not reported as changed                                                                                                                                                                                              |
+| recomputation | `recheck.holds` | a declared scope changed since the run, per promise                                                                                                                                                                                                                                                                                                                                                       |
 
 A protocol without `[[promise]]` tables has no promise checks; its head is still read.
