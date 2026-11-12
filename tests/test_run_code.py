@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -331,7 +332,9 @@ class CodeSinceRun(unittest.TestCase):
         run = self.run_now()
         self._record(run, git_full=runs.NO_GIT)
         (line,) = self.held(run)
-        self.assertIn("recorded no commit, or the area lies in no git repository", line)
+        # the cause that holds, and not the other: the area is in a repository
+        self.assertIn(f"{run.name} recorded no commit, so the helpers", line)
+        self.assertNotIn("no git repository", line)
         # a record that only lacks the commit leaves the comparison without
         # its basis; `git` NO_GIT is the run's word that it started outside
         # the history
@@ -356,6 +359,24 @@ class CodeSinceRun(unittest.TestCase):
         self.script.write_text("import features\nfrom lib import (\n", encoding="utf-8")
         lines = self.held(run)
         self.assertTrue(any("cannot be read now" in ln for ln in lines), lines)
+
+    def test_an_area_outside_a_repository_is_the_cause_named(self) -> None:
+        """The run recorded its commit and the area's repository is gone
+        since: the sentence names that cause and not a missing commit; with
+        both, both."""
+        run = self.run_now()
+        shutil.rmtree(self.repo / ".git")
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertIn("the area lies in no git repository now, so the", found.text)
+        self.assertNotIn("recorded no commit", found.text)
+        self.assertEqual(found.rule, gate.TECHNICAL_RULE)
+        self._record(run, git_full="")
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertIn(
+            f"{run.name} recorded no commit and the area lies in no git "
+            f"repository now, so the",
+            found.text,
+        )
 
     def test_a_helper_in_another_repository_is_named_not_compared(self) -> None:
         """`lib/` as a link out of the repository or as a submodule cannot be

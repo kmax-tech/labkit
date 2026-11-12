@@ -64,6 +64,8 @@ class Readable(unittest.TestCase):
         (f,) = check("PROMPT = build_prompt()\n", TWO_BLOCKS)
         self.assertTrue(f.startswith("WARNING"), f)
         self.assertIn("drift unchecked", f)
+        # the drift check did not run for it; nothing is shown to be breached
+        self.assertIn("check not executable", f)
 
 
 class Blocks(unittest.TestCase):

@@ -573,6 +573,13 @@ def same_second_rival(
     )
 
 
+#: the first step out of an adopted run that may not answer: while
+#: `[result]` names it, no other run is chosen (`_adopted_choice`)
+WITHDRAW_ADOPTION = (
+    'withdraw the adoption (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`)'
+)
+
+
 @dataclass(frozen=True)
 class RunExclusion:
     """A run that could not answer, and why (for the operator who has to look)."""
@@ -636,7 +643,8 @@ class AnsweringRun:
         intent-check, recheck, params and the audit, who ask it through
         `area_state.Measured.told`, so none tells it its own way; a caller that tells a sentence tells its `message`. A chosen run that
         reports no intent key while the protocol registers ids is a blocker
-        here, everywhere: a probe or producer run is not an answer."""
+        here, everywhere: it is no answer, whether it was a probe or producer
+        run or its script reports no registered key — which, is not read."""
         if self.run_dir is None:
             assert self.blocker is not None and self.rule is not None, (
                 "bound_answering_run sets a blocker whenever no run stands, "
@@ -657,13 +665,27 @@ class AnsweringRun:
                 if self.adopted
                 else "is the newest bound run, and no bound run reports an intent key"
             )
+            # which of the two causes holds is not read here, so the way out
+            # names the step for each
+            measure = (
+                f"measure in full: `{measure_command(area)}` (no `--probe`, "
+                f"`--show` or `--eval-only`) — where a full run reports no "
+                f"intent key either, report the registered keys in the measure "
+                f"script first"
+            )
+            # the adoption decides, not the newest run: a full run alone
+            # leaves an adopted probe the answering run
+            way_out = (
+                f"{WITHDRAW_ADOPTION}, {measure}, audit that run, then adopt it"
+                if self.adopted
+                else measure
+            )
             return (
                 GateFinding(
                     BLOCKER,
-                    f"{self.run_dir.name} {standing} — a probe or producer run, "
-                    f"not an answer",
-                    fix=f"measure in full: `{measure_command(area)}` (no `--probe`, "
-                    f"`--show` or `--eval-only`) writes the intent keys to metrics.json",
+                    f"{self.run_dir.name} {standing} — no answer: a probe or "
+                    f"producer run, or a script that reports no registered key",
+                    fix=way_out,
                     evidence_kind=GUARANTEED,
                     rule=LAB_004,
                 ),
@@ -816,8 +838,8 @@ def _adopted_choice(
             0,
             exclusions,
             f"[result] names {adopted}, which cannot answer for {pid}: {why}",
-            way_out=f"withdraw the adoption (`protocol-fill <PROTOCOL> --withdraw "
-            f'--why "<why>"`), audit a completed run bound to {pid}, then adopt it',
+            way_out=f"{WITHDRAW_ADOPTION}, audit a completed run bound to {pid}, "
+            f"then adopt it",
             rule=cannot_answer_rule(
                 next((f for f in rest if f.dir.name == adopted), None)
             ),

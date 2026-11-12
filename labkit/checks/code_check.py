@@ -209,8 +209,8 @@ def _intent_id_findings(
                 f"[{i}] is registered, but no script names a "
                 f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key literal (a key "
                 f"assembled at run time is not seen, and blocks here too) · the run "
-                f"may report nothing for this promise, and the metrics check fails "
-                f"after the tokens are spent",
+                f"may report nothing for this promise; the metrics check then "
+                f"fails after the tokens are spent",
                 rule=KEY_LITERAL_RULE,
                 fix=f"report the key in the measure script or drop [{i}] from the "
                 f"block, then `{gate_command('code-check', area)}`",

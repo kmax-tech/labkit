@@ -206,8 +206,8 @@ def _coverage_in(
                         WARNING,
                         f"{where}:{node.lineno}",
                         f"`{_call_name(node)}(…)` loads code at run time · the "
-                        f"stamp follows `import` lines only, so what this loads "
-                        f"changes the number unseen",
+                        f"stamp follows `import` lines only, so it does not "
+                        f"cover what this loads",
                         rule=LAB_019,
                         fix=fix,
                         evidence_kind=STATIC_EVIDENCE,
@@ -225,9 +225,8 @@ def _coverage_in(
                         coded(
                             WARNING,
                             f"{where}:{node.lineno}",
-                            f"names area `{foreign[0]}` · a file of another area "
-                            f"determines this number, and this area's stamp does "
-                            f"not cover it",
+                            f"names area `{foreign[0]}` · this area's stamp "
+                            f"does not follow a path into it",
                             rule=LAB_019,
                             fix=fix,
                             evidence_kind=STATIC_EVIDENCE,
@@ -244,8 +243,10 @@ def stamp_coverage_findings(area: Path, repo: Path) -> list[GateFinding]:
     `sys.path` edit that does not point at `lib/` or `src/`, a dynamic
     loader, a path naming another area, an import resolving outside
     `lib/` and `src/`. The stamp (`scope_sha.area_stamp`) walks static
-    imports into LOCAL_ROOTS and nothing else; what these lines pull in
-    determines the number without any stamp seeing a change to it."""
+    imports into LOCAL_ROOTS and nothing else, so no stamp sees a change to
+    what these lines pull in. Each finding is the line's form (a call by
+    that name, a string naming an area): whether the line runs, and whether
+    what it pulls in reaches the number, is not checked."""
     out: list[tuple[str, int, GateFinding]] = []
     try:
         helpers = imported_repo_helpers(area, repo)

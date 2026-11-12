@@ -224,12 +224,33 @@ class AdoptedRun(unittest.TestCase):
                 self.assertIn("--withdraw", choice.way_out or "")
 
     def test_an_adopted_probe_is_no_answer(self) -> None:
+        """A full run measured after the adoption does not lift the blocker
+        — the adoption decides —, so the way out withdraws the adoption
+        first; without an adoption the same full run answers."""
         probe = _run(self.area, "2026-10-01T08-30-00_aaaa", metrics={"n_rows": 3})
-        _run(self.area, "2026-10-01T09-00-00_bbbb")
+        full = _run(self.area, "2026-10-01T09-00-00_bbbb")
         choice = state_of(self.area).measured_of(PID).answering(probe.name)
         blocker, _ = choice.explain(True)
-        assert blocker is not None
+        assert blocker is not None and blocker.fix is not None
         self.assertIn("is the adopted run ([result] run)", blocker.text)
+        self.assertTrue(blocker.fix.startswith("withdraw the adoption"), blocker.fix)
+        self.assertIn("measure in full", blocker.fix)
+        unadopted = state_of(self.area).measured_of(PID).answering(None)
+        self.assertEqual(unadopted.run_dir, full)
+        self.assertEqual(unadopted.explain(True), (None, []))
+
+    def test_the_newest_probe_without_adoption_needs_only_a_full_run(self) -> None:
+        """Twin: nothing is adopted, so the way out names no withdrawal."""
+        _run(self.area, "2026-10-01T08-30-00_aaaa", metrics={"n_rows": 3})
+        choice = state_of(self.area).measured_of(PID).answering(None)
+        blocker, _ = choice.explain(True)
+        assert blocker is not None and blocker.fix is not None
+        self.assertTrue(blocker.fix.startswith("measure in full"), blocker.fix)
+        self.assertNotIn("withdraw", blocker.fix)
+        # the condition is "no intent key reported": the script that sets
+        # none is the other cause, and has its step
+        self.assertIn("a script that reports no registered key", blocker.text)
+        self.assertIn("report the registered keys in the measure script", blocker.fix)
 
     def test_a_result_table_that_does_not_read_adopts_nothing(self) -> None:
         self.assertIsNone(answering_run.adopted_run('[result]\nrun = "typed"\n'))

@@ -225,7 +225,9 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
     (`protocol_check.registered_prompt_blocks` — every fence under Prompt but
     the stamp's unfilled one). A block rendered with real data passes; a
     transcript that drifted does not. No registered block, or no readable
-    constant: nothing to hold, only the unreadable-constant warnings."""
+    constant: nothing to hold, only the unreadable-constant warnings — each
+    a check that could not run for that constant (`NOT_EXECUTABLE`), not a
+    breach by it."""
     consts, unreadable = _prompts(area)
     # A prompt this reader cannot compute is unchecked — said aloud, never a
     # silent pass.
@@ -236,6 +238,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
             f"{name} is not statically readable (a call or a format spec this "
             f"check does not compute) · prompt drift unchecked for it",
             evidence_kind=GUARANTEED,
+            stated_outcome=NOT_EXECUTABLE,
             rule=TECHNICAL_RULE,
         )
         for name in unreadable

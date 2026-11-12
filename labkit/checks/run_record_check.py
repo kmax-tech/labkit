@@ -309,10 +309,17 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
     if not in_git:
         return out, warnings
     names = ", ".join(shown(f, here) for f in in_git)
-    if repo is None or not cfg.git_full or cfg.git_full == NO_GIT:
+    no_commit = not cfg.git_full or cfg.git_full == NO_GIT
+    if repo is None or no_commit:
+        # each cause that holds is named, and no other
+        causes: list[str] = []
+        if no_commit:
+            causes.append(f"{rid} recorded no commit")
+        if repo is None:
+            causes.append("the area lies in no git repository now")
         why = (
-            f"{rid} recorded no commit, or the area lies in no git repository "
-            f"now, so the helpers its script imports ({names}) cannot be compared"
+            f"{' and '.join(causes)}, so the helpers its script imports "
+            f"({names}) cannot be compared"
         )
         fix = f"in the repository, {measure_anew(run_dir.parent.parent)}"
         # NO_GIT is the run's own word that it started outside the history;

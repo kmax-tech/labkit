@@ -478,6 +478,12 @@ class TestStampCoverage(unittest.TestCase):
         self.assertIn(":3 · `sys.path` gains a computed path", found[2])
         self.assertIn(":4 · `import_module(…)`", found[3])
         self.assertIn(":5 · `exec(…)`", found[4])
+        # the line's form is all the check saw: no sentence says that what
+        # it pulls in changes or determines the number
+        self.assertIn("this area's stamp does not follow a path into it", found[1])
+        self.assertIn("it does not cover what this loads", found[3])
+        self.assertFalse([f for f in found if "the number unseen" in f], found)
+        self.assertFalse([f for f in found if "determines this number" in f], found)
         self.assertTrue(
             all(
                 "LAB-019 The stamp covers everything that determines the number" in f
