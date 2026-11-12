@@ -1,0 +1,666 @@
+[
+ {
+  "n": 1,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "readability (the field's value is not in the format the place takes)",
+  "forwarded": false,
+  "condition": "The head's `preflight_audit` value does not have the form of a preflight record's file name (`names_preflight_record`, a regex on the name alone; no file is looked up) — labkit/formats/audit_gaps.py:221, labkit/formats/findings.py:2058."
+ },
+ {
+  "n": 2,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "none — a mark in the run's own config is read (`unfrozen_ack` is set)",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "order in time (the mark records that the run stood before the freeze, but no time is tested)",
+  "forwarded": false,
+  "condition": "The run's config carries the acknowledgement mark `unfrozen_ack`; nothing is compared with it — labkit/formats/runs.py:786, told at labkit/gates/report_check.py:530."
+ },
+ {
+  "n": 3,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The head says `frozen = true` while the lane of its own `repeat_cost` freezes nothing — labkit/formats/protocol_check.py:1098."
+ },
+ {
+  "n": 4,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": true,
+  "condition": "`promises.block_stamp` of the protocol text raises PromiseError, whose text is passed on unchanged — labkit/formats/audit_gaps.py:324."
+ },
+ {
+  "n": 5,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "which object failed to read is not told at the site (run record, protocol or the covering audit records)",
+  "forwarded": true,
+  "condition": "`rendering(area, text, run)` raises OSError or ValueError (the run's metrics.json, or another input of the rendering, does not read) and the site passes the error text on — labkit/gates/report_decisions.py:82-84."
+ },
+ {
+  "n": 6,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as a run recorded it (the first measurement's promise snapshot)"
+   },
+   {
+    "object": "protocol",
+    "version": "as a run recorded it (the answering run's promise snapshot)"
+   }
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The block digest the answering run recorded differs from the one the first measurement recorded; the two snapshots' scopes differing picks this cause's rule — labkit/gates/registration_hold.py:191 and :128."
+ },
+ {
+  "n": 7,
+  "objects": [
+   {
+    "object": "area code",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "none — a limit of the checker's reader, the file itself parses",
+  "forwarded": false,
+  "condition": "A module-level `PROMPT…` constant of an area script does not compute to a string under the check's static reader (`_value_of` returns no str) — labkit/checks/prompt_check.py:182-186, told at :232."
+ },
+ {
+  "n": 8,
+  "objects": [
+   {
+    "object": "area code",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness (a missing scope file); the ValueError may also come from the protocol's promise block",
+  "forwarded": true,
+  "condition": "`area_stamp(area)` raises FileNotFoundError or ValueError (a scope file missing, nothing to stamp, a promise block unreadable) and the site passes the text on without telling them apart — labkit/formats/audit_gaps.py:255-257."
+ },
+ {
+  "n": 9,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "inner consistency (a doubled id is two tables of one block colliding)",
+  "forwarded": true,
+  "condition": "`promises.parse_block(text)` raises PromiseError (here one whose rule is the open one: duplicate id, empty scope) and its text becomes a must gap the site tells as it is — labkit/formats/protocol_check.py:1118-1126, told at labkit/gates/report_check.py:280."
+ },
+ {
+  "n": 10,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "At least one `[[promise]]` table's `sentence` is still the stamp's `<…>` placeholder (`placeholder_sentences`) — labkit/gates/preflight.py:409-410, labkit/formats/promises.py:692."
+ },
+ {
+  "n": 11,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": true,
+  "condition": "`explain` only tests that no run was chosen and passes the blocker text on; the cause is set where the run `[result] run` names is not among the completed runs bound to the id (its state is not COMPLETED) — labkit/formats/answering_run.py:640, :807, :387."
+ },
+ {
+  "n": 12,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "version": "as it stands"
+   }
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The file `audits/<name>` that the head's `preflight_audit` names is no file in the area — labkit/formats/audit_gaps.py:237."
+ },
+ {
+  "n": 13,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "binding",
+  "forwarded": false,
+  "condition": "The head registers no `[reference]` while the run's metrics.json carries reference-verdict keys (`ref_*`) — labkit/formats/reference.py:169-171."
+ },
+ {
+  "n": 14,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The first measurement's config names no commit (`recorded_commit` is None → cause NO_COMMIT) — labkit/gates/report_check.py:369, labkit/formats/protocol_history.py:218."
+ },
+ {
+  "n": 15,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "version": "as it stands"
+   }
+  ],
+  "property": "none — presence of a file labkit keeps while an adoption runs (a pending adoption for this protocol)",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The area state lists a pending adoption for the protocol and the check is not reading the proposal itself — labkit/gates/report_check.py:653."
+ },
+ {
+  "n": 16,
+  "objects": [
+   {
+    "object": "report",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "version": "as it stands"
+   }
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "none — the kind of file at the report's path (link, not regular file)",
+  "forwarded": false,
+  "condition": "The gate's file state holds the report's path as a symbolic link whose chain does not end at a place a report is held (or runs in a circle) — labkit/gates/report_hold.py:101-105, told at :602-607."
+ },
+ {
+  "n": 17,
+  "objects": [
+   {
+    "object": "area code",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "Some fixed line of an area script's `PROMPT` constant appears in no registered prompt block of the protocol (`unheld_prompt_lines`) — labkit/checks/prompt_check.py:249-250."
+ },
+ {
+  "n": 18,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The note's file name starts with `related-` and the kind its meta line declares does not contain `Related-Lesart` — labkit/checks/notes_check.py:221-222."
+ },
+ {
+  "n": 19,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "A BLOCKER decided `false-positive` (not carried, not once contested) has no decision review of this record, of the decision as it stands and under the claim the protocol text makes now, with every verdict `upheld` — labkit/gates/report_decisions.py:354-358, labkit/formats/reviews.py:349."
+ },
+ {
+  "n": 20,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "order in time",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "none — the command's mode against the head's repeat cost and the absence of a completed run",
+  "forwarded": false,
+  "condition": "The audit is asked in mode preflight, the head's repeat cost owes no preflight audit, and the area holds no completed run — labkit/gates/audit.py:157-163."
+ },
+ {
+  "n": 21,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "A limitation whose effect is `stands` has no decision review of the decision as it stands and under the claim the protocol text makes now that upholds it — labkit/gates/report_decisions.py:257-259, labkit/formats/reviews.py:349."
+ },
+ {
+  "n": 22,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "A `criterion_<i>_n` in the run's metrics.json equals none of the counts the same run recorded (rows of its `data=` inputs, lines of its outputs) — labkit/checks/run_record_check.py:511 (no count at all: :496)."
+ },
+ {
+  "n": 23,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The TOML block holds a `[reference]` table while the head's `kind` is one with a bar (`has_bar`) — labkit/formats/protocol_check.py:1034."
+ },
+ {
+  "n": 24,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness (the owed first measurement is not there)",
+  "forwarded": false,
+  "condition": "The head registers a report and the area has measured (a lost run, or one whose record does not read), yet no first measurement whose record reads exists and none is listed as unread — labkit/gates/registered_report.py:314-315."
+ },
+ {
+  "n": 25,
+  "objects": [
+   {
+    "object": "area code",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "the unreadable file may also be the protocol",
+  "forwarded": false,
+  "condition": "`read_source(f)` raises SourceError for a file of the bundle (protocol, scripts, imported lib modules) — labkit/checks/code_check.py:646-649, told at :757."
+ },
+ {
+  "n": 26,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": true,
+  "condition": "The run id the generated counts in Data / scope name is not a run of the area, or `counts_text` raises ValueError for it (no preparation run, not completed, no n_items); the gate tells `gap.why` as it comes — labkit/checks/data_counts.py:140 and :146-148, told at labkit/gates/finalize.py:557-560."
+ },
+ {
+  "n": 27,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "version": "as it stands"
+   }
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The commit the first measurement's config recorded is not known to the repository (`commit_known` false → UNKNOWN_COMMIT) — labkit/gates/report_check.py:381, labkit/formats/protocol_history.py:220."
+ },
+ {
+  "n": 28,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "`report_blocks.discussions(written)` raises ReportBlockError on the report's text — labkit/gates/registered_report.py:477-483."
+ },
+ {
+  "n": 29,
+  "objects": [
+   {
+    "object": "area checks",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "`parse_source(t)` raises SourceError for a test file under the repo's tests/ — labkit/checks/prompt_check.py:68-70."
+ },
+ {
+  "n": 30,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "version": "as it stands"
+   }
+  ],
+  "property": "none — whether the command's protocol can be chosen: the area holds more than one PROTOCOL-*.md and the call names none",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "binding (weak: the area leads to no single protocol)",
+  "forwarded": true,
+  "condition": "`the_protocol(area, protocol)` raises ProtocolChoiceError (here: several protocol files, none named) and finalize passes its text on — labkit/gates/finalize.py:939-945, labkit/formats/repo.py:1250."
+ },
+ {
+  "n": 31,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "A carried finding closed `false-positive` has no decision review of the decision as it stands and under the claim the protocol text makes now that upholds it — labkit/gates/report_decisions.py:426-427, labkit/formats/reviews.py:349."
+ },
+ {
+  "n": 32,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "which object failed to read is not told at the site (run record, protocol or the covering audit records)",
+  "forwarded": true,
+  "condition": "The block's source carries the declared run but no body: `rendering(...)` raised OSError or ValueError when the source was built, and the gate tells that text — labkit/checks/report_blocks.py:331, labkit/gates/report_hold.py:478-486."
+ },
+ {
+  "n": 33,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The protocol declares `[replaces]` and its head's `type` is not `exploratory` — labkit/gates/report_replacement.py:81."
+ },
+ {
+  "n": 34,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as a run recorded it (the block digest in the run's config)"
+   },
+   {
+    "object": "protocol",
+    "version": "as a commit holds it (the commit the run recorded, with the run's kept patch applied)"
+   }
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "readability (what the site itself tests: the protocol as a run saw it cannot be read back)",
+  "forwarded": true,
+  "condition": "The promise-block digest of the protocol text read back from the run's commit and patch differs from the digest the run recorded, so the text counts as not read back; the hold itself only joins the reasons it is given — labkit/formats/protocol_history.py:727-728, told at labkit/gates/registration_hold.py:289-291."
+ },
+ {
+  "n": 35,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "readability (the registered output is not there); binding (the record's entry leads to no file)",
+  "forwarded": true,
+  "condition": "Computing the audited state raises AuditError — here because a path the run's outputs.json registers is no file — and the site passes `exc.why` on — labkit/gates/report_check.py:462, labkit/checks/audit_binding.py:124."
+ },
+ {
+  "n": 36,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "none — the test fires on sameness of two parts, not on a contradiction",
+  "forwarded": false,
+  "condition": "In a kept output with both lanes, every item's (answer, gold) in the null lane equals the registered lane's (`null_lane_unmoved`) — labkit/checks/run_record_check.py:442, :409."
+ },
+ {
+  "n": 37,
+  "objects": [
+   {
+    "object": "run record",
+    "version": "as it stands"
+   }
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "forwarded": false,
+  "condition": "The exception of the failed read of a run file is an access refusal (`outcome_of_failed_read(exc) == NOT_EXECUTABLE`: an OSError other than a missing file) — labkit/gates/finalize.py:615."
+ },
+ {
+  "n": 38,
+  "objects": [
+   {
+    "object": "report",
+    "version": "as it stands"
+   },
+   {
+    "object": "generated block or line",
+    "version": "as it stands"
+   }
+  ],
+  "property": "none — whether a line outside every generated block states a number (presence by position)",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "binding (weak: a number with no generated source)",
+  "forwarded": false,
+  "condition": "`unsourced_numbers(text)` is non-empty: a line of the report that lies in no generated result or discussion block contains a number — labkit/gates/report_hold.py:760-761, labkit/checks/report_blocks.py:721-728."
+ },
+ {
+  "n": 39,
+  "objects": [
+   {
+    "object": "protocol",
+    "version": "as it stands"
+   }
+  ],
+  "property": "inner consistency",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "readability (which copy is registered cannot be interpreted)",
+  "forwarded": false,
+  "condition": "A bound field's label occurs on more than one line of the protocol text (`repeated_fields`); the copies' values are not compared — labkit/gates/report_check.py:307, labkit/formats/protocol_check.py:229-233."
+ },
+ {
+  "n": 40,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "version": "as it stands"
+   }
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "completeness (every finding of the record decided)",
+  "forwarded": false,
+  "condition": "The named preflight record, already matched to the code's stamp, the promise block and the registration, still has findings `open` (`record.open`) — labkit/formats/audit_gaps.py:273."
+ }
+]

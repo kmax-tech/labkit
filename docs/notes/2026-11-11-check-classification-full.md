@@ -2,7 +2,7 @@
 
 *Every gate finding labkit tells, by function and cause, in the four dimensions of [the sample](2026-11-11-check-classification-sample.md): 216 finding sites of the inventory (`python -m labkit.tools.check_inventory`) as 288 causes (262 until bundled rows were split on 2026-11-12). Basis, procedure, outcome and effect are read from the source by the inventory; the subject and the causes of the 25 sites that receive their rule are one reader's reading at the code, not checked independently. A first full draft, not a checked stock. No new round on the reasons: where a basis is open it stays open.*
 
-*Revised 2026-11-12, six times: the rows with a mark of doubt were sorted, eight more bundled rows split, and a schema of objects and relation tried as a working hypothesis, by which the twelve subjects below may go (sections "The units corrected" and "A working hypothesis"). Before that: the fifteen rows on which the readers differed were read at the code — eleven settled, five split into sixteen, four open, after the author's answer (section "The fifteen open rows read at the code"). Before that: every row has since been assigned by two independent readers, and the table says per row how its subject came about (section "The whole table read by two readers"). Before that: the subjects' definitions were rewritten after the second reading and tested on a new sample (section "A third reading"). Before that: two independent readers assigned a sample of 41 causes (section "A second reading"), and the table carries what they agreed on. Before that the seven points under "What does not fit" were worked through. Three were faults in the code and are fixed there, the subjects got a definition each and were applied again, and the table and the counts below show the state after that.*
+*Revised 2026-11-12, seven times: two independent readers read a sample of 40 causes under the schema of objects and property (section "The sample read by two readers"). Before that: the rows with a mark of doubt were sorted, eight more bundled rows split, and a schema of objects and relation tried as a working hypothesis, by which the twelve subjects below may go (sections "The units corrected" and "A working hypothesis"). Before that: the fifteen rows on which the readers differed were read at the code — eleven settled, five split into sixteen, four open, after the author's answer (section "The fifteen open rows read at the code"). Before that: every row has since been assigned by two independent readers, and the table says per row how its subject came about (section "The whole table read by two readers"). Before that: the subjects' definitions were rewritten after the second reading and tested on a new sample (section "A third reading"). Before that: two independent readers assigned a sample of 41 causes (section "A second reading"), and the table carries what they agreed on. Before that the seven points under "What does not fit" were worked through. Three were faults in the code and are fixed there, the subjects got a definition each and were applied again, and the table and the counts below show the state after that.*
 
 ## What was added to the inventory's columns
 
@@ -388,6 +388,47 @@ What the trial does not show: whether two readers reach the same objects and rel
 - The four causes that are a forwarded error text are not resolved causes. Their rows say so in the column "Agreement".
 
 **The sample.** 40 causes for two readers who work independently of each other and of this note: 16 drawn from the rows three readings agree on, 6 from the rows with a mark of doubt, 6 from the split rows, 12 chosen because they were hard (seed and strata in `docs/notes/2026-11-12-subject-readings/object-sample-1-key.json`). The definitions are fixed in `object-property-definitions-1.md` beside it and are not changed while the sample is read. A reader may answer that nothing fits, and may mark an answer unsure. Objects, versions and the property are compared apart.
+
+## The sample read by two readers, 2026-11-12
+
+Two readers, independent of each other and of this note, read the 40 causes at the code under the fixed definitions (`docs/notes/2026-11-12-subject-readings/object-sample-1-reader-A.json`, `-B.json`; the definitions were not changed). The three things were compared apart; a version counts as equal when both readers name the same of the three kinds for each object.
+
+| Compared                              | Equal, of 40 | Ordinary, of 16 | Doubt, of 6 | Split, of 6 | Chosen, of 12 |
+|---------------------------------------|--------------|-----------------|-------------|-------------|---------------|
+| the property or relation              | 38           | 15              | 6           | 5           | 12            |
+| the objects                           | 32           | 15              | 4           | 5           | 8             |
+| the versions, where the objects agree | 32 of 32     | 15              | 4           | 5           | 8             |
+| all three                             | 30           | 14              | 4           | 4           | 8             |
+| "fits": yes, weak or no               | 39           | 16              | 6           | 6           | 11            |
+| "forwarded"                           | 37           | 15              | 5           | 5           | 12            |
+
+**The property.** The readers differ on two rows: a registered output that is gone (completeness or binding, `report_check.analysis_audit_gap`) and a field written twice (inner consistency or readability, `report_check.repeated_gaps`). On the rows the twelve subjects left open they agree: the prompt block against the constant is area code and protocol, agreement; the constant that is not readable is area code, readability; the test file that does not parse is area checks, readability; the three checks of a decision without its review are all audit coverage.
+
+**The objects.** Eight rows differ, and seven of them in how many objects are named, not in which thing is read:
+
+- Three rows (the decision checks) name the audit and review records once or twice: a decision and its review are two records of one kind.
+- Four rows add an object the other reader leaves out: the protocol beside the area code where the file read is known only when the check runs (`code_check.main`), or where it is a precondition of the test (`preflight._owed`, `registered_report.report_binding_gap`, `report_decisions.limit_gaps`).
+- One row is "which protocol is meant", which both readers say does not fit.
+
+**What does not fit.** Both readers, each alone, answer "no" for the same four rows and "weak" for five; reader A marks one more as weak.
+
+| Row                                                                    | Both readers say the condition tests                                                      |
+|------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| `report_check.unreportable_gaps`: a full run over an unfrozen protocol | that a mark is in the run's record; nothing is compared                                   |
+| `report_check.cut_off_adoption_gaps`                                   | that a file is there                                                                      |
+| `finalize.finalize_area`: several protocols, none named                | a unique choice; forwarded                                                                |
+| `report_hold.report_hints`: numbers without an assigned source         | that numbers stand outside every generated block: a pattern over the text, no comparison  |
+| `preflight._owed`: `preflight_audit` names no record (weak)            | the form of a field's value                                                               |
+| `report_hold.link_gap` (weak)                                          | the kind of file                                                                          |
+| `report_check.repeated_gaps` (weak)                                    | that a field is written twice                                                             |
+| `audit.early_for_tier` (weak)                                          | order in time, though no time is read: the repeat cost and whether a completed run exists |
+| `run_record_check.null_lane_findings` (weak)                           | that two lanes are the same; the test fires on sameness, not on contradiction             |
+
+Three kinds return in this list: the bare presence of a mark or a file, the form of a value or a file, and a test that fires on sameness or duplication. They are collected here and no value is added for them.
+
+**Forwarded.** Reader A marks ten rows, reader B seven; they differ on three, where a helper returns a cause it tested itself and the site only words it. Both mark the two rows of the sample this note already calls forwarded (`report_decisions.limit_gaps`, `report_blocks.block_gaps`).
+
+**What this shows, and what not.** With objects and property apart, two readers reach the same property on 38 of 40 rows and the same answer in all three on 30, in a sample where 24 rows were chosen or drawn as hard. Every difference in the objects but one is a question of counting that the definitions leave open. It is one sample of 40 with two readers of the same kind; it says nothing on the 248 rows outside it, and the comparison of versions is by kind, not by the commit named. No number here compares with the 247 of 262 rows the readers of the twelve subjects agreed on: that was one value per row over the whole table.
 
 ## What "exact" covers
 
