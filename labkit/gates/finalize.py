@@ -86,6 +86,7 @@ read-only gate that reports findings.
 from __future__ import annotations
 
 import shlex
+from functools import partial
 from dataclasses import replace
 from pathlib import Path
 
@@ -375,7 +376,11 @@ def check_open_audit_findings(
     # the runs: every record of the area; the findings: this protocol's
     gone = check_audited_runs_kept(state, evidence=held)
     undecided = check_audit_findings_decided(
-        state, evidence=held, protocol=protocol, protocol_id=protocol_id
+        held,
+        protocol_id=protocol_id,
+        # the line names PROTOCOL only where the area holds several
+        # (`commands.audit_command`)
+        way_out_of=partial(audit_findings.decide_way, area, protocol=protocol),
     )
     findings.take_all([*gone, *undecided])
     own = followup.records_of(held.records, protocol_id)

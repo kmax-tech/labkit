@@ -7,6 +7,7 @@ data in memory, its violation and its valid twin (docs/architecture.md,
 from __future__ import annotations
 
 import unittest
+from functools import partial
 
 import pytest
 
@@ -159,10 +160,11 @@ class AnAuditFindingIsDecided(unittest.TestCase):
         )
         return pure_call(
             check_audit_findings_decided,
-            area_state(),
-            evidence=evidence,
-            protocol=AREA / "PROTOCOL-x.md",
+            evidence,
             protocol_id=held,
+            # a stand-in for the station's way out; whether the line names a
+            # protocol is `commands.audit_command`'s, not this rule's
+            way_out_of=partial(findings.decide_way, AREA),
         )
 
     def test_an_open_blocker_blocks_with_its_decision_command(self):

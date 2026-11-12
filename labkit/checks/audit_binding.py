@@ -15,7 +15,7 @@ Reads only; the records themselves are `findings`'.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from pathlib import Path
 from typing import NamedTuple
@@ -372,36 +372,33 @@ def check_audit_records_read(
 
 
 def check_audit_findings_decided(
-    state: AreaState,
-    *,
     evidence: AreaEvidence,
-    protocol: Path,
+    *,
     protocol_id: str | None,
+    way_out_of: Callable[[findings.OpenFinding], str],
 ) -> list[GateFinding]:
     """finalize's row of `findings.open_findings`' table: every finding
-    still `open`, any mode, in those of EVIDENCE's records that audited
-    PROTOCOL (by PROTOCOL_ID, the id its head stamps: `followup.records_of`;
-    None, a head without one, has no record), as a gate
-    finding of its record's grade (LAB-015 Preflight audit before freezing)
-    — a BLOCKER blocks with its `--decide` way out (`findings.decide_way`
-    for the area of STATE, naming PROTOCOL where the area holds several), a
-    WARNING warns. A NOTE is no gate finding and gives none: the gate tells
-    it. [] when every finding of them is decided. A finding on another
-    protocol of the area is that protocol's to decide and holds nothing
-    here; a change of the area's code is held for every protocol by its own
-    audit coverage, not by this."""
+    still `open`, any mode, in those of EVIDENCE's records that audited the
+    protocol with stamped id PROTOCOL_ID (`followup.records_of`; None, a
+    head without one, has no record), as a gate finding of its record's
+    grade (LAB-015 Preflight audit before freezing) — a BLOCKER blocks with
+    the way out WAY_OUT_OF gives for it, a WARNING warns. A NOTE is no gate
+    finding and gives none: the gate tells it. [] when every finding of
+    them is decided. A finding on another protocol of the area is that
+    protocol's to decide and holds nothing here; a change of the area's
+    code is held for every protocol by its own audit coverage, not by this.
+
+    The station hands the way out in (`findings.decide_way` for its area and
+    protocol): the printed `--decide` line names the protocol where the
+    area holds several, and `commands.audit_command`, the one home of that
+    choice, lists the area to know."""
     out: list[GateFinding] = []
     own = followup.records_of(evidence.records, protocol_id)
-    # STATE knows whether the area holds several protocols: with one, the
-    # line names none, and the command builder lists no directory
-    named = protocol if len(state.protocols) > 1 else None
     for u in findings.open_findings(own):
         line = f"{u.line} — {UNDECIDED}"
         rule = cited_rule("LAB-015 Preflight audit before freezing")
         if u.grade == BLOCKER:
-            out.append(
-                blocker(line, fix=findings.decide_way(state.area, u, named), rule=rule)
-            )
+            out.append(blocker(line, fix=way_out_of(u), rule=rule))
         elif u.grade == WARNING:
             out.append(GateFinding(WARNING, line, rule=rule, evidence_kind=GUARANTEED))
     return out
