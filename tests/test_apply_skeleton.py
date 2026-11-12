@@ -615,6 +615,46 @@ class ApplySkeleton(unittest.TestCase):
         self.assertIn("code_sha", said)
         self.assertIn("`kept_v2.jsonl`", said)
 
+    def test_a_helper_change_refuses_to_resume_the_rows_of_the_old_code(self):
+        """The row identity covers a local module the script imports: with
+        the script unchanged, a repaired helper under `lib/` refuses the
+        resume. The twin: the same helper resumes."""
+        with contextlib.redirect_stdout(io.StringIO()):
+            area, _ = scaffold.stamp_area(
+                self.root, "helper", repeat_cost="low", kind="apply"
+            )
+        helper = self.root / "lib" / "skeleton_resume_helper.py"
+        helper.parent.mkdir(exist_ok=True)
+        helper.write_text("OFFSET = 0\n", encoding="utf-8")
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "import skeleton_resume_helper\n",
+            encoding="utf-8",
+        )
+        name = f"helper_resume_{id(self)}"
+        spec = importlib.util.spec_from_file_location(name, script)
+        assert spec is not None and spec.loader is not None
+        measure = importlib.util.module_from_spec(spec)
+        sys.modules[name] = measure
+        self.addCleanup(sys.modules.pop, name, None)
+        self.addCleanup(sys.modules.pop, "skeleton_resume_helper", None)
+        spec.loader.exec_module(measure)
+        predictor = mock.Mock()
+        predictor.predict.side_effect = lambda xs: [0 for _ in xs]
+        output = area / "output" / "kept.jsonl"
+        as_run = script.read_bytes()
+        with (
+            mock.patch.object(measure, "make_estimator", return_value=predictor),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            measure.measure(measure.CONFIG, self.items(), output)
+            measure.measure(measure.CONFIG, self.items(), output)  # resumes
+            helper.write_text("OFFSET = 1  # repaired\n", encoding="utf-8")
+            with self.assertRaises(batch.InstrumentError) as cm:
+                measure.measure(measure.CONFIG, self.items(), output)
+        self.assertIn("code_sha", str(cm.exception))
+        self.assertEqual(script.read_bytes(), as_run)  # the helper alone changed
+
     def test_changed_artifact_after_config_snapshot_refuses_before_predictions(self):
         area, measure = self.measure_module("apply")
         model = area / "primary.model"
