@@ -31,7 +31,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import report_command
-from labkit.formats import area_state, protocol_history, runs
+from labkit.formats import area_state, gate, protocol_history, runs
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
@@ -1047,13 +1047,53 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         _git(self.root, "commit", "-qm", "the report, entered late")
         gap = self._gap(self._head_now(None))
         assert gap is not None
-        self.assertIn(
-            "registered REPORT.md as its report in its last commit, after its "
-            "first measurement",
-            gap,
-        )
+        self.assertIn("registered REPORT.md as its report in commit ", gap)
+        self.assertIn(", after its first measurement", gap)
         # the twin: moved instead of removed
         self.assertIsNone(self._gap(self._head_now("docs/OTHER.md")))
+
+    def test_a_late_report_removed_by_a_commit_past_the_hook_still_binds(self):
+        """The duty is read from where it began, not from the last commit:
+        a commit that removed the entry, whatever let it through, ends
+        nothing."""
+        self._run(self._register(None))
+        for report, said in (("REPORT.md", "entered late"), (None, "removed")):
+            self._head_now(report)
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", said, "--no-verify")
+        gap = self._gap(self.proto.read_text(encoding="utf-8"))
+        assert gap is not None
+        self.assertIn("registered REPORT.md as its report in commit ", gap)
+        self.assertIn("its head now registers none", gap)
+        # the twin: named again, at another path
+        self.assertIsNone(self._gap(self._head_now("docs/OTHER.md")))
+
+    def test_the_twin_a_report_removed_before_the_first_measurement_binds_nothing(
+        self,
+    ):
+        self._register("REPORT.md")
+        self._run(self._register(None))
+        self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
+
+    def test_a_history_that_does_not_tell_the_duty_is_a_check_not_executable(self):
+        """A report an earlier commit registered, and a first measurement
+        whose commit this clone does not hold: whether the entry stood then
+        cannot be read, and that is not "no duty"."""
+        self._register("REPORT.md")
+        self._register(None)
+        self._run("0" * 40)
+        text = self.proto.read_text(encoding="utf-8")
+        gap = registered_report.report_binding_gap(
+            self.proto, text, measured=_measured(self.proto, text)
+        )
+        assert gap is not None
+        self.assertEqual(
+            (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn("whether it owes a report cannot be told", gap.text)
+        self.assertIn("registered REPORT.md", gap.text)
+        # the twins: no commit ever registered one; or the head names one
+        self.assertIsNone(self._gap(self._head_now("REPORT.md")))
 
     def test_the_twin_a_report_committed_before_any_measurement_binds_nothing(self):
         self._register("REPORT.md")
@@ -1072,7 +1112,7 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         # the report, and removing the entry is held by that
         gap = self._gap(self._head_now(None))
         assert gap is not None
-        self.assertIn("in its last commit, after its first measurement", gap)
+        self.assertIn("in its last commit, with a measurement in its area", gap)
 
     def test_one_first_measurement_with_a_report_is_enough_for_the_duty(self):
         first = self._register("REPORT.md")
@@ -1443,6 +1483,68 @@ class ReportOwedByADeletedProtocol(_Repository):
         self.assertIn(f"no protocol of the area carries the id {PID}", out)
         self.assertIn(RUN, out)
         self.assertIn("registered REPORT.md as its report", out)
+
+    def _measured_then_deleted(self, report: str | None) -> Path:
+        """The protocol registering REPORT, committed and measured, then
+        deleted in the tree and the index (not committed); its old path."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=report) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the run")
+        _git(self.root, "rm", "-q", str(self.proto))
+        return self.proto
+
+    def _hold(self, paths: list[Path], *, staged: bool) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = report_check.hold_reported(paths, self.root, staged=staged).exit
+        return code, out.getvalue()
+
+    def test_the_commit_and_the_stop_hold_the_deletion_of_a_protocol_that_owes(self):
+        """No protocol is left to run a chain for: the hold reaches the
+        area through the deleted path, in the index and in the tree."""
+        gone = self._measured_then_deleted("REPORT.md")
+        for staged in (True, False):
+            with self.subTest(staged=staged):
+                code, out = self._hold([gone], staged=staged)
+                self.assertEqual(code, 1, out)
+                self.assertIn(f"no protocol of the area carries the id {PID}", out)
+                self.assertIn("registered REPORT.md as its report", out)
+
+    def test_report_check_on_an_area_without_a_protocol_names_the_duty(self):
+        self._measured_then_deleted("REPORT.md")
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(f"no protocol of the area carries the id {PID}", out)
+
+    def test_the_twin_deleting_a_protocol_that_owes_no_report_passes_the_holds(self):
+        gone = self._measured_then_deleted(None)
+        for staged in (True, False):
+            with self.subTest(staged=staged):
+                code, out = self._hold([gone], staged=staged)
+                self.assertEqual(code, 0, out)
+        # the area form still says what it always said of an area without one
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 2, out)
+
+    def test_the_twin_a_renamed_protocol_is_no_orphan(self):
+        self.proto.write_text(
+            head(repeat_cost="low", report="REPORT.md") + REGISTRATION,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        renamed = self.area / "PROTOCOL-y.md"
+        _git(self.root, "mv", str(self.proto), str(renamed))
+        for staged in (True, False):
+            with self.subTest(staged=staged):
+                _, out = self._hold([self.proto, renamed], staged=staged)
+                self.assertNotIn("no protocol of the area carries", out)
 
     def test_the_twin_a_deleted_protocol_that_owed_no_report_is_passed_over(self):
         self.proto.write_text(

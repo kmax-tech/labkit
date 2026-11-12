@@ -120,7 +120,7 @@ from labkit.formats.area_state import (
     gone_run_restore,
     state_of,
 )
-from labkit.formats.repo import pending_adoption
+from labkit.formats.repo import PROTOCOL_NAME, pending_adoption
 from labkit.formats import evidence
 from labkit.formats.protocol_history import (
     NO_COMMIT,
@@ -586,6 +586,16 @@ def protocol_verdict(
     (`console.refuse`), not through TELL.
     """
     # 0. protocol and context — the only early end
+    if protocol is None:
+        # an area without a protocol has no chain to run; the report a
+        # protocol deleted from it owed is its finding, told before the
+        # refusal "no PROTOCOL-*.md" would end the check
+        area_state = state = area_state or state_of(area, file_state=file_state)
+        orphaned = orphaned_duty_gaps(state) if not state.protocols else []
+        for gap in orphaned:
+            tell(f"  {gap.line}")
+        if orphaned:
+            return ProtocolVerdict(1, None)
     chosen = choose_protocol(area, protocol, "report-check")
     if chosen is None:
         return ProtocolVerdict(2, None)
@@ -695,13 +705,23 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     gap = report_binding_gap(
         ctx.protocol, ctx.text, measured=state.measured_of(ctx.head.id)
     )
-    out = [] if gap is None else [gap]
-    if state.repo is not None:
-        carried = {protocol_block.id_of(t) for t in state.protocol_texts.values()}
-        out += orphaned_report_duties(
-            ctx.area, state.measured, {c for c in carried if c}, state.repo
-        )
-    return out
+    return ([] if gap is None else [gap]) + orphaned_duty_gaps(state)
+
+
+def orphaned_duty_gaps(state: AreaState) -> list[GateFinding]:
+    """The report duties of protocols STATE's area measured under and no
+    longer holds, in STATE's file state
+    (`registered_report.orphaned_report_duties`, the ids carried read from
+    the state's protocol texts) — the one reading for report-check's
+    station, its area form on an area without a protocol
+    (`protocol_verdict`), and the stop's and the commit's hold
+    (`hold_reported`). [] outside a repository."""
+    if state.repo is None:
+        return []
+    carried = {protocol_block.id_of(t) for t in state.protocol_texts.values()}
+    return orphaned_report_duties(
+        state.area, state.measured, {c for c in carried if c}, state.repo
+    )
 
 
 def finalize_findings(
@@ -1183,8 +1203,10 @@ def hold_reported(
     head registers a file among PATHS as its report is held too
     (`registering_protocols`): the report lies in no area, and a change
     of it reaches the protocol that owes it its result
-    (`registered_report.report_owed`, through `hold_declared`). Every line goes
-    through TELL. Returns the worst exit code and the chains that ran
+    (`registered_report.report_owed`, through `hold_declared`). An area
+    PATHS touch that measured under a protocol it no longer holds is held
+    to the report that protocol owed (`orphaned_duty_gaps`), with or
+    without a protocol left in it. Every line goes through TELL. Returns the worst exit code and the chains that ran
     (`HoldVerdict`)."""
     touched = reached_by(paths, repo, staged=staged)
     protocols, reports = touched.protocols, touched.reports
@@ -1208,6 +1230,25 @@ def hold_reported(
         worst = max(worst, released.exit)
         if released.chain is not None:
             chains[protocol] = released.chain
+    # a protocol deleted or replaced leaves no protocol to run a chain for;
+    # its area is among those PATHS touch, and the duty is the area's — told
+    # here where no chain of the area told it (`report_binding_gaps`)
+    chained = {p.parent.resolve() for p in chains}
+    # `areas_touched` knows an area by its protocols; one whose last
+    # protocol is among PATHS, deleted, is named by that path
+    root = repo.resolve()
+    touched_areas = {a.resolve() for a in areas_touched(paths, repo, staged=staged)}
+    touched_areas |= {
+        (p if p.is_absolute() else root / p).parent.resolve()
+        for p in paths
+        if PROTOCOL_NAME.match(p.name)
+    }
+    for area in sorted(touched_areas):
+        if area in chained:
+            continue
+        for gap in orphaned_duty_gaps(sources.held_state(area)):
+            tell(f"  {gap.line}")
+            worst = max(worst, 1)
     for path, text in reports:
         worst = max(worst, hold_report(path, text, repo, sources, tell=tell))
     for path, text, held_as in reached:

@@ -41,6 +41,7 @@ from labkit.formats.repo import (
     commit_known,
     git_root,
     git_run,
+    head_sha,
     text_at,
     unreadable_at,
 )
@@ -200,6 +201,46 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
         if isinstance(table, dict) and table.get("id") == pid:
             return root / rel
     return None
+
+
+def reports_registered_since(
+    root: Path, pid: str, after: Sequence[str]
+) -> list[tuple[str, str]] | None:
+    """(commit, report), newest first: every commit of the repository ROOT
+    reachable from HEAD and from none of AFTER (full shas; empty: the whole
+    history) that changed a `PROTOCOL-*.md` and in which the protocol
+    carrying the id PID registers a report (`protocol_path_at`: found by
+    id, so a rename or a move is followed; the head read as TOML only, as
+    there). How a report duty is read from where it began and not from the
+    last commit alone: an entry a later commit removed is still found.
+    None when the history cannot be read whole — a shallow clone, whose
+    cut hides commits; [] before the first commit. Raises GitError when
+    git fails."""
+    if not head_sha(root):
+        return []
+    shallow = git_run(["rev-parse", "--is-shallow-repository"], root)
+    if shallow.returncode != 0 or shallow.stdout.strip() != "false":
+        return None
+    # --full-history: without it git prunes a side branch that registered a
+    # report and removed it again before its merge
+    args = ["rev-list", "--full-history", "HEAD", *(f"^{c}" for c in after)]
+    listed = git_run([*args, "--", ":(glob)**/PROTOCOL-*.md"], root)
+    if listed.returncode != 0:
+        raise GitError(f"git {' '.join(args)} in {root}: {listed.stderr.strip()}")
+    out = []
+    for commit in listed.stdout.split():
+        then = protocol_path_at(root, commit, pid)
+        text = text_at(root, then, commit) if then is not None else None
+        if text is None:
+            continue
+        try:
+            table = protocol_block.parse_toml_block(text).get("protocol", {})
+        except protocol_block.BlockError:
+            continue  # `protocol_path_at` read this block; kept for the type
+        report = table.get("report") if isinstance(table, dict) else None
+        if isinstance(report, str) and report.strip():
+            out.append((commit, report))
+    return out
 
 
 def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
