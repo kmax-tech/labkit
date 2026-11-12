@@ -1,6 +1,6 @@
 # Simplify checks and tests — implementation plan (2026-11-10)
 
-> Decided by the author on 2026-11-10: restructure the checks and tests before the next usage round. This note owns the implementation plan; [TODO task 6c](../../TODO.md#6c-ein-klares-testmodell-und-der-umbau-der-checks--vor-der-nutzungsrunde-entschieden-2026-11-10) owns its place in the work order.
+> Decided by the author on 2026-11-10: restructure the checks and tests before the next usage round. This note owns the implementation plan; [TODO task 6c](../../TODO.md#6c-ein-klares-testmodell-und-der-umbau-der-checks--abgeschlossen-2026-11-12) owns its place in the work order.
 
 ## Start here
 
@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1 to 5 are done ([step 5](#5-measure-and-review)). The full suite runs 13–14 % faster than at the baseline with 100 tests more; the timing targets are missed, by the author's decision, and the ten sites of `report_decisions.py` that waited for the second-review decision are migrated since 2026-11-11 ([step 3, point 3](#step-3-for-the-other-gates-as-built-2026-11-10)). **Target 4:** the independent review found a missing gate assertion for a field edited after the answering run ([review](2026-11-11-test-model-review.md)); that assertion is restored in `29290169` (the review, "Correction"). The second call of the same comparison has its test since `cd615bb5`. A measurement over the callers of the pure checks (the review, "The callers of every pure check") found one more unheld caller, finalize's null-lane station, now tested (`NullLaneStation`). The author closed target 4 on 2026-11-11. What the whole restructuring removed, added and only moved: the [abstraction balance](#6-abstraction-balance-of-the-whole-restructuring-2026-11-12) of 2026-11-12.
+**Status:** steps 1 to 5 are done ([step 5](#5-measure-and-review)). The full suite runs 13–14 % faster than at the baseline with 100 tests more; the timing targets are missed, by the author's decision, and the ten sites of `report_decisions.py` that waited for the second-review decision are migrated since 2026-11-11 ([step 3, point 3](#step-3-for-the-other-gates-as-built-2026-11-10)). **Target 4:** the independent review found a missing gate assertion for a field edited after the answering run ([review](2026-11-11-test-model-review.md)); that assertion is restored in `29290169` (the review, "Correction"). The second call of the same comparison has its test since `cd615bb5`. A measurement over the callers of the pure checks (the review, "The callers of every pure check") found one more unheld caller, finalize's null-lane station, now tested (`NullLaneStation`). The author closed target 4 on 2026-11-11. What the whole restructuring removed, added and only moved: the [abstraction balance](#6-abstraction-balance-of-the-whole-restructuring-2026-11-12) of 2026-11-12, on which the author closed the restructuring the same day.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -342,7 +342,7 @@ No registry, no wrapper type and no new package module were added; that part of 
 **Moved, not removed.**
 
 1. **File reading moved from the checks into the stations.** `finalize.py` changed by +98 −94: the station now reads, builds the typed values and passes them on. The check is simpler; the station is not.
-2. **The way out of a finding.** A pure check may not build a command line that lists the area's protocols. `report_decisions` has the way out handed in; `check_audit_findings_decided` decides from the state whether to name the protocol (`b15d96a4`) and so repeats the condition the command builder already holds (`commands.audit_command`: more than one protocol). The purity rule produced a second home for that condition.
+2. **The way out of a finding.** A pure check may not build a command line that lists the area's protocols, so the station builds the way out and hands it in: `report_decisions` since its migration, `check_audit_findings_decided` since the decision below. For one day (`b15d96a4`) that check decided itself whether to name the protocol and repeated the condition the command builder holds (`commands.audit_command`: more than one protocol); the choice has one home again. The cost that stays is a callable parameter on each such check.
 3. **The risk of an untested condition became the risk of an untested caller.** The independent review found one assertion lost in the move (restored in `29290169`), and the measurement over the callers found two unheld ones. That measurement replaces answers, not inputs: a caller that computes a wrong input is seen only where the computing function was replaced (target 4).
 4. **Where a condition is tested is now a decision.** Rule test, gate test or scenario test: the rule is written down, but every new check needs the classification that the site account did once and that nothing maintains.
 5. **The rule assignments.** The restructuring made 168 open assignments visible and decided none; the work moved to the rounds after it ([open assignments](2026-11-11-open-assignments.md)).
@@ -355,11 +355,14 @@ No registry, no wrapper type and no new package module were added; that part of 
 
 **Verdict.** The restructuring bought conditions that are tested from data and rules that are data. It paid with about 860 more package lines, 3 440 more test lines and three conventions (the mandatory rule value, the purity of a check, the test layer). What a person reads first — a gate's entry point — is about as long as before. So "simpler" holds for changing and testing one condition, not for the size of the system or for reading a gate top to bottom.
 
-Open for the author — observations, no work is proposed here:
+**Decided by the author on 2026-11-12, on this balance.** A limited success: single checks are easier to maintain and to test, the system as a whole is not simpler. Further abstraction needs a concrete proof of use from now on.
 
-1. **The inventory tools** (the two scripts that counted the sites and which test reaches them): 1 657 lines whose main reader, the site account, is closed. Removing them would drop the means to repeat the counts in this note; keeping them means maintaining a scanner nobody runs.
-2. **The second home of "name the protocol where several"** (point 2 above): moving it would mean a command builder that takes the answer from the state instead of listing the directory.
-3. **`SourceNow`**: still the heaviest value; the checkpoint left its size to the author.
+1. **The restructuring is closed.** The remaining gates are not migrated for the sake of one pattern. The two patterns and where each applies: a condition that read files itself, or that several callers share, is a pure check with rule tests (finalize, `registration_hold`, `report_decisions`); a gate whose conditions already live in tested format or check functions composes them and is tested at its stations.
+2. **The doubled protocol choice is merged** — built with this decision: `check_audit_findings_decided` takes the way out from its station (`way_out_of`), as the checks of `report_decisions` take `review_way`; it no longer reads the state's protocols. The author's wording was that the state should supply the choice; handing the way out in is the existing pattern that reaches the same end without a state parameter on the command builders. The printed line with `--protocol` is still run as printed by `tests/test_adopt_per_protocol.py`.
+3. **The inventory tools are not removed for their size.** First establish which of them is used from now on; repeating the historical counts and a running maintenance check are different tasks. Not established yet.
+4. **`SourceNow` is not judged by its field count.** Eight fields that belong together can be simpler than several scattered values; what decides is whether callers can use the type understandably and completely. Not examined yet.
+
+No further clean-up round follows. The next larger step is the usage round (TODO task 7), under its own research order: whether the better local testability and the more precise findings help the agents.
 
 ## Decisions and dependencies
 
