@@ -1009,7 +1009,8 @@ def row_provenance_findings(
     are a blocker: a file of two measurements. Rows without `_prov` are a
     note (a Store without `prov`), not proof of anything. Rows
     of a continued run whose script differs from this run's are a blocker
-    too (`_continued_with_other_code`): the number is that code's. A
+    too (`_continued_with_other_code`; none where that run has no row in
+    the file now): the number is that code's. A
     broken lineage (`runs.lineage`) is the one blocker: without
     it no row can be held to a run."""
     blockers: list[GateFinding] = []
@@ -1079,19 +1080,27 @@ def _continued_with_other_code(
     estimator skeleton's): its ROWS were written by other code, and the
     number counts them as this run's: a fix measured again into the faulty
     run's file keeps every faulty row. Rows without it — a model's answers — do not
-    depend on the script: a parser fix re-reads them. A run whose record
-    does not read is left to the record checks."""
+    depend on the script: a parser fix re-reads them. A continued run with
+    no row in PATH now is passed over: no row of its code is counted, and
+    the file is not the recorded one then, which `output_record_findings`
+    holds (runlog names as continued only a run whose rows stand in the
+    file at its end). A run whose record does not read is left to the
+    record checks."""
     own = read_run_config(answering_run)
     if own is None or not _rows_carry_code(path):
         return []
     out: list[GateFinding] = []
     for rid in continued:
+        # no row of that run's code is in the file; that the file is not
+        # the recorded one then is `output_record_findings`
+        if rows.get(rid, 0) == 0:
+            continue
         other = read_run_config(answering_run.parent / rid)
         if other is None or other.script_sha == own.script_sha:
             continue
         out.append(
             blocker(
-                f"{path.name}: {rows.get(rid, 0)} row(s) come from {rid}, which ran "
+                f"{path.name}: {rows[rid]} row(s) come from {rid}, which ran "
                 f"other code (script {other.script_sha}, this run's "
                 f"{own.script_sha}) — {answering_run.name}'s number counts that "
                 f"code's rows as its own",

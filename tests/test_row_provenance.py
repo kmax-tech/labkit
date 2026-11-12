@@ -266,6 +266,26 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             self.assertIn("`x_v2.jsonl`", blockers[0].fix or "")
             self.assertTrue(any("continues " + A in n for n in notes), notes)
 
+    def test_a_continued_run_without_a_row_in_the_file_is_passed_over(self) -> None:
+        """No row of the other code is in the file, so none is counted as
+        this run's. The twin is the test above: rows of that run in the
+        file block. (That the file is no longer the recorded one is
+        `output_record_findings`.)"""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            out = area / "x.jsonl"
+            self._run(area, A, out, script_sha="a" * 12)
+            run = self._run(
+                area,
+                "2026-10-02T10-00-00_bbbb",
+                out,
+                continues=[A],
+                script_sha="b" * 12,
+            )
+            _rows(out, run.name, ["1", "2"], code_sha="c" * 12)
+            blockers, _ = run_record_check.row_provenance_findings(run)
+            self.assertEqual(blockers, [])
+
     def test_the_twin_continued_rows_of_the_same_code_pass(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
