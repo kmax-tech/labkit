@@ -8,7 +8,7 @@
 
 **Goal:** each scientific or technical condition has one implementation and tests of its own. Gates combine checks; scenario tests verify only what one command passes to the next. The plan keeps what today's tests establish first and reduces test time second.
 
-**Status:** steps 1 to 5 are done ([step 5](#5-measure-and-review)). The full suite runs 13–14 % faster than at the baseline with 100 tests more; the timing targets are missed, by the author's decision, and the ten sites of `report_decisions.py` that waited for the second-review decision are migrated since 2026-11-11 ([step 3, point 3](#step-3-for-the-other-gates-as-built-2026-11-10)). **Target 4:** the independent review found a missing gate assertion for a field edited after the answering run ([review](2026-11-11-test-model-review.md)); that assertion is restored in `29290169` (the review, "Correction"). The second call of the same comparison has its test since `cd615bb5`. A measurement over the callers of the pure checks (the review, "The callers of every pure check") found one more unheld caller, finalize's null-lane station, now tested (`NullLaneStation`). The author closed target 4 on 2026-11-11.
+**Status:** steps 1 to 5 are done ([step 5](#5-measure-and-review)). The full suite runs 13–14 % faster than at the baseline with 100 tests more; the timing targets are missed, by the author's decision, and the ten sites of `report_decisions.py` that waited for the second-review decision are migrated since 2026-11-11 ([step 3, point 3](#step-3-for-the-other-gates-as-built-2026-11-10)). **Target 4:** the independent review found a missing gate assertion for a field edited after the answering run ([review](2026-11-11-test-model-review.md)); that assertion is restored in `29290169` (the review, "Correction"). The second call of the same comparison has its test since `cd615bb5`. A measurement over the callers of the pure checks (the review, "The callers of every pure check") found one more unheld caller, finalize's null-lane station, now tested (`NullLaneStation`). The author closed target 4 on 2026-11-11. What the whole restructuring removed, added and only moved: the [abstraction balance](#6-abstraction-balance-of-the-whole-restructuring-2026-11-12) of 2026-11-12.
 
 **Execution order:** 1 → 2a → finalize pilot → stop for the author's decision → 2b → remaining gates → 4 → 5. The pilot is the migration of the finalize gate alone; it has no time cap (author decision, 2026-11-10). Do not build the full measurement tooling of step 2b before the author's decision at the checkpoint.
 
@@ -292,11 +292,80 @@ Extend the existing tests alongside the migrations. `tests/test_architecture.py:
 
 Give each guard a forbidden example that it rejects and an allowed example that passes. Later migrations reuse the guards. Reader tests and the gate tests of file state keep the file access they need. The guards enforce the technical boundaries that the tests exercise; they do not establish scientific adequacy, nor purity for every possible execution.
 
+### 6. Abstraction balance of the whole restructuring (2026-11-12)
+
+The [checkpoint report](#checkpoint-report-2026-11-10-at-602f794f) drew this balance for the finalize pilot alone. This one covers the restructuring from the baseline `524b93ce` to `d1cc1a56`, the commit that migrated the last ten sites. Its sources are the measurements already in this note and `git diff 524b93ce d1cc1a56`; no test, timing or assignment was run for it. The verdicts are the agent's reading of that evidence (Claude, 2026-11-12) and are the author's to judge.
+
+**Size.** The code grew. Line counts decide nothing alone, but they bound what "simpler" can mean here.
+
+| Part                                                  | Added | Removed | Net    |
+|-------------------------------------------------------|-------|---------|--------|
+| Package without the two inventory tools               | 1 382 | 525     | +857   |
+| Inventory tools (`check_inventory`, `test_inventory`) | 228   | 28      | +200   |
+| Tests (47 files)                                      | 5 285 | 1 845   | +3 440 |
+
+Tests: 3 234 at the baseline, 3 334 at `b5235238` (step 5). Scenario tests: 485 before step 4, 378 after it.
+
+**What went.**
+
+| Removed                                        | Evidence                                                                                                                                                                                                                                                                                                                                                                                          |
+|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| File access inside a condition                 | The conditions of criterion n, the null lane, the outputs, the data sources, the audit records, the correction release and the second review take records and typed values; 17 pure checks by the review's count (12 of them named `check_*`) run under `pure_call` (50 calls in 6 test files at `d1cc1a56`). `tests/test_finalize_criterion_n.py`, which wrote three files per case, is deleted. |
+| The rule of a finding as message text only     | At the baseline 168 of 194 gate finding sites named no rule. Every constructor of a gate finding now requires `rule` (`GateFinding.rule`, keyword-only, no default).                                                                                                                                                                                                                              |
+| Scenario variants that repeated a condition    | Step 4: 41 scenario tests removed, each with a named replacement (20 of 25 correction variants, 14 cases `CodexStop` inherited, 4 that `RegisteredReportRepairs` inherited and ran twice, 3 single ones); 66 moved unchanged to the fast tier.                                                                                                                                                    |
+| Sites no test reached, or only a whole command | Unreached 30 → 0, command-only 19 → 1 (step 5, and step 3, point 3).                                                                                                                                                                                                                                                                                                                              |
+| Duplicate wording and helpers                  | The undecided line has one constant (`UNDECIDED`); `first_dismissals` and `repaired_claims` became checks; four checks lost their directory parameter.                                                                                                                                                                                                                                            |
+
+One defect surfaced on the way and is fixed: a refused file access that `report_check.analysis_audit_gap` did not catch (`b8968d4e`).
+
+**What came.**
+
+| Addition                                                                                                                                                 | Purpose                                                                        | What it costs from now on                                                                                            |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `gate.RuleAssignment`, four kinds, `cited_rule`, three constants (`gate.py` +114 lines)                                                                  | the rule as data, counted without parsing messages                             | A duty on every new finding site: name a rule, a technical contract, or say the assignment is open.                  |
+| Typed run values `KeptRows`, `OutputNow`, `SourceNow`, `FirstMeasurement`, and their readers in `runs`                                                   | what a check judges, read once by the station                                  | A station's reader must know the value types; `SourceNow` has eight fields for a decision with six outcomes.         |
+| The pure checks and the hold helpers (`seen_hold`, `now_hold`, `split_released`, `waiting_refs`, `followup.released_corrections`, `awaited_corrections`) | one implementation per condition                                               | More names: `report_decisions.py` +298 −159, `registration_hold.py` +186 −93, `run_record_check.py` +209 −108.       |
+| `tests/state_fixture.py` (166 lines, five builders) and `tests/check_guards.py` (146 lines, two guards, with tests of their own)                         | a state without files; a rule test that cannot touch a file or start a process | Shared test infrastructure that every rule test depends on.                                                          |
+| Four rule-test files (1 482 lines) and seven station-test files (872 lines), two refusal-test files                                                      | the condition with its valid twin; what a gate adds                            | Three places a test can stand, and a rule for which one (`docs/architecture.md`, "Checks and their tests").          |
+| The architecture guard `ForwardingKeepsWhatAFindingIs`                                                                                                   | forwarding keeps grade, rule and evidence kind                                 | One more guard a refactor can trip.                                                                                  |
+| The inventory tools, 1 264 → 1 464 lines; the frozen site account                                                                                        | the measurement behind every count in this note                                | 1 657 lines today that only a `just` recipe and their own tests call; the comparison `--account` is already removed. |
+
+No registry, no wrapper type and no new package module were added; that part of the checkpoint's balance still holds.
+
+**Simpler in fact.**
+
+1. **Adding or changing a condition.** One function and one test class from data. The checkpoint showed it for criterion n; it held again on 2026-11-12 (`b15d96a4`): limiting finalize's undecided findings to the records of one protocol took one filter in `audit_binding.check_audit_findings_decided` and two rule tests of a few lines, without a repository.
+2. **Asking which rule a finding holds.** Read from `GateFinding.rule`; open assignments are countable instead of invisible.
+3. **Finding a condition's tests.** The violation and its valid twin stand under one name in `tests/test_rules_*.py`.
+4. **The scenario files.** Fewer variants, and no test inherited by accident.
+
+**Moved, not removed.**
+
+1. **File reading moved from the checks into the stations.** `finalize.py` changed by +98 −94: the station now reads, builds the typed values and passes them on. The check is simpler; the station is not.
+2. **The way out of a finding.** A pure check may not build a command line that lists the area's protocols. `report_decisions` has the way out handed in; `check_audit_findings_decided` decides from the state whether to name the protocol (`b15d96a4`) and so repeats the condition the command builder already holds (`commands.audit_command`: more than one protocol). The purity rule produced a second home for that condition.
+3. **The risk of an untested condition became the risk of an untested caller.** The independent review found one assertion lost in the move (restored in `29290169`), and the measurement over the callers found two unheld ones. That measurement replaces answers, not inputs: a caller that computes a wrong input is seen only where the computing function was replaced (target 4).
+4. **Where a condition is tested is now a decision.** Rule test, gate test or scenario test: the rule is written down, but every new check needs the classification that the site account did once and that nothing maintains.
+5. **The rule assignments.** The restructuring made 168 open assignments visible and decided none; the work moved to the rounds after it ([open assignments](2026-11-11-open-assignments.md)).
+6. **The boundaries.** The 23 boundary sites against git and the kept files are tested as before; `code_since_run` stays an extraction exception with 11 sites.
+
+**Not gained.**
+
+- **Test time.** The full suite ran 13–14 % faster, the fast tier unchanged, both timing targets missed (step 5).
+- **One pattern for every gate.** Checks were extracted in finalize, `registration_hold` and `report_decisions`. The other gates got station tests and rule values only (step 3). Two patterns are in use, and which one a gate follows is read from its code.
+
+**Verdict.** The restructuring bought conditions that are tested from data and rules that are data. It paid with about 860 more package lines, 3 440 more test lines and three conventions (the mandatory rule value, the purity of a check, the test layer). What a person reads first — a gate's entry point — is about as long as before. So "simpler" holds for changing and testing one condition, not for the size of the system or for reading a gate top to bottom.
+
+Open for the author — observations, no work is proposed here:
+
+1. **The inventory tools** (the two scripts that counted the sites and which test reaches them): 1 657 lines whose main reader, the site account, is closed. Removing them would drop the means to repeat the counts in this note; keeping them means maintaining a scanner nobody runs.
+2. **The second home of "name the protocol where several"** (point 2 above): moving it would mean a command builder that takes the answer from the state instead of listing the directory.
+3. **`SourceNow`**: still the heaviest value; the checkpoint left its size to the author.
+
 ## Decisions and dependencies
 
 The test model, the rule field, the explicit open assignment and the removal of scenario tests only with preserved assertions are agreed. The migration keeps the current meaning of each check; a scientific change requires the author's decision. Release and rollout stay separate work.
 
-Steps 1, 2a and the finalize pilot do not wait for the six decisions of the second review. The dependent checks in `report_decisions.py` waited for the decision on LAB-015 Preflight audit before freezing, taken on 2026-11-11, and are migrated (step 3, point 3); the [report-claim contract](2026-11-10-report-claim-decisions.md) waited for the same decision and is the next step to build. Task 6b's adoption acceptance for two protocols stays due before the usage round; its status stays in [TODO task 6b](../../TODO.md#6b-die-einzelprüfung-der-blocker-umsetzen--entschieden-2026-11-10). The individual assignments in the [rule proposal](2026-11-09-rule-per-finding-proposal.md) stay open until decided.
+Steps 1, 2a and the finalize pilot do not wait for the six decisions of the second review. The dependent checks in `report_decisions.py` waited for the decision on LAB-015 Preflight audit before freezing, taken on 2026-11-11, and are migrated (step 3, point 3); the [report-claim contract](2026-11-10-report-claim-decisions.md) waited for the same decision and is built (`8b145b19`, 2026-11-12). Task 6b's adoption acceptance for two protocols is done, with its limits, in [TODO task 6b](../../TODO.md#6b-die-einzelprüfung-der-blocker-umsetzen--abgeschlossen-2026-11-12-mit-drei-grenzen). The individual assignments in the [rule proposal](2026-11-09-rule-per-finding-proposal.md) stay open until decided.
 
 ## Targets
 
