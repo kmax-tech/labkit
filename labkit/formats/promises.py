@@ -217,11 +217,15 @@ class PromiseError(ValueError):
     the assignment of the requirement the block breaks, set where the cause
     is found: LAB_004 where a sentence of that rule states the requirement,
     TECHNICAL_RULE for a block or a value that does not have the form a
-    reader needs and for a declared scope that cannot be hashed
-    (`scope_sources`), OPEN_RULE where neither is decided. Who tells the
-    error as a finding passes this rule on and sets none of its own."""
+    reader needs, for a declared scope that cannot be hashed
+    (`scope_sources`) and for what a script's own call asks of a protocol
+    that does not hold it (`load`, `constants`, `with_constant` — raised
+    in the lab's script, told by no gate), OPEN_RULE where neither is
+    decided. Every cause says which; there is no default, so a rule left
+    out is not read as an open one. Who tells the error as a finding
+    passes this rule on and sets none of its own."""
 
-    def __init__(self, message: str, *, rule: RuleAssignment = OPEN_RULE) -> None:
+    def __init__(self, message: str, *, rule: RuleAssignment) -> None:
         super().__init__(message)
         self.rule = rule
 
@@ -260,13 +264,15 @@ def parse_outcomes(sentence: str) -> tuple[BranchOutcome, ...]:
         if outcome.name in {o.name for o in outcomes}:
             raise PromiseError(
                 f"outcome {n} {part!r}: name {outcome.name!r} stands in an "
-                f"earlier outcome too — a recorded name must select one outcome"
+                f"earlier outcome too — a recorded name must select one outcome",
+                rule=OPEN_RULE,
             )
         outcomes.append(outcome)
     if len(outcomes) < 2:
         raise PromiseError(
             f"one outcome — a branch chooses between at least two; with one "
-            f"outcome, register none; {OUTCOMES_FORM}"
+            f"outcome, register none; {OUTCOMES_FORM}",
+            rule=OPEN_RULE,
         )
     return tuple(outcomes)
 
@@ -303,12 +309,14 @@ def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome
     if condition == OTHERWISE and not last:
         raise PromiseError(
             f"outcome {n} {part!r} is `otherwise` but not the last outcome — "
-            f"the outcomes after it would never be selected; {OUTCOMES_FORM}"
+            f"the outcomes after it would never be selected; {OUTCOMES_FORM}",
+            rule=OPEN_RULE,
         )
     if not OUTCOME_NAME.match(name):
         raise PromiseError(
             f"outcome {n} {part!r}: name {name!r} is not lowercase letters, "
-            f"digits and hyphens — {OUTCOMES_FORM}"
+            f"digits and hyphens — {OUTCOMES_FORM}",
+            rule=OPEN_RULE,
         )
     if not mark or not consequence:
         raise PromiseError(
@@ -455,7 +463,7 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
             )
         where = f"[[promise]] {pid}"
         if pid in seen:
-            raise PromiseError(f"{where}: duplicate id")
+            raise PromiseError(f"{where}: duplicate id", rule=OPEN_RULE)
         seen.add(pid)
         key = e["key"]
         stem = key_stem(pid)
@@ -487,7 +495,8 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         ):
             raise PromiseError(
                 f"{where}: `scope` must be a non-empty list of "
-                f"'file' or 'file:function' strings"
+                f"'file' or 'file:function' strings",
+                rule=OPEN_RULE,
             )
         absolute = [s for s in scope if Path(s.partition(":")[0]).is_absolute()]
         if absolute:
@@ -605,7 +614,10 @@ def load(protocol: Path) -> PromiseTables:
     """
     block = parse_block(protocol.read_text(encoding="utf-8"))
     if block is None:
-        raise PromiseError(f"{protocol}: no [[promise]] tables in its ```toml block")
+        raise PromiseError(
+            f"{protocol}: no [[promise]] tables in its ```toml block",
+            rule=TECHNICAL_RULE,
+        )
     return block
 
 
@@ -614,7 +626,8 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
     by_id = load(protocol).by_id()
     if promise_id not in by_id:
         raise PromiseError(
-            f"{protocol}: no promise {promise_id!r}; declared: {sorted(by_id)}"
+            f"{protocol}: no promise {promise_id!r}; declared: {sorted(by_id)}",
+            rule=TECHNICAL_RULE,
         )
     return dict(by_id[promise_id].constants)
 
@@ -637,7 +650,7 @@ def with_constant(text: str, name: str, value: float) -> str:
     line holds NAME, or the read-back differs."""
     span = protocol_block.toml_block_span(text)
     if span is None:
-        raise PromiseError("no ```toml block to set a constant in")
+        raise PromiseError("no ```toml block to set a constant in", rule=TECHNICAL_RULE)
     lines = text.split("\n")
     pattern = re.compile(
         rf"(\bconstants\s*=\s*\{{[^}}]*\b{re.escape(name)}\s*=\s*)[-+0-9.eE]+"
@@ -645,7 +658,8 @@ def with_constant(text: str, name: str, value: float) -> str:
     hits = [i for i in range(*span) if pattern.search(lines[i])]
     if len(hits) != 1:
         raise PromiseError(
-            f"{len(hits)} constants lines hold {name!r} — one table registers a constant"
+            f"{len(hits)} constants lines hold {name!r} — one table registers a constant",
+            rule=TECHNICAL_RULE,
         )
     lines[hits[0]] = pattern.sub(
         lambda m: m.group(1) + repr(value), lines[hits[0]], count=1
@@ -653,7 +667,9 @@ def with_constant(text: str, name: str, value: float) -> str:
     new = "\n".join(lines)
     block = parse_block(new)
     if block is None or all_constants(block).get(name) != value:
-        raise PromiseError(f"{name} did not read back as {value!r}")
+        raise PromiseError(
+            f"{name} did not read back as {value!r}", rule=TECHNICAL_RULE
+        )
     return new
 
 

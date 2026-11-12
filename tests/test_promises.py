@@ -896,9 +896,46 @@ class TheRuleARefusedBlockNames(unittest.TestCase):
                 self.assertEqual(self._rule(block(broken)), promises.LAB_004)
 
     def test_a_requirement_no_sentence_states_stays_open(self):
-        self.assertEqual(self._rule(block(C1, C1)), OPEN_RULE)
-        self.assertEqual(
-            self._rule(block(B1.replace("→ noisy:", "→ generalises:"))), OPEN_RULE
+        """The six causes recorded as open, each said at its cause."""
+        first = "criterion-1 met → generalises: used on the next cohort"
+        for broken in (
+            block(C1, C1),  # a doubled id
+            block(B1.replace("→ noisy:", "→ generalises:")),  # a doubled name
+            block(B1.replace(B1.split('"')[5], first)),  # one outcome only
+            block(B1.replace("quality-check-1 not met →", "otherwise →")),
+            block(B1.replace("→ noisy:", "→ Noisy:")),  # a name off its alphabet
+            block(C1.replace('["scripts/01_measure.py:compute_score"]', "[]")),
+        ):
+            with self.subTest(broken=broken[-150:]):
+                self.assertEqual(self._rule(broken), OPEN_RULE)
+
+    def test_there_is_no_default_a_cause_says_its_rule(self):
+        """A rule left out is not an open one: the error is not built
+        without it."""
+        with self.assertRaisesRegex(TypeError, "rule"):
+            promises.PromiseError("x")  # type: ignore[call-arg]
+        self.assertEqual(promises.PromiseError("x", rule=OPEN_RULE).rule, OPEN_RULE)
+
+    def test_what_a_scripts_own_call_asks_in_vain_is_a_technical_contract(self):
+        """`load`, `constants` and `with_constant` are called by the lab's
+        script; no gate tells their error."""
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text("no block\n", encoding="utf-8")
+            with self.assertRaises(promises.PromiseError) as none:
+                promises.load(protocol)
+            protocol.write_text(block(C1), encoding="utf-8")
+            with self.assertRaises(promises.PromiseError) as absent:
+                promises.constants(protocol, "criterion-9")
+        with self.assertRaises(promises.PromiseError) as no_block:
+            promises.with_constant("no block\n", "min_acc", 0.5)
+        with self.assertRaises(promises.PromiseError) as no_line:
+            promises.with_constant(block(C1), "margin", 0.5)
+        for cm in (none, absent, no_block, no_line):
+            self.assertEqual(cm.exception.rule, TECHNICAL_RULE)
+        # the twin: a constant the block holds is set
+        self.assertIn(
+            "min_acc = 0.5", promises.with_constant(block(C1), "min_acc", 0.5)
         )
 
     def test_the_twin_a_block_that_reads_raises_nothing(self):
