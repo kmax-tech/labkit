@@ -1352,6 +1352,35 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         return code, out.getvalue()
 
 
+class ReportOwedByADeletedProtocol(_Repository):
+    """A protocol that measured under a registered report and is deleted,
+    a new one with another id and no report in its place: the area still
+    holds the first protocol's run, and its report was neither delivered
+    nor ended by a handover."""
+
+    @unittest.expectedFailure  # the gap as found 2026-11-12: report-check says "all clear"
+    def test_deleting_the_protocol_does_not_remove_the_report_it_owes(self):
+        self.proto.write_text(
+            head(repeat_cost="low", report="REPORT.md") + REGISTRATION,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        _git(self.root, "rm", "-q", str(self.proto))
+        self.proto = self.area / "PROTOCOL-y.md"
+        self.proto.write_text(
+            head(id="p-1111111111111111", repeat_cost="low", report=None)
+            + REGISTRATION,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "another protocol in its place")
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(RUN, out)
+
+
 class HighReportRegisteredBeforeTheFirstMeasurement(
     ReportRegisteredBeforeTheFirstMeasurement
 ):

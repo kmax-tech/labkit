@@ -22,8 +22,10 @@ from labkit.checks.run_record_check import (
 )
 from labkit.formats.gate import (
     BLOCKER,
+    DEVIATION,
     GUARANTEED,
     KNOWN_RULE,
+    NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
     cited_rule,
@@ -157,24 +159,27 @@ class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):
 
     def test_a_gone_an_unrecorded_and_a_changed_file_block(self):
         unrecorded = "outputs.json records no sha256 for it"
-        for now, recorded, stands, said in (
-            (None, "ab12", False, "the file is gone"),
+        # a comparison that cannot run is the technical contract and a check
+        # not executable; only compared bytes that differ are a deviation
+        cannot_compare = (TECHNICAL_RULE, NOT_EXECUTABLE)
+        for now, recorded, stands, said, basis in (
+            (None, "ab12", False, "the file is gone", cannot_compare),
             # nothing recorded to compare with: the file is not read, and
             # whether one stands at the path now does not change the cause
-            (None, None, True, unrecorded),
-            (None, None, False, unrecorded),
+            (None, None, True, unrecorded, cannot_compare),
+            (None, None, False, unrecorded, cannot_compare),
             (
                 "cd34" + "0" * 60,
                 "ab12",
                 True,
                 "its sha256 cd34 is not the recorded ab12",
+                (OPEN_RULE, DEVIATION),
             ),
         ):
             with self.subTest(said=said, stands=stands):
                 (f,) = self._held(now, recorded, stands)
-                self.assertEqual(
-                    (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, OPEN_RULE)
-                )
+                self.assertEqual((f.grade, f.evidence_kind), (BLOCKER, GUARANTEED))
+                self.assertEqual((f.rule, f.outcome), basis)
                 self.assertEqual(
                     f.text, f"out/rows.jsonl: not the file run r1 recorded — {said}"
                 )

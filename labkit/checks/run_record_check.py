@@ -46,6 +46,7 @@ from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import promises, protocol_block
 from labkit.formats.gate import (
     GUARANTEED,
+    NOT_EXECUTABLE,
     OPEN_RULE,
     STATIC_EVIDENCE,
     TECHNICAL_RULE,
@@ -904,16 +905,28 @@ def output_record_findings(
     the run wrote for an external task, are pinned to the run by path and
     sha256 — a file swapped, edited or removed after the run is no longer
     what the run produced. The way out follows the cause
-    (`_output_way_out`). [] when every file is as recorded."""
-    return [
-        blocker(
-            f"{o.entry.path}: not the file run {run_id} recorded — {drift.why}",
-            fix=_output_way_out(o, drift, area),
-            rule=OPEN_RULE,
+    (`_output_way_out`), and so do the basis and the outcome: without a
+    recorded sha256, or without the file, the comparison cannot run — the
+    technical contract, a check not executable, which states neither that
+    the bytes changed nor that a format duty was broken (runlog itself
+    records an output absent at the end of the run without a sha256);
+    other bytes than the recorded are a deviation whose rule is an open
+    assignment. [] when every file is as recorded."""
+    out = []
+    for o in outputs:
+        drift = output_drift(o)
+        if drift is None:
+            continue
+        compared = drift.cause == OUTPUT_CHANGED
+        out.append(
+            blocker(
+                f"{o.entry.path}: not the file run {run_id} recorded — {drift.why}",
+                fix=_output_way_out(o, drift, area),
+                stated_outcome=None if compared else NOT_EXECUTABLE,
+                rule=OPEN_RULE if compared else TECHNICAL_RULE,
+            )
         )
-        for o in outputs
-        if (drift := output_drift(o)) is not None
-    ]
+    return out
 
 
 def _gone(f: Path, area: Path) -> GateFinding:
