@@ -5,6 +5,7 @@ not read, and a replacement hint — each one finding with its way out."""
 
 from __future__ import annotations
 
+import dataclasses
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ from unittest import mock
 
 from labkit.checks import report_blocks
 from labkit.checks.audit_binding import AuditError
+from labkit.checks.report_review_inputs import review_keys
 from labkit.formats import report_reviews
 from labkit.formats.gate import BLOCKER, TECHNICAL_RULE
 from labkit.gates import report_hold
@@ -107,6 +109,78 @@ class AReportHold(unittest.TestCase):
         )
         self.assertEqual(gap.rule, TECHNICAL_RULE)
 
+    def test_at_the_commit_a_decision_counts_only_with_its_confirmation_staged(self):
+        """What the commit adds to the release of a decided claim: the
+        review and the claim review that upholds its decision count only
+        when the index holds their records — a confirmation left unstaged
+        releases nothing the commit carries."""
+        folder = self.area / "audits" / "report-reviews"
+        claim = report_reviews.ReportClaim(
+            3, "result", "reads as a result", "false-positive", "inside the block"
+        )
+        review = report_reviews.ReportReview(
+            folder / "2026-11-12T10-00-review.toml",
+            "2026-11-12T10:00",
+            "m",
+            *review_keys(self.area, self.report, self.area / "PROTOCOL-x.md"),
+            "",
+            {},
+            False,
+            (claim,),
+        )
+        confirmation = report_reviews.ClaimReview(
+            folder / "2026-11-12T10-30-claim-review.toml",
+            "2026-11-12T10:30",
+            "m",
+            review.path.name,
+            "",
+            False,
+            (
+                report_reviews.ClaimVerdict(
+                    1, report_reviews.claim_decision_digest(claim), "upheld", "so"
+                ),
+            ),
+        )
+
+        def gap(indexed: list[Path]):
+            held = dataclasses.replace(
+                area_evidence(),
+                report_reviews=(review,),
+                claim_reviews=(confirmation,),
+            )
+            sources = report_hold.Sources.blank(
+                self.repo,
+                staged=True,
+                states={self.area: area_state(area=self.area)},
+                held={self.area: held},
+            )
+            with (
+                mock.patch.object(report_hold, "staged_area_gap", return_value=None),
+                mock.patch.object(report_hold, "review_pieces", return_value=[]),
+                mock.patch.object(
+                    report_hold, "review_fingerprint", return_value=("", {})
+                ),
+                mock.patch.object(report_hold, "indexed_files", return_value=indexed),
+            ):
+                return report_hold.review_gap(
+                    self.report,
+                    "REPORT.md",
+                    "",
+                    self.area / "PROTOCOL-x.md",
+                    "",
+                    [],
+                    "owed",
+                    sources,
+                )
+
+        self.assertIsNone(gap([review.path, confirmation.path]))
+        unconfirmed = gap([review.path])
+        assert unconfirmed is not None
+        self.assertIn("not yet judged by a second reviewer", unconfirmed.text)
+        unreviewed = gap([confirmation.path])
+        assert unreviewed is not None
+        self.assertIn("has no clean report review of this state", unreviewed.text)
+
     def test_a_run_of_a_protocol_whose_head_does_not_read_blocks(self):
         sources = self._sources(known={"r1"})
         with mock.patch.object(
@@ -152,7 +226,9 @@ class TheRuleAReviewHoldRecords(unittest.TestCase):
         )
 
     def _hold(self, reviews: list, *, gaps: tuple[str, ...] = ()):
-        stands = report_reviews.standing(reviews, "REPORT.md", "PROTOCOL-x.md", "aa")
+        stands = report_reviews.standing(
+            reviews, "REPORT.md", "PROTOCOL-x.md", "aa", []
+        )
         self.assertFalse(stands.released)
         return report_hold.review_hold(
             "REPORT.md",
@@ -162,6 +238,7 @@ class TheRuleAReviewHoldRecords(unittest.TestCase):
             {"REPORT REPORT.md": "aa"},
             "`labkit-audit --report-review`",
             area_evidence(gaps=gaps),
+            "change the report, or decide the claim",
         )
 
     CLAIM = report_reviews.ReportClaim(

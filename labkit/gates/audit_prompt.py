@@ -74,6 +74,7 @@ AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
 CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"
 REVIEW_AGENT = PACKAGE_DIR / "agents" / "decision-review.agent.md"
 REPORT_AGENT = PACKAGE_DIR / "agents" / "report-review.agent.md"
+CLAIM_AGENT = PACKAGE_DIR / "agents" / "claim-review.agent.md"
 CLARITY = "clarity"
 ANALYSIS = ANALYSIS_AUDIT  # its one spelling is standard_contract's
 STANDARD_LABEL = (
@@ -101,11 +102,13 @@ def instructions(mode: str = "preflight") -> str:
     """The agent's instructions as shipped, without the provenance comment —
     the preflight agent for preflight and analysis, the clarity agent for
     clarity, the decision-review agent for `--review` (`decision_review`),
-    the report-review agent for `--report-review` (`report_review`)."""
+    the report-review agent for `--report-review` (`report_review`), the
+    claim-review agent for `--review` on a report review (`claim_review`)."""
     agent = {
         CLARITY: CLARITY_AGENT,
         "review": REVIEW_AGENT,
         "report": REPORT_AGENT,
+        "claim": CLAIM_AGENT,
     }.get(mode, AGENT)
     return re.sub(
         r"^<!--.*?-->\n", "", agent.read_text(encoding="utf-8"), count=1, flags=re.S

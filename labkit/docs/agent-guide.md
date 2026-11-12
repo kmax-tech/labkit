@@ -154,7 +154,7 @@ REPORT.md`. Say that the question stays open. A report holds one discussion bloc
 3. Run the review.
 4. Commit.
 
-Any later change, a rewrite of the file included, owes a new review. If the reviewer names a wrong claim, correct it and review again. A clean draw on the unchanged state releases nothing. If the area's audit evidence is gone, no review runs. Restore the evidence, or remove the run ids and the discussion block and keep the handover block.
+Any later change, a rewrite of the file included, owes a new review. If the reviewer names a claim that is true, correct the report and review again. A clean draw on the unchanged state releases nothing. If the reviewer misread — the line stands inside a discussion block, the number is the adopted one, the statement agrees with the record —, do not reword a correct text: decide the claim with `labkit-audit <area> --report-review REPORT.md --decide <n> false-positive --why "<the counter-evidence: line, record, number>"`, then run `labkit-audit <area> --review --record <report review file>`. Only a second reviewer's `upheld` releases the report. If it rejects the decision, correct the report or decide again with better evidence; do not draw again on the same decision. A claim cannot be decided `limitation` or `fixed`. If the area's audit evidence is gone, no review runs. Restore the evidence, or remove the run ids and the discussion block and keep the handover block.
 
 Stage the required review records with the commit. `runlog reindex <area>` rebuilds the ignored run index `runs.tsv`.
 

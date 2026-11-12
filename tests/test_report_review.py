@@ -233,7 +233,7 @@ class Command(unittest.TestCase):
         self.assertEqual((rc, calls), (1, 1))
         self.assertIn("CLAIM: ", out)
         self.assertIn("REPORT.md:5: contradiction", out)
-        self.assertIn("the commit holds this state: CLAIM in ", out)
+        self.assertIn("the commit holds this state: CLAIM #1 in ", out)
         (r,) = self.reviews()
         self.assertEqual((r.report, r.protocol), ("REPORT.md", P))
         self.assertEqual([(c.line, c.kind) for c in r.claims], [(5, "contradiction")])
@@ -256,13 +256,13 @@ class Command(unittest.TestCase):
         self.assertIn("an `--again` draw: a claim it names holds the state", out)
         self.assertNotIn("released", out.replace("releases nothing", ""))
         self.assertIn(
-            "report review state: the commit holds this state: CLAIM in ", out
+            "report review state: the commit holds this state: CLAIM #1 in ", out
         )
         first, second = self.reviews()
         self.assertTrue(second.again)
         self.assertEqual(first.fingerprint, second.fingerprint)
         stands = report_reviews.standing(
-            self.reviews(), "REPORT.md", P, second.fingerprint
+            self.reviews(), "REPORT.md", P, second.fingerprint, []
         )
         self.assertFalse(stands.released)
 
@@ -290,7 +290,7 @@ class Command(unittest.TestCase):
         self.assertIn("report review: this draw names 1 claim(s)", out)
         self.assertIn("report review state: the commit holds this state: CLAIM", out)
         stands = report_reviews.standing(
-            self.reviews(), "REPORT.md", P, self.reviews()[-1].fingerprint
+            self.reviews(), "REPORT.md", P, self.reviews()[-1].fingerprint, []
         )
         self.assertFalse(stands.released)
 
@@ -305,7 +305,7 @@ class Command(unittest.TestCase):
         rc, _, _, calls = self.review(MARKED, self.CLEAN)
         self.assertEqual((rc, calls), (0, 1))
         stands = report_reviews.standing(
-            self.reviews(), "REPORT.md", P, self.reviews()[-1].fingerprint
+            self.reviews(), "REPORT.md", P, self.reviews()[-1].fingerprint, []
         )
         self.assertTrue(stands.released)
 
@@ -478,16 +478,18 @@ class Records(unittest.TestCase):
 
         claim = report_reviews.ReportClaim(1, "result", "x")
         standing = report_reviews.standing
-        self.assertFalse(standing([], "REPORT.md", P, "f").released)
-        self.assertTrue(standing([rr("f")], "REPORT.md", P, "f").released)
-        self.assertFalse(standing([rr("f", again=True)], "REPORT.md", P, "f").released)
-        held = standing([rr("f", [claim]), rr("f")], "REPORT.md", P, "f")
+        self.assertFalse(standing([], "REPORT.md", P, "f", []).released)
+        self.assertTrue(standing([rr("f")], "REPORT.md", P, "f", []).released)
+        self.assertFalse(
+            standing([rr("f", again=True)], "REPORT.md", P, "f", []).released
+        )
+        held = standing([rr("f", [claim]), rr("f")], "REPORT.md", P, "f", [])
         self.assertFalse(held.released)
-        self.assertEqual(len(held.claims), 1)
-        other = standing([rr("old")], "REPORT.md", P, "f")
+        self.assertEqual(len(held.holding), 1)
+        other = standing([rr("old")], "REPORT.md", P, "f", [])
         self.assertFalse(other.released)
         self.assertEqual(other.earlier.fingerprint if other.earlier else "", "old")
-        self.assertFalse(standing([rr("f")], "OTHER.md", P, "f").released)
+        self.assertFalse(standing([rr("f")], "OTHER.md", P, "f", []).released)
 
 
 class Cli(unittest.TestCase):

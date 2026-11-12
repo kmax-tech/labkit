@@ -7,6 +7,12 @@ commit holds it, it stays as written:
     audits/<record>.toml   only its findings' decision lines change —
                            `status`, `reason`, `effect`, which `labkit-audit
                            --decide` writes (`findings.without_decisions`)
+    audits/report-reviews/<review>.toml
+                           only its claims' decision lines change
+                           (`report_reviews.without_claim_decisions`); one of
+                           the format without decisions may move, unchanged,
+                           into `report-reviews/superseded/`
+                           (`report_reviews.is_undecided_format`)
     audits/attempts.jsonl  appended to, never cut — `attempts` holds it,
                            against HEAD and against its copy in the git
                            directory; this module leaves it out
@@ -134,6 +140,52 @@ def record_changed(before: str, after: str) -> bool:
     return kept != now
 
 
+def report_review_changed(before: str, after: str) -> bool:
+    """Does AFTER, a report review's text, differ from BEFORE beyond its
+    claims' decision lines (`report_reviews.without_claim_decisions`)? A
+    version whose claims lack those lines is compared whole. Pure."""
+    kept = report_reviews.without_claim_decisions(before)
+    now = report_reviews.without_claim_decisions(after)
+    if kept is None or now is None:
+        return before != after
+    return kept != now
+
+
+def is_report_review(rel: str) -> bool:
+    """Is REL, a path relative to an area, a report review's record
+    (`audits/report-reviews/<minute>-review[-n].toml`) — not a claim review
+    beside it, nothing below the folder? Pure."""
+    parts = rel.split("/")
+    return (
+        len(parts) == 3
+        and parts[:2] == [findings.DIR, report_reviews.FOLDER]
+        and parts[2].endswith(".toml")
+        and not report_reviews.CLAIM_REVIEW_NAME.search(parts[2])
+    )
+
+
+def moved_aside(rel: str, added: set[str], before: str | None) -> bool:
+    """Was REL, a deleted path relative to an area, moved into the folder
+    of superseded report reviews? Yes when ADDED, the paths the same
+    change adds, hold it there (`report_reviews.superseded_name`) and
+    BEFORE, its text, is a review of the format without decisions
+    (`report_reviews.is_undecided_format`) — the one record that may leave
+    its place: this labkit reads no claim of it, so moving it lifts no
+    hold. A record that reads stays where it was written. Pure."""
+    prefix = f"{findings.DIR}/"
+    moved = {
+        prefix + name
+        for path in added
+        if path.startswith(prefix)
+        and (name := report_reviews.superseded_name(path[len(prefix) :])) is not None
+    }
+    return (
+        rel in moved
+        and before is not None
+        and report_reviews.is_undecided_format(before)
+    )
+
+
 def broken(
     entries: list[tuple[str, str]],
     closed: set[str],
@@ -148,37 +200,52 @@ def broken(
     (`attempts.gaps` names one against HEAD); and per run CLOSED in the
     earlier state its paths changed or deleted, each as (path in the run's
     folder, how). TEXTS reads a record's two versions (earlier, later): one
-    whose decisions alone changed breaks nothing. UNDONE tells a later
+    whose decisions alone changed breaks nothing, nor does a report review
+    whose claims' decisions alone changed (`report_review_changed`) or one
+    moved aside (`moved_aside`). UNDONE tells a later
     version that is back as labkit first committed it (`original`): a
     restore breaks nothing either. Pure apart from TEXTS and UNDONE."""
     audits: list[tuple[str, str]] = []
     runs: dict[str, list[tuple[str, str]]] = {}
+    added = {rel for letter, rel in entries if letter == "A"}
     for letter, rel in entries:
         how = _HOW.get(letter)
         run = run_of(rel)
-        parts = rel.split("/")
         if how is None or (run is not None and run not in closed):
             continue
-        if run is None and (
-            parts[0] != findings.DIR or rel == f"{findings.DIR}/{JOURNAL}"
-        ):
-            continue
-        what = how
-        if how == "changed" and run is None and len(parts) == 2:
-            if findings.is_record_name(parts[1]):
-                before, after = texts(rel)
-                if before and after and not record_changed(before, after):
-                    continue
-                what = "record"
-        if how == "deleted" and run is None and not deletions:
-            continue
-        if how == "changed" and undone(rel):
-            continue
         if run is not None:
-            runs.setdefault(run, []).append((rel.split("/", 2)[2], how))
-        else:
+            if how == "deleted" or not undone(rel):
+                runs.setdefault(run, []).append((rel.split("/", 2)[2], how))
+            continue
+        if rel.split("/")[0] != findings.DIR or rel == f"{findings.DIR}/{JOURNAL}":
+            continue
+        if how == "deleted":
+            if deletions and not moved_aside(rel, added, texts(rel)[0]):
+                audits.append((rel, how))
+            continue
+        what = _changed_audit_file(rel, texts)
+        if what is not None and not undone(rel):
             audits.append((rel, what))
     return audits, runs
+
+
+def _changed_audit_file(
+    rel: str, texts: Callable[[str], tuple[str | None, str | None]]
+) -> str | None:
+    """What the changed audit file REL (relative to an area) is, for
+    `broken`'s sentence — "record" or "report review" when it changed
+    beyond its decision lines, "changed" for any other audit file — or
+    None when a record's or a report review's decisions alone changed
+    (TEXTS reads the two versions)."""
+    parts = rel.split("/")
+    is_record = len(parts) == 2 and findings.is_record_name(parts[1])
+    if not is_record and not is_report_review(rel):
+        return "changed"
+    before, after = texts(rel)
+    changed = record_changed if is_record else report_review_changed
+    if before and after and not changed(before, after):
+        return None
+    return "record" if is_record else "report review"
 
 
 def told(
@@ -207,6 +274,17 @@ def told(
                     "decision changes it",
                     f"restore it ({checkout(rel)}), then decide with the "
                     f"`--decide` command `{audit_command(area, '--findings')}` prints",
+                )
+            )
+        elif what == "report review":
+            out.append(
+                (
+                    f"{rel}: changed beyond its claims' decision lines {where} — "
+                    "a report review keeps what the reader wrote; only a "
+                    "decision on a claim changes it",
+                    f"restore it ({checkout(rel)}), then decide the claim with "
+                    f"`{audit_command(area)} --report-review <REPORT> --decide N "
+                    f'false-positive --why "<why>" --record {Path(rel).name}`',
                 )
             )
         else:
@@ -690,7 +768,12 @@ class AreaEvidence:
         report_reviews: The area's report reviews, oldest first
             (`report_reviews.area_report_reviews`, the tree's), () when one
             does not read.
-        report_reviews_unread: Why the report reviews could not be read, "".
+        report_reviews_unread: Why the report reviews or the claim reviews
+            could not be read, "".
+        claim_reviews: The area's claim reviews — a second reviewer's
+            verdicts on decided claims —, oldest first
+            (`report_reviews.area_claim_reviews`, the tree's), () when a
+            report review or a claim review does not read.
         handed_over_entries: The findings any handover record of the area lists as
             left over (`handovers.handed_over`, as `handovers.entry` spells
             them), frozenset() when a record does not read.
@@ -708,6 +791,7 @@ class AreaEvidence:
     report_reviews_unread: str = ""
     handed_over_entries: frozenset[str] = frozenset()
     handovers_unread: str = ""
+    claim_reviews: tuple[report_reviews.ClaimReview, ...] = ()
 
     @property
     def problems(self) -> tuple[str, ...]:
@@ -745,9 +829,14 @@ def read_evidence(area: Path, staged: bool) -> AreaEvidence:
         reviews_unread = str(exc)
     found_report_reviews: tuple[report_reviews.ReportReview, ...] = ()
     report_reviews_unread = ""
+    found_claim_reviews: tuple[report_reviews.ClaimReview, ...] = ()
     try:
         found_report_reviews = tuple(report_reviews.area_report_reviews(area))
-    except report_reviews.ReportReviewError as exc:
+        found_claim_reviews = tuple(report_reviews.area_claim_reviews(area))
+    except (report_reviews.ReportReviewError, findings.FindingsError) as exc:
+        # FindingsError: a file in the folder whose name tells no age
+        # (`findings.written_order`)
+        found_report_reviews, found_claim_reviews = (), ()
         report_reviews_unread = str(exc)
     handed: frozenset[str] = frozenset()
     handovers_unread = ""
@@ -767,4 +856,5 @@ def read_evidence(area: Path, staged: bool) -> AreaEvidence:
         report_reviews_unread,
         handed,
         handovers_unread,
+        found_claim_reviews,
     )

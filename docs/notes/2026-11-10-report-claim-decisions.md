@@ -1,6 +1,6 @@
 # Decisions on report-review claims — the contract (2026-11-10)
 
-> Status: decided by the author on 2026-11-11, with three corrections from an independent reading (the confirmation by a second reviewer is the rule, the way on after a rejection, the old records); nothing built. The rule: LAB-015 Preflight audit before freezing, "A decision that releases a BLOCKER is confirmed by a second auditor".
+> Status: decided by the author on 2026-11-11, with three corrections from an independent reading (the confirmation by a second reviewer is the rule, the way on after a rejection, the old records); built on 2026-11-12 (`labkit/gates/claim_review.py`, section "As built" at the end). The rule: LAB-015 Preflight audit before freezing, "A decision that releases a BLOCKER is confirmed by a second auditor".
 
 ## The problem
 
@@ -48,3 +48,13 @@ Through the real commands, each with its twin:
 4. An `--again` draw does not release an open claim, and a claim it adds holds until decided.
 5. A record without `status` is refused with the sentence naming the version that reads it and the move that keeps it; after the move the new review runs, and no gate holds the moved record as lost.
 6. A `false-positive` the reviewer rejected is not released by another draw; the same claim decided again with a revised reason is released once a review upholds that decision, and the earlier rejection still reads in its record.
+
+## As built (2026-11-12)
+
+The six acceptance cases run in `tests/test_claim_review.py`, the rules from data in `tests/test_rules_report_claims.py`. Where the build departs from the text above or settles what it left open:
+
+- **The decision's command** takes its reason with `--why`, as a finding's does: `labkit-audit AREA --report-review REPORT --decide N false-positive --why "REASON" [--record FILE]`. Without `--record` it takes the one review of the current state that names a claim. A record that read another state is refused: its claims hold nothing any more.
+- **The moved record (point 6).** The hold on lost audit evidence did name a moved record as gone, at three places: the attempt journal's check of the tree and of the index (`attempts.area_gaps`), and the check of each commit of a session (`evidence.commit_changes`). The exception is narrow: only a record of the format without decisions counts as moved (`report_reviews.is_undecided_format`), read from the state checked. A record this labkit reads that is moved into `superseded/` is still named as gone — moving it would lift the hold its claim places.
+- **Decision lines are the one change a committed review record takes** (`evidence.report_review_changed`), as for an audit record's findings; a claim review's file never changes.
+- **The second reviewer's call** is journaled under the mode `report-review-claim`. The name contains `report-review`, so a handover leaves its journal lines and files out of what it binds, as it does the report review's.
+- **Not built, and not measured:** whether a model judges such a decision right. The instructions (`labkit/agents/claim-review.agent.md`) have met no real model; the release condition is what is guaranteed.

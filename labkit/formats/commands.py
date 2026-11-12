@@ -259,6 +259,29 @@ def report_review_command(area: Path, report: Path, protocol: Path) -> Command:
     return Command(REVIEW, line)
 
 
+def claim_decide_command(
+    area: Path, report: Path, n: int, record: str, protocol: Path
+) -> Command:
+    """The line that decides claim N of the report review RECORD (its file
+    name) on REPORT `false-positive`, the one decision a claim takes
+    (`report_reviews.claim_refusal`): `labkit-audit … --report-review
+    REPORT --decide N false-positive --why "<why>" --record RECORD`, the
+    reason a placeholder the reader replaces."""
+    return Command(
+        DECIDE,
+        f"{report_review_command(area, report, protocol)} --decide {n} "
+        f'false-positive --why "<why>" --record {shlex.quote(record)}',
+    )
+
+
+def claim_review_command(area: Path, record: str, protocol: Path) -> Command:
+    """The line that has a second reviewer judge the decided claims of the
+    report review RECORD (its file name): `labkit-audit … --review --record
+    RECORD` (`gates/claim_review`)."""
+    line = audit_command(area, "--review", "--record", record, protocol=protocol).line
+    return Command(REVIEW, line)
+
+
 def into_command(protocol: Path, report: Path) -> Command:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them

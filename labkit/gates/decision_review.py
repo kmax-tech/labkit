@@ -344,11 +344,15 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     )
 
 
-def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
+def parse_review(
+    report: str, numbers: list[int], *, subject: str = "finding"
+) -> list[tuple[int, str, str]]:
     """(number, verdict, why) per decision line before the LAST closing
     line, held to NUMBERS: every number once, no other, and the closing
     counts equal to the lines. Raises AuditError otherwise — nothing is
-    recorded from a report that disagrees with itself."""
+    recorded from a report that disagrees with itself. SUBJECT names what
+    is decided on in the refusal: a record's `finding`, or a report
+    review's `claim` (`claim_review`, the same reply form)."""
     m = audit_reply.last_verdict(VERDICT, report, "the report", "a review")
     body = (report or "")[: m.start()]
     lines = [
@@ -358,8 +362,8 @@ def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
     got = [n for n, _, _ in lines]
     if sorted(got) != sorted(numbers) or len(set(got)) != len(got):
         raise AuditError(
-            f"the report decides on findings {got}, the record asked about {numbers} "
-            f"— one DECISION line per finding under review, no other",
+            f"the report decides on {subject}s {got}, the record asked about {numbers} "
+            f"— one DECISION line per {subject} under review, no other",
             fix=ANSWER_AGAIN,
         )
     counts = tuple(

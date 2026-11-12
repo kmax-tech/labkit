@@ -70,6 +70,8 @@ from labkit.formats.repo import (
 from labkit.formats.commands import (
     adopt_command,
     audit_command,
+    claim_decide_command,
+    claim_review_command,
     into_command,
     report_review_command,
     stage_command,
@@ -872,10 +874,14 @@ def review_gap(
         if held.report_reviews_unread:
             raise report_reviews.ReportReviewError(held.report_reviews_unread)
         found = list(held.report_reviews)
+        confirmed = list(held.claim_reviews)
         if staged:
             carried = set(indexed_files(repo))
             found = [r for r in found if r.path.resolve() in carried]
-        stands = report_reviews.standing(found, report_key, protocol_key, whole)
+            confirmed = [c for c in confirmed if c.path.resolve() in carried]
+        stands = report_reviews.standing(
+            found, report_key, protocol_key, whole, confirmed
+        )
     except (
         AuditError,
         findings.FindingsError,
@@ -891,7 +897,8 @@ def review_gap(
     if stands.released:
         return None
     # lost audit evidence, then claims, then no clean review (`review_hold`)
-    return review_hold(rel, protocol, owed_because, stands, parts, command, held)
+    ways = claim_ways(stands, area, path, protocol) if stands.holding else ""
+    return review_hold(rel, protocol, owed_because, stands, parts, command, held, ways)
 
 
 @dataclass(frozen=True)
@@ -924,6 +931,45 @@ def lost_evidence(protocol: Path, held: evidence.AreaEvidence) -> LostEvidence |
     )
 
 
+def claim_ways(
+    standing: report_reviews.Standing, area: Path, report: Path, protocol: Path
+) -> str:
+    """The two ways out of the claims that hold STANDING's state, for
+    REPORT under PROTOCOL in AREA: change the report or a source the
+    reviewer read and review that state; or, when the reviewer misread,
+    the decision `false-positive` and its confirmation, each as its
+    command — for the first claim still open, and for the first decided
+    one no second reviewer judged as it stands. A decision a reviewer did
+    not uphold is decided again, with the evidence in the reason. The one
+    sentence `--report-review`'s refusal, its state line
+    (`report_review.state_line`) and report-check's hold (`review_hold`)
+    give."""
+    ways = [
+        "change the report, or a source the reviewer read, so that no claim "
+        f"holds, then review that state (`{report_review_command(area, report, protocol)}`)"
+    ]
+    undecided = next(
+        (h for h in standing.holding if h.claim.status == report_reviews.OPEN), None
+    )
+    decided = next(
+        (h for h in standing.holding if h.claim.status != report_reviews.OPEN), None
+    )
+    if undecided is not None:
+        ways.append(
+            "where the reviewer misread, decide the claim with the counter-evidence "
+            f"as its reason (`{claim_decide_command(area, report, undecided.n, undecided.review.path.name, protocol)}`) "
+            "— a second reviewer then confirms the decision"
+        )
+    if decided is not None:
+        ways.append(
+            "a decided claim holds until a second reviewer upholds the decision "
+            f"(`{claim_review_command(area, decided.review.path.name, protocol)}`, "
+            "one model call); one a reviewer did not uphold is decided again with "
+            "a revised reason, and no further draw releases the same decision"
+        )
+    return "; or ".join(ways)
+
+
 def review_hold(
     rel: str,
     protocol: Path,
@@ -932,13 +978,17 @@ def review_hold(
     parts: dict[str, str],
     command: str,
     held: evidence.AreaEvidence,
+    ways: str,
 ) -> GateFinding:
     """The BLOCKER of a report no review releases: first, while the area's
     audit evidence is gone, that no review can run and the way out that
     works (`lost_evidence` — before any claims of this state, since no
-    review can answer them then); else the claims that hold this state
-    (LAB_015: no further draw releases it); else that it has no clean
-    review (LAB_104). REL is the report, HELD_FOR why it
+    review can answer them then); else the claims that hold this state,
+    each with where its decision stands, and WAYS, the two ways out
+    (`claim_ways`: a changed state reviewed, or the decision
+    `false-positive` a second reviewer upholds — LAB_015: no further draw
+    releases a claim or a decision not upheld); else that it has no clean
+    review (LAB_104). REL is the report, OWED_BECAUSE why it
     owes a review of PROTOCOL's area (its discussion, or the head
     registering it), STANDS where the report stands, PARTS the state's
     fingerprint parts, COMMAND the review to run.
@@ -953,15 +1003,15 @@ def review_hold(
             fix=lost.fix,
             rule=TECHNICAL_RULE,
         )
-    if stands.claims:
+    if stands.holding:
         return blocker(
             f"{rel}: the report review holds this state ({owed_because}) — "
             f"{held_by(stands)}",
-            fix=f"change the report, or a source the reviewer read, so that "
-            f"no claim holds, then review that state: {command} (another "
-            f"draw on this state, `--again` included, releases nothing)",
+            fix=f"{ways} (another draw on this state, `--again` included, "
+            f"releases nothing)",
             # LAB_015's text states it: a claim the report review names
-            # holds until the report or what it cites changes
+            # holds until the report or what it cites changes, or until it
+            # is decided false-positive and a second reviewer upholds that
             rule=LAB_015,
         )
     since = (

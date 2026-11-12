@@ -7,6 +7,10 @@
     labkit-audit <AREA> --review [--record FILE] [--again]   (`gates/decision_review`)
     labkit-audit <AREA> --report-review REPORT [--again] [--protocol FILE]
                                                      (`gates/report_review`)
+    labkit-audit <AREA> --report-review REPORT --decide N false-positive --why REASON
+                 [--record FILE]                     (`gates/claim_review`)
+    labkit-audit <AREA> --review --record <report review file> [--again]
+                                                     (`gates/claim_review`)
 
 The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
 (analysis, before a number leaves) as one command, the only runner. The
@@ -144,7 +148,9 @@ AUDIT_EXIT_CONTRACT = (
     "(the commit counts the record once it is staged), 1 after a draw the commit "
     "holds it (a claim on it, this draw's or an earlier one's, or only --again "
     "draws saw it), 2 no review (a claimed state without --again is refused "
-    "with no call)"
+    "with no call); --report-review with --decide: 0 the decision on the claim "
+    "is stored, 2 it is refused; --review --record <report review>: as --review, "
+    "for the decided claims of that report review"
 )
 
 
@@ -324,7 +330,12 @@ def main(argv: list[str]) -> int:
         metavar=("N", "STATUS"),
         help="store your decision on finding N of the newest record: STATUS "
         f"({' | '.join(s for s in findings.STATUSES if s != 'open')}), its reason "
-        f"with --why (owed for {', '.join(findings.REASON_OWED)}); no audit runs",
+        f"with --why (owed for {', '.join(findings.REASON_OWED)}); no audit runs. "
+        "With --report-review REPORT: your decision on claim N of the report "
+        "review (--record, else the one review of this state that names a "
+        "claim) — false-positive, the counter-evidence with --why (open takes "
+        "the decision back; limitation and fixed are refused); a "
+        "second reviewer confirms it (--review --record <that review>)",
     )
     ap.add_argument(
         "--why",
@@ -362,7 +373,10 @@ def main(argv: list[str]) -> int:
         "--record) that owe one — a finding decided `limitation` with effect `stands`, a finding "
         "closed after a review did not uphold a decision on it, a carried finding "
         "closed false-positive: does the reported claim stand? writes "
-        "audits/<minute>-review.toml",
+        "audits/<minute>-review.toml. With --record naming a report review "
+        "(audits/report-reviews/<minute>-review.toml): a second reviewer on its "
+        "claims decided false-positive — did the first reviewer misread? writes "
+        "audits/report-reviews/<minute>-claim-review.toml",
     )
     ap.add_argument(
         "--report-review",
@@ -372,7 +386,8 @@ def main(argv: list[str]) -> int:
         "discussion block): does it state such a run's numbers as results, or what "
         "the audits contradict? writes audits/report-reviews/<minute>-review.toml, "
         "bound to the inputs it read; report-check holds the report until a review "
-        "of its state names no claim",
+        "of its state names no claim, or every claim named is decided "
+        "false-positive (with --decide) and upheld by a second reviewer",
     )
     ap.add_argument(
         "--again",
@@ -630,8 +645,11 @@ def _stamp_report(
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Exactly one of --mode (audit), --decide (store a decision), --findings
     (show what there is to decide), --review (a second auditor on the
-    decisions) and --report-review (a cold reader on a report); --record
-    never with --mode or --report-review; an unset --model becomes the
+    decisions) and --report-review (a cold reader on a report) — but
+    --decide with --report-review is one step, the decision on a report
+    review's claim; --record never with --mode or with --report-review
+    alone; --not-assessable and --again never with a claim's decision; an
+    unset --model becomes the
     lab's `[audit] model` (`llm.audit_alias`), else DEFAULT_MODEL. A usage
     error, an `[audit]` that does not read included, exits 2 through
     argparse."""
@@ -642,9 +660,10 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
             args.model = DEFAULT_MODEL  # no models.toml: the call itself says so
         except ValueError as exc:
             ap.error(str(exc))
+    claim_decision = args.decide is not None and args.report_review is not None
     chosen = [
         args.mode is not None,
-        args.decide is not None,
+        args.decide is not None and not claim_decision,
         args.findings,
         args.review,
         args.report_review is not None,
@@ -653,12 +672,18 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
         ap.error(
             "give --mode to audit, --decide N STATUS --why REASON to decide, --findings "
             "to show what there is to decide, --review to review the decisions, or "
-            "--report-review REPORT to read a finished report — one of them"
+            "--report-review REPORT to read a finished report — one of them "
+            "(--report-review REPORT with --decide decides a claim of its review)"
         )
     if args.record is not None and (
-        args.mode is not None or args.report_review is not None
+        args.mode is not None or (args.report_review is not None and not claim_decision)
     ):
         ap.error("--record goes with --decide, --findings or --review")
+    if claim_decision and (args.not_assessable or args.again):
+        ap.error(
+            "a claim's decision takes --why and --record: --not-assessable belongs "
+            "to a finding's limitation, --again to a review"
+        )
     if (args.why or args.not_assessable) and args.decide is None:
         ap.error("--why and --not-assessable go with --decide")
     if args.again and not (args.review or args.report_review is not None):
@@ -669,7 +694,32 @@ def _without_audit(args: argparse.Namespace) -> int:
     """`--decide`, `--findings`, `--review` or `--report-review`: the calls
     that run no audit of the area (the reviews are one model call each: on a
     record's decisions, `decision_review.review`; on a finished report,
-    `report_review.review_report`)."""
+    `report_review.review_report`; on the decided claims of a report
+    review, when `--record` names one, `claim_review.review_claims`).
+    `--report-review` with `--decide` stores the decision on a claim
+    (`claim_review.decide_claim`)."""
+    from labkit.gates import claim_review
+
+    if args.report_review is not None and args.decide is not None:
+        return claim_review.decide_claim(
+            args.area,
+            args.report_review,
+            args.decide,
+            args.why,
+            args.record,
+            args.protocol,
+        )
+    report_review_path = claim_review.report_review_named(args.area, args.record)
+    if args.review and report_review_path is not None:
+        return claim_review.review_claims(
+            args.area,
+            args.protocol,
+            report_review_path,
+            args.model,
+            args.timeout,
+            args.out,
+            again=args.again,
+        )
     if args.report_review is not None:
         from labkit.gates.report_review import review_report
 

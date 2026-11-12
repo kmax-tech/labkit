@@ -93,6 +93,7 @@ from typing import IO
 from labkit.formats.commands import checkout_command
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
+from labkit.formats import report_reviews
 from labkit.formats.files import lock_held, write_atomic, write_atomic_bytes
 from labkit.formats.findings import ANSWERS, DIR, JOURNAL
 from labkit.formats.gate import with_way_out
@@ -714,7 +715,10 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     (`restore_way`, from the evidence copy where it keeps one; a loss a
     handover recorded its `restore_command`, or NOTHING_KEEPS — the
     handover is written already). A handover record that does not read
-    is one more blocker beside the others, never in their place. Raises
+    is one more blocker beside the others, never in their place. A report
+    review of the format without decisions that lies in the folder of
+    superseded reviews counts as held where it was written, in the state
+    checked and in HEAD (`places_moved_from`): it was moved, not lost. Raises
     AttemptError on a journal that does not read, RuntimeError when git
     fails."""
     if staged:
@@ -726,6 +730,8 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         attempts = parse_journal(now, f"{DIR}/{JOURNAL}")
         present = _paths_under(area / DIR)
     at_head, journal_at_head = _git_paths(area, "HEAD")
+    aside = places_moved_from(area, present, staged=staged)
+    present, at_head = present | aside, at_head | aside
     kept = kept_files(area)
     in_tree = _paths_under(area / DIR) if staged else set()
     copy = journal_copy(area)
@@ -780,6 +786,36 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         # them
         lost = [str(exc)]
     return Gaps([*found.blockers, *lost_here, *lost], found.notes)
+
+
+def places_moved_from(area: Path, present: set[str], *, staged: bool) -> set[str]:
+    """The paths under AREA's audits/ a report review was written at and
+    moved from, into the folder of superseded reviews
+    (`report_reviews.superseded_name`), among PRESENT — the paths the
+    state checked holds, the index's when STAGED. Only a review of the
+    format without decisions counts (`report_reviews.is_undecided_format`,
+    its text read from that state): this labkit reads no claim of it, so
+    its move lifts no hold, while a record that reads and went there is
+    still named as gone from its place. A file that is not UTF-8 is none.
+    Raises RuntimeError when git fails."""
+    root = git_root(area) if staged else None
+    out: set[str] = set()
+    for rel in present:
+        written_at = report_reviews.superseded_name(rel)
+        if written_at is None:
+            continue
+        path = area / DIR / rel
+        try:
+            text = (
+                text_at(root, path, INDEX_REV)
+                if root is not None
+                else path.read_text(encoding="utf-8")
+            )
+        except UnicodeError:
+            continue
+        if text is not None and report_reviews.is_undecided_format(text):
+            out.add(written_at)
+    return out
 
 
 def _copy_text(copy: Path | None) -> str | None:

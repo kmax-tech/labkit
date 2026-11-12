@@ -227,7 +227,11 @@ lines, each as the protocol renders them; it refuses while the question or
 the Conclusion is not written. For a run only discussed, use
 `protocol-fill PROTOCOL --discuss RUN_ID --why "REASON" --into REPORT.md`.
 Then `labkit-audit AREA --report-review REPORT.md` writes the required
-semantic review for the final state.
+semantic review for the final state. A claim it names holds that state:
+change the report or the source it goes against and review again — or,
+when the reviewer misread, decide the claim (`--report-review REPORT.md
+--decide N false-positive --why "REASON"`) and have a second reviewer
+confirm the decision (`--review --record <report review file>`).
 
 **Done / way out:** generated blocks match their sources and any required
 review names no unsupported claim. A registered report takes its final

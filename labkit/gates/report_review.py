@@ -28,13 +28,16 @@ before the commit is named, so the state stays held once the record is
 gone. report-check holds a report with a
 discussion block, and the report a protocol's head registers once it
 carries its result or handover block, until a review of exactly that
-state names no claim (`report_hold.report_review_owed`,
-`registered_report.report_owed`); a claim holds the state, and a later clean
+state releases it (`report_hold.report_review_owed`,
+`registered_report.report_owed`, `report_reviews.standing`); a claim holds
+the state, and a later clean
 draw does not release it. A research note citing a run is not held: it
 owes a review only when it discusses one, and may be reviewed by hand.
 On a state a review
 already judged the command makes no new call: after a claim, change the
-report or a source the reviewer read; after a clean review there is
+report or a source the reviewer read — or, when the reviewer misread,
+decide the claim `false-positive` and have a second reviewer uphold that
+(`gates/claim_review`); after a clean review there is
 nothing to do. `--again` draws once more on such a state, to see how the
 reviewer's answers spread; its record counts like any review's — a claim
 it names holds the state — and it releases nothing: a clean `--again`
@@ -47,8 +50,9 @@ and the exit code is the state's: a clean draw on a held state is no
 Exit codes (the state's, by the release rule report-check holds the
 report to, `report_reviews.standing`; at the commit only the records the
 index holds count): 0 the state is
-released — a review that is no `--again` draw saw it and no review of it
-named a claim (this call's, or one before it: nothing to do; the commit
+released — a review that is no `--again` draw saw it and every claim a
+review of it named is decided `false-positive` and upheld (this call's, or
+one before it: nothing to do; the commit
 counts the record once it is staged); 1 after a draw, the commit holds
 the state — a claim on it, this draw's or an earlier one's, or only
 `--again` draws saw it; 2 no review — a discussed run with no
@@ -213,22 +217,19 @@ def review_report(
         prompt, discussed, pieces = gather_report(area, report, chosen)
         whole, parts = report_hold.review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, report, chosen)
-        standing = report_reviews.standing(
-            report_reviews_of(area), report_key, protocol_key, whole
-        )
-        if not again and standing.claims:
+        standing = state_after(area, report_key, protocol_key, whole)
+        if not again and standing.holding:
             raise AuditError(
                 f"{report_key}: this state is held by {held_by(standing)} — another "
                 f"draw settles nothing",
-                fix="change the report, or a source the reviewer read, so that the "
-                "claim no longer holds, then run this command again on that state "
-                "(`--again` draws once more on this one: its claims hold it too, "
-                "and it releases nothing)",
+                fix=f"{report_hold.claim_ways(standing, area, report, chosen)} (`--again` draws "
+                "once more on this state: its claims hold it too, and it releases "
+                "nothing)",
             )
         if not again and standing.released:
             print(
-                f"report review: {report_key} in this state is reviewed, no claim "
-                f"({standing.on_state[-1].path.name}) — nothing to do"
+                f"report review: {report_key} in this state is reviewed and "
+                f"released ({standing.on_state[-1].path.name}) — nothing to do"
             )
             return 0
         # `attempts.begin` refuses it all the same, but its refusal names
@@ -296,29 +297,26 @@ def state_after(
     area: Path, report_key: str, protocol_key: str, whole: str
 ) -> report_reviews.Standing:
     """Where the state of REPORT_KEY under PROTOCOL_KEY (its fingerprint
-    WHOLE) stands after the review just written, read back from every
-    record of AREA (`report_reviews.standing`) — what the command's exit
-    code and its state line say, not the draw alone."""
-    return report_reviews.standing(
-        report_reviews_of(area), report_key, protocol_key, whole
-    )
-
-
-def report_reviews_of(area: Path) -> list[report_reviews.ReportReview]:
-    """AREA's report reviews from its audit evidence read once
-    (`evidence.read_evidence`); raises `report_reviews.ReportReviewError`
-    with the sentence when one does not read, as the reader did."""
+    WHOLE) stands, read from every record of AREA — its report reviews and
+    the claim reviews on their decisions (`report_reviews.standing`): what
+    the command refuses a draw on, and after the review just written what
+    its exit code and its state line say, not the draw alone. Raises
+    `report_reviews.ReportReviewError` with the sentence when a record
+    does not read, as the reader did."""
     held = evidence.read_evidence(area, staged=False)
     if held.report_reviews_unread:
         raise report_reviews.ReportReviewError(held.report_reviews_unread)
-    return list(held.report_reviews)
+    return report_reviews.standing(
+        held.report_reviews, report_key, protocol_key, whole, held.claim_reviews
+    )
 
 
 def state_line(
     standing: report_reviews.Standing, area: Path, report: Path, protocol: Path
 ) -> str:
     """STANDING in words, with the step that answers it: released, held by a
-    claim — this draw's or an earlier one's on the same state — or owed a
+    claim — this draw's or an earlier one's on the same state, with the two
+    ways out (`report_hold.claim_ways`) — or owed a
     review that is no `--again` draw (the command for REPORT under PROTOCOL
     in AREA). Printed apart from the draw's own claims: a clean `--again`
     draw on a held state would read as released while the commit stays
@@ -328,11 +326,10 @@ def state_line(
             "this state is released (the commit counts the review record "
             "once it is staged)"
         )
-    if standing.claims:
+    if standing.holding:
         return (
-            f"the commit holds this state: {held_by(standing)}; change the report, "
-            f"or a source the reviewer read, so that no claim holds, then review "
-            f"that state"
+            f"the commit holds this state: {held_by(standing)}; "
+            f"{report_hold.claim_ways(standing, area, report, protocol)}"
         )
     return (
         f"the commit holds this state: only a review that is no `--again` draw "

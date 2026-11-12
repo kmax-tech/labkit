@@ -1693,7 +1693,14 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
     return tuple(out)
 
 
-_FINDING_HEADER = re.compile(r"^\s*\[\[\s*finding\s*\]\]\s*(?:#.*)?$")
+def array_header(name: str) -> re.Pattern[str]:
+    """The line that opens one `[[NAME]]` table of a record: what tells the
+    tables whose decision lines are rewritten (`[[finding]]` here,
+    `[[claim]]` in a report review, `report_reviews`)."""
+    return re.compile(rf"^\s*\[\[\s*{re.escape(name)}\s*\]\]\s*(?:#.*)?$")
+
+
+_FINDING_HEADER = array_header("finding")
 _TABLE_HEADER = re.compile(r"^\s*\[")
 #: a one-line `status = …`, `reason = …` or `effect = …` — the lines a
 #: decision rewrites
@@ -1727,10 +1734,11 @@ def _closing(rest: str, delim: str) -> int | None:
 
 
 def _decision_lines(
-    lines: list[str], n: int
+    lines: list[str], n: int, header: re.Pattern[str] = _FINDING_HEADER
 ) -> dict[str, tuple[int, int, str, str]] | None:
     """{"status": (first, end, head, tail), "reason": …, "effect": … when it
-    stands} of the N-th `[[finding]]` table in LINES: the value spans
+    stands} of the N-th table HEADER opens in LINES (`[[finding]]` unless
+    said otherwise): the value spans
     lines[first:end], HEAD is the text before it (`reason = `), TAIL the
     text after it on its last line (a comment). A value is a one-line TOML
     string or a multi-line one; None when status or reason is missing or a
@@ -1741,7 +1749,7 @@ def _decision_lines(
     i = 0
     while i < len(lines):
         line = lines[i]
-        if _FINDING_HEADER.match(line):
+        if header.match(line):
             seen += 1
             inside = seen == n
         elif _TABLE_HEADER.match(line):
@@ -1766,23 +1774,49 @@ def _decision_lines(
     return at if {"status", "reason"} <= set(at) else None
 
 
-def without_decisions(text: str) -> str | None:
+def without_decisions(
+    text: str, header: re.Pattern[str] = _FINDING_HEADER
+) -> str | None:
     """TEXT, a record's, with every finding's decision lines removed —
     `status`, `reason` and `effect`, a multi-line value whole: what
     `write_decision` keeps byte for byte. Two versions of one record whose
     results are equal differ in decisions alone (`evidence.AreaEvidence.change_sentences`). None
     when a finding lacks the status and reason lines labkit-audit writes,
-    or a multi-line value never closes. Pure."""
+    or a multi-line value never closes. HEADER opens the tables decided:
+    `[[finding]]`, or a report review's `[[claim]]`
+    (`report_reviews.without_claim_decisions`). Pure."""
     lines = text.splitlines(keepends=True)
-    count = sum(1 for line in lines if _FINDING_HEADER.match(line))
+    count = sum(1 for line in lines if header.match(line))
     dropped: set[int] = set()
     for n in range(1, count + 1):
-        at = _decision_lines(lines, n)
+        at = _decision_lines(lines, n, header)
         if at is None:
             return None
         for first, end, _, _ in at.values():
             dropped.update(range(first, end))
     return "".join(line for i, line in enumerate(lines) if i not in dropped)
+
+
+def with_decision(
+    text: str, n: int, status: str, reason: str, header: re.Pattern[str]
+) -> str | None:
+    """TEXT, a record's, with the `status` and `reason` lines of the N-th
+    table HEADER opens set to STATUS and REASON — each value on one line
+    (`toml_string`), a multi-line one replaced whole, every other byte
+    kept. None when that table lacks one of the two lines or a multi-line
+    value never closes. The rewrite of a decision without an effect: a
+    report review's claim (`report_reviews.write_claim_decision`). Pure."""
+    lines = text.splitlines(keepends=True)
+    at = _decision_lines(lines, n, header)
+    if at is None:
+        return None
+    values = {"status": status, "reason": reason}
+    for key in sorted(values, key=lambda k: -at[k][0]):
+        first, end, head, tail = at[key]
+        last = lines[end - 1]
+        ending = last[len(last.splitlines()[0]) :] or "\n"
+        lines[first:end] = [head + _s(values[key]) + tail + ending]
+    return "".join(lines)
 
 
 def write_decision(
@@ -1929,10 +1963,11 @@ def _head(r: Record) -> tuple:
     )  # fmt: skip
 
 
-#: the name `create_file` gives a record, a failed attempt or a review:
+#: the name `create_file` gives a record, a failed attempt or a review (a
+#: decision review, a report review, a claim review under `report-reviews/`):
 #: `<minute>-<mode>[-<n>]` and its suffix, n counting the files of one minute
 _WRITTEN_NAME = re.compile(
-    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?P<mode>{'|'.join(MODES)}|review)(?:-(?P<n>\d+))?"
+    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?P<mode>{'|'.join(MODES)}|claim-review|review)(?:-(?P<n>\d+))?"
     rf"(?P<failed>{re.escape(FAILED_SUFFIX)})?(?(failed)|\.toml)$"
 )
 

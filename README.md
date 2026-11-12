@@ -166,6 +166,8 @@ labkit-audit AREA --decide N STATUS --why REASON [--not-assessable IDS] [--recor
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw on a judged state — its verdicts count, it lifts no hold; the exit is the state's, as without --again)
 labkit-audit AREA --report-review REPORT                   # a cold reader on a report: does it present as a result what the protocol has not adopted, or what the audits or the adopted result contradict? Owed by a report with a discussion block and by the report the head registers
+labkit-audit AREA --report-review REPORT --decide N false-positive --why REASON [--record FILE]   # your decision on claim N of the report review, when the reader misread: the counter-evidence as the reason; `limitation` and `fixed` are refused
+labkit-audit AREA --review --record REPORT-REVIEW-FILE     # a second reviewer on the claims decided false-positive; only its `upheld` releases the report
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas, citing reports, and the report a protocol head registers (owed its result block or handover block once delivered)
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs

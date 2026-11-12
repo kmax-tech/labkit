@@ -303,6 +303,7 @@ FILE_ACCESS_MODULES = {
     "audit_decisions",
     "decision_review",
     "report_review",
+    "claim_review",
     "notes_check",
 }
 #: functions that run a program or read a command-line argument, which no
