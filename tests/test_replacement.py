@@ -29,6 +29,7 @@ from labkit.formats import (  # noqa: E402
     handovers,
     protocol_block,
     protocol_history,
+    scope_sha,
 )
 from labkit.gates import report_check, report_hold  # noqa: E402
 from labkit.gates import report_context
@@ -321,6 +322,25 @@ class Gate(_Areas):
             ),
             (),
         )
+
+    def test_a_new_run_of_the_predecessor_moves_the_confirmatory_successors_stamp(
+        self,
+    ):
+        """What the audit judged the type from is covered by its stamp; the
+        twin: an exploratory successor's stamp does not follow the
+        predecessor."""
+        declared = replaces(A_ID, ("criterion-1 margin", "0.25", "0.15"))
+        for kind, moves in (("confirmatory", True), ("exploratory", False)):
+            with self.subTest(type=kind):
+                self._b(declared, type=kind)
+                before = scope_sha.area_snapshot(self.b)
+                later = "2026-10-09T10-00-00_" + kind[:4]
+                completed_run(self.a, later, pid=A_ID, metrics=self.a_metrics)
+                after = scope_sha.area_snapshot(self.b)
+                self.assertEqual(before.sha != after.sha, moves)
+                self.assertEqual(
+                    any("as confirmatory" in told for told in after.validation), moves
+                )
 
     def test_a_predecessor_no_protocol_carries_is_said_not_passed_over(self):
         proto = self._b(replaces("p-cccccccccccccccc"), type="confirmatory")

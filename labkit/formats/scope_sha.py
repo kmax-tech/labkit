@@ -38,7 +38,13 @@ from types import MappingProxyType
 
 from labkit.formats.digests import digest, tree_digest
 from labkit.formats.files import ReadError, read_cause
-from labkit.formats.runs import CONFIG_FILE, metrics_path, recorded_runs, run_path
+from labkit.formats.runs import (
+    CONFIG_FILE,
+    metrics_path,
+    recorded_runs,
+    run_dirs,
+    run_path,
+)
 from labkit.formats import console, protocol_block
 from pathlib import Path
 
@@ -454,7 +460,9 @@ class Snapshot:
         pin: (file, line) of the labkit pin, or None.
         validation: One sentence per `annotation_validity` the area's
             protocols declare, naming what of it the sha covers
-            (`validation_basis`); () when none does.
+            (`validation_basis`), and one per confirmatory successor for
+            its predecessor's run records (`predecessor_basis`); () when
+            there is neither.
     """
 
     sha: str
@@ -516,10 +524,14 @@ def area_snapshot(
     pin = find_pin(area.resolve()) if use_pin else None
     entries = sorted((_key(f, root), contents[f]) for f in contents)
     basis, told = validation_basis(area)
+    before, told_before = predecessor_basis(area)
     # appended after the files and only when declared: an area without an
-    # `annotation_validity` keeps the stamp it had
-    sha = tree_digest([*entries, *basis], trailer=[pin[1]] if pin else [])
-    return Snapshot(sha, tuple(files), MappingProxyType(contents), pin, told)
+    # `annotation_validity` and without a confirmatory successor keeps the
+    # stamp it had
+    sha = tree_digest([*entries, *basis, *before], trailer=[pin[1]] if pin else [])
+    return Snapshot(
+        sha, tuple(files), MappingProxyType(contents), pin, told + told_before
+    )
 
 
 #: entry names of the validation basis start so, apart from every file key
@@ -563,6 +575,68 @@ def validation_basis(
             f"adopted result, the run record of its model and its scripts)"
         )
     return entries, tuple(told)
+
+
+#: entry names of the predecessor basis start so
+PREDECESSOR_KEY = "predecessor"
+
+
+def predecessor_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, ...]]:
+    """(entries, sentences): what the area stamp covers of the predecessor
+    of a protocol that replaces another and calls itself confirmatory, so
+    an audit that judged that claim from the predecessor's runs
+    (`audit_prompt.predecessor_evidence`) goes stale when they change. Per
+    such protocol: the predecessor's id as written; where it names exactly
+    one protocol of the repo, the `config.json` of every run of that
+    protocol's area bound to the id, and of every run there whose record
+    does not read (its binding is unknowable). The record holds the inputs
+    the run read and the commit it started from, which fixes the
+    registration a first measurement saw; a new run of the predecessor adds
+    an entry. Not covered: the predecessor's protocol file as it stands,
+    its metrics and its report — the audit is not shown them. Never raises
+    for a protocol it cannot read — the head check names that."""
+    root = layout_root(area)
+    entries: list[tuple[str, bytes]] = []
+    told: list[str] = []
+    ids: dict[str, list[Path]] | None = None
+    for p in area_protocols(area):
+        try:
+            text = p.read_text(encoding="utf-8")
+            rep = protocol_block.replaces(text)
+            kind = protocol_block.head(text).type
+        except (OSError, protocol_block.BlockError):
+            continue
+        if rep is None or kind != "confirmatory":
+            continue
+        name = f"{PREDECESSOR_KEY} of {_key(p, root)}"
+        entries.append((name, rep.protocol.encode("utf-8")))
+        if ids is None:
+            ids = protocol_block.repo_protocol_ids(area)
+        hits = ids.get(rep.protocol, [])
+        if len(hits) != 1:
+            told.append(
+                f"{_key(p, root)} replaces {rep.protocol}, no one protocol of the repo"
+            )
+            continue
+        records = _run_records(hits[0].parent, rep.protocol)
+        entries += [(f"{name}: {_key(f, root)}", f.read_bytes()) for f in records]
+        told.append(
+            f"{_key(p, root)} replaces {_key(hits[0], root)} as confirmatory "
+            f"(the records of its {len(records)} run(s))"
+        )
+    return entries, tuple(told)
+
+
+def _run_records(area: Path, pid: str) -> list[Path]:
+    """The `config.json` of every run of AREA bound to the protocol id PID,
+    and of every run whose record does not read, by run name
+    (`runs.run_dirs`)."""
+    return [
+        rd.dir / CONFIG_FILE
+        for rd in run_dirs(area)
+        if rd.error is not None
+        or (rd.config is not None and rd.config.protocol.id == pid)
+    ]
 
 
 def validation_sources(area: Path) -> list[Path]:
@@ -639,7 +713,7 @@ def validation_note(area: Path) -> str:
     if not told:
         return ""
     return (
-        " — the stamp covers the bound validation too, so a change to it "
+        " — the stamp covers evidence outside the area too, so a change to it "
         "counts as well: " + "; ".join(told)
     )
 

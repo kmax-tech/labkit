@@ -474,7 +474,7 @@ class StaleEvidence(Evidence):
                 edit(val, Path(d))
                 gap = self._gap(share, name, text)
                 self.assertIsNotNone(gap)
-                self.assertIn("covers the bound validation too", gap or "")
+                self.assertIn("covers evidence outside the area too", gap or "")
                 self.assertIn(
                     "experiments/01-validation/PROTOCOL-validation.md", gap or ""
                 )

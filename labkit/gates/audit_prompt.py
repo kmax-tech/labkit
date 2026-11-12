@@ -366,9 +366,11 @@ def predecessor_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
     inputs every run of both protocols recorded, under INPUTS_SHOW. The pieces let the auditor judge
     whether the changed question meets data already evaluated; they prove
     neither. A predecessor that is not exactly one protocol of the repo, or
-    whose registration cannot be read back: one line saying so. The pieces
-    are not covered by the record's `scope_sha`: a later run of the
-    predecessor does not stale the record. () for every other protocol,
+    whose registration cannot be read back: one line saying so. The record's
+    `scope_sha` covers the predecessor's run records
+    (`scope_sha.predecessor_basis`): a new or changed run of the
+    predecessor stales the record, the successor's own later runs do so
+    through the run the record binds. () for every other protocol,
     and for a head that does not read or carries no id — `bound_prompt`
     refuses both before it renders. Raises RuntimeError when git fails."""
     try:
