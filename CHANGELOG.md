@@ -413,8 +413,9 @@ pins (`requirements.txt` / `requirements.lock`).
   records.** The registration station's sentence cited LAB-003 No run without an intent paragraph
   for both causes. A run that recorded `no-git` now cites
   LAB-010 Commit before the run, the rule the finding records; a record
-  that merely names no commit cites none (a technical contract). No duty
-  changes.
+  that merely names no commit cites none (a technical contract), and
+  neither does a commit the repository does not hold or cannot read. No
+  duty changes.
 
 - **An output that cannot be compared is told as that.** A registered output whose record holds no sha256, or whose file is gone, was reported as a deviation with an open rule assignment, like a file with other bytes. Both now record the technical contract and the outcome "check not executable": the comparison could not run, and nothing says the bytes changed or a format duty was broken (runlog itself records an output absent at the end of the run without a sha256). Other bytes than the recorded stay a deviation with an open assignment. The blocker and its ways out are unchanged.
 

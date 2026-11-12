@@ -939,6 +939,29 @@ class FirstMeasurementInGitOrder(_Repository):
             gap,
         )
 
+    def test_git_evidence_gone_or_unreadable_cites_no_rule(self):
+        """A commit the repository does not hold, and one it cannot read:
+        the check lacks its basis, a technical contract — neither sentence
+        names a rule of the standard."""
+        sha = self._commit(REGISTRATION)
+        self._run("0123456789abcdef" * 2 + "01234567")
+        ctx = report_context.checked(self.area, self.proto)
+        (unknown,) = report_check.registration_gaps(ctx)
+        self.assertIn("does not hold", unknown.text)
+        unreadable = protocol_history.CommittedAt(
+            run=RUN,
+            commit=sha,
+            text=None,
+            cause=protocol_history.UNREADABLE_COMMIT,
+            detail="fatal: bad object",
+        )
+        with mock.patch.object(report_check, "committed_at", return_value=unreadable):
+            (unread,) = report_check.registration_gaps(ctx)
+        self.assertIn("cannot be read: fatal: bad object", unread.text)
+        for gap in (unknown, unread):
+            self.assertEqual(gap.rule, gate.TECHNICAL_RULE)
+            self.assertNotIn("LAB-", gap.text)
+
     def test_a_run_without_a_commit_is_held_beside_the_placed_one(self):
         sha = self._commit(REGISTRATION)
         placed = self._run(sha, "2026-10-07T09-00-00_0000")

@@ -397,7 +397,7 @@ def _registration_at(
                 f"{at} ({commit}{among}) recorded a commit this repository does not "
                 f"hold (a rewritten history, a shallow clone) — neither its place "
                 f"among the measurements nor the registration it stood on can be "
-                f"read (LAB-003 No run without an intent paragraph)",
+                f"read",
                 fix="fetch that commit from a clone that has it (`git fetch "
                 "--unshallow` in a shallow clone)",
                 rule=TECHNICAL_RULE,
@@ -409,7 +409,7 @@ def _registration_at(
             blocker(
                 f"{ctx.protocol.name} at {at} ({commit[:12]}{among}) cannot be read: "
                 f"{then.detail} — the registration that stood before the number "
-                f"cannot be told (LAB-003 No run without an intent paragraph)",
+                f"cannot be told",
                 fix=f"make it readable: restore the repository's missing objects "
                 f"(`git fsck` names them) or fetch them from a clone that has them "
                 f"(`git fetch`), then `{gate_command('report-check', ctx.area)}`; "
