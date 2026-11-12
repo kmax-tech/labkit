@@ -423,14 +423,31 @@ def is_block_id(name: str) -> bool:
     return bool(_BLOCK_ID.match(name))
 
 
+def _string_field(entry: dict, field: str, where: str) -> str:
+    """The value of FIELD in the [[promise]] table ENTRY, a string. Raises
+    PromiseError under TECHNICAL_RULE for a value of another type: a form
+    no reader can take, whatever the field would have said — what the
+    string must say is held by the caller, under the rule that states it."""
+    value = entry[field]
+    if not isinstance(value, str):
+        raise PromiseError(
+            f"{where}: `{field}` is {type(value).__name__}, not a string",
+            rule=TECHNICAL_RULE,
+        )
+    return value
+
+
 def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's promises, or None if its block declares none.
 
     Raises PromiseError on anything malformed: invalid TOML, an unknown
-    field, an unknown kind, a key outside its id's namespace, a duplicate
-    id, an empty scope, a non-scalar constant, a branch whose
+    field, a value of the wrong type, an unknown kind, a key outside its
+    id's namespace, a duplicate id, an empty sentence, an empty scope or a
+    blank scope entry, a non-scalar constant, a branch whose
     sentence is not outcomes (`parse_outcomes`; the stamp's `<…>` placeholder
-    passes — `promise_tables_owed` holds it). The digest covers the
+    passes — `promise_tables_owed` holds it). A wrong type and a lack in
+    what the value says are two causes, each with its own message and rule
+    (`PromiseError.rule`). The digest covers the
     promises only, not the head: freezing or stamping the audit line must
     not read as a changed promise.
     """
@@ -467,13 +484,12 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         for field in ("id", "key", "sentence", "scope"):
             if field not in e:
                 raise PromiseError(f"{where}: missing `{field}`", rule=LAB_004)
-        pid = e["id"]
-        if not isinstance(pid, str) or not _BLOCK_ID.match(pid):
-            hint = (
-                f" — {EARLIER_IDS_HELP}"
-                if isinstance(pid, str) and EARLIER_ID.match(f"[{pid}]")
-                else ""
-            )
+        # per field: a wrong type is TECHNICAL_RULE (`_string_field`, for
+        # `scope` the list check below); what the value lacks follows it,
+        # under LAB_004 or OPEN_RULE
+        pid = _string_field(e, "id", where)
+        if not _BLOCK_ID.match(pid):
+            hint = f" — {EARLIER_IDS_HELP}" if EARLIER_ID.match(f"[{pid}]") else ""
             raise PromiseError(
                 f"{where}: id {pid!r} is not criterion-<n>, quality-check-<n> "
                 f"or branch-<n>{hint}",
@@ -483,18 +499,21 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         if pid in seen:
             raise PromiseError(f"{where}: duplicate id", rule=OPEN_RULE)
         seen.add(pid)
-        key = e["key"]
+        key = _string_field(e, "key", where)
         stem = key_stem(pid)
-        if not isinstance(key, str) or (key != stem and not key.startswith(stem + "_")):
+        if key != stem and not key.startswith(stem + "_"):
             raise PromiseError(
                 f"{where}: key {key!r} is outside the id's "
                 f"namespace — expected '{stem}' or '{stem}_<suffix>'",
                 rule=LAB_004,
             )
-        sentence = e["sentence"]
-        if not isinstance(sentence, str) or not sentence.strip():
+        sentence = _string_field(e, "sentence", where).strip()
+        if not sentence:
+            # the identifier rule says per kind what the promise states (a
+            # criterion which value of which metric, a quality check why its
+            # failure invalidates the measurement, a branch its outcomes);
+            # an empty sentence states none of it
             raise PromiseError(f"{where}: `sentence` is empty", rule=LAB_004)
-        sentence = sentence.strip()
         outcomes: tuple[BranchOutcome, ...] = ()
         if kind_of(pid) == "branch" and not protocol_block.is_stamp_placeholder(
             sentence
@@ -506,11 +525,17 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
                     f"{where}: `sentence`: {exc}", rule=exc.rule
                 ) from exc
         scope = e["scope"]
-        if (
-            not isinstance(scope, list)
-            or not scope
-            or not all(isinstance(s, str) and s.strip() for s in scope)
-        ):
+        if not isinstance(scope, list) or not all(isinstance(s, str) for s in scope):
+            raise PromiseError(
+                f"{where}: `scope` is {scope!r}, not a list of 'file' or "
+                f"'file:function' strings",
+                rule=TECHNICAL_RULE,
+            )
+        # an empty list or a blank entry — whether the named file exists is
+        # `scope_sources`. Open: no sentence of the standard says that a
+        # promise names a code region (the identifier rule lists the
+        # table's parts, `constants` among them, which may be absent)
+        if not scope or not all(s.strip() for s in scope):
             raise PromiseError(
                 f"{where}: `scope` must be a non-empty list of "
                 f"'file' or 'file:function' strings",

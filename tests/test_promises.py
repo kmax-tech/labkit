@@ -898,9 +898,29 @@ class TheRuleARefusedBlockNames(unittest.TestCase):
             self._rule(block(C1.replace("constants", "extra"))), TECHNICAL_RULE
         )
 
+    def test_a_value_of_the_wrong_type_is_a_technical_contract(self):
+        """The type is the form; what a value of the right type lacks is
+        the other cause, under its own rule (the two tests below)."""
+        for broken, named in (
+            (C1.replace('"criterion-1"', "1"), "`id` is int"),
+            (C1.replace('"criterion_1_pass"', "true"), "`key` is bool"),
+            (C1.replace('"accuracy >= min_acc"', "0.7"), "`sentence` is float"),
+            (
+                C1.replace('["scripts/01_measure.py:compute_score"]', '"a.py"'),
+                "`scope`",
+            ),
+            (C1.replace('["scripts/01_measure.py:compute_score"]', "[1]"), "`scope`"),
+        ):
+            with self.subTest(named=named, broken=broken[:60]):
+                with self.assertRaises(promises.PromiseError) as cm:
+                    promises.parse_block(block(broken))
+                self.assertEqual(cm.exception.rule, TECHNICAL_RULE)
+                self.assertIn(named, str(cm.exception))
+
     def test_what_the_identifier_rule_states_records_that_rule(self):
         for broken in (
             C1.replace('key = "criterion_1_pass"\n', ""),
+            C1.replace('"accuracy >= min_acc"', '" "'),  # a sentence that says nothing
             C1.replace("criterion-1", "K1"),
             C1.replace("criterion_1_pass", "accuracy_ok"),
             C1.replace("min_acc = 0.7", "MinAcc = 0.7"),
@@ -910,7 +930,7 @@ class TheRuleARefusedBlockNames(unittest.TestCase):
                 self.assertEqual(self._rule(block(broken)), promises.LAB_004)
 
     def test_a_requirement_no_sentence_states_stays_open(self):
-        """The six causes recorded as open, each said at its cause."""
+        """The causes recorded as open, each said at its cause."""
         first = "criterion-1 met → generalises: used on the next cohort"
         for broken in (
             block(C1, C1),  # a doubled id
@@ -919,6 +939,7 @@ class TheRuleARefusedBlockNames(unittest.TestCase):
             block(B1.replace("quality-check-1 not met →", "otherwise →")),
             block(B1.replace("→ noisy:", "→ Noisy:")),  # a name off its alphabet
             block(C1.replace('["scripts/01_measure.py:compute_score"]', "[]")),
+            block(C1.replace('["scripts/01_measure.py:compute_score"]', '[""]')),
         ):
             with self.subTest(broken=broken[-150:]):
                 self.assertEqual(self._rule(broken), OPEN_RULE)
