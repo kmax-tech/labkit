@@ -41,12 +41,12 @@ Three rules of counting:
 
 For each object, one of these; where none describes it, say in words what the version is and do not press it into one:
 
-| Version              | Means                                                                                                                  |
-|----------------------|------------------------------------------------------------------------------------------------------------------------|
-| as it stands         | the file as the check's file state holds it now (working tree or index)                                                |
-| as a commit holds it | the file in a named commit: say which (the commit a run recorded, HEAD)                                                |
-| as a run recorded it | what a run's record keeps of it (a digest, a kept copy, the patch)                                                     |
-| rebuilt              | a text put together from several sources: say from which (the commit a run recorded with the run's kept patch applied) |
+| Version              | Means                                                                                                                              |
+|----------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| as it stands         | the file as the check's file state holds it now; where the working tree and the index are compared or differ, say which of the two |
+| as a commit holds it | the file in a named commit: say which (the commit a run recorded, HEAD)                                                            |
+| as a run recorded it | what a run's record keeps of it (a digest, a kept copy, the patch)                                                                 |
+| rebuilt              | a text put together from several sources: say from which (the commit a run recorded with the run's kept patch applied)             |
 
 Where two versions of one object are compared, the object has two entries, one `side` each.
 
@@ -79,17 +79,20 @@ A property belongs to one object, a relation to two.
    - `"one"`: one test stands behind the row — also when the telling site passes its text on without reading it.
    - `"aggregated"`: several tests stand behind it and all have the same objects, the same property and the same outcome. List them in `bundled` and classify the row.
    - `"mixed"`: several tests that differ in objects, property or outcome. List them in `bundled`, each with its property, and give the row no property of its own (`"fits": "mixed"`).
+   - `"joined"`: the finding is told only when several conditions hold together. List each in `bundled` and say that they are joined: none of them is a finding that triggers alone.
    - `"open"`: the site catches by an error's type and the tests behind it are no closed list. Say what was found.
 
    That a reader refuses a file is no property. Behind "does not read" look at what the reader refuses: text that does not parse is readability, a required key that is missing is completeness, a value of a form its place does not take is form.
-4. **Missing is completeness; binding is between things that are there.** A required object or element that is missing is completeness — a file a run owes, a registered report, a field. Binding asks whether things that are there are assigned to each other: a reference that leads to a thing of the wrong kind, a thing that cannot be assigned to the place that names it. Agreement asks whether a thing that is there differs from what was recorded, and also whether one side holds what the other registers: a part the protocol registers that a run does not hold is agreement with the registration, since both sides are needed to tell it. It is completeness of the run record only where the run record's own format asks for the part. A condition that fires because a mark, a flag or a file is there tests a state the mark records, not completeness: say which state; there is no value "presence", and if no value names that state, rule 6 holds.
+4. **Missing is completeness; binding is between things that are there.** A required object or element that is missing is completeness — a file a run owes, a registered report, a field. Binding asks whether things that are there are assigned to each other: a reference that leads to a thing of the wrong kind, a thing that cannot be assigned to the place that names it. Agreement asks whether a thing that is there differs from what was recorded, and also whether one side holds what the other registers: a part the protocol registers that a run, or the area's code, does not hold is agreement with the registration, since both sides are needed to tell it. It is completeness of the run record only where the run record's own format asks for the part. A condition that fires because a mark, a flag or a file is there tests a state the mark records, not completeness: say which state; there is no value "presence", and if no value names that state, rule 6 holds. Missing is not completeness by itself: ask whether the missing thing is the requirement this condition tests, or only a technical precondition of another check (no git repository, so a comparison cannot run). The second is a limit of the execution (rule 7).
 5. **The operator is not the property.** A condition is not classified by the comparison it is written with. A test for equality is part of many checks: of agreement, where two things should say the same, and of others, where a finding is told because two things are the same. State what the test establishes about the objects. "Equality" is no value, and a test that fires on sameness is not uniqueness.
 6. **No forcing.** The values need not take every cause. Where none fits, answer `"fits": "no"` and say in a few words what the condition tests instead. Where a value fits only loosely, `"fits": "weak"`. Where you are not sure, `"unsure": true` and name the alternative.
 
-7. **A limit of the execution is no property of the object.** Where the check could not be carried out — access to a file refused, a timeout, git fails for a technical reason, the check's own procedure cannot evaluate a text that reads and parses — nothing is shown about the object. That is the check's outcome. Answer the objects and the property of the check that could not run, and set `"check_limit": true`. A limit is not assumed: a file that is missing, or a repository that is not one, is a condition about the object (rule 4).
+7. **A limit of the execution is no property of the object.** Where the check could not be carried out — access to a file refused, a timeout, git fails for a technical reason, the check's own procedure cannot evaluate a text that reads and parses — nothing is shown about the object. That is the check's outcome. Answer the objects and the property of the check that could not run, and set `"check_limit": true`. A limit is not assumed either: a file the condition requires and that is missing is a condition about the object (rule 4).
 
 8. **An open finding does not make a record incomplete.** An audit finding that is documented in full and not decided leaves its record complete. A condition that reads whether a finding is decided or released tests the decision or release status — the half of audit coverage that asks whether the record releases the state.
 9. **An object is what this check tests.** The protocol's claim is an object of a check only where that check itself judges or compares it. Where a gate reads only review records, the claim is the review's object and at most a precondition of the gate.
+
+10. **A thing read that is in no object of the list** is named in plain words ("input data", "model profile") with `"object": "not listed: …"`. Its place in the list is open; what it is must be said.
 
 ## Answer
 
