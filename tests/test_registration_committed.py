@@ -30,7 +30,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
-from labkit.tools import report_command
+from labkit.tools import next_command, report_command
 from labkit.formats import area_state, gate, protocol_history, runs
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, VIOLATED, Findings
@@ -1547,6 +1547,41 @@ class ReportOwedByADeletedProtocol(_Repository):
         code, out = _report_check(self.area)
         self.assertEqual(code, 1, out)
         self.assertIn(f"no protocol of the area carries the id {PID}", out)
+
+    def test_next_names_the_same_restore_as_the_gate_after_the_protocol_is_deleted(
+        self,
+    ):
+        """The next step restores the protocol that still owes a report,
+        in the tree and the index, rather than registering a new question."""
+        self._measured_then_deleted("REPORT.md")
+        for staged in (False, True):
+            with self.subTest(staged=staged), contextlib.chdir(self.root):
+                state = area_state.state_of(
+                    self.area, file_state=area_state.file_state_of(staged=staged)
+                )
+                (gap,) = report_check.orphaned_duty_gaps(state)
+                out = io.StringIO()
+                args = [str(self.area), *(["--staged"] if staged else [])]
+                with contextlib.redirect_stdout(out):
+                    code = next_command.main(args)
+                self.assertEqual(code, 0, out.getvalue())
+                self.assertIn(f"where: {gap.text}", out.getvalue())
+                self.assertIn(f"next:  {gap.fix}", out.getvalue())
+                self.assertNotIn("labkit-init exp", out.getvalue())
+
+    def test_next_registers_when_the_deleted_protocol_owed_no_report(self):
+        """A measured protocol without a report duty need not be restored."""
+        self._measured_then_deleted(None)
+        for staged in (False, True):
+            with self.subTest(staged=staged), contextlib.chdir(self.root):
+                out = io.StringIO()
+                args = [str(self.area), *(["--staged"] if staged else [])]
+                with contextlib.redirect_stdout(out):
+                    code = next_command.main(args)
+                self.assertEqual(code, 0, out.getvalue())
+                self.assertIn("holds no protocol", out.getvalue())
+                self.assertIn("labkit-init exp", out.getvalue())
+                self.assertNotIn("restore the protocol", out.getvalue())
 
     def test_the_twin_deleting_a_protocol_that_owes_no_report_passes_the_holds(self):
         gone = self._measured_then_deleted(None)

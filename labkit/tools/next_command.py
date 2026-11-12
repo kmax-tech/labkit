@@ -92,11 +92,14 @@ def main(argv: list[str]) -> int:
         console.refuse("labkit-next", no_such_area(area))
         return 2
     protocol = None
-    if args.protocol is not None or area_protocols(area):
-        protocol = choose_protocol(area, args.protocol, "labkit-next")
-        if protocol is None:
-            return 2
     try:
+        protocols = area_protocols(area, staged=args.staged)
+        if args.protocol is not None or protocols:
+            protocol = choose_protocol(
+                area, args.protocol, "labkit-next", staged=args.staged
+            )
+            if protocol is None:
+                return 2
         step = next_step(area, protocol, file_state=file_state_of(staged=args.staged))
     except (protocol_block.BlockError, ValueError) as exc:
         console.refuse("labkit-next", f"{protocol.name if protocol else area}: {exc}")

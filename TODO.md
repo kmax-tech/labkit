@@ -55,6 +55,8 @@ Der enge Vertrag ist seit `7d2f9730` gebaut und dort vollständig geprüft. Das 
 
 ### Taxonomie und Meldungsbereinigung — erste Fassung abgeschlossen
 
+Die Agentenschleife ist berichtigt (2026-11-12, eigener Auftrag nach der Doku-Prüfung): `labkit-next` nennt für ein gelöschtes Protokoll mit Berichtspflicht den Wiederherstellungsweg des Gates, im Arbeitsbaum und im Index. Guide, Ablaufdoku und gedruckter Berichtshinweis beschreiben den bereits geltenden engen Vertrag. [Fehler und Abnahme](docs/notes/2026-11-12-next-agent-loop.md). Kein neuer methodischer Vertrag und kein Rollout in fremde Repos.
+
 Die [Taxonomie-Note](docs/notes/2026-11-12-check-taxonomy.md) ist die Heimat der Definitionen, Zuordnungen und ihrer Herkunft. Bündel, nicht passende Werte und Unsicherheiten bleiben sichtbar. Zeilenabdeckung ist kein Anteil korrekt arbeitender Prüfungen. Pflege nur an konkreten Fällen; keine weitere allgemeine Leser- oder Zuordnungsrunde.
 
 Überzogene Meldungen und die Weitergabe der Fehler im Versprechensblock sind bereinigt. Der Reparaturweg eines übernommenen Laufs ohne Intent-Schlüssel ist mit echten Kommandos und eingesetztem Audit-Record getestet; kein echtes Audit-Modell wurde dabei ausgeführt. `FieldReport.missing_must` bei späterer Arbeit an der Stelle passend umbenennen, kein eigener Taxonomie-Schritt.

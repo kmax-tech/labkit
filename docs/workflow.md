@@ -88,21 +88,9 @@ fills the named field; `protocol-check PROTOCOL` validates registration.
 Commit the protocol and relevant implementation, naming only your paths
 in `git add` and `git commit -- <paths>` so other staged work stays out.
 
-**Done / way out:** at `low`, the required registration stands in the commit
-of the first measurement. A required report can be added to an existing
-unmeasured protocol with `protocol-fill PROTOCOL report=REPORT.md`; a
-pre-measurement replacement needs `--force`. The registered path must be
-committed before the first measurement. A valid report draft can be
-committed with the registration before any measurement; it owes no result
-block yet. After measurement, save its progress account. Removing or moving that bound path
-later holds release: restore it, or explicitly hand over and register anew.
-`--force` does not bypass the binding. At both `low` and `high`, the first
-measurement's commit fixes the report path, including the absence of one:
-a report cannot be registered later in the same protocol. The setter and
-gates use the same comparison; `--force` can restore the original path but
-cannot redirect it. At `high`, additionally pass preflight, decide its
-audit, set the matching freeze evidence and freeze the protocol. Freeze
-is not a substitute for report-path commitment.
+**Done / way out:** at `low`, the required registration stands in the commit of the first measurement. Register a required report with `protocol-fill PROTOCOL report=REPORT.md` and commit the entry before measuring. At both repeat costs, a report registered in the first measurement's commit creates a lasting delivery duty tied to the protocol id. The target can move: `protocol-fill PROTOCOL report=OTHER.md --force` changes the file that owes the delivery. Removing the entry or deleting the protocol does not end that duty; restore a target or hand over. A report first registered after the measurement may be removed again. While registered it is checked, and removing it does not release an adopted result, an existing report or audit evidence from their checks. The setter previews the same binding check as the gates.
+
+A valid report draft can be committed before measurement; it owes no result block yet. After measurement, save its progress account. At `high`, additionally pass preflight, decide its audit, set the matching freeze evidence and freeze the protocol. Freeze does not establish the report duty.
 
 See [the promise format](promise-block.md#the-block) for technical fields
 and [the chain](architecture.md#the-chain) for registration binding. A missed

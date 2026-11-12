@@ -19,12 +19,14 @@ must pass `--protocol <PROTOCOL>` to every command that accepts it.
 
 ## The loop
 
-1. Run `labkit-next <area>`. It prints where the area stands, the next
-   command and what stays held until you take it.
+1. Run `labkit-next <area>`. It prints the state, next command and what
+   remains held.
 2. Run that command as printed.
 3. If a command refuses, read its line that ends in `Next: …`. Take that
    step, then return to 1.
 4. Stop when `labkit-next` prints `next: nothing`, or when you hand over.
+
+Exit 0 means guidance, not release.
 
 Report file required? Pass `--report-file REPORT.md` before measuring.
 

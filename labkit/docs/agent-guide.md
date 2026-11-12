@@ -2,6 +2,8 @@
 
 This guide is the reference behind the stamped `AGENTS.md`: every step, its conditions and the reason for each rule. Read the part for your current step only. `labkit-next <area>` names that step.
 
+`labkit-next` reads the current state and runs the applicable checks, including area tests and recomputation where needed. It prints the next action but does not execute it. Exit 0 means it printed guidance, not that a result is released. Take the named action, then run `labkit-next` again; with several protocols, pass `--protocol <PROTOCOL>`.
+
 ## When a gate stops you
 
 Run `labkit-audit <area> --findings`. Without a model call, it prints the open BLOCKERs, the evidence problems and the complete decision and handover commands. Use those commands. Do not invent flags. If it names a failed audit call, that call left no findings to decide. A superseded call needs nothing more, but recorded BLOCKERs still need their follow-up.
@@ -18,7 +20,7 @@ The run's metrics do not replace the files the task names. The answering run wri
 
 A result no longer holds when a gate refuses it, or when an audit BLOCKER against its code or data stays unfixed. Then remove the output file at once. Write it again from the next adopted run. Until then, keep the file away. Say in the report which you did, and why.
 
-A protocol head can register a report (`report = "REPORT.md"`, stamped by `labkit-init exp --report-file`, or set by `protocol-fill <PROTOCOL> report=REPORT.md` before the first measurement). If your task asks for a report file, register it before you measure: after the first measurement no fill registers, moves or drops it. Then the stop and the commit hold that file. They release it when it carries the adopted run's generated result block or the handover block. A number without its run id or a typed run id releases nothing. Other notes owe nothing.
+A protocol head can register a report (`report = "REPORT.md"`, stamped by `labkit-init exp --report-file`, or set by `protocol-fill <PROTOCOL> report=REPORT.md`). If your task asks for a report file, register and commit it before you measure. The target in the first measurement's commit creates a lasting duty to deliver a report. You may move the target with `protocol-fill <PROTOCOL> report=OTHER.md --force`; the new target owes the delivery. Removing the entry or the protocol does not end that duty. A target first entered after the measurement may be removed again. While a target is registered, the stop and the commit check its report; adopted results, existing reports and audit evidence keep their own checks even if a later target is removed. The report carries the adopted run's generated result block or the handover block, or the progress account described below while nothing is adopted. A number without its run id or a typed run id releases nothing. Other notes owe nothing.
 
 Write the progress account right after the measurement, before the audit: `labkit-next` names `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what was measured, what is still open>" --into REPORT.md`. While nothing is adopted, the commit and the stop take that account as an honest interim state; it releases no result and owes no report review yet, and `labkit-next` names the next step: the audit and the adoption, or the handover. The adoption puts the result block where the account stood.
 

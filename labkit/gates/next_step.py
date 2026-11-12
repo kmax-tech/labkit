@@ -3,7 +3,9 @@ held until it is taken.
 
 The order, the first that applies is the step (`next_step`):
 
-    no protocol in the area      → `labkit-init exp …` registers the question
+    no protocol in the area      → restore one that still owes a report;
+                                   otherwise `labkit-init exp …` registers
+                                   the question
     a MUST field absent or still → `protocol-fill …` fills a placeholder;
       a placeholder                an absent † field comes with
                                    `labkit-init exp … --report`
@@ -54,8 +56,9 @@ The order, the first that applies is the step (`next_step`):
 
 Before the first measurement of a protocol whose head registers no report,
 the step adds how to register one (`protocol-fill … report=REPORT.md`):
-labkit cannot tell whether the task asks for a report file, and after the
-first measurement the registration is refused.
+labkit cannot tell whether the task asks for a report file. Only the target
+in the first measurement's commit creates a lasting duty; a report may be
+registered or moved later, and a later target may be removed again.
 
 The step is read from a file state (`area_state.TREE` or `INDEX`), the
 one the caller judges: the console and the stop the tree, the pre-commit
@@ -137,7 +140,8 @@ def next_step(
     """The next step of AREA under PROTOCOL (`Step`), in the module's order,
     read from FILE_STATE — the working tree (TREE) or the index (INDEX), the
     state the caller judges: a hook that holds the index names a step from
-    the index. PROTOCOL None and no protocol in AREA is the first step;
+    the index. PROTOCOL None restores a protocol that still owes a report,
+    or registers a question when there is no such duty;
     PROTOCOL must otherwise be the one the caller chose
     (`repo.choose_protocol`). CHAIN, what report-check's chain found for
     PROTOCOL in FILE_STATE when the caller ran it already
@@ -149,7 +153,17 @@ def next_step(
     that cannot be made."""
     from labkit.gates import report_check, report_context
 
+    area_state = state_of(area, file_state=file_state)
     if protocol is None:
+        orphaned = report_check.orphaned_duty_gaps(area_state)
+        if orphaned:
+            first = orphaned[0]
+            return Step(
+                first.text,
+                first.fix or "restore the protocol as the finding describes",
+                f"the report obligation: {len(orphaned)} blocker(s) stand, "
+                "and this is the first",
+            )
         return Step(
             f"{shown(area, Path.cwd())} holds no protocol: nothing is registered",
             "`labkit-init exp <name> --kind compute|fit|apply` stamps the area "
@@ -157,8 +171,7 @@ def next_step(
             "every run: a run needs a registered question",
         )
     staged = staged_of(file_state)
-    # the area's state once, for every step and for the chain
-    area_state = state_of(area, file_state=file_state)
+    # the area's state above is shared by every step and the chain
     text = area_state.text_of(protocol)
     report = protocol_check.check_fields(text)
     if report.head_error:
@@ -630,16 +643,17 @@ def _field_step(
 
 def _report_hint(protocol: Path, text: str, measured: Measured) -> str:
     """The sentence a step before the first measurement adds when the head
-    registers no report: how to register one — labkit cannot tell whether
-    the task asks for a report file, and once the area measured (MEASURED)
-    the registration is refused (`protocol_fill.report_bound`). "" otherwise."""
+    registers no report: how to register one before it creates a lasting
+    duty in the first measurement's commit. A later target is allowed but
+    creates no lasting duty. "" after a measurement (MEASURED), without a
+    stamped id, or with a target already registered."""
     head = protocol_block.head(text)
     if head.report is not None or not head.id or measured.has_measured:
         return ""
     return (
         f"; if the task asks for a report file, register it now: "
-        f"`{fill_command(protocol, 'report=REPORT.md')}` — before the first "
-        f"measurement only"
+        f"`{fill_command(protocol, 'report=REPORT.md')}` — the target in the "
+        f"first measurement's commit remains owed"
     )
 
 

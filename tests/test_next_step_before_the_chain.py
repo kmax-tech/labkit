@@ -101,6 +101,22 @@ class BeforeTheChain(unittest.TestCase):
         self.assertIn("holds no protocol", out)
         self.assertIn("labkit-init exp", out)
 
+    def test_staged_selection_without_a_repository_is_refused(self):
+        """An index cannot be selected before the repository exists."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d) / "experiments" / "01-x"
+            area.mkdir(parents=True)
+            out, err = io.StringIO(), io.StringIO()
+            with (
+                contextlib.chdir(d),
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(err),
+            ):
+                code = next_command.main([str(area), "--staged"])
+        self.assertEqual(code, 2)
+        self.assertIn("no git repository to read the index", err.getvalue())
+        self.assertEqual(out.getvalue(), "")
+
     def test_a_fill_line_is_named_only_where_one_fill_closes_the_gap(self):
         """A placeholder is filled by protocol-fill; a field absent from the
         text is not (protocol-fill knows no field it cannot see): a † field

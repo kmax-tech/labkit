@@ -264,9 +264,10 @@ def lab_root(start: Path) -> Path | None:
     return None
 
 
-def area_protocols(area: Path) -> list[Path]:
+def area_protocols(area: Path, *, staged: bool = False) -> list[Path]:
     """Every protocol in the area (`PROTOCOL-*.md` directly in it),
-    lexicographic — a list, not a first hit.
+    lexicographic — a list, not a first hit. STAGED lists the index's
+    protocols, resolved, and raises ProtocolChoiceError outside a git repo.
 
     The series rule gives every follow-up its own `PROTOCOL-s<N>-<slug>.md`,
     so an area legitimately holds many. A first hit would pick one of them
@@ -274,6 +275,11 @@ def area_protocols(area: Path) -> list[Path]:
     running s1..s13 it is always s1. A green check against the wrong
     protocol is worse than no check, so the caller must choose.
     """
+    if staged:
+        root = git_root(area)
+        if root is None:
+            raise ProtocolChoiceError(f"{area}: no git repository to read the index")
+        return [p for p in indexed_protocols(root) if p.parent == area.resolve()]
     return sorted(area.glob(PROTOCOL_GLOB))
 
 
@@ -1225,26 +1231,41 @@ def given_or_in(given: Path, directory: Path) -> Path:
     return inside if inside.exists() or inside.is_symlink() else given
 
 
-def the_protocol(area: Path, protocol: Path | None) -> Path:
+def _named_tree_protocol(area: Path, protocol: Path) -> Path:
+    """Resolve a named working-tree protocol, accepting a bare name in AREA.
+    Raise ProtocolChoiceError when it is missing or is a symbolic link."""
+    named = given_or_in(protocol, area)
+    if named.is_symlink():
+        raise ProtocolChoiceError(protocol_link(named, "tree"))
+    if not named.is_file():
+        where = (
+            f" (not in {shown(area, Path.cwd())} either)"
+            if named.parent == Path(".")
+            else ""
+        )
+        raise ProtocolChoiceError(f"no such protocol: {named}{where}")
+    return named
+
+
+def the_protocol(area: Path, protocol: Path | None, *, staged: bool = False) -> Path:
     """The protocol a command holds the area to: the named one — a path, or
     a bare file name inside AREA (`given_or_in`) —, else the area's only
-    one. Raises ProtocolChoiceError (the message says why and lists the
+    one. STAGED selects from the index, including the resolution of a bare
+    file name; otherwise selection uses the working tree.
+    Raises ProtocolChoiceError (the message says why and lists the
     candidates) when there is none, or several and none is named — a gate
     never guesses, and when the one it holds is a symbolic link
     (`protocol_link`). `choose_protocol` is the printing form."""
-    if protocol is not None:
-        named = given_or_in(protocol, area)
-        if named.is_symlink():
-            raise ProtocolChoiceError(protocol_link(named, "tree"))
-        if not named.is_file():
-            where = (
-                f" (not in {shown(area, Path.cwd())} either)"
-                if named.parent == Path(".")
-                else ""
-            )
-            raise ProtocolChoiceError(f"no such protocol: {named}{where}")
-        return named
-    protocols = area_protocols(area)
+    protocols = area_protocols(area, staged=staged)
+    if staged and protocol is not None:
+        named = own_path(protocol)
+        if protocol.parent == Path(".") and named not in protocols:
+            named = own_path(area / protocol)
+        if named not in protocols:
+            raise ProtocolChoiceError(f"no such protocol in the index: {protocol}")
+        protocols = [named]
+    elif protocol is not None:
+        return _named_tree_protocol(area, protocol)
     if not protocols:
         raise ProtocolChoiceError(f"no PROTOCOL-*.md in {area}")
     if len(protocols) > 1:
@@ -1252,16 +1273,23 @@ def the_protocol(area: Path, protocol: Path | None) -> Path:
             f"{len(protocols)} protocols in {area} — name one with --protocol FILE:\n"
             + "\n".join(f"  {p}" for p in protocols)
         )
-    if protocols[0].is_symlink():
+    if staged:
+        links = protocol_links(layout_root(area), protocols, staged=True)
+        if links:
+            raise ProtocolChoiceError(links[protocols[0]])
+    elif protocols[0].is_symlink():
         raise ProtocolChoiceError(protocol_link(protocols[0], "tree"))
     return protocols[0]
 
 
-def choose_protocol(area: Path, protocol: Path | None, tool: str) -> Path | None:
+def choose_protocol(
+    area: Path, protocol: Path | None, tool: str, *, staged: bool = False
+) -> Path | None:
     """`the_protocol` for a command line: says why on stderr
-    (`console.refuse`, prefixed with `tool`) and returns None instead of raising."""
+    (`console.refuse`, prefixed with `tool`) and returns None instead of raising.
+    STAGED selects from the index rather than the working tree."""
     try:
-        return the_protocol(area, protocol)
+        return the_protocol(area, protocol, staged=staged)
     except ProtocolChoiceError as exc:
         console.refuse(tool, str(exc))
         return None

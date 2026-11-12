@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.formats.evidence import read_evidence
 from labkit.gates import registered_report
 from labkit.formats.area_state import state_of
-from labkit.tools import report_command
+from labkit.tools import next_command, report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
 from labkit.formats import protocol_block, report_reviews  # noqa: E402
 from labkit.formats import area_state  # noqa: E402
@@ -172,11 +172,11 @@ class TheChain(unittest.TestCase):
 
     def test_the_walk_from_registered_to_adopted(self):
         # registered, not measured: measure; no report registered: how to
-        # register one, before the first measurement only
+        # register one before its presence creates a lasting report duty
         step = self.step()
         self.assertIn("01_measure.py", step.next, step)
         self.assertIn(
-            '"report=REPORT.md"` — before the first measurement only', step.next
+            "the target in the first measurement's commit remains owed", step.next
         )
         self.assertIn("blocker(s) stand, and this is the first", step.held)
         run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
@@ -885,6 +885,23 @@ class ProtocolInTheIndexOnly(unittest.TestCase):
             self.assertEqual(
                 next_step.steps_for(self.lab.root, [self.script], staged=False), []
             )
+
+    def test_the_staged_command_selects_the_protocol_the_index_still_holds(self):
+        """Automatic and named choices use the index even when the tree
+        no longer holds the protocol file."""
+        choices = (
+            [],
+            ["--protocol", str(self.protocol)],
+            ["--protocol", self.protocol.name],
+        )
+        for choice in choices:
+            with self.subTest(choice=choice), contextlib.chdir(self.lab.root):
+                out, err = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    code = next_command.main([str(self.area), "--staged", *choice])
+                self.assertEqual(code, 0, err.getvalue())
+                self.assertIn("the working tree differs from the index", out.getvalue())
+                self.assertNotIn("labkit-init exp", out.getvalue())
 
 
 class ReportInTheIndexOnly(unittest.TestCase):

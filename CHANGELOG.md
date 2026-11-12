@@ -400,6 +400,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-next` restores a deleted protocol that still owes a report.** On an area with no remaining protocol, the next step now uses report-check's orphaned report duty and its restore instruction, in the working tree and the index. An area without such a duty still gets the registration step. The agent guide, workflow and printed report hint now describe the existing narrow contract: the first measurement's committed report creates a lasting duty, its target may move, and a target first entered later may be removed. The stamped agent instructions also distinguish printing guidance from executing it or releasing a result.
+
 - **A `[result]` table that does not read is one blocker in report-check.**
   The declaration station and the nested finalize each told it, so one
   typed run id stood as two blockers. Where finalize read the text the

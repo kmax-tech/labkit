@@ -12,6 +12,7 @@ import io
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -201,6 +202,60 @@ class ProtocolChoice(unittest.TestCase):
                 repo.the_protocol(self.area, Path("PROTOCOL-b.md")),
                 Path("PROTOCOL-b.md"),
             )
+
+
+class IndexProtocolChoice(unittest.TestCase):
+    """Protocol choice judges the index independently of tree entries."""
+
+    def setUp(self) -> None:
+        self.root = make_repo().resolve()
+        self.addCleanup(shutil.rmtree, self.root)
+        self.area = self.root / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+
+    def _stage(self, *paths: Path) -> None:
+        """Stage PATHS in the fixture's repository."""
+        subprocess.run(
+            ["git", "add", "--", *map(str, paths)], cwd=self.root, check=True
+        )
+
+    def test_two_indexed_protocols_require_a_name_and_ignore_an_untracked_one(self):
+        first = self.area / "PROTOCOL-first.md"
+        second = self.area / "PROTOCOL-second.md"
+        untracked = self.area / "PROTOCOL-untracked.md"
+        for path in (first, second, untracked):
+            path.write_text("# protocol\n", encoding="utf-8")
+        self._stage(first, second)
+        first.unlink()
+        with self.assertRaisesRegex(repo.ProtocolChoiceError, "2 protocols"):
+            repo.the_protocol(self.area, None, staged=True)
+        with contextlib.chdir(self.root):
+            self.assertEqual(
+                repo.the_protocol(self.area, Path(first.name), staged=True), first
+            )
+        with self.assertRaisesRegex(
+            repo.ProtocolChoiceError, "no such protocol in the index"
+        ):
+            repo.the_protocol(self.area, untracked, staged=True)
+
+    def test_an_indexed_link_is_refused_even_when_the_tree_has_a_regular_file(self):
+        target = self.area / "text.txt"
+        target.write_text("# protocol\n", encoding="utf-8")
+        protocol = self.area / "PROTOCOL-x.md"
+        protocol.symlink_to(target.name)
+        self._stage(protocol)
+        protocol.unlink()
+        protocol.write_text("# now regular\n", encoding="utf-8")
+        with self.assertRaisesRegex(repo.ProtocolChoiceError, "symbolic link.*index"):
+            repo.the_protocol(self.area, None, staged=True)
+
+    def test_a_tree_link_does_not_replace_the_regular_protocol_in_the_index(self):
+        protocol = self.area / "PROTOCOL-x.md"
+        protocol.write_text("# protocol\n", encoding="utf-8")
+        self._stage(protocol)
+        protocol.unlink()
+        protocol.symlink_to("missing.txt")
+        self.assertEqual(repo.the_protocol(self.area, None, staged=True), protocol)
 
 
 class RequirementLines(unittest.TestCase):
