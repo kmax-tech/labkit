@@ -1,0 +1,202 @@
+[
+ {
+  "n": 1,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names no record"
+ },
+ {
+  "n": 2,
+  "function": "report_check.unreportable_gaps",
+  "cause": "a full run acknowledged over an unfrozen protocol"
+ },
+ {
+  "n": 3,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`"
+ },
+ {
+  "n": 4,
+  "function": "preflight._owed",
+  "cause": "the promise block does not read"
+ },
+ {
+  "n": 5,
+  "function": "report_decisions.limit_gaps",
+  "cause": "the result cannot be rendered from …: …"
+ },
+ {
+  "n": 6,
+  "function": "registration_hold.registration_changes",
+  "cause": "a promise's declared scope changed"
+ },
+ {
+  "n": 7,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "… is not statically readable (a call or a format spec this check does not compute) · pr…"
+ },
+ {
+  "n": 8,
+  "function": "preflight._owed",
+  "cause": "the area cannot be stamped now, so the record cannot be held to it"
+ },
+ {
+  "n": 9,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)"
+ },
+ {
+  "n": 10,
+  "function": "preflight.check_promise_sentences",
+  "cause": "[[promise]] … still carries the stamp's `<…>` sentence — frozen = true refuses it"
+ },
+ {
+  "n": 11,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run that did not complete"
+ },
+ {
+  "n": 12,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record the area does not have"
+ },
+ {
+  "n": 13,
+  "function": "reference.comparison_gaps",
+  "cause": "metrics.json carries … and the head registers no [reference] — a comparison is register…"
+ },
+ {
+  "n": 14,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…"
+ },
+ {
+  "n": 15,
+  "function": "report_check.cut_off_adoption_gaps",
+  "cause": "…: an adoption was cut off during its check — the protocol may hold a proposal no check…"
+ },
+ {
+  "n": 16,
+  "function": "report_hold.link_gap",
+  "cause": "…: a symbolic link to … — a report is held as a file at its own path, never through a…"
+ },
+ {
+  "n": 17,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "prompt block drifted from …: … of … fixed line(s) missing, e.g. …"
+ },
+ {
+  "n": 18,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: filename says related-* but the declared kind is …"
+ },
+ {
+  "n": 19,
+  "function": "report_decisions.check_first_dismissals_upheld",
+  "cause": "audit … #…: `false-positive` on a BLOCKER … — a blocking finding is not released by…"
+ },
+ {
+  "n": 20,
+  "function": "audit.early_for_tier",
+  "cause": "repeat_cost = \"low\" and no completed run · the first run is the cheaper probe; one audit …"
+ },
+ {
+  "n": 21,
+  "function": "report_decisions.check_stands_upheld",
+  "cause": "…: `stands` on a … decided limitation … — no decision review upholds that the repor…"
+ },
+ {
+  "n": 22,
+  "function": "run_record_check._criterion_n_warning",
+  "cause": "a criterion's denominator matches no recorded input count"
+ },
+ {
+  "n": 23,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 24,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurement is missing — the report binding cannot be read"
+ },
+ {
+  "n": 25,
+  "function": "code_check.main",
+  "cause": "bundle: … could not be read — the reader sees `not readable` in its place"
+ },
+ {
+  "n": 26,
+  "function": "finalize.check_data_counts",
+  "cause": "the counts name a run the area lacks or that is no completed prepare run"
+ },
+ {
+  "n": 27,
+  "function": "report_check._registration_at",
+  "cause": "… (……) recorded a commit this repository does not hold (a rewritten history, a shal…"
+ },
+ {
+  "n": 28,
+  "function": "registered_report.registered_review",
+  "cause": "…: its discussion blocks do not read — …"
+ },
+ {
+  "n": 29,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "cannot be parsed (…) · which parsers it calls cannot be told"
+ },
+ {
+  "n": 30,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds several protocols and none is named"
+ },
+ {
+  "n": 31,
+  "function": "report_decisions.check_carried_closings_upheld",
+  "cause": "audit … #…: a carried finding (from …) `…` — the follow-up did not find the fault…"
+ },
+ {
+  "n": 32,
+  "function": "report_blocks.block_gaps",
+  "cause": "a result block's body cannot be rendered from its protocol"
+ },
+ {
+  "n": 33,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "…: [protocol] type = \"…\" — a protocol that replaces another answers a new, post-hoc q…"
+ },
+ {
+  "n": 34,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded a promise block its commit and patch do not give"
+ },
+ {
+  "n": 35,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the run: a registered output of the run is gone"
+ },
+ {
+  "n": 36,
+  "function": "run_record_check.null_lane_findings",
+  "cause": "…: the null lane's answer and gold equal the registered lane's on every item — if the n…"
+ },
+ {
+  "n": 37,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run could not be opened"
+ },
+ {
+  "n": 38,
+  "function": "report_hold.report_hints",
+  "cause": "…: no assigned source found for the numbers on … line(s) — they stand outside every g…"
+ },
+ {
+  "n": 39,
+  "function": "report_check.repeated_gaps",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 40,
+  "function": "preflight._owed",
+  "cause": "the record's findings are still open"
+ }
+]
