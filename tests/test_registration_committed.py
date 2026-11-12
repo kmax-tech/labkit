@@ -1219,6 +1219,22 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
             )
         self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
 
+    def test_a_renamed_protocol_keeps_the_report_it_registered(self):
+        """The id binds: renaming the protocol and dropping its report in
+        one commit does not remove the report its first measurement stood
+        under."""
+        self._run(self._register("REPORT.md"))
+        renamed = self.area / "PROTOCOL-y.md"
+        _git(self.root, "mv", str(self.proto), str(renamed))
+        self.proto = renamed
+        text = self._head_now(None)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "renamed, report dropped")
+        gap = self._gap(text)
+        assert gap is not None
+        self.assertIn("registered REPORT.md as its report", gap)
+        self.assertIn("its head now registers none", gap)
+
     def test_late_registration_gets_the_same_gate_and_setter_refusal(self):
         from labkit.tools import protocol_edit, protocol_fill
 
