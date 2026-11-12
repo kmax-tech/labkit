@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 from labkit.formats.gate import STATIC_EVIDENCE
-from labkit.formats.gate import WARNING, GateFinding, RuleAssignment, cited_rule, coded
+from labkit.formats.gate import WARNING, GateFinding, cited_rule, coded
 from labkit.formats.repo import shown
 from labkit.formats.scope_sha import (
     LOCAL_ROOTS,
@@ -27,6 +27,8 @@ from labkit.formats.scope_sha import (
 )
 from labkit.checks.code_scan import unreadable_source
 
+#: the rule every finding of this module records: what the stamp must cover
+LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
 
 DYNAMIC_LOADERS = {
     "import_module",
@@ -94,7 +96,6 @@ def _import_findings(
     area: Path,
     repo: Path,
     where: str,
-    rule: RuleAssignment,
     fix: str,
 ) -> list[tuple[int, GateFinding]]:
     """The imports of NODE that resolve outside lib/ and src/."""
@@ -116,7 +117,7 @@ def _import_findings(
                         f"`{name}` resolves to {found.relative_to(repo)}, outside "
                         f"lib/ and src/ · the stamp does not cover it, a change "
                         f"there moves the number unseen",
-                        rule=rule,
+                        rule=LAB_019,
                         fix=fix,
                         evidence_kind=STATIC_EVIDENCE,
                     ),
@@ -161,7 +162,6 @@ def _coverage_in(
     loaders and foreign-area paths are read in the area's OWN files only: a
     shared helper's loader is parameterised by its caller, and reporting it
     for every area that imports the helper would be the same line forever."""
-    rule = cited_rule("LAB-019 The stamp covers everything that determines the number")
     fix = (
         "declare the file as a promise's scope (its declared_scope_sha then "
         "sees it) or copy it into the area"
@@ -190,7 +190,7 @@ def _coverage_in(
                         f"{', '.join(sorted(names)) or 'a computed path'} · imports "
                         f"after it may resolve outside lib/ and src/, which the "
                         f"stamp does not follow",
-                        rule=rule,
+                        rule=LAB_019,
                         fix=fix,
                         evidence_kind=STATIC_EVIDENCE,
                     ),
@@ -208,7 +208,7 @@ def _coverage_in(
                         f"`{_call_name(node)}(…)` loads code at run time · the "
                         f"stamp follows `import` lines only, so what this loads "
                         f"changes the number unseen",
-                        rule=rule,
+                        rule=LAB_019,
                         fix=fix,
                         evidence_kind=STATIC_EVIDENCE,
                     ),
@@ -228,14 +228,14 @@ def _coverage_in(
                             f"names area `{foreign[0]}` · a file of another area "
                             f"determines this number, and this area's stamp does "
                             f"not cover it",
-                            rule=rule,
+                            rule=LAB_019,
                             fix=fix,
                             evidence_kind=STATIC_EVIDENCE,
                         ),
                     )
                 )
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
-            out += _import_findings(node, area, repo, where, rule, fix)
+            out += _import_findings(node, area, repo, where, fix)
     return out
 
 
