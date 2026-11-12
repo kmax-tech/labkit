@@ -496,7 +496,7 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area, again=True)
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
-        self.assertIn("CLAIM in ", out)
+        self.assertIn("CLAIM #1 in ", out)
         # the way out: the report changes, and a review of that state is clean
         report.write_text(
             report.read_text(encoding="utf-8").replace(
