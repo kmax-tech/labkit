@@ -280,10 +280,12 @@ def promise_block_findings(
                     BLOCKER,
                     protocol.name,
                     f"[{p.id}] declared scope: {exc} · runlog refuses the run",
-                    fix=f"name files that exist in [{p.id}]'s scope, then "
+                    fix=f"{promises.scope_way_out(p.id, exc)}, then "
                     f"`{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
-                    # the cause names its rule where the scope is read
+                    # the cause names its rule and its outcome where the
+                    # scope is read
+                    stated_outcome=exc.site_outcome,
                     rule=exc.rule,
                 )
             )

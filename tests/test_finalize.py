@@ -399,6 +399,32 @@ class IntentCheckRefused(unittest.TestCase):
             self.assertFalse(any("unreadable" in g.text for g in twin.found))
 
 
+class DeclaredScopeWithoutADigestNow(unittest.TestCase):
+    """Station 4: a declared scope that gives no digest now is not compared
+    — its own cause under its rule, no run named as changed, and the way
+    out its repair: a new run would be refused over the same scope."""
+
+    def test_a_scope_file_gone_is_told_as_not_compared(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            run = completed_run(area, "r1", metrics={"criterion_1_pass": True})
+            (area / "scripts" / "01_measure.py").unlink()
+            found = gate.Findings(tell=None)
+            finalize.check_declared_scopes(found, area, run, CLEAN_PROTOCOL)
+        self.assertTrue(found.found)
+        for f in found.found:
+            self.assertTrue(
+                f.text.startswith(
+                    "declared scope cannot be compared with what r1 recorded: "
+                ),
+                f.text,
+            )
+            self.assertEqual((f.changed_since, f.rule), (None, gate.TECHNICAL_RULE))
+            self.assertIn("scope as the sentence says", f.fix or "")
+            self.assertNotIn("rerun", f.fix or "")
+
+
 class DeclaredScopeSinceTheRun(unittest.TestCase):
     """Station 4: a promise's declared scope edited after the run blocks,
     naming the run as data (`changed_since`) and the measuring command;

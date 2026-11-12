@@ -574,6 +574,20 @@ class Chain(unittest.TestCase):
             recheck.scopes_unchanged(run, self.area)
         self.assertIn("[criterion-1]", str(cm.exception))
         self.assertIn("[quality-check-1]", str(cm.exception))
+        self.assertIn("declared scope changed since run", str(cm.exception))
+
+    def test_recheck_refuses_a_scope_gone_as_not_compared(self):
+        """No digest now: no change is claimed and no rerun named — a run
+        is refused over the same scope."""
+        run = self.complete(self.start(), self.GOOD)
+        (self.area / "scripts" / "01_measure.py").unlink()
+        with self.assertRaises(SystemExit) as cm:
+            recheck.scopes_unchanged(run, self.area)
+        told = str(cm.exception)
+        self.assertIn("declared scope cannot be compared with what run", told)
+        self.assertIn("scope as the sentence says", told)
+        self.assertNotIn("changed since", told)
+        self.assertNotIn("— rerun", told)
 
 
 if __name__ == "__main__":

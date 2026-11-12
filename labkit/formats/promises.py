@@ -60,7 +60,14 @@ from pathlib import Path
 
 from labkit.formats import digests
 from labkit.formats import files, protocol_block, runs
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment, cited_rule
+from labkit.formats.gate import (
+    OPEN_RULE,
+    TECHNICAL_RULE,
+    RuleAssignment,
+    cited_rule,
+    NOT_EXECUTABLE,
+    outcome_of_failed_read,
+)
 
 #: the kinds of promise — each one an id's stem: `criterion-1`
 PROMISE_KINDS = ("criterion", "quality-check", "branch")
@@ -222,12 +229,23 @@ class PromiseError(ValueError):
     not meet — each named where it is raised: what `load` returns, the id
     `constants` is asked for, the one line `with_constant` edits and its
     read-back —, OPEN_RULE where neither is decided. Every cause says which; there is no default, so a rule left
-    out is not read as an open one. Who tells the error as a finding
-    passes this rule on and sets none of its own."""
+    out is not read as an open one. SITE_OUTCOME is what the site that tells
+    the error states of its check (`GateFinding.stated_outcome`): NOT_EXECUTABLE
+    where a declared scope's file was refused to the reader — the scope may
+    be sound —, else None: the site states nothing, and the finding's
+    outcome is the one derived from RULE (`gate.derived_outcome`). Who tells
+    the error as a finding passes both on and sets none of its own."""
 
-    def __init__(self, message: str, *, rule: RuleAssignment) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        rule: RuleAssignment,
+        site_outcome: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.rule = rule
+        self.site_outcome = site_outcome
 
 
 @dataclass(frozen=True)
@@ -812,6 +830,7 @@ def _function_source(path: Path, name: str) -> str:
             f"{path}: cannot read {name!r} from it ({exc.__class__.__name__}: "
             f"{exc}) — the declared scope must be parseable code",
             rule=TECHNICAL_RULE,
+            site_outcome=outcome_of_failed_read(exc),
         ) from exc
     defs = [
         node
@@ -866,10 +885,29 @@ def scope_sources(base: Path, scope: tuple[str, ...]) -> list[tuple[str, bytes]]
             )
         except OSError as exc:
             raise PromiseError(
-                f"scope entry {entry!r}: {exc}", rule=TECHNICAL_RULE
+                f"scope entry {entry!r}: {exc}",
+                rule=TECHNICAL_RULE,
+                site_outcome=outcome_of_failed_read(exc),
             ) from exc
         entries.append((entry, content))
     return entries
+
+
+def scope_way_out(promise_id: str, cause: PromiseError) -> str:
+    """The step that lets PROMISE_ID's declared scope be read again, by the
+    CAUSE `scope_sources` raised: access to the file where the reader was
+    refused it (the scope itself may be sound), else the scope's repair.
+    The one wording for every site that tells such a cause."""
+    if cause.site_outcome == NOT_EXECUTABLE:
+        return (
+            f"give the reader access to the file the sentence names "
+            f"([{promise_id}]'s scope may be sound as it is)"
+        )
+    return (
+        f"repair [{promise_id}]'s scope as the sentence says — every entry a "
+        f"file that reads, or `file:function` naming one top-level definition "
+        f"in it"
+    )
 
 
 def unmentioned_constants(block: PromiseTables, base: Path) -> list[str]:
@@ -918,22 +956,42 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
     return digests.tree_digest(scope_sources(base, scope))
 
 
-def scope_drift(recorded: dict | None, base: Path) -> list[str]:
-    """`[criterion-1] old → new` for every promise whose declared scope changed since
-    the run. `recorded` is the run's config.json `promises` (None: the run
-    predates the block — nothing to compare)."""
+@dataclass(frozen=True)
+class ScopeDrift:
+    """One promise whose declared scope does not give the digest its run
+    recorded (`scope_drift`).
+
+    Attributes:
+        promise_id: The promise ("criterion-1").
+        told: `[criterion-1] old → new`, or `… → unreadable now (<why>)`.
+        unread: Why the scope has no digest now (`scope_sources`: a file or
+            function gone, code that does not parse, a refused read), with
+            its rule and site outcome; None when it has another digest —
+            the one case in which a change is shown.
+    """
+
+    promise_id: str
+    told: str
+    unread: PromiseError | None
+
+
+def scope_drift(recorded: dict | None, base: Path) -> list[ScopeDrift]:
+    """Every promise whose declared scope does not give the digest the run
+    recorded: another digest, or none (`ScopeDrift.unread` — not a crash,
+    and not a comparison made). `recorded` is the run's config.json
+    `promises` (None: the run predates the block — nothing to compare)."""
     if recorded is None:
         return []
     out = []
     for pid, rec in sorted(recorded["ids"].items()):
+        then = rec["declared_scope_sha"]
         try:
             now = declared_scope_sha(base, tuple(rec["scope"]))
         except PromiseError as exc:
-            # gone or unparsable is a change, not a crash
-            out.append(f"[{pid}] {rec['declared_scope_sha']} → unreadable now ({exc})")
+            out.append(ScopeDrift(pid, f"[{pid}] {then} → unreadable now ({exc})", exc))
             continue
-        if now != rec["declared_scope_sha"]:
-            out.append(f"[{pid}] {rec['declared_scope_sha']} → {now}")
+        if now != then:
+            out.append(ScopeDrift(pid, f"[{pid}] {then} → {now}", None))
     return out
 
 

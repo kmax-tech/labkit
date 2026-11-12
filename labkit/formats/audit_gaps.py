@@ -27,6 +27,7 @@ from labkit.formats.protocol_check import (
     INVALID,
     MISSING,
     PLACEHOLDER,
+    REPAIR_TABLES,
     check_fields,
     registration_drift,
     registration_stamp,
@@ -181,8 +182,9 @@ class RecordGap:
     """Why the record a head names covers no full run (`audit_record_gap`),
     the step that closes it — the way out a gate tells beside the sentence
     (`gate.with_way_out`) — and the rule the cause breaks: the preflight
-    audit's, or the technical contract where the record or the area's
-    stamp does not read."""
+    audit's, the technical contract where the record or the area's stamp
+    does not read, or the rule of the cause where the promise block does
+    not (`promises.PromiseError.rule`)."""
 
     why: str
     fix: str
@@ -267,9 +269,9 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
             audit,
             LAB_015,
         )
-    judged = _protocol_gap(record, name, text)
+    judged = _protocol_gap(record, name, text, audit)
     if judged:
-        return RecordGap(judged[0], audit, judged[1])
+        return judged
     if record.open:
         return RecordGap(
             f"{len(record.open)} finding(s) of {name} still `open` — decide each "
@@ -313,24 +315,33 @@ def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
     return out
 
 
-def _protocol_gap(
-    record: Record, name: str, text: str
-) -> tuple[str, RuleAssignment] | None:
-    """Why RECORD (named NAME) judged another protocol than TEXT, with the
-    rule the cause breaks, or None: another promise block (`block_sha`) or
-    another registration — the kind, the question or another field the kind
-    owes (`registration`) —, the preflight audit's rule; a promise block
-    that does not read, the technical contract."""
+def _protocol_gap(record: Record, name: str, text: str, audit: str) -> RecordGap | None:
+    """Why RECORD (named NAME) judged another protocol than TEXT, or None:
+    another promise block (`block_sha`) or another registration — the kind,
+    the question or another field the kind owes (`registration`) —, the
+    preflight audit's rule, the way out a new audit (AUDIT). A promise
+    block that does not read is not compared: its own cause with the rule
+    that cause names (`PromiseError.rule`), the way out its repair — a new
+    audit would not read it either."""
     try:
         block = promises.block_stamp(text)
     except promises.PromiseError as exc:
-        return str(exc), TECHNICAL_RULE
+        return RecordGap(
+            f"the promise block does not read, so the record {name} cannot be "
+            f"held to it: {exc}",
+            REPAIR_TABLES,
+            exc.rule,
+        )
     if record.block_sha != block:
-        return (
+        return RecordGap(
             f"the record {name} saw the promise block {record.block_sha}, the protocol "
-            f"carries {block} now — a promise rewritten after the audit owes a new one"
-        ), LAB_015
+            f"carries {block} now — a promise rewritten after the audit owes a new one",
+            audit,
+            LAB_015,
+        )
     changed = registration_note([record], registration_stamp(text))
     if not changed:
         return None
-    return f"the record {name} no longer covers the protocol{changed}", LAB_015
+    return RecordGap(
+        f"the record {name} no longer covers the protocol{changed}", audit, LAB_015
+    )

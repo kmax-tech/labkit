@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
-from labkit.formats import audit_gaps
+from labkit.formats import audit_gaps, gate
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 BODY = """
@@ -121,6 +121,27 @@ class PreflightRecord(unittest.TestCase):
             "the registration changed after the audit (Question / hypothesis)",
             gap.why,
         )
+
+    def test_a_block_that_does_not_read_is_its_own_cause_and_way_out(self):
+        """Nothing is compared: the gap carries the rule the block's cause
+        names — here an open one, a duplicate id — and its repair as the
+        way out, not a new audit, which would not read the block either."""
+        text = _protocol()
+        name = self._record(text)
+        twice = text.replace(
+            'id = "quality-check-2"\nkey = "quality_check_2_pass"',
+            'id = "quality-check-1"\nkey = "quality_check_1_pass"',
+        )
+        self.assertNotEqual(twice, text)
+        with self.assertRaises(promises.PromiseError) as cm:
+            promises.parse_block(twice)
+        self.assertEqual(cm.exception.rule, gate.OPEN_RULE)
+        gap = audit_gaps.audit_record_gap(self.area, name, twice)
+        assert gap is not None
+        self.assertIn("duplicate id", gap.why)
+        self.assertIn("cannot be held to it", gap.why)
+        self.assertEqual(gap.rule, gate.OPEN_RULE)
+        self.assertEqual(gap.fix, protocol_check.REPAIR_TABLES)
 
     def test_a_changed_kind_is_named(self):
         text = _protocol("fit")

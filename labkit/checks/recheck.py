@@ -135,16 +135,31 @@ def scopes_unchanged(run: Path, area: Path) -> None:
 
     The run recorded a declared-scope hash per promise (config.json `promises`);
     if a declared region changed since, recomputing with today's code
-    agrees or disagrees about a different instrument. Runs without a
-    promise block — and run dirs without config.json —
-    have nothing to compare and pass.
+    agrees or disagrees about a different instrument. A scope that gives
+    no digest now (`promises.ScopeDrift.unread`) is refused as not
+    compared, with its cause's step. Runs without a promise block — and
+    run dirs without config.json — have nothing to compare and pass.
     """
     cfg = runs.read_run_config(run)
-    changed = promises.scope_drift(cfg.promises if cfg else None, area)
-    if changed:
+    drift = promises.scope_drift(cfg.promises if cfg else None, area)
+    # a scope without a digest now is not compared: its cause and that
+    # cause's step, no change claimed — a rerun is refused over it too
+    unread = [d for d in drift if d.unread is not None]
+    if unread:
+        raise SystemExit(
+            f"recheck: declared scope cannot be compared with what run "
+            f"{run.name} recorded: "
+            + "; ".join(
+                f"{d.told} — {promises.scope_way_out(d.promise_id, d.unread)}"
+                for d in unread
+                if d.unread is not None
+            )
+            + ", or recheck from that run's commit"
+        )
+    if drift:
         raise SystemExit(
             f"recheck: declared scope changed since run {run.name}: "
-            + "; ".join(changed)
+            + "; ".join(d.told for d in drift)
             + " — rerun, or recheck from that run's commit"
         )
 

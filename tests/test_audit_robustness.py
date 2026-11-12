@@ -9,9 +9,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.checks import intent_check, recheck
+from labkit.checks import code_check, intent_check, recheck
 from labkit.run import runlog
-from labkit.formats import promises, protocol_block, protocol_check
+from labkit.formats import gate, promises, protocol_block, protocol_check
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.checks import protocol_report
 from protocol_fixture import PID, head
@@ -44,10 +44,73 @@ class DeclaredScope(unittest.TestCase):
             _, run = area_with_run(tmp)
             recorded = json.loads((run / "config.json").read_text())["promises"]
             (tmp / "scripts" / "m.py").write_text("def evaluate(:\n")
-            drift = promises.scope_drift(recorded, tmp)
-            self.assertIn("unreadable now", drift[0])
+            (unparsable,) = promises.scope_drift(recorded, tmp)
+            self.assertIn("unreadable now", unparsable.told)
             (tmp / "scripts" / "m.py").unlink()
-            self.assertIn("unreadable now", promises.scope_drift(recorded, tmp)[0])
+            (gone,) = promises.scope_drift(recorded, tmp)
+            self.assertIn("unreadable now", gone.told)
+            # no digest now: the scope's own cause with its rule, a defect
+            # found — not a comparison that showed a change
+            for drift in (unparsable, gone):
+                assert drift.unread is not None
+                self.assertEqual(drift.unread.rule, gate.TECHNICAL_RULE)
+                self.assertIsNone(drift.unread.site_outcome)
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
+    def test_code_check_passes_the_scope_cause_on_with_rule_and_outcome(self):
+        """What the gate adds to the cause: its rule and outcome reach the
+        finding, and the way out names the scope's repair for every cause —
+        a refused file reads `not executable`, a missing one a breach."""
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            protocol, _ = area_with_run(tmp)
+            (tmp / "scripts" / "m.py").write_text(
+                'def evaluate(rows):\n    return {"criterion_1_pass": True}\n'
+            )
+            (tmp / "data").mkdir()
+            extra = tmp / "data" / "bar.py"
+            extra.write_text("BAR = 1\n")
+            text = protocol.read_text().replace(
+                'scope = ["scripts/m.py', 'scope = ["data/bar.py", "scripts/m.py'
+            )
+            self.assertNotEqual(text, protocol.read_text())
+            self.assertEqual(code_check.promise_block_findings(tmp, protocol, text), [])
+            extra.chmod(0)
+            try:
+                (refused,) = code_check.promise_block_findings(tmp, protocol, text)
+            finally:
+                extra.chmod(0o644)
+            extra.unlink()
+            (gone,) = code_check.promise_block_findings(tmp, protocol, text)
+        self.assertEqual(refused.outcome, gate.NOT_EXECUTABLE)
+        self.assertEqual(gone.outcome, gate.VIOLATED)
+        for f in (refused, gone):
+            self.assertEqual(f.rule, gate.TECHNICAL_RULE)
+        # the way out follows the cause: access for the refused file, whose
+        # scope may be sound; the scope's repair for the missing one
+        self.assertIn("give the reader access", refused.fix or "")
+        self.assertNotIn("repair", refused.fix or "")
+        self.assertIn("scope as the sentence says", gone.fix or "")
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
+    def test_a_refused_scope_file_is_a_check_not_executable(self):
+        """The file is there and the reader may not open it: the scope may
+        be sound, so the cause states `not executable` — as a whole file and
+        as `file:function`; the twin that reads states nothing."""
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            script = tmp / "m.py"
+            script.write_text("def evaluate(rows):\n    return 1\n")
+            for scope in (("m.py",), ("m.py:evaluate",)):
+                promises.scope_sources(tmp, scope)  # the twin: it reads
+                script.chmod(0)
+                try:
+                    with self.assertRaises(promises.PromiseError) as cm:
+                        promises.scope_sources(tmp, scope)
+                finally:
+                    script.chmod(0o644)
+                self.assertEqual(cm.exception.site_outcome, gate.NOT_EXECUTABLE)
+                self.assertEqual(cm.exception.rule, gate.TECHNICAL_RULE)
 
 
 class RecheckByIdentity(unittest.TestCase):

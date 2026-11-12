@@ -477,9 +477,22 @@ def check_declared_scopes(
         return
     drift = promises.scope_drift(recorded, area)
     for d in drift:
+        if d.unread is not None:
+            # no digest now, so nothing is compared: the cause of that,
+            # told with its rule and outcome — no change is shown, and a new
+            # run would be refused over the same scope
+            findings.block(
+                f"declared scope cannot be compared with what "
+                f"{answering_run.name} recorded: {d.told}",
+                fix=f"{promises.scope_way_out(d.promise_id, d.unread)}, then "
+                f"`{gate_command('finalize', area)}`",
+                stated_outcome=d.unread.site_outcome,
+                rule=d.unread.rule,
+            )
+            continue
         drifted = replace(
             blocker(
-                f"declared scope changed since {answering_run.name}: {d}",
+                f"declared scope changed since {answering_run.name}: {d.told}",
                 fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
                 step=measure_command(area),
                 rule=LAB_041,
