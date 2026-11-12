@@ -1,0 +1,142 @@
+[
+ {
+  "n": 215,
+  "function": "report_decisions.check_first_dismissals_upheld",
+  "cause": "audit … #…: `false-positive` on a BLOCKER … — a blocking finding is not released by…"
+ },
+ {
+  "n": 216,
+  "function": "report_decisions.check_limit_effects_decided",
+  "cause": "…: a BLOCKER decided limitation owes its effect on the verdicts"
+ },
+ {
+  "n": 217,
+  "function": "report_decisions.check_repaired_claims_upheld",
+  "cause": "audit … #…: `fixed` on a BLOCKER on the Conclusion … — no follow-up audit is shown …"
+ },
+ {
+  "n": 218,
+  "function": "report_decisions.check_stands_upheld",
+  "cause": "…: `stands` on a … decided limitation … — no decision review upholds that the repor…"
+ },
+ {
+  "n": 219,
+  "function": "report_decisions.followup_findings",
+  "cause": "the carried findings of … do not form a chain: …"
+ },
+ {
+  "n": 220,
+  "function": "report_hold.discussion_sources",
+  "cause": "… names …, and there is no such protocol"
+ },
+ {
+  "n": 221,
+  "function": "report_hold.discussion_sources",
+  "cause": "…: …'s area has no runs/…/ — a discussion names a run of its protocol's area"
+ },
+ {
+  "n": 222,
+  "function": "report_hold.hold_report",
+  "cause": "a report of a replacing protocol does not name what it replaces"
+ },
+ {
+  "n": 223,
+  "function": "report_hold.hold_report",
+  "cause": "a discussion head lacks protocol, run or why"
+ },
+ {
+  "n": 224,
+  "function": "report_hold.hold_report",
+  "cause": "a block of the report does not read"
+ },
+ {
+  "n": 225,
+  "function": "report_hold.link_gap",
+  "cause": "…: a symbolic link to … — a report is held as a file at its own path, never through a…"
+ },
+ {
+  "n": 226,
+  "function": "report_hold.owed_blocks",
+  "cause": "line …: cites run …, the adopted result of …, without its generated block — the num…"
+ },
+ {
+  "n": 227,
+  "function": "report_hold.report_hints",
+  "cause": "…: no assigned source found for the numbers on … line(s) — they stand outside every g…"
+ },
+ {
+  "n": 228,
+  "function": "report_hold.report_hints",
+  "cause": "…: numbers on … line(s) beside a discussed run — a discussed run's number in a report…"
+ },
+ {
+  "n": 229,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: an audit record or a report review record does not read"
+ },
+ {
+  "n": 230,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: the protocol's head does not read"
+ },
+ {
+  "n": 231,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: git fails"
+ },
+ {
+  "n": 232,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: the report discusses a run the area does not hold"
+ },
+ {
+  "n": 233,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state (one naming no claim)… — a cold r…"
+ },
+ {
+  "n": 234,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state — and none can run: …"
+ },
+ {
+  "n": 235,
+  "function": "report_hold.review_hold",
+  "cause": "…: the report review holds this state (…) — …"
+ },
+ {
+  "n": 236,
+  "function": "report_hold.staged_area_gap",
+  "cause": "…: the working tree differs from the index (…) — … the tree, the commit holds the i…"
+ },
+ {
+  "n": 237,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which has adopted no result"
+ },
+ {
+  "n": 238,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, which no protocol has adopted as its result — a reported number is adopte…"
+ },
+ {
+  "n": 239,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: line …: run … is discussed as not reported, but … has adopted it as its result"
+ },
+ {
+  "n": 240,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which adopts it in the working tree but not in …"
+ },
+ {
+  "n": 241,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which has adopted no result — and neither its a…"
+ },
+ {
+  "n": 242,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites a run of a protocol whose head does not read — …"
+ }
+]

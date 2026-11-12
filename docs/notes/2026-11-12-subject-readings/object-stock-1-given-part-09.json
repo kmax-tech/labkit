@@ -1,0 +1,152 @@
+[
+ {
+  "n": 243,
+  "function": "report_replacement._predecessor",
+  "cause": "[replaces] protocol is its own id"
+ },
+ {
+  "n": 244,
+  "function": "report_replacement._predecessor",
+  "cause": "`[replaces]` names no protocol of the repo"
+ },
+ {
+  "n": 245,
+  "function": "report_replacement._predecessor",
+  "cause": "`[replaces]` names an id several protocols carry"
+ },
+ {
+  "n": 246,
+  "function": "report_replacement._predecessor",
+  "cause": "the replacements run in a circle (…)"
+ },
+ {
+  "n": 247,
+  "function": "report_replacement._predecessor_open",
+  "cause": "its predecessor's BLOCKER is still open — …"
+ },
+ {
+  "n": 248,
+  "function": "report_replacement._predecessor_open",
+  "cause": "the predecessor's audit records do not read: …"
+ },
+ {
+  "n": 249,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "changed against … (…) and not declared: … … → …"
+ },
+ {
+  "n": 250,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "declares a change the registrations do not show: … … → … (the predecessor …, this…"
+ },
+ {
+  "n": 251,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "the registrations cannot be compared: a protocol as its first measurement saw it cannot be read back (the whys of `registration_hold.unread_hold`)"
+ },
+ {
+  "n": 252,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "the registrations cannot be compared: the protocol's own first measurements saw different registrations"
+ },
+ {
+  "n": 253,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "…: [protocol] type = \"…\" — a protocol that replaces another answers a new, post-hoc q…"
+ },
+ {
+  "n": 254,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "a `[[replaces.change]]` states no why"
+ },
+ {
+  "n": 255,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "`[replaces]` does not read"
+ },
+ {
+  "n": 256,
+  "function": "result_render.render_gaps",
+  "cause": "the Recorded results line is not written"
+ },
+ {
+  "n": 257,
+  "function": "result_render.render_gaps",
+  "cause": "the Recorded results line differs from its rendering (the run's metrics.json and the reco…"
+ },
+ {
+  "n": 258,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" is written … times — one generated line per label"
+ },
+ {
+  "n": 259,
+  "function": "result_render.render_gaps",
+  "cause": "no \"…\" line — the limit's line belongs in the protocol"
+ },
+ {
+  "n": 260,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" names a limit no covering record decides — written by hand or from an older record"
+ },
+ {
+  "n": 261,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" differs from the record"
+ },
+ {
+  "n": 262,
+  "function": "run_record_check._continued_with_other_code",
+  "cause": "…: … row(s) come from …, which ran other code (script …, this run's …) — …'s …"
+ },
+ {
+  "n": 263,
+  "function": "run_record_check._criterion_n_warning",
+  "cause": "a criterion's denominator matches no recorded input count"
+ },
+ {
+  "n": 264,
+  "function": "run_record_check._gone",
+  "cause": "… is not at its recorded path on this machine — deleted, moved or held elsewhere; the r…"
+ },
+ {
+  "n": 265,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the run recorded no commit, so the helpers its script imports cannot be compared"
+ },
+ {
+  "n": 266,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the area lies in no git repository now, so the helpers cannot be compared"
+ },
+ {
+  "n": 267,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… started at commit …, which this clone does not hold"
+ },
+ {
+  "n": 268,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… is in neither …'s commit nor its uncommitted.patch, so it cannot be compared with w…"
+ },
+ {
+  "n": 269,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… recorded no commit, or the area lies in no git repository now, so the helpers its scr…"
+ },
+ {
+  "n": 270,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the tree … started from cannot be read for …: …"
+ },
+ {
+  "n": 271,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… changed since … ran it (it was untracked; the run kept it as …)"
+ },
+ {
+  "n": 272,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… changed since … ran"
+ }
+]

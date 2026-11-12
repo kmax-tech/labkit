@@ -1,0 +1,162 @@
+[
+ {
+  "n": 153,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: a registered output of the run is gone"
+ },
+ {
+  "n": 154,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: a `fixed` finding names a place that begins several fields"
+ },
+ {
+  "n": 155,
+  "function": "registration_hold.seen_hold",
+  "cause": "a field LAB-003 names changed after the first measurement"
+ },
+ {
+  "n": 156,
+  "function": "registration_hold.seen_hold",
+  "cause": "the registered comparison `[reference]` changed"
+ },
+ {
+  "n": 157,
+  "function": "registration_hold.seen_hold",
+  "cause": "`kind` or `[kept]` changed"
+ },
+ {
+  "n": 158,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded no commit"
+ },
+ {
+  "n": 159,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded a promise block its commit and patch do not give"
+ },
+ {
+  "n": 160,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run's commit is not in this clone, or git cannot read its tree or the protocol's blob"
+ },
+ {
+  "n": 161,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run started with the protocol untracked"
+ },
+ {
+  "n": 162,
+  "function": "report_blocks.block_gaps",
+  "cause": "a result block names no protocol of the repo, or one that adopted no result"
+ },
+ {
+  "n": 163,
+  "function": "report_blocks.block_gaps",
+  "cause": "the block's protocol head does not read"
+ },
+ {
+  "n": 164,
+  "function": "report_blocks.block_gaps",
+  "cause": "…: the protocol has adopted run … now"
+ },
+ {
+  "n": 165,
+  "function": "report_blocks.block_gaps",
+  "cause": "… differs from the protocol's rendering"
+ },
+ {
+  "n": 166,
+  "function": "report_blocks.cited_gaps",
+  "cause": "a run cited in a structured place is not held by the repo"
+ },
+ {
+  "n": 167,
+  "function": "report_blocks.cited_gaps",
+  "cause": "a run id in running prose is not held by the repo"
+ },
+ {
+  "n": 168,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "… repeats the block at line … — one block per protocol and run"
+ },
+ {
+  "n": 169,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "a discussion block has no why"
+ },
+ {
+  "n": 170,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "…: its line differs from its head"
+ },
+ {
+  "n": 171,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…"
+ },
+ {
+  "n": 172,
+  "function": "report_check._registration_at",
+  "cause": "… (……) recorded a commit this repository does not hold (a rewritten history, a shal…"
+ },
+ {
+  "n": 173,
+  "function": "report_check._registration_at",
+  "cause": "… at … (……) cannot be read: … — the registration that stood before the number c…"
+ },
+ {
+  "n": 174,
+  "function": "report_check._registration_at",
+  "cause": "… was not committed at … (……) — nothing stood before the number; the registration…"
+ },
+ {
+  "n": 175,
+  "function": "report_check._registration_at",
+  "cause": "the registration as committed at … (……) lacks … — the registration is what the co…"
+ },
+ {
+  "n": 176,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…"
+ },
+ {
+  "n": 177,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is"
+ },
+ {
+  "n": 178,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no answering run to hold it to — …"
+ },
+ {
+  "n": 179,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is now, and none can run — …"
+ },
+ {
+  "n": 180,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the run: a registered output of the run is gone"
+ },
+ {
+  "n": 181,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: a file is missing or its access refused"
+ },
+ {
+  "n": 182,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: there is nothing to stamp"
+ },
+ {
+  "n": 183,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: a findings file does not read"
+ },
+ {
+  "n": 184,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: the promise block does not read"
+ }
+]

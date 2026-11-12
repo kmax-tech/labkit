@@ -1,0 +1,637 @@
+[
+ {
+  "n": 273,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:617",
+  "told_at": "labkit/checks/run_record_check.py:624",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run's config.json holds no data= entry and no declaration that the run reads no input file."
+ },
+ {
+  "n": 274,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:422",
+  "told_at": "labkit/checks/run_record_check.py:610",
+  "bundled": [
+   "entry is no table (form)",
+   "entry has no rows field (completeness)",
+   "path missing, empty or no text (completeness or form)",
+   "sha256 missing or no text (completeness or form)",
+   "rows is no count (form)"
+  ],
+  "check_limit": false,
+  "condition": "data_entries raises ArtefactError on any data= entry not of the shape runlog writes; the telling site passes the sentence on unread."
+ },
+ {
+  "n": 275,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "completeness of the run record (the owed script digest is missing, written as a mark)",
+  "tested_at": "labkit/checks/run_record_check.py:163",
+  "told_at": "labkit/checks/run_record_check.py:165",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The record's script_sha holds the mark `no-script`: a mark that is there and records that the run was started without a script file (rule 4); no value names that state."
+ },
+ {
+  "n": 276,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json reads and records a script"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:222",
+  "told_at": "labkit/checks/run_record_check.py:175",
+  "bundled": [
+   "no file of the recorded script's name under the area (binding: run record -> area code)",
+   "several files of its name, none named by the command (uniqueness of area code)"
+  ],
+  "check_limit": false,
+  "condition": "script_of finds no file for the script the record names, or several files of its name in the area; _run_code only tests that a sentence came back."
+ },
+ {
+  "n": 277,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json reads",
+   "the script is found in the area"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:184",
+  "told_at": "labkit/checks/run_record_check.py:187",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The digest of the script file now differs from the script_sha the run recorded."
+ },
+ {
+  "n": 278,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json reads",
+   "the script is found in the area"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/scope_sha.py:91",
+  "told_at": "labkit/checks/run_record_check.py:203",
+  "bundled": [
+   "file cannot be read (missing, access, not UTF-8)",
+   "file does not parse as Python"
+  ],
+  "check_limit": false,
+  "condition": "measured_code raises SourceError: the script or a module it imports is gone, not accessible, not UTF-8 or does not parse as Python (read at scope_sha.py:91-107, caught at run_record_check.py:200)."
+ },
+ {
+  "n": 279,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's data= names the source",
+   "the source stands and resolves inside the repository"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "binding, weak (the run record's source reference leads to a file git does not hold); the source file itself is in no object of the table",
+  "tested_at": "labkit/checks/run_record_check.py:686",
+  "told_at": "labkit/checks/run_record_check.py:810",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Some file of the source is neither tracked by git nor matched by an ignore rule (untracked at :780/:786, minus ignoring_rules): the file's status in git, which no value names."
+ },
+ {
+  "n": 280,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "decided at run time",
+    "candidates": [
+     "repository and working state"
+    ],
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's [model] block reads and declares arms",
+   "the answering run's config.json reads"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "the property fits; the profile file is in no object of the table, hence weak",
+  "tested_at": "labkit/checks/run_record_check.py:1088",
+  "told_at": "labkit/checks/run_record_check.py:1090",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The profile path an arm of the protocol's head names is no regular file under the repository root."
+ },
+ {
+  "n": 281,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's [model] block reads and declares arms",
+   "the answering run's config.json reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:1098",
+  "told_at": "labkit/checks/run_record_check.py:1100",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The fingerprint an arm of the head names does not occur as text anywhere in the answering run's config record."
+ },
+ {
+  "n": 282,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's [model] block reads and declares arms",
+   "the arm names an alias",
+   "the answering run's config.json reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:1109",
+  "told_at": "labkit/checks/run_record_check.py:1111",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The alias an arm of the head names does not occur as text anywhere in the answering run's config record."
+ },
+ {
+  "n": 283,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:1267",
+  "told_at": "labkit/checks/run_record_check.py:142",
+  "bundled": [
+   "a run of the chain has no config.json",
+   "a config.json in the chain is damaged (RunConfigError)",
+   "derived_from names no run directory beside the run",
+   "derived_from loops"
+  ],
+  "check_limit": false,
+  "condition": "runs.lineage raises ValueError somewhere along the derived_from chain; the telling site passes the sentence on."
+ },
+ {
+  "n": 284,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's [kept] names a key",
+   "metrics.json reads"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "bundle of completeness (key missing) and form (value no finite number) of the run record, the protocol a precondition; the code words the two apart at :1144 inside one finding",
+  "tested_at": "labkit/checks/run_record_check.py:1138",
+  "told_at": "labkit/checks/run_record_check.py:1150",
+  "bundled": [
+   "metrics.json holds no such key",
+   "the key's value is no finite number"
+  ],
+  "check_limit": false,
+  "condition": "The key the head's [kept] names is not in the run's metrics.json, or its value there is no finite number (there, and of the kind the place takes)."
+ },
+ {
+  "n": 285,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's metrics show model calls (llm_retries, or model_calls > 0)",
+   "the lineage reads"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "inner consistency of the run record (metrics say a model was called, the config names none), if the metrics are read as tested rather than as the condition for the check to apply",
+  "tested_at": "labkit/formats/runs.py:1301",
+  "told_at": "labkit/checks/run_record_check.py:939",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No run in the lineage recorded models_resolved in its config, while the metrics show model calls (:927, :930)."
+ },
+ {
+  "n": 286,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's metrics show model calls"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:1267",
+  "told_at": "labkit/checks/run_record_check.py:933",
+  "bundled": [
+   "a run of the chain has no config.json",
+   "a config.json in the chain is damaged (RunConfigError)",
+   "derived_from names no run directory beside the run",
+   "derived_from loops"
+  ],
+  "check_limit": false,
+  "condition": "runs.lineage raises ValueError inside model_provenance_run; the telling site passes the sentence on."
+ },
+ {
+  "n": 287,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "a kept JSONL output holds both lanes, registered and null"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "inner consistency does not fit: the two lanes do not contradict each other",
+  "tested_at": "labkit/checks/run_record_check.py:409",
+  "told_at": "labkit/checks/run_record_check.py:447",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "For every item the null lane's row has the same answer and gold as the registered lane's row: the null condition changed nothing in the kept rows. A finding told because two parts are the same (rule 5); no value names it."
+ },
+ {
+  "n": 288,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "outputs.json reads"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:829",
+  "told_at": "labkit/checks/run_record_check.py:853",
+  "bundled": [
+   "the registered file is gone (completeness of the run record, rule 4)",
+   "outputs.json records no sha256 for it (completeness of the run record)",
+   "the file's sha256 now is not the recorded one (agreement: output as it stands against as a run recorded it)"
+  ],
+  "check_limit": false,
+  "condition": "output_drift gives one of three reasons for a registered output; the code words them apart in the reason only, the row is one."
+ },
+ {
+  "n": 289,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:504",
+  "told_at": "labkit/checks/run_record_check.py:553",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run directory holds no outputs.json (read_outputs returns None, tested again at :552)."
+ },
+ {
+  "n": 290,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "check_limit: the tracking check of source and output did not run; or fits no (a repository that is not there is not a file that does not read)",
+  "tested_at": "labkit/checks/run_record_check.py:561",
+  "told_at": "labkit/checks/run_record_check.py:572",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "git_root(area) finds no repository above the area (tested at :570), so the tracked-or-ignored half of the check is skipped."
+ },
+ {
+  "n": 291,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "outputs.json registers the output",
+   "the output file stands",
+   "the area lies in a git repository"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "binding, weak (the run record's output reference leads to a file git does not hold)",
+  "tested_at": "labkit/checks/run_record_check.py:586",
+  "told_at": "labkit/checks/run_record_check.py:588",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A registered output that stands in the tree is not tracked by git: the file's status in git, which no value names."
+ },
+ {
+  "n": 292,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the lineage reads",
+   "the output is a .jsonl file that stands and parses"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "binding (the rows' run reference leads to a run the place does not take); the lineage reads other runs' records, one entry by the counting rule",
+  "tested_at": "labkit/checks/run_record_check.py:989",
+  "told_at": "labkit/checks/run_record_check.py:992",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Rows of a kept JSONL output name in _prov.run a run that is neither in the answering run's derived_from lineage nor in the continues list outputs.json records for that output."
+ },
+ {
+  "n": 293,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:1267",
+  "told_at": "labkit/checks/run_record_check.py:968",
+  "bundled": [
+   "a run of the chain has no config.json",
+   "a config.json in the chain is damaged (RunConfigError)",
+   "derived_from names no run directory beside the run",
+   "derived_from loops"
+  ],
+  "check_limit": false,
+  "condition": "runs.lineage raises ValueError (called at :965); the telling site passes the sentence on."
+ },
+ {
+  "n": 294,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the lineage reads",
+   "the output is a .jsonl file that stands and parses"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "the row may mean the blocker at :980 instead (row_runs raises on a damaged line: readability of the run record)",
+  "tested_at": "labkit/run/batch.py:93",
+  "told_at": "labkit/checks/run_record_check.py:1013",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Rows of a kept JSONL output carry no _prov.run text (counted as unstamped; tested at :1012); the code tells it as a note, so whether the stamp is owed is loose."
+ },
+ {
+  "n": 295,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's metrics show model calls",
+   "every run record of the area reads"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "completeness, weak (a repeat as an owed part of the area's runs; the code says whether a spread is owed is the protocol's)",
+  "tested_at": "labkit/checks/run_record_check.py:899",
+  "told_at": "labkit/checks/run_record_check.py:908",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No completed run of the area records repeat_of = the answering run (answering_run.py:140, :163): the number of draws is one. A count of runs; no value names it, and firing on exactly one is not uniqueness."
+ },
+ {
+  "n": 296,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's metrics show model calls"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/answering_run.py:138",
+  "told_at": "labkit/checks/run_record_check.py:902",
+  "bundled": [
+   "a run of the area has an unreadable config.json (readability)",
+   "a repeat records no integer draw (completeness or form)",
+   "two completed repeats carry one draw number (uniqueness)",
+   "a repeat's seed is neither the parent's nor the derived one (agreement between run records)"
+  ],
+  "check_limit": false,
+  "condition": "repeats_of raises RunConfigError; the telling site passes the sentence on."
+ },
+ {
+  "n": 297,
+  "objects": [
+   {
+    "object": "decided at run time",
+    "candidates": [
+     "repository and working state"
+    ],
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "decided at run time",
+    "candidates": [
+     "repository and working state"
+    ],
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "the run's data= names the source with a sha256",
+   "the source stands",
+   "no file of it is loose in git"
+  ],
+  "property": "agreement",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "the property fits; the input data a run read is in no object of the table, hence weak",
+  "tested_at": "labkit/checks/run_record_check.py:753",
+  "told_at": "labkit/checks/run_record_check.py:722",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The digest of the source's bytes now, cut to the recorded length, differs from the sha256 the run recorded (decided at :720)."
+ }
+]

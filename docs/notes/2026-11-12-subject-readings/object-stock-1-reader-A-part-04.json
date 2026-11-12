@@ -1,0 +1,745 @@
+[
+ {
+  "n": 92,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the audit records (rule 1), if every refusal of the record's reader counts as 'does not read'",
+  "tested_at": "labkit/formats/findings.py:2049",
+  "told_at": "labkit/gates/preflight.py:479",
+  "bundled": [
+   "record file name gives no time (written_order)",
+   "file is not UTF-8 or not TOML",
+   "[audit] table or one of its keys missing or not a string",
+   "an [audit] or finding value outside what its place takes (status, grade, rule, effect)",
+   "`finding` / `fix_verdict` not arrays of tables",
+   "recorded counts against the findings held (a finding lost or a count edited)",
+   "a status that owes a reason and has none"
+  ],
+  "check_limit": false,
+  "condition": "area_records raises FindingsError on the first error record_status collected while reading every audits/*.toml record of the area in the working tree; preflight catches it and blocks without reading the text."
+ },
+ {
+  "n": 93,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the audit records (rule 1), if every refusal of the record's reader counts as 'does not read'",
+  "tested_at": "labkit/formats/findings.py:2049",
+  "told_at": "labkit/gates/preflight.py:530",
+  "bundled": [
+   "record file name gives no time (written_order)",
+   "file is not UTF-8 or not TOML",
+   "[audit] table or one of its keys missing or not a string",
+   "an [audit] or finding value outside what its place takes (status, grade, rule, effect)",
+   "`finding` / `fix_verdict` not arrays of tables",
+   "recorded counts against the findings held (a finding lost or a count edited)",
+   "a status that owes a reason and has none"
+  ],
+  "check_limit": false,
+  "condition": "open_elsewhere reads every record of every other area under the same parent (repo_records -> area_records) and raises FindingsError on the first record the reader refuses; preflight catches it and warns."
+ },
+ {
+  "n": 94,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "another area's audit records read and hold an open finding (else its handovers are not read)"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the handover records (rule 1), if every refusal of the reader counts as 'does not read'",
+  "tested_at": "labkit/formats/handovers.py:335",
+  "told_at": "labkit/gates/preflight.py:538",
+  "bundled": [
+   "file is not UTF-8 JSON",
+   "the keys are not exactly the schema's, or schema is not the current integer",
+   "run_state is not one of the allowed values",
+   "run named although none measured, or none named although measured (two fields contradict)",
+   "a string field empty or not a string"
+  ],
+  "check_limit": false,
+  "condition": "For another area that has an open finding, read_evidence calls handovers.handed_over, which reads every handover record of that area (read_handover) and raises HandoverError; the sentence is kept as handovers_unread and warned."
+ },
+ {
+  "n": 95,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/install_hooks.py:420",
+  "told_at": "labkit/gates/preflight.py:615",
+  "bundled": [
+   ".githooks/<name> is no file (an owed part of the installation missing: completeness)",
+   ".githooks/<name> text differs from this labkit's hook text (agreement: hook file against the installed package's template)",
+   "git config core.hooksPath is not '.githooks' (a setting's value)",
+   "settings file holds hook entries of an earlier labkit (stale_entries)",
+   "settings file lacks this labkit's hook entries (merged != current)"
+  ],
+  "check_limit": false,
+  "condition": "install_hooks.check lists every gap: a .githooks hook file that is no file, a hook file whose text differs from the text this labkit would write, core.hooksPath not .githooks, an agent settings file with entries of an earlier labkit, or without this labkit's entries; preflight warns each line unread."
+ },
+ {
+  "n": 96,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the lane of the head's repeat_cost freezes and the head is not frozen (preflight_area)",
+   "the kind registers promises (kind_registers)",
+   "the promise block parses and holds tables"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:695",
+  "told_at": "labkit/gates/preflight.py:411",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "placeholder_sentences(block) is non-empty: a [[promise]] table's `sentence` is, spaces aside, one `<...>` (is_stamp_placeholder)."
+ },
+ {
+  "n": 97,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads (check_fields); repeat_cost, kind, [model], frozen and a declared result decide which fields are owed"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1158",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [
+   "an owed must field is absent from the text (protocol_check.py:1158-1162)",
+   "a [protocol] head key is still the stamp's placeholder (protocol_check.py:1164-1167)"
+  ],
+  "check_limit": false,
+  "condition": "A field the protocol owes as a must has no label line in the text (label not among fields(text)), or a key of the [protocol] head still holds the stamp's `<...>` (head.placeholders)."
+ },
+ {
+  "n": 98,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads, a [model] table is there and the kind is decided"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "bundle, if the row stands for all four branches of _kind_gap: two of them (compute with [model] and no number_describes; target_property without annotation_validity) are an owed key missing (completeness), the fourth (model_outputs with annotation_validity) is again a contradiction",
+  "tested_at": "labkit/formats/protocol_check.py:880",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's kind is not compute and the [model] table carries claim keys (number_describes / annotation_validity): _kind_gap's first branch, state INVALID."
+ },
+ {
+  "n": 99,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the TOML block parses and the kind is decided"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "fits no by rule 4: the test fires because a table is present on a kind that takes none; nothing inside the table is compared with the kind",
+  "tested_at": "labkit/formats/protocol_check.py:1034",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The TOML block holds a [reference] table and the head's kind is one with a bar (fit or apply): the table is refused by being there beside that kind, whatever it holds."
+ },
+ {
+  "n": 100,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1098",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "head.frozen is true and the lane of head.repeat_cost does not freeze (low): two keys of the head contradict each other."
+ },
+ {
+  "n": 101,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads; frozen = true makes the key owed"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1107",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "head.frozen is true, the lane freezes, and head.preflight_audit is empty (an empty string or still the stamp's placeholder); nothing is looked up."
+ },
+ {
+  "n": 102,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads; the TOML block parses and holds `promise`"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:408",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [
+   "a table lacks id, key, sentence or scope (promises.py:449, an owed part missing)",
+   "id does not match criterion-<n> / quality-check-<n> / branch-<n> (promises.py:453, pattern)",
+   "key is outside the namespace of the table's own id (promises.py:470, two values of one table against each other)",
+   "sentence is empty or no string (promises.py:477)",
+   "a branch's sentence: an outcome empty, not exactly one arrow, no condition, no consequence (promises.py:286-326)",
+   "a constant's name does not match lowercase snake_case (promises.py:520, pattern)",
+   "a constant's name stands in two promises (promises.py:527, written twice)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises a PromiseError whose rule is LAB-004; freeze_must_gaps catches every PromiseError alike and passes text and rule on (state INVALID, block_unread)."
+ },
+ {
+  "n": 103,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol's promise block (rule 1), if every refusal of the block's reader counts as 'does not read' — the code names the gap block_unread",
+  "tested_at": "labkit/formats/promises.py:408",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [
+   "the ```toml block is not valid TOML or holds foreign top-level keys (promises.py:420, does not parse)",
+   "`promise` is no array of tables / an entry is no table (promises.py:426, 436)",
+   "a table holds an unknown field (promises.py:443)",
+   "a scope entry is an absolute path (promises.py:502, pattern of a value)",
+   "`constants` is no table, or a constant is no scalar (promises.py:510, 515)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises a PromiseError whose rule is the technical contract; freeze_must_gaps catches every PromiseError alike and passes text and rule on."
+ },
+ {
+  "n": 104,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads; the TOML block parses"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:408",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [
+   "an id stands in two [[promise]] tables (promises.py:465, written twice: uniqueness)",
+   "scope is no list, is empty, or holds an empty or non-string entry (promises.py:492, an owed part empty or a value of the wrong kind)",
+   "a branch's outcome name stands in two outcomes (promises.py:264, written twice)",
+   "a branch's sentence holds fewer than two outcomes (promises.py:271)",
+   "`otherwise` is not the last outcome (promises.py:309, order of parts)",
+   "an outcome's name does not match lowercase letters, digits, hyphens (promises.py:315, pattern)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises a PromiseError whose rule is the open rule; freeze_must_gaps catches every PromiseError alike and passes text and rule on."
+ },
+ {
+  "n": 105,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads and the promise block parses; frozen / repeat_cost / kind and whether the prose names an id decide whether tables are owed"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:723",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [
+   "no [[promise]] table although owed (promises.py:735-745; told MISSING at protocol_check.py:1142)",
+   "a sentence still the stamp's placeholder (promises.py:726-734; told PLACEHOLDER)"
+  ],
+  "check_limit": false,
+  "condition": "The tables are owed (frozen, or the lane registers every run) and either the block declares no [[promise]] table while the kind registers (state MISSING), or a table's sentence is still the stamp's `<...>` (state PLACEHOLDER)."
+ },
+ {
+  "n": 106,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads"
+  ],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:233",
+  "told_at": "labkit/gates/preflight.py:350",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "One of BOUND_FIELDS has more than one label line in the text (len(lines) > 1); the copies' values are not compared."
+ },
+ {
+  "n": 107,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads (check_fields); repeat_cost, kind, [model], frozen and a declared result decide which fields are owed"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:970",
+  "told_at": "labkit/gates/preflight.py:357",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A field the protocol owes as a must now is written and its value is still a placeholder (FieldLine.placeholder)."
+ },
+ {
+  "n": 108,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads"
+  ],
+  "property": "form",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "fits no by rule 4: the test fires because a string of an old pattern is present anywhere in the text; no place is asked which form it takes. The row's words (lower case) name one case of the one test (the pattern ignores case).",
+  "tested_at": "labkit/formats/protocol_check.py:1177",
+  "told_at": "labkit/gates/preflight.py:344",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "earlier_ids(text) is non-empty: the text holds a bracketed id in the earlier letters, `[C1]`, `[k2]` (EARLIER_ID, case ignored) — a spelling of a promise id labkit no longer reads."
+ },
+ {
+  "n": 109,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads (check_fields); repeat_cost, kind, [model], frozen and a declared result decide which fields are owed"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1163",
+  "told_at": "labkit/gates/preflight.py:370",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A field the protocol owes as a should (full form, not frozen) has no label line in the text."
+ },
+ {
+  "n": 110,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head reads (check_fields); repeat_cost, kind, [model], frozen and a declared result decide which fields are owed"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:970",
+  "told_at": "labkit/gates/preflight.py:374",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A written field that is not owed as a must now holds a placeholder value (open_holes minus the must names) — every such field, also one the cut owes only as a should or not at all."
+ },
+ {
+  "n": 111,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "role": "side",
+    "version": "as a commit holds it (HEAD)"
+   }
+  ],
+  "preconditions": [
+   "the directory lies in a git repository (else tree_dirty is False)"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "the object could be 'decided at run time' (any file under the repo: protocol, area code, checks, records) instead of the working tree as such",
+  "tested_at": "labkit/formats/repo.py:970",
+  "told_at": "labkit/gates/preflight.py:600",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "`git status --porcelain` under the repo names anything: a tracked file differs from HEAD or the index, or an untracked file is there."
+ },
+ {
+  "n": 112,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the ```toml block parses"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_block.py:940",
+  "told_at": "labkit/gates/preflight.py:259",
+  "bundled": [
+   "no [protocol] table (protocol_block.py:908)",
+   "a required key of [protocol] is absent (protocol_block.py:940)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.head raises HeadPartMissing: the TOML block holds no [protocol] table, or the table lacks one of PROTOCOL_HEAD_KEYS."
+ },
+ {
+  "n": 113,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol's head (rule 1), if every refusal of the head's reader counts as 'does not read'",
+  "tested_at": "labkit/formats/protocol_block.py:902",
+  "told_at": "labkit/gates/preflight.py:259",
+  "bundled": [
+   "the ```toml block is not valid TOML (protocol_block.py:255, does not parse)",
+   "foreign top-level keys in the block (protocol_block.py:261)",
+   "`protocol` is no table; an unknown key in [protocol] (protocol_block.py:915, 918)",
+   "standard is no string or not the standard this labkit reads (protocol_block.py:925, 927)",
+   "id does not match `p-` plus 16 hex digits (protocol_block.py:947, pattern of a value)",
+   "frozen no boolean, preflight_audit no string, type / repeat_cost / kind outside their choices (protocol_block.py:953-965)",
+   "report is empty, absolute, outside the repository, or no Markdown file name (protocol_block.py:972-996, pattern of a value)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.head raises a BlockError other than HeadPartMissing; check_fields returns it as head_error and preflight blocks and ends."
+ },
+ {
+  "n": 114,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has test files (tests/test_<NN>_<name>*.py)"
+  ],
+  "property": "result of an executed area check",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "fits no: what is tested is the installation (repository and working state) lacking pytest, a state no value names",
+  "tested_at": "labkit/gates/preflight.py:194",
+  "told_at": "labkit/gates/preflight.py:641",
+  "bundled": [],
+  "check_limit": true,
+  "condition": "The pytest subprocess over the area's test files returned non-zero and its stderr holds 'No module named pytest': the tests were not run."
+ },
+ {
+  "n": 115,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has test files"
+  ],
+  "property": "result of an executed area check",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/preflight.py:200",
+  "told_at": "labkit/gates/preflight.py:662",
+  "bundled": [
+   "pytest exit code 1 (preflight.py:200)",
+   "timeout of the run (preflight.py:183)"
+  ],
+  "check_limit": false,
+  "condition": "pytest over the area's test files ended with exit code 1, or ran past the 300 s timeout (both state 'failed'); preflight's caller passes the sentence on the resolution check and LAB-016."
+ },
+ {
+  "n": 116,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has test files"
+  ],
+  "property": "result of an executed area check",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/preflight.py:200",
+  "told_at": "labkit/gates/preflight.py:662",
+  "bundled": [
+   "pytest exit code 1 (preflight.py:200)",
+   "timeout of the run (preflight.py:183)"
+  ],
+  "check_limit": false,
+  "condition": "The same test as for preflight — pytest over the area's test files ended with exit code 1 or timed out —, told by finalize's call of tell_test_run (labkit/gates/finalize.py:598) with finalize's sentence and rule."
+ },
+ {
+  "n": 117,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has test files"
+  ],
+  "property": "result of an executed area check",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "check_limit true (the code tells it as a check not executed, NOT_EXECUTABLE); I left it false because 'did a check of the area run' is the property itself and the cause lies in the tests, not in labkit's procedure",
+  "tested_at": "labkit/gates/preflight.py:200",
+  "told_at": "labkit/gates/preflight.py:653",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "pytest over the area's test files ended with exit code 2-5 (interrupted, collection or import error, internal or usage error, nothing collected) and stderr does not name a missing pytest: state 'not run'."
+ },
+ {
+  "n": 118,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area's scripts read and define at least one parse_* function (they name what is owed)",
+   "test files that do not parse are left out (told as n=119)"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "fits no: a relation between area code and tests (each parser called by a test) that no value names — binding asks about a reference that is there, here none is there; completeness holds only if the missing test call counts as an owed part of the checks that another object (the area code) names. The tests read are the whole repo's tests/, not only the area's.",
+  "tested_at": "labkit/checks/prompt_check.py:93",
+  "told_at": "labkit/checks/prompt_check.py:97",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A `def parse_*` name found by regex in the area's scripts is not among the names called (ast.Call) in any parseable tests/test_*.py of the repo."
+ },
+ {
+  "n": 119,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area's scripts define at least one parse_* function (else the tests are not read)"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/prompt_check.py:69",
+  "told_at": "labkit/checks/prompt_check.py:73",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "parse_source of a tests/test_*.py file of the repo raises SourceError: the file does not read or parse as Python."
+ },
+ {
+  "n": 120,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the script reads and parses (one that does not is skipped silently)"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/prompt_check.py:183",
+  "told_at": "labkit/checks/prompt_check.py:233",
+  "bundled": [],
+  "check_limit": true,
+  "condition": "A module-level PROMPT / PROMPT_<VARIANT> assignment of an area script that _value_of does not compute to a string (a call other than 'sep'.join, a format spec, a list or dict): the script parses, the drift comparison with the protocol's prompt block is not made for that constant."
+ },
+ {
+  "n": 121,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "at least one PROMPT constant is statically readable",
+   "the protocol holds at least one registered (filled) prompt block"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1544",
+  "told_at": "labkit/checks/prompt_check.py:252",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "unheld_prompt_lines(constant, blocks) is non-empty: a non-empty line of a readable PROMPT constant without a {placeholder} is, stripped, no line of any registered prompt block of the protocol file."
+ }
+]

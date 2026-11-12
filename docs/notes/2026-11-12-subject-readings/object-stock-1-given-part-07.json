@@ -1,0 +1,152 @@
+[
+ {
+  "n": 185,
+  "function": "report_check.cut_off_adoption_gaps",
+  "cause": "…: an adoption was cut off during its check — the protocol may hold a proposal no check…"
+ },
+ {
+  "n": 186,
+  "function": "report_check.declaration_gaps",
+  "cause": "the `[result]` table does not read"
+ },
+ {
+  "n": 187,
+  "function": "report_check.freeze_gaps",
+  "cause": "a must field is absent, or a head key is a placeholder"
+ },
+ {
+  "n": 188,
+  "function": "report_check.freeze_gaps",
+  "cause": "`[model]` claims on a kind that has none (`kind_gap`)"
+ },
+ {
+  "n": 189,
+  "function": "report_check.freeze_gaps",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 190,
+  "function": "report_check.freeze_gaps",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`"
+ },
+ {
+  "n": 191,
+  "function": "report_check.freeze_gaps",
+  "cause": "frozen without the preflight record named"
+ },
+ {
+  "n": 192,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables break a form LAB-004 states (the causes of `code_check.promise_block_findings`, first row)"
+ },
+ {
+  "n": 193,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables do not have the form a reader needs"
+ },
+ {
+  "n": 194,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)"
+ },
+ {
+  "n": 195,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables are owed and missing"
+ },
+ {
+  "n": 196,
+  "function": "report_check.freeze_gaps",
+  "cause": "…: line …: … still a placeholder"
+ },
+ {
+  "n": 197,
+  "function": "report_check.freeze_gaps",
+  "cause": "…: not `frozen = true` — a reported number owes the freeze"
+ },
+ {
+  "n": 198,
+  "function": "report_check.recomputation_findings",
+  "cause": "… (LAB-041 Generate numbers, don't retype them)"
+ },
+ {
+  "n": 199,
+  "function": "report_check.recomputation_findings",
+  "cause": "… — no result, the numbers are not held to the run"
+ },
+ {
+  "n": 200,
+  "function": "report_check.registration_gaps",
+  "cause": "not a git repository — the registration cannot be held to the commit of the first measure…"
+ },
+ {
+  "n": 201,
+  "function": "report_check.repeated_gaps",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 202,
+  "function": "report_check.unreportable_gaps",
+  "cause": "the answering run is no measurement"
+ },
+ {
+  "n": 203,
+  "function": "report_check.unreportable_gaps",
+  "cause": "a full run acknowledged over an unfrozen protocol"
+ },
+ {
+  "n": 204,
+  "function": "report_check.unreportable_gaps",
+  "cause": "…: no config.json in this file state — the run's record cannot be checked"
+ },
+ {
+  "n": 205,
+  "function": "report_decisions.check_carried_closings_upheld",
+  "cause": "audit … #…: a carried finding (from …) `…` — the follow-up did not find the fault…"
+ },
+ {
+  "n": 206,
+  "function": "report_decisions.check_contested_closings_upheld",
+  "cause": "audit … #…: `…` on a … a review said … on (…) — closing a finding a reviewer …"
+ },
+ {
+  "n": 207,
+  "function": "report_decisions.check_decision_reviews_read",
+  "cause": "a review nobody can read: …"
+ },
+ {
+  "n": 208,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: decided `fixed` in the state audited — no follow-up has seen the repair"
+ },
+ {
+  "n": 209,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: the follow-up of this state said …"
+ },
+ {
+  "n": 210,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: no follow-up, and the run lacks the required check"
+ },
+ {
+  "n": 211,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: followed up in a record that no longer covers this state"
+ },
+ {
+  "n": 212,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: decided, never followed up"
+ },
+ {
+  "n": 213,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: the follow-up judged another decision — it changed since"
+ },
+ {
+  "n": 214,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: `resolved`, but the required check was not in the run shown"
+ }
+]

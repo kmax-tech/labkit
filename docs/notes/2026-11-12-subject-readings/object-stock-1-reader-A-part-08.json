@@ -1,0 +1,762 @@
+[
+ {
+  "n": 215,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:354",
+  "told_at": "labkit/gates/report_decisions.py:362",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A BLOCKER decided false-positive (not carried, never not-upheld) has no decision review of the record's code and run, of the decision as it stands and of the claim the protocol makes now, in which every draw says upheld and one is no --again draw (reviews.upholding, labkit/formats/reviews.py:349)."
+ },
+ {
+  "n": 216,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:203",
+  "told_at": "labkit/gates/report_decisions.py:196",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A BLOCKER decided limitation in a covering analysis record has an empty effect field."
+ },
+ {
+  "n": 217,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:315",
+  "told_at": "labkit/gates/report_decisions.py:322",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A BLOCKER on the protocol's Conclusion decided fixed (never not-upheld) has no decision review that upholds the decision as it stands under the claim the protocol makes now (reviews.upholding, labkit/formats/reviews.py:349)."
+ },
+ {
+  "n": 218,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:258",
+  "told_at": "labkit/gates/report_decisions.py:246",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A limitation whose effect is `stands` has no decision review upholding it as decided now and under the claim the protocol makes now (reviews.upholding, labkit/formats/reviews.py:349); the finding's grade sets the grade."
+ },
+ {
+  "n": 219,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "if classified as one: inner consistency of the audit records",
+  "tested_at": "labkit/formats/followup.py:117",
+  "told_at": "labkit/gates/report_decisions.py:168",
+  "bundled": [
+   "carries names a finding no record holds (binding within the records)",
+   "carries names a finding of the same or a later record (order of records)",
+   "carried finding is no BLOCKER (binding: not the kind)",
+   "carried finding belongs to a record on another protocol",
+   "a loop of carried findings (inner consistency)",
+   "two findings of one origin carried in one record (uniqueness)"
+  ],
+  "check_limit": false,
+  "condition": "followup.chain over the protocol's records raises FindingsError for one of six tests on the `carries` fields; the telling site passes the text on. The same chain over all the area's records ran before (followup.py:96, caught at report_decisions.py:157 with an empty return), so this site may never be reached."
+ },
+ {
+  "n": 220,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_hold.py:680",
+  "told_at": "labkit/gates/report_hold.py:682",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol path a discussion block names, resolved from the report's directory, is no protocol file of an existing area directory in the file state."
+ },
+ {
+  "n": 221,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol the block names exists in the file state"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_hold.py:688",
+  "told_at": "labkit/gates/report_hold.py:690",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run id a discussion block names is no run directory among the runs of the named protocol's area."
+ },
+ {
+  "n": 222,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the report as HEAD holds it and as it stands cite runs of different protocols",
+   "the run records bind each cited run to a protocol id"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "agreement between the report as HEAD holds it and the report as it stands (the switched citations); a [replaces] naming another protocol is binding, not completeness",
+  "tested_at": "labkit/gates/report_hold.py:725",
+  "told_at": "labkit/gates/report_hold.py:638",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The report at HEAD cited runs of protocol A, its text now cites runs of protocol B and none of A's, and B's [replaces] is missing, does not read, or names another protocol than A (static-evidence warning)."
+ },
+ {
+  "n": 223,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:537",
+  "told_at": "labkit/gates/report_hold.py:613",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The TOML head of a discussion block lacks one of the keys protocol, run, why (DiscussionKeyMissing)."
+ },
+ {
+  "n": 224,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "form for the unknown key and the non-string value",
+  "tested_at": "labkit/checks/report_blocks.py:207",
+  "told_at": "labkit/gates/report_hold.py:613",
+  "bundled": [
+   "result block opens inside another (report_blocks.py:207)",
+   "close marker without an open one (report_blocks.py:213, comment_blocks.py:77)",
+   "block or head never closed (report_blocks.py:219, comment_blocks.py:84, 101)",
+   "discussion block opens inside another (comment_blocks.py:95)",
+   "discussion head is not TOML (report_blocks.py:531)",
+   "discussion head holds an unknown key (report_blocks.py:537)",
+   "a head value is not a string (report_blocks.py:545)"
+  ],
+  "check_limit": false,
+  "condition": "Parsing the report's result and discussion blocks raises a ReportBlockError other than a missing key: the block's markers or its head cannot be read."
+ },
+ {
+  "n": 225,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "form",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding: the code tests where the link leads, not only that the file is a link",
+  "tested_at": "labkit/gates/report_hold.py:105",
+  "told_at": "labkit/gates/report_hold.py:656",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The file state holds the report's path as a symbolic link whose chain ends at no held place (outside the repo, under runs/ or data/, no Markdown file) or runs in a circle; a link ending at a held place is not refused."
+ },
+ {
+  "n": 226,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "a protocol's head declares the cited run as its result"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:369",
+  "told_at": "labkit/gates/report_hold.py:520",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The report cites a run a protocol declares as its result and carries no result block naming that protocol."
+ },
+ {
+  "n": 227,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:726",
+  "told_at": "labkit/gates/report_hold.py:762",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A line of the report outside every generated block holds a token that reads as a number (static-evidence hint); the condition fires because something is there, and no value names that state: a number in prose without a generated source."
+ },
+ {
+  "n": 228,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the report carries a discussion block"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:673",
+  "told_at": "labkit/gates/report_hold.py:773",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A line in the paragraph right above or below a discussion block holds a token that reads as a number (static-evidence hint); no value names that state: a number standing beside a discussed run."
+ },
+ {
+  "n": 229,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_review_inputs.py:54",
+  "told_at": "labkit/gates/report_hold.py:886",
+  "bundled": [
+   "an audit record does not read",
+   "a report review record does not read"
+  ],
+  "check_limit": false,
+  "condition": "An audit record of the area does not read (held.unreadable) or the report review records do not read (held.report_reviews_unread, report_hold.py:872)."
+ },
+ {
+  "n": 230,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_review_inputs.py:103",
+  "told_at": "labkit/gates/report_hold.py:886",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Reading the adopted run or the id out of the protocol's head raises BlockError while the reviewer's inputs are built."
+ },
+ {
+  "n": 231,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "no property of an object: the audit-coverage check of 233 could not run (check_limit); git failing in staged_area_gap (report_hold.py:863) is outside the try and not told here",
+  "tested_at": "labkit/gates/report_hold.py:876",
+  "told_at": "labkit/gates/report_hold.py:886",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A git call made while the report review's standing is read (the index's file list, staged) raises RuntimeError."
+ },
+ {
+  "n": 232,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's text is held"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_review_inputs.py:124",
+  "told_at": "labkit/gates/report_hold.py:886",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A discussion block names a run that is not among the runs of the protocol's area in the file state (AuditError from review_pieces); through report_review_owed this is filtered before (report_hold.py:811)."
+ },
+ {
+  "n": 233,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "report",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area's audit evidence has no gap"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/report_reviews.py:275",
+  "told_at": "labkit/gates/report_hold.py:973",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No report review record for this report and protocol carries the fingerprint of the state as it is (report, protocol, runs' metrics, audits, brief) from a draw that is no --again draw, and none of this state names a claim; the area's audit evidence stands."
+ },
+ {
+  "n": 234,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "report",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "audit coverage as 233, with the lost evidence as a further state no value names",
+  "tested_at": "labkit/gates/report_hold.py:918",
+  "told_at": "labkit/gates/report_hold.py:950",
+  "bundled": [
+   "no clean report review of this state (audit coverage)",
+   "an audit record or attempt file the journal names is gone (completeness of the audit and review records)",
+   "the attempts journal does not read (readability)"
+  ],
+  "check_limit": false,
+  "condition": "No report review releases this state (as 233) and the area's audit evidence has a gap (held.gaps not empty), so no review can start."
+ },
+ {
+  "n": 235,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "report",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_hold.py:956",
+  "told_at": "labkit/gates/report_hold.py:957",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A report review record with the fingerprint of the state as it is names at least one claim (report_reviews.standing, labkit/formats/report_reviews.py:274): the record belongs to the state and does not release it."
+ },
+ {
+  "n": 236,
+  "objects": [
+   {
+    "object": "decided at run time",
+    "role": "side",
+    "version": "as it stands",
+    "candidates": [
+     "protocol",
+     "run record",
+     "area code",
+     "area checks",
+     "audit and review records",
+     "text beside the protocol"
+    ]
+   },
+   {
+    "object": "decided at run time",
+    "role": "side",
+    "version": "as it stands",
+    "candidates": [
+     "protocol",
+     "run record",
+     "area code",
+     "area checks",
+     "audit and review records",
+     "text beside the protocol"
+    ]
+   }
+  ],
+  "preconditions": [],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "repository and working state as the one object; the version table has one value (as it stands) for both the index and the tree",
+  "tested_at": "labkit/gates/report_hold.py:148",
+  "told_at": "labkit/gates/report_hold.py:166",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "git status names a path under the area whose working tree differs from the index (modified or deleted and unstaged, or untracked): one side is the file in the index, the other the file in the working tree."
+ },
+ {
+  "n": 237,
+  "objects": [
+   {
+    "object": "report",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head declares no result",
+   "the adoption is not written unstaged in the tree",
+   "the area's audit evidence has no gap"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "completeness of the protocol (no [result]); or no value: a state of the protocol (nothing adopted) combined with a citation",
+  "tested_at": "labkit/gates/report_hold.py:1021",
+  "told_at": "labkit/gates/report_hold.py:1061",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The report cites, outside a discussion, a known run that no protocol declares, and that run is the reportable answering run of a protocol declaring no result (promotions, report_hold.py:549-563): the reference leads to a run that is there and is not an adopted result."
+ },
+ {
+  "n": 238,
+  "objects": [
+   {
+    "object": "report",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "no protocol's head declares the cited run"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "no value: the cited run is there and assigned; what is tested is that no protocol adopted it",
+  "tested_at": "labkit/gates/report_hold.py:1074",
+  "told_at": "labkit/gates/report_hold.py:1076",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The report cites, outside a discussion, a known run that no protocol declares as its result and that is no protocol's reportable answering run (guaranteed warning)."
+ },
+ {
+  "n": 239,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "agreement",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_hold.py:1001",
+  "told_at": "labkit/gates/report_hold.py:1004",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run id of a discussion block (a run said to be not reported) is the run a protocol's head declares as its result: the block and the protocol contradict each other; the test itself fires on the two ids being the same."
+ },
+ {
+  "n": 240,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the report cites the run undiscussed and it is the protocol's reportable answering run"
+  ],
+  "property": "agreement",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "the version table has no value for the working tree beside the check's file state (the index); both sides are entered as `as it stands`",
+  "tested_at": "labkit/gates/report_hold.py:1098",
+  "told_at": "labkit/gates/report_hold.py:1036",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol in the working tree declares the cited run as its result while the protocol in the index (the check's file state) does not."
+ },
+ {
+  "n": 241,
+  "objects": [
+   {
+    "object": "report",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "binding as 237, with the lost evidence as a further state no value names",
+  "tested_at": "labkit/gates/report_hold.py:1050",
+  "told_at": "labkit/gates/report_hold.py:1052",
+  "bundled": [
+   "the report cites the answering run of a protocol that adopted no result (as 237)",
+   "an audit record or attempt file the journal names is gone (completeness of the audit and review records)",
+   "the attempts journal does not read (readability)"
+  ],
+  "check_limit": false,
+  "condition": "The condition of 237 holds and the area's audit evidence has a gap (held.gaps not empty), so neither adoption nor discussion can pass."
+ },
+ {
+  "n": 242,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the report cites a known, undiscussed run no protocol declares, held by that protocol's area"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/audit_binding.py:90",
+  "told_at": "labkit/gates/report_hold.py:1024",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "protocol_block.head of a protocol declaring no result, in whose area an undeclared cited run lies, raises BlockError when its answering run is looked up (audited_run)."
+ }
+]

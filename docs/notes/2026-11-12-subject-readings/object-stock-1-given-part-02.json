@@ -1,0 +1,147 @@
+[
+ {
+  "n": 30,
+  "function": "finalize.check_declared_scopes",
+  "cause": "… recorded no promise block: … — a run records the block it was measured under, so th…"
+ },
+ {
+  "n": 31,
+  "function": "finalize.check_declared_scopes",
+  "cause": "declared scope changed since …: …"
+ },
+ {
+  "n": 32,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the protocol's head does not read"
+ },
+ {
+  "n": 33,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the promise block does not read"
+ },
+ {
+  "n": 34,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: intent ids in the earlier form"
+ },
+ {
+  "n": 35,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the answering run has no metrics file"
+ },
+ {
+  "n": 36,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run is not completed"
+ },
+ {
+  "n": 37,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run is bound to another protocol"
+ },
+ {
+  "n": 38,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run's config or metrics do not read"
+ },
+ {
+  "n": 39,
+  "function": "finalize.check_kept_number",
+  "cause": "`[kept]` is missing on a computation, or holds a placeholder"
+ },
+ {
+  "n": 40,
+  "function": "finalize.check_kept_number",
+  "cause": "`[kept]` does not read, or stands on a fit or an apply"
+ },
+ {
+  "n": 41,
+  "function": "finalize.check_open_fields",
+  "cause": "a must field still holds its placeholder"
+ },
+ {
+  "n": 42,
+  "function": "finalize.check_open_fields",
+  "cause": "another field still holds its placeholder"
+ },
+ {
+  "n": 43,
+  "function": "finalize.check_open_fields",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 44,
+  "function": "finalize.check_open_fields",
+  "cause": "… — a stamped placeholder, fill or delete the line"
+ },
+ {
+  "n": 45,
+  "function": "finalize.check_reference",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 46,
+  "function": "finalize.check_reference",
+  "cause": "`[reference]` or `[kept]` does not read"
+ },
+ {
+  "n": 47,
+  "function": "finalize.check_run_code",
+  "cause": "a helper lies in another repository (a submodule or a link out) and is not compared with what the run ran"
+ },
+ {
+  "n": 48,
+  "function": "finalize.choose_answering_run",
+  "cause": "no stamped protocol id ([protocol] id) — no run is bound to it"
+ },
+ {
+  "n": 49,
+  "function": "finalize.choose_answering_run",
+  "cause": "…: bound to this protocol and newer by name than the adopted run … — if one of them a…"
+ },
+ {
+  "n": 50,
+  "function": "finalize.declared_run_gaps",
+  "cause": "the `[result]` table does not read"
+ },
+ {
+  "n": 51,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds no protocol file"
+ },
+ {
+  "n": 52,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the named protocol does not exist"
+ },
+ {
+  "n": 53,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds several protocols and none is named"
+ },
+ {
+  "n": 54,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the protocol is a symbolic link"
+ },
+ {
+  "n": 55,
+  "function": "finalize.finalize_area",
+  "cause": "a required part of the head is missing"
+ },
+ {
+  "n": 56,
+  "function": "finalize.finalize_area",
+  "cause": "the head does not read"
+ },
+ {
+  "n": 57,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run is missing or malformed"
+ },
+ {
+  "n": 58,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run could not be opened"
+ }
+]

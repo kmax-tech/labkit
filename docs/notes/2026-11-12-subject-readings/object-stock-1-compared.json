@@ -1,0 +1,9139 @@
+[
+ {
+  "n": 1,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no completed run is bound to the protocol; records that do not read; two runs that both answer",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 2,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run id the area has no run directory for",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 3,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run that did not complete",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 4,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run bound to another protocol or to none",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 5,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run's record does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 6,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run is a repeat",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 7,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run reports no intent key — a probe or producer run, not an answer",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 8,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no bound run reports an intent key, the newest is taken — a probe or producer run, not an answer",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 9,
+  "function": "audit.early_for_tier",
+  "cause": "repeat_cost = \"low\" and no completed run · the first run is the cheaper probe; one audit …",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ],
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ],
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 10,
+  "function": "audit_binding.check_audit_findings_decided",
+  "cause": "an audit BLOCKER is undecided",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 11,
+  "function": "audit_binding.check_audit_findings_decided",
+  "cause": "an audit WARNING is undecided",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 12,
+  "function": "audit_binding.check_audit_records_read",
+  "cause": "an audit record does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 13,
+  "function": "audit_binding.check_audited_runs_kept",
+  "cause": "…: names … as the run it read, and there is no runs/…/ in this area — the run the r…",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 14,
+  "function": "code_check._intent_id_findings",
+  "cause": "[…] is registered, but no script names a '…'/'…_*' key literal (a key assembled at …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 15,
+  "function": "code_check._intent_id_findings",
+  "cause": "key '…_*' is in the intent-id namespace, but the protocol registers no […] · a number…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 16,
+  "function": "code_check.constant_copies",
+  "cause": "[…] …:… sets … = … itself (…) · a copy judges by an unregistered value once t…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ],
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 17,
+  "function": "code_check.main",
+  "cause": "bundle: … could not be read — the reader sees `not readable` in its place",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "decided at run time",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 18,
+  "function": "code_check.promise_block_findings",
+  "cause": "the promise block breaks a form LAB-004 states (10 causes: a missing field, an id or key outside its alphabet, an empty sentence, an outcome without condition or consequence, a constant's name or second home)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 19,
+  "function": "code_check.promise_block_findings",
+  "cause": "the block does not have the form a reader needs (7 causes: no TOML, no table, an unknown field, an absolute scope, a constant that is no scalar)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 20,
+  "function": "code_check.promise_block_findings",
+  "cause": "a form no rule states (6 causes: a doubled id, a doubled outcome name, one outcome only, `otherwise` not last, an outcome name outside its alphabet, an empty scope list)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 21,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declares key '…', which no script names as a literal… (an assembled key is not …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 22,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declared scope: … · runlog refuses the run",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 23,
+  "function": "code_check.quality_check_reads",
+  "cause": "[…] key '…' is written but nothing decides on it · the criterion verdict is reported …",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 24,
+  "function": "code_check.quality_check_reads",
+  "cause": "quality-check keys: read check not done — …",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 25,
+  "function": "code_scan.unreadable_source",
+  "cause": "… · the code cannot be read, so no check over it holds",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 26,
+  "function": "evidence.change_blockers",
+  "cause": "git could not compare the evidence with the state",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 27,
+  "function": "evidence.change_blockers",
+  "cause": "the evidence an audit read changed since",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "side"
+   ],
+   [
+    "decided at run time",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "decided at run time",
+    "side"
+   ],
+   [
+    "decided at run time",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 28,
+  "function": "finalize.check_data_counts",
+  "cause": "the generated counts differ from the prepare run's record",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 29,
+  "function": "finalize.check_data_counts",
+  "cause": "the counts name a run the area lacks or that is no completed prepare run",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 30,
+  "function": "finalize.check_declared_scopes",
+  "cause": "… recorded no promise block: … — a run records the block it was measured under, so th…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 31,
+  "function": "finalize.check_declared_scopes",
+  "cause": "declared scope changed since …: …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 32,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the protocol's head does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 33,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the promise block does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 34,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: intent ids in the earlier form",
+  "prop_A": "form",
+  "prop_B": "form",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 35,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the answering run has no metrics file",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 36,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run is not completed",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 37,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run is bound to another protocol",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 38,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run's config or metrics do not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 39,
+  "function": "finalize.check_kept_number",
+  "cause": "`[kept]` is missing on a computation, or holds a placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 40,
+  "function": "finalize.check_kept_number",
+  "cause": "`[kept]` does not read, or stands on a fit or an apply",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 41,
+  "function": "finalize.check_open_fields",
+  "cause": "a must field still holds its placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 42,
+  "function": "finalize.check_open_fields",
+  "cause": "another field still holds its placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 43,
+  "function": "finalize.check_open_fields",
+  "cause": "a bound field is written twice",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 44,
+  "function": "finalize.check_open_fields",
+  "cause": "… — a stamped placeholder, fill or delete the line",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 45,
+  "function": "finalize.check_reference",
+  "cause": "`[reference]` on a kind a criterion judges",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 46,
+  "function": "finalize.check_reference",
+  "cause": "`[reference]` or `[kept]` does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 47,
+  "function": "finalize.check_run_code",
+  "cause": "a helper lies in another repository (a submodule or a link out) and is not compared with what the run ran",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": true,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 48,
+  "function": "finalize.choose_answering_run",
+  "cause": "no stamped protocol id ([protocol] id) — no run is bound to it",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 49,
+  "function": "finalize.choose_answering_run",
+  "cause": "…: bound to this protocol and newer by name than the adopted run … — if one of them a…",
+  "prop_A": "order in time",
+  "prop_B": "order in time",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "earlier"
+   ],
+   [
+    "run record",
+    "later"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "earlier"
+   ],
+   [
+    "run record",
+    "later"
+   ]
+  ]
+ },
+ {
+  "n": 50,
+  "function": "finalize.declared_run_gaps",
+  "cause": "the `[result]` table does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 51,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds no protocol file",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 52,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the named protocol does not exist",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 53,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds several protocols and none is named",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 54,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the protocol is a symbolic link",
+  "prop_A": "form",
+  "prop_B": "form",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 55,
+  "function": "finalize.finalize_area",
+  "cause": "a required part of the head is missing",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 56,
+  "function": "finalize.finalize_area",
+  "cause": "the head does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 57,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run is missing or malformed",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 58,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run could not be opened",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 59,
+  "function": "finalize.unreportable_warnings",
+  "cause": "the answering run is no measurement",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 60,
+  "function": "finalize.unreportable_warnings",
+  "cause": "a full run acknowledged over an unfrozen protocol",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 61,
+  "function": "import_check._coverage_in",
+  "cause": "`sys.path` gains … · imports after it may resolve outside lib/ and src/, which the stam…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 62,
+  "function": "import_check._coverage_in",
+  "cause": "`…(…)` loads code at run time · the stamp follows `import` lines only, so what this loa…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 63,
+  "function": "import_check._coverage_in",
+  "cause": "names area `…` · a file of another area determines this number, and this area's stamp d…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 64,
+  "function": "import_check._import_findings",
+  "cause": "an import resolves outside `lib/` and `src/`",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "holds the reference"
+   ],
+   [
+    "repository and working state",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "holds the reference"
+   ],
+   [
+    "decided at run time",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 65,
+  "function": "intent_check.check_block_against_run",
+  "cause": "…: […] declares key '…', which the run does not report.",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 66,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run recorded a registered constant with another value",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 67,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run recorded no promise block",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 68,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the promises were removed or changed after the run",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 69,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run's digest is of an earlier format",
+  "prop_A": "form",
+  "prop_B": "agreement",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 70,
+  "function": "intent_check.hold",
+  "cause": "a registered id's key is not in the run's metrics, or the reverse",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 71,
+  "function": "intent_check.hold",
+  "cause": "the prose and the promise block name different ids",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 72,
+  "function": "intent_check.unregistered_outcomes",
+  "cause": "…: […] records … = …, which is none of its outcomes' names",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 73,
+  "function": "notes_check.check_file",
+  "cause": "…:1: MISSING: no italic meta line after the title",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 74,
+  "function": "notes_check.check_file",
+  "cause": "…:…: MISSING: no kind in the meta line",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 75,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: no date in the meta line",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 76,
+  "function": "notes_check.check_file",
+  "cause": "…:…: MISSING: declared 'Instrument — implementiert' but names no script, function, or…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 77,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: filename says related-* but the declared kind is …",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 78,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: none of the named scripts resolve in the repo (……) — code paths may…",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "referred to"
+   ],
+   [
+    "text beside the protocol",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "text beside the protocol",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 79,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: Related-Lesart without a citekey — write 'Related-Lesart (<citekey>)'",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 80,
+  "function": "notes_check.check_notes",
+  "cause": "a note cannot be read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 81,
+  "function": "preflight._owed",
+  "cause": "an audit finding is undecided",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ]
+ },
+ {
+  "n": 82,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names no record",
+  "prop_A": "form",
+  "prop_B": "form",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 83,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record the area does not have",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 84,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record of another mode",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 85,
+  "function": "preflight._owed",
+  "cause": "the record `preflight_audit` names does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 86,
+  "function": "preflight._owed",
+  "cause": "the area cannot be stamped now, so the record cannot be held to it",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ],
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 87,
+  "function": "preflight._owed",
+  "cause": "the code changed after the audit (scope sha)",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ]
+ },
+ {
+  "n": 88,
+  "function": "preflight._owed",
+  "cause": "the promise block or the registration changed after the audit",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 89,
+  "function": "preflight._owed",
+  "cause": "the promise block does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 90,
+  "function": "preflight._owed",
+  "cause": "the record's findings are still open",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ]
+ },
+ {
+  "n": 91,
+  "function": "preflight._owed",
+  "cause": "the resolution check's test file is missing",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 92,
+  "function": "preflight.check_audit_records",
+  "cause": "an audit record does not read",
+  "prop_A": "bundle",
+  "prop_B": "readability",
+  "fits_A": "bundle",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 93,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's audit records do not read",
+  "prop_A": "bundle",
+  "prop_B": "readability",
+  "fits_A": "bundle",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 94,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's handover does not read",
+  "prop_A": "bundle",
+  "prop_B": "readability",
+  "fits_A": "bundle",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 95,
+  "function": "preflight.check_hooks",
+  "cause": "a hook is missing or from another labkit",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 96,
+  "function": "preflight.check_promise_sentences",
+  "cause": "[[promise]] … still carries the stamp's `<…>` sentence — frozen = true refuses it",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 97,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a must field is absent, or a head key is a placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 98,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[model]` claims on a kind that has none (`kind_gap`)",
+  "prop_A": "inner consistency",
+  "prop_B": "bundle",
+  "fits_A": "yes",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 99,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[reference]` on a kind a criterion judges",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 100,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 101,
+  "function": "preflight.check_protocol_fields",
+  "cause": "frozen without the preflight record named",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 102,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables break a form LAB-004 states (the causes of `code_check.promise_block_findings`, first row)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 103,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables do not have the form a reader needs",
+  "prop_A": "bundle",
+  "prop_B": "readability",
+  "fits_A": "bundle",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 104,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 105,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables are owed and missing",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 106,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a bound field is written twice",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 107,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a must field still holds its placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 108,
+  "function": "preflight.check_protocol_fields",
+  "cause": "an id is written in lower case in the prose",
+  "prop_A": "form",
+  "prop_B": "form",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 109,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a \"should\" field is missing",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 110,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a \"should\" field still holds its placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 111,
+  "function": "preflight.check_working_tree",
+  "cause": "uncommitted changes in … (commit or stash before the run)",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "side"
+   ],
+   [
+    "repository and working state",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "side"
+   ],
+   [
+    "repository and working state",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 112,
+  "function": "preflight.preflight_area",
+  "cause": "a required part of the head is missing",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 113,
+  "function": "preflight.preflight_area",
+  "cause": "the head does not read",
+  "prop_A": "bundle",
+  "prop_B": "readability",
+  "fits_A": "bundle",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 114,
+  "function": "preflight.tell_test_run",
+  "cause": "pytest is not installed in this interpreter — tests not run",
+  "prop_A": "result of an executed area check",
+  "prop_B": "result of an executed area check",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": true,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 115,
+  "function": "preflight.tell_test_run",
+  "cause": "the resolution check's tests failed (preflight)",
+  "prop_A": "result of an executed area check",
+  "prop_B": "result of an executed area check",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 116,
+  "function": "preflight.tell_test_run",
+  "cause": "the area's tests failed (finalize)",
+  "prop_A": "result of an executed area check",
+  "prop_B": "result of an executed area check",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 117,
+  "function": "preflight.tell_test_run",
+  "cause": "… did not run… — …",
+  "prop_A": "result of an executed area check",
+  "prop_B": "result of an executed area check",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 118,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "…() is called by no test under tests/ · a parser fails silently into a wrong number",
+  "prop_A": "completeness",
+  "prop_B": "no",
+  "fits_A": "weak",
+  "fits_B": "no",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "holds the reference"
+   ],
+   [
+    "area code",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 119,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "cannot be parsed (…) · which parsers it calls cannot be told",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 120,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "… is not statically readable (a call or a format spec this check does not compute) · pr…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": true,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 121,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "prompt block drifted from …: … of … fixed line(s) missing, e.g. …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 122,
+  "function": "protocol_history.check_annotation_validity",
+  "cause": "the annotator's evidence names no protocol, several, or one that does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 123,
+  "function": "protocol_history.check_annotation_validity",
+  "cause": "the evidence is no apply protocol, or has adopted no result",
+  "prop_A": "binding",
+  "prop_B": "bundle",
+  "fits_A": "weak",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 124,
+  "function": "protocol_history.check_protocol_id",
+  "cause": "…: DUPLICATE protocol id … — also carried by …. An id binds runs to ONE protocol",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 125,
+  "function": "protocol_history.check_protocol_id",
+  "cause": "…: WARNING: protocol id changed against HEAD (… -> …) — runs bound to the old id st…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 126,
+  "function": "readme_check.readme_route",
+  "cause": "README.md: no … … … block — the route (protocol · runlog · labkit-params · evaluate_r…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 127,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: does not name …",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "text beside the protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 128,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: scripts/01_measure.py does not exist",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 129,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: scripts/01_measure.py defines no evaluate_rows",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 130,
+  "function": "reference.comparison_gaps",
+  "cause": "metrics.json carries … and the head registers no [reference] — a comparison is register…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 131,
+  "function": "reference.comparison_gaps",
+  "cause": "the head registers [reference] on `…`, and the run recorded no verdict (no `…` in met…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 132,
+  "function": "reference.comparison_gaps",
+  "cause": "`…` …, so the registered reference (…) cannot be compared and no verdict can be rep…",
+  "prop_A": "no",
+  "prop_B": "completeness",
+  "fits_A": "no",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 133,
+  "function": "reference.comparison_gaps",
+  "cause": "the verdict in metrics.json does not read: `…` = …, `…` = … — written beside the …",
+  "prop_A": "form",
+  "prop_B": "form",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 134,
+  "function": "reference.comparison_gaps",
+  "cause": "the run compared with …, the head registers … — the reference changed after the run, …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 135,
+  "function": "registered_report.missing_report",
+  "cause": "… registers … as its report; the report is missing (…), and its area holds a measur…",
+  "prop_A": "binding",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "report",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 136,
+  "function": "registered_report.registered_review",
+  "cause": "…: its discussion blocks do not read — …",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 137,
+  "function": "registered_report.report_binding_gap",
+  "cause": "… registered … before its first measurement …, and its head now registers … — the…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 138,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: it recorded no commit",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 139,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its commit is not in this repository, or git cannot read the protocol at it",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 140,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its commit does not hold the protocol",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 141,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its committed head does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 142,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurements registered different reports (…) — which one stood before t…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 143,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurement is missing — the report binding cannot be read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 144,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report lacks the result block, handover or progress account it owes",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 145,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report is not UTF-8",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 146,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report's blocks do not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 147,
+  "function": "registration_hold.now_hold",
+  "cause": "a field LAB-003 names changed after the first measurement",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 148,
+  "function": "registration_hold.now_hold",
+  "cause": "the registered comparison `[reference]` changed",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 149,
+  "function": "registration_hold.now_hold",
+  "cause": "`kind` or `[kept]` changed",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 150,
+  "function": "registration_hold.registration_changes",
+  "cause": "ids, keys, sentences or constants changed after the first measurement",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 151,
+  "function": "registration_hold.registration_changes",
+  "cause": "a promise's declared scope changed",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 152,
+  "function": "registration_hold.registration_changes",
+  "cause": "the first measurements recorded different registrations: … — which one stood before the…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 153,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: a registered output of the run is gone",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 154,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: a `fixed` finding names a place that begins several fields",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 155,
+  "function": "registration_hold.seen_hold",
+  "cause": "a field LAB-003 names changed after the first measurement",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 156,
+  "function": "registration_hold.seen_hold",
+  "cause": "the registered comparison `[reference]` changed",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 157,
+  "function": "registration_hold.seen_hold",
+  "cause": "`kind` or `[kept]` changed",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 158,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded no commit",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 159,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded a promise block its commit and patch do not give",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 160,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run's commit is not in this clone, or git cannot read its tree or the protocol's blob",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [],
+  "objs_B": []
+ },
+ {
+  "n": 161,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run started with the protocol untracked",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 162,
+  "function": "report_blocks.block_gaps",
+  "cause": "a result block names no protocol of the repo, or one that adopted no result",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 163,
+  "function": "report_blocks.block_gaps",
+  "cause": "the block's protocol head does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [],
+  "objs_B": []
+ },
+ {
+  "n": 164,
+  "function": "report_blocks.block_gaps",
+  "cause": "…: the protocol has adopted run … now",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 165,
+  "function": "report_blocks.block_gaps",
+  "cause": "… differs from the protocol's rendering",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "side"
+   ],
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 166,
+  "function": "report_blocks.cited_gaps",
+  "cause": "a run cited in a structured place is not held by the repo",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [],
+  "objs_B": []
+ },
+ {
+  "n": 167,
+  "function": "report_blocks.cited_gaps",
+  "cause": "a run id in running prose is not held by the repo",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [],
+  "objs_B": []
+ },
+ {
+  "n": 168,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "… repeats the block at line … — one block per protocol and run",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 169,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "a discussion block has no why",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 170,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "…: its line differs from its head",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 171,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…",
+  "prop_A": "completeness",
+  "prop_B": "no",
+  "fits_A": "weak",
+  "fits_B": "no",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 172,
+  "function": "report_check._registration_at",
+  "cause": "… (……) recorded a commit this repository does not hold (a rewritten history, a shal…",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 173,
+  "function": "report_check._registration_at",
+  "cause": "… at … (……) cannot be read: … — the registration that stood before the number c…",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 174,
+  "function": "report_check._registration_at",
+  "cause": "… was not committed at … (……) — nothing stood before the number; the registration…",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 175,
+  "function": "report_check._registration_at",
+  "cause": "the registration as committed at … (……) lacks … — the registration is what the co…",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [],
+  "objs_B": []
+ },
+ {
+  "n": 176,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 177,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 178,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no answering run to hold it to — …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [],
+  "objs_B": []
+ },
+ {
+  "n": 179,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is now, and none can run — …",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 180,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the run: a registered output of the run is gone",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 181,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: a file is missing or its access refused",
+  "prop_A": "readability",
+  "prop_B": "bundle",
+  "fits_A": "yes",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 182,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: there is nothing to stamp",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 183,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: a findings file does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 184,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: the promise block does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 185,
+  "function": "report_check.cut_off_adoption_gaps",
+  "cause": "…: an adoption was cut off during its check — the protocol may hold a proposal no check…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 186,
+  "function": "report_check.declaration_gaps",
+  "cause": "the `[result]` table does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 187,
+  "function": "report_check.freeze_gaps",
+  "cause": "a must field is absent, or a head key is a placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 188,
+  "function": "report_check.freeze_gaps",
+  "cause": "`[model]` claims on a kind that has none (`kind_gap`)",
+  "prop_A": "inner consistency",
+  "prop_B": "bundle",
+  "fits_A": "yes",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 189,
+  "function": "report_check.freeze_gaps",
+  "cause": "`[reference]` on a kind a criterion judges",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 190,
+  "function": "report_check.freeze_gaps",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 191,
+  "function": "report_check.freeze_gaps",
+  "cause": "frozen without the preflight record named",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 192,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables break a form LAB-004 states (the causes of `code_check.promise_block_findings`, first row)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 193,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables do not have the form a reader needs",
+  "prop_A": "form",
+  "prop_B": "bundle",
+  "fits_A": "weak",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 194,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 195,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables are owed and missing",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 196,
+  "function": "report_check.freeze_gaps",
+  "cause": "…: line …: … still a placeholder",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 197,
+  "function": "report_check.freeze_gaps",
+  "cause": "…: not `frozen = true` — a reported number owes the freeze",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 198,
+  "function": "report_check.recomputation_findings",
+  "cause": "… (LAB-041 Generate numbers, don't retype them)",
+  "prop_A": "result of an executed area check",
+  "prop_B": "bundle",
+  "fits_A": "yes",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 199,
+  "function": "report_check.recomputation_findings",
+  "cause": "… — no result, the numbers are not held to the run",
+  "prop_A": "result of an executed area check",
+  "prop_B": "result of an executed area check",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": true,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area checks",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 200,
+  "function": "report_check.registration_gaps",
+  "cause": "not a git repository — the registration cannot be held to the commit of the first measure…",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": true,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 201,
+  "function": "report_check.repeated_gaps",
+  "cause": "a bound field is written twice",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 202,
+  "function": "report_check.unreportable_gaps",
+  "cause": "the answering run is no measurement",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 203,
+  "function": "report_check.unreportable_gaps",
+  "cause": "a full run acknowledged over an unfrozen protocol",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 204,
+  "function": "report_check.unreportable_gaps",
+  "cause": "…: no config.json in this file state — the run's record cannot be checked",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 205,
+  "function": "report_decisions.check_carried_closings_upheld",
+  "cause": "audit … #…: a carried finding (from …) `…` — the follow-up did not find the fault…",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 206,
+  "function": "report_decisions.check_contested_closings_upheld",
+  "cause": "audit … #…: `…` on a … a review said … on (…) — closing a finding a reviewer …",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 207,
+  "function": "report_decisions.check_decision_reviews_read",
+  "cause": "a review nobody can read: …",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 208,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: decided `fixed` in the state audited — no follow-up has seen the repair",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ]
+  ]
+ },
+ {
+  "n": 209,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: the follow-up of this state said …",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ]
+ },
+ {
+  "n": 210,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: no follow-up, and the run lacks the required check",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 211,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: followed up in a record that no longer covers this state",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "state covered"
+   ],
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 212,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: decided, never followed up",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ]
+ },
+ {
+  "n": 213,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: the follow-up judged another decision — it changed since",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ]
+ },
+ {
+  "n": 214,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: `resolved`, but the required check was not in the run shown",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ]
+  ]
+ },
+ {
+  "n": 215,
+  "function": "report_decisions.check_first_dismissals_upheld",
+  "cause": "audit … #…: `false-positive` on a BLOCKER … — a blocking finding is not released by…",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 216,
+  "function": "report_decisions.check_limit_effects_decided",
+  "cause": "…: a BLOCKER decided limitation owes its effect on the verdicts",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 217,
+  "function": "report_decisions.check_repaired_claims_upheld",
+  "cause": "audit … #…: `fixed` on a BLOCKER on the Conclusion … — no follow-up audit is shown …",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 218,
+  "function": "report_decisions.check_stands_upheld",
+  "cause": "…: `stands` on a … decided limitation … — no decision review upholds that the repor…",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "confirmation"
+   ],
+   [
+    "audit and review records",
+    "decision"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 219,
+  "function": "report_decisions.followup_findings",
+  "cause": "the carried findings of … do not form a chain: …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 220,
+  "function": "report_hold.discussion_sources",
+  "cause": "… names …, and there is no such protocol",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 221,
+  "function": "report_hold.discussion_sources",
+  "cause": "…: …'s area has no runs/…/ — a discussion names a run of its protocol's area",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 222,
+  "function": "report_hold.hold_report",
+  "cause": "a report of a replacing protocol does not name what it replaces",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 223,
+  "function": "report_hold.hold_report",
+  "cause": "a discussion head lacks protocol, run or why",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 224,
+  "function": "report_hold.hold_report",
+  "cause": "a block of the report does not read",
+  "prop_A": "readability",
+  "prop_B": "bundle",
+  "fits_A": "yes",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 225,
+  "function": "report_hold.link_gap",
+  "cause": "…: a symbolic link to … — a report is held as a file at its own path, never through a…",
+  "prop_A": "form",
+  "prop_B": "form",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 226,
+  "function": "report_hold.owed_blocks",
+  "cause": "line …: cites run …, the adopted result of …, without its generated block — the num…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 227,
+  "function": "report_hold.report_hints",
+  "cause": "…: no assigned source found for the numbers on … line(s) — they stand outside every g…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 228,
+  "function": "report_hold.report_hints",
+  "cause": "…: numbers on … line(s) beside a discussed run — a discussed run's number in a report…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 229,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: an audit record or a report review record does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 230,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: the protocol's head does not read",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 231,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: git fails",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 232,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: the report discusses a run the area does not hold",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 233,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state (one naming no claim)… — a cold r…",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "audit and review records",
+    "state covered"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "report",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "audit and review records",
+    "state covered"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "report",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 234,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state — and none can run: …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "audit and review records",
+    "state covered"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "report",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 235,
+  "function": "report_hold.review_hold",
+  "cause": "…: the report review holds this state (…) — …",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "audit and review records",
+    "state covered"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "report",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "audit and review records",
+    "state covered"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ],
+   [
+    "report",
+    "state covered"
+   ],
+   [
+    "run record",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 236,
+  "function": "report_hold.staged_area_gap",
+  "cause": "…: the working tree differs from the index (…) — … the tree, the commit holds the i…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "side"
+   ],
+   [
+    "decided at run time",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "side"
+   ],
+   [
+    "repository and working state",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 237,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which has adopted no result",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 238,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, which no protocol has adopted as its result — a reported number is adopte…",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "report",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 239,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: line …: run … is discussed as not reported, but … has adopted it as its result",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 240,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which adopts it in the working tree but not in …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 241,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which has adopted no result — and neither its a…",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "report",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 242,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites a run of a protocol whose head does not read — …",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 243,
+  "function": "report_replacement._predecessor",
+  "cause": "[replaces] protocol is its own id",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 244,
+  "function": "report_replacement._predecessor",
+  "cause": "`[replaces]` names no protocol of the repo",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 245,
+  "function": "report_replacement._predecessor",
+  "cause": "`[replaces]` names an id several protocols carry",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 246,
+  "function": "report_replacement._predecessor",
+  "cause": "the replacements run in a circle (…)",
+  "prop_A": "no",
+  "prop_B": "binding",
+  "fits_A": "no",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "protocol",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 247,
+  "function": "report_replacement._predecessor_open",
+  "cause": "its predecessor's BLOCKER is still open — …",
+  "prop_A": "audit coverage",
+  "prop_B": "audit coverage",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "covering record"
+   ],
+   [
+    "protocol",
+    "state covered"
+   ]
+  ]
+ },
+ {
+  "n": 248,
+  "function": "report_replacement._predecessor_open",
+  "cause": "the predecessor's audit records do not read: …",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 249,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "changed against … (…) and not declared: … … → …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 250,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "declares a change the registrations do not show: … … → … (the predecessor …, this…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 251,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "the registrations cannot be compared: a protocol as its first measurement saw it cannot be read back (the whys of `registration_hold.unread_hold`)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ],
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 252,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "the registrations cannot be compared: the protocol's own first measurements saw different registrations",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "protocol",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 253,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "…: [protocol] type = \"…\" — a protocol that replaces another answers a new, post-hoc q…",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 254,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "a `[[replaces.change]]` states no why",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 255,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "`[replaces]` does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 256,
+  "function": "result_render.render_gaps",
+  "cause": "the Recorded results line is not written",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 257,
+  "function": "result_render.render_gaps",
+  "cause": "the Recorded results line differs from its rendering (the run's metrics.json and the reco…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "side"
+   ],
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "side"
+   ],
+   [
+    "generated block or line",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 258,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" is written … times — one generated line per label",
+  "prop_A": "uniqueness",
+  "prop_B": "uniqueness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 259,
+  "function": "result_render.render_gaps",
+  "cause": "no \"…\" line — the limit's line belongs in the protocol",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "generated block or line",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 260,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" names a limit no covering record decides — written by hand or from an older record",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "referred to"
+   ],
+   [
+    "generated block or line",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "referred to"
+   ],
+   [
+    "generated block or line",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 261,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" differs from the record",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "audit and review records",
+    "side"
+   ],
+   [
+    "generated block or line",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "audit and review records",
+    "side"
+   ],
+   [
+    "generated block or line",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 262,
+  "function": "run_record_check._continued_with_other_code",
+  "cause": "…: … row(s) come from …, which ran other code (script …, this run's …) — …'s …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 263,
+  "function": "run_record_check._criterion_n_warning",
+  "cause": "a criterion's denominator matches no recorded input count",
+  "prop_A": "bundle",
+  "prop_B": "inner consistency",
+  "fits_A": "bundle",
+  "fits_B": "yes",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 264,
+  "function": "run_record_check._gone",
+  "cause": "… is not at its recorded path on this machine — deleted, moved or held elsewhere; the r…",
+  "prop_A": "binding",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 265,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the run recorded no commit, so the helpers its script imports cannot be compared",
+  "prop_A": "completeness",
+  "prop_B": "bundle",
+  "fits_A": "weak",
+  "fits_B": "bundle",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 266,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the area lies in no git repository now, so the helpers cannot be compared",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 267,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… started at commit …, which this clone does not hold",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ]
+ },
+ {
+  "n": 268,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… is in neither …'s commit nor its uncommitted.patch, so it cannot be compared with w…",
+  "prop_A": "readability",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 269,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… recorded no commit, or the area lies in no git repository now, so the helpers its scr…",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ],
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 270,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the tree … started from cannot be read for …: …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ],
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 271,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… changed since … ran it (it was untracked; the run kept it as …)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 272,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… changed since … ran",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 273,
+  "function": "run_record_check._recorded_sources",
+  "cause": "source not frozen — the run carries no `data=`",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 274,
+  "function": "run_record_check._recorded_sources",
+  "cause": "the run's `data=` record does not read",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 275,
+  "function": "run_record_check._run_code",
+  "cause": "… recorded no script — the code behind its number cannot be compared",
+  "prop_A": "no",
+  "prop_B": "completeness",
+  "fits_A": "no",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 276,
+  "function": "run_record_check._run_code",
+  "cause": "the script the run recorded cannot be told",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "referred to"
+   ],
+   [
+    "run record",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 277,
+  "function": "run_record_check._run_code",
+  "cause": "… changed since … ran it — its number came from other code",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "side"
+   ],
+   [
+    "area code",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 278,
+  "function": "run_record_check._run_code",
+  "cause": "the code … ran cannot be read now: …",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "area code",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "area code",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 279,
+  "function": "run_record_check._untracked_source",
+  "cause": "… — whether it belongs to the project is left open",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 280,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names …, no such file under …",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "referred to"
+   ],
+   [
+    "protocol",
+    "holds the reference"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "repository and working state",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 281,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names fingerprint …, the answering run recorded no such value —…",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 282,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names alias …, the answering run recorded no such alias",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ },
+ {
+  "n": 283,
+  "function": "run_record_check.code_since_run",
+  "cause": "…: its runs cannot be followed (…)",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 284,
+  "function": "run_record_check.kept_number_gaps",
+  "cause": "the kept number: metrics.json of … … — the head's [kept] names `…` as the number th…",
+  "prop_A": "binding",
+  "prop_B": "binding",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ],
+  "objs_B": [
+   [
+    "protocol",
+    "holds the reference"
+   ],
+   [
+    "run record",
+    "referred to"
+   ]
+  ]
+ },
+ {
+  "n": 285,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "… called a model, but no run in its lineage recorded models_resolved — record the alias…",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 286,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "model provenance: the lineage of … is broken — …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 287,
+  "function": "run_record_check.null_lane_findings",
+  "cause": "…: the null lane's answer and gold equal the registered lane's on every item — if the n…",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 288,
+  "function": "run_record_check.output_record_findings",
+  "cause": "…: not the file run … recorded — …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": []
+ },
+ {
+  "n": 289,
+  "function": "run_record_check.provenance_findings",
+  "cause": "no outputs.json — the run registered no output file (run.output)",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "yes",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 290,
+  "function": "run_record_check.provenance_findings",
+  "cause": "not a git repository — cannot tell whether source and output are committed",
+  "prop_A": "readability",
+  "prop_B": "readability",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 291,
+  "function": "run_record_check.provenance_findings",
+  "cause": "output … is not yet tracked — `git add …` before the commit that cites the number",
+  "prop_A": "no",
+  "prop_B": "no",
+  "fits_A": "no",
+  "fits_B": "no",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "repository and working state",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 292,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "…: … row(s) from … — a run this run neither is, continues nor derives from; a file …",
+  "prop_A": "inner consistency",
+  "prop_B": "inner consistency",
+  "fits_A": "yes",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 293,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "row provenance: the lineage of … is broken — …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 294,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "an output's rows do not say which run wrote them",
+  "prop_A": "completeness",
+  "prop_B": "completeness",
+  "fits_A": "weak",
+  "fits_B": "yes",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 295,
+  "function": "run_record_check.single_draw",
+  "cause": "… is one draw — no spread: `scripts/01_measure.py --repeat-of …` draws it again, 02_…",
+  "prop_A": "no",
+  "prop_B": "completeness",
+  "fits_A": "no",
+  "fits_B": "weak",
+  "prop_eq": false,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 296,
+  "function": "run_record_check.single_draw",
+  "cause": "the draws of … cannot be counted: …",
+  "prop_A": "bundle",
+  "prop_B": "bundle",
+  "fits_A": "bundle",
+  "fits_B": "bundle",
+  "prop_eq": true,
+  "kinds_eq": true,
+  "objs_eq": true,
+  "vers_eq": true,
+  "unsure": false,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "run record",
+    "tested"
+   ]
+  ],
+  "objs_B": [
+   [
+    "run record",
+    "tested"
+   ]
+  ]
+ },
+ {
+  "n": 297,
+  "function": "run_record_check.source_finding",
+  "cause": "source … is not the bytes the run read: …, the run recorded sha256 …",
+  "prop_A": "agreement",
+  "prop_B": "agreement",
+  "fits_A": "weak",
+  "fits_B": "weak",
+  "prop_eq": true,
+  "kinds_eq": false,
+  "objs_eq": false,
+  "vers_eq": false,
+  "unsure": true,
+  "limit_A": false,
+  "limit_B": false,
+  "objs_A": [
+   [
+    "decided at run time",
+    "side"
+   ],
+   [
+    "decided at run time",
+    "side"
+   ]
+  ],
+  "objs_B": [
+   [
+    "decided at run time",
+    "side"
+   ],
+   [
+    "run record",
+    "side"
+   ]
+  ]
+ }
+]

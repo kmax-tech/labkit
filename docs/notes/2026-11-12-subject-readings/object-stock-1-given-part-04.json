@@ -1,0 +1,152 @@
+[
+ {
+  "n": 92,
+  "function": "preflight.check_audit_records",
+  "cause": "an audit record does not read"
+ },
+ {
+  "n": 93,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's audit records do not read"
+ },
+ {
+  "n": 94,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's handover does not read"
+ },
+ {
+  "n": 95,
+  "function": "preflight.check_hooks",
+  "cause": "a hook is missing or from another labkit"
+ },
+ {
+  "n": 96,
+  "function": "preflight.check_promise_sentences",
+  "cause": "[[promise]] … still carries the stamp's `<…>` sentence — frozen = true refuses it"
+ },
+ {
+  "n": 97,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a must field is absent, or a head key is a placeholder"
+ },
+ {
+  "n": 98,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[model]` claims on a kind that has none (`kind_gap`)"
+ },
+ {
+  "n": 99,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 100,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`"
+ },
+ {
+  "n": 101,
+  "function": "preflight.check_protocol_fields",
+  "cause": "frozen without the preflight record named"
+ },
+ {
+  "n": 102,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables break a form LAB-004 states (the causes of `code_check.promise_block_findings`, first row)"
+ },
+ {
+  "n": 103,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables do not have the form a reader needs"
+ },
+ {
+  "n": 104,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)"
+ },
+ {
+  "n": 105,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables are owed and missing"
+ },
+ {
+  "n": 106,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 107,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a must field still holds its placeholder"
+ },
+ {
+  "n": 108,
+  "function": "preflight.check_protocol_fields",
+  "cause": "an id is written in lower case in the prose"
+ },
+ {
+  "n": 109,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a \"should\" field is missing"
+ },
+ {
+  "n": 110,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a \"should\" field still holds its placeholder"
+ },
+ {
+  "n": 111,
+  "function": "preflight.check_working_tree",
+  "cause": "uncommitted changes in … (commit or stash before the run)"
+ },
+ {
+  "n": 112,
+  "function": "preflight.preflight_area",
+  "cause": "a required part of the head is missing"
+ },
+ {
+  "n": 113,
+  "function": "preflight.preflight_area",
+  "cause": "the head does not read"
+ },
+ {
+  "n": 114,
+  "function": "preflight.tell_test_run",
+  "cause": "pytest is not installed in this interpreter — tests not run"
+ },
+ {
+  "n": 115,
+  "function": "preflight.tell_test_run",
+  "cause": "the resolution check's tests failed (preflight)"
+ },
+ {
+  "n": 116,
+  "function": "preflight.tell_test_run",
+  "cause": "the area's tests failed (finalize)"
+ },
+ {
+  "n": 117,
+  "function": "preflight.tell_test_run",
+  "cause": "… did not run… — …"
+ },
+ {
+  "n": 118,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "…() is called by no test under tests/ · a parser fails silently into a wrong number"
+ },
+ {
+  "n": 119,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "cannot be parsed (…) · which parsers it calls cannot be told"
+ },
+ {
+  "n": 120,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "… is not statically readable (a call or a format spec this check does not compute) · pr…"
+ },
+ {
+  "n": 121,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "prompt block drifted from …: … of … fixed line(s) missing, e.g. …"
+ }
+]

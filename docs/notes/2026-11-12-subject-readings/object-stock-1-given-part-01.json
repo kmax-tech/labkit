@@ -1,0 +1,147 @@
+[
+ {
+  "n": 1,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no completed run is bound to the protocol; records that do not read; two runs that both answer"
+ },
+ {
+  "n": 2,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run id the area has no run directory for"
+ },
+ {
+  "n": 3,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run that did not complete"
+ },
+ {
+  "n": 4,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run bound to another protocol or to none"
+ },
+ {
+  "n": 5,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run's record does not read"
+ },
+ {
+  "n": 6,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run is a repeat"
+ },
+ {
+  "n": 7,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run reports no intent key — a probe or producer run, not an answer"
+ },
+ {
+  "n": 8,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no bound run reports an intent key, the newest is taken — a probe or producer run, not an answer"
+ },
+ {
+  "n": 9,
+  "function": "audit.early_for_tier",
+  "cause": "repeat_cost = \"low\" and no completed run · the first run is the cheaper probe; one audit …"
+ },
+ {
+  "n": 10,
+  "function": "audit_binding.check_audit_findings_decided",
+  "cause": "an audit BLOCKER is undecided"
+ },
+ {
+  "n": 11,
+  "function": "audit_binding.check_audit_findings_decided",
+  "cause": "an audit WARNING is undecided"
+ },
+ {
+  "n": 12,
+  "function": "audit_binding.check_audit_records_read",
+  "cause": "an audit record does not read"
+ },
+ {
+  "n": 13,
+  "function": "audit_binding.check_audited_runs_kept",
+  "cause": "…: names … as the run it read, and there is no runs/…/ in this area — the run the r…"
+ },
+ {
+  "n": 14,
+  "function": "code_check._intent_id_findings",
+  "cause": "[…] is registered, but no script names a '…'/'…_*' key literal (a key assembled at …"
+ },
+ {
+  "n": 15,
+  "function": "code_check._intent_id_findings",
+  "cause": "key '…_*' is in the intent-id namespace, but the protocol registers no […] · a number…"
+ },
+ {
+  "n": 16,
+  "function": "code_check.constant_copies",
+  "cause": "[…] …:… sets … = … itself (…) · a copy judges by an unregistered value once t…"
+ },
+ {
+  "n": 17,
+  "function": "code_check.main",
+  "cause": "bundle: … could not be read — the reader sees `not readable` in its place"
+ },
+ {
+  "n": 18,
+  "function": "code_check.promise_block_findings",
+  "cause": "the promise block breaks a form LAB-004 states (10 causes: a missing field, an id or key outside its alphabet, an empty sentence, an outcome without condition or consequence, a constant's name or second home)"
+ },
+ {
+  "n": 19,
+  "function": "code_check.promise_block_findings",
+  "cause": "the block does not have the form a reader needs (7 causes: no TOML, no table, an unknown field, an absolute scope, a constant that is no scalar)"
+ },
+ {
+  "n": 20,
+  "function": "code_check.promise_block_findings",
+  "cause": "a form no rule states (6 causes: a doubled id, a doubled outcome name, one outcome only, `otherwise` not last, an outcome name outside its alphabet, an empty scope list)"
+ },
+ {
+  "n": 21,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declares key '…', which no script names as a literal… (an assembled key is not …"
+ },
+ {
+  "n": 22,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declared scope: … · runlog refuses the run"
+ },
+ {
+  "n": 23,
+  "function": "code_check.quality_check_reads",
+  "cause": "[…] key '…' is written but nothing decides on it · the criterion verdict is reported …"
+ },
+ {
+  "n": 24,
+  "function": "code_check.quality_check_reads",
+  "cause": "quality-check keys: read check not done — …"
+ },
+ {
+  "n": 25,
+  "function": "code_scan.unreadable_source",
+  "cause": "… · the code cannot be read, so no check over it holds"
+ },
+ {
+  "n": 26,
+  "function": "evidence.change_blockers",
+  "cause": "git could not compare the evidence with the state"
+ },
+ {
+  "n": 27,
+  "function": "evidence.change_blockers",
+  "cause": "the evidence an audit read changed since"
+ },
+ {
+  "n": 28,
+  "function": "finalize.check_data_counts",
+  "cause": "the generated counts differ from the prepare run's record"
+ },
+ {
+  "n": 29,
+  "function": "finalize.check_data_counts",
+  "cause": "the counts name a run the area lacks or that is no completed prepare run"
+ }
+]

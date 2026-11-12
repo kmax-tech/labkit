@@ -1,0 +1,820 @@
+[
+ {
+  "n": 59,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json is there and reads (no config: no finding)"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "no value: the condition reads which kind of run the record states (a recorded state, rule 4); form does not fit, the value is an allowed one",
+  "tested_at": "labkit/formats/runs.py:779",
+  "told_at": "labkit/gates/finalize.py:338",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's config records a run_kind other than 'measurement'."
+ },
+ {
+  "n": 60,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json is there and reads (no config: no finding)"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "no value: a flag that is there and records a state (the run was acknowledged over an unfrozen protocol), rule 4; the protocol's frozen state is not read here",
+  "tested_at": "labkit/formats/runs.py:786",
+  "told_at": "labkit/gates/finalize.py:338",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's config carries unfrozen_ack = true."
+ },
+ {
+  "n": 61,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the file parses as Python (a file that does not parse is skipped here)"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "no value: the code contains a construct the stamp cannot follow; nothing is looked up. Possibly check_limit (the limit is the stamp's, another check's, not this check's)",
+  "tested_at": "labkit/checks/import_check.py:178",
+  "told_at": "labkit/checks/import_check.py:186",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A statement of an area script or an imported helper adds to sys.path an expression whose string literals are not all 'lib'/'src' (or that has none)."
+ },
+ {
+  "n": 62,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the file parses as Python",
+   "the file is one of the area's own, not an imported helper"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "no value: the code contains a construct the stamp cannot follow. Possibly check_limit (a computed path is not evaluated; the limit told is the stamp's)",
+  "tested_at": "labkit/checks/import_check.py:199",
+  "told_at": "labkit/checks/import_check.py:205",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A call in one of the area's own files is named like a dynamic loader (import_module, exec, run_path, ...) and does not name, as a literal path under AREA, a file the stamp already covers."
+ },
+ {
+  "n": 63,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the file parses as Python",
+   "the file is one of the area's own, not an imported helper"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "no value: a name pattern over literals, nothing is looked up, so not binding; binding would hold if the named area's file were resolved",
+  "tested_at": "labkit/checks/import_check.py:218",
+  "told_at": "labkit/checks/import_check.py:225",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A string literal in one of the area's own files contains a path segment shaped like an area name that is not this area's name."
+ },
+ {
+  "n": 64,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "decided at run time",
+    "role": "referred to",
+    "version": "as it stands",
+    "candidates": [
+     "area code",
+     "repository and working state"
+    ]
+   }
+  ],
+  "preconditions": [
+   "the file parses as Python"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "the reference leads to a thing that is there and stands in a place the stamp does not take; 'kind the place takes' is stretched to 'location'",
+  "tested_at": "labkit/formats/scope_sha.py:130",
+  "told_at": "labkit/checks/import_check.py:114",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "An import's first name segment resolves to a file or directory at the repo root that is neither lib/ nor src/ nor a script of the area."
+ },
+ {
+  "n": 65,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol has a promise block that reads",
+   "the metrics.json reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness of the run record (an owed key missing), the protocol then a precondition — but rule 4 speaks of a part named by the same object",
+  "tested_at": "labkit/checks/intent_check.py:325",
+  "told_at": "labkit/checks/intent_check.py:319",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A key a [[promise]] table of the protocol declares is not a key of the run's metrics.json."
+ },
+ {
+  "n": 66,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol has a promise block that reads",
+   "the run's config.json reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "the same function tells apart a second state, the constant absent from the run's config (promises.py:775, told intent_check.py:400); this row is the 'different' state",
+  "tested_at": "labkit/formats/promises.py:779",
+  "told_at": "labkit/checks/intent_check.py:394",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A constant a [[promise]] table declares stands in the run's recorded config under the same name with another value (type-strict)."
+ },
+ {
+  "n": 67,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol has a promise block that reads"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "agreement between protocol and run record (one has a block, the other recorded none)",
+  "tested_at": "labkit/formats/promises.py:963",
+  "told_at": "labkit/checks/intent_check.py:331",
+  "bundled": [
+   "the run directory has no config.json (cfg None, intent_check.py:328)",
+   "config.json's promises is null"
+  ],
+  "check_limit": false,
+  "condition": "The run's config records no promises table (null, or the run has no config.json) while the protocol carries a promise block."
+ },
+ {
+  "n": 68,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json reads and records a promises table",
+   "the recorded digest is of the current format"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:987",
+  "told_at": "labkit/checks/intent_check.py:331",
+  "bundled": [
+   "protocol has no block now, the run recorded one (promises.py:974)",
+   "block digest differs from the recorded block_sha (promises.py:987)"
+  ],
+  "check_limit": false,
+  "condition": "The run recorded a promise block digest and the protocol now carries no block, or a block with another digest."
+ },
+ {
+  "n": 69,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "the run's config.json reads and records a promises table",
+   "the protocol has a promise block"
+  ],
+  "property": "agreement",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "form of the run record (the value of promises.digest is not the one its place takes), without check_limit",
+  "tested_at": "labkit/formats/promises.py:981",
+  "told_at": "labkit/checks/intent_check.py:331",
+  "bundled": [],
+  "check_limit": true,
+  "condition": "The run's recorded promises table names a digest format other than the current one, so the two block digests are not compared."
+ },
+ {
+  "n": 70,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head and block read",
+   "prose and block name the same ids",
+   "a metrics.json is chosen and reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/intent_check.py:178",
+  "told_at": "labkit/checks/intent_check.py:285",
+  "bundled": [
+   "id registered, no key in the metrics (intent_check.py:178)",
+   "key in the id namespace, no registered id (intent_check.py:183)"
+  ],
+  "check_limit": false,
+  "condition": "The set of ids the protocol's prose names and the set of ids the keys of the run's metrics.json report differ, in either direction."
+ },
+ {
+  "n": 71,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head and block read",
+   "the protocol has a promise block"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:570",
+  "told_at": "labkit/checks/intent_check.py:267",
+  "bundled": [
+   "id in the prose, not in the block",
+   "id in the block, not in the prose"
+  ],
+  "check_limit": false,
+  "condition": "The ids the protocol's prose names and the ids its [[promise]] tables declare are not the same set."
+ },
+ {
+  "n": 72,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the promise registers outcomes",
+   "the key is in the metrics"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "agreement between protocol and run record (the recorded value against the registered set)",
+  "tested_at": "labkit/checks/intent_check.py:362",
+  "told_at": "labkit/checks/intent_check.py:365",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The value the run's metrics record under a branch promise's key is not a string that is one of the outcome names the protocol's promise registers."
+ },
+ {
+  "n": 73,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/notes_check.py:153",
+  "told_at": "labkit/checks/notes_check.py:155",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The note has no italic paragraph as first content paragraph after its title."
+ },
+ {
+  "n": 74,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads",
+   "it has a meta paragraph"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "form (the meta line matches no allowed kind pattern); a misspelt kind and no kind are not told apart",
+  "tested_at": "labkit/checks/notes_check.py:167",
+  "told_at": "labkit/checks/notes_check.py:169",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The note's meta paragraph contains none of the kind tokens."
+ },
+ {
+  "n": 75,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads",
+   "it has a meta paragraph"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/notes_check.py:179",
+  "told_at": "labkit/checks/notes_check.py:181",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The note's meta paragraph contains no YYYY-MM or YYYY-MM-DD date."
+ },
+ {
+  "n": 76,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads",
+   "it has a meta paragraph"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "inner consistency (the declared kind against the rest of the note)",
+  "tested_at": "labkit/checks/notes_check.py:189",
+  "told_at": "labkit/checks/notes_check.py:193",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The meta paragraph declares 'Instrument — implementiert' and the note's text matches no code-name pattern (.py file, experiments/ path, backticked call, PROTOCOL- reference)."
+ },
+ {
+  "n": 77,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads",
+   "it has a meta paragraph with a kind"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "holds only if the file name counts as a part of the note",
+  "tested_at": "labkit/checks/notes_check.py:222",
+  "told_at": "labkit/checks/notes_check.py:224",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The note's file name starts with related- and the kind its meta paragraph declares is not Related-Lesart."
+ },
+ {
+  "n": 78,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads",
+   "its meta paragraph declares 'Instrument — implementiert'",
+   "the note lies in a git repository"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "the thing referred to may be area code rather than the working tree as such; the search is over any file of the repo",
+  "tested_at": "labkit/checks/notes_check.py:207",
+  "told_at": "labkit/checks/notes_check.py:211",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Every .py file the note names is found neither at its path under the repo root nor by its file name anywhere in the repo."
+ },
+ {
+  "n": 79,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the note reads",
+   "it has a meta paragraph",
+   "the file name starts with related-"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "form (the kind token does not match the pattern with a cite-key)",
+  "tested_at": "labkit/checks/notes_check.py:232",
+  "told_at": "labkit/checks/notes_check.py:234",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A note named related-* says Related-Lesart in its meta paragraph without a cite-key in parentheses after it."
+ },
+ {
+  "n": 80,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/notes_check.py:268",
+  "told_at": "labkit/checks/notes_check.py:270",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Reading the note's file raises an OSError."
+ },
+ {
+  "n": 81,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "every audit record of the area reads"
+  ],
+  "property": "audit coverage",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "completeness of the audit records (an owed decision is missing); only the 'release' half of audit coverage is tested, no state is compared",
+  "tested_at": "labkit/formats/findings.py:980",
+  "told_at": "labkit/gates/preflight.py:485",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A finding in one of the area's audit records, any mode, still has the state open."
+ },
+ {
+  "n": 82,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "form",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:221",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's preflight_audit value does not match the file name pattern of a written preflight record."
+ },
+ {
+  "n": 83,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the value has the form of a preflight record's file name"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:237",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The record file the head's preflight_audit names is no file under the area's audits/."
+ },
+ {
+  "n": 84,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the named record is a file and reads"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:248",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The record the head's preflight_audit names records a mode other than preflight."
+ },
+ {
+  "n": 85,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the named record is a file"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:245",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Reading the named record raises a FindingsError (not TOML, or a table or field it cannot hold to)."
+ },
+ {
+  "n": 86,
+  "objects": [],
+  "preconditions": [
+   "the named record reads and is a preflight record"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "the check prevented is audit coverage (record against the code's stamp); the causes themselves are binding/completeness/readability of different objects",
+  "tested_at": "labkit/formats/audit_gaps.py:256",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [
+   "a listed scope file is missing: a file a promise declares as scope, an imported helper or a script (scope_sha.py:503)",
+   "the area has no scope files at all (scope_sha.py:506)",
+   "a protocol's promise block is malformed (ValueError from parse_block, scope_sha.py:271)",
+   "another ValueError raised below the snapshot"
+  ],
+  "check_limit": true,
+  "condition": "Stamping the area raises FileNotFoundError or ValueError."
+ },
+ {
+  "n": 87,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the named record reads and is a preflight record",
+   "the area can be stamped"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:261",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The scope sha the named record carries differs from the stamp over the area's code now."
+ },
+ {
+  "n": 88,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the named record covers the code's stamp",
+   "the protocol's promise block reads"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:328",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [
+   "block_sha differs (audit_gaps.py:328)",
+   "a registration entry differs: kind or a registration field (audit_gaps.py:333)"
+  ],
+  "check_limit": false,
+  "condition": "The promise block digest or the registration stamp the named record carries differs from what the protocol text gives now."
+ },
+ {
+  "n": 89,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the named record covers the code's stamp"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:325",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Parsing the protocol's promise block raises a PromiseError."
+ },
+ {
+  "n": 90,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the named record reads, is a preflight record and saw the code, promise block and registration as they are"
+  ],
+  "property": "audit coverage",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "completeness of the audit record (an owed decision is missing); the state covered is established by the earlier conditions, not by this one",
+  "tested_at": "labkit/formats/audit_gaps.py:273",
+  "told_at": "labkit/gates/preflight.py:509",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The named record, which saw this code, block and registration, still has a finding with the state open."
+ },
+ {
+  "n": 91,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/preflight.py:676",
+  "told_at": "labkit/gates/preflight.py:677",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No file tests/test_<area stem>.py or tests/test_<area stem>_*.py exists in the repo (tested where the files are collected, labkit/formats/scope_sha.py:175)."
+ }
+]

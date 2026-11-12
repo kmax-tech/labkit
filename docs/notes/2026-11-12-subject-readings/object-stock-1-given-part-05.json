@@ -1,0 +1,157 @@
+[
+ {
+  "n": 122,
+  "function": "protocol_history.check_annotation_validity",
+  "cause": "the annotator's evidence names no protocol, several, or one that does not read"
+ },
+ {
+  "n": 123,
+  "function": "protocol_history.check_annotation_validity",
+  "cause": "the evidence is no apply protocol, or has adopted no result"
+ },
+ {
+  "n": 124,
+  "function": "protocol_history.check_protocol_id",
+  "cause": "…: DUPLICATE protocol id … — also carried by …. An id binds runs to ONE protocol"
+ },
+ {
+  "n": 125,
+  "function": "protocol_history.check_protocol_id",
+  "cause": "…: WARNING: protocol id changed against HEAD (… -> …) — runs bound to the old id st…"
+ },
+ {
+  "n": 126,
+  "function": "readme_check.readme_route",
+  "cause": "README.md: no … … … block — the route (protocol · runlog · labkit-params · evaluate_r…"
+ },
+ {
+  "n": 127,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: does not name …"
+ },
+ {
+  "n": 128,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: scripts/01_measure.py does not exist"
+ },
+ {
+  "n": 129,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: scripts/01_measure.py defines no evaluate_rows"
+ },
+ {
+  "n": 130,
+  "function": "reference.comparison_gaps",
+  "cause": "metrics.json carries … and the head registers no [reference] — a comparison is register…"
+ },
+ {
+  "n": 131,
+  "function": "reference.comparison_gaps",
+  "cause": "the head registers [reference] on `…`, and the run recorded no verdict (no `…` in met…"
+ },
+ {
+  "n": 132,
+  "function": "reference.comparison_gaps",
+  "cause": "`…` …, so the registered reference (…) cannot be compared and no verdict can be rep…"
+ },
+ {
+  "n": 133,
+  "function": "reference.comparison_gaps",
+  "cause": "the verdict in metrics.json does not read: `…` = …, `…` = … — written beside the …"
+ },
+ {
+  "n": 134,
+  "function": "reference.comparison_gaps",
+  "cause": "the run compared with …, the head registers … — the reference changed after the run, …"
+ },
+ {
+  "n": 135,
+  "function": "registered_report.missing_report",
+  "cause": "… registers … as its report; the report is missing (…), and its area holds a measur…"
+ },
+ {
+  "n": 136,
+  "function": "registered_report.registered_review",
+  "cause": "…: its discussion blocks do not read — …"
+ },
+ {
+  "n": 137,
+  "function": "registered_report.report_binding_gap",
+  "cause": "… registered … before its first measurement …, and its head now registers … — the…"
+ },
+ {
+  "n": 138,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: it recorded no commit"
+ },
+ {
+  "n": 139,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its commit is not in this repository, or git cannot read the protocol at it"
+ },
+ {
+  "n": 140,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its commit does not hold the protocol"
+ },
+ {
+  "n": 141,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its committed head does not read"
+ },
+ {
+  "n": 142,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurements registered different reports (…) — which one stood before t…"
+ },
+ {
+  "n": 143,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurement is missing — the report binding cannot be read"
+ },
+ {
+  "n": 144,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report lacks the result block, handover or progress account it owes"
+ },
+ {
+  "n": 145,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report is not UTF-8"
+ },
+ {
+  "n": 146,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report's blocks do not read"
+ },
+ {
+  "n": 147,
+  "function": "registration_hold.now_hold",
+  "cause": "a field LAB-003 names changed after the first measurement"
+ },
+ {
+  "n": 148,
+  "function": "registration_hold.now_hold",
+  "cause": "the registered comparison `[reference]` changed"
+ },
+ {
+  "n": 149,
+  "function": "registration_hold.now_hold",
+  "cause": "`kind` or `[kept]` changed"
+ },
+ {
+  "n": 150,
+  "function": "registration_hold.registration_changes",
+  "cause": "ids, keys, sentences or constants changed after the first measurement"
+ },
+ {
+  "n": 151,
+  "function": "registration_hold.registration_changes",
+  "cause": "a promise's declared scope changed"
+ },
+ {
+  "n": 152,
+  "function": "registration_hold.registration_changes",
+  "cause": "the first measurements recorded different registrations: … — which one stood before the…"
+ }
+]

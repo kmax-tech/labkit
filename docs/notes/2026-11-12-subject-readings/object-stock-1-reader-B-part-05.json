@@ -1,0 +1,772 @@
+[
+ {
+  "n": 122,
+  "objects": [],
+  "preconditions": [
+   "the protocol is a computation whose [model] annotation_validity names a protocol id"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:362",
+  "told_at": "labkit/formats/protocol_history.py:412",
+  "bundled": [
+   "the id names no protocol of the repo (binding: protocol holds the reference, protocol referred to) - protocol_history.py:362",
+   "the id is carried by several protocols (same test len(hits) != 1; binding, or uniqueness of the id among protocols) - protocol_history.py:362",
+   "the one named protocol's file or head does not read (readability of the referred protocol) - protocol_history.py:378"
+  ],
+  "check_limit": false,
+  "condition": "bound_validation returns NotBound with the technical rule: the id's hit list in the repo's id index has not exactly one entry (none or several), or the one protocol it names raises OSError/BlockError when read."
+ },
+ {
+  "n": 123,
+  "objects": [],
+  "preconditions": [
+   "the protocol's [model] annotation_validity names exactly one protocol of the repo, and it reads"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "both as one binding (the referred protocol is not of the kind the place takes: an apply with an adopted result), objects protocol 'holds the reference' and protocol 'referred to', both as it stands",
+  "tested_at": "labkit/formats/protocol_history.py:380",
+  "told_at": "labkit/formats/protocol_history.py:412",
+  "bundled": [
+   "the referred protocol's kind is not apply (binding: referred thing not of the kind the place takes) - protocol_history.py:380",
+   "the referred protocol has no [result] run (completeness of the referred protocol) - protocol_history.py:386"
+  ],
+  "check_limit": false,
+  "condition": "bound_validation returns NotBound with the open rule: the named protocol's head kind is not apply, or its head declares no [result] run."
+ },
+ {
+  "n": 124,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head carries an id"
+  ],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:280",
+  "told_at": "labkit/formats/protocol_history.py:283",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The repo's id index lists another protocol file than this one under this protocol's id."
+ },
+ {
+  "n": 125,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head carries an id",
+   "HEAD holds the file with an id"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:296",
+  "told_at": "labkit/formats/protocol_history.py:298",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The id in the protocol's head as it stands differs from the id of the same file in git HEAD."
+ },
+ {
+  "n": 126,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has a README.md"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/readme_check.py:98",
+  "told_at": "labkit/checks/readme_check.py:100",
+  "bundled": [
+   "start marker absent",
+   "end marker absent",
+   "end marker before the start marker (order, not absence)"
+  ],
+  "check_limit": false,
+  "condition": "The README lacks the route start marker, or holds no end marker after it (str.find of both markers; end < start covers a missing end and an end before the start)."
+ },
+ {
+  "n": 127,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has a README.md with a route block",
+   "the protocol's file name, passed in (its content is not read)"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/readme_check.py:121",
+  "told_at": "labkit/checks/readme_check.py:123",
+  "bundled": [
+   "protocol file name not in the block - readme_check.py:111",
+   "a station of ROUTE_STATIONS not in the block - readme_check.py:121"
+  ],
+  "check_limit": false,
+  "condition": "The route block of the README does not contain a required name as a substring: the protocol's file name (line 111, told at 113) or one of the four constant stations (line 121)."
+ },
+ {
+  "n": 128,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has a README.md with a route block"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "binding (README holds the reference, area code referred to) if the constant station counted as the README's reference; the code does not look whether the block names the script",
+  "tested_at": "labkit/checks/readme_check.py:131",
+  "told_at": "labkit/checks/readme_check.py:133",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "scripts/01_measure.py is not among the area's script files (area.glob); the README's block is not read for this test, although the message is headed 'README.md route'."
+ },
+ {
+  "n": 129,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area has a README.md with a route block",
+   "scripts/01_measure.py exists and parses"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/readme_check.py:140",
+  "told_at": "labkit/checks/readme_check.py:145",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The parsed module body of scripts/01_measure.py holds no top-level function definition named evaluate_rows."
+ },
+ {
+  "n": 130,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "agreement",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "fits no: with the protocol's missing [reference] as precondition, the run record holds keys that are there and not allowed - a state recorded by presence (rule 4), no value names it",
+  "tested_at": "labkit/formats/reference.py:169",
+  "told_at": "labkit/formats/reference.py:174",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head registers no [reference] and the run's metrics carry at least one reserved ref_* verdict key."
+ },
+ {
+  "n": 131,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head registers a [reference] (and so a [kept] key)"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "agreement protocol / run record, as the other direction of cause 130",
+  "tested_at": "labkit/formats/reference.py:186",
+  "told_at": "labkit/formats/reference.py:188",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head registers a [reference] and the run's metrics hold no ref_state key."
+ },
+ {
+  "n": 132,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head registers a [reference]",
+   "metrics hold ref_state"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "form (a kept value that is no finite number), or bundle of both; by rule 4 the mark records a state: kept number absent (completeness) or not a finite number (form), and the one test does not tell them apart",
+  "tested_at": "labkit/formats/reference.py:198",
+  "told_at": "labkit/formats/reference.py:205",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run's recorded ref_state equals 'not comparable' - a mark the run wrote when the kept key was absent from its metrics or no finite number; the gate tests the mark, and reads the key only to word the finding (line 201)."
+ },
+ {
+  "n": 133,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head registers a [reference]",
+   "metrics hold ref_state, not 'not comparable'"
+  ],
+  "property": "form",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/reference.py:215",
+  "told_at": "labkit/formats/reference.py:217",
+  "bundled": [
+   "ref_state outside its two values",
+   "ref_met not a boolean (or absent)"
+  ],
+  "check_limit": false,
+  "condition": "The recorded ref_state is not 'compared', or ref_met is not true or false (a missing ref_met included)."
+ },
+ {
+  "n": 134,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "the run's verdict reads (state compared, ref_met boolean)"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "second side as 'run record, as it stands' (the values stand in metrics.json) instead of 'protocol, as a run recorded it'",
+  "tested_at": "labkit/formats/reference.py:230",
+  "told_at": "labkit/formats/reference.py:234",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "ref_value, ref_tolerance or ref_relation as the run's metrics keep them differ from what the head's [reference] yields now."
+ },
+ {
+  "n": 135,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head registers a report and carries an id",
+   "the area holds a measurement of the protocol",
+   "at the commit: HEAD holds the report or the head declares a result"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding (protocol holds the reference, report referred to: the reference leads to nothing) - the table's wording takes it, rule 4 says binding asks about a thing that is there; or completeness of a delivery, for which no object stands in the list",
+  "tested_at": "labkit/gates/registered_report.py:422",
+  "told_at": "labkit/gates/registered_report.py:442",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The file the head's report field names is not in the state (index when staged, else working tree) while the area measured the protocol."
+ },
+ {
+  "n": 136,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol registers the report",
+   "the report carries the result block of the declared run or a matching handover block"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "object report instead of generated block, if a block that does not parse counts as the report's text",
+  "tested_at": "labkit/gates/registered_report.py:480",
+  "told_at": "labkit/gates/registered_report.py:484",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Parsing the report's discussion blocks raises ReportBlockError."
+ },
+ {
+  "n": 137,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   }
+  ],
+  "preconditions": [
+   "a git repository and a stamped id",
+   "the first measurements' commits read and all register one report value"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/registered_report.py:324",
+  "told_at": "labkit/gates/registered_report.py:333",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The report path in the head as it stands differs from the report path in the head of the protocol at the commit the first measurement recorded (none on either side included)."
+ },
+ {
+  "n": 138,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the caller asks for unread first measurements",
+   "the head or a readable first measurement registers a report"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "rule 7 (the report-binding comparison did not run) with protocol / protocol agreement as the check; read here as the run record's own missing part",
+  "tested_at": "labkit/formats/protocol_history.py:218",
+  "told_at": "labkit/gates/registered_report.py:294",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The first measurement's config records no commit (git_full empty), so the protocol at its commit cannot be read."
+ },
+ {
+  "n": 139,
+  "objects": [],
+  "preconditions": [
+   "the first measurement recorded a commit",
+   "the head or a readable first measurement registers a report"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:220",
+  "told_at": "labkit/gates/registered_report.py:294",
+  "bundled": [
+   "the recorded commit is not a commit the repository holds (binding: run record holds the reference, repository referred to) - protocol_history.py:220",
+   "git cannot read the protocol at that commit (readability of the protocol as that commit holds it, or of the repository) - protocol_history.py:226"
+  ],
+  "check_limit": false,
+  "condition": "committed_at returns UNKNOWN_COMMIT (the recorded sha is no commit this repository holds, or no full sha) or UNREADABLE_COMMIT (git lists the protocol at the commit and cannot show it, or cannot list the tree); the code tells the two apart with two sentences, the row joins them."
+ },
+ {
+  "n": 140,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as a commit holds it"
+   }
+  ],
+  "preconditions": [
+   "the first measurement recorded a commit the repository holds and git can read"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding (run record holds the reference to a commit, protocol in it referred to and not there); readability is taken for 'is the object there' only",
+  "tested_at": "labkit/formats/protocol_history.py:233",
+  "told_at": "labkit/gates/registered_report.py:294",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The commit the first measurement recorded holds no file at the protocol's path and none carrying the id the run is bound to."
+ },
+ {
+  "n": 141,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as a commit holds it"
+   }
+  ],
+  "preconditions": [
+   "the first measurement's commit holds the protocol's text"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/registered_report.py:250",
+  "told_at": "labkit/gates/registered_report.py:294",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head of the protocol as the first measurement's recorded commit holds it raises BlockError."
+ },
+ {
+  "n": 142,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   }
+  ],
+  "preconditions": [
+   "a git repository and a stamped id",
+   "no unread first measurement held before (or the caller passes unread False)"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "uniqueness (exactly one registered report is asked for among the first measurements)",
+  "tested_at": "labkit/gates/registered_report.py:303",
+  "told_at": "labkit/gates/registered_report.py:307",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The heads of the protocol at the commits of its first measurements name more than one distinct report value (none counts as a value)."
+ },
+ {
+  "n": 143,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head registers a report",
+   "the area measured the protocol (a measurement run, a record that does not read, or a run only the index lists)"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness of the run record (the owed first measurement is missing)",
+  "tested_at": "labkit/gates/registered_report.py:315",
+  "told_at": "labkit/gates/registered_report.py:316",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No first measurement yields a registration and none is unread: the area measured, and no measurement record that reads is there (lost runs or records that do not read)."
+ },
+ {
+  "n": 144,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head registers a report and the state holds the file",
+   "the area measured the protocol, or a run answers, or the head declares a result",
+   "the declared run id and the protocol's path, read from the protocol and the area's runs"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "object 'generated block or line' instead of report; or bundle, since a handover block that is there and differs from its record (agreement: generated block / audit and review records, registered_report.py:143) is told by the same finding",
+  "tested_at": "labkit/gates/registered_report.py:161",
+  "told_at": "labkit/gates/registered_report.py:182",
+  "bundled": [
+   "no result block of the protocol with the declared run id - registered_report.py:133",
+   "no handover block of the protocol, or one that differs from its record - registered_report.py:143",
+   "no progress account (discussion block for the pending run) - registered_report.py:161"
+  ],
+  "check_limit": false,
+  "condition": "The report holds no result block of this protocol for the declared run, no handover block of this protocol that matches its record, and no discussion block with a why for the pending run - one conjunction, told when no release stands."
+ },
+ {
+  "n": 145,
+  "objects": [
+   {
+    "object": "report",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head registers a report"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/registered_report.py:117",
+  "told_at": "labkit/gates/registered_report.py:182",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Reading the registered report from the state raises UnicodeDecodeError."
+ },
+ {
+  "n": 146,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head registers a report and the state holds the file"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "object report instead of generated block",
+  "tested_at": "labkit/gates/registered_report.py:126",
+  "told_at": "labkit/gates/registered_report.py:182",
+  "bundled": [
+   "result blocks do not parse - registered_report.py:126",
+   "handover blocks do not parse - registered_report.py:127"
+  ],
+  "check_limit": false,
+  "condition": "Parsing the report's result blocks or handover blocks raises ReportBlockError or HandoverError."
+ },
+ {
+  "n": 147,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run and a stamped id",
+   "every first measurement's protocol text can be read back",
+   "the protocol as the answering run saw it shows no held difference"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "a conjunction with audit coverage (audit and review records as covering record, the state as covered): the difference is told only where no resolved correction covers it; first side could be 'as a run recorded it' because the patch is applied",
+  "tested_at": "labkit/formats/protocol_history.py:501",
+  "told_at": "labkit/gates/registration_hold.py:540",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "One of the five scope fields differs between the protocol as a first measurement saw it (its recorded commit with the run's patch applied) and the protocol as it stands, no kind or [kept] differs in the same cause, and no correction judged resolved by a covering follow-up releases the field (registration_hold.py:748)."
+ },
+ {
+  "n": 148,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run and a stamped id",
+   "every first measurement's protocol text can be read back",
+   "the protocol as the answering run saw it shows no held difference"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:492",
+  "told_at": "labkit/gates/registration_hold.py:540",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's [reference] table, as TOML on one line, differs between the protocol as a first measurement saw it and the protocol as it stands; by_cause parts it from the other differences (registration_hold.py:116)."
+ },
+ {
+  "n": 149,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run and a stamped id",
+   "every first measurement's protocol text can be read back",
+   "the protocol as the answering run saw it shows no held difference"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:488",
+  "told_at": "labkit/gates/registration_hold.py:540",
+  "bundled": [
+   "kind differs - protocol_history.py:488",
+   "[kept] differs - protocol_history.py:492"
+  ],
+  "check_limit": false,
+  "condition": "The head's kind or its [kept] table differs between the protocol as a first measurement saw it and the protocol as it stands (alone or beside scope fields of the same cause; scope_rule at registration_hold.py:101 names the cause)."
+ },
+ {
+  "n": 150,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "an answering run whose config holds a promise snapshot",
+   "the first measurements recorded exactly one promise block digest"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "objects as run record / run record (two configs compared)",
+  "tested_at": "labkit/gates/registration_hold.py:191",
+  "told_at": "labkit/gates/registration_hold.py:198",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The promise block digest the answering run recorded differs from the one the first measurement recorded, and no promise held by both has a different declared scope (registration_rule, registration_hold.py:128)."
+ },
+ {
+  "n": 151,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "an answering run whose config holds a promise snapshot",
+   "the first measurements recorded exactly one promise block digest"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "objects as run record / run record (two configs compared)",
+  "tested_at": "labkit/gates/registration_hold.py:191",
+  "told_at": "labkit/gates/registration_hold.py:198",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The promise block digest the answering run recorded differs from the first measurement's, and a promise both snapshots hold lists other scope paths (promises.py:197, read at registration_hold.py:128 for the rule only)."
+ },
+ {
+  "n": 152,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "an answering run whose config holds a promise snapshot"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "uniqueness (exactly one registration is asked for among the first measurements)",
+  "tested_at": "labkit/gates/registration_hold.py:169",
+  "told_at": "labkit/gates/registration_hold.py:174",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The runs at the first positions recorded more than one distinct promise block digest."
+ }
+]

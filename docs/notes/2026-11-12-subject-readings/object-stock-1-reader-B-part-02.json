@@ -1,0 +1,602 @@
+[
+ {
+  "n": 30,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's text registers a promise id (finalize.py:462, promises.registers_promises)"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/finalize.py:467",
+  "told_at": "labkit/gates/finalize.py:469",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's config holds no `promises` record (cfg.promises is None) although the protocol registers a promise id."
+ },
+ {
+  "n": 31,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "agreement between area code as a run recorded it (side) and area code as it stands (side), reading 'unreadable now' as one kind of difference, as the code's comment does",
+  "tested_at": "labkit/formats/promises.py:935",
+  "told_at": "labkit/gates/finalize.py:482",
+  "bundled": [
+   "digest of the declared scope now != digest the run recorded (agreement: area code as a run recorded it / as it stands; promises.py:935)",
+   "a scope entry's file is missing or cannot be read now (readability or completeness of area code; promises.py:857, 867)",
+   "the named function is not in the file, the file does not parse, or the name is bound several times (readability / binding / uniqueness of area code; promises.py:810, 823, 838)"
+  ],
+  "check_limit": false,
+  "condition": "For each promise the run recorded, the digest of its declared scope computed now from the area's files differs from the recorded digest, or the scope cannot be resolved now."
+ },
+ {
+  "n": 32,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol (rule 1), taking every parser error as 'does not read'",
+  "tested_at": "labkit/checks/intent_check.py:207",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [
+   "the ```toml block is no valid TOML or holds foreign top-level keys (readability)",
+   "no [protocol] table or a required key missing (completeness)",
+   "unknown field, value of the wrong type, another standard version (readability)",
+   "id not `p-`+16 hex, type/repeat_cost/kind outside the choices, report path of a refused shape (form)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.head raises BlockError on the protocol's text; intent-check catches every such error alike (in finalize the same text's head was already read at finalize.py:950, so this branch is not reached there)."
+ },
+ {
+  "n": 33,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol (rule 1)",
+  "tested_at": "labkit/checks/intent_check.py:211",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [
+   "invalid TOML (readability)",
+   "unknown field, non-scalar constant (readability)",
+   "id not criterion-/quality-check-/branch-<n>, unknown kind, key outside its id's namespace, branch sentence not outcomes (form)",
+   "duplicate id (uniqueness)",
+   "empty scope (completeness)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises PromiseError on the protocol's [[promise]] tables; every such error is caught alike."
+ },
+ {
+  "n": 34,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "form",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/intent_check.py:258",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol's text holds promise ids written in the earlier letters (regex promises.EARLIER_ID finds at least one)."
+ },
+ {
+  "n": 35,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "readability (a file that is not there), if the metrics file and not the run directory is taken as the object",
+  "tested_at": "labkit/checks/intent_check.py:421",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's metrics.json is no file (Path.is_file on runs/<id>/metrics.json)."
+ },
+ {
+  "n": 36,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "completeness of the run record (config.json or completion.json missing), the unreadable config being the one case of readability",
+  "tested_at": "labkit/checks/intent_check.py:430",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [
+   "the run directory has no config.json (completeness; answering_run.py:112)",
+   "completion.json is missing (completeness; runs.py:135)",
+   "config.json exists and does not read — state `unreadable` (readability; answering_run.py:110)"
+  ],
+  "check_limit": false,
+  "condition": "The run's facts are None (no config.json) or its state is not `completed` (runs.run_state: metrics.json and completion.json both exist; an unreadable config gives state `unreadable`)."
+ },
+ {
+  "n": 37,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the run is completed",
+   "the protocol's head carries a stamped id"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "agreement (run record side, protocol side): the code compares two id strings and looks nothing up",
+  "tested_at": "labkit/checks/intent_check.py:442",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol id the run's config records as its binding is set and differs from the id in the protocol's head."
+ },
+ {
+  "n": 38,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:686",
+  "told_at": "labkit/gates/finalize.py:410",
+  "bundled": [
+   "metrics.json cannot be opened or is not JSON (runs.py:358)",
+   "metrics.json is no JSON object (runs.py:689)",
+   "a run's config.json does not read (RunConfigError, runs.py:316)"
+  ],
+  "check_limit": false,
+  "condition": "Reading the chosen run's metrics.json (or a run config on the way to the choice) raises a ValueError: the file cannot be opened, is no JSON, or is no JSON object."
+ },
+ {
+  "n": 39,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1075",
+  "told_at": "labkit/gates/finalize.py:779",
+  "bundled": [
+   "[kept] table missing at kind compute (protocol_check.py:1075)",
+   "[kept] key or unit still a placeholder (protocol_check.py:1086)"
+  ],
+  "check_limit": false,
+  "condition": "At kind compute the head has no [kept] table, or a [kept] value (key, unit) is still the stamp's `<…>` placeholder."
+ },
+ {
+  "n": 40,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1059",
+  "told_at": "labkit/gates/finalize.py:779",
+  "bundled": [
+   "the block is no valid TOML, [kept] is no table or holds an unknown key (readability; protocol_check.py:1059)",
+   "[kept] lacks `key` or `unit` (completeness)",
+   "`key` is no one-word string, `unit` no non-empty string (form)",
+   "[kept] present with kind fit/apply: two parts of the head contradict (inner consistency; protocol_check.py:1063)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.kept raises BlockError on the [kept] table, or the table is there while the head's kind is a fit or an apply; both arrive as a MustGap of the same rule and state."
+ },
+ {
+  "n": 41,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:957",
+  "told_at": "labkit/gates/finalize.py:514",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A prose field the protocol owes as a must now (by cut, kind, model, freeze, declared result) holds a stamp placeholder as its value."
+ },
+ {
+  "n": 42,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:957",
+  "told_at": "labkit/gates/finalize.py:514",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A prose field that counts for the protocol's cut but is not owed as a must now holds a stamp placeholder as its value."
+ },
+ {
+  "n": 43,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:233",
+  "told_at": "labkit/gates/finalize.py:522",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "One of the bound fields is written on more than one line of the protocol's text; the copies' values are not compared."
+ },
+ {
+  "n": 44,
+  "objects": [
+   {
+    "object": "text beside the protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "form (a pattern match on the text); no part of the README is stated as owed",
+  "tested_at": "labkit/checks/readme_check.py:49",
+  "told_at": "labkit/gates/finalize.py:530",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The area's README.md holds, outside code spans and fences, a text matching `<…>` of three or more characters (a pattern over prose, static evidence)."
+ },
+ {
+  "n": 45,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1034",
+  "told_at": "labkit/gates/finalize.py:701",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's block holds a [reference] table while the head's kind is one with a bar (fit or apply): the table is refused by its presence on that kind."
+ },
+ {
+  "n": 46,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol (rule 1)",
+  "tested_at": "labkit/gates/finalize.py:714",
+  "told_at": "labkit/gates/finalize.py:717",
+  "bundled": [
+   "[reference] is no table or holds an unknown key, `key` among them (readability)",
+   "[reference] without [kept]; `value`, `relation` or the tolerance of `within` missing (completeness)",
+   "value or tolerance no finite number, relation outside the choices, relative no bool, source empty (form)",
+   "a tolerance with at_least/at_most (inner consistency)",
+   "[kept] key still the placeholder while the kind is undecided (completeness; protocol_block.py kept_key)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.reference or protocol_block.kept_key raises BlockError; every such error is caught alike (kept gaps at a decided kind were named before, finalize.py:708)."
+ },
+ {
+  "n": 47,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as a commit holds it (the commit the run recorded, with the run's patch)"
+   }
+  ],
+  "preconditions": [
+   "the area lies in a git repository",
+   "the helper is no untracked file the run kept a copy of"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:302",
+  "told_at": "labkit/checks/run_record_check.py:303",
+  "bundled": [],
+  "check_limit": true,
+  "condition": "A module the run's script imports resolves outside the repository or into a nested repository (_in_repo false), so it is left out of the comparison with the tree the run started from."
+ },
+ {
+  "n": 48,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/finalize.py:212",
+  "told_at": "labkit/gates/finalize.py:213",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's `id` is still the stamp's placeholder (protocol_block.head reads it as None, protocol_block.py:945)."
+ },
+ {
+  "n": 49,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "earlier",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "later",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's [result] names an adopted run that is a completed bound run",
+   "the protocol's head carries a stamped id"
+  ],
+  "property": "order in time",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "uniqueness (several candidates for the one adopted run); the order is read from names, no recorded time is compared",
+  "tested_at": "labkit/formats/answering_run.py:830",
+  "told_at": "labkit/gates/finalize.py:246",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Among the completed runs bound to the protocol's id, some run ids sort after the adopted run's id (string comparison of the names, which start with the start time), and they report intent keys if the adopted one does."
+ },
+ {
+  "n": 50,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol (rule 1)",
+  "tested_at": "labkit/gates/finalize.py:1041",
+  "told_at": "labkit/gates/finalize.py:1044",
+  "bundled": [
+   "`result` is no table, or holds a key other than `run` (readability)",
+   "`run` is missing (completeness)",
+   "`run` is no string of the shape runlog writes (form)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.declared_run raises BlockError on the head's [result] table; every such error is caught alike."
+ },
+ {
+  "n": 51,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "uniqueness (a choice that needs exactly one candidate finds none)",
+  "tested_at": "labkit/formats/repo.py:1248",
+  "told_at": "labkit/gates/finalize.py:945",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No file matching PROTOCOL-*.md lies directly in the area and none is named."
+ },
+ {
+  "n": 52,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/repo.py:1239",
+  "told_at": "labkit/gates/finalize.py:945",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The named protocol path (as given, or inside the area) is no file."
+ },
+ {
+  "n": 53,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/repo.py:1250",
+  "told_at": "labkit/gates/finalize.py:945",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The area holds more than one PROTOCOL-*.md and no protocol is named."
+ },
+ {
+  "n": 54,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "form",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/repo.py:1237",
+  "told_at": "labkit/gates/finalize.py:945",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The named protocol, or the area's only one, is a symbolic link (Path.is_symlink; also repo.py:1255)."
+ },
+ {
+  "n": 55,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_block.py:941",
+  "told_at": "labkit/gates/finalize.py:955",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol's block has no [protocol] table (protocol_block.py:907) or the table lacks a required key (protocol_block.py:939): HeadPartMissing, told apart from other head errors by head_rule."
+ },
+ {
+  "n": 56,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol (rule 1)",
+  "tested_at": "labkit/formats/protocol_block.py:902",
+  "told_at": "labkit/gates/finalize.py:955",
+  "bundled": [
+   "the ```toml block is no valid TOML or holds foreign top-level keys (readability; protocol_block.py:255, 260)",
+   "`protocol` is no table, an unknown field, a value of the wrong type, another standard version (readability)",
+   "id not `p-`+16 hex, type/repeat_cost/kind outside the choices, report path of a refused shape (form)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.head raises a BlockError other than HeadPartMissing; these errors are told alike."
+ },
+ {
+  "n": 57,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the run record (rule 1: a file that does not read)",
+  "tested_at": "labkit/formats/gate.py:116",
+  "told_at": "labkit/gates/finalize.py:623",
+  "bundled": [
+   "the file is missing (completeness of the run record, rule 4; files.py:49)",
+   "the file is malformed: no JSON, wrong shape, undecodable (readability; files.py:53)"
+  ],
+  "check_limit": false,
+  "condition": "The exception a caller caught while reading a file of the answering run (outputs, metrics, the record) has a read cause other than ACCESS: MISSING or MALFORMED, not told apart here."
+ },
+ {
+  "n": 58,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "check_limit true (the code states the outcome NOT_EXECUTABLE: the input may be sound, the check did not run); the prevented check differs per caller (null lane, registered outputs, kept number, reference, criterion n)",
+  "tested_at": "labkit/formats/gate.py:116",
+  "told_at": "labkit/gates/finalize.py:616",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The exception a caller caught while reading a file of the answering run is an OSError other than a missing file (access refused): the file is there and could not be opened."
+ }
+]

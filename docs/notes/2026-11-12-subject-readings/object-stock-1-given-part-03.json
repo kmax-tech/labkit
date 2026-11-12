@@ -1,0 +1,167 @@
+[
+ {
+  "n": 59,
+  "function": "finalize.unreportable_warnings",
+  "cause": "the answering run is no measurement"
+ },
+ {
+  "n": 60,
+  "function": "finalize.unreportable_warnings",
+  "cause": "a full run acknowledged over an unfrozen protocol"
+ },
+ {
+  "n": 61,
+  "function": "import_check._coverage_in",
+  "cause": "`sys.path` gains … · imports after it may resolve outside lib/ and src/, which the stam…"
+ },
+ {
+  "n": 62,
+  "function": "import_check._coverage_in",
+  "cause": "`…(…)` loads code at run time · the stamp follows `import` lines only, so what this loa…"
+ },
+ {
+  "n": 63,
+  "function": "import_check._coverage_in",
+  "cause": "names area `…` · a file of another area determines this number, and this area's stamp d…"
+ },
+ {
+  "n": 64,
+  "function": "import_check._import_findings",
+  "cause": "an import resolves outside `lib/` and `src/`"
+ },
+ {
+  "n": 65,
+  "function": "intent_check.check_block_against_run",
+  "cause": "…: […] declares key '…', which the run does not report."
+ },
+ {
+  "n": 66,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run recorded a registered constant with another value"
+ },
+ {
+  "n": 67,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run recorded no promise block"
+ },
+ {
+  "n": 68,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the promises were removed or changed after the run"
+ },
+ {
+  "n": 69,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run's digest is of an earlier format"
+ },
+ {
+  "n": 70,
+  "function": "intent_check.hold",
+  "cause": "a registered id's key is not in the run's metrics, or the reverse"
+ },
+ {
+  "n": 71,
+  "function": "intent_check.hold",
+  "cause": "the prose and the promise block name different ids"
+ },
+ {
+  "n": 72,
+  "function": "intent_check.unregistered_outcomes",
+  "cause": "…: […] records … = …, which is none of its outcomes' names"
+ },
+ {
+  "n": 73,
+  "function": "notes_check.check_file",
+  "cause": "…:1: MISSING: no italic meta line after the title"
+ },
+ {
+  "n": 74,
+  "function": "notes_check.check_file",
+  "cause": "…:…: MISSING: no kind in the meta line"
+ },
+ {
+  "n": 75,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: no date in the meta line"
+ },
+ {
+  "n": 76,
+  "function": "notes_check.check_file",
+  "cause": "…:…: MISSING: declared 'Instrument — implementiert' but names no script, function, or…"
+ },
+ {
+  "n": 77,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: filename says related-* but the declared kind is …"
+ },
+ {
+  "n": 78,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: none of the named scripts resolve in the repo (……) — code paths may…"
+ },
+ {
+  "n": 79,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: Related-Lesart without a citekey — write 'Related-Lesart (<citekey>)'"
+ },
+ {
+  "n": 80,
+  "function": "notes_check.check_notes",
+  "cause": "a note cannot be read"
+ },
+ {
+  "n": 81,
+  "function": "preflight._owed",
+  "cause": "an audit finding is undecided"
+ },
+ {
+  "n": 82,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names no record"
+ },
+ {
+  "n": 83,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record the area does not have"
+ },
+ {
+  "n": 84,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record of another mode"
+ },
+ {
+  "n": 85,
+  "function": "preflight._owed",
+  "cause": "the record `preflight_audit` names does not read"
+ },
+ {
+  "n": 86,
+  "function": "preflight._owed",
+  "cause": "the area cannot be stamped now, so the record cannot be held to it"
+ },
+ {
+  "n": 87,
+  "function": "preflight._owed",
+  "cause": "the code changed after the audit (scope sha)"
+ },
+ {
+  "n": 88,
+  "function": "preflight._owed",
+  "cause": "the promise block or the registration changed after the audit"
+ },
+ {
+  "n": 89,
+  "function": "preflight._owed",
+  "cause": "the promise block does not read"
+ },
+ {
+  "n": 90,
+  "function": "preflight._owed",
+  "cause": "the record's findings are still open"
+ },
+ {
+  "n": 91,
+  "function": "preflight._owed",
+  "cause": "the resolution check's test file is missing"
+ }
+]

@@ -1,0 +1,127 @@
+[
+ {
+  "n": 273,
+  "function": "run_record_check._recorded_sources",
+  "cause": "source not frozen — the run carries no `data=`"
+ },
+ {
+  "n": 274,
+  "function": "run_record_check._recorded_sources",
+  "cause": "the run's `data=` record does not read"
+ },
+ {
+  "n": 275,
+  "function": "run_record_check._run_code",
+  "cause": "… recorded no script — the code behind its number cannot be compared"
+ },
+ {
+  "n": 276,
+  "function": "run_record_check._run_code",
+  "cause": "the script the run recorded cannot be told"
+ },
+ {
+  "n": 277,
+  "function": "run_record_check._run_code",
+  "cause": "… changed since … ran it — its number came from other code"
+ },
+ {
+  "n": 278,
+  "function": "run_record_check._run_code",
+  "cause": "the code … ran cannot be read now: …"
+ },
+ {
+  "n": 279,
+  "function": "run_record_check._untracked_source",
+  "cause": "… — whether it belongs to the project is left open"
+ },
+ {
+  "n": 280,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names …, no such file under …"
+ },
+ {
+  "n": 281,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names fingerprint …, the answering run recorded no such value —…"
+ },
+ {
+  "n": 282,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names alias …, the answering run recorded no such alias"
+ },
+ {
+  "n": 283,
+  "function": "run_record_check.code_since_run",
+  "cause": "…: its runs cannot be followed (…)"
+ },
+ {
+  "n": 284,
+  "function": "run_record_check.kept_number_gaps",
+  "cause": "the kept number: metrics.json of … … — the head's [kept] names `…` as the number th…"
+ },
+ {
+  "n": 285,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "… called a model, but no run in its lineage recorded models_resolved — record the alias…"
+ },
+ {
+  "n": 286,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "model provenance: the lineage of … is broken — …"
+ },
+ {
+  "n": 287,
+  "function": "run_record_check.null_lane_findings",
+  "cause": "…: the null lane's answer and gold equal the registered lane's on every item — if the n…"
+ },
+ {
+  "n": 288,
+  "function": "run_record_check.output_record_findings",
+  "cause": "…: not the file run … recorded — …"
+ },
+ {
+  "n": 289,
+  "function": "run_record_check.provenance_findings",
+  "cause": "no outputs.json — the run registered no output file (run.output)"
+ },
+ {
+  "n": 290,
+  "function": "run_record_check.provenance_findings",
+  "cause": "not a git repository — cannot tell whether source and output are committed"
+ },
+ {
+  "n": 291,
+  "function": "run_record_check.provenance_findings",
+  "cause": "output … is not yet tracked — `git add …` before the commit that cites the number"
+ },
+ {
+  "n": 292,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "…: … row(s) from … — a run this run neither is, continues nor derives from; a file …"
+ },
+ {
+  "n": 293,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "row provenance: the lineage of … is broken — …"
+ },
+ {
+  "n": 294,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "an output's rows do not say which run wrote them"
+ },
+ {
+  "n": 295,
+  "function": "run_record_check.single_draw",
+  "cause": "… is one draw — no spread: `scripts/01_measure.py --repeat-of …` draws it again, 02_…"
+ },
+ {
+  "n": 296,
+  "function": "run_record_check.single_draw",
+  "cause": "the draws of … cannot be counted: …"
+ },
+ {
+  "n": 297,
+  "function": "run_record_check.source_finding",
+  "cause": "source … is not the bytes the run read: …, the run recorded sha256 …"
+ }
+]

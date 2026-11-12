@@ -1,0 +1,794 @@
+[
+ {
+  "n": 153,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol differs from a first measurement in what the number is about, so a release is looked up",
+   "the run's registered outputs list reads"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/audit_binding.py:124",
+  "told_at": "labkit/gates/registration_hold.py:301",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "An output path the answering run registered is no regular file when the state the run was audited in is recomputed (run_rows), so the release of a correction cannot be looked up."
+ },
+ {
+  "n": 154,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol differs from a first measurement in what the number is about",
+   "a finding is decided `fixed` and its place names the protocol file",
+   "the area's records read and the audited state computes"
+  ],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "uniqueness (a choice that needs exactly one candidate: several fields begin with the place); the same telling path also carries the twice-written field (protocol_check.py:466), which the exception's text tells apart",
+  "tested_at": "labkit/formats/protocol_check.py:439",
+  "told_at": "labkit/gates/registration_hold.py:301",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The place a `fixed` finding names is no full field name of the protocol and is the beginning of more than one field name, so it leads to no single field."
+ },
+ {
+  "n": 155,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the first measurement recorded, the run's uncommitted.patch applied"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the answering run recorded, the run's uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "a first measurement other than the answering run exists and every text reads back",
+   "no follow-up's `resolved` on a correction of the field, in an analysis record covering the run, releases the difference (audit and review records)"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:501",
+  "told_at": "labkit/gates/registration_hold.py:461",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A prose field of what the number is about (SCOPE_FIELDS) reads differently in the protocol as a first measurement saw it and as the answering run saw it, and no difference of the group is in kind or [kept] (rule LAB-003)."
+ },
+ {
+  "n": 156,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the first measurement recorded, the run's uncommitted.patch applied"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the answering run recorded, the run's uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "a first measurement other than the answering run exists and every text reads back"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:492",
+  "told_at": "labkit/gates/registration_hold.py:461",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's [reference] table, as TOML on one line (or the sentence of its read error), differs between the protocol as a first measurement saw it and as the answering run saw it."
+ },
+ {
+  "n": 157,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the first measurement recorded, the run's uncommitted.patch applied"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the answering run recorded, the run's uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "a first measurement other than the answering run exists and every text reads back"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:488",
+  "told_at": "labkit/gates/registration_hold.py:461",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's kind or its [kept] table differs between the protocol as a first measurement saw it and as the answering run saw it (the group of differences then records the open rule; fields changed beside it stand in the same finding)."
+ },
+ {
+  "n": 158,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol lies in a git repository",
+   "the run is a first measurement, or the answering run beside one"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "no value: where the record carries the `no git` mark the test reads the state the mark records (run started outside a history), rule 4; the comparison of the protocol versions is the check that did not run",
+  "tested_at": "labkit/formats/protocol_history.py:700",
+  "told_at": "labkit/gates/registration_hold.py:562",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run's config does not read or names no full commit (git_full empty), so the protocol as the run saw it cannot be read back."
+ },
+ {
+  "n": 159,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit the run recorded, the run's uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "the run recorded a commit the clone holds and that commit (with the patch) holds the protocol",
+   "the run's config recorded a promise block digest"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:728",
+  "told_at": "labkit/gates/registration_hold.py:562",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The promise block digest the run's config recorded differs from the digest of the promise block in the protocol text rebuilt from the run's commit and patch."
+ },
+ {
+  "n": 160,
+  "objects": [],
+  "preconditions": [
+   "the run recorded a full commit"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:702",
+  "told_at": "labkit/gates/registration_hold.py:562",
+  "bundled": [
+   "commit_known false (protocol_history.py:702): binding, run record holds the reference, repository referred to",
+   "GitError from blobs_then / protocol_path_at (protocol_history.py:715): git cannot read the commit's tree, or the run's patch does not apply to it — readability of repository state, or agreement of run record (patch) and commit",
+   "RuntimeError from blob_text (protocol_history.py:724): readability of the protocol as that commit holds it"
+  ],
+  "check_limit": false,
+  "condition": "Three tests behind one row: the recorded commit is not a commit of this clone; git fails on the commit's tree or the run's patch does not apply; git cat-file cannot read the protocol's blob."
+ },
+ {
+  "n": 161,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as a commit holds it: the commit the run recorded, the run's uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "the run recorded a commit the clone holds and git reads its tree"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding (run record holds commit and protocol id, no protocol there in that commit); the object is absent, not unparseable",
+  "tested_at": "labkit/formats/protocol_history.py:717",
+  "told_at": "labkit/gates/registration_hold.py:562",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The tree of the run's commit with the run's patch applied holds no protocol, neither at the protocol's path nor under the id the run is bound to."
+ },
+ {
+  "n": 162,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the report's result blocks parse",
+   "the named path is not an unreadable protocol (row 163)"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "for the second test agreement (block shows a run, protocol declares none)",
+  "tested_at": "labkit/gates/report_hold.py:469",
+  "told_at": "labkit/checks/report_blocks.py:313",
+  "bundled": [
+   "no protocol text at the named path (report_hold.py:469)",
+   "the protocol's [result] declares no run (report_hold.py:473)"
+  ],
+  "check_limit": false,
+  "condition": "The path a result block names is no protocol of the repo's file state, or the protocol there declares no run in [result] — the reference leads to nothing, or to a protocol that is not one with an adopted result."
+ },
+ {
+  "n": 163,
+  "objects": [],
+  "preconditions": [
+   "a result block names the protocol"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_hold.py:460",
+  "told_at": "labkit/checks/report_blocks.py:313",
+  "bundled": [
+   "the protocol is a symbolic link in tree or index (report_hold.py:419, repo.py:384): form of the file",
+   "reading the file's text raises OSError or UnicodeError (report_hold.py:430): readability",
+   "its [result] / head raises BlockError in declared_run (report_hold.py:438): readability"
+  ],
+  "check_limit": false,
+  "condition": "The block's protocol is among the sources that do not read; three tests fill that set and the telling site passes the sentence on."
+ },
+ {
+  "n": 164,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol reads and declares a run"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:322",
+  "told_at": "labkit/checks/report_blocks.py:324",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run id in the result block's opening line differs from the run the protocol's [result] declares."
+ },
+ {
+  "n": 165,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol declares the block's run",
+   "the body renders (protocol, metrics and records read)"
+  ],
+  "property": "agreement",
+  "fits": "weak",
+  "unsure": false,
+  "alternative": "the second side is one rendering computed from three objects; the definitions give a comparison two sides",
+  "tested_at": "labkit/checks/report_blocks.py:341",
+  "told_at": "labkit/checks/report_blocks.py:343",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The block's body as written differs from the body rendered now from the protocol text, the declared run's metrics.json and the covering audit records."
+ },
+ {
+  "n": 166,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "binding (generated block holds the reference, run record referred to) if the row means only the `token not in known` test",
+  "tested_at": "labkit/checks/report_blocks.py:406",
+  "told_at": "labkit/checks/report_blocks.py:415",
+  "bundled": [
+   "token does not fully match RUN_ID (report_blocks.py:403): form of a value in the generated block",
+   "token not in the repo's run ids (report_blocks.py:406): binding, generated block holds the reference, run record referred to"
+  ],
+  "check_limit": false,
+  "condition": "A token on a line inside a generated result or discussion block reads like a run id and either has not the shape runlog writes or is no run id among the repo's runs; one telling site blocks for both."
+ },
+ {
+  "n": 167,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "binding (report holds the reference, run record referred to) if the row means only the `token not in known` test",
+  "tested_at": "labkit/checks/report_blocks.py:406",
+  "told_at": "labkit/checks/report_blocks.py:418",
+  "bundled": [
+   "token does not fully match RUN_ID (report_blocks.py:403): form of a value in the report",
+   "token not in the repo's run ids (report_blocks.py:406): binding, report holds the reference, run record referred to"
+  ],
+  "check_limit": false,
+  "condition": "A token in the report's prose (outside generated blocks) reads like a run id and either has not the shape runlog writes or is no run id among the repo's runs; one telling site warns (static evidence) for both."
+ },
+ {
+  "n": 168,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the discussion blocks parse"
+  ],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:612",
+  "told_at": "labkit/checks/report_blocks.py:614",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Two discussion blocks of the report carry the same pair of protocol and run."
+ },
+ {
+  "n": 169,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the discussion block's head parses with its three keys"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:623",
+  "told_at": "labkit/checks/report_blocks.py:626",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The `why` of a discussion block's head is empty or whitespace."
+ },
+ {
+  "n": 170,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's why is not empty"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/report_blocks.py:634",
+  "told_at": "labkit/checks/report_blocks.py:636",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The discussion block's body differs from the line its own head (run, why) writes."
+ },
+ {
+  "n": 171,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol has a stamped id and a first measurement",
+   "the protocol lies in a git repository"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "completeness of the run record (no commit recorded); rows 171 and 176 share one text — read here as the NO_GIT branch (line 379), 176 as the other (line 380)",
+  "tested_at": "labkit/gates/report_check.py:378",
+  "told_at": "labkit/gates/report_check.py:379",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The first measurement's record names no full commit and its `git` field is the `no git` mark: the run says it started outside a history (rule LAB-010). Tests the state a mark records, which no value names."
+ },
+ {
+  "n": 172,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the first measurement recorded a full commit"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_history.py:220",
+  "told_at": "labkit/gates/report_check.py:383",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The commit the first measurement recorded is no commit this repository holds."
+ },
+ {
+  "n": 173,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as a commit holds it: the commit the first measurement recorded"
+   }
+  ],
+  "preconditions": [
+   "the repository holds the recorded commit"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "readability of repository and working state (git's objects) instead of the protocol in that commit",
+  "tested_at": "labkit/formats/protocol_history.py:226",
+  "told_at": "labkit/gates/report_check.py:396",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "git fails to list the protocol's path in the tree of the first measurement's commit (exit code, not absence)."
+ },
+ {
+  "n": 174,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as a commit holds it: the commit the first measurement recorded"
+   }
+  ],
+  "preconditions": [
+   "the repository holds the recorded commit and git reads its tree"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding (run record holds commit and protocol id, nothing there) or order in time (the protocol did not stand at the run's commit); the object is absent, not unparseable",
+  "tested_at": "labkit/formats/protocol_history.py:233",
+  "told_at": "labkit/gates/report_check.py:409",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The first measurement's commit holds no protocol, neither at the protocol's path nor under the id the run is bound to."
+ },
+ {
+  "n": 175,
+  "objects": [],
+  "preconditions": [
+   "the first measurement's commit holds the protocol"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_check.py:418",
+  "told_at": "labkit/gates/report_check.py:421",
+  "bundled": [
+   "head does not read with this labkit (protocol_history.py:146): readability",
+   "a field the kind owes, repeat_cost or kind not written (protocol_check.py:1233-1235): completeness",
+   "the committed head's kind differs from the kind declared now (protocol_check.py:1229): agreement of two versions",
+   "kind_gap / reference_gap / kept_gaps (protocol_check.py:1236-1240): inner consistency or completeness",
+   "a bound field written more than once (protocol_history.py:153): uniqueness"
+  ],
+  "check_limit": false,
+  "condition": "registration_missing over the protocol as the first measurement's commit holds it returns a non-empty list; its entries come from different tests and the site joins them."
+ },
+ {
+  "n": 176,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol has a stamped id and a first measurement",
+   "the protocol lies in a git repository"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "rows 171 and 176 share one text; the mapping to lines 379 / 380 is my reading",
+  "tested_at": "labkit/formats/protocol_history.py:218",
+  "told_at": "labkit/gates/report_check.py:380",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The first measurement's record names no full commit (git_full empty) and its `git` field is not the `no git` mark."
+ },
+ {
+  "n": 177,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run exists",
+   "the area stamps, records and promise block read",
+   "not: no covering record and audit evidence lost (row 179)"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:127",
+  "told_at": "labkit/gates/report_check.py:496",
+  "bundled": [
+   "no record with that state; the registration alone changed (audit_gaps.py:131)",
+   "no record; attempts on this state unproven (audit_gaps.py:139)",
+   "no record; an attempt under way (audit_gaps.py:152)",
+   "no record; none ran or the state changed after the audit (audit_gaps.py:161)",
+   "a covering record with open findings (audit_gaps.py:168)"
+  ],
+  "check_limit": false,
+  "condition": "No analysis record's audited state (code stamp, promise block, registration, run id, digest of what was shown of the run) equals the state recomputed now, or a covering record has a finding still open."
+ },
+ {
+  "n": 178,
+  "objects": [],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "I did not follow AnsweringRun.explain's causes into answering_run; they may be further conditions",
+  "tested_at": "labkit/gates/report_check.py:450",
+  "told_at": "labkit/gates/report_check.py:451",
+  "bundled": [
+   "the protocol's id is still a placeholder (audit_binding.py:97): completeness of the protocol",
+   "the choice of the answering run has a blocker (audit_binding.py:100, area_state told/explain): several causes of its own",
+   "no completed run bound to the protocol's id (audit_binding.py:100): no run record to hold"
+  ],
+  "check_limit": false,
+  "condition": "The context holds no answering run; why comes from audited_run, which has three ways to None."
+ },
+ {
+  "n": 179,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run exists",
+   "the area stamps, records and promise block read"
+  ],
+  "property": "audit coverage",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "a conjunction of two tests: audit coverage and completeness/readability of the audit evidence (attempts.evidence_gaps); the definitions name alternatives told as one, not two conditions that must both hold",
+  "tested_at": "labkit/gates/report_check.py:484",
+  "told_at": "labkit/gates/report_check.py:487",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No analysis record covers the state as it is now, and the area's audit evidence has gaps (a file an attempt ended with is gone, or the attempt journal does not read)."
+ },
+ {
+  "n": 180,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run exists",
+   "the run's registered outputs list reads"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/audit_binding.py:124",
+  "told_at": "labkit/gates/report_check.py:463",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "An output path the answering run registered is no regular file when the state to cover is computed (run_rows)."
+ },
+ {
+  "n": 181,
+  "objects": [],
+  "preconditions": [
+   "an answering run exists"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/scope_sha.py:503",
+  "told_at": "labkit/gates/report_check.py:472",
+  "bundled": [
+   "a file listed for the area's stamp (a scope file a promise declares, an import, an extra) is no file (scope_sha.py:503): completeness of area code, or binding from the protocol's declared scope",
+   "an OSError other than a missing file on any read of the stamp, the run's outputs or the records: readability of an object decided at run time (area code, run record, audit and review records)"
+  ],
+  "check_limit": false,
+  "condition": "An OSError while the state to cover is computed or the records are listed: a listed scope file is no file, or the system refuses a read; the site passes the exception's text on and marks only the refused case (stated_outcome)."
+ },
+ {
+  "n": 182,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run exists"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "readability in its sense `is the object there` — the whole area code is absent, not a part of it",
+  "tested_at": "labkit/formats/scope_sha.py:506",
+  "told_at": "labkit/gates/report_check.py:472",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The area's globs match no script and no protocol declares a scope file: the list of files to stamp is empty."
+ },
+ {
+  "n": 183,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run exists",
+   "the area stamps"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/findings.py:2049",
+  "told_at": "labkit/gates/report_check.py:472",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A findings record of the area is malformed or unreadable (record_status holds an error)."
+ },
+ {
+  "n": 184,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run exists"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:206",
+  "told_at": "labkit/gates/report_check.py:472",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol's [[promise]] block does not parse (PromiseError from block_stamp, or from reading the declared scope for the stamp)."
+ }
+]

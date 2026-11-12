@@ -567,6 +567,56 @@ No further site had to be excluded. Seen on the way and not followed: `report_ho
 
 The table has 299 rows, 297 of them set for classification; the two rendering rows are excluded.
 
+## The 297 rows read by two readers under the third version, 2026-11-12
+
+The 297 rows set for classification were numbered in the table's order and cut into ten parts along function boundaries (`docs/notes/2026-11-12-subject-readings/object-stock-1-given.json`, `-given-part-01.json` to `-10.json`). Each part was read at the code by two readers, independent of each other, of this note and of every earlier answer — twenty readers, the definitions fixed in `object-property-definitions-3.md`, no value added while they read. Their answers are `object-stock-1-reader-A-part-NN.json` and `-B-part-NN.json`; the comparison per row is `object-stock-1-compared.json`. The numbers below are row numbers of the given file. The table's columns are not changed: this section is the result, the table still carries the twelve subjects.
+
+Every row falls into one of six groups:
+
+| Group                                                                               | Rows |
+|-------------------------------------------------------------------------------------|------|
+| both readers give the same property, the same objects with roles and versions       | 200  |
+| the same property, the objects or a version differ                                  | 12   |
+| both give a property, and not the same                                              | 4    |
+| both answer "bundle": the row holds several conditions the code does not tell apart | 46   |
+| both answer "no": no value fits                                                     | 15   |
+| one reader gives a property, the other "bundle" (14) or "no" (6)                    | 20   |
+
+Of the 200 rows, 156 are "fits: yes" for both, 119 of them without a mark of doubt from either reader; in 44 a reader calls the fit weak. The properties of the 212 rows with one property: completeness 58, agreement 44, readability 34, binding 24, audit coverage 21, inner consistency 11, uniqueness 8, form 6, result of an executed area check 5, order in time 1.
+
+What this shows, and what not. Two readers per row, of the same kind, with the same definitions; agreement is evidence that the definitions lead to one answer, not that the answer is right, and no row was checked at the code by a third party. A reader's "bundle" was not checked either: whether the code tells the conditions apart for the row is the reader's reading.
+
+**The largest group that is no classification: 46 bundles.** By both readers the unit of these rows is wrong, most in `finalize` (10) and `run_record_check` (10), then `report_check` (5), `code_check` and `preflight` (4 each). Three kinds return:
+
+- A reader that refuses a file for several reasons, told as "does not read": invalid syntax, a missing key and a value of the wrong form raise one error (the head, the `[[promise]]` tables, a run's config, an audit record). Seven of the 14 rows where only one reader says "bundle" are of this kind: rule 1 says readability, rule 3 says bundle, and the definitions do not say which goes first.
+- One `except` over several tests (`run_record_check`: rows 274, 283, 286, 293, 296), and a message for a main condition joined with a second one (rows 234, 241: the review is missing, and the evidence is lost).
+- Rows this session split on 2026-11-12 from an error text: three of the seven rows of `finalize.check_intent_keys_in_metrics` (32, 33, 36) are bundles by both readers — the split stopped one level too early.
+
+**The 15 rows where no value fits, by both readers.**
+
+| What the condition tests                                    | Rows                                                                                                                                 |
+|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| a mark or a file that records a state                       | 59, 60, 202, 203 (run kind, unfrozen acknowledgement), 185 (cut-off adoption)                                                        |
+| something stands in the text or the code: fires on presence | 227, 228 (numbers in the report's prose), 61, 62, 63 (code the stamp cannot follow), 16 (a registered constant copied into the code) |
+| how git holds a file: neither tracked nor ignored           | 279, 291                                                                                                                             |
+| two things are the same                                     | 287 (null lane)                                                                                                                      |
+| two states read now and combined                            | 9 (the audit before the cheap first run)                                                                                             |
+
+The five rows of the 18-row reading are among them. Six more rows get "no" from one reader only, against completeness (118, 132, 171, 275, 295) or binding (246, a circle of replacements).
+
+**What the readers report as not decided by the definitions**, collected from the twenty reports; nothing was changed for it.
+
+1. "Does not read" from a strict reader: readability (rule 1) or bundle (rule 3). Rows 92, 93, 94, 103, 113, 224, 181, and the rows of the same kind both call a bundle.
+2. A thing that is not there at all: readability ("is the object there"), completeness, or binding. A missing run file (35, 57), a registered report that is missing (135), a protocol absent in a run's commit (161, 174), an input source gone (264), no git repository (290).
+3. A limit of the check, or a property of the object: git fails (26, 231), access refused (58), a timeout and a missing repository (199, 200), "cannot be compared" (265 to 270), tests that did not run (114, 117). Both readers set the limit on four rows (47, 114, 120, 199), one reader on three more (69, 86, 200).
+4. The version of a text rebuilt from a run's commit and its patch lies between "as a commit holds it" and "as a run recorded it" (134, 147 to 152, 155 to 159, 249, 250, 252, 272); the index against the working tree is "as it stands" twice (236, 240). The three rows where only the version differs are of this kind.
+5. Things read that are in no object of the list: a run's input data (279, 297), a model profile file (280), the area as such (51).
+6. An open or undecided audit finding: audit coverage, of which only the "release" half is read, or completeness (10, 11, 81, 90, 247). Whether the protocol's claim is an object or a precondition of a decision check (205 to 214).
+7. A part the protocol names and the run lacks: agreement of the two, or completeness of the run (7, 8, 23, 65, 67).
+8. A finding told only when two conditions both hold (144, 179, 210): "bundle" is defined for alternatives, not for a conjunction.
+9. A reference to itself and a circle of references (243, 246).
+10. A row whose words match two places in the code (171 and 176 with the same text, 294, 263).
+
 ## What "exact" covers
 
 "Exact" names the condition a check tests: it is silent on a correct input, and what it tells is true of that condition. It does not promise that every breach of the rule is found. Limits that are written down, each at its source:

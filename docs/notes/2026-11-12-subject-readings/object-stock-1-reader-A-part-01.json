@@ -1,0 +1,758 @@
+[
+ {
+  "n": 1,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: its id selects the runs bound to it; no [result] run adopted"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/answering_run.py:736",
+  "told_at": "labkit/formats/answering_run.py:645",
+  "bundled": [
+   "no runs/ directory in the area (answering_run.py:722)",
+   "no completed, non-repeat run whose recorded protocol id is this protocol's (answering_run.py:736; binding, loosely)",
+   "a run newer than the chosen one, or of the same second, has a config.json that does not read (answering_run.py:547,750; readability of the run record)",
+   "another bound run of the same standing started in the same second, so the newest cannot be told (answering_run.py:565,760; uniqueness of the choice)"
+  ],
+  "check_limit": false,
+  "condition": "No run stands and no run is adopted: bound_answering_run set a blocker for one of four tests, and explain passes the text on without telling them apart."
+ },
+ {
+  "n": 2,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/answering_run.py:807",
+  "told_at": "labkit/formats/answering_run.py:645",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run id in the protocol's [result] is the name of no run directory with a record among the area's runs (neither taken nor left out)."
+ },
+ {
+  "n": 3,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "completeness of the run record (the run lacks what a completed run holds)",
+  "tested_at": "labkit/formats/answering_run.py:387",
+  "told_at": "labkit/formats/answering_run.py:645",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run [result] names is there, and its state read from the directory is not completed (and not unreadable): not of the kind the place takes."
+ },
+ {
+  "n": 4,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "agreement: the protocol's id against the protocol id the run recorded",
+  "tested_at": "labkit/formats/answering_run.py:391",
+  "told_at": "labkit/formats/answering_run.py:645",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run [result] names is completed and no repeat, and the protocol id its record carries is another protocol's or none, not this protocol's id."
+ },
+ {
+  "n": 5,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: its [result] run names the adopted run (decides that the adopted branch applies)"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/answering_run.py:110",
+  "told_at": "labkit/formats/answering_run.py:645",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The config.json of the run [result] names cannot be read (the run's facts carry state unreadable with the reader's error)."
+ },
+ {
+  "n": 6,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/answering_run.py:389",
+  "told_at": "labkit/formats/answering_run.py:645",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The run [result] names is completed and its record carries repeat_of: a repeat, not the kind of run the place takes."
+ },
+ {
+  "n": 7,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: its [result] run names the adopted run (decides that the adopted branch applies)",
+   "protocol: it registers at least one promise id (ids_registered, a yes/no; the ids are not compared)"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "agreement protocol / run record (ids registered against ids reported), if ids_registered counts as a side and not as a precondition",
+  "tested_at": "labkit/formats/answering_run.py:826",
+  "told_at": "labkit/formats/answering_run.py:661",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The adopted run's metrics.json holds no key in the intent-id namespace while the protocol registers ids."
+ },
+ {
+  "n": 8,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: its id selects the bound runs; no [result] run adopted",
+   "protocol: it registers at least one promise id (ids_registered, a yes/no; the ids are not compared)"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "agreement protocol / run record (ids registered against ids reported), if ids_registered counts as a side and not as a precondition",
+  "tested_at": "labkit/formats/answering_run.py:494",
+  "told_at": "labkit/formats/answering_run.py:661",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "None of the completed runs bound to the protocol holds a key in the intent-id namespace in its metrics.json, so the newest was taken, while the protocol registers ids."
+ },
+ {
+  "n": 9,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the command's mode is preflight",
+   "the protocol head reads (a head that does not read gives no finding)"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/audit.py:163",
+  "told_at": "labkit/gates/audit.py:166",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's repeat_cost puts the area in a lane that owes no preflight audit, and the area holds no completed run: two states read now and combined — whether the audit asked for is owed yet; no time or order is read, and nothing is compared."
+ },
+ {
+  "n": 10,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "audit coverage (the record does not release), but no state covered is read; or no value: `open` is a status that is there and records a state (rule 4)",
+  "tested_at": "labkit/formats/findings.py:928",
+  "told_at": "labkit/checks/audit_binding.py:387",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A finding of a readable audit record has status open and its grade is BLOCKER."
+ },
+ {
+  "n": 11,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "audit coverage (the record does not release), but no state covered is read; or no value: `open` is a status that is there and records a state (rule 4)",
+  "tested_at": "labkit/formats/findings.py:928",
+  "told_at": "labkit/checks/audit_binding.py:389",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A finding of a readable audit record has status open and its grade is WARNING."
+ },
+ {
+  "n": 12,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/findings.py:2024",
+  "told_at": "labkit/checks/audit_binding.py:368",
+  "bundled": [
+   "a record does not parse or validate as a findings record, or is not UTF-8 (findings.py:2024; readability, with whatever form and completeness tests the record reader holds — not followed further)",
+   "a record's file name is not of the shape labkit-audit writes (findings.py:1946,2012; form)",
+   "index state only: a record is in the tree and not in the index (findings.py:1996)",
+   "index state only: no git repository holds the index (findings.py:1988)",
+   "index state only: a record listed in the index is not readable there (findings.py:2017; readability)"
+  ],
+  "check_limit": false,
+  "condition": "record_status collected at least one error sentence for the area's audit records; check_audit_records_read turns each into a blocker without reading which test gave it."
+ },
+ {
+  "n": 13,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/audit_gaps.py:96",
+  "told_at": "labkit/checks/audit_binding.py:412",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "An audit record names a run id (not the no-run mark) that is the name of no run directory the area state holds."
+ },
+ {
+  "n": 14,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/code_check.py:204",
+  "told_at": "labkit/checks/code_check.py:206",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "An id written in the protocol text is among none of the ids the area's code and imported helpers name as key literals or call keywords."
+ },
+ {
+  "n": 15,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/code_check.py:220",
+  "told_at": "labkit/checks/code_check.py:222",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A suffixed key in the intent-id namespace stands in the area's code, and the protocol text registers no such id."
+ },
+ {
+  "n": 16,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the promise declares constants",
+   "the scope file is a .py file that reads and parses"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "uniqueness, weak: one home asked and two there, but across two objects and by name",
+  "tested_at": "labkit/checks/code_check.py:500",
+  "told_at": "labkit/checks/code_check.py:518",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A Python file of the promise's declared scope assigns a literal other than None to a name the promise block declares as a constant; the finding is told whether the two values are the same or differ, so no agreement is tested — the condition is that the declared constant has a second place where it is set."
+ },
+ {
+  "n": 17,
+  "objects": [
+   {
+    "object": "decided at run time",
+    "candidates": [
+     "protocol",
+     "area code"
+    ],
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "--bundle given"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/code_check.py:647",
+  "told_at": "labkit/checks/code_check.py:758",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A file packed into the bundle (the protocol, an area script or analysis file, an imported repo helper) cannot be opened or is not UTF-8."
+ },
+ {
+  "n": 18,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:451",
+  "told_at": "labkit/checks/code_check.py:258",
+  "bundled": [
+   "a table lacks id, key, sentence or scope (promises.py:451; completeness)",
+   "id not criterion-<n>, quality-check-<n> or branch-<n> (promises.py:453; form)",
+   "key not the id's stem or stem_<suffix> (promises.py:470; form, or inner consistency of id and key)",
+   "sentence empty (promises.py:478; completeness)",
+   "an outcome of a branch sentence is empty (promises.py:287; completeness)",
+   "an outcome holds not exactly one arrow (promises.py:289; form)",
+   "an outcome has no condition (promises.py:305; completeness)",
+   "an outcome names no consequence (promises.py:321; completeness)",
+   "a constant's name is not lowercase snake_case (promises.py:520; form)",
+   "a constant's name stands in an earlier promise too (promises.py:527; uniqueness)"
+  ],
+  "check_limit": false,
+  "condition": "parse_block raised a PromiseError carrying the LAB-004 rule; promise_block_findings tells its sentence without reading which of ten tests raised it."
+ },
+ {
+  "n": 19,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:422",
+  "told_at": "labkit/checks/code_check.py:258",
+  "bundled": [
+   "the toml block is not valid TOML (protocol_block.py:256, promises.py:422; readability)",
+   "top-level keys other than [protocol] and [[promise]] (protocol_block.py:261; form)",
+   "`promise` is no array of tables (promises.py:426; form)",
+   "an entry is no table (promises.py:436; form)",
+   "a table holds an unknown field (promises.py:443; form)",
+   "a scope entry is an absolute path (promises.py:502; form)",
+   "`constants` is no table (promises.py:510; form)",
+   "a constant's value is no scalar (promises.py:515; form)"
+  ],
+  "check_limit": false,
+  "condition": "parse_block raised a PromiseError carrying the technical rule; promise_block_findings tells its sentence without reading which test raised it."
+ },
+ {
+  "n": 20,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:465",
+  "told_at": "labkit/checks/code_check.py:258",
+  "bundled": [
+   "an id stands in two tables (promises.py:465; uniqueness)",
+   "an outcome name stands in two outcomes of one sentence (promises.py:264; uniqueness)",
+   "a branch sentence holds one outcome only (promises.py:271; completeness or form)",
+   "`otherwise` is the condition of an outcome that is not the last (promises.py:309; form)",
+   "an outcome name is not lowercase letters, digits and hyphens (promises.py:315; form)",
+   "scope is no list, an empty list or holds an empty or non-string entry (promises.py:491; completeness and form)"
+  ],
+  "check_limit": false,
+  "condition": "parse_block raised a PromiseError carrying the open rule assignment; promise_block_findings tells its sentence without reading which of six tests raised it."
+ },
+ {
+  "n": 21,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the promise block parses"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/code_check.py:291",
+  "told_at": "labkit/checks/code_check.py:294",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The exact key a promise table declares is none of the keys the area's code and imported helpers name as literals or call keywords."
+ },
+ {
+  "n": 22,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the promise block parses"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "binding for the whole row, if a scope file that does not read or a name bound twice counts as a thing not of the kind the place takes",
+  "tested_at": "labkit/formats/promises.py:857",
+  "told_at": "labkit/checks/code_check.py:278",
+  "bundled": [
+   "a scope entry's file part is no file (promises.py:857; binding)",
+   "a file:function entry names no top-level function or class of the file (promises.py:838; binding)",
+   "the file of a file:function entry cannot be read or does not parse (promises.py:810; readability of the area code)",
+   "a file entry's bytes cannot be read (promises.py:867; readability of the area code)",
+   "the function's name is bound more than once at the file's top level (promises.py:823; uniqueness in the area code)"
+  ],
+  "check_limit": false,
+  "condition": "Resolving a promise's declared scope against the area raised a PromiseError; promise_block_findings tells its sentence without reading which of five tests raised it."
+ },
+ {
+  "n": 23,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: a promise of kind quality-check names the key",
+   "the key stands in the area's code (written)"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "agreement protocol / area code (the promise's kind says the key permits the verdict, the code decides nothing on it); or no value: a use missing in the code is no owed part of a file",
+  "tested_at": "labkit/checks/code_check.py:451",
+  "told_at": "labkit/checks/code_check.py:441",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The key of a quality-check promise, which the code names, is read at no place where a decision is taken (if/while/assert test, and/or/not operand, all()/any() argument) in any area file or imported helper."
+ },
+ {
+  "n": 24,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: a promise of kind quality-check whose key the code names"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/code_check.py:427",
+  "told_at": "labkit/checks/code_check.py:430",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "An area file or imported helper raised a ValueError when read and parsed for the key reads (it cannot be opened, is not UTF-8 or is not Python), so the read check was not done (rule 1)."
+ },
+ {
+  "n": 25,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/scope_sha.py:93",
+  "told_at": "labkit/checks/code_scan.py:148",
+  "bundled": [
+   "cannot be opened or is not UTF-8 (scope_sha.py:93)",
+   "does not parse as Python (scope_sha.py:106)"
+  ],
+  "check_limit": false,
+  "condition": "A source file of the area's code (a script, an analysis file, an imported repo helper) raised a SourceError at a caller's read: missing, access refused, not UTF-8 or not Python; the function itself only builds the finding from the exception."
+ },
+ {
+  "n": 26,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the area lies in a git repository with a first commit"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "rule 7: agreement of the audit records and closed runs as they stand with HEAD's, check_limit true — if a failing git call counts as the check's own procedure and not as an object that does not read",
+  "tested_at": "labkit/formats/evidence.py:409",
+  "told_at": "labkit/formats/evidence.py:385",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A git command the comparison of the area's evidence with HEAD needs returned an error (GitError), so the comparison did not run; the finding carries the outcome not executable."
+ },
+ {
+  "n": 27,
+  "objects": [
+   {
+    "object": "decided at run time",
+    "candidates": [
+     "audit and review records",
+     "run record"
+    ],
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "decided at run time",
+    "candidates": [
+     "audit and review records",
+     "run record"
+    ],
+    "role": "side",
+    "version": "as a commit holds it (HEAD)"
+   }
+  ],
+  "preconditions": [
+   "the area lies in a git repository with a first commit",
+   "run record: HEAD holds the run closed"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "bundle, if the two kinds of object (audit file, closed run's file) count as different objects under rule 3 and not as one object decided at run time",
+  "tested_at": "labkit/formats/evidence.py:446",
+  "told_at": "labkit/formats/evidence.py:387",
+  "bundled": [
+   "an audit record changed beyond its findings' decision lines (evidence.py:168-172)",
+   "another audit file changed (evidence.py:180)",
+   "a file of a run closed at HEAD changed or was deleted (evidence.py:177)"
+  ],
+  "check_limit": false,
+  "condition": "A path of the area's evidence differs between HEAD and the tree (or the index): an audit record beyond its decision lines, another audit file changed, or a file of a run HEAD holds closed changed or deleted — and is not back as labkit first committed it."
+ },
+ {
+  "n": 28,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the Data / scope field holds a generated counts part",
+   "the run it names is a completed preparation run of the area with n_items"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/data_counts.py:153",
+  "told_at": "labkit/gates/finalize.py:560",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The generated counts part of the protocol's Data / scope field is not the text built now from the named preparation run's config and metrics."
+ },
+ {
+  "n": 29,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the Data / scope field holds a generated counts part"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/data_counts.py:141",
+  "told_at": "labkit/gates/finalize.py:560",
+  "bundled": [
+   "the run id is the name of no run the area state holds (data_counts.py:141; binding)",
+   "the run has no config or its run_kind is not preparation (data_counts.py:64; binding, kind)",
+   "the run's state is not completed (data_counts.py:66; binding, kind)",
+   "the run's metrics.json holds no n_items (data_counts.py:69; completeness of the run record)",
+   "any other ValueError the run's config or metrics reader raises (data_counts.py:149; readability of the run record)"
+  ],
+  "check_limit": false,
+  "condition": "The run id in the counts part is no run of the area, or building the counts from that run raised a ValueError; both leave with the technical rule and finalize tells the sentence without reading which test gave it."
+ }
+]

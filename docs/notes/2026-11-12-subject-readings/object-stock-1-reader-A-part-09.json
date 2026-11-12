@@ -1,0 +1,771 @@
+[
+ {
+  "n": 243,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "inner consistency",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding: the reference leads to the protocol itself, not to a thing of the kind the place takes (another protocol); the test fires on sameness of two parts, no contradiction in the narrow sense",
+  "tested_at": "labkit/gates/report_replacement.py:110",
+  "told_at": "labkit/gates/report_replacement.py:111",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The id in [replaces] protocol equals the id in the same protocol's own head."
+ },
+ {
+  "n": 244,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "repository and working state: a git root, from which the protocol files are listed"
+  ],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_replacement.py:118",
+  "told_at": "labkit/gates/report_replacement.py:123",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No protocol file of the repository carries the id that [replaces] protocol names (index of ids read from the working tree, zero hits)."
+ },
+ {
+  "n": 245,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: the [replaces] table of the replacing protocol reads and names the id"
+  ],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "binding: the reference cannot be assigned to one predecessor",
+  "tested_at": "labkit/gates/report_replacement.py:118",
+  "told_at": "labkit/gates/report_replacement.py:123",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "More than one protocol file of the repository carries the id that [replaces] protocol names; the tested object is the repository's protocols, the id written in several."
+ },
+ {
+  "n": 246,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: [replaces] names exactly one protocol of the repository"
+  ],
+  "property": "binding",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "no value names a circle in a chain of references across several protocols; binding is the nearest (each reference leads to a thing that is there and of the right kind, so binding itself holds); inner consistency does not fit, the parts lie in different protocol files",
+  "tested_at": "labkit/gates/report_replacement.py:268",
+  "told_at": "labkit/gates/report_replacement.py:132",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Following [replaces] from the predecessor back, each protocol read in the check's file state, the chain reaches the starting id or an id already passed."
+ },
+ {
+  "n": 247,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: [replaces] names exactly one predecessor",
+   "audit and review records: the predecessor area's records and handovers read"
+  ],
+  "property": "audit coverage",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "the code reads only the records (open finding, handover entry) and does not test whether a record belongs to a state; read as the records' own state: completeness of the audit and review records (a decision owed and not given)",
+  "tested_at": "labkit/gates/report_replacement.py:238",
+  "told_at": "labkit/gates/report_replacement.py:244",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A finding of the predecessor area's audit records is graded BLOCKER and still open (labkit/formats/findings.py:1032), and no handover record of that area lists it."
+ },
+ {
+  "n": 248,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: [replaces] names exactly one predecessor"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_replacement.py:222",
+  "told_at": "labkit/gates/report_replacement.py:230",
+  "bundled": [
+   "an audit record of the predecessor's area does not read (report_replacement.py:222)",
+   "the handover records do not read, tested only when an open BLOCKER is held (report_replacement.py:225)"
+  ],
+  "check_limit": false,
+  "condition": "An audit record of the predecessor's area does not read, or, while open BLOCKERs are held, its handover records do not read."
+ },
+ {
+  "n": 249,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the predecessor and this protocol, each as the commit its first measurement recorded holds it with the run's uncommitted.patch applied; as it stands for one without a measurement"
+   }
+  ],
+  "preconditions": [
+   "run record: the first measurements of both protocols name the commits",
+   "protocol: both registrations read back, and this protocol's first measurements saw one registration"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "completeness of the protocol: an owed [[replaces.change]] is missing; the computed side is itself a comparison of two protocols, so three things stand behind two sides",
+  "tested_at": "labkit/gates/report_replacement.py:199",
+  "told_at": "labkit/gates/report_replacement.py:190",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A difference computed between the predecessor's registration and this protocol's registration (each as its first measurement saw it) is not among the [[replaces.change]] entries (what, from, to) of the protocol as it stands."
+ },
+ {
+  "n": 250,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the predecessor and this protocol, each as the commit its first measurement recorded holds it with the run's uncommitted.patch applied; as it stands for one without a measurement"
+   }
+  ],
+  "preconditions": [
+   "run record: the first measurements of both protocols name the commits",
+   "protocol: both registrations read back, and this protocol's first measurements saw one registration"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_replacement.py:210",
+  "told_at": "labkit/gates/report_replacement.py:203",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A [[replaces.change]] entry (what, from, to) of the protocol as it stands is not among the differences computed between the predecessor's and this protocol's registrations as first measured."
+ },
+ {
+  "n": 251,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as a commit holds it: the commit a first measurement recorded, with its uncommitted.patch applied"
+   },
+   {
+    "object": "repository and working state",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "read as one condition 'the earlier protocol version does not read': readability of the protocol as a commit holds it",
+  "tested_at": "labkit/formats/protocol_history.py:633",
+  "told_at": "labkit/gates/report_replacement.py:172",
+  "bundled": [
+   "the first measurement recorded no commit, or no git root (protocol_history.py:700): run record, completeness",
+   "the recorded commit is not held by this clone (protocol_history.py:702): binding, run record to repository",
+   "git cannot read the tree or the patch does not apply (protocol_history.py:715): readability",
+   "the commit's tree with the patch lacks the protocol (protocol_history.py:717): protocol as a commit holds it is not there",
+   "git cannot read the blob (protocol_history.py:724): readability",
+   "the promise block of the text read back is not the block_sha the run recorded (protocol_history.py:728): agreement, protocol as a commit holds it against the run record"
+  ],
+  "check_limit": false,
+  "condition": "For the predecessor or this protocol, the protocol text as one first measurement saw it cannot be read back (as_measured returns no text); the telling site joins the reason without reading it."
+ },
+ {
+  "n": 252,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit one first measurement recorded, with its uncommitted.patch applied"
+   },
+   {
+    "object": "protocol",
+    "role": "side",
+    "version": "as a commit holds it: the commit another first measurement recorded, with its uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "run record: the first measurements of the protocol, which name the commits"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "uniqueness: exactly one registration as first measured is asked for; the message says 'cannot be compared', the code tests the difference itself, so no check limit",
+  "tested_at": "labkit/gates/report_replacement.py:165",
+  "told_at": "labkit/gates/report_replacement.py:172",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol's texts as its own first measurements saw them are more than one distinct text (texts collected at labkit/formats/protocol_history.py:635)."
+ },
+ {
+  "n": 253,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: [replaces] reads and names exactly one predecessor"
+  ],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "form: the value of type is not the one its place allows once [replaces] is declared",
+  "tested_at": "labkit/gates/report_replacement.py:81",
+  "told_at": "labkit/gates/report_replacement.py:83",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head declares [replaces] and its [protocol] type is not \"exploratory\"."
+ },
+ {
+  "n": 254,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_block.py:847",
+  "told_at": "labkit/gates/report_replacement.py:68",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A [[replaces.change]] entry's `why` is an empty string or whitespace only."
+ },
+ {
+  "n": 255,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol, if 'a table that parses as TOML and cannot be interpreted in its format' counts as not reading (the code's own comment reads it so)",
+  "tested_at": "labkit/formats/protocol_block.py:819",
+  "told_at": "labkit/gates/report_replacement.py:68",
+  "bundled": [
+   "the TOML block does not parse (protocol_block.py:819): readability",
+   "`replaces` is no table, `change` no list of tables, a change row no table (protocol_block.py:823, 833, 837): form",
+   "an unknown key in [replaces] or in a change (protocol_block.py:825, 839): form, loosely",
+   "protocol is missing, no string or not in the id shape (protocol_block.py:827): completeness or form, one test",
+   "a change's what/from/to/why is missing or no string (protocol_block.py:841): completeness or form, one test"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.replaces raises a BlockError other than ChangeReasonMissing; the telling site passes the error's text on and tells only the empty `why` apart."
+ },
+ {
+  "n": 256,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "completeness of the protocol, if the line counts as the protocol's part",
+  "tested_at": "labkit/checks/result_render.py:345",
+  "told_at": "labkit/checks/result_render.py:347",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The protocol text holds no Recorded results field, or the field still holds its placeholder (labkit/formats/protocol_check.py:1411)."
+ },
+ {
+  "n": 257,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "protocol: the promise block, [kept], [reference] and [replaces] select and name what is rendered",
+   "run record: metrics.json reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "the rendered side comes from two kinds of object (run record, audit records) and, with [replaces], the predecessor's sources: more than two sides behind one equality",
+  "tested_at": "labkit/checks/result_render.py:354",
+  "told_at": "labkit/checks/result_render.py:356",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The Recorded results line's value is not equal to the line rendered from the declared run's metrics.json, its run id and the limits of the covering analysis records (one equality over the whole line)."
+ },
+ {
+  "n": 258,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/result_render.py:374",
+  "told_at": "labkit/checks/result_render.py:378",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A generated label (Recorded results, or a Limitation label) stands on more than one field line of the protocol text."
+ },
+ {
+  "n": 259,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "audit and review records: the covering analysis records and their findings decided limitation, which say which lines are owed"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "agreement between the audit and review records and the generated lines (one side lacks what the other holds)",
+  "tested_at": "labkit/checks/result_render.py:389",
+  "told_at": "labkit/checks/result_render.py:391",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A limit decided in a covering analysis record has no line with its label in the protocol text."
+ },
+ {
+  "n": 260,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "agreement between generated lines and records; the label also fails when the records cover no run at all (limits_of returns none on an audit error, result_render.py:198)",
+  "tested_at": "labkit/checks/result_render.py:409",
+  "told_at": "labkit/checks/result_render.py:411",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A line of the protocol text carries a Limitation label (record stem and finding number) that is not the label of any limit decided in the covering analysis records."
+ },
+ {
+  "n": 261,
+  "objects": [
+   {
+    "object": "generated block or line",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "side",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/result_render.py:398",
+  "told_at": "labkit/checks/result_render.py:400",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The value of a Limitation line is not equal to the limit line rendered from the finding of the covering analysis record with that label."
+ },
+ {
+  "n": 262,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as a run recorded it"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [
+   "run record: outputs.json names the runs the output continues",
+   "run record: a row of the output carries _instrument.code_sha",
+   "run record: both runs' config reads"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "agreement of two run records as they stand (config.json against config.json); the script itself is not read",
+  "tested_at": "labkit/checks/run_record_check.py:1037",
+  "told_at": "labkit/checks/run_record_check.py:1040",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The script digest (script_sha) a continued run recorded is not the one the answering run recorded."
+ },
+ {
+  "n": 263,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "if the row means only the test at run_record_check.py:511: inner consistency, run record tested, fits yes",
+  "tested_at": "labkit/checks/run_record_check.py:511",
+  "told_at": "labkit/checks/run_record_check.py:517",
+  "bundled": [
+   "metrics.json holds criterion_<i>_n keys and the run recorded no input count at all, no data= rows and no output lines (run_record_check.py:496): a missing part of the run record, completeness loosely",
+   "a criterion_<i>_n value equals none of the recorded data= rows or output line counts (run_record_check.py:511): inner consistency of the run record"
+  ],
+  "check_limit": false,
+  "condition": "_criterion_n_warning only builds the finding; its caller criterion_n_input_mismatches passes it two texts for two tests, and the row's words take both."
+ },
+ {
+  "n": 264,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "the object table names no input data: the source file is taken as the working tree; by rule 4 read as completeness of the run record, if a recorded source counts as its owed part",
+  "tested_at": "labkit/checks/run_record_check.py:716",
+  "told_at": "labkit/checks/run_record_check.py:866",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Nothing stands at the path the run recorded for an input source (path_kind is None, run_record_check.py:675)."
+ },
+ {
+  "n": 265,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "area code: at least one helper of the script lies in the repository and was not copied as untracked"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "NO_GIT is a mark that records a state (the run started outside git's history), which no value names (rule 4); or the check that could not run: agreement of area code as it stands with the run's commit, with check_limit true",
+  "tested_at": "labkit/checks/run_record_check.py:312",
+  "told_at": "labkit/checks/run_record_check.py:321",
+  "bundled": [
+   "git_full is empty",
+   "git_full is the mark NO_GIT"
+  ],
+  "check_limit": false,
+  "condition": "The run's config holds no full commit (git_full empty) or the mark NO_GIT in its place."
+ },
+ {
+  "n": 266,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "area code: at least one helper of the script is to be compared"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "'is the object there' is the only part of readability that fits; or the check that could not run: agreement of area code as it stands with the run's commit, with check_limit true",
+  "tested_at": "labkit/checks/run_record_check.py:312",
+  "told_at": "labkit/checks/run_record_check.py:322",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No git repository holds the area now (git_root of the area is None)."
+ },
+ {
+  "n": 267,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "holds the reference",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "role": "referred to",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "binding",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "agreement of area code could not run: check_limit, if a missing commit counts as the check's limit",
+  "tested_at": "labkit/checks/run_record_check.py:323",
+  "told_at": "labkit/checks/run_record_check.py:326",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The full commit sha the run recorded is not a commit this clone holds (labkit/formats/repo.py:1090, also false for a value that is no full sha)."
+ },
+ {
+  "n": 268,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as a commit holds it: the commit the run recorded, with the part of its uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "run record: the recorded commit is held by the clone and the patch applies",
+   "area code: the helper stands now and the script imports it"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "only 'is the object there' of readability fits, for an earlier version; else completeness of the run record (it kept no state of the helper), or the agreement check of 272 with check_limit true",
+  "tested_at": "labkit/checks/run_record_check.py:352",
+  "told_at": "labkit/checks/run_record_check.py:354",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The tree the run started from (its recorded commit with its uncommitted.patch applied) holds no blob at the helper's path."
+ },
+ {
+  "n": 269,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   },
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:312",
+  "told_at": "labkit/checks/run_record_check.py:321",
+  "bundled": [
+   "no git repository holds the area now (repo is None): repository and working state",
+   "the run's config holds no full commit (git_full empty): run record, completeness",
+   "the run's config holds the mark NO_GIT: run record, a recorded state"
+  ],
+  "check_limit": false,
+  "condition": "One `or` of three tests is told in one sentence; the code tells apart only the rule (repository present and the run's git is NO_GIT, against every other case)."
+ },
+ {
+  "n": 270,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as a commit holds it: the commit the run recorded, with the part of its uncommitted.patch applied"
+   },
+   {
+    "object": "area code",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "read as one condition: readability of the area code as the run's commit and patch hold it",
+  "tested_at": "labkit/checks/run_record_check.py:342",
+  "told_at": "labkit/checks/run_record_check.py:345",
+  "bundled": [
+   "git read-tree of the recorded commit fails (labkit/formats/repo.py:796): repository",
+   "the part of the run's uncommitted.patch for the helpers does not apply to the commit (labkit/formats/repo.py:796): run record's patch against the commit",
+   "git ls-files in the temporary index fails (labkit/formats/repo.py:796)",
+   "git hash-object of the helpers as they stand fails (labkit/formats/repo.py:816): area code as it stands"
+  ],
+  "check_limit": false,
+  "condition": "git fails while reading the helpers' blobs in the tree the run started from, or while hashing the helpers as they stand (GitError from blobs_then or blobs_now)."
+ },
+ {
+  "n": 271,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as a run recorded it"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/runs.py:602",
+  "told_at": "labkit/checks/run_record_check.py:292",
+  "bundled": [
+   "the run's kept copy is no file (labkit/formats/runs.py:602): run record, completeness by rule 4",
+   "the copy's bytes differ from the helper as it stands (labkit/formats/runs.py:602): agreement, area code as it stands against as a run recorded it"
+  ],
+  "check_limit": false,
+  "condition": "For a helper the run copied as untracked: the copy in the run directory is no file, or its bytes differ from the helper's bytes now."
+ },
+ {
+  "n": 272,
+  "objects": [
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "side",
+    "version": "as a commit holds it: the commit the run recorded, with the part of its uncommitted.patch applied"
+   }
+  ],
+  "preconditions": [
+   "run record: the recorded commit and the patch",
+   "repository and working state: the clone holds the commit"
+  ],
+  "property": "agreement",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/checks/run_record_check.py:364",
+  "told_at": "labkit/checks/run_record_check.py:368",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The blob id of a helper as it stands now differs from its blob id in the tree the run started from (recorded commit with uncommitted.patch applied)."
+ }
+]

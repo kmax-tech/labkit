@@ -1,0 +1,1487 @@
+[
+ {
+  "n": 1,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no completed run is bound to the protocol; records that do not read; two runs that both answer"
+ },
+ {
+  "n": 2,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run id the area has no run directory for"
+ },
+ {
+  "n": 3,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run that did not complete"
+ },
+ {
+  "n": 4,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "`[result]` names a run bound to another protocol or to none"
+ },
+ {
+  "n": 5,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run's record does not read"
+ },
+ {
+  "n": 6,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run is a repeat"
+ },
+ {
+  "n": 7,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run reports no intent key — a probe or producer run, not an answer"
+ },
+ {
+  "n": 8,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no bound run reports an intent key, the newest is taken — a probe or producer run, not an answer"
+ },
+ {
+  "n": 9,
+  "function": "audit.early_for_tier",
+  "cause": "repeat_cost = \"low\" and no completed run · the first run is the cheaper probe; one audit …"
+ },
+ {
+  "n": 10,
+  "function": "audit_binding.check_audit_findings_decided",
+  "cause": "an audit BLOCKER is undecided"
+ },
+ {
+  "n": 11,
+  "function": "audit_binding.check_audit_findings_decided",
+  "cause": "an audit WARNING is undecided"
+ },
+ {
+  "n": 12,
+  "function": "audit_binding.check_audit_records_read",
+  "cause": "an audit record does not read"
+ },
+ {
+  "n": 13,
+  "function": "audit_binding.check_audited_runs_kept",
+  "cause": "…: names … as the run it read, and there is no runs/…/ in this area — the run the r…"
+ },
+ {
+  "n": 14,
+  "function": "code_check._intent_id_findings",
+  "cause": "[…] is registered, but no script names a '…'/'…_*' key literal (a key assembled at …"
+ },
+ {
+  "n": 15,
+  "function": "code_check._intent_id_findings",
+  "cause": "key '…_*' is in the intent-id namespace, but the protocol registers no […] · a number…"
+ },
+ {
+  "n": 16,
+  "function": "code_check.constant_copies",
+  "cause": "[…] …:… sets … = … itself (…) · a copy judges by an unregistered value once t…"
+ },
+ {
+  "n": 17,
+  "function": "code_check.main",
+  "cause": "bundle: … could not be read — the reader sees `not readable` in its place"
+ },
+ {
+  "n": 18,
+  "function": "code_check.promise_block_findings",
+  "cause": "the promise block breaks a form LAB-004 states (10 causes: a missing field, an id or key outside its alphabet, an empty sentence, an outcome without condition or consequence, a constant's name or second home)"
+ },
+ {
+  "n": 19,
+  "function": "code_check.promise_block_findings",
+  "cause": "the block does not have the form a reader needs (7 causes: no TOML, no table, an unknown field, an absolute scope, a constant that is no scalar)"
+ },
+ {
+  "n": 20,
+  "function": "code_check.promise_block_findings",
+  "cause": "a form no rule states (6 causes: a doubled id, a doubled outcome name, one outcome only, `otherwise` not last, an outcome name outside its alphabet, an empty scope list)"
+ },
+ {
+  "n": 21,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declares key '…', which no script names as a literal… (an assembled key is not …"
+ },
+ {
+  "n": 22,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declared scope: … · runlog refuses the run"
+ },
+ {
+  "n": 23,
+  "function": "code_check.quality_check_reads",
+  "cause": "[…] key '…' is written but nothing decides on it · the criterion verdict is reported …"
+ },
+ {
+  "n": 24,
+  "function": "code_check.quality_check_reads",
+  "cause": "quality-check keys: read check not done — …"
+ },
+ {
+  "n": 25,
+  "function": "code_scan.unreadable_source",
+  "cause": "… · the code cannot be read, so no check over it holds"
+ },
+ {
+  "n": 26,
+  "function": "evidence.change_blockers",
+  "cause": "git could not compare the evidence with the state"
+ },
+ {
+  "n": 27,
+  "function": "evidence.change_blockers",
+  "cause": "the evidence an audit read changed since"
+ },
+ {
+  "n": 28,
+  "function": "finalize.check_data_counts",
+  "cause": "the generated counts differ from the prepare run's record"
+ },
+ {
+  "n": 29,
+  "function": "finalize.check_data_counts",
+  "cause": "the counts name a run the area lacks or that is no completed prepare run"
+ },
+ {
+  "n": 30,
+  "function": "finalize.check_declared_scopes",
+  "cause": "… recorded no promise block: … — a run records the block it was measured under, so th…"
+ },
+ {
+  "n": 31,
+  "function": "finalize.check_declared_scopes",
+  "cause": "declared scope changed since …: …"
+ },
+ {
+  "n": 32,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the protocol's head does not read"
+ },
+ {
+  "n": 33,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the promise block does not read"
+ },
+ {
+  "n": 34,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: intent ids in the earlier form"
+ },
+ {
+  "n": 35,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the answering run has no metrics file"
+ },
+ {
+  "n": 36,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run is not completed"
+ },
+ {
+  "n": 37,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run is bound to another protocol"
+ },
+ {
+  "n": 38,
+  "function": "finalize.check_intent_keys_in_metrics",
+  "cause": "intent-check refuses: the run's config or metrics do not read"
+ },
+ {
+  "n": 39,
+  "function": "finalize.check_kept_number",
+  "cause": "`[kept]` is missing on a computation, or holds a placeholder"
+ },
+ {
+  "n": 40,
+  "function": "finalize.check_kept_number",
+  "cause": "`[kept]` does not read, or stands on a fit or an apply"
+ },
+ {
+  "n": 41,
+  "function": "finalize.check_open_fields",
+  "cause": "a must field still holds its placeholder"
+ },
+ {
+  "n": 42,
+  "function": "finalize.check_open_fields",
+  "cause": "another field still holds its placeholder"
+ },
+ {
+  "n": 43,
+  "function": "finalize.check_open_fields",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 44,
+  "function": "finalize.check_open_fields",
+  "cause": "… — a stamped placeholder, fill or delete the line"
+ },
+ {
+  "n": 45,
+  "function": "finalize.check_reference",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 46,
+  "function": "finalize.check_reference",
+  "cause": "`[reference]` or `[kept]` does not read"
+ },
+ {
+  "n": 47,
+  "function": "finalize.check_run_code",
+  "cause": "a helper lies in another repository (a submodule or a link out) and is not compared with what the run ran"
+ },
+ {
+  "n": 48,
+  "function": "finalize.choose_answering_run",
+  "cause": "no stamped protocol id ([protocol] id) — no run is bound to it"
+ },
+ {
+  "n": 49,
+  "function": "finalize.choose_answering_run",
+  "cause": "…: bound to this protocol and newer by name than the adopted run … — if one of them a…"
+ },
+ {
+  "n": 50,
+  "function": "finalize.declared_run_gaps",
+  "cause": "the `[result]` table does not read"
+ },
+ {
+  "n": 51,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds no protocol file"
+ },
+ {
+  "n": 52,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the named protocol does not exist"
+ },
+ {
+  "n": 53,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the area holds several protocols and none is named"
+ },
+ {
+  "n": 54,
+  "function": "finalize.finalize_area",
+  "cause": "which protocol is meant cannot be told: the protocol is a symbolic link"
+ },
+ {
+  "n": 55,
+  "function": "finalize.finalize_area",
+  "cause": "a required part of the head is missing"
+ },
+ {
+  "n": 56,
+  "function": "finalize.finalize_area",
+  "cause": "the head does not read"
+ },
+ {
+  "n": 57,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run is missing or malformed"
+ },
+ {
+  "n": 58,
+  "function": "finalize.run_file_unread",
+  "cause": "a file of the run could not be opened"
+ },
+ {
+  "n": 59,
+  "function": "finalize.unreportable_warnings",
+  "cause": "the answering run is no measurement"
+ },
+ {
+  "n": 60,
+  "function": "finalize.unreportable_warnings",
+  "cause": "a full run acknowledged over an unfrozen protocol"
+ },
+ {
+  "n": 61,
+  "function": "import_check._coverage_in",
+  "cause": "`sys.path` gains … · imports after it may resolve outside lib/ and src/, which the stam…"
+ },
+ {
+  "n": 62,
+  "function": "import_check._coverage_in",
+  "cause": "`…(…)` loads code at run time · the stamp follows `import` lines only, so what this loa…"
+ },
+ {
+  "n": 63,
+  "function": "import_check._coverage_in",
+  "cause": "names area `…` · a file of another area determines this number, and this area's stamp d…"
+ },
+ {
+  "n": 64,
+  "function": "import_check._import_findings",
+  "cause": "an import resolves outside `lib/` and `src/`"
+ },
+ {
+  "n": 65,
+  "function": "intent_check.check_block_against_run",
+  "cause": "…: […] declares key '…', which the run does not report."
+ },
+ {
+  "n": 66,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run recorded a registered constant with another value"
+ },
+ {
+  "n": 67,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run recorded no promise block"
+ },
+ {
+  "n": 68,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the promises were removed or changed after the run"
+ },
+ {
+  "n": 69,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the run's digest is of an earlier format"
+ },
+ {
+  "n": 70,
+  "function": "intent_check.hold",
+  "cause": "a registered id's key is not in the run's metrics, or the reverse"
+ },
+ {
+  "n": 71,
+  "function": "intent_check.hold",
+  "cause": "the prose and the promise block name different ids"
+ },
+ {
+  "n": 72,
+  "function": "intent_check.unregistered_outcomes",
+  "cause": "…: […] records … = …, which is none of its outcomes' names"
+ },
+ {
+  "n": 73,
+  "function": "notes_check.check_file",
+  "cause": "…:1: MISSING: no italic meta line after the title"
+ },
+ {
+  "n": 74,
+  "function": "notes_check.check_file",
+  "cause": "…:…: MISSING: no kind in the meta line"
+ },
+ {
+  "n": 75,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: no date in the meta line"
+ },
+ {
+  "n": 76,
+  "function": "notes_check.check_file",
+  "cause": "…:…: MISSING: declared 'Instrument — implementiert' but names no script, function, or…"
+ },
+ {
+  "n": 77,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: filename says related-* but the declared kind is …"
+ },
+ {
+  "n": 78,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: none of the named scripts resolve in the repo (……) — code paths may…"
+ },
+ {
+  "n": 79,
+  "function": "notes_check.check_file",
+  "cause": "…:…: warning: Related-Lesart without a citekey — write 'Related-Lesart (<citekey>)'"
+ },
+ {
+  "n": 80,
+  "function": "notes_check.check_notes",
+  "cause": "a note cannot be read"
+ },
+ {
+  "n": 81,
+  "function": "preflight._owed",
+  "cause": "an audit finding is undecided"
+ },
+ {
+  "n": 82,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names no record"
+ },
+ {
+  "n": 83,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record the area does not have"
+ },
+ {
+  "n": 84,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names a record of another mode"
+ },
+ {
+  "n": 85,
+  "function": "preflight._owed",
+  "cause": "the record `preflight_audit` names does not read"
+ },
+ {
+  "n": 86,
+  "function": "preflight._owed",
+  "cause": "the area cannot be stamped now, so the record cannot be held to it"
+ },
+ {
+  "n": 87,
+  "function": "preflight._owed",
+  "cause": "the code changed after the audit (scope sha)"
+ },
+ {
+  "n": 88,
+  "function": "preflight._owed",
+  "cause": "the promise block or the registration changed after the audit"
+ },
+ {
+  "n": 89,
+  "function": "preflight._owed",
+  "cause": "the promise block does not read"
+ },
+ {
+  "n": 90,
+  "function": "preflight._owed",
+  "cause": "the record's findings are still open"
+ },
+ {
+  "n": 91,
+  "function": "preflight._owed",
+  "cause": "the resolution check's test file is missing"
+ },
+ {
+  "n": 92,
+  "function": "preflight.check_audit_records",
+  "cause": "an audit record does not read"
+ },
+ {
+  "n": 93,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's audit records do not read"
+ },
+ {
+  "n": 94,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's handover does not read"
+ },
+ {
+  "n": 95,
+  "function": "preflight.check_hooks",
+  "cause": "a hook is missing or from another labkit"
+ },
+ {
+  "n": 96,
+  "function": "preflight.check_promise_sentences",
+  "cause": "[[promise]] … still carries the stamp's `<…>` sentence — frozen = true refuses it"
+ },
+ {
+  "n": 97,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a must field is absent, or a head key is a placeholder"
+ },
+ {
+  "n": 98,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[model]` claims on a kind that has none (`kind_gap`)"
+ },
+ {
+  "n": 99,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 100,
+  "function": "preflight.check_protocol_fields",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`"
+ },
+ {
+  "n": 101,
+  "function": "preflight.check_protocol_fields",
+  "cause": "frozen without the preflight record named"
+ },
+ {
+  "n": 102,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables break a form LAB-004 states (the causes of `code_check.promise_block_findings`, first row)"
+ },
+ {
+  "n": 103,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables do not have the form a reader needs"
+ },
+ {
+  "n": 104,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)"
+ },
+ {
+  "n": 105,
+  "function": "preflight.check_protocol_fields",
+  "cause": "the `[[promise]]` tables are owed and missing"
+ },
+ {
+  "n": 106,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 107,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a must field still holds its placeholder"
+ },
+ {
+  "n": 108,
+  "function": "preflight.check_protocol_fields",
+  "cause": "an id is written in lower case in the prose"
+ },
+ {
+  "n": 109,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a \"should\" field is missing"
+ },
+ {
+  "n": 110,
+  "function": "preflight.check_protocol_fields",
+  "cause": "a \"should\" field still holds its placeholder"
+ },
+ {
+  "n": 111,
+  "function": "preflight.check_working_tree",
+  "cause": "uncommitted changes in … (commit or stash before the run)"
+ },
+ {
+  "n": 112,
+  "function": "preflight.preflight_area",
+  "cause": "a required part of the head is missing"
+ },
+ {
+  "n": 113,
+  "function": "preflight.preflight_area",
+  "cause": "the head does not read"
+ },
+ {
+  "n": 114,
+  "function": "preflight.tell_test_run",
+  "cause": "pytest is not installed in this interpreter — tests not run"
+ },
+ {
+  "n": 115,
+  "function": "preflight.tell_test_run",
+  "cause": "the resolution check's tests failed (preflight)"
+ },
+ {
+  "n": 116,
+  "function": "preflight.tell_test_run",
+  "cause": "the area's tests failed (finalize)"
+ },
+ {
+  "n": 117,
+  "function": "preflight.tell_test_run",
+  "cause": "… did not run… — …"
+ },
+ {
+  "n": 118,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "…() is called by no test under tests/ · a parser fails silently into a wrong number"
+ },
+ {
+  "n": 119,
+  "function": "prompt_check.check_parser_fixtures",
+  "cause": "cannot be parsed (…) · which parsers it calls cannot be told"
+ },
+ {
+  "n": 120,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "… is not statically readable (a call or a format spec this check does not compute) · pr…"
+ },
+ {
+  "n": 121,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "prompt block drifted from …: … of … fixed line(s) missing, e.g. …"
+ },
+ {
+  "n": 122,
+  "function": "protocol_history.check_annotation_validity",
+  "cause": "the annotator's evidence names no protocol, several, or one that does not read"
+ },
+ {
+  "n": 123,
+  "function": "protocol_history.check_annotation_validity",
+  "cause": "the evidence is no apply protocol, or has adopted no result"
+ },
+ {
+  "n": 124,
+  "function": "protocol_history.check_protocol_id",
+  "cause": "…: DUPLICATE protocol id … — also carried by …. An id binds runs to ONE protocol"
+ },
+ {
+  "n": 125,
+  "function": "protocol_history.check_protocol_id",
+  "cause": "…: WARNING: protocol id changed against HEAD (… -> …) — runs bound to the old id st…"
+ },
+ {
+  "n": 126,
+  "function": "readme_check.readme_route",
+  "cause": "README.md: no … … … block — the route (protocol · runlog · labkit-params · evaluate_r…"
+ },
+ {
+  "n": 127,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: does not name …"
+ },
+ {
+  "n": 128,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: scripts/01_measure.py does not exist"
+ },
+ {
+  "n": 129,
+  "function": "readme_check.readme_route",
+  "cause": "README.md route: scripts/01_measure.py defines no evaluate_rows"
+ },
+ {
+  "n": 130,
+  "function": "reference.comparison_gaps",
+  "cause": "metrics.json carries … and the head registers no [reference] — a comparison is register…"
+ },
+ {
+  "n": 131,
+  "function": "reference.comparison_gaps",
+  "cause": "the head registers [reference] on `…`, and the run recorded no verdict (no `…` in met…"
+ },
+ {
+  "n": 132,
+  "function": "reference.comparison_gaps",
+  "cause": "`…` …, so the registered reference (…) cannot be compared and no verdict can be rep…"
+ },
+ {
+  "n": 133,
+  "function": "reference.comparison_gaps",
+  "cause": "the verdict in metrics.json does not read: `…` = …, `…` = … — written beside the …"
+ },
+ {
+  "n": 134,
+  "function": "reference.comparison_gaps",
+  "cause": "the run compared with …, the head registers … — the reference changed after the run, …"
+ },
+ {
+  "n": 135,
+  "function": "registered_report.missing_report",
+  "cause": "… registers … as its report; the report is missing (…), and its area holds a measur…"
+ },
+ {
+  "n": 136,
+  "function": "registered_report.registered_review",
+  "cause": "…: its discussion blocks do not read — …"
+ },
+ {
+  "n": 137,
+  "function": "registered_report.report_binding_gap",
+  "cause": "… registered … before its first measurement …, and its head now registers … — the…"
+ },
+ {
+  "n": 138,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: it recorded no commit"
+ },
+ {
+  "n": 139,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its commit is not in this repository, or git cannot read the protocol at it"
+ },
+ {
+  "n": 140,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its commit does not hold the protocol"
+ },
+ {
+  "n": 141,
+  "function": "registered_report.report_binding_gap",
+  "cause": "which report its first measurement stood under cannot be read: its committed head does not read"
+ },
+ {
+  "n": 142,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurements registered different reports (…) — which one stood before t…"
+ },
+ {
+  "n": 143,
+  "function": "registered_report.report_binding_gap",
+  "cause": "…: its first measurement is missing — the report binding cannot be read"
+ },
+ {
+  "n": 144,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report lacks the result block, handover or progress account it owes"
+ },
+ {
+  "n": 145,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report is not UTF-8"
+ },
+ {
+  "n": 146,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report's blocks do not read"
+ },
+ {
+  "n": 147,
+  "function": "registration_hold.now_hold",
+  "cause": "a field LAB-003 names changed after the first measurement"
+ },
+ {
+  "n": 148,
+  "function": "registration_hold.now_hold",
+  "cause": "the registered comparison `[reference]` changed"
+ },
+ {
+  "n": 149,
+  "function": "registration_hold.now_hold",
+  "cause": "`kind` or `[kept]` changed"
+ },
+ {
+  "n": 150,
+  "function": "registration_hold.registration_changes",
+  "cause": "ids, keys, sentences or constants changed after the first measurement"
+ },
+ {
+  "n": 151,
+  "function": "registration_hold.registration_changes",
+  "cause": "a promise's declared scope changed"
+ },
+ {
+  "n": 152,
+  "function": "registration_hold.registration_changes",
+  "cause": "the first measurements recorded different registrations: … — which one stood before the…"
+ },
+ {
+  "n": 153,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: a registered output of the run is gone"
+ },
+ {
+  "n": 154,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: a `fixed` finding names a place that begins several fields"
+ },
+ {
+  "n": 155,
+  "function": "registration_hold.seen_hold",
+  "cause": "a field LAB-003 names changed after the first measurement"
+ },
+ {
+  "n": 156,
+  "function": "registration_hold.seen_hold",
+  "cause": "the registered comparison `[reference]` changed"
+ },
+ {
+  "n": 157,
+  "function": "registration_hold.seen_hold",
+  "cause": "`kind` or `[kept]` changed"
+ },
+ {
+  "n": 158,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded no commit"
+ },
+ {
+  "n": 159,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run recorded a promise block its commit and patch do not give"
+ },
+ {
+  "n": 160,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run's commit is not in this clone, or git cannot read its tree or the protocol's blob"
+ },
+ {
+  "n": 161,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: the run started with the protocol untracked"
+ },
+ {
+  "n": 162,
+  "function": "report_blocks.block_gaps",
+  "cause": "a result block names no protocol of the repo, or one that adopted no result"
+ },
+ {
+  "n": 163,
+  "function": "report_blocks.block_gaps",
+  "cause": "the block's protocol head does not read"
+ },
+ {
+  "n": 164,
+  "function": "report_blocks.block_gaps",
+  "cause": "…: the protocol has adopted run … now"
+ },
+ {
+  "n": 165,
+  "function": "report_blocks.block_gaps",
+  "cause": "… differs from the protocol's rendering"
+ },
+ {
+  "n": 166,
+  "function": "report_blocks.cited_gaps",
+  "cause": "a run cited in a structured place is not held by the repo"
+ },
+ {
+  "n": 167,
+  "function": "report_blocks.cited_gaps",
+  "cause": "a run id in running prose is not held by the repo"
+ },
+ {
+  "n": 168,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "… repeats the block at line … — one block per protocol and run"
+ },
+ {
+  "n": 169,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "a discussion block has no why"
+ },
+ {
+  "n": 170,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "…: its line differs from its head"
+ },
+ {
+  "n": 171,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…"
+ },
+ {
+  "n": 172,
+  "function": "report_check._registration_at",
+  "cause": "… (……) recorded a commit this repository does not hold (a rewritten history, a shal…"
+ },
+ {
+  "n": 173,
+  "function": "report_check._registration_at",
+  "cause": "… at … (……) cannot be read: … — the registration that stood before the number c…"
+ },
+ {
+  "n": 174,
+  "function": "report_check._registration_at",
+  "cause": "… was not committed at … (……) — nothing stood before the number; the registration…"
+ },
+ {
+  "n": 175,
+  "function": "report_check._registration_at",
+  "cause": "the registration as committed at … (……) lacks … — the registration is what the co…"
+ },
+ {
+  "n": 176,
+  "function": "report_check._registration_at",
+  "cause": "… recorded no commit (……) — the registration cannot be held to what stood before th…"
+ },
+ {
+  "n": 177,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is"
+ },
+ {
+  "n": 178,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no answering run to hold it to — …"
+ },
+ {
+  "n": 179,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is now, and none can run — …"
+ },
+ {
+  "n": 180,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the run: a registered output of the run is gone"
+ },
+ {
+  "n": 181,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: a file is missing or its access refused"
+ },
+ {
+  "n": 182,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: there is nothing to stamp"
+ },
+ {
+  "n": 183,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: a findings file does not read"
+ },
+ {
+  "n": 184,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the area: the promise block does not read"
+ },
+ {
+  "n": 185,
+  "function": "report_check.cut_off_adoption_gaps",
+  "cause": "…: an adoption was cut off during its check — the protocol may hold a proposal no check…"
+ },
+ {
+  "n": 186,
+  "function": "report_check.declaration_gaps",
+  "cause": "the `[result]` table does not read"
+ },
+ {
+  "n": 187,
+  "function": "report_check.freeze_gaps",
+  "cause": "a must field is absent, or a head key is a placeholder"
+ },
+ {
+  "n": 188,
+  "function": "report_check.freeze_gaps",
+  "cause": "`[model]` claims on a kind that has none (`kind_gap`)"
+ },
+ {
+  "n": 189,
+  "function": "report_check.freeze_gaps",
+  "cause": "`[reference]` on a kind a criterion judges"
+ },
+ {
+  "n": 190,
+  "function": "report_check.freeze_gaps",
+  "cause": "`frozen = true` at `repeat_cost = \"low\"`"
+ },
+ {
+  "n": 191,
+  "function": "report_check.freeze_gaps",
+  "cause": "frozen without the preflight record named"
+ },
+ {
+  "n": 192,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables break a form LAB-004 states (the causes of `code_check.promise_block_findings`, first row)"
+ },
+ {
+  "n": 193,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables do not have the form a reader needs"
+ },
+ {
+  "n": 194,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables have a form no rule states (a doubled id, an empty scope list)"
+ },
+ {
+  "n": 195,
+  "function": "report_check.freeze_gaps",
+  "cause": "the `[[promise]]` tables are owed and missing"
+ },
+ {
+  "n": 196,
+  "function": "report_check.freeze_gaps",
+  "cause": "…: line …: … still a placeholder"
+ },
+ {
+  "n": 197,
+  "function": "report_check.freeze_gaps",
+  "cause": "…: not `frozen = true` — a reported number owes the freeze"
+ },
+ {
+  "n": 198,
+  "function": "report_check.recomputation_findings",
+  "cause": "… (LAB-041 Generate numbers, don't retype them)"
+ },
+ {
+  "n": 199,
+  "function": "report_check.recomputation_findings",
+  "cause": "… — no result, the numbers are not held to the run"
+ },
+ {
+  "n": 200,
+  "function": "report_check.registration_gaps",
+  "cause": "not a git repository — the registration cannot be held to the commit of the first measure…"
+ },
+ {
+  "n": 201,
+  "function": "report_check.repeated_gaps",
+  "cause": "a bound field is written twice"
+ },
+ {
+  "n": 202,
+  "function": "report_check.unreportable_gaps",
+  "cause": "the answering run is no measurement"
+ },
+ {
+  "n": 203,
+  "function": "report_check.unreportable_gaps",
+  "cause": "a full run acknowledged over an unfrozen protocol"
+ },
+ {
+  "n": 204,
+  "function": "report_check.unreportable_gaps",
+  "cause": "…: no config.json in this file state — the run's record cannot be checked"
+ },
+ {
+  "n": 205,
+  "function": "report_decisions.check_carried_closings_upheld",
+  "cause": "audit … #…: a carried finding (from …) `…` — the follow-up did not find the fault…"
+ },
+ {
+  "n": 206,
+  "function": "report_decisions.check_contested_closings_upheld",
+  "cause": "audit … #…: `…` on a … a review said … on (…) — closing a finding a reviewer …"
+ },
+ {
+  "n": 207,
+  "function": "report_decisions.check_decision_reviews_read",
+  "cause": "a review nobody can read: …"
+ },
+ {
+  "n": 208,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: decided `fixed` in the state audited — no follow-up has seen the repair"
+ },
+ {
+  "n": 209,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: the follow-up of this state said …"
+ },
+ {
+  "n": 210,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: no follow-up, and the run lacks the required check"
+ },
+ {
+  "n": 211,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: followed up in a record that no longer covers this state"
+ },
+ {
+  "n": 212,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: decided, never followed up"
+ },
+ {
+  "n": 213,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: the follow-up judged another decision — it changed since"
+ },
+ {
+  "n": 214,
+  "function": "report_decisions.check_earlier_blockers_released",
+  "cause": "audit …: `resolved`, but the required check was not in the run shown"
+ },
+ {
+  "n": 215,
+  "function": "report_decisions.check_first_dismissals_upheld",
+  "cause": "audit … #…: `false-positive` on a BLOCKER … — a blocking finding is not released by…"
+ },
+ {
+  "n": 216,
+  "function": "report_decisions.check_limit_effects_decided",
+  "cause": "…: a BLOCKER decided limitation owes its effect on the verdicts"
+ },
+ {
+  "n": 217,
+  "function": "report_decisions.check_repaired_claims_upheld",
+  "cause": "audit … #…: `fixed` on a BLOCKER on the Conclusion … — no follow-up audit is shown …"
+ },
+ {
+  "n": 218,
+  "function": "report_decisions.check_stands_upheld",
+  "cause": "…: `stands` on a … decided limitation … — no decision review upholds that the repor…"
+ },
+ {
+  "n": 219,
+  "function": "report_decisions.followup_findings",
+  "cause": "the carried findings of … do not form a chain: …"
+ },
+ {
+  "n": 220,
+  "function": "report_hold.discussion_sources",
+  "cause": "… names …, and there is no such protocol"
+ },
+ {
+  "n": 221,
+  "function": "report_hold.discussion_sources",
+  "cause": "…: …'s area has no runs/…/ — a discussion names a run of its protocol's area"
+ },
+ {
+  "n": 222,
+  "function": "report_hold.hold_report",
+  "cause": "a report of a replacing protocol does not name what it replaces"
+ },
+ {
+  "n": 223,
+  "function": "report_hold.hold_report",
+  "cause": "a discussion head lacks protocol, run or why"
+ },
+ {
+  "n": 224,
+  "function": "report_hold.hold_report",
+  "cause": "a block of the report does not read"
+ },
+ {
+  "n": 225,
+  "function": "report_hold.link_gap",
+  "cause": "…: a symbolic link to … — a report is held as a file at its own path, never through a…"
+ },
+ {
+  "n": 226,
+  "function": "report_hold.owed_blocks",
+  "cause": "line …: cites run …, the adopted result of …, without its generated block — the num…"
+ },
+ {
+  "n": 227,
+  "function": "report_hold.report_hints",
+  "cause": "…: no assigned source found for the numbers on … line(s) — they stand outside every g…"
+ },
+ {
+  "n": 228,
+  "function": "report_hold.report_hints",
+  "cause": "…: numbers on … line(s) beside a discussed run — a discussed run's number in a report…"
+ },
+ {
+  "n": 229,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: an audit record or a report review record does not read"
+ },
+ {
+  "n": 230,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: the protocol's head does not read"
+ },
+ {
+  "n": 231,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: git fails"
+ },
+ {
+  "n": 232,
+  "function": "report_hold.review_gap",
+  "cause": "its report review cannot be told: the report discusses a run the area does not hold"
+ },
+ {
+  "n": 233,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state (one naming no claim)… — a cold r…"
+ },
+ {
+  "n": 234,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state — and none can run: …"
+ },
+ {
+  "n": 235,
+  "function": "report_hold.review_hold",
+  "cause": "…: the report review holds this state (…) — …"
+ },
+ {
+  "n": 236,
+  "function": "report_hold.staged_area_gap",
+  "cause": "…: the working tree differs from the index (…) — … the tree, the commit holds the i…"
+ },
+ {
+  "n": 237,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which has adopted no result"
+ },
+ {
+  "n": 238,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, which no protocol has adopted as its result — a reported number is adopte…"
+ },
+ {
+  "n": 239,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: line …: run … is discussed as not reported, but … has adopted it as its result"
+ },
+ {
+  "n": 240,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which adopts it in the working tree but not in …"
+ },
+ {
+  "n": 241,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites …, the answering run of …, which has adopted no result — and neither its a…"
+ },
+ {
+  "n": 242,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites a run of a protocol whose head does not read — …"
+ },
+ {
+  "n": 243,
+  "function": "report_replacement._predecessor",
+  "cause": "[replaces] protocol is its own id"
+ },
+ {
+  "n": 244,
+  "function": "report_replacement._predecessor",
+  "cause": "`[replaces]` names no protocol of the repo"
+ },
+ {
+  "n": 245,
+  "function": "report_replacement._predecessor",
+  "cause": "`[replaces]` names an id several protocols carry"
+ },
+ {
+  "n": 246,
+  "function": "report_replacement._predecessor",
+  "cause": "the replacements run in a circle (…)"
+ },
+ {
+  "n": 247,
+  "function": "report_replacement._predecessor_open",
+  "cause": "its predecessor's BLOCKER is still open — …"
+ },
+ {
+  "n": 248,
+  "function": "report_replacement._predecessor_open",
+  "cause": "the predecessor's audit records do not read: …"
+ },
+ {
+  "n": 249,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "changed against … (…) and not declared: … … → …"
+ },
+ {
+  "n": 250,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "declares a change the registrations do not show: … … → … (the predecessor …, this…"
+ },
+ {
+  "n": 251,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "the registrations cannot be compared: a protocol as its first measurement saw it cannot be read back (the whys of `registration_hold.unread_hold`)"
+ },
+ {
+  "n": 252,
+  "function": "report_replacement._undeclared_changes",
+  "cause": "the registrations cannot be compared: the protocol's own first measurements saw different registrations"
+ },
+ {
+  "n": 253,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "…: [protocol] type = \"…\" — a protocol that replaces another answers a new, post-hoc q…"
+ },
+ {
+  "n": 254,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "a `[[replaces.change]]` states no why"
+ },
+ {
+  "n": 255,
+  "function": "report_replacement.replacement_gaps",
+  "cause": "`[replaces]` does not read"
+ },
+ {
+  "n": 256,
+  "function": "result_render.render_gaps",
+  "cause": "the Recorded results line is not written"
+ },
+ {
+  "n": 257,
+  "function": "result_render.render_gaps",
+  "cause": "the Recorded results line differs from its rendering (the run's metrics.json and the reco…"
+ },
+ {
+  "n": 258,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" is written … times — one generated line per label"
+ },
+ {
+  "n": 259,
+  "function": "result_render.render_gaps",
+  "cause": "no \"…\" line — the limit's line belongs in the protocol"
+ },
+ {
+  "n": 260,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" names a limit no covering record decides — written by hand or from an older record"
+ },
+ {
+  "n": 261,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" differs from the record"
+ },
+ {
+  "n": 262,
+  "function": "run_record_check._continued_with_other_code",
+  "cause": "…: … row(s) come from …, which ran other code (script …, this run's …) — …'s …"
+ },
+ {
+  "n": 263,
+  "function": "run_record_check._criterion_n_warning",
+  "cause": "a criterion's denominator matches no recorded input count"
+ },
+ {
+  "n": 264,
+  "function": "run_record_check._gone",
+  "cause": "… is not at its recorded path on this machine — deleted, moved or held elsewhere; the r…"
+ },
+ {
+  "n": 265,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the run recorded no commit, so the helpers its script imports cannot be compared"
+ },
+ {
+  "n": 266,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the area lies in no git repository now, so the helpers cannot be compared"
+ },
+ {
+  "n": 267,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… started at commit …, which this clone does not hold"
+ },
+ {
+  "n": 268,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… is in neither …'s commit nor its uncommitted.patch, so it cannot be compared with w…"
+ },
+ {
+  "n": 269,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… recorded no commit, or the area lies in no git repository now, so the helpers its scr…"
+ },
+ {
+  "n": 270,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the tree … started from cannot be read for …: …"
+ },
+ {
+  "n": 271,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… changed since … ran it (it was untracked; the run kept it as …)"
+ },
+ {
+  "n": 272,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… changed since … ran"
+ },
+ {
+  "n": 273,
+  "function": "run_record_check._recorded_sources",
+  "cause": "source not frozen — the run carries no `data=`"
+ },
+ {
+  "n": 274,
+  "function": "run_record_check._recorded_sources",
+  "cause": "the run's `data=` record does not read"
+ },
+ {
+  "n": 275,
+  "function": "run_record_check._run_code",
+  "cause": "… recorded no script — the code behind its number cannot be compared"
+ },
+ {
+  "n": 276,
+  "function": "run_record_check._run_code",
+  "cause": "the script the run recorded cannot be told"
+ },
+ {
+  "n": 277,
+  "function": "run_record_check._run_code",
+  "cause": "… changed since … ran it — its number came from other code"
+ },
+ {
+  "n": 278,
+  "function": "run_record_check._run_code",
+  "cause": "the code … ran cannot be read now: …"
+ },
+ {
+  "n": 279,
+  "function": "run_record_check._untracked_source",
+  "cause": "… — whether it belongs to the project is left open"
+ },
+ {
+  "n": 280,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names …, no such file under …"
+ },
+ {
+  "n": 281,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names fingerprint …, the answering run recorded no such value —…"
+ },
+ {
+  "n": 282,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names alias …, the answering run recorded no such alias"
+ },
+ {
+  "n": 283,
+  "function": "run_record_check.code_since_run",
+  "cause": "…: its runs cannot be followed (…)"
+ },
+ {
+  "n": 284,
+  "function": "run_record_check.kept_number_gaps",
+  "cause": "the kept number: metrics.json of … … — the head's [kept] names `…` as the number th…"
+ },
+ {
+  "n": 285,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "… called a model, but no run in its lineage recorded models_resolved — record the alias…"
+ },
+ {
+  "n": 286,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "model provenance: the lineage of … is broken — …"
+ },
+ {
+  "n": 287,
+  "function": "run_record_check.null_lane_findings",
+  "cause": "…: the null lane's answer and gold equal the registered lane's on every item — if the n…"
+ },
+ {
+  "n": 288,
+  "function": "run_record_check.output_record_findings",
+  "cause": "…: not the file run … recorded — …"
+ },
+ {
+  "n": 289,
+  "function": "run_record_check.provenance_findings",
+  "cause": "no outputs.json — the run registered no output file (run.output)"
+ },
+ {
+  "n": 290,
+  "function": "run_record_check.provenance_findings",
+  "cause": "not a git repository — cannot tell whether source and output are committed"
+ },
+ {
+  "n": 291,
+  "function": "run_record_check.provenance_findings",
+  "cause": "output … is not yet tracked — `git add …` before the commit that cites the number"
+ },
+ {
+  "n": 292,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "…: … row(s) from … — a run this run neither is, continues nor derives from; a file …"
+ },
+ {
+  "n": 293,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "row provenance: the lineage of … is broken — …"
+ },
+ {
+  "n": 294,
+  "function": "run_record_check.row_provenance_findings",
+  "cause": "an output's rows do not say which run wrote them"
+ },
+ {
+  "n": 295,
+  "function": "run_record_check.single_draw",
+  "cause": "… is one draw — no spread: `scripts/01_measure.py --repeat-of …` draws it again, 02_…"
+ },
+ {
+  "n": 296,
+  "function": "run_record_check.single_draw",
+  "cause": "the draws of … cannot be counted: …"
+ },
+ {
+  "n": 297,
+  "function": "run_record_check.source_finding",
+  "cause": "source … is not the bytes the run read: …, the run recorded sha256 …"
+ }
+]

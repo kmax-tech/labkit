@@ -1,0 +1,751 @@
+[
+ {
+  "n": 185,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the file state checked is not the adoption's proposal"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "rule 4: fires because a file is there; the state it records is an adoption that did not end — no value names it",
+  "tested_at": "labkit/formats/area_state.py:368",
+  "told_at": "labkit/gates/report_check.py:658",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The file an adoption keeps beside the protocol while its proposal is unchecked (.<protocol>.before-adoption) exists, and the text checked is not the proposal itself."
+ },
+ {
+  "n": 186,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's TOML block parsed (an unreadable head ends the check before)"
+  ],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "readability of the protocol, if 'the table does not read' is taken as one condition under rule 1",
+  "tested_at": "labkit/formats/protocol_block.py:756",
+  "told_at": "labkit/gates/report_check.py:675",
+  "bundled": [
+   "`result` is not a table (form)",
+   "a key other than `run` (form)",
+   "`run` missing (completeness)",
+   "`run` not in the shape of a run id (form)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_block.declared_run raises BlockError on the `[result]` table (report_context.py:127 keeps the sentence)."
+ },
+ {
+  "n": 187,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1161",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [
+   "owed must field absent from the text (protocol_check.py:1161)",
+   "head key still a placeholder (protocol_check.py:1166)"
+  ],
+  "check_limit": false,
+  "condition": "A field the protocol owes as a must is not among the field labels of the text, or a key of the `[protocol]` head still holds its placeholder."
+ },
+ {
+  "n": 188,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "inner consistency (yes), if the row means only the first test: claim keys in `[model]` on a kind other than compute",
+  "tested_at": "labkit/formats/protocol_check.py:880",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [
+   "claim keys in `[model]` with kind fit/apply (inner consistency)",
+   "kind compute with `[model]` and no `number_describes` (completeness)",
+   "`number_describes = target_property` without `annotation_validity` (completeness)",
+   "`annotation_validity` with `number_describes = model_outputs` (inner consistency)"
+  ],
+  "check_limit": false,
+  "condition": "protocol_check._kind_gap: the head's `kind` against the keys of its `[model]` table, four tests with one telling site."
+ },
+ {
+  "n": 189,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1034",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The TOML block holds a `[reference]` table while the head's `kind` is one with a bar (fit, apply); the table's content is not read."
+ },
+ {
+  "n": 190,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "inner consistency",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1098",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head says `frozen = true` and its `repeat_cost` is of a lane in which nothing freezes."
+ },
+ {
+  "n": 191,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:1107",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head says `frozen = true` and its `preflight_audit` key is absent or empty."
+ },
+ {
+  "n": 192,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:451",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [
+   "a table lacks id, key, sentence or scope (completeness)",
+   "id not criterion-/quality-check-/branch-<n> (form)",
+   "key outside the id's namespace (inner consistency or form)",
+   "sentence empty (completeness)",
+   "a branch outcome empty, without exactly one arrow, or without a condition (form)",
+   "a branch outcome names no consequence (completeness)",
+   "constant name not snake_case (form)",
+   "a constant declared in two promises (uniqueness)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises a PromiseError whose rule is LAB-004; protocol_check.py:1126 passes the sentence and the rule on."
+ },
+ {
+  "n": 193,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:422",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [
+   "the TOML block does not parse (readability)",
+   "`promise` is not an array of tables, or an entry is not a table (form)",
+   "an unknown field in a table (form)",
+   "an absolute scope path (form)",
+   "`constants` not a table, or a constant not a scalar (form)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises a PromiseError whose rule is the technical contract; protocol_check.py:1126 passes it on."
+ },
+ {
+  "n": 194,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:466",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [
+   "an id written in two tables (uniqueness)",
+   "`scope` not a list, empty, or with an empty entry (form or completeness)",
+   "an outcome name used by two outcomes of a branch (uniqueness)",
+   "a branch with one outcome only (completeness or form)",
+   "`otherwise` not on the last outcome (form)",
+   "an outcome name not lowercase letters, digits, hyphens (form)"
+  ],
+  "check_limit": false,
+  "condition": "promises.parse_block raises a PromiseError whose rule is the open rule; protocol_check.py:1126 passes it on."
+ },
+ {
+  "n": 195,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/promises.py:735",
+  "told_at": "labkit/gates/report_check.py:281",
+  "bundled": [
+   "no `[[promise]]` table where owed (promises.py:735-741)",
+   "a table whose sentence is still the stamp's placeholder (promises.py:723-734)"
+  ],
+  "check_limit": false,
+  "condition": "The protocol is frozen (or a full run is held to the registration), registers promises by its kind or prose, and its block holds no `[[promise]]` table; with tables, a sentence still the stamp's placeholder."
+ },
+ {
+  "n": 196,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:957",
+  "told_at": "labkit/gates/report_check.py:287",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A field the protocol owes as a must now is there and its value is still the `<…>` placeholder (must_and_soft_holes, protocol_check.py:970)."
+ },
+ {
+  "n": 197,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the head's repeat_cost is of a lane that owes the freeze (report_check.py:850)"
+  ],
+  "property": "completeness",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "no value: the flag records a state (frozen or not) and the condition reads that state, not a missing part",
+  "tested_at": "labkit/gates/report_check.py:266",
+  "told_at": "labkit/gates/report_check.py:268",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The head's `frozen` is not true, in a lane whose repeat cost owes the freeze."
+ },
+ {
+  "n": 198,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "",
+  "fits": "bundle",
+  "unsure": true,
+  "alternative": "result of an executed area check for both, if 'did a check of the area run' takes the missing script",
+  "tested_at": "labkit/gates/report_check.py:252",
+  "told_at": "labkit/gates/report_check.py:766",
+  "bundled": [
+   "the analysis script is not among the area's files (report_check.py:231; completeness of the area checks)",
+   "the script's `--check` exits nonzero (report_check.py:252; result of an executed area check)"
+  ],
+  "check_limit": false,
+  "condition": "check_analysis_script returns a sentence: the area holds no analysis check script, or its `--check` run exits nonzero."
+ },
+ {
+  "n": 199,
+  "objects": [
+   {
+    "object": "area checks",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "result of an executed area check",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "check_limit false: 'did the check run and what did it return' already names a run without a result",
+  "tested_at": "labkit/gates/report_check.py:248",
+  "told_at": "labkit/gates/report_check.py:756",
+  "bundled": [],
+  "check_limit": true,
+  "condition": "The analysis script's `--check` did not end within the gate's time limit of 300 s: no exit code was read."
+ },
+ {
+  "n": 200,
+  "objects": [
+   {
+    "object": "repository and working state",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the protocol's head carries a stamped id",
+   "the area holds a first measurement of that id"
+  ],
+  "property": "readability",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "the prevented check (completeness of the protocol as the first measurement's commit holds it) with check_limit; the repository is absent, not unreadable, so rule 1 and rule 7 both fit only loosely",
+  "tested_at": "labkit/gates/report_check.py:336",
+  "told_at": "labkit/gates/report_check.py:338",
+  "bundled": [],
+  "check_limit": true,
+  "condition": "git_root of the protocol is None: the protocol stands in no git repository, so the registration at the first measurement's commit is not looked up."
+ },
+ {
+  "n": 201,
+  "objects": [
+   {
+    "object": "protocol",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [],
+  "property": "uniqueness",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/protocol_check.py:233",
+  "told_at": "labkit/gates/report_check.py:302",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "One of the bound field labels opens more than one field line of the protocol text; the copies' values are not compared."
+ },
+ {
+  "n": 202,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run was chosen for the protocol",
+   "its config.json reads"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": true,
+  "alternative": "binding (the protocol's answering run is not of the kind the place takes) — but no reference is followed here; the condition reads which kind of run the record says it is",
+  "tested_at": "labkit/formats/runs.py:779",
+  "told_at": "labkit/gates/report_check.py:523",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's config records a run_kind other than `measurement`."
+ },
+ {
+  "n": 203,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run was chosen for the protocol",
+   "its config.json reads"
+  ],
+  "property": "",
+  "fits": "no",
+  "unsure": false,
+  "alternative": "rule 4: fires because a mark is there; the state it records (started while the protocol was not frozen) has no value — no time or order is read, the protocol is not read",
+  "tested_at": "labkit/formats/runs.py:786",
+  "told_at": "labkit/gates/report_check.py:523",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's config carries the mark `unfrozen_ack`: the run was started over an unfrozen protocol on acknowledgement."
+ },
+ {
+  "n": 204,
+  "objects": [
+   {
+    "object": "run record",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "an answering run was chosen for the protocol"
+  ],
+  "property": "completeness",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "readability of the run record (the message: its record cannot be checked)",
+  "tested_at": "labkit/formats/runs.py:312",
+  "told_at": "labkit/gates/report_check.py:511",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "The answering run's directory holds no file config.json."
+ },
+ {
+  "n": 205,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:427",
+  "told_at": "labkit/gates/report_decisions.py:416",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A finding of a covering analysis record carries an earlier finding and is decided `false-positive`, and no decision review of that record (same code and run shown) judged this decision as it stands under the Conclusion the protocol holds now with every draw `upheld` and at least one draw not `--again` (reviews.py:350)."
+ },
+ {
+  "n": 206,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/gates/report_decisions.py:281",
+  "told_at": "labkit/gates/report_decisions.py:284",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A finding of a covering analysis record is decided `false-positive` or `fixed`, a review of that record once gave a verdict other than `upheld` on it, and no review upholds the decision as it stands under the claim the protocol makes now."
+ },
+ {
+  "n": 207,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "tested",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before (the station returns before this check without them)"
+  ],
+  "property": "readability",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/evidence.py:743",
+  "told_at": "labkit/gates/report_decisions.py:216",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Reading the area's decision review files raised ReviewError: a review file does not read."
+ },
+ {
+  "n": 208,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "no value: the condition reads one decision's status in a record that covers; no second record and no state is compared",
+  "tested_at": "labkit/formats/followup.py:296",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A BLOCKER that heads its chain stands in a covering analysis record with status `fixed` and its place is not the protocol's Conclusion."
+ },
+ {
+  "n": 209,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/followup.py:330",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "For an earlier decided BLOCKER outside the cover, a covering record holds a follow-up verdict other than `resolved` on a finding of the same origin."
+ },
+ {
+  "n": 210,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "weak",
+  "unsure": true,
+  "alternative": "binding: the finding's `check` (audit record, holds the reference) names a key the run record (referred to) does not hold; the row is a conjunction of both",
+  "tested_at": "labkit/formats/followup.py:343",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No covering record holds a follow-up verdict on the earlier decided BLOCKER, and the check key the finding requires is not among the answering run's metrics and shown files (or neither reads)."
+ },
+ {
+  "n": 211,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "covering record",
+    "version": "as it stands"
+   },
+   {
+    "object": "area code",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "protocol",
+    "role": "state covered",
+    "version": "as it stands"
+   },
+   {
+    "object": "run record",
+    "role": "state covered",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "the finding requires no check, or the run's evidence holds it"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/followup.py:349",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No covering record holds a follow-up verdict on the earlier decided BLOCKER, and a record outside the cover does."
+ },
+ {
+  "n": 212,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before",
+   "the finding requires no check, or the run's evidence holds it"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/followup.py:357",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "No record, covering or not, holds a follow-up verdict on the earlier decided BLOCKER."
+ },
+ {
+  "n": 213,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": true,
+  "alternative": "agreement: the decision digest the follow-up recorded against the decision as it stands",
+  "tested_at": "labkit/formats/followup.py:358",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "Covering records hold follow-up verdicts on the earlier decided BLOCKER, and none carries the digest of the decision as it stands now."
+ },
+ {
+  "n": 214,
+  "objects": [
+   {
+    "object": "audit and review records",
+    "role": "decision",
+    "version": "as it stands"
+   },
+   {
+    "object": "audit and review records",
+    "role": "confirmation",
+    "version": "as it stands"
+   }
+  ],
+  "preconditions": [
+   "which analysis records cover the area code, the promise block, the registration and the answering run as they are now (audit_binding.covering_analysis), computed before"
+  ],
+  "property": "audit coverage",
+  "fits": "yes",
+  "unsure": false,
+  "alternative": "",
+  "tested_at": "labkit/formats/followup.py:364",
+  "told_at": "labkit/gates/report_decisions.py:393",
+  "bundled": [],
+  "check_limit": false,
+  "condition": "A valid `resolved` stands on the earlier decided BLOCKER, the finding requires a check, and a valid verdict names another check or records it as not present in the run it was shown; the run itself is not read."
+ }
+]
