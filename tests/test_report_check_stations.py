@@ -116,3 +116,49 @@ class AReportedNumberOwesTheFreeze(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheDecisionStationsLeaveUnreadableCoverageToTheAuditGap(unittest.TestCase):
+    """The three decision stations (`report_decisions.limit_gaps`,
+    `review_findings`, `followup_findings`) give [] when the analysis
+    coverage cannot be read — their docstrings name `analysis_audit_gap` as
+    the station that tells it. That dependency is documented, not enforced
+    by an interface; this test holds it: on one area whose coverage does
+    not read, the three are silent and the audit gap is the blocker, so
+    their silence releases nothing."""
+
+    RUN_ID = "2026-11-10T10-00-00_ab12"
+    RESULT = head(repeat_cost="low", result=RUN_ID)
+
+    def _ctx(self, area: Path):
+        run = area / "runs" / self.RUN_ID
+        run.mkdir(parents=True)
+        (area / "audits").mkdir()
+        (area / "audits" / "2026-11-12T10-00-analysis.toml").write_text(
+            "no = [toml\n", encoding="utf-8"
+        )
+        return checked(self.RESULT, run=run, area=area)
+
+    def test_the_stations_are_silent_and_the_audit_gap_blocks(self):
+        from labkit.gates import report_decisions
+
+        with tempfile.TemporaryDirectory() as d:
+            ctx = self._ctx(Path(d))
+            self.assertEqual(report_decisions.limit_gaps(ctx), [])
+            self.assertEqual(report_decisions.review_findings(ctx), [])
+            self.assertEqual(report_decisions.followup_findings(ctx), [])
+            gap = report_check.analysis_audit_gap(ctx)
+        assert gap is not None
+        self.assertEqual(gap.grade, BLOCKER)
+        self.assertIn("the analysis audit cannot be held to", gap.text)
+
+    def test_the_twin_without_a_run_the_gap_names_the_measurement(self):
+        """No run, nothing to cover: the stations are silent for that reason,
+        and the gap names the missing measurement, not an unreadable area."""
+        from labkit.gates import report_decisions
+
+        ctx = checked(self.RESULT, run=None, why="nothing measured")
+        self.assertEqual(report_decisions.followup_findings(ctx), [])
+        gap = report_check.analysis_audit_gap(ctx)
+        assert gap is not None
+        self.assertNotIn("cannot be held to", gap.text)
