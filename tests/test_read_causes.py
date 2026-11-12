@@ -15,6 +15,8 @@ from labkit.gates import finalize, preflight
 from labkit.checks import notes_check
 from labkit.formats import evidence
 
+from gate_fixture import EVERY_RULE
+
 #: a permission refused is no refusal for root, so those cases skip there
 AS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0
 
@@ -128,7 +130,7 @@ class Outcome(unittest.TestCase):
     about its check follows from the evidence kind and the rule assignment;
     only a check not executed is said by the site."""
 
-    def warned(self, evidence_kind: str, rule: gate.RuleAssignment | None) -> str:
+    def warned(self, evidence_kind: str, rule: gate.RuleAssignment) -> str:
         return gate.GateFinding(
             gate.WARNING, "x", rule=rule, evidence_kind=evidence_kind
         ).outcome
@@ -145,11 +147,11 @@ class Outcome(unittest.TestCase):
         )
 
     def test_an_exact_check_on_an_unsettled_basis_is_a_deviation(self) -> None:
-        """An open assignment, a new class and a site without an assignment
-        name no decided basis: none of them is told as a violation, and the
-        line says so. It blocks as before."""
-        for rule in (gate.OPEN_RULE, gate.NEW_CLASS_RULE, None):
-            with self.subTest(rule=rule):
+        """An open assignment and a new class name no decided basis: neither
+        is told as a violation, and the line says so. It blocks as
+        before."""
+        for rule in (gate.OPEN_RULE, gate.NEW_CLASS_RULE):
+            with self.subTest(rule=rule.kind):
                 f = gate.blocker("x", fix="y", rule=rule)
                 self.assertEqual(f.outcome, gate.DEVIATION)
                 self.assertEqual(f.grade, gate.BLOCKER)
@@ -215,19 +217,23 @@ class Outcome(unittest.TestCase):
     def test_a_static_check_not_executed_names_the_kind_beside_the_mark(
         self,
     ) -> None:
-        f = gate.coded(
-            gate.WARNING,
-            "a.py:1",
-            "x",
-            evidence_kind=gate.STATIC_EVIDENCE,
-            stated_outcome=gate.NOT_EXECUTABLE,
-        )
-        self.assertEqual(
-            f.line, "WARNING · static evidence · check not executable · a.py:1 · x"
-        )
+        for rule in EVERY_RULE:
+            with self.subTest(rule=rule.kind):
+                f = gate.coded(
+                    gate.WARNING,
+                    "a.py:1",
+                    "x",
+                    evidence_kind=gate.STATIC_EVIDENCE,
+                    stated_outcome=gate.NOT_EXECUTABLE,
+                    rule=rule,
+                )
+                told = "WARNING · static evidence · check not executable · a.py:1 · x"
+                self.assertEqual(
+                    f.line, " · ".join(p for p in (told, rule.line_part) if p)
+                )
 
     def test_static_evidence_is_a_suspicion_whatever_its_basis(self) -> None:
-        for rule in (LAB_003, gate.TECHNICAL_RULE, gate.OPEN_RULE, None):
+        for rule in EVERY_RULE:
             with self.subTest(rule=rule):
                 self.assertEqual(
                     self.warned(gate.STATIC_EVIDENCE, rule), gate.SUSPECTED
@@ -254,7 +260,6 @@ class Outcome(unittest.TestCase):
     ) -> None:
         for kind, rule, stated in (
             (gate.GUARANTEED, gate.OPEN_RULE, gate.VIOLATED),
-            (gate.GUARANTEED, None, gate.VIOLATED),
             (gate.GUARANTEED, LAB_003, gate.DEVIATION),
             (gate.STATIC_EVIDENCE, LAB_003, gate.VIOLATED),
             (gate.GUARANTEED, LAB_003, gate.SUSPECTED),
@@ -315,20 +320,27 @@ class Outcome(unittest.TestCase):
                 )
 
     def test_a_check_not_executed_says_so_in_every_form(self) -> None:
-        f = gate.blocker("x", fix="y", stated_outcome=gate.NOT_EXECUTABLE)
-        self.assertEqual(f.line, "BLOCKER (check not executable): x. Next: y")
-        written = gate.GateFinding(
-            gate.WARNING,
-            "x",
-            gate.AS_WRITTEN,
-            evidence_kind=gate.GUARANTEED,
-            stated_outcome=gate.NOT_EXECUTABLE,
-        )
-        self.assertEqual(written.line, "x (check not executable)")
+        for rule in EVERY_RULE:
+            with self.subTest(rule=rule.kind):
+                f = gate.blocker(
+                    "x", fix="y", stated_outcome=gate.NOT_EXECUTABLE, rule=rule
+                )
+                self.assertEqual(f.line, "BLOCKER (check not executable): x. Next: y")
+                written = gate.GateFinding(
+                    gate.WARNING,
+                    "x",
+                    gate.AS_WRITTEN,
+                    evidence_kind=gate.GUARANTEED,
+                    stated_outcome=gate.NOT_EXECUTABLE,
+                    rule=rule,
+                )
+                self.assertEqual(written.line, "x (check not executable)")
 
     def test_an_unknown_outcome_is_refused(self) -> None:
-        with self.assertRaisesRegex(ValueError, "outcome"):
-            gate.blocker("x", fix="y", stated_outcome="skipped")
+        for rule in EVERY_RULE:
+            with self.subTest(rule=rule.kind):
+                with self.assertRaisesRegex(ValueError, "outcome is one of"):
+                    gate.blocker("x", fix="y", stated_outcome="skipped", rule=rule)
 
     def test_only_access_leaves_a_check_not_executed(self) -> None:
         self.assertEqual(

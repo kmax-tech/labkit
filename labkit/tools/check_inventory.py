@@ -139,12 +139,12 @@ class FindingSite:
             (`gate.RuleAssignment`, `_call_assignment`): a rule id
             `LAB-nnn`, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT or NEW_CLASS;
             NOT_RECORDED where the call sets none (every `exit` and
-            `printed` site, and a gate finding the migration has not
-            visited); `variable` where it passes a value the scan cannot
+            `printed` site; a gate finding without one is refused when
+            it is built, `gate.GateFinding.rule`); `variable` where it passes a value the scan cannot
             follow. The rule tables count by it.
         outcome: The check outcome (`site_outcome`): one of
-            `gate.OUTCOMES`, COMPUTED, `variable`, or `none` for an exit
-            or a printed line.
+            `gate.OUTCOMES`, COMPUTED, `variable`, REFUSED, or `none` for
+            an exit or a printed line.
     """
 
     unit: str
@@ -162,6 +162,9 @@ class FindingSite:
 
 #: a site that records no rule assignment as data
 NOT_RECORDED = "not recorded"
+#: the outcome of a gate finding whose call sets no rule: none, the
+#: constructor refuses the call (`gate.GateFinding.rule`)
+REFUSED = "refused"
 #: the module constants of `gate` that stand for an assignment without a rule
 _RULE_CONSTANTS = {
     "OPEN_RULE": OPEN_ASSIGNMENT,
@@ -419,15 +422,12 @@ def _call_rules(
 WAY_OUT_WRAPPER = "with_way_out"
 
 
-def _rule_argument(call: ast.Call, ctor: str) -> ast.AST | None:
-    """The expression CALL to the finding constructor CTOR passes as its
-    rule: the `rule=` keyword, or a GateFinding's fifth positional argument
-    (grade, text, form, where, rule)."""
+def _rule_argument(call: ast.Call) -> ast.AST | None:
+    """The expression CALL to a finding constructor passes as its
+    rule: the `rule=` keyword, the only way to pass one."""
     for k in call.keywords:
         if k.arg == "rule":
             return k.value
-    if ctor == "GateFinding" and len(call.args) > 4:
-        return call.args[4]
     return None
 
 
@@ -484,13 +484,14 @@ def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
     2. `stated_outcome=` is anything else but a literal None — a call, a
        local name, an attribute: COMPUTED. The site decides at run time
        whether its check ran; the scan does not follow the expression.
-    3. Nothing stated, static evidence: `suspected`, whatever the rule —
+    3. Nothing stated, no `rule=` (NOT_RECORDED): REFUSED — the
+       constructor does not build the finding, whatever its evidence kind.
+    4. Nothing stated, static evidence: `suspected`, whatever the rule —
        also where the rule is `variable`.
-    4. Nothing stated, an exact check: the outcome `gate.derived_outcome`
+    5. Nothing stated, an exact check: the outcome `gate.derived_outcome`
        gives for the assignment — `violated` for a rule id or a technical
-       contract, `deviation` for an open assignment, a new class and a
-       site without `rule=` (NOT_RECORDED).
-    5. `variable` where 4 cannot be read from the source: the cause passes
+       contract, `deviation` for an open assignment and a new class.
+    6. `variable` where 5 cannot be read from the source: the cause passes
        the rule in (ASSIGNMENT `variable`), or the evidence kind
        (EVIDENCE_KIND `variable`). Unlike COMPUTED, the site states
        nothing; a fixed derivation waits for an input the scan lacks."""
@@ -509,12 +510,13 @@ def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
     if evidence_kind not in _EVIDENCE_CONSTANTS:
         return "variable"
     kind = _EVIDENCE_CONSTANTS[evidence_kind]
+    if assignment == NOT_RECORDED:
+        return REFUSED
     if kind == gate.STATIC_EVIDENCE:
-        return gate.derived_outcome(kind, None)
+        # whatever the rule (`gate.derived_outcome`), also one passed in
+        return gate.SUSPECTED
     if assignment == "variable":
         return "variable"
-    if assignment == NOT_RECORDED:
-        return gate.derived_outcome(kind, None)
     basis = KNOWN_RULE if RULE_ID.fullmatch(assignment) else assignment
     return gate.derived_outcome(kind, basis)
 
@@ -618,7 +620,7 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
                     ctor = _constructor(n)
                     assert ctor is not None, "a finding site is a constructor call"
                     assignment = _call_assignment(
-                        _rule_argument(n, ctor), assigned, constants, m.name, imports
+                        _rule_argument(n), assigned, constants, m.name, imports
                     )
                     outcome = site_outcome(n, evidence_kind, assignment)
                 out.append(
@@ -659,7 +661,7 @@ def _site_rule_names(node: ast.AST, skip: set[int]) -> set[int]:
         if kind is None or kind[0] != "finding" or not isinstance(n, ast.Call):
             continue
         ctor = _constructor(n)
-        expr = _rule_argument(n, ctor) if ctor is not None else None
+        expr = _rule_argument(n) if ctor is not None else None
         while isinstance(expr, ast.Name) and len(assigned.get(expr.id, [])) == 1:
             expr = assigned[expr.id][0]
         if expr is not None and _names_open_rule(expr):
@@ -843,7 +845,7 @@ def render_inventory(
     by_outcome = Counter(s.outcome for s in sites if s.channel == "finding")
     outcomes = ", ".join(
         f"{by_outcome[o]} {o}"
-        for o in (*gate.OUTCOMES, COMPUTED, "variable")
+        for o in (*gate.OUTCOMES, COMPUTED, "variable", REFUSED)
         if by_outcome[o]
     )
     lines = [
@@ -863,7 +865,8 @@ def render_inventory(
         f"(`GateFinding.outcome`): {outcomes or 'none'} — `computed`: the site "
         "states it from an error at run time; `variable`: the site states "
         "nothing and the cause passes in the rule or the evidence kind it "
-        "is derived from. "
+        "is derived from; `refused`: the call sets no rule, and the "
+        "constructor does not build it. "
         "Read from the source, not run: `python -m labkit.tools.check_inventory` "
         "(its docstring says what counts and how far the estimate reaches).",
         "",

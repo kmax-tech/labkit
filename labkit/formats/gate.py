@@ -226,29 +226,28 @@ NEW_CLASS_RULE = RuleAssignment(NEW_CLASS)
 
 
 #: the outcome of an exact check that found its condition, by the kind of
-#: its rule assignment (`derived_outcome`); None is a site that records no
-#: assignment. VIOLATED needs a decided basis; an open assignment may be a
-#: duty not decided or only a rule not yet entered, so DEVIATION claims
-#: neither. A new class and a site without an assignment name no decided
-#: basis either
-_EXACT_OUTCOME_BY_BASIS: dict[str | None, str] = {
+#: its rule assignment (`derived_outcome`). VIOLATED needs a decided basis;
+#: an open assignment may be a duty not decided or only a rule not yet
+#: entered, so DEVIATION claims neither. A new class names no decided basis
+#: either. No assignment is no kind: an open assignment is recorded
+#: (OPEN_RULE), one left out is refused (`GateFinding.rule`)
+_EXACT_OUTCOME_BY_BASIS: dict[str, str] = {
     KNOWN_RULE: VIOLATED,
     TECHNICAL_CONTRACT: VIOLATED,
     OPEN_ASSIGNMENT: DEVIATION,
     NEW_CLASS: DEVIATION,
-    None: DEVIATION,
 }
 
 
-def derived_outcome(evidence_kind: str, basis: str | None) -> str:
+def derived_outcome(evidence_kind: str, basis: str) -> str:
     """The outcome of a check that ran and found its condition, from what
     carries the sentence (EVIDENCE_KIND) and the kind of the finding's rule
-    assignment (BASIS, one of RULE_KINDS, None without an assignment) —
+    assignment (BASIS, one of RULE_KINDS) —
     the one home of the derivation, for a finding and for the inventory
     that reads a site from the source; NOT_EXECUTABLE is never derived, the
     site says it. STATIC_EVIDENCE gives SUSPECTED whatever the basis;
     GUARANTEED gives VIOLATED for a known rule or a technical contract and
-    DEVIATION for an open assignment, a new class and no assignment
+    DEVIATION for an open assignment and a new class
     (`_EXACT_OUTCOME_BY_BASIS`). Raises ValueError for an evidence kind or a
     rule kind it does not name, so a new one is decided here before any
     finding is told as a breach. Pure."""
@@ -287,11 +286,12 @@ class GateFinding:
         form: PREFIXED (`<grade>: <text>`), AS_WRITTEN (the text says its
             grade itself, `DUPLICATE protocol id`), DOTTED (`coded`).
         where: The file or `file:line` the finding points at, when it has one.
-        rule: The rule assignment (`RuleAssignment`). None: the site has not
-            been visited by the migration yet (docs/notes/2026-11-10-test-model.md,
-            step 3), so nothing is recorded; OPEN_RULE: visited, and the
-            rule is recorded as not decided. Neither is told in the line.
-            A plain string is refused.
+        rule: The rule assignment (`RuleAssignment`), keyword, required:
+            a rule of the standard (`cited_rule`), TECHNICAL_RULE, or
+            OPEN_RULE where the rule is recorded as not decided — the
+            site says which, an assignment left out is refused, and so
+            are None and a plain string. An open one is not told in the
+            line as a rule; its outcome is (`outcome_mark`).
         fix: The way out — what closes the finding, a command where one
             exists. Required for a BLOCKER (refused without one), optional
             for a WARNING; told in every form (`line`).
@@ -322,9 +322,9 @@ class GateFinding:
     text: str
     form: str = PREFIXED
     where: str | None = None
-    rule: RuleAssignment | None = None
     fix: str | None = None
     evidence_kind: str = field(kw_only=True)
+    rule: RuleAssignment = field(kw_only=True)
     changed_since: str | None = field(default=None, kw_only=True)
     step: Command | None = field(default=None, kw_only=True)
     withdraw_first: Command | None = field(default=None, kw_only=True)
@@ -335,10 +335,10 @@ class GateFinding:
             raise ValueError(
                 f"a gate finding's grade is BLOCKER or WARNING, not {self.grade!r}"
             )
-        if self.rule is not None and not isinstance(self.rule, RuleAssignment):
+        if not isinstance(self.rule, RuleAssignment):
             raise ValueError(
                 f"a gate finding's rule is a RuleAssignment (`cited_rule`, "
-                f"OPEN_RULE, TECHNICAL_RULE), not {self.rule!r}"
+                f"OPEN_RULE, TECHNICAL_RULE), not {self.rule!r}: {self.text!r}"
             )
         if self.form not in (PREFIXED, AS_WRITTEN, DOTTED):
             raise ValueError(f"a gate finding's form is not {self.form!r}")
@@ -351,7 +351,7 @@ class GateFinding:
             raise ValueError(
                 f"a gate finding's outcome is one of {OUTCOMES}, not {self.stated_outcome!r}"
             )
-        derived = derived_outcome(self.evidence_kind, self._basis)
+        derived = derived_outcome(self.evidence_kind, self.rule.kind)
         if self.stated_outcome not in (None, NOT_EXECUTABLE, derived):
             raise ValueError(
                 f"a gate finding states the outcome {self.stated_outcome!r}, and "
@@ -376,12 +376,7 @@ class GateFinding:
         evidence kind and the rule assignment (`derived_outcome`)."""
         if self.stated_outcome == NOT_EXECUTABLE:
             return NOT_EXECUTABLE
-        return derived_outcome(self.evidence_kind, self._basis)
-
-    @property
-    def _basis(self) -> str | None:
-        """The kind of the rule assignment, None without one."""
-        return self.rule.kind if self.rule is not None else None
+        return derived_outcome(self.evidence_kind, self.rule.kind)
 
     @property
     def way(self) -> str | None:
@@ -418,7 +413,7 @@ class GateFinding:
                 else None
             )
             fix = f"Next: {self.way}" if self.way else None
-            rule = self.rule.line_part if self.rule is not None else None
+            rule = self.rule.line_part
             parts = (self.grade, kind, mark, self.where, self.text, rule, fix)
             return " · ".join(p for p in parts if p)
         if self.form == AS_WRITTEN:
@@ -468,7 +463,7 @@ def blocker(
     fix: str,
     step: Command | None = None,
     stated_outcome: str | None = None,
-    rule: RuleAssignment | None = None,
+    rule: RuleAssignment,
 ) -> GateFinding:
     """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
     check returns as data for the gate that takes it (`Findings.take`).
@@ -492,7 +487,7 @@ def coded(
     text: str,
     *,
     evidence_kind: str,
-    rule: RuleAssignment | None = None,
+    rule: RuleAssignment,
     fix: str | None = None,
     stated_outcome: str | None = None,
 ) -> GateFinding:
@@ -618,7 +613,7 @@ class Findings:
         fix: str,
         step: Command | None = None,
         stated_outcome: str | None = None,
-        rule: RuleAssignment | None = None,
+        rule: RuleAssignment,
     ) -> None:
         """A blocker: told as `BLOCKER: msg. Next: fix`, repeated in the
         summary, exit 1. Always GUARANTEED — static evidence never blocks.
@@ -636,7 +631,7 @@ class Findings:
         evidence_kind: str,
         fix: str | None = None,
         stated_outcome: str | None = None,
-        rule: RuleAssignment | None = None,
+        rule: RuleAssignment,
     ) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own.
         EVIDENCE_KIND says what carries it (`GateFinding`); FIX, when given,

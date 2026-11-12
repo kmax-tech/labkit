@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from labkit.gates import hook_pre_run  # noqa: E402
 from labkit.formats import gate  # noqa: E402
+from gate_fixture import BREACH, EVERY_RULE  # noqa: E402
 
 #: the calls that build a gate finding: (name, index of the grade argument,
 #: or None when the call is a blocker by itself)
@@ -310,13 +311,19 @@ class TheHooks(unittest.TestCase):
 
 class TheFinding(unittest.TestCase):
     def test_a_blocker_without_a_fix_is_refused_and_a_warning_is_not(self):
-        for fix in (None, "", "  "):
-            with self.assertRaisesRegex(ValueError, "names its way out"):
-                gate.GateFinding(
-                    gate.BLOCKER, "x", fix=fix, evidence_kind=gate.GUARANTEED
-                )
+        for rule in EVERY_RULE:
+            for fix in (None, "", "  "):
+                with self.subTest(rule=rule.kind, fix=fix):
+                    with self.assertRaisesRegex(ValueError, "names its way out"):
+                        gate.GateFinding(
+                            gate.BLOCKER,
+                            "x",
+                            fix=fix,
+                            evidence_kind=gate.GUARANTEED,
+                            rule=rule,
+                        )
         warning = gate.GateFinding(
-            gate.WARNING, "x", evidence_kind=gate.GUARANTEED, rule=gate.TECHNICAL_RULE
+            gate.WARNING, "x", evidence_kind=gate.GUARANTEED, rule=BREACH
         )
         self.assertEqual(warning.line, "WARNING: x")
 
@@ -334,7 +341,7 @@ class TheFinding(unittest.TestCase):
                 where="a.py:1" if form == gate.DOTTED else None,
                 fix=fix,
                 evidence_kind=gate.GUARANTEED,
-                rule=gate.TECHNICAL_RULE,
+                rule=BREACH,
             )
             self.assertEqual(f.line, line)
             self.assertIn(fix, f.message)
@@ -345,7 +352,7 @@ class TheFinding(unittest.TestCase):
         out.block(
             "x",
             fix=f"run `labkit-audit {gate.AREA_SLOT} --findings`",
-            rule=gate.TECHNICAL_RULE,
+            rule=BREACH,
         )
         out.report("tool", "reporting")
         want = "x. Next: run `labkit-audit experiments/01-x --findings`"

@@ -105,8 +105,13 @@ class ReportCheck(unittest.TestCase):
             area_: Path, protocol: Path | None, collected, *, state=None, held=None
         ) -> int:
             if finalize:  # finalize keeps every reason it has as a blocker
+                # a station's blocker counts whatever its rule
+                # (test_gate, "a blocker blocks whatever its rule"); the
+                # stub is the plainest one, a breach without a rule to cite
                 collected.block(
-                    f"stub blocker (finalize exit {finalize})", fix="stub way out"
+                    f"stub blocker (finalize exit {finalize})",
+                    fix="stub way out",
+                    rule=gate.TECHNICAL_RULE,
                 )
             return finalize
 

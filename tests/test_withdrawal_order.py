@@ -19,7 +19,8 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest import mock
 
-from labkit.formats.gate import blocker, withdrawn_first
+from labkit.checks.run_record_check import LAB_041
+from labkit.formats.gate import TECHNICAL_RULE, blocker, withdrawn_first
 from labkit.formats import area_state
 from labkit.formats.commands import withdraw_command
 from labkit.gates import report_check, report_context
@@ -47,7 +48,8 @@ class HeldDeclaration(unittest.TestCase):
         return report_check.held_declaration(context(self.PROTOCOL, state), list(found))
 
     def changed(self, text: str, run: str = RUN):
-        return replace(blocker(text, fix="`x`"), changed_since=run)
+        # the rule of the comparison that finds it (`run_record_check._run_code`)
+        return replace(blocker(text, fix="`x`", rule=LAB_041), changed_since=run)
 
     def test_a_reworded_change_still_puts_the_withdrawal_first(self):
         found = self.changed(f"finalize: the measuring code differs from {RUN}")
@@ -60,7 +62,10 @@ class HeldDeclaration(unittest.TestCase):
         self.assertEqual(self.held(found), self.PROTOCOL)
 
     def test_an_unrelated_blocker_quoting_the_phrase_does_not(self):
-        quoting = blocker(f"finalize: a note changed since {RUN}", fix="`x`")
+        # the same rule and the same words: only the datum is missing
+        quoting = blocker(
+            f"finalize: a note changed since {RUN}", fix="`x`", rule=LAB_041
+        )
         self.assertIsNone(self.held(quoting))
 
     def test_code_that_could_not_be_compared_does_not(self):
@@ -69,8 +74,12 @@ class HeldDeclaration(unittest.TestCase):
         all that is owed."""
         unread = withdrawn_first(
             [
+                # as the comparison records code it could not read
+                # (`run_record_check._run_code`, a technical contract)
                 blocker(
-                    f"finalize: {RUN} started at a commit this clone lacks", fix="`x`"
+                    f"finalize: {RUN} started at a commit this clone lacks",
+                    fix="`x`",
+                    rule=TECHNICAL_RULE,
                 )
             ],
             withdraw_command(self.PROTOCOL),

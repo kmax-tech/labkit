@@ -306,6 +306,9 @@ def block_gaps(
         into_cmd = into_command(report.parent / b.protocol, report)
         into = f"`{into_cmd}`"
         if s.run_id is None:
+            assert s.rule is not None, (
+                "a block source without a declared run names its rule (BlockSource)"
+            )
             gaps.append(
                 blocker(
                     f"{at}: {s.why} — a block shows an adopted result only",

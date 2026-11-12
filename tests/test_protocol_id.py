@@ -183,7 +183,12 @@ class TestUniqueness(unittest.TestCase):
         OK."""
         from dataclasses import replace
 
-        from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
+        from labkit.formats.gate import (
+            BLOCKER,
+            GUARANTEED,
+            TECHNICAL_RULE,
+            GateFinding,
+        )
 
         base = protocol_report.FileReport(path=Path("P.md"), head_error=None)
         self.assertTrue(base.clean)
@@ -199,6 +204,8 @@ class TestUniqueness(unittest.TestCase):
                             "P.md: DUPLICATE",
                             fix="re-stamp the copy",
                             evidence_kind=GUARANTEED,
+                            # as `protocol_history.check_protocol_id` records it
+                            rule=TECHNICAL_RULE,
                         )
                     ],
                 ),

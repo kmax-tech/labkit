@@ -230,7 +230,7 @@ class CheckOutcome(unittest.TestCase):
                 ("rule", gate.VIOLATED),
                 ("contract", gate.VIOLATED),
                 ("open", gate.DEVIATION),
-                ("no assignment", gate.DEVIATION),
+                ("no assignment", inv.REFUSED),
                 ("hint", gate.SUSPECTED),
                 ("hint, rule passed in", gate.SUSPECTED),
                 ("unrun", gate.NOT_EXECUTABLE),
@@ -246,8 +246,8 @@ class CheckOutcome(unittest.TestCase):
         text = inv.render_inventory(inv.finding_sites([self.OUTCOMES]), [], {}, [])
         self.assertIn(
             "Check outcome of the 11 gate findings (`GateFinding.outcome`): "
-            "3 violated, 2 deviation, 2 suspected, 1 not executable, 1 computed, "
-            "2 variable",
+            "3 violated, 1 deviation, 2 suspected, 1 not executable, 1 computed, "
+            "2 variable, 1 refused",
             text,
         )
         self.assertIn("| Rule (data) | Check outcome | Cited in the text |", text)

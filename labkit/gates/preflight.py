@@ -253,6 +253,9 @@ def preflight_area(
     findings.header(f"protocol-check: {protocol.name}")
     report = check_fields(text)  # the same field report as protocol-check
     if report.head is None:
+        assert report.head_rule is not None, (
+            "a field report without a head names the rule that breaks (FieldReport)"
+        )
         findings.block(
             f"HEAD (must): {report.head_error}",
             fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
