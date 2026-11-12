@@ -1,0 +1,254 @@
+[
+ {
+  "n": 1,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "No run that may answer, unreadable run records, or two answering runs: the runs' own records, held against the need for exactly one answering run."
+ },
+ {
+  "n": 2,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "The adopted run's record does not read; rule 1 gives the subject of the thing that does not read."
+ },
+ {
+  "n": 3,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "code against the registration",
+  "why": "A promise's declared scope names code files that are not there; rule 5: the protocol field is wrong."
+ },
+ {
+  "n": 4,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "code against the registration",
+  "why": "The read check did not run because a code file does not parse (SourceError); the wrapped why is an unreadable code file (rules 1, 6)."
+ },
+ {
+  "n": 5,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The protocol head does not read."
+ },
+ {
+  "n": 6,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "Code loaded at run time is not followed by the audit's stamp."
+ },
+ {
+  "n": 7,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "An import outside the covered roots is code the audit's stamp cannot follow."
+ },
+ {
+  "n": 8,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "Two parts of the protocol (prose and promise block) contradict each other on the ids."
+ },
+ {
+  "n": 9,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note lacks its meta line."
+ },
+ {
+  "n": 10,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note cannot be read."
+ },
+ {
+  "n": 11,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "The code changed after the audit, so the audit no longer covers it."
+ },
+ {
+  "n": 12,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The promise block, part of the protocol, does not read."
+ },
+ {
+  "n": 13,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "Another area's audit or handover records do not read; an unreadable audit record belongs to the records."
+ },
+ {
+  "n": 14,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "",
+  "why": "Uncommitted changes in the working tree before a run."
+ },
+ {
+  "n": 15,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A required part of the protocol head is missing."
+ },
+ {
+  "n": 16,
+  "subject": "area tests",
+  "unclear": false,
+  "second": "",
+  "why": "The area's tests did not run."
+ },
+ {
+  "n": 17,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "run record against the registration",
+  "why": "The verdict in the run's metrics.json is malformed (written by hand); an unreadable part of the run's record, though it could also count as the registered verdict not delivered."
+ },
+ {
+  "n": 18,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "The report lacks the result, handover or progress block labkit writes."
+ },
+ {
+  "n": 19,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A registered field of the protocol was changed after the first measurement (rule 2: the protocol changed later)."
+ },
+ {
+  "n": 20,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "Ids, keys, sentences or constants of the protocol changed after the first measurement."
+ },
+ {
+  "n": 21,
+  "subject": "audit coverage",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "Whether a follow-up audit's release still covers the run cannot be computed (a registered output gone, or a correction's field unclear); the check would have looked at coverage, the why may be a missing output or an unclear record."
+ },
+ {
+  "n": 22,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "The protocol as a run saw it cannot be read back from git (commit not held, tree or blob unreadable); the bundled whys also include a run that recorded no commit."
+ },
+ {
+  "n": 23,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "generated line or block",
+  "why": "The block cannot be compared because its protocol's head does not read; rule 6 takes the why."
+ },
+ {
+  "n": 24,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "No analysis audit record covers the area as it is now."
+ },
+ {
+  "n": 25,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "protocol text or head",
+  "why": "Not a git repository, so the registration check against the first measurement's commit cannot run."
+ },
+ {
+  "n": 26,
+  "subject": "audit coverage",
+  "unclear": true,
+  "second": "records among themselves",
+  "why": "A `stands` decision on a limitation has no decision review that upholds it for the claim as it stands; missing review of the present state versus a decision and its review not fitting each other."
+ },
+ {
+  "n": 27,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "report prose",
+  "why": "The report cites an adopted run without the generated result block it owes; also reads as a prose sentence naming a run id without its source."
+ },
+ {
+  "n": 28,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "The report has no clean review of this state and none can run because the audit evidence is gone."
+ },
+ {
+  "n": 29,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "protocol text or head",
+  "why": "A discussion block says the run is not reported while the protocol has adopted it: the block differs from its source."
+ },
+ {
+  "n": 30,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The protocol of a cited run has a head that does not read (rules 1 and 6)."
+ },
+ {
+  "n": 31,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "A generated line (Recorded results or Limitation label) is written more than once: malformed generated line."
+ },
+ {
+  "n": 32,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "The run's output file mixes rows from a continued run that ran another script: the run's own lineage and outputs do not form one measurement; no definition names this case exactly."
+ },
+ {
+  "n": 33,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "run record against the state",
+  "why": "Git cannot read the tree the run started from; rule 1 puts what git cannot give back under repository state."
+ },
+ {
+  "n": 34,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "The script changed since the run ran it: the code is no longer what the run recorded."
+ },
+ {
+  "n": 35,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "The run's record lacks models_resolved although it called a model: an incomplete record (models)."
+ },
+ {
+  "n": 36,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "A registered output file is no longer the file the run recorded (swapped, edited or removed)."
+ }
+]

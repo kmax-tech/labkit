@@ -1,0 +1,464 @@
+[
+ {
+  "n": 67,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a protocol's prose writes an id in lower case; held against the id form"
+ },
+ {
+  "n": 68,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the protocol lacks a should field the field contract names"
+ },
+ {
+  "n": 69,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a should field of the protocol still holds the stamp's placeholder"
+ },
+ {
+  "n": 70,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the protocol's head does not read (rule 1)"
+ },
+ {
+  "n": 71,
+  "subject": "area tests",
+  "unclear": false,
+  "second": "",
+  "why": "the area's resolution-check tests failed"
+ },
+ {
+  "n": 72,
+  "subject": "area tests",
+  "unclear": false,
+  "second": "",
+  "why": "the area's tests failed at finalize"
+ },
+ {
+  "n": 73,
+  "subject": "area tests",
+  "unclear": false,
+  "second": "",
+  "why": "a parser of the area is called by no test under tests/"
+ },
+ {
+  "n": 74,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "area tests",
+  "why": "a test file does not parse (a code file, rule 1); by rule 7 the check not run would have looked at the tests"
+ },
+ {
+  "n": 75,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "code against the registration",
+  "why": "the protocol's prompt block lacks fixed lines of the PROMPT constant; the sentence calls the block drifted, the table lists the prompt under code against the registration"
+ },
+ {
+  "n": 76,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head's annotation_validity field names no protocol, several, or one that does not read (rule 5)"
+ },
+ {
+  "n": 77,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head's annotation_validity field names a protocol that is no apply or has adopted no result"
+ },
+ {
+  "n": 78,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "two protocols carry the same id; they contradict each other"
+ },
+ {
+  "n": 79,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the protocol's id in the tree differs from the one HEAD holds"
+ },
+ {
+  "n": 80,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "the README has no route block between its markers"
+ },
+ {
+  "n": 81,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "the README's route block does not name the protocol or a station"
+ },
+ {
+  "n": 82,
+  "subject": "text beside the protocol",
+  "unclear": true,
+  "second": "code against the registration",
+  "why": "told as a README route gap, but the thing missing is the area's scripts/01_measure.py"
+ },
+ {
+  "n": 83,
+  "subject": "text beside the protocol",
+  "unclear": true,
+  "second": "code against the registration",
+  "why": "told as a README route gap, but the thing lacking is evaluate_rows in the measuring script"
+ },
+ {
+  "n": 84,
+  "subject": "run record against the registration",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "the run's metrics carry verdict keys while the head registers no [reference]; the run delivered more than registered, not less"
+ },
+ {
+  "n": 85,
+  "subject": "run record against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "the run recorded no verdict for the [reference] the head registers"
+ },
+ {
+  "n": 86,
+  "subject": "run record against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "the run's metrics lack the registered kept key as a finite number, so no verdict"
+ },
+ {
+  "n": 87,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "",
+  "why": "the head's report field names a file that is not there (rule 5), though the sentence calls the delivery incomplete"
+ },
+ {
+  "n": 88,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head registers another report than the first measurement's commit held: changed after the run (rule 2)"
+ },
+ {
+  "n": 89,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "repository or installation state",
+  "why": "wraps several whys (rule 6): first named is a first measurement that recorded no commit; others are a commit git does not hold or cannot read"
+ },
+ {
+  "n": 90,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "the first measurements' commits registered different reports; the protocol changed between them, or no run can be told as first"
+ },
+ {
+  "n": 91,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the protocol's first measurement is missing, so the report binding cannot be read"
+ },
+ {
+  "n": 92,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "report prose",
+  "why": "the report's labkit blocks do not read (rule 1); a report that is not UTF-8 is bundled and fits no subject exactly"
+ },
+ {
+  "n": 93,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head's [reference] as it stands differs from what the first measurement registered (rule 2)"
+ },
+ {
+  "n": 94,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head's kind or [kept] as it stands differs from what the first measurement registered"
+ },
+ {
+  "n": 95,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a promise's declared scope differs from the block the first measurement recorded: changed after the run"
+ },
+ {
+  "n": 96,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "the first measurements recorded different promise blocks; the registration changed between them, and no run answers a registered question"
+ },
+ {
+  "n": 97,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a registered field changed after the first measurement, as the answering run saw the protocol"
+ },
+ {
+  "n": 98,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "[reference] changed after the first measurement, as the answering run saw the protocol"
+ },
+ {
+  "n": 99,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "kind or [kept] changed after the first measurement, as the answering run saw the protocol"
+ },
+ {
+  "n": 100,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a result block in the report has no source: its protocol is absent or has adopted no result"
+ },
+ {
+  "n": 101,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a result block shows another run than the protocol has adopted now"
+ },
+ {
+  "n": 102,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a result block's body differs from the protocol's rendering"
+ },
+ {
+  "n": 103,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "run record against the state",
+  "why": "a run id inside a generated block names no run the repo holds"
+ },
+ {
+  "n": 104,
+  "subject": "report prose",
+  "unclear": false,
+  "second": "",
+  "why": "a run id in the report's running prose names no run the repo holds"
+ },
+ {
+  "n": 105,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a discussion block repeats another of the same protocol and run"
+ },
+ {
+  "n": 106,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a discussion block's line differs from the line its head writes"
+ },
+ {
+  "n": 107,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the first measurement's record names no commit"
+ },
+ {
+  "n": 108,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "",
+  "why": "git cannot give back the protocol at the first measurement's commit (rule 1)"
+ },
+ {
+  "n": 109,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "repository or installation state",
+  "why": "the protocol was not committed at the first measurement: no registration stood; could also be read as an uncommitted file at the run"
+ },
+ {
+  "n": 110,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the protocol as committed at the first measurement lacks registration fields"
+ },
+ {
+  "n": 111,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the first measurement's record names no commit (it started outside the history)"
+ },
+ {
+  "n": 112,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "no run may answer, so the analysis audit has nothing to be held to (rule 6: the why)"
+ },
+ {
+  "n": 113,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "no analysis audit covers the area as it is and the audit evidence is gone"
+ },
+ {
+  "n": 114,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "wraps several whys (rule 6): first is a file missing or refused; others an unreadable findings file or promise block; by rule 7 the check would have looked at audit coverage"
+ },
+ {
+  "n": 115,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "generated line or block",
+  "why": "the protocol may hold a proposal no check passed after a cut-off adoption; what the adoption writes is labkit's result table and block"
+ },
+ {
+  "n": 116,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head's [result] table does not read"
+ },
+ {
+  "n": 117,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a must field is absent or a head key is a placeholder"
+ },
+ {
+  "n": 118,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head carries [model] claims on a kind that has none"
+ },
+ {
+  "n": 119,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head carries [reference] on a kind a criterion judges: two parts contradict"
+ },
+ {
+  "n": 120,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head says frozen = true at repeat_cost low: two parts contradict"
+ },
+ {
+  "n": 121,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "audit coverage",
+  "why": "the head is frozen and its preflight_audit field is absent; the field names nothing, so rule 5 does not move it"
+ },
+ {
+  "n": 122,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the promise tables break a form the standard states"
+ },
+ {
+  "n": 123,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the promise tables do not have the form a reader needs"
+ },
+ {
+  "n": 124,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the promise tables have a doubled id or an empty scope list"
+ },
+ {
+  "n": 125,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the promise tables the kind owes are missing from the protocol"
+ },
+ {
+  "n": 126,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a must field of the protocol still holds its placeholder"
+ },
+ {
+  "n": 127,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head is not frozen while a reported number owes the freeze"
+ },
+ {
+  "n": 128,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "the analysis script's check fails: the protocol's written numbers are not what recomputing from the run gives; the cause text is open and also covers a missing script or a changed output"
+ },
+ {
+  "n": 129,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "the check did not finish (rule 7): it would have held the protocol's numbers to the run"
+ },
+ {
+  "n": 130,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a bound field is written twice in the protocol"
+ },
+ {
+  "n": 131,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "the run's own record marks it as acknowledged over an unfrozen protocol; held against what a reported number owes"
+ },
+ {
+  "n": 132,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the answering run has no config.json: its record is missing"
+ }
+]

@@ -1,0 +1,233 @@
+[
+ {
+  "n": 1,
+  "subject": "audit coverage",
+  "sure": true,
+  "second": "",
+  "why": "another area's file determines the number and the audit's stamp does not follow it"
+ },
+ {
+  "n": 2,
+  "subject": "repository or installation state",
+  "sure": true,
+  "second": "",
+  "why": "a code file cannot be read, so no check over it holds (rule 1)"
+ },
+ {
+  "n": 3,
+  "subject": "audit coverage",
+  "sure": true,
+  "second": "",
+  "why": "sys.path change lets imports resolve outside the roots the audit stamp covers"
+ },
+ {
+  "n": 4,
+  "subject": "repository or installation state",
+  "sure": true,
+  "second": "run record in itself",
+  "why": "the run's recorded commit is one git cannot give back (rule 1), though the commit is part of the run's record"
+ },
+ {
+  "n": 5,
+  "subject": "records among themselves",
+  "sure": true,
+  "second": "",
+  "why": "a handover record of another area does not read (rule 1: subject of the thing that does not read)"
+ },
+ {
+  "n": 6,
+  "subject": "audit coverage",
+  "sure": false,
+  "second": "protocol text or head",
+  "why": "the head field names no audit record, a missing one or one of the wrong mode: no preflight audit covers the state; the first sub-cause is equally a malformed head field"
+ },
+ {
+  "n": 7,
+  "subject": "repository or installation state",
+  "sure": true,
+  "second": "",
+  "why": "the commit the run started at is not in this clone, git cannot give it back (rule 1)"
+ },
+ {
+  "n": 8,
+  "subject": "protocol text or head",
+  "sure": true,
+  "second": "",
+  "why": "the promise block's form breaks the block's own rules"
+ },
+ {
+  "n": 9,
+  "subject": "protocol text or head",
+  "sure": false,
+  "second": "run record against the state",
+  "why": "the head's arm table names a profile file that does not exist in the repo: a reference in the protocol leading nowhere, or a file gone since the run"
+ },
+ {
+  "n": 10,
+  "subject": "protocol text or head",
+  "sure": false,
+  "second": "generated line or block",
+  "why": "the block cannot be rendered because the protocol it is rendered from is at fault (the fix repairs the protocol); the block itself is not shown to differ"
+ },
+ {
+  "n": 11,
+  "subject": "generated line or block",
+  "sure": true,
+  "second": "",
+  "why": "a discussion block labkit wrote lacks its why"
+ },
+ {
+  "n": 12,
+  "subject": "run record against the registration",
+  "sure": true,
+  "second": "",
+  "why": "registered ids' keys held against the run's metrics.json: the run did not report a registered key (or reports an unregistered one)"
+ },
+ {
+  "n": 13,
+  "subject": "area tests",
+  "sure": true,
+  "second": "",
+  "why": "the area's test file with the resolution check is missing"
+ },
+ {
+  "n": 14,
+  "subject": "none",
+  "sure": true,
+  "second": "",
+  "why": "advice that a preflight audit is early at low repeat cost; nothing is called wrong (rule 4)"
+ },
+ {
+  "n": 15,
+  "subject": "run record against the state",
+  "sure": false,
+  "second": "audit coverage",
+  "why": "a registered output the run recorded is gone, so the audited state cannot be computed; the sentence speaks of the audit not being holdable to the run"
+ },
+ {
+  "n": 16,
+  "subject": "generated line or block",
+  "sure": true,
+  "second": "",
+  "why": "a discussion block's head line lacks protocol, run or why"
+ },
+ {
+  "n": 17,
+  "subject": "generated line or block",
+  "sure": true,
+  "second": "",
+  "why": "the report's discussion blocks do not read (rule 1: the block is what does not read)"
+ },
+ {
+  "n": 18,
+  "subject": "code against the registration",
+  "sure": false,
+  "second": "none",
+  "why": "the prompt constant in the code cannot be computed statically, so the prompt comparison is unchecked; no thing is shown wrong, only a check not run"
+ },
+ {
+  "n": 19,
+  "subject": "audit coverage",
+  "sure": true,
+  "second": "",
+  "why": "the run an audit record says it read is no longer in the area"
+ },
+ {
+  "n": 20,
+  "subject": "records among themselves",
+  "sure": true,
+  "second": "",
+  "why": "an audit record does not read (rule 1)"
+ },
+ {
+  "n": 21,
+  "subject": "repository or installation state",
+  "sure": true,
+  "second": "",
+  "why": "git could not give back what the evidence comparison needs (rule 1)"
+ },
+ {
+  "n": 22,
+  "subject": "audit coverage",
+  "sure": true,
+  "second": "run record against the state",
+  "why": "the evidence an audit read changed after the audit"
+ },
+ {
+  "n": 23,
+  "subject": "protocol text or head",
+  "sure": true,
+  "second": "",
+  "why": "the promise block differs from what the run recorded: the protocol was changed after the run (rule 2)"
+ },
+ {
+  "n": 24,
+  "subject": "run record in itself",
+  "sure": true,
+  "second": "",
+  "why": "the answering run's own kind is not a measurement"
+ },
+ {
+  "n": 25,
+  "subject": "records among themselves",
+  "sure": true,
+  "second": "",
+  "why": "the named audit record has findings nobody decided"
+ },
+ {
+  "n": 26,
+  "subject": "code against the registration",
+  "sure": true,
+  "second": "",
+  "why": "the protocol declares a key no script carries as a literal"
+ },
+ {
+  "n": 27,
+  "subject": "protocol text or head",
+  "sure": true,
+  "second": "",
+  "why": "the head's reference differs from what the run compared with: the registration changed after the run (rule 2)"
+ },
+ {
+  "n": 28,
+  "subject": "area tests",
+  "sure": true,
+  "second": "",
+  "why": "the test run could not start because pytest is missing"
+ },
+ {
+  "n": 29,
+  "subject": "run record against the registration",
+  "sure": true,
+  "second": "",
+  "why": "the run's metrics lack a key the promise block declares"
+ },
+ {
+  "n": 30,
+  "subject": "generated line or block",
+  "sure": true,
+  "second": "",
+  "why": "a labkit block of the report does not read (rule 1)"
+ },
+ {
+  "n": 31,
+  "subject": "run record in itself",
+  "sure": true,
+  "second": "",
+  "why": "the run's lineage (the runs it derives from) cannot be followed from its own record"
+ },
+ {
+  "n": 32,
+  "subject": "report prose",
+  "sure": true,
+  "second": "generated line or block",
+  "why": "numbers in report sentences beside a discussed run stand without a stated source"
+ },
+ {
+  "n": 33,
+  "subject": "text beside the protocol",
+  "sure": true,
+  "second": "",
+  "why": "the area's README still carries a stamped placeholder"
+ }
+]

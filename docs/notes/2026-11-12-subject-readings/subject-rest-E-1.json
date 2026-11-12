@@ -1,0 +1,464 @@
+[
+ {
+  "n": 1,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "Prose and promise block of one protocol name different ids: two parts of the protocol contradict each other."
+ },
+ {
+  "n": 2,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "The block in the report cannot be held to its source because the rendering from the protocol and adopted run fails; the why (protocol or run file) is not fixed in the cause."
+ },
+ {
+  "n": 3,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "No completed bound run, run records that do not read, or two rivals: no run that may answer, or two."
+ },
+ {
+  "n": 4,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "Git cannot give back the tree the run started from (GitError), so the helpers cannot be compared; rule 1 puts what git cannot return under repository state."
+ },
+ {
+  "n": 5,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "report prose",
+  "why": "The report cites an adopted run but its generated result block is missing; the citing line itself is prose outside a block."
+ },
+ {
+  "n": 6,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "[result] names a run that is not there (first why); the other whys (not completed, bound elsewhere) concern the run's own record."
+ },
+ {
+  "n": 7,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "[result] adopts a run that is a repeat; the adoption in the head is called wrong, yet the reason is the run's kind."
+ },
+ {
+  "n": 8,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "run record against the registration",
+  "why": "The chosen run reports no intent key, so no run may answer; it is also a registered key the run did not report."
+ },
+ {
+  "n": 9,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "An audit BLOCKER finding has no decision."
+ },
+ {
+  "n": 10,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "An audit WARNING finding has no decision."
+ },
+ {
+  "n": 11,
+  "subject": "code against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "A registered id has no key literal in any script: the code lacks what the protocol registers."
+ },
+ {
+  "n": 12,
+  "subject": "code against the registration",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "The code writes a key in the intent-id namespace the protocol does not register; the reverse direction of the definition."
+ },
+ {
+  "n": 13,
+  "subject": "code against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "The code sets a registered constant itself as a literal copy."
+ },
+ {
+  "n": 14,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "A file for the audit bundle could not be read; mostly code files (rule 1), but the protocol is among the files read."
+ },
+ {
+  "n": 15,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The promise block breaks a stated form (missing field, id or key outside its alphabet)."
+ },
+ {
+  "n": 16,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The promise block does not have a readable form (no TOML, unknown field)."
+ },
+ {
+  "n": 17,
+  "subject": "code against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "The code writes a registered quality-check key but nothing decides on it: the code lacks the effect the registration states."
+ },
+ {
+  "n": 18,
+  "subject": "generated line or block",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "The generated counts in the Data / scope field differ from what the prepare run recorded (typed or stale); whether the counts count as a marked generated line is not stated."
+ },
+ {
+  "n": 19,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "generated line or block",
+  "why": "The Data / scope field names a prepare run the area lacks or that is not a completed prepare run (rule 5)."
+ },
+ {
+  "n": 20,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "The answering run's record holds no promise block; the text also allows that the block was added to the protocol after the run."
+ },
+ {
+  "n": 21,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "Files of a declared scope changed since the run recorded them."
+ },
+ {
+  "n": 22,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "intent-check's refusal bundles whys: no protocol, head or block that reads (first named), then no run that may answer, unreadable metrics or run record."
+ },
+ {
+  "n": 23,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The head's [kept] table is missing or still a placeholder."
+ },
+ {
+  "n": 24,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The head's [kept] table does not read or stands on a kind that has none."
+ },
+ {
+  "n": 25,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A must field of the protocol still holds its placeholder."
+ },
+ {
+  "n": 26,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "Another protocol field still holds its placeholder."
+ },
+ {
+  "n": 27,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A bound protocol field is written twice."
+ },
+ {
+  "n": 28,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "[reference] stands on a kind a criterion judges: the head contradicts itself."
+ },
+ {
+  "n": 29,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The head's [reference] or [kept] table does not read."
+ },
+ {
+  "n": 30,
+  "subject": "run record against the state",
+  "unclear": true,
+  "second": "repository or installation state",
+  "why": "The run's code cannot be compared with the present files (rule 7: the check looks at code since the run); the whys bundle a record without script or commit, a commit git lacks, an unreadable code file."
+ },
+ {
+  "n": 31,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The head carries no stamped [protocol] id."
+ },
+ {
+  "n": 32,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "Bound runs sort after the adopted one, so the adoption in [result] may be stale; a hint that calls nothing definitely wrong (could be none)."
+ },
+ {
+  "n": 33,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The head's [result] table does not read."
+ },
+ {
+  "n": 34,
+  "subject": "none",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "The protocol to hold cannot be chosen (named file missing, or several and none named); no listed thing is called wrong."
+ },
+ {
+  "n": 35,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A required part of the head is missing or does not read."
+ },
+ {
+  "n": 36,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "A file of the run's own record (metrics, outputs, inputs) is missing or malformed."
+ },
+ {
+  "n": 37,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "A file of the run's record could not be opened, so the check was not done; it would have looked at the run's own record (rule 7)."
+ },
+ {
+  "n": 38,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "The answering run's record says it is no measurement (its kind)."
+ },
+ {
+  "n": 39,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "The run's record marks a full run acknowledged over an unfrozen protocol; behind it stands a missing preflight audit."
+ },
+ {
+  "n": 40,
+  "subject": "run record against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "The run recorded a registered constant with another value than the protocol registers."
+ },
+ {
+  "n": 41,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "run record against the registration",
+  "why": "The run's record holds no promise block, so it cannot be held to the registration; the record is incomplete."
+ },
+ {
+  "n": 42,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "The run's recorded block digest is of an earlier format: the record does not read as today's."
+ },
+ {
+  "n": 43,
+  "subject": "run record against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "The run recorded a branch value that is none of the registered outcomes' names."
+ },
+ {
+  "n": 44,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note's meta line names no kind."
+ },
+ {
+  "n": 45,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note's meta line carries no date."
+ },
+ {
+  "n": 46,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note declares itself implemented but names no script, function or path."
+ },
+ {
+  "n": 47,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note's filename and its declared kind disagree."
+ },
+ {
+  "n": 48,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "The scripts a note names do not resolve in the repo: the note's paths are stale."
+ },
+ {
+  "n": 49,
+  "subject": "text beside the protocol",
+  "unclear": false,
+  "second": "",
+  "why": "A note's Related-Lesart kind lacks its cite-key."
+ },
+ {
+  "n": 50,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "An audit finding is undecided."
+ },
+ {
+  "n": 51,
+  "subject": "records among themselves",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "The record preflight_audit names does not read (first named); the second why, an area that cannot be stamped, concerns coverage or the code."
+ },
+ {
+  "n": 52,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "Promise block or registration changed after the audit, so the record no longer covers the protocol."
+ },
+ {
+  "n": 53,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "An audit record does not read."
+ },
+ {
+  "n": 54,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "",
+  "why": "A hook is missing or from another labkit."
+ },
+ {
+  "n": 55,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A [[promise]] sentence is still the stamp's placeholder."
+ },
+ {
+  "n": 56,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A must field is absent or a head key is a placeholder."
+ },
+ {
+  "n": 57,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "[model] claim keys on a kind that has none: the head contradicts itself."
+ },
+ {
+  "n": 58,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "[reference] on a kind a criterion judges."
+ },
+ {
+  "n": 59,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "frozen = true at low repeat cost: two head keys contradict each other."
+ },
+ {
+  "n": 60,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "The head is frozen with an empty preflight_audit field; the field is missing, though the question behind it is whether an audit covers the freeze."
+ },
+ {
+  "n": 61,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The [[promise]] tables break a stated form."
+ },
+ {
+  "n": 62,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The [[promise]] tables do not read."
+ },
+ {
+  "n": 63,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The [[promise]] tables carry a doubled id or an empty scope list."
+ },
+ {
+  "n": 64,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "The [[promise]] tables the protocol owes are missing."
+ },
+ {
+  "n": 65,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A bound protocol field is written twice."
+ },
+ {
+  "n": 66,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "A must field still holds its placeholder."
+ }
+]

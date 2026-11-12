@@ -1,0 +1,233 @@
+[
+ {
+  "n": 1,
+  "function": "import_check._coverage_in",
+  "cause": "names area `…` · a file of another area determines this number, and this area's stamp d…",
+  "subject": "audit coverage",
+  "kind": "code"
+ },
+ {
+  "n": 2,
+  "function": "code_scan.unreadable_source",
+  "cause": "… · the code cannot be read, so no check over it holds",
+  "subject": "repository or installation state",
+  "kind": "code"
+ },
+ {
+  "n": 3,
+  "function": "import_check._coverage_in",
+  "cause": "`sys.path` gains … · imports after it may resolve outside lib/ and src/, which the stam…",
+  "subject": "audit coverage",
+  "kind": "code"
+ },
+ {
+  "n": 4,
+  "function": "report_check._registration_at",
+  "cause": "… (……) recorded a commit this repository does not hold (a rewritten history, a shal…",
+  "subject": "repository or installation state",
+  "kind": "git"
+ },
+ {
+  "n": 5,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's handover does not read",
+  "subject": "records among themselves",
+  "kind": "blocks"
+ },
+ {
+  "n": 6,
+  "function": "preflight._owed",
+  "cause": "`preflight_audit` names no record, a missing one or one of another mode",
+  "subject": "audit coverage",
+  "kind": "audit"
+ },
+ {
+  "n": 7,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "… started at commit …, which this clone does not hold",
+  "subject": "repository or installation state",
+  "kind": "git"
+ },
+ {
+  "n": 8,
+  "function": "code_check.promise_block_findings",
+  "cause": "a form no rule states (6 causes: a doubled id, a doubled outcome name, one outcome only, `otherwise` not last, an outcome name outside its alphabet, an empty scope list)",
+  "subject": "protocol text or head",
+  "kind": "ordinary"
+ },
+ {
+  "n": 9,
+  "function": "run_record_check.arm_findings",
+  "cause": "arm `…`: the protocol names …, no such file under …",
+  "subject": "repository or installation state",
+  "kind": "ordinary"
+ },
+ {
+  "n": 10,
+  "function": "report_blocks.block_gaps",
+  "cause": "a result block's body cannot be rendered from its protocol",
+  "subject": "protocol text or head",
+  "kind": "fix"
+ },
+ {
+  "n": 11,
+  "function": "report_blocks.discussion_gaps",
+  "cause": "a discussion block has no why",
+  "subject": "generated line or block",
+  "kind": "blocks"
+ },
+ {
+  "n": 12,
+  "function": "intent_check.hold",
+  "cause": "a registered id's key is not in the run's metrics, or the reverse",
+  "subject": "run record against the registration",
+  "kind": "ordinary"
+ },
+ {
+  "n": 13,
+  "function": "preflight._owed",
+  "cause": "the resolution check's test file is missing",
+  "subject": "area tests",
+  "kind": "ordinary"
+ },
+ {
+  "n": 14,
+  "function": "audit.early_for_tier",
+  "cause": "repeat_cost = \"low\" and no completed run · the first run is the cheaper probe; one audit …",
+  "subject": "not assigned (the order of steps)",
+  "kind": "none"
+ },
+ {
+  "n": 15,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "the analysis audit cannot be held to the run: …",
+  "subject": "audit coverage",
+  "kind": "ordinary"
+ },
+ {
+  "n": 16,
+  "function": "report_hold.hold_report",
+  "cause": "a discussion head lacks protocol, run or why",
+  "subject": "generated line or block",
+  "kind": "blocks"
+ },
+ {
+  "n": 17,
+  "function": "registered_report.registered_review",
+  "cause": "…: its discussion blocks do not read — …",
+  "subject": "generated line or block",
+  "kind": "blocks"
+ },
+ {
+  "n": 18,
+  "function": "prompt_check.check_prompt_drift",
+  "cause": "… is not statically readable (a call or a format spec this check does not compute) · pr…",
+  "subject": "code against the registration",
+  "kind": "ordinary"
+ },
+ {
+  "n": 19,
+  "function": "audit_binding.check_audited_runs_kept",
+  "cause": "…: names … as the run it read, and there is no runs/…/ in this area — the run the r…",
+  "subject": "audit coverage",
+  "kind": "audit"
+ },
+ {
+  "n": 20,
+  "function": "audit_binding.check_audit_records_read",
+  "cause": "an audit record does not read",
+  "subject": "records among themselves",
+  "kind": "ordinary"
+ },
+ {
+  "n": 21,
+  "function": "evidence.change_blockers",
+  "cause": "git could not compare the evidence with the state",
+  "subject": "repository or installation state",
+  "kind": "git"
+ },
+ {
+  "n": 22,
+  "function": "evidence.change_blockers",
+  "cause": "the evidence an audit read changed since",
+  "subject": "audit coverage",
+  "kind": "audit"
+ },
+ {
+  "n": 23,
+  "function": "intent_check.check_block_against_run",
+  "cause": "the promises were removed or changed after the run",
+  "subject": "protocol text or head",
+  "kind": "overlap"
+ },
+ {
+  "n": 24,
+  "function": "report_check.unreportable_gaps",
+  "cause": "the answering run is no measurement",
+  "subject": "run record in itself",
+  "kind": "ordinary"
+ },
+ {
+  "n": 25,
+  "function": "preflight._owed",
+  "cause": "the record's findings are still open",
+  "subject": "records among themselves",
+  "kind": "audit"
+ },
+ {
+  "n": 26,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declares key '…', which no script names as a literal… (an assembled key is not …",
+  "subject": "code against the registration",
+  "kind": "fix"
+ },
+ {
+  "n": 27,
+  "function": "reference.comparison_gaps",
+  "cause": "the run compared with …, the head registers … — the reference changed after the run, …",
+  "subject": "protocol text or head",
+  "kind": "overlap"
+ },
+ {
+  "n": 28,
+  "function": "preflight.tell_test_run",
+  "cause": "pytest is not installed in this interpreter — tests not run",
+  "subject": "area tests",
+  "kind": "pytest"
+ },
+ {
+  "n": 29,
+  "function": "intent_check.check_block_against_run",
+  "cause": "…: […] declares key '…', which the run does not report.",
+  "subject": "run record against the registration",
+  "kind": "overlap"
+ },
+ {
+  "n": 30,
+  "function": "report_hold.hold_report",
+  "cause": "a block of the report does not read",
+  "subject": "generated line or block",
+  "kind": "ordinary"
+ },
+ {
+  "n": 31,
+  "function": "run_record_check.code_since_run",
+  "cause": "…: its runs cannot be followed (…)",
+  "subject": "run record against the state",
+  "kind": "ordinary"
+ },
+ {
+  "n": 32,
+  "function": "report_hold.report_hints",
+  "cause": "…: numbers on … line(s) beside a discussed run — a discussed run's number in a report…",
+  "subject": "report prose",
+  "kind": "ordinary"
+ },
+ {
+  "n": 33,
+  "function": "finalize.check_open_fields",
+  "cause": "… — a stamped placeholder, fill or delete the line",
+  "subject": "text beside the protocol",
+  "kind": "ordinary"
+ }
+]

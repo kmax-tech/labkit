@@ -1,0 +1,464 @@
+[
+ {
+  "n": 133,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "a carried finding closed false-positive has no upholding decision review: decision held against the review records"
+ },
+ {
+  "n": 134,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "a closed finding a review once did not uphold lacks an upholding review: decision against review records"
+ },
+ {
+  "n": 135,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "a decision review record does not read (rule 1: a review record)"
+ },
+ {
+  "n": 136,
+  "subject": "records among themselves",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "an earlier decided BLOCKER lacks a valid follow-up verdict; one variant says the follow-up no longer covers this state, another that the run lacks a required check"
+ },
+ {
+  "n": 137,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "a BLOCKER decided false-positive has no upholding review: decision against review records"
+ },
+ {
+  "n": 138,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "a limitation decision in the audit record lacks its effect on the verdicts"
+ },
+ {
+  "n": 139,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "a BLOCKER on the Conclusion decided fixed has no upholding review"
+ },
+ {
+  "n": 140,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "the carried findings of the audit records do not form a chain: the records do not fit each other"
+ },
+ {
+  "n": 141,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "generated line or block",
+  "why": "rule 6: the why is the run's metrics.json that does not read, so the result section cannot be rendered"
+ },
+ {
+  "n": 142,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a discussion block of the report names a protocol that is not there: the block labkit wrote is malformed"
+ },
+ {
+  "n": 143,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a discussion block names a run its protocol's area does not hold"
+ },
+ {
+  "n": 144,
+  "subject": "protocol text or head",
+  "unclear": true,
+  "second": "report prose",
+  "why": "hint that the protocol whose runs the report now cites declares no [replaces] of the one cited before; the cause text was not found verbatim, read as replacement_hints"
+ },
+ {
+  "n": 145,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "",
+  "why": "the report is a symbolic link instead of a file at its own path; no subject names the report file as such"
+ },
+ {
+  "n": 146,
+  "subject": "report prose",
+  "unclear": false,
+  "second": "",
+  "why": "numbers on report lines outside every generated block have no assigned source"
+ },
+ {
+  "n": 147,
+  "subject": "records among themselves",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "rule 6 with bundled whys (audit, review record or protocol head that does not read, git failure); the check itself asks whether a review covers the state"
+ },
+ {
+  "n": 148,
+  "subject": "audit coverage",
+  "unclear": false,
+  "second": "",
+  "why": "no clean report review record exists for the report's state as it is"
+ },
+ {
+  "n": 149,
+  "subject": "records among themselves",
+  "unclear": true,
+  "second": "report prose",
+  "why": "a report review of this state names claims that stand unresolved; the claims concern the report's sentences"
+ },
+ {
+  "n": 150,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "",
+  "why": "the area's working tree differs from the index the commit holds"
+ },
+ {
+  "n": 151,
+  "subject": "report prose",
+  "unclear": false,
+  "second": "",
+  "why": "the report cites a protocol's answering run outside a block while no result is adopted: a run id without a source"
+ },
+ {
+  "n": 152,
+  "subject": "report prose",
+  "unclear": false,
+  "second": "",
+  "why": "the report cites runs no protocol has adopted as its result"
+ },
+ {
+  "n": 153,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "report prose",
+  "why": "the adoption stands in the working tree but is not staged in the index"
+ },
+ {
+  "n": 154,
+  "subject": "report prose",
+  "unclear": true,
+  "second": "audit coverage",
+  "why": "the report cites an answering run with no adopted result; the appended why says the area's audit evidence is lost"
+ },
+ {
+  "n": 155,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "[replaces] names the protocol's own id"
+ },
+ {
+  "n": 156,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "rule 5: [replaces] names a protocol that is not there"
+ },
+ {
+  "n": 157,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "[replaces] names an id that several protocols carry, so the predecessor cannot be told"
+ },
+ {
+  "n": 158,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the [replaces] fields of the protocols form a circle"
+ },
+ {
+  "n": 159,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "the predecessor's audit finding is still undecided"
+ },
+ {
+  "n": 160,
+  "subject": "records among themselves",
+  "unclear": false,
+  "second": "",
+  "why": "the predecessor's audit or handover records do not read"
+ },
+ {
+  "n": 161,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the [replaces] table omits a difference between this registration and the predecessor's"
+ },
+ {
+  "n": 162,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the [replaces] table declares a change the two registrations do not show"
+ },
+ {
+  "n": 163,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "rule 6 with bundled whys: a registration as first measured cannot be read back (git or run record), or the protocol's own first measurements saw different registrations"
+ },
+ {
+  "n": 164,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the head's type is not exploratory although the protocol declares [replaces]"
+ },
+ {
+  "n": 165,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "a [[replaces.change]] in the protocol states no why"
+ },
+ {
+  "n": 166,
+  "subject": "protocol text or head",
+  "unclear": false,
+  "second": "",
+  "why": "the [replaces] table of the head does not read"
+ },
+ {
+  "n": 167,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "the generated Recorded results line is missing in the protocol"
+ },
+ {
+  "n": 168,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "the Recorded results line differs from its rendering out of metrics.json and the records"
+ },
+ {
+  "n": 169,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a generated Limitation line is missing in the protocol"
+ },
+ {
+  "n": 170,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a Limitation line stands that no covering record decides"
+ },
+ {
+  "n": 171,
+  "subject": "generated line or block",
+  "unclear": false,
+  "second": "",
+  "why": "a Limitation line differs from the record it is rendered from"
+ },
+ {
+  "n": 172,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "none",
+  "why": "a criterion denominator in the run's metrics matches no input count the same run recorded; a static hint inside one record, not clearly 'missing or incomplete'"
+ },
+ {
+  "n": 173,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "a source the run recorded is gone or moved from its recorded path"
+ },
+ {
+  "n": 174,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "repository or installation state",
+  "why": "rule 6/7 with two whys: the run recorded no commit (first named), or the area lies in no git repository now"
+ },
+ {
+  "n": 175,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "the run's record (commit and patch) does not hold the helper, so it cannot say what the run imported; the check would compare code against the run"
+ },
+ {
+  "n": 176,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "repository or installation state",
+  "why": "same sentence as 174: the run recorded no commit (first named), or no git repository now"
+ },
+ {
+  "n": 177,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "an untracked helper differs from the copy the run kept"
+ },
+ {
+  "n": 178,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "a helper module changed since the run's commit"
+ },
+ {
+  "n": 179,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the run's record carries no data= sources"
+ },
+ {
+  "n": 180,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the run's data= record does not read"
+ },
+ {
+  "n": 181,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the run recorded no script"
+ },
+ {
+  "n": 182,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "run record in itself",
+  "why": "the script the run recorded is gone or cannot be told apart among files now: code moved or gone since the run"
+ },
+ {
+  "n": 183,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "run record against the state",
+  "why": "rule 1: a code file the run's script imports cannot be read or parsed now"
+ },
+ {
+  "n": 184,
+  "subject": "repository or installation state",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "a source file is neither tracked nor ignored in git: an untracked file, told although its bytes match the run's record"
+ },
+ {
+  "n": 185,
+  "subject": "run record against the registration",
+  "unclear": true,
+  "second": "protocol text or head",
+  "why": "the head registers an arm fingerprint the answering run did not record; the sentence itself offers a profile changed after the stamp as the other cause"
+ },
+ {
+  "n": 186,
+  "subject": "run record against the registration",
+  "unclear": false,
+  "second": "protocol text or head",
+  "why": "the head registers an arm alias the answering run did not record"
+ },
+ {
+  "n": 187,
+  "subject": "run record against the registration",
+  "unclear": false,
+  "second": "",
+  "why": "the run's metrics.json lacks the kept number the head's [kept] names"
+ },
+ {
+  "n": 188,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the run's lineage is broken, so its model cannot be named from the record"
+ },
+ {
+  "n": 189,
+  "subject": "none",
+  "unclear": true,
+  "second": "run record in itself",
+  "why": "the null lane's rows equal the registered lane's: a doubt about the measuring instrument, which no subject names"
+ },
+ {
+  "n": 190,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the run registered no output file: its record has no outputs.json"
+ },
+ {
+  "n": 191,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "",
+  "why": "rule 7 and the definition: the area lies in no git repository, so tracking cannot be told"
+ },
+ {
+  "n": 192,
+  "subject": "repository or installation state",
+  "unclear": false,
+  "second": "",
+  "why": "an output file of the run is untracked"
+ },
+ {
+  "n": 193,
+  "subject": "run record in itself",
+  "unclear": true,
+  "second": "run record against the state",
+  "why": "an output of the run holds rows another, unrelated run wrote: the run's outputs and lineage do not fit, yet the record is not simply missing or unread"
+ },
+ {
+  "n": 194,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the run's lineage is broken, so no row can be held to a run"
+ },
+ {
+  "n": 195,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "rows of the run's output carry no run stamp: the record of its outputs is incomplete"
+ },
+ {
+  "n": 196,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "the answering run has no repeat: its draws show no spread"
+ },
+ {
+  "n": 197,
+  "subject": "run record in itself",
+  "unclear": false,
+  "second": "",
+  "why": "a run record in the area does not read, so the draws cannot be counted"
+ },
+ {
+  "n": 198,
+  "subject": "run record against the state",
+  "unclear": false,
+  "second": "",
+  "why": "a source's bytes differ from the sha256 the run recorded"
+ }
+]

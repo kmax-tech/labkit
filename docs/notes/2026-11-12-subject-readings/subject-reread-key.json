@@ -1,0 +1,218 @@
+[
+ {
+  "n": 1,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "no completed run is bound to the protocol; records that do not read; two runs that both answer",
+  "subject": "run record in itself"
+ },
+ {
+  "n": 2,
+  "function": "answering_run.AnsweringRun.explain",
+  "cause": "the adopted run's record does not read",
+  "subject": "run record in itself"
+ },
+ {
+  "n": 3,
+  "function": "code_check.promise_block_findings",
+  "cause": "[…] declared scope: … · runlog refuses the run",
+  "subject": "code against the registration"
+ },
+ {
+  "n": 4,
+  "function": "code_check.quality_check_reads",
+  "cause": "quality-check keys: read check not done — …",
+  "subject": "code against the registration"
+ },
+ {
+  "n": 5,
+  "function": "finalize.finalize_area",
+  "cause": "the head does not read",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 6,
+  "function": "import_check._coverage_in",
+  "cause": "`…(…)` loads code at run time · the stamp follows `import` lines only, so what this loa…",
+  "subject": "audit coverage"
+ },
+ {
+  "n": 7,
+  "function": "import_check._import_findings",
+  "cause": "an import resolves outside `lib/` and `src/`",
+  "subject": "audit coverage"
+ },
+ {
+  "n": 8,
+  "function": "intent_check.hold",
+  "cause": "the prose and the promise block name different ids",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 9,
+  "function": "notes_check.check_file",
+  "cause": "…:1: MISSING: no italic meta line after the title",
+  "subject": "text beside the protocol"
+ },
+ {
+  "n": 10,
+  "function": "notes_check.check_notes",
+  "cause": "a note cannot be read",
+  "subject": "text beside the protocol"
+ },
+ {
+  "n": 11,
+  "function": "preflight._owed",
+  "cause": "the code changed after the audit (scope sha)",
+  "subject": "audit coverage"
+ },
+ {
+  "n": 12,
+  "function": "preflight._owed",
+  "cause": "the promise block does not read",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 13,
+  "function": "preflight.check_handed_over_elsewhere",
+  "cause": "another area's audit records do not read",
+  "subject": "records among themselves"
+ },
+ {
+  "n": 14,
+  "function": "preflight.check_working_tree",
+  "cause": "uncommitted changes in … (commit or stash before the run)",
+  "subject": "repository or installation state"
+ },
+ {
+  "n": 15,
+  "function": "preflight.preflight_area",
+  "cause": "a required part of the head is missing",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 16,
+  "function": "preflight.tell_test_run",
+  "cause": "… did not run… — …",
+  "subject": "area tests"
+ },
+ {
+  "n": 17,
+  "function": "reference.comparison_gaps",
+  "cause": "the verdict in metrics.json does not read: `…` = …, `…` = … — written beside the …",
+  "subject": "run record in itself"
+ },
+ {
+  "n": 18,
+  "function": "registered_report.report_owed",
+  "cause": "the registered report lacks the result block, handover or progress account it owes",
+  "subject": "generated line or block"
+ },
+ {
+  "n": 19,
+  "function": "registration_hold.now_hold",
+  "cause": "a field LAB-003 names changed after the first measurement",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 20,
+  "function": "registration_hold.registration_changes",
+  "cause": "ids, keys, sentences or constants changed after the first measurement",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 21,
+  "function": "registration_hold.scope_changes",
+  "cause": "whether a correction in place releases what the number is about cannot be checked: …",
+  "subject": "records among themselves"
+ },
+ {
+  "n": 22,
+  "function": "registration_hold.unread_hold",
+  "cause": "what the number is about cannot be compared with its first measurement: … — the compari…",
+  "subject": "repository or installation state"
+ },
+ {
+  "n": 23,
+  "function": "report_blocks.block_gaps",
+  "cause": "the block's protocol head does not read",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 24,
+  "function": "report_check.analysis_audit_gap",
+  "cause": "no analysis audit covers the area as it is",
+  "subject": "audit coverage"
+ },
+ {
+  "n": 25,
+  "function": "report_check.registration_gaps",
+  "cause": "not a git repository — the registration cannot be held to the commit of the first measure…",
+  "subject": "repository or installation state"
+ },
+ {
+  "n": 26,
+  "function": "report_decisions.check_stands_upheld",
+  "cause": "…: `stands` on a … decided limitation … — no decision review upholds that the repor…",
+  "subject": "records among themselves"
+ },
+ {
+  "n": 27,
+  "function": "report_hold.owed_blocks",
+  "cause": "line …: cites run …, the adopted result of …, without its generated block — the num…",
+  "subject": "generated line or block"
+ },
+ {
+  "n": 28,
+  "function": "report_hold.review_hold",
+  "cause": "…: … and has no clean report review of this state — and none can run: …",
+  "subject": "audit coverage"
+ },
+ {
+  "n": 29,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: line …: run … is discussed as not reported, but … has adopted it as its result",
+  "subject": "report prose"
+ },
+ {
+  "n": 30,
+  "function": "report_hold.undeclared_findings",
+  "cause": "…: cites a run of a protocol whose head does not read — …",
+  "subject": "protocol text or head"
+ },
+ {
+  "n": 31,
+  "function": "result_render.render_gaps",
+  "cause": "\"…\" is written … times — one generated line per label",
+  "subject": "generated line or block"
+ },
+ {
+  "n": 32,
+  "function": "run_record_check._continued_with_other_code",
+  "cause": "…: … row(s) come from …, which ran other code (script …, this run's …) — …'s …",
+  "subject": "run record in itself"
+ },
+ {
+  "n": 33,
+  "function": "run_record_check._helpers_since_run",
+  "cause": "the tree … started from cannot be read for …: …",
+  "subject": "repository or installation state"
+ },
+ {
+  "n": 34,
+  "function": "run_record_check._run_code",
+  "cause": "… changed since … ran it — its number came from other code",
+  "subject": "run record against the state"
+ },
+ {
+  "n": 35,
+  "function": "run_record_check.model_provenance_gap",
+  "cause": "… called a model, but no run in its lineage recorded models_resolved — record the alias…",
+  "subject": "run record in itself"
+ },
+ {
+  "n": 36,
+  "function": "run_record_check.output_record_findings",
+  "cause": "…: not the file run … recorded — …",
+  "subject": "run record against the state"
+ }
+]
