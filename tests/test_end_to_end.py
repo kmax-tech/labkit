@@ -42,6 +42,7 @@ from labkit.formats import (
     promises,
     protocol_block,
     protocol_check,
+    runs,
     scope_sha,
     standard_contract as sc,
 )
@@ -1339,21 +1340,11 @@ class Judge(unittest.TestCase):
             sorted(dest for _, dest in sc.MODEL.scripts),
         )
 
-    def _adopted(self) -> str:
-        """Run, finalize, record, adopt, commit — once per class; every later
-        test calls it first and so runs alone and in any order."""
-        cls = type(self)
-        if cls.run_id:
-            return cls.run_id
-        lab = cls.lab
+    def _measured(self) -> str:
+        """The measuring script run in full with the faked model: what it
+        printed, the run id in it (`Lab.run_id_of`)."""
         from labkit.run import llm
 
-        listed = io.StringIO()
-        with contextlib.redirect_stdout(listed):
-            self.assertEqual(protocol_fill.main([str(self.protocol), "--list"]), 0)
-        before, _, after = listed.getvalue().partition("after the run — yours")
-        self.assertNotIn("Raw output", before)  # not owed before the run
-        self.assertIn("Raw output", after)
         out = io.StringIO()
         with (
             mock.patch.object(llm, "complete_many", self._model),
@@ -1363,13 +1354,31 @@ class Judge(unittest.TestCase):
                 lambda alias: {"model": "fake@e2e", "endpoint": "fake"},
             ),
             mock.patch.object(sys, "argv", [str(self.measure)]),
-            mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(lab.root)}),
+            mock.patch.dict(
+                os.environ, {"CLAUDE_PROJECT_DIR": str(type(self).lab.root)}
+            ),
             contextlib.redirect_stdout(out),
         ):
             _load(self.measure, "e2e_judge_measure").main()
-        run_id = lab.run_id_of(out.getvalue())
+        return out.getvalue()
+
+    def _adopted(self) -> str:
+        """Run, finalize, record, adopt, commit — once per class; every later
+        test calls it first and so runs alone and in any order."""
+        cls = type(self)
+        if cls.run_id:
+            return cls.run_id
+        lab = cls.lab
+        listed = io.StringIO()
+        with contextlib.redirect_stdout(listed):
+            self.assertEqual(protocol_fill.main([str(self.protocol), "--list"]), 0)
+        before, _, after = listed.getvalue().partition("after the run — yours")
+        self.assertNotIn("Raw output", before)  # not owed before the run
+        self.assertIn("Raw output", after)
+        measured = self._measured()
+        run_id = lab.run_id_of(measured)
         cls.run_id = run_id
-        self.assertRegex(out.getvalue(), r"criterion_1_pass +True")
+        self.assertRegex(measured, r"criterion_1_pass +True")
         rc, out_text = lab.finalize(self.area)
         self.assertEqual(rc, 0, out_text)
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
@@ -1643,6 +1652,100 @@ class Judge(unittest.TestCase):
         self.protocol.write_text(text, encoding="utf-8")
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)  # the twin: the declared run exists
+
+
+class AdoptedRunWithoutIntentKeys(unittest.TestCase):
+    """An adopted run whose metrics report no intent key is no answer
+    (`AnsweringRun.explain`); its way out, taken step by step on the judge
+    area. A lab of its own: the scenario withdraws the adoption `Judge`'s
+    tests share. It borrows `Judge`'s faked model, measurement and adoption,
+    which read `lab`, `area`, `protocol`, `measure` and `run_id` off the
+    class — set here as `Judge.setUpClass` sets them."""
+
+    run_id = ""
+    _model = staticmethod(Judge._model)
+    _measured = Judge._measured
+    _adopted = Judge._adopted
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.lab = Lab()
+        cls.area, cls.protocol = judge_area(cls.lab, "judge")
+        cls.measure = cls.area / "scripts" / "01_measure.py"
+        cls.lab.commit("the judge, registered")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.lab.close()
+
+    def _measured_later(self, earlier: str) -> str:
+        """A full run in a later second than the run EARLIER: its id. Run
+        ids carry the second, and two bound runs of one second leave the
+        answering run's choice blocked (`answering_run.same_second_rival`)."""
+        while time.strftime(RUN_ID_TIME) <= earlier[: len(_SECOND)]:
+            time.sleep(0.02)
+        return self.lab.run_id_of(self._measured())
+
+    def test_the_way_out_lifts_the_hold_and_a_full_run_alone_does_not(self):
+        """The steps the hold prints, taken in the order it prints them —
+        withdraw, measure, audit, adopt —, and finalize passes; the full run
+        taken alone leaves the hold, since the adoption decides.
+        The state is built by cutting the intent keys out of the adopted
+        run's metrics: the adoption refuses such a run, so no command leads
+        there."""
+        lab = self.lab
+        run_a = self._adopted()
+        metrics = runs.metrics_path(runs.run_path(self.area, run_a))
+        kept = {
+            k: v
+            for k, v in runs.read_metrics(metrics).items()
+            if not promises.reported_ids({k: v})
+        }
+        metrics.write_text(json.dumps(kept), encoding="utf-8")
+        # committed, so the cut record is the history's and no gate holds
+        # the run for a record changed since HEAD
+        lab.commit("the adopted run's metrics without intent keys")
+        hold = (
+            f"{run_a} is the adopted run ([result] run), and it reports no intent key"
+        )
+        rc, out = lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(hold, out)
+        # the printed way out: these four steps, in this order
+        way_out = out.partition(hold)[2].splitlines()[0]
+        steps = (
+            "withdraw the adoption (`protocol-fill",
+            "measure in full: `",
+            "audit that run",
+            "then adopt it",
+        )
+        at = [way_out.find(step) for step in steps]
+        self.assertNotIn(-1, at, way_out)
+        self.assertEqual(at, sorted(at), way_out)
+        # the step the way out puts second, taken alone: the hold stays
+        run_b = self._measured_later(run_a)
+        rc, out = lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(hold, out)
+        # the four steps as printed
+        told = io.StringIO()
+        with contextlib.redirect_stdout(told), contextlib.redirect_stderr(told):
+            rc = protocol_fill.main(
+                [str(self.protocol), "--withdraw", "--why", "it reports no intent key"]
+            )
+        self.assertEqual(rc, 0, told.getvalue())
+        run_c = self._measured_later(run_b)
+        rc, out = lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_c)
+        rc, out = lab.adopt(self.protocol, run_c)  # no --force
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(
+            protocol_block.declared_run(self.protocol.read_text(encoding="utf-8")),
+            run_c,
+        )
+        rc, out = lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
 
 
 def points_area(lab: "Lab", repeat_cost: str, kind: str) -> tuple[Path, Path]:
