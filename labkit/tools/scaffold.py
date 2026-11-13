@@ -111,7 +111,6 @@ from labkit.tools.repo_check import PIN_FILES, PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
     CUT_MARK,
     ProtocolBlocks,
-    auto_fill_deterministic,
     bar_cut,
     count_placeholders,
     estimator_placeholders,
@@ -456,33 +455,69 @@ def explore_next(slug: str) -> str:
     )
 
 
-def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
-    """Fill the report-grade fields into an existing area's protocols."""
+def stamp_model(text: str) -> bool | str:
+    """The stamp's MODEL argument for a protocol TEXT: the alias of its
+    head's `[model]` table, True for a table without an alias, False
+    without a table."""
+    declared = protocol_block.model(text)
+    return (declared.alias or True) if declared is not None else False
+
+
+def report_blocks(root: Path, proto: Path, text: str) -> ProtocolBlocks:
+    """The report fields (†) by section that the full form of TEXT's head
+    carries — `protocol_stamp` for its kind, repeat cost, model, id and
+    report file —, so `--report` adds the same fields with the same
+    placeholders as a new area's full form. Raises `console.Refused`
+    when the head names no kind: the field selection depends on it."""
+    head = protocol_block.head(text)
+    if head.kind is None:
+        raise console.Refused(
+            "labkit-init",
+            f"--report: {proto.name} declares no kind — fill the head "
+            f"(`protocol-fill … kind=…`) first",
+        )
+    slug = proto.stem.removeprefix("PROTOCOL-")
+    full = protocol_stamp(
+        root,
+        slug,
+        head.repeat_cost,
+        head.kind,
+        stamp_model(text),
+        True,
+        head.id,
+        head.report,
+    )
+    return pilot_and_report(full)[1]
+
+
+def promote(root: Path, area: Path) -> list[str]:
+    """Fill the report fields its full form carries (`report_blocks`)
+    into each of an existing area's protocols whose repeat cost freezes
+    (`lane.freeze`: high); a protocol at low repeat cost is skipped.
+    Every protocol is read and judged before any is written, so a refusal
+    (`report_blocks`) leaves the area unchanged. Returns the log."""
     protos = area_protocols(area)
     if not protos:
         raise console.Refused("labkit-init", f"no PROTOCOL-*.md in {area}")
     log = []
+    filled: dict[Path, str] = {}
     for proto in protos:
         text = proto.read_text(encoding="utf-8")
         lane = standard_contract.lane(protocol_block.head(text).repeat_cost)
-        if not lane.freeze:
+        if not lane.freeze:  # low repeat cost: nothing freezes, no report fields
             log.append(
                 f"  skip (repeat_cost {lane.repeat_cost}: nothing freezes, no report fields)  {proto}"
             )
             continue
-        new, added = insert_report_fields(text, blocks)
+        new, added = insert_report_fields(text, report_blocks(root, proto, text))
         if not added:
             log.append(f"  skip (report fields already there)  {proto}")
             continue
-        new, auto = auto_fill_deterministic(new)
-        write_atomic(proto, new)
+        filled[proto] = new
         log.append(
             f"  filled in      {proto} ({added} report field(s), each in its section)"
         )
-        if auto:
-            log.append(
-                f"  n/a stamped    {auto} field(s): no model, nothing to draw, nothing to parse"
-            )
+    write_all(filled)
     return log
 
 
@@ -623,8 +658,7 @@ def stamp_area(
                 f"is stamped — before its first measurement `protocol-fill "
                 f"<PROTOCOL> report={shlex.quote(report_file)}` registers it",
             )
-        _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
-        return found, "\n".join(promote(found, blocks))
+        return found, "\n".join(promote(root, found))
     kind = asked_kind(kind)
     refuse_kept_with_bar(kind, kept)
     quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
@@ -933,7 +967,7 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
             f"--change-kind: {protocol.name} already says kind = {kind!r}",
         )
     declared = protocol_block.model(old)
-    model: bool | str = (declared.alias or True) if declared is not None else False
+    model = stamp_model(old)
     report = any(
         f.name == protocol_check.field_name(REPORT_FIELD)
         for f in protocol_check.fields(old)

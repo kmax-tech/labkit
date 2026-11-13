@@ -3,10 +3,9 @@ protocol, through real areas, for every kind, cost and model.
 
 - `--report` at low repeat cost leaves the protocol as it was (nothing
   freezes there); at high repeat cost the result matches the kept file
-  (`form_stamps_fixture.report_file`). Kept as found on 2026-11-13: a
-  computation gains Noise ceiling, and without a model Answer form +
-  resolution, which its full form leaves out — whether it should is a
-  separate decision (docs/notes/2026-11-13-protocol-field-selection-plan.md).
+  (`form_stamps_fixture.report_file`), and a protocol without its report
+  fields gains the full form's fields with the full form's placeholders
+  (`scaffold.report_blocks`; docs/notes/2026-11-13-protocol-field-selection-plan.md).
 - `--change-kind` on an unfilled protocol writes exactly the stamp of the
   new kind under the same id, short form or report form. Carrying the
   author's fields is held in `test_scaffold.py`.
@@ -31,7 +30,8 @@ from form_stamps_fixture import (
     reported,
     stamped,
 )
-from labkit.tools import scaffold
+from labkit.formats import protocol_check
+from labkit.tools import protocol_cuts, scaffold
 
 pytestmark = pytest.mark.slow
 
@@ -57,6 +57,36 @@ class ReportOnAnArea(unittest.TestCase):
                         kept.read_text(encoding="utf-8"),
                         f"differs from {kept.name}",
                     )
+
+    def test_the_fields_it_adds_are_the_full_forms(self) -> None:
+        # a protocol without its report fields gains the full form's: the same
+        # fields, each with the same placeholder (placed at its section's end)
+        for kind in KINDS:
+            for model in MODELS:
+                with self.subTest(kind=kind, model=model):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        root = lab(tmp)
+                        area, _ = quiet(
+                            scaffold.stamp_area,
+                            root,
+                            "x",
+                            repeat_cost="high",
+                            kind=kind,
+                            model=model,
+                        )
+                        protocol = area / "PROTOCOL-x.md"
+                        full = protocol.read_text(encoding="utf-8")
+                        protocol.write_text(
+                            protocol_cuts.pilot_and_report(full)[0], encoding="utf-8"
+                        )
+                        quiet(scaffold.stamp_area, root, "x", report=True)
+                        after = protocol.read_text(encoding="utf-8")
+                    self.assertEqual(self.values(after), self.values(full))
+
+    @staticmethod
+    def values(text: str) -> dict[str, str]:
+        """Each field of TEXT by name to its value."""
+        return {f.name: f.value for f in protocol_check.fields(text)}
 
 
 class ChangeKind(unittest.TestCase):

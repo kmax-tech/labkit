@@ -2,9 +2,9 @@
 
 The template's sections by key (`ProtocolBlocks`), the `low` cut and
 the quick block, short placeholders, the pilot part and the report fields
-inserted later (`pilot_and_report`, `insert_report_fields`), the fields a
-deterministic area fills itself, the placeholders of the counting and the
-estimator skeleton, and a new protocol's id. Pure text in, text out;
+inserted later (`pilot_and_report`, `insert_report_fields`), the
+placeholders of the counting and the estimator skeleton, and a new
+protocol's id. Pure text in, text out;
 `scaffold` writes the result.
 """
 
@@ -353,17 +353,6 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
     return "\n".join(out).rstrip() + "\n", added
 
 
-# A protocol that names no model has nothing to parse; --report fills that
-# field when the Model / tool field says so (`protocol_check.model_named`,
-# the one reading of that field). It writes nothing into Randomness
-# controls and Noise ceiling: "no language model" is not "no source of
-# randomness" — a seeded forest, a fold shuffle and a permutation are ones.
-# Those two fields stay owed: an estimator with a seed owes them.
-DETERMINISTIC_NA = {
-    "Parser cases harvested": "n/a — no model, nothing to parse (auto-filled by --report)",
-}
-
-
 def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
     """In place: the stamped `<…>` placeholder of LABEL (one line or wrapped)
     becomes VALUE on the label line; False when the field is not stamped."""
@@ -376,18 +365,6 @@ def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
             lines[i : j + 1] = [m.group(1) + value]
             return True
     return False
-
-
-def auto_fill_deterministic(text: str) -> tuple[str, int]:
-    """Fill the placeholder a model-free protocol cannot answer — the parser
-    field, nothing about randomness (DETERMINISTIC_NA); (text, fields filled)."""
-    if model_named(text):
-        return text, 0
-    lines = text.split("\n")
-    filled = sum(
-        _replace_placeholder(lines, lb, v) for lb, v in DETERMINISTIC_NA.items()
-    )
-    return "\n".join(lines), filled
 
 
 #: What a computation's registration owes, said in the placeholder: "n/a"

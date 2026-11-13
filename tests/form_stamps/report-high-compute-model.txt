@@ -57,9 +57,6 @@
 - **Validation †:** <anchor items, a second model or self-consistency>
 - **Free knobs †:** <every preprocessing parameter with its value>
 - **Randomness controls †:** <seeds, number of runs, temperature and why. Write "deterministic" if…>
-- **Noise ceiling → threshold †:** <the spread of repeats on the probe or
-  the null lane, never on the registered lane before the freeze. The
-  threshold comes from this run's null condition.>
 
 ## Checks (render check → instrument check → pilot)
 

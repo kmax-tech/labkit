@@ -2209,7 +2209,7 @@ class AreaNumbers(unittest.TestCase):
 
 
 class Report(unittest.TestCase):
-    """--report answers what a model-free protocol cannot: seed, noise, parser."""
+    """--report on a model-free protocol: no parser field, the randomness fields owed."""
 
     def stamped(self, model: bool | str) -> str:
         """An area stamped with MODEL (the head's `[model]`), then promoted."""
@@ -2221,7 +2221,7 @@ class Report(unittest.TestCase):
             quiet(scaffold.stamp_area, root, "foo-bar", report=True, kind="fit")
             return proto.read_text(encoding="utf-8")
 
-    def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
+    def test_no_model_has_no_parser_field_and_leaves_randomness_owed(self) -> None:
         """A seeded estimator owes its randomness fields; --report writes no
         "no seed, spread 0" into them."""
         text = self.stamped(False)
@@ -2230,8 +2230,27 @@ class Report(unittest.TestCase):
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
         self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
 
-    def test_a_model_leaves_them_open(self) -> None:
-        self.assertNotIn("auto-filled", self.stamped("haiku"))
+    def test_a_refused_protocol_leaves_every_protocol_unwritten(self) -> None:
+        # the first protocol would gain report fields; the second has no kind
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scaffold.stamp_lab(root, "lab")
+            area, _ = quiet(scaffold.stamp_area, root, "foo-bar", kind="fit")
+            first = area / "PROTOCOL-foo-bar.md"
+            pilot = protocol_cuts.pilot_and_report(first.read_text(encoding="utf-8"))[0]
+            first.write_text(pilot, encoding="utf-8")
+            (area / "PROTOCOL-zz.md").write_text(
+                head(id="p-1111111111111111", kind="<compute | fit | apply>"),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                console.Refused, "PROTOCOL-zz.md declares no kind"
+            ):
+                scaffold.stamp_area(root, "foo-bar", report=True)
+            self.assertEqual(first.read_text(encoding="utf-8"), pilot)
+
+    def test_a_model_keeps_the_parser_field(self) -> None:
+        self.assertRegex(self.stamped("haiku"), r"\*\*Parser cases harvested:\*\* <")
 
 
 class OwedCut(unittest.TestCase):
@@ -2350,27 +2369,32 @@ if __name__ == "__main__":
 
 
 class ModelNamed(unittest.TestCase):
-    """`--report` asks `protocol_check.model_named`, the head's `[model]`
-    table: prose that says "—", "none" or names an alias decides nothing,
-    and a `—` or a `†` label never reads as "a model"."""
+    """`--report` selects its fields by the head's `[model]` table
+    (`scaffold.report_blocks`): prose that says "—", "none" or names an
+    alias decides nothing."""
 
-    PARSER = "- **Parser cases harvested:** <cases>\n"
+    PROTO = Path("PROTOCOL-x.md")
 
-    def test_without_a_model_table_the_parser_field_is_filled(self):
+    @staticmethod
+    def labels(blocks: protocol_cuts.ProtocolBlocks) -> set[str]:
+        return {protocol_check.field_name(protocol_cuts._label_of(i))
+                for _, _, items in blocks for i in items if i[0].startswith("- ")}  # fmt: skip
+
+    # a computation owes its answer form only with a model as instrument
+    ANSWER_FORM = "answer form + resolution"
+
+    def test_without_a_model_table_a_computation_gets_no_answer_form(self):
         for value in ("—", "none", "gpt-oss"):
-            text = (
-                head(repeat_cost="high")
-                + f"- **Model / tool †:** {value}\n"
-                + self.PARSER
-            )
-            filled, n = protocol_cuts.auto_fill_deterministic(text)
-            self.assertEqual(n, 1, value)
-            self.assertIn("n/a — no model", filled)
+            text = head(kind="compute") + f"- **Model / tool:** {value}\n"
+            blocks = scaffold.report_blocks(Path("/nonexistent"), self.PROTO, text)
+            self.assertNotIn(self.ANSWER_FORM, self.labels(blocks), value)
 
-    def test_a_model_table_leaves_it_open(self):
-        text = (
-            head(repeat_cost="high", model="gpt-oss")
-            + "- **Model / tool:** none\n"
-            + self.PARSER
-        )
-        self.assertEqual(protocol_cuts.auto_fill_deterministic(text), (text, 0))
+    def test_a_model_table_adds_it(self):
+        text = head(kind="compute", model="gpt-oss") + "- **Model / tool:** none\n"
+        blocks = scaffold.report_blocks(Path("/nonexistent"), self.PROTO, text)
+        self.assertIn(self.ANSWER_FORM, self.labels(blocks))
+
+    def test_a_head_without_a_kind_is_refused(self):
+        text = head(kind="<compute | fit | apply>")
+        with self.assertRaisesRegex(console.Refused, "declares no kind"):
+            scaffold.report_blocks(Path("/nonexistent"), self.PROTO, text)
