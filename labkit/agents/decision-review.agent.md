@@ -17,8 +17,10 @@ and you do not soften a finding the auditor made.
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
-   the effect `stands` (findings decided `limitation`). Four more kinds
-   appear: every BLOCKER decided `false-positive`, a `false-positive` on a
+   the effect `stands` (findings decided `limitation`). A `limitation`
+   can instead carry the effect `<ID> not assessable`, with a line
+   `leaves unjudged:` naming each promise it leaves without a verdict and
+   what the run recorded for it. Four more kinds appear: every BLOCKER decided `false-positive`, a `false-positive` on a
    carried finding (a follow-up audit did not find its fault gone), a
    BLOCKER on the Conclusion decided `fixed` (no follow-up audit is shown
    a rewritten claim), and a `false-positive` or `fixed` decided again
@@ -61,6 +63,22 @@ Per decision, one of three verdicts:
 - **insufficient** — what is on the page does not let you tell: the
   reason points to evidence that is not inlined, or the claim is not
   written. Name what is missing. This is not a pass.
+
+For a limitation whose effect is `<ID> not assessable`, the question
+is whether the fault prevents judging each promise listed under `leaves
+unjudged:` — a quality check named there leaves every criterion
+unjudged, so each criterion listed is part of the question:
+
+- **upheld** — the reason shows, for every promise listed, how the
+  fault makes its verdict unreadable from this run: the score the
+  criterion compares is itself unreliable, or the promise asks what the
+  run cannot measure.
+- **rejected** — for at least one promise listed, its verdict can be
+  read from the run as recorded despite the fault: a criterion compared
+  directly with its bar, whose score the fault does not touch, is
+  judged, and its recorded verdict — a miss too — stands. Name that
+  promise and its recorded verdict.
+- **insufficient** — the reason points to evidence that is not inlined.
 
 For a BLOCKER decided `false-positive`, a BLOCKER on the Conclusion
 decided `fixed`, and a finding closed after a review did not uphold it,

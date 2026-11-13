@@ -1063,9 +1063,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(rc, 1, err)
         self.assertIn(
             "limitation --not-assessable <ID>[,<ID>] (<ID>: criterion-1 (inference "
-            "criterion)) — no review owed; a quality check left "
-            "unjudged leaves every criterion without a verdict by itself, so name "
-            "the condition, not the criteria",
+            "criterion)) — a second auditor confirms that the fault prevents "
+            "judging what it leaves unjudged; a quality check left unjudged leaves "
+            "every criterion without a verdict by itself, so name the condition, "
+            "not the criteria",
             out,
         )
         refused = io.StringIO()
@@ -1266,7 +1267,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 ["limitation", "--why", "r", "--not-assessable", "criterion-1"],
                 "limitation: the finding holds and this run does not judge what it names "
                 "— `criterion-1 not assessable` stands in the report's Limitation line; "
-                "no review is owed",
+                "a second auditor's review is owed, which confirms that the fault "
+                "prevents judging it",
             ),
             (
                 ["limitation", "--why", "r"],
@@ -1283,9 +1285,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
                     rc = audit.main([str(promised), "--decide", "1", *words])
                 self.assertEqual(rc, 0, out.getvalue())
                 self.assertIn(line, out.getvalue())
-                # a WARNING's limit with its verdicts standing owes a review
-                # whose absence warns; nothing else here names one
-                owes_review = words == ["limitation", "--why", "r"]
+                # a WARNING's limit with an effect — its verdicts standing, or
+                # a promise left not assessable — owes a review whose absence
+                # warns; a false positive on a WARNING names none
+                owes_review = words[0] == "limitation"
                 self.assertEqual("--review" in out.getvalue(), owes_review)
 
     def test_a_missing_area_is_refused_with_one_sentence_on_every_step(self):

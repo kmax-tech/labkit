@@ -716,7 +716,9 @@ def decision_entails(
     a second auditor's review is owed at every repeat cost (`--review
     --record`) — a BLOCKER's number does not leave without it, a WARNING's
     absent review warns. `limitation` with `<ids> not assessable`: the run does
-    not judge those promises, and no review is owed; a NOTE's limitation is
+    not judge those promises; it releases the finding too, so the same
+    review is owed, which confirms that the fault prevents judging them; a
+    NOTE's limitation is
     recorded and limits nothing in the report (`Record.limits`).
     `false-positive`: the finding does not apply to the code and run as
     audited; the reason names the counter-evidence, and a BLOCKER's or a
@@ -754,10 +756,18 @@ def decision_entails(
             f"{held}, at every repeat cost: `{review}`"
         )
     if f.status == "limitation" and f.effect:
+        held = (
+            "the number does not leave until a second auditor confirms that the "
+            "fault prevents judging it"
+            if f.grade == BLOCKER
+            else "a second auditor's review is owed, which confirms that the fault "
+            "prevents judging it; for a WARNING its absence does not hold the "
+            "number, the adoption and report-check warn until a review upholds it"
+        )
         return (
             f"limitation: the finding holds and this run does not judge what it "
-            f"names — `{f.effect}` stands in the report's Limitation line; no review "
-            "is owed"
+            f"names — `{f.effect}` stands in the report's Limitation line; "
+            f"{held}, at every repeat cost: `{review}`"
         )
     if f.status == "limitation":
         return (
@@ -813,6 +823,14 @@ def decision_digest(f: Finding) -> str:
     if f.carries:
         fields += ["carries", f.carries]
     return digest(as_stored(fields).encode("utf-8"))
+
+
+def leaves_unjudged(effect: str) -> bool:
+    """Whether the limitation's EFFECT is `<ID>[, <ID>] not assessable` — it
+    voids the verdicts of what it names —, not `stands` and not none. The
+    one test of the form: rendering lifts such an effect a review did not
+    uphold, and the way after a rejection is its own."""
+    return bool(effect) and effect != EFFECT_STANDS
 
 
 def effect_ids(effect: str) -> tuple[str, ...]:

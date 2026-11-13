@@ -1,5 +1,6 @@
 """decision_review — `labkit-audit AREA --review [--record FILE]`: a second,
-cold auditor on the `stands` decisions of one analysis record.
+cold auditor on the limitation decisions with an effect (`stands`, `<ID> not
+assessable`) and the closing decisions of one analysis record.
 
     labkit-audit <AREA> --review [--record FILE] [--protocol FILE]
                  [--model ALIAS] [--timeout S] [--out FILE]
@@ -14,7 +15,11 @@ record's `scope_sha`), and what the auditor was shown of the run (the
 rows' excerpts and metrics.json, held to the record's `shown_sha`). The
 finding and the reason alone would only test whether the reason sounds
 plausible; the claim and the evidence are what it is tested against.
-Instructions: `decision-review.agent.md`.
+A limitation whose effect is `<ID> not assessable` releases the finding
+too: the reviewer is told what it leaves unjudged, each promise with its
+recorded verdict (`result_render.left_unjudged`), and confirms that the
+fault prevents judging every one; rejected, the effect voids no verdict
+(`result_render.limits_of`). Instructions: `decision-review.agent.md`.
 
 The verdicts are written beside the records (`formats/reviews`,
 `audits/<minute>-review.toml`), bound to the record, its code, its run as
@@ -66,9 +71,8 @@ from typing import NamedTuple
 from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.run_record_check import script_as_run
-from labkit.checks.result_render import rendering
-from labkit.formats import attempts, console, evidence, findings, reviews
-from labkit.formats.findings import EFFECT_STANDS
+from labkit.checks.result_render import left_unjudged, rendering
+from labkit.formats import attempts, console, evidence, findings, promises, reviews
 from labkit.formats.gate import BLOCKER
 from labkit.formats.protocol_check import conclusion_written
 from labkit.formats.repo import layout_root, shown, the_protocol
@@ -129,7 +133,8 @@ def reviewable(
 ) -> list[tuple[int, findings.Finding]]:
     """(number, finding) of every decision of RECORD a review asks about,
     in the record's order: a limitation of the result (`Record.limits`: a
-    BLOCKER or WARNING decided `limitation`) whose effect is `stands`, and a
+    BLOCKER or WARNING decided `limitation`) with an effect — `stands`, or
+    `<ID> not assessable`, which releases the finding as well —, and a
     finding closed (`findings.CLOSING`: false-positive, fixed) after a review
     among FOUND did not uphold a decision on it (`reviews.once_not_upheld`),
     a carried finding (`carries`: a follow-up did not find it resolved) now
@@ -138,13 +143,12 @@ def reviewable(
     (`report_decisions.followup_findings`) —, a BLOCKER decided `false-positive`, its
     first dismissal too (`findings.false_positive_blocker`), and a BLOCKER
     on the Conclusion decided `fixed` (`findings.fixed_claim`: no follow-up
-    audit is shown a repaired claim). `not assessable`
-    leaves the promise unjudged and claims nothing to review."""
-    stands = {n for n, f in record.limits() if f.effect == EFFECT_STANDS}
+    audit is shown a repaired claim)."""
+    limited = {n for n, f in record.limits() if f.effect}
     return [
         (n, f)
         for n, f in enumerate(record.findings, 1)
-        if n in stands
+        if n in limited
         or findings.carried_and_closed(f)
         or findings.false_positive_blocker(f)
         or findings.fixed_claim(f)
@@ -185,10 +189,13 @@ def decisions_text(
     decided: list[tuple[int, findings.Finding]],
     found: list[reviews.Review],
     metrics: dict | None,
+    block: promises.PromiseTables | None,
 ) -> str:
     """The decisions of RECORD under review, as the reviewer reads them:
     number, grade, finding text, the status, the reason, the effect
-    (`limitation` only), the finding's required check with its value in
+    (`limitation` only) — for `<ID> not assessable`, what it leaves unjudged
+    under BLOCK, the protocol's promises, each with its verdict as METRICS
+    record it (`result_render.left_unjudged`) —, the finding's required check with its value in
     METRICS — the run's snapshot the prompt shows — or that it is missing
     (`audit_prompt.required_check_line`), so a reason resting on the check
     meets what the run records beside it — and, for a finding closed after a review did not
@@ -204,6 +211,9 @@ def decisions_text(
         ]
         if f.effect:
             lines.append(f"   effect: {f.effect}")
+        reach = left_unjudged(block, f.effect, metrics) if block is not None else ""
+        if reach:
+            lines.append(f"   leaves unjudged: {reach}")
         check = audit_prompt.required_check_line(f, metrics)
         if check:
             lines.append(f"   {check}")
@@ -258,6 +268,16 @@ class Evidence(NamedTuple):
     numbers: list[int]
 
 
+def promise_block(text: str) -> promises.PromiseTables | None:
+    """The promise tables of the protocol TEXT, None without a block or when
+    it does not read — report-check names a malformed block; the reviewer is
+    then not told what an effect leaves unjudged."""
+    try:
+        return promises.parse_block(text)
+    except promises.PromiseError:
+        return None
+
+
 def decided_reviews(area: Path) -> list[reviews.Review]:
     """AREA's decision reviews from its audit evidence read once
     (`evidence.read_evidence`); raises `reviews.ReviewError` with the
@@ -278,7 +298,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     decided = reviewable(record, found)
     if not decided:
         raise AuditError(
-            f"{record.path.name}: no finding decided `limitation` with effect `stands`, no "
+            f"{record.path.name}: no finding decided `limitation` with an effect, no "
             f"finding closed after a review did not uphold it, no carried finding "
             f"closed false-positive, no BLOCKER decided false-positive and no "
             f"BLOCKER on the Conclusion decided fixed — nothing to review",
@@ -326,7 +346,12 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         )
     label, rules_text = audit_prompt.standard_excerpt(REVIEW)
     pieces: list[tuple[str, str]] = [
-        (DECISIONS_LABEL, decisions_text(record, decided, found, seen.evidence())),
+        (
+            DECISIONS_LABEL,
+            decisions_text(
+                record, decided, found, seen.evidence(), promise_block(text)
+            ),
+        ),
         (f"FILE: {shown(protocol, repo)}", text),
         (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]
@@ -509,7 +534,7 @@ def print_review_state(record: findings.Record, not_upheld: list[int]) -> None:
     """Print the review state of RECORD after a draw: the findings among
     NOT_UPHELD (`held_after`) by what report-check does with them — a
     BLOCKER's decision holds the number, a WARNING's is only warned
-    (`report_decisions.check_stands_upheld`) —, or that every decision
+    (`report_decisions.check_limits_upheld`) —, or that every decision
     reviewed is released. Side effect: stdout only."""
     held = [n for n in not_upheld if record.findings[n - 1].grade == BLOCKER]
     warned = [n for n in not_upheld if n not in held]

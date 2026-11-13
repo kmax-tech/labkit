@@ -133,7 +133,9 @@ WAYS_OUT = (
     (
         UNJUDGED_PROMISE,
         "the run is right but cannot judge a promise (the auditor's `statement`): "
-        "decide it `limitation` with `--not-assessable <ID>`; the criterion then "
+        "decide it `limitation` with `--not-assessable <ID>`, which a second "
+        "auditor confirms prevents judging it (rejected, the recorded verdict "
+        "stands); the criterion then "
         "reads not assessable — report the measured numbers as description, no "
         "verdict. An `implementation` fault you cannot fix is handed over, not "
         "limited",
@@ -212,9 +214,21 @@ def blocker_routes(promised: bool) -> tuple[str, ...]:
 def rejected_way(finding: findings.Finding, promised: bool) -> str:
     """What a reviewed decision on FINDING owes first, within its allowed
     decisions (`findings.allowed_decisions`). A permitted limitation may
-    leave a promise not assessable only when PROMISED. No state is read
+    leave a promise not assessable only when PROMISED. A rejected `<ID> not
+    assessable` is decided again as `stands`, repaired, or shown
+    inapplicable: its effect no longer voids a verdict. No state is read
     or written; another draw alone settles nothing."""
-    if "limitation" not in findings.allowed_decisions(finding):
+    if findings.leaves_unjudged(finding.effect):
+        # a rejected `not assessable` is lifted: the verdicts read as the run
+        # recorded them (`result_render.limits_of`), a miss included
+        routes = (
+            "the effect was not confirmed, so the verdicts read as the run "
+            "recorded them: decide it `limitation` with the effect `stands` — "
+            "a missed criterion reported as the result, its own second auditor "
+            "owed —, fix the fault and measure again, or supply counter-evidence "
+            "for `false-positive`"
+        )
+    elif "limitation" not in findings.allowed_decisions(finding):
         routes = (
             "complete the repair or required check the finding names, supply "
             "counter-evidence for `false-positive`, or hand the protocol over "

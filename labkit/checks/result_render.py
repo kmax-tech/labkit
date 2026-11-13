@@ -171,6 +171,37 @@ def verdicts(
     return [_verdict(p, metrics.get(p.key), unjudged, blocked) for p in block.promises]
 
 
+def left_unjudged(
+    block: promises.PromiseTables, effect: str, metrics: dict | None
+) -> str:
+    """What a limitation's EFFECT (`<ID>[, <ID>] not assessable`) leaves
+    unjudged under BLOCK, by the rule `verdicts` applies — the promises it
+    names, and every criterion when one of them is a quality check —, each
+    with its verdict as METRICS (the run's, None: not read) record it: `criterion-1
+    (recorded as missed), quality-check-2 (recorded as met)`. What a decision
+    reviewer confirms the fault prevents judging. "" for an effect that
+    names no promise (`stands`, or none). Pure."""
+    if not findings.leaves_unjudged(effect):
+        return ""
+    ids = set(findings.effect_ids(effect))
+    voids_criteria = any(
+        p.id in ids and p.kind == "quality-check" for p in block.promises
+    )
+    left = [
+        p
+        for p in block.promises
+        if p.id in ids or (voids_criteria and p.kind == "criterion")
+    ]
+
+    def recorded(p: promises.Promise) -> str:
+        value = None if metrics is None else metrics.get(p.key)
+        if not isinstance(value, bool):
+            return "not recorded as true or false"
+        return "recorded as " + _verdict(p, value, {}, []).removeprefix(f"{p.id} ")
+
+    return ", ".join(f"{p.id} ({recorded(p)})" for p in left)
+
+
 def _verdict(
     p: promises.Promise, value: object, unjudged: dict[str, str], blocked: list[str]
 ) -> str:
@@ -194,30 +225,38 @@ def limits_of(
 ) -> list[tuple[str, str, str]]:
     """(label, value, effect) of every limit with its effect decided — an
     BLOCKER or WARNING decided limitation — in the analysis
-    records covering RUN. A `stands` a decision review among FOUND
-    contested as decided and claimed now (`reviews.contested`) reads as
-    proposed, not confirmed (`findings.UNCONFIRMED`); an unreviewed or
-    upheld one as its effect. FOUND: AREA's decision reviews
+    records covering RUN; EFFECT is "" for a lifted one. An effect a
+    decision review among FOUND did not uphold as decided and claimed now
+    — rejected, insufficient, or draws that disagree (`reviews.contested`)
+    — reads as proposed, not confirmed (`findings.UNCONFIRMED`), and an
+    `<ID> not assessable` among them is lifted: given as "", so the
+    verdicts read as the run recorded them; not confirmed, it does not
+    hide a miss. An unreviewed or upheld one reads as its
+    effect — report-check holds the unreviewed one at its grade
+    (`report_decisions.check_limits_upheld`). FOUND: AREA's decision reviews
     (`evidence.AreaEvidence.reviews`). An area the gate cannot hold to that run gives
     none here: report-check names why (`analysis_audit_gap`)."""
     try:
         records = covering_analysis(area, text, run)
     except (AuditError, FileNotFoundError, ValueError):
         return []
-    return [
-        (
-            findings.limit_label(r, n),
-            findings.limit_line(
-                f,
-                contested=f.effect == findings.EFFECT_STANDS
-                and reviews.contested(r, n, list(found), text),
-            ),
-            f.effect,
-        )
-        for r in records
-        for n, f in r.limits()
-        if f.effect
-    ]
+    out: list[tuple[str, str, str]] = []
+    for r in records:
+        for n, f in r.limits():
+            if not f.effect:
+                continue
+            contested = reviews.contested(r, n, list(found), text)
+            # a `not assessable` no review upheld voids no verdict: the miss stands
+            lifted = contested and findings.leaves_unjudged(f.effect)
+            effect = "" if lifted else f.effect
+            out.append(
+                (
+                    findings.limit_label(r, n),
+                    findings.limit_line(f, contested=contested),
+                    effect,
+                )
+            )
+    return out
 
 
 def rendering(
@@ -267,6 +306,8 @@ def _verdicts_and_values(
         )
     unjudged: dict[str, str] = {}
     for label, _, effect in limits:
+        if not effect:  # a contested `not assessable`: lifted (`limits_of`)
+            continue
         for pid in findings.effect_ids(effect):
             unjudged.setdefault(pid, label)
     keys = frozenset(p.key for p in block.promises)

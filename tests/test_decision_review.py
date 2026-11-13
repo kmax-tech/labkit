@@ -179,7 +179,10 @@ def gate(area: Path) -> tuple[int, str]:
 
 
 class Reviewable(unittest.TestCase):
-    def test_only_stands_limits_are_reviewed(self):
+    def test_every_limit_with_an_effect_is_reviewed(self):
+        """`stands` and `<ID> not assessable` both release the finding, so
+        both owe the second auditor; a WARNING's limitation without an
+        effect claims nothing to review."""
         _, record = area_with(
             [BLOCKER, BLOCKER, WARNING, WARNING],
             {
@@ -194,7 +197,7 @@ class Reviewable(unittest.TestCase):
             },
         )
         rec = findings.read(record)
-        self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1, 3])
+        self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1, 2, 3])
 
     def test_named_files_resolve_against_the_repo_then_the_area(self):
         area, record = area_with([BLOCKER], {1: ("limitation", "r", "stands")})
@@ -203,6 +206,75 @@ class Reviewable(unittest.TestCase):
             decision_review.reviewable(rec, []), area.parent.parent, area
         )
         self.assertEqual(files, [(area / "scripts" / "01_measure.py").resolve()])
+
+
+class ANotAssessableIsReviewed(unittest.TestCase):
+    """A limitation that leaves a promise not assessable owes a second
+    auditor, who must confirm that the fault prevents judging what the
+    effect leaves unjudged; rejected, the effect falls and the verdicts read
+    as recorded (decided by the author 2026-11-13; usage round 24, sts512
+    a-r3: a doubtful null check left a plain miss "not assessable")."""
+
+    EFFECT = "quality-check-2 not assessable"
+    MISSED = {"criterion_1_pass": False}
+
+    def area(self) -> tuple[Path, Path]:
+        return area_with(
+            [BLOCKER],
+            {1: ("limitation", "the null lane cannot judge chance", self.EFFECT)},
+            metrics=self.MISSED,
+        )
+
+    def test_the_reviewer_is_told_what_the_effect_leaves_unjudged(self):
+        area, _ = self.area()
+        _, _, _, sent = run_review(area, UPHELD)
+        prompt = sent[0]
+        self.assertIn(f"effect: {self.EFFECT}", prompt)
+        self.assertIn(
+            "leaves unjudged: criterion-1 (recorded as missed), quality-check-2 "
+            "(recorded as met)",
+            prompt,
+        )
+        self.assertIn("prevents judging each promise", prompt)  # the instructions
+
+    def test_a_rejection_lets_the_recorded_verdict_stand(self):
+        area, record = self.area()
+        proto = area / "PROTOCOL-x.md"
+        before = proto.read_text(encoding="utf-8")
+        self.assertIn("criterion-1 not assessable", before)
+        rc, out, _, _ = run_review(area, REJECTED)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("decide it `limitation` with the effect `stands`", out)
+        self.assertIn("a missed criterion reported as the result", out)
+        rendered, _ = protocol_result.render_result(before, area)
+        self.assertIn("criterion-1 missed", rendered)
+        self.assertNotIn("not assessable (Limitation", rendered)
+        label = f"Limitation (audit {record.stem} #1)"
+        self.assertIn(
+            f"- **{label}:** a limit proposed, not confirmed by a second auditor "
+            "— unresolved — the null lane cannot judge chance",
+            rendered,
+        )
+        proto.write_text(rendered, encoding="utf-8")
+        code, out = gate(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(f"`{self.EFFECT}` on a BLOCKER decided limitation rejected", out)
+
+    def test_the_twin_an_upheld_effect_leaves_the_criterion_unjudged(self):
+        area, _ = self.area()
+        proto = area / "PROTOCOL-x.md"
+        before = proto.read_text(encoding="utf-8")
+        code, out = gate(area)
+        self.assertEqual(code, 1, out)  # unreviewed on a BLOCKER: held
+        self.assertIn(
+            f"`{self.EFFECT}` on a BLOCKER decided limitation not reviewed", out
+        )
+        rc, _, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0)
+        self.assertEqual(protocol_result.render_result(before, area), (before, []))
+        self.assertIn("criterion-1 not assessable", before)
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
 
 
 class TheCall(unittest.TestCase):
@@ -290,7 +362,7 @@ class TheCall(unittest.TestCase):
 
     def test_a_rejected_warning_limit_is_told_as_not_held_with_one_way(self):
         """The contract: a WARNING's `stands` no review upholds warns, it
-        does not hold (`check_stands_upheld`). After a rejection the review
+        does not hold (`check_limits_upheld`). After a rejection the review
         and the gate say the same — not released, nothing held, decide the
         finding again — not "held" beside a commit that passes, and not the
         review already made as the way out (usage round 24, replay case 2).
@@ -838,7 +910,7 @@ class TheCall(unittest.TestCase):
         area, _ = area_with([BLOCKER], {1: ("fixed", "fixed it", "")})
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual((rc, sent), (2, []))
-        self.assertIn("no finding decided `limitation` with effect `stands`", err)
+        self.assertIn("no finding decided `limitation` with an effect", err)
 
 
 class TheFile(unittest.TestCase):

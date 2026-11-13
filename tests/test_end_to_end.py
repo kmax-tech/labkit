@@ -1528,6 +1528,11 @@ class Judge(unittest.TestCase):
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)  # the record says so, the protocol not yet
         self.assertIn(label, out)
+        # the effect releases the BLOCKER: a second auditor confirms that the
+        # fault prevents judging criterion-1, before the adoption
+        self.assertIn("no decision review upholds that the fault prevents", out)
+        rc, out = self._review(record)
+        self.assertEqual(rc, 0, out)
         rc, out = lab.adopt_forced(self.protocol, self.run_id)
         self.assertEqual(rc, 0, out)
         text = self.protocol.read_text(encoding="utf-8")

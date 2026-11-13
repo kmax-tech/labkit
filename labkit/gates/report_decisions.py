@@ -98,8 +98,9 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
 
 
 def review_findings(ctx: Checked) -> list[GateFinding]:
-    """The decision reviews: every `stands` among the limits of the
-    covering analysis records is upheld by a decision review
+    """The decision reviews: every effect among the limits of the
+    covering analysis records — `stands`, `<ID> not assessable` — is upheld
+    by a decision review
     (`reviews.upholding`: a review of that record, its code and its run as
     shown, under the claim the protocol makes now, of the decision as it
     stands now, every draw saying `upheld`). The grade follows the
@@ -131,7 +132,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     )
     for r in records:
         step = partial(_review_step, ctx, r)
-        out += check_stands_upheld(
+        out += check_limits_upheld(
             r,
             found,
             text=ctx.text,
@@ -234,7 +235,7 @@ def check_decision_reviews_read(evidence: AreaEvidence) -> list[GateFinding]:
     ]
 
 
-def check_stands_upheld(
+def check_limits_upheld(
     record: findings.Record,
     found: list[reviews.Review],
     *,
@@ -242,9 +243,12 @@ def check_stands_upheld(
     review_way: Callable[[], str],
     way_after_rejection: Callable[[findings.Finding], str],
 ) -> list[GateFinding]:
-    """Every limit of RECORD whose effect is `stands` is upheld by a decision
-    review among FOUND, as decided now and under the claim TEXT makes now
-    (`reviews.upholding`). One that is not is held at the finding's grade:
+    """Every limit of RECORD with an effect — `stands`, or `<ID> not
+    assessable` — is upheld by a decision review among FOUND, as decided now
+    and under the claim TEXT makes now (`reviews.upholding`): both release
+    the finding, the one claiming the verdicts hold, the other that the
+    fault prevents judging what it names. One that is not is held at the
+    finding's grade:
     a BLOCKER limitation blocks, a WARNING limitation warns (LAB-015
     Preflight audit before freezing, "By risk"). Its way out: deciding the
     finding again once a review of this state rejected it — another review
@@ -263,9 +267,7 @@ def check_stands_upheld(
     """
     out: list[GateFinding] = []
     for n, f in record.limits():
-        if f.effect != findings.EFFECT_STANDS or reviews.upholding(
-            record, n, found, text
-        ):
+        if not f.effect or reviews.upholding(record, n, found, text):
             continue
         verdicts = reviews.verdicts_on_state(record, n, found, text)
         rejected = any(d.verdict == reviews.REJECTED for d in verdicts)
@@ -278,9 +280,14 @@ def check_stands_upheld(
         out.append(
             GateFinding(
                 BLOCKER if f.grade == BLOCKER else WARNING,
-                f"{findings.limit_label(record, n)}: `stands` on a {f.grade} decided "
-                f"limitation {reviews.state(record, n, found, text)} — no decision "
-                "review upholds that the reported claim stands within this limit",
+                f"{findings.limit_label(record, n)}: `{f.effect}` on a {f.grade} "
+                f"decided limitation {reviews.state(record, n, found, text)} — no "
+                "decision review upholds that "
+                + (
+                    "the reported claim stands within this limit"
+                    if f.effect == findings.EFFECT_STANDS
+                    else "the fault prevents judging what it leaves not assessable"
+                ),
                 fix=fix,
                 evidence_kind=GUARANTEED,
                 rule=LAB_015,
@@ -301,7 +308,7 @@ def check_contested_closings_upheld(
     (`findings.CLOSING`) is upheld as decided now (`reviews.upholding`):
     closing a contested finding is not settling it. One that is not is held
     at the finding's grade. FOUND, TEXT and REVIEW_WAY as
-    `check_stands_upheld` takes them."""
+    `check_limits_upheld` takes them."""
     out: list[GateFinding] = []
     for n, f in enumerate(record.findings, 1):
         if f.status not in findings.CLOSING:
@@ -337,7 +344,7 @@ def check_repaired_claims_upheld(
     as it stands — else a BLOCKER: no follow-up audit is shown a repaired
     claim, so the decision review judges it. One a review once did not
     uphold is `check_contested_closings_upheld`'s; each is held once. FOUND,
-    TEXT and REVIEW_WAY as `check_stands_upheld` takes them."""
+    TEXT and REVIEW_WAY as `check_limits_upheld` takes them."""
     out: list[GateFinding] = []
     for n, f in enumerate(record.findings, 1):
         if (
@@ -375,7 +382,7 @@ def check_first_dismissals_upheld(
     else a BLOCKER: the deciding agent's own decision would release a
     blocking finding. A carried one is `check_carried_closings_upheld`'s,
     one a review once did not uphold `check_contested_closings_upheld`'s;
-    each is held once. FOUND, TEXT and REVIEW_WAY as `check_stands_upheld`
+    each is held once. FOUND, TEXT and REVIEW_WAY as `check_limits_upheld`
     takes them."""
     out: list[GateFinding] = []
     for n, f in enumerate(record.findings, 1):
@@ -438,7 +445,7 @@ def check_carried_closings_upheld(
     (`findings.carried_and_closed`) is upheld by a review among FOUND as
     decided now — else a BLOCKER: the follow-up did not find the fault
     gone, so closing it is not settling it. FOUND, TEXT and REVIEW_WAY as
-    `check_stands_upheld` takes them."""
+    `check_limits_upheld` takes them."""
     return [
         blocker(
             f"audit {record.path.stem} #{n}: a carried finding (from {f.carries}) "

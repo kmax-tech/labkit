@@ -99,14 +99,15 @@ def decision_lines(
         # the id named with its field: an agent cannot pick `quality-check-2` unnamed
         named = effect_ids_named(area, protocol) if promised else ""
         # what the route owes and what it does by itself: else a reader
-        # takes the review clause of `stands` for this route too, and names
+        # misses the review this route owes too, and names
         # every criterion an unjudged quality check already voids
         unassessed = (
             "limitation --not-assessable <ID>[,<ID>]"
             + (f" (<ID>: {named})" if named else "")
-            + " — no review owed; a quality check left unjudged "
-            "leaves every criterion without a verdict by itself, so name the "
-            "condition, not the criteria"
+            + " — a second auditor confirms that the fault prevents judging "
+            "what it leaves unjudged; a quality check left unjudged leaves every "
+            "criterion without a verdict by itself, so name the condition, not "
+            "the criteria"
         )
         # one line, not the routes: the ways out stand in the guide, and
         # `labkit-next` is the one explainer of the next step
