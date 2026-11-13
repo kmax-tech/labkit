@@ -32,6 +32,7 @@ from labkit.formats.gate import Findings
 from labkit.formats.runs import (
     RunDir,
     patch_text,
+    stopped_without_number,
     read_run_dir,
     recorded_commit,
     read_run_config,
@@ -281,6 +282,12 @@ def scope_changes(
     own naming the run, git's or the record's reason and the way back
     (`unread_hold`): the comparison could not run, which is no "nothing
     changed" (docs/notes/2026-11-03-finalize-hold-missing-once.md).
+    Before both comparisons, the first measurements are held to each other:
+    when two of them saw different texts in a field no correction in place
+    covers (several at one commit, the tree edited between them), which
+    text stood cannot be told, and the one BLOCKER per cause has no
+    restore among its ways out — only a new registration or a handover
+    (`split_hold`).
     Raises RuntimeError when git fails."""
     firsts = [rd for group in measured.first_groups for rd in group]
     others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
@@ -291,7 +298,7 @@ def scope_changes(
             return [unread_hold(area, pid, unread)]
     try:
         return _scope_held(
-            area, protocol, pid, run, root, others, measured, state, held
+            area, protocol, pid, run, root, firsts, others, measured, state, held
         )
     except AuditError as exc:
         # whether a follow-up's release still covers the run cannot be told:
@@ -315,15 +322,37 @@ def _scope_held(
     pid: str,
     run: Path,
     root: Path | None,
+    firsts: list[RunDir],
     others: list[RunDir],
     measured: Measured,
     state: AreaState,
     held: evidence.AreaEvidence,
 ) -> list[GateFinding]:
-    """`scope_changes` once every text it compares reads: the hold of the
-    answering run's text, then of the protocol as it stands. Raises
-    AuditError when a release cannot be checked (`resolved_corrections`),
-    RuntimeError when git fails."""
+    """`scope_changes` once every text it compares reads, FIRSTS the first
+    measurements, OTHERS those but the answering run: first measurements
+    that saw different texts in a field no correction in place covers
+    (`split_hold`, and nothing else: a restore to either leaves the other
+    held), else the hold of the answering run's text, then of the protocol
+    as it stands. Raises AuditError when a release cannot be checked
+    (`resolved_corrections`), RuntimeError when git fails."""
+    among = protocol_history.differences_among_first_measurements(
+        protocol, firsts, root
+    )
+    if among:
+        # a field corrected in place (decided `fixed`, released or awaiting
+        # its follow-up) differs between first measurements by design: the
+        # holds below judge its release
+        text = state.text_of(protocol)
+        corrected = (
+            resolved_corrections(area, protocol, text, run, held).keys()
+            | awaiting_followup(area, protocol, text, run, held).keys()
+        )
+        for one, other, between in among:
+            unsettled = [d for d in between if field_name(d[0]) not in corrected]
+            if unsettled:
+                return split_hold(pid, one, other, unsettled)
+        # every difference among them is a corrected field: on to the holds
+        # of the answering run's text and the protocol as it stands
     seen, _ = (
         protocol_history.as_measured(protocol, read_run_dir(run), root)
         if others
@@ -469,6 +498,50 @@ def seen_hold(
             )
         )
     return found
+
+
+def split_hold(
+    pid: str, one: RunDir, other: RunDir, diffs: list[tuple[str, str, str]]
+) -> list[GateFinding]:
+    """The BLOCKERs when the first measurements ONE and OTHER saw different
+    texts of what the number is about (DIFFS, ONE's value → OTHER's), one
+    per cause (`by_cause`) with its rule (`scope_rule`): which text stood
+    before the number cannot be told, so no restore closes it — the ways
+    out are a new registration declaring its changes against each, or a
+    handover, as for first measurements that recorded different promise
+    blocks (`registration_changes`). A first measurement that stopped
+    without a number is named so (`runs.stopped_without_number`): it counts
+    all the same (`answering_run.first_measurement_groups`: finished or
+    not); one only a commit holds is named by its id alone, its files not
+    being here to read. Reads each run's directory through `runs`."""
+    runs_named = (
+        f"{one.dir.name}{stopped_note(one)} and {other.dir.name}{stopped_note(other)}"
+    )
+    return [
+        blocker(
+            f"the first measurements saw different texts of what the number is "
+            f"about: {runs_named} — {quoted_changes(cause)} — which text stood "
+            f"before the number cannot be told, so no run of this protocol answers "
+            f"a registered question, and bringing back either text leaves the "
+            f"other first measurement held",
+            fix="either "
+            + register_anew(pid, "per change against each of these texts")
+            + f"; or {HANDOVER}",
+            rule=scope_rule(cause),
+        )
+        # no correction ref to carry: a corrected field never reaches here
+        for cause, _ in by_cause(diffs, refs=[None] * len(diffs))
+    ]
+
+
+def stopped_note(rd: RunDir) -> str:
+    """` (stopped without a number[: <failure>])` for a run RD that wrote
+    no metrics.json (`runs.stopped_without_number`), its failure cut to
+    SCOPE_QUOTE characters; "" otherwise."""
+    why = stopped_without_number(rd)
+    if why is None:
+        return ""
+    return f" (stopped without a number{f': {_quoted(why)}' if why else ''})"
 
 
 def now_hold(

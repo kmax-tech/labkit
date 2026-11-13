@@ -363,6 +363,7 @@ class TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands(unittest.TestCase):
                 PID,
                 AREA / "runs" / "r2",
                 None,
+                [],  # no first measurements to hold to each other
                 [mock.sentinel.first_measurement],
                 Measured(AREA, PID, (), (), (), ()),
                 state,

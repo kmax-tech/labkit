@@ -825,6 +825,72 @@ class ScopeAsFirstMeasured(_Repository):
         (line,) = self._changes()
         self.assertIn(f"(as the answering run {RUN} saw the protocol)", line)
 
+    def _first_at_one_commit_with_another_question(self, *, crashed: bool) -> Path:
+        """Two first measurements at one commit: self.FIRST under the
+        committed question, then — the question rewritten in the tree, not
+        committed — a second one, CRASHED or finished, whose
+        uncommitted.patch holds the rewrite (assay b2 of usage round 24,
+        2026-11-13). The tree restored, the answering run RUN measures at a
+        later commit. Returns the second run."""
+        commit = self._register(ALL_ROADS)
+        self._run(commit, self.FIRST)
+        self._rewrite("the deforested share", "the deforested share of BR highways")
+        second = self._run(commit, "2026-10-07T09-30-00_7f9a", dirty=True)
+        patch = _git(self.root, "diff", "HEAD")
+        (second / "uncommitted.patch").write_text(patch + "\n", encoding="utf-8")
+        if crashed:  # stopped at its start: no metrics, no completion
+            (second / runs.COMPLETION_FILE).unlink()
+            runs.metrics_path(second).unlink()
+            (second / runs.FAILURE_FILE).write_text(
+                json.dumps({"error": "InstrumentError", "message": "resume refused"}),
+                encoding="utf-8",
+            )
+        _git(self.root, "checkout", "--", ".")
+        (self.area / "notes.md").write_text("later\n", encoding="utf-8")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "later")
+        self._run(_git(self.root, "rev-parse", "HEAD"), RUN)
+        return second
+
+    def test_first_measurements_that_saw_different_questions_are_one_hold(self):
+        """Restoring the question as one of them registered it leaves the
+        other held: the hold names both and the ways that close it —
+        register anew, or hand over — never a restore. A first measurement
+        that stopped without a number counts like a finished one and is
+        named as such."""
+        second = self._first_at_one_commit_with_another_question(crashed=True)
+        (line,) = self._changes()
+        self.assertIn(
+            "the first measurements saw different texts of what the number is about",
+            line,
+        )
+        self.assertIn(self.FIRST, line)
+        self.assertIn(
+            f"{second.name} (stopped without a number: InstrumentError: resume refused)",
+            line,
+        )
+        self.assertIn('Question / hypothesis "the deforested share within', line)
+        self.assertIn("register anew", line)
+        self.assertIn("hand over", line)
+        self.assertNotIn("restore", line)
+
+    def test_the_twin_finished_first_measurements_are_held_the_same_way(self):
+        second = self._first_at_one_commit_with_another_question(crashed=False)
+        (line,) = self._changes()
+        self.assertIn(
+            "the first measurements saw different texts of what the number is about",
+            line,
+        )
+        self.assertIn(second.name, line)
+        self.assertNotIn("stopped without a number", line)
+
+    def test_the_twin_first_measurements_that_agree_are_no_hold(self):
+        commit = self._register(ALL_ROADS)
+        self._run(commit, self.FIRST)
+        self._run(commit, "2026-10-07T09-30-00_7f9a")
+        self._run(commit, RUN)
+        self.assertEqual(self._changes(), [])
+
     def test_finalize_holds_it(self):
         self._run(self._register(ALL_ROADS), self.FIRST)
         self._run(self._register(ALL_ROADS.replace("5.5 km", "2.75 km")), RUN)

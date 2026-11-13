@@ -681,6 +681,34 @@ def first_measured_differences(
     return None
 
 
+def differences_among_first_measurements(
+    protocol: Path, firsts: "Sequence[RunDir]", root: Path | None
+) -> "list[tuple[RunDir, RunDir, list[tuple[str, str, str]]]]":
+    """The first measurements FIRSTS of PROTOCOL compared with each other,
+    not with a later text (that is `first_measured_differences`): (one,
+    other, differences) for each that saw PROTOCOL otherwise (`as_measured`)
+    than ONE, the earliest readable of them, in what the number is about
+    (`scope_differences`, ONE's text against OTHER's); [] when every
+    readable one saw the same. Two first measurements at one commit can:
+    the tree may have changed between them, and no run id orders them
+    (`answering_run.first_measurement_groups`). A first measurement whose
+    protocol cannot be read back is passed over: `unread_measurements`
+    holds it. Raises RuntimeError when git fails."""
+    seen = [
+        (first, text)
+        for first in firsts
+        if (text := as_measured(protocol, first, root)[0]) is not None
+    ]
+    if not seen:
+        return []
+    (one, one_text), *rest = seen
+    return [
+        (one, other, diffs)
+        for other, other_text in rest
+        if (diffs := scope_differences(one_text, other_text))
+    ]
+
+
 def as_measured(
     protocol: Path, rd: "RunDir", root: Path | None
 ) -> tuple[str | None, str]:

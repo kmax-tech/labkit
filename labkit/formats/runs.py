@@ -256,6 +256,16 @@ def write_failure(
     return path
 
 
+def stopped_without_number(rd: RunDir) -> str | None:
+    """Why run RD, as the file state holds it, wrote no metrics.json — its
+    failure (`read_failure`), or "" when it left none —; None when it wrote
+    one or when only a commit holds RD (`RunDir.from_commit`): its files
+    are not here to read. RunConfigError when failure.json cannot be read."""
+    if rd.from_commit is not None or metrics_path(rd.dir).is_file():
+        return None
+    return read_failure(rd.dir) or ""
+
+
 def read_failure(run_dir: Path) -> str | None:
     """`<Type>: <message>` from RUN_DIR/failure.json, None when the run left
     none; RunConfigError when it is there and cannot be read."""
