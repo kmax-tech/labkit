@@ -185,6 +185,16 @@ class RecordedRule(unittest.TestCase):
         )
         self.assertIn("| `labkit/checks/causes.py:10` | `checks.causes.gap` |", text)
 
+    def test_the_recorded_rule_is_no_citation_in_the_text(self) -> None:
+        """`rule=` is the record: neither its literal nor the constant it
+        names counts as cited in the message."""
+        cited = {
+            s.wording: s.rules
+            for s in inv.finding_sites([CHECKS])
+            if s.unit.endswith(".recorded") and s.wording in ("cited", "constant")
+        }
+        self.assertEqual(cited, {"cited": (), "constant": ()})
+
     def test_a_rule_only_cited_in_the_message_is_not_recorded(self) -> None:
         (s,) = [
             s for s in inv.finding_sites([CHECKS]) if s.unit.endswith(".freeze_gap")
@@ -326,9 +336,26 @@ class ThePackage(unittest.TestCase):
             and "recorded no commit" in line
             and "outside the history" in line
         )
-        # the rule as data and the rule the sentence cites, the same one
-        self.assertIn("| LAB-010 | violated | LAB-010 |", row)
+        # the rule as data; the sentence cites none, its line cites the datum
+        self.assertIn("| LAB-010 | violated | — |", row)
         self.assertIn("report-check", row)
+
+    def test_no_gate_finding_cites_a_rule_in_its_text(self) -> None:
+        """A finding's line cites the rule it records (`gate.with_rule`); a
+        citation typed into the text is told twice, or names another rule
+        than the one counted. Read over every site that builds a gate
+        finding: the strings of the call and of the local names it passes —
+        a sentence it receives from another function is not read. That the
+        scan finds a typed citation:
+        `FindingSites.test_a_blocker_cites_the_rule_in_its_message_not_in_the_docstring`."""
+        sites = [
+            s
+            for s in inv.finding_sites(inv.read_modules(PACKAGE_DIR))
+            if s.channel == "finding"
+        ]
+        self.assertGreater(len(sites), 200)
+        typed = {f"{s.path}:{s.line}": s.rules for s in sites if s.rules}
+        self.assertEqual(typed, {})
 
     def test_out_writes_the_file_and_a_wrong_line_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as d:

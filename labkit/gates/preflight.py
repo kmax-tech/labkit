@@ -507,7 +507,7 @@ def check_audit_coverage(
     gap = audit_gaps.audit_record_gap(area, audit_line, text)
     if gap:
         _owed(findings, frozen, gap.rule)(
-            f"preflight_audit: {gap.why} (LAB-015 Preflight audit before freezing)",
+            f"preflight_audit: {gap.why}",
             gap.fix,
         )
 
@@ -675,8 +675,7 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
     lines told; a missing pytest warns (`tell_test_run`)."""
     if not tests.files:
         _owed(findings, frozen, LAB_016)(
-            f"no {tests.pattern} — the resolution check has no "
-            f"permanent form (LAB-016 Resolution check before freezing)"
+            f"no {tests.pattern} — the resolution check has no permanent form"
             + (" and frozen = true owes it" if frozen else ""),
             f"write {tests.pattern} with the resolution check of evaluate(): the "
             f"cases it must tell apart",

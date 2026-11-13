@@ -184,7 +184,8 @@ class RecordGap:
     (`gate.with_way_out`) — and the rule the cause breaks: the preflight
     audit's, the technical contract where the record or the area's stamp
     does not read, or the rule of the cause where the promise block does
-    not (`promises.PromiseError.rule`)."""
+    not (`promises.PromiseError.rule`). The sentence does not cite that
+    rule; whoever tells it cites it from here (`gate.with_rule`)."""
 
     why: str
     fix: str
@@ -229,9 +230,9 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
             "own: run it and name its record; when the backend does not answer, "
             "labkit-audit records the failed attempt and a full run acknowledges "
             "it with LABKIT_UNFROZEN=1 (its number stays unreportable). If no "
-            "audit is owed at all, the repeat cost is wrong, not the field — and a "
-            "tier lowered after the protocol's first commit is reported "
-            "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)",
+            "audit is owed at all, the repeat cost is wrong, not the field "
+            "(LAB-017 The number of audits follows the cost tier) — and a tier "
+            "lowered after the protocol's first commit is reported",
             audit,
             LAB_015,
         )

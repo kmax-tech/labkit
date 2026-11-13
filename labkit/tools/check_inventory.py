@@ -22,9 +22,12 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
     `gate.RuleAssignment`: a rule id, an open assignment, a technical
     contract, a new class), read through a local name and a module
     constant; the rule tables count by it. Beside it the scan names the
-    rule ids the call's strings cite — its own literals, the module
-    constants it names, what is assigned to a local name it passes —, a
-    citation in the text, not a record
+    rule ids the call's other strings cite — its own literals, the module
+    constants it names, what is assigned to a local name it passes; the
+    `rule=` argument left out —, a citation in the text, not a record. A
+    gate finding's line cites the recorded rule itself (`gate.with_rule`),
+    so its text cites none (`tests/test_check_inventory.py` holds the
+    sites); a sentence a site receives from another function is not read
   - its check outcome (`gate.GateFinding.outcome`) is the value the call
     states as a constant (`stated_outcome=NOT_EXECUTABLE`); `computed`
     where it states an expression, known only at run time
@@ -132,8 +135,9 @@ class FindingSite:
             passes one.
         evidence_kind: GUARANTEED, STATIC_EVIDENCE, `variable`, or
             `none` for an exit or a printed line, which carry none.
-        rules: The rule ids in the call's strings, sorted — what the
-            message cites, not what the finding records.
+        rules: The rule ids in the call's strings outside its `rule=`
+            argument, sorted — what the message cites, not what the
+            finding records.
         wording: The message's constant text, every value as `{…}`.
         assignment: The rule assignment the call records as data
             (`gate.RuleAssignment`, `_call_assignment`): a rule id
@@ -401,17 +405,21 @@ def _call_rules(
     imports: dict[str, str],
 ) -> tuple[str, ...]:
     """The rule ids in CALL's strings and in the values assigned to the
-    local names it passes, and in the module constants either names."""
+    local names it passes, and in the module constants either names — all
+    outside the `rule=` argument of a finding constructor, which is the
+    record (`_call_assignment`) and no citation in the text."""
+    rule = _rule_argument(call) if isinstance(call, ast.Call) else None
+    record = {id(n) for n in ast.walk(rule)} if rule is not None else set()
     nodes = [call] + [
         value
         for n in ast.walk(call)
-        if isinstance(n, ast.Name)
+        if isinstance(n, ast.Name) and id(n) not in record
         for value in assigned.get(n.id, [])
     ]
-    texts = [s for node in nodes for s in strings_in(node, skip)]
+    texts = [s for node in nodes for s in strings_in(node, skip | record)]
     for node in nodes:
         for n in ast.walk(node):
-            if isinstance(n, ast.Name):
+            if isinstance(n, ast.Name) and id(n) not in record:
                 texts += constants.get(f"{module}.{n.id}", [])
                 texts += constants.get(imports.get(n.id, ""), [])
     return tuple(sorted({r for t in texts for r in RULE_ID.findall(t)}))

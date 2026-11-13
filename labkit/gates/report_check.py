@@ -211,7 +211,6 @@ LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
-LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
 LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
@@ -377,7 +376,7 @@ def _registration_at(
                 blocker(
                     f"{at} recorded no commit ({cfg.git!r}{among}) — it started "
                     f"outside the history, so the registration cannot be held to "
-                    f"what stood before the number (LAB-010 Commit before the run)",
+                    f"what stood before the number",
                     fix=anew,
                     rule=LAB_010,
                 )
@@ -422,8 +421,7 @@ def _registration_at(
             blocker(
                 f"{ctx.protocol.name} was not committed at {at} ({commit[:12]}{among}) "
                 f"— nothing stood before the number; the registration is what the "
-                f"commit of the first measurement holds (LAB-003 No run without an "
-                f"intent paragraph)",
+                f"commit of the first measurement holds",
                 fix=anew,
                 rule=LAB_003,
             )
@@ -436,8 +434,7 @@ def _registration_at(
                 f"{', '.join(missing)} — the registration is what the commit of "
                 f"the first measurement holds, not what the tree says now, so "
                 f"that measurement is exploratory; a new run on the same data does "
-                f"not restore what stood before the number (LAB-003 No run without "
-                f"an intent paragraph)",
+                f"not restore what stood before the number",
                 fix=anew,
                 rule=LAB_003,
             )
@@ -506,7 +503,10 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"area and no number leaves it: {ways_out.HANDOVER}",
             rule=TECHNICAL_RULE,
         )
-    return blocker(gap, fix=audit, rule=LAB_050)
+    # the rule of the lane: at low the cost tier's, which owes this one
+    # audit at the promotion of the number; else the analysis audit's
+    owed = cited_rule(lane(ctx.head.repeat_cost).analysis_rule)
+    return blocker(gap, fix=audit, rule=owed)
 
 
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
@@ -774,19 +774,18 @@ def finalize_findings(
 
 
 def analysis_findings(
-    ctx: Checked, rule: str, *, result_section: bool = True
+    ctx: Checked, *, result_section: bool = True
 ) -> list[GateFinding]:
     """Coverage and rendered-result blockers for an analysis stage already due.
 
-    RULE is the lane's analysis-audit rule; the entry point decides whether
-    this stage runs. Missing coverage and result differences are all kept;
-    RESULT_SECTION False leaves the rendered result out (before an adoption,
-    which writes it).
+    The entry point decides whether this stage runs. Missing coverage and
+    result differences are all kept; RESULT_SECTION False leaves the
+    rendered result out (before an adoption, which writes it).
     """
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
     if gap:
-        out.append(replace(gap, text=f"analysis audit: {gap.text} ({rule})"))
+        out.append(replace(gap, text=f"analysis audit: {gap.text}"))
     # the rendered result section is held here too, named as what it is:
     # under "analysis audit:" a retyped Recorded results line reads as a
     # record problem
@@ -817,7 +816,7 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
     return (
         [
             blocker(
-                f"{failed} (LAB-041 Generate numbers, don't retype them)",
+                failed,
                 fix=f"fix what the check names until {check} exits 0; a number "
                 f"in the protocol comes from `protocol-fill`, never typed",
                 rule=LAB_041,
@@ -929,9 +928,7 @@ def chain_gaps(
     # without one, finalize's run-choice station holds it where it reads
     # this text
     if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or not same_text):
-        analysis = analysis_findings(
-            ctx, ln.analysis_rule, result_section=not undeclared
-        )
+        analysis = analysis_findings(ctx, result_section=not undeclared)
         out += withdrawn_first(analysis, withdrawal)
     # 6. recomputation — always, unless `undeclared`
     if not undeclared:

@@ -67,6 +67,82 @@ class HelpStatesTheExitContract(unittest.TestCase):
         self.assertIn("2 no audit", text)
 
 
+class RuleCitation(unittest.TestCase):
+    """The rule a finding records is cited in its line from the datum
+    (`gate.with_rule`), in every form and in the summary: a site types no
+    citation, so the line cannot name another rule than the one counted."""
+
+    LAB_010 = gate.cited_rule("LAB-010 Commit before the run")
+
+    def test_a_known_rule_is_cited_after_the_text_before_the_way_out(self):
+        f = gate.blocker("the run recorded no commit", fix="commit", rule=self.LAB_010)
+        self.assertEqual(
+            f.line,
+            "BLOCKER: the run recorded no commit (LAB-010 Commit before the run). "
+            "Next: commit",
+        )
+        self.assertEqual(
+            f.message,
+            "the run recorded no commit (LAB-010 Commit before the run). Next: commit",
+        )
+
+    def test_the_line_as_written_and_the_dotted_line_cite_it_too(self):
+        written = gate.GateFinding(
+            "WARNING",
+            "a.md: WARNING: x",
+            gate.AS_WRITTEN,
+            evidence_kind=gate.GUARANTEED,
+            rule=self.LAB_010,
+        )
+        self.assertEqual(
+            written.line, "a.md: WARNING: x (LAB-010 Commit before the run)"
+        )
+        dotted = gate.coded(
+            "WARNING", "a.py:1", "x", evidence_kind=gate.GUARANTEED, rule=self.LAB_010
+        )
+        self.assertEqual(
+            dotted.line, "WARNING · a.py:1 · x · LAB-010 Commit before the run"
+        )
+
+    def test_the_summary_repeats_the_blocker_with_its_rule(self):
+        f = gate.Findings(tell=None)
+        f.block("x", fix="y", rule=self.LAB_010)
+        self.assertEqual(
+            f.summary("t", "the run")[1],
+            "  - x (LAB-010 Commit before the run). Next: y",
+        )
+
+    def test_the_texts_own_full_stop_goes_before_the_citation(self):
+        self.assertEqual(
+            gate.with_rule("One sentence. A second.", self.LAB_010),
+            "One sentence. A second (LAB-010 Commit before the run)",
+        )
+
+    def test_the_twin_an_assignment_without_a_rule_adds_nothing(self):
+        """A technical contract and an open assignment are data for the
+        inventory: the text stands as written, its full stop too."""
+        for rule in (gate.TECHNICAL_RULE, gate.OPEN_RULE):
+            with self.subTest(rule=rule.kind):
+                self.assertEqual(gate.with_rule("x.", rule), "x.")
+        self.assertEqual(
+            gate.blocker("x", fix="y", rule=gate.TECHNICAL_RULE).line,
+            "BLOCKER: x. Next: y",
+        )
+
+    def test_a_new_class_is_named_as_the_dotted_line_names_it(self):
+        self.assertEqual(gate.with_rule("x", gate.NEW_CLASS_RULE), "x (new class)")
+
+    def test_another_rule_changes_the_line_and_nothing_else(self):
+        """The citation follows the datum: the same sentence under another
+        rule cites that rule."""
+        f = gate.blocker("x", fix="y", rule=self.LAB_010)
+        other = replace(f, rule=gate.cited_rule("LAB-043 Runs go through `runlog`"))
+        self.assertEqual(other.text, f.text)
+        self.assertEqual(
+            other.line, "BLOCKER: x (LAB-043 Runs go through `runlog`). Next: y"
+        )
+
+
 class EvidenceKind(unittest.TestCase):
     """`evidence_kind` says what carries a finding's sentence, given at every
     site: static evidence warns and never blocks, every form names it,
@@ -157,7 +233,7 @@ class EvidenceKind(unittest.TestCase):
                     gate.GateFinding(
                         "WARNING", "z", evidence_kind=gate.STATIC_EVIDENCE, rule=rule
                     ).line,
-                    "WARNING (suspected, static evidence): z",
+                    f"WARNING (suspected, static evidence): {gate.with_rule('z', rule)}",
                 )
         # the twin: an exact check on a decided basis names neither
         self.assertEqual(

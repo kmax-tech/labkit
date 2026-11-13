@@ -32,7 +32,7 @@ from labkit.formats import findings, promises, protocol_block, protocol_check, r
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
-from labkit.formats.gate import BLOCKER, with_way_out
+from labkit.formats.gate import BLOCKER, with_rule, with_way_out
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
@@ -395,7 +395,8 @@ def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> li
     gap = audit_gaps.audit_record_gap(base_dir, line, text)
     if gap is None:
         return []
-    return [with_way_out(f"{path.name}: preflight_audit: {gap.why}", gap.fix)]
+    why = with_rule(f"{path.name}: preflight_audit: {gap.why}", gap.rule)
+    return [with_way_out(why, gap.fix)]
 
 
 def _promise_snapshot(

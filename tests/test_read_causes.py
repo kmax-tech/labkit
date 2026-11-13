@@ -156,7 +156,9 @@ class Outcome(unittest.TestCase):
                 self.assertEqual(f.outcome, gate.DEVIATION)
                 self.assertEqual(f.grade, gate.BLOCKER)
                 self.assertEqual(
-                    f.line, "BLOCKER (deviation, basis not settled): x. Next: y"
+                    f.line,
+                    "BLOCKER (deviation, basis not settled): "
+                    f"{gate.with_rule('x', rule)}. Next: y",
                 )
 
     def test_every_form_and_the_summary_name_an_outcome_that_is_no_breach(
@@ -164,22 +166,24 @@ class Outcome(unittest.TestCase):
     ) -> None:
         """One wording per outcome (`gate.OUTCOME_MARKS`), in the prefixed
         line, the line as written, the dotted line and the summary's
-        message."""
+        message; a rule of the standard is cited after the text
+        (`gate.with_rule`, held in tests/test_gate.py)."""
         for rule, kind, mark in (
             (gate.OPEN_RULE, gate.GUARANTEED, "deviation, basis not settled"),
             (LAB_003, gate.STATIC_EVIDENCE, "suspected, static evidence"),
         ):
             with self.subTest(mark=mark):
+                x = gate.with_rule("x", rule)
                 prefixed = gate.GateFinding(
                     gate.WARNING, "x", rule=rule, fix="y", evidence_kind=kind
                 )
-                self.assertEqual(prefixed.line, f"WARNING ({mark}): x. Next: y")
-                self.assertEqual(prefixed.message, f"({mark}) x. Next: y")
+                self.assertEqual(prefixed.line, f"WARNING ({mark}): {x}. Next: y")
+                self.assertEqual(prefixed.message, f"({mark}) {x}. Next: y")
                 written = gate.GateFinding(
                     gate.WARNING, "x", gate.AS_WRITTEN, rule=rule, evidence_kind=kind
                 )
-                self.assertEqual(written.line, f"x ({mark})")
-                self.assertEqual(written.message, f"({mark}) x")
+                self.assertEqual(written.line, f"{x} ({mark})")
+                self.assertEqual(written.message, f"({mark}) {x}")
                 dotted = gate.coded(
                     gate.WARNING, "a.py:1", "x", rule=rule, evidence_kind=kind
                 )
@@ -195,7 +199,10 @@ class Outcome(unittest.TestCase):
                 prefixed = gate.GateFinding(
                     gate.WARNING, "x", rule=rule, evidence_kind=gate.GUARANTEED
                 )
-                self.assertEqual((prefixed.line, prefixed.message), ("WARNING: x", "x"))
+                x = gate.with_rule("x", rule)
+                self.assertEqual(
+                    (prefixed.line, prefixed.message), (f"WARNING: {x}", x)
+                )
                 self.assertIsNone(prefixed.outcome_mark)
                 written = gate.GateFinding(
                     gate.WARNING,
@@ -204,7 +211,7 @@ class Outcome(unittest.TestCase):
                     rule=rule,
                     evidence_kind=gate.GUARANTEED,
                 )
-                self.assertEqual((written.line, written.message), ("x", "x"))
+                self.assertEqual((written.line, written.message), (x, x))
                 dotted = gate.coded(
                     gate.WARNING,
                     "a.py:1",
@@ -325,7 +332,10 @@ class Outcome(unittest.TestCase):
                 f = gate.blocker(
                     "x", fix="y", stated_outcome=gate.NOT_EXECUTABLE, rule=rule
                 )
-                self.assertEqual(f.line, "BLOCKER (check not executable): x. Next: y")
+                x = gate.with_rule("x", rule)
+                self.assertEqual(
+                    f.line, f"BLOCKER (check not executable): {x}. Next: y"
+                )
                 written = gate.GateFinding(
                     gate.WARNING,
                     "x",
@@ -334,7 +344,7 @@ class Outcome(unittest.TestCase):
                     stated_outcome=gate.NOT_EXECUTABLE,
                     rule=rule,
                 )
-                self.assertEqual(written.line, "x (check not executable)")
+                self.assertEqual(written.line, f"{x} (check not executable)")
 
     def test_an_unknown_outcome_is_refused(self) -> None:
         for rule in EVERY_RULE:

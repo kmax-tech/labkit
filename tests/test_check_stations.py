@@ -19,6 +19,7 @@ from labkit.checks import code_check, notes_check, protocol_report, run_record_c
 from labkit.formats import audit_gaps, promises, protocol_block, protocol_history
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 from labkit.gates import audit
+from labkit.run import start_check
 from labkit.formats.gate import (
     GUARANTEED,
     NOT_EXECUTABLE,
@@ -200,6 +201,38 @@ class ADataEntryThatDoesNotRead(unittest.TestCase):
         self.assertEqual(f.rule, TECHNICAL_RULE)
 
 
+class TheRunStartCitesTheRuleOfTheGap(unittest.TestCase):
+    """`start_check._audit_line_findings`: the refusal of a head whose
+    `preflight_audit` record covers no full run cites the rule the gap
+    records (`gate.with_rule`), before its way out — the sentence itself
+    carries none."""
+
+    def _refusal(self, gap: audit_gaps.RecordGap) -> list[str]:
+        with mock.patch.object(audit_gaps, "audit_record_gap", return_value=gap):
+            return start_check._audit_line_findings(
+                Path("area"), Path("area/PROTOCOL-x.md"), "r.toml", ""
+            )
+
+    def test_a_gap_of_the_preflight_audit_cites_its_rule(self):
+        gap = audit_gaps.RecordGap(
+            "r.toml saw other code", "audit again", audit_gaps.LAB_015
+        )
+        self.assertEqual(
+            self._refusal(gap),
+            [
+                "PROTOCOL-x.md: preflight_audit: r.toml saw other code (LAB-015 "
+                "Preflight audit before freezing). Next: audit again"
+            ],
+        )
+
+    def test_the_twin_a_record_that_does_not_read_cites_none(self):
+        gap = audit_gaps.RecordGap("r.toml does not read", "restore it", TECHNICAL_RULE)
+        self.assertEqual(
+            self._refusal(gap),
+            ["PROTOCOL-x.md: preflight_audit: r.toml does not read. Next: restore it"],
+        )
+
+
 class ProtocolCheckTellsItsWarnings(unittest.TestCase):
     """`protocol_report.print_report` prints protocol-check's own WARNING
     lines: a head's `preflight_audit` record that covers no full run, with
@@ -218,8 +251,16 @@ class ProtocolCheckTellsItsWarnings(unittest.TestCase):
         told = self._told(audit_drift=gap)
         self.assertIn(
             "area/PROTOCOL-x.md: WARNING: preflight_audit: the record saw scope sha "
-            "000000000000. Next: audit again",
+            "000000000000 (LAB-015 Preflight audit before freezing). Next: audit again",
             told,
+        )
+
+    def test_the_twin_a_record_that_does_not_read_cites_no_rule(self):
+        gap = audit_gaps.RecordGap("x.toml does not read", "restore it", TECHNICAL_RULE)
+        self.assertIn(
+            "area/PROTOCOL-x.md: WARNING: preflight_audit: x.toml does not read. "
+            "Next: restore it",
+            self._told(audit_drift=gap),
         )
 
     def test_an_unmentioned_constant_warns(self):

@@ -459,7 +459,8 @@ class Chain(unittest.TestCase):
         self.assertIn(
             "[branch-1] records branch_1_outcome = "
             "'generalises if criterion-1 met', which is none of its outcomes' "
-            "names. Next: record one of generalises, noisy, no-verdict",
+            "names (LAB-004 Identifiers make the intent addressable). Next: "
+            "record one of generalises, noisy, no-verdict",
             out,
         )
 

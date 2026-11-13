@@ -193,8 +193,7 @@ class AStandsIsUpheld(unittest.TestCase):
             f.text,
             f"Limitation (audit {rec.path.stem} #1): `stands` on a BLOCKER decided "
             f"limitation not reviewed — no decision review upholds that the "
-            f"reported claim stands within this limit (LAB-015 Preflight audit "
-            f"before freezing)",
+            f"reported claim stands within this limit",
         )
         self.assertEqual(
             f.fix,
@@ -298,8 +297,7 @@ class ARepairedClaimIsUpheld(unittest.TestCase):
             f.text,
             f"audit {rec.path.stem} #1: `fixed` on a BLOCKER on the Conclusion not "
             f"reviewed — no follow-up audit is shown a repaired claim; a second "
-            f"auditor judges the Conclusion as it stands (LAB-015 Preflight audit "
-            f"before freezing)",
+            f"auditor judges the Conclusion as it stands",
         )
         self.assertEqual(
             f.fix,
@@ -339,7 +337,7 @@ class AFirstDismissalIsUpheld(unittest.TestCase):
             f.text,
             f"audit {rec.path.stem} #1: `false-positive` on a BLOCKER not reviewed "
             f"— a blocking finding is not released by the deciding agent's own "
-            f"decision (LAB-015 Preflight audit before freezing)",
+            f"decision",
         )
         self.assertEqual(
             f.fix,
@@ -380,8 +378,7 @@ class ACarriedClosingIsUpheld(unittest.TestCase):
             f.text,
             f"audit {rec.path.stem} #1: a carried finding (from {EARLIER}#1) "
             f"`false-positive` — the follow-up did not find the fault gone, so "
-            f"closing it settles nothing by itself (LAB-015 Preflight audit before "
-            f"freezing)",
+            f"closing it settles nothing by itself",
         )
         self.assertEqual(
             f.fix,
@@ -414,8 +411,7 @@ class AnEarlierBlockerIsReleased(unittest.TestCase):
         )
         self.assertEqual(
             f.text,
-            f"audit {EARLIER}#1: decided `false-positive`, never followed up "
-            f"(LAB-015 Preflight audit before freezing)",
+            f"audit {EARLIER}#1: decided `false-positive`, never followed up",
         )
         self.assertEqual(f.fix, followup.STEP_AUDIT)
 

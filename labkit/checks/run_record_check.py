@@ -458,7 +458,7 @@ def null_lane_findings(kept: Sequence[KeptRows], area: Path) -> NullLanes:
                     f"registered lane's on every item — if the null condition "
                     f"should change either, it measures no noise floor (an "
                     f"instrument that ignores its labels predicts the same in both "
-                    f"lanes; LAB-034 Null condition in the same run)",
+                    f"lanes)",
                     fix="if the null should differ, give the instrument a null of its "
                     f"own, e.g. its predictions against permuted gold, then "
                     f"{measure_anew(area)}",

@@ -15,6 +15,7 @@ from labkit.formats.gate import (
     NOT_EXECUTABLE,
     VIOLATED,
     TECHNICAL_RULE,
+    cited_rule,
 )
 from labkit.gates import report_check
 from protocol_fixture import head
@@ -65,6 +66,49 @@ class TheAnalysisAuditCannotBeHeld(unittest.TestCase):
         )
         assert gap is not None
         self.assertEqual(gap.text, "no answering run to hold it to — nothing measured")
+
+
+class AMissingAnalysisAuditRecordsTheRuleOfTheLane(unittest.TestCase):
+    """`analysis_audit_gap`: where no decided record covers the area, the
+    blocker records the lane's rule — at low LAB-017 The number of audits
+    follows the cost tier, which owes this one audit at the promotion of
+    the number; else LAB-050 Analysis audit before reporting — and the
+    station's line cites it from that datum."""
+
+    def _gap(self, repeat_cost: str):
+        ctx = checked(head(repeat_cost=repeat_cost), run=AREA / "runs" / "r1")
+        with (
+            mock.patch.object(report_check, "analysis_now"),
+            mock.patch.object(report_check, "covering_analysis", return_value=[]),
+            mock.patch.object(
+                report_check.audit_gaps, "audit_coverage", return_value="none saw it"
+            ),
+        ):
+            (f,) = report_check.analysis_findings(ctx, result_section=False)
+        return f
+
+    def test_each_lane_cites_its_own_rule(self):
+        for repeat_cost, rule in (
+            ("low", "LAB-017 The number of audits follows the cost tier"),
+            ("high", "LAB-050 Analysis audit before reporting"),
+        ):
+            with self.subTest(repeat_cost=repeat_cost):
+                f = self._gap(repeat_cost)
+                self.assertEqual((f.grade, f.rule), (BLOCKER, cited_rule(rule)))
+                self.assertEqual(f.text, "analysis audit: none saw it")
+                self.assertIn(f"analysis audit: none saw it ({rule}). Next: ", f.line)
+
+    def test_the_twin_an_audit_that_cannot_be_held_cites_none(self):
+        ctx = checked(TEXT, run=AREA / "runs" / "r1")
+        gone = AuditError("out.jsonl is gone", fix="restore it")
+        with mock.patch.object(report_check, "analysis_now", side_effect=gone):
+            (f,) = report_check.analysis_findings(ctx, result_section=False)
+        self.assertEqual(f.rule, TECHNICAL_RULE)
+        self.assertEqual(
+            f.line,
+            "BLOCKER: analysis audit: the analysis audit cannot be held to the run: "
+            "out.jsonl is gone. Next: restore it",
+        )
 
 
 class AnAnsweringRunWithoutItsRecord(unittest.TestCase):

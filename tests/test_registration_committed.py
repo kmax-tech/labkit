@@ -310,9 +310,9 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         ctx = report_context.checked(self.area, self.proto)
         (gap,) = report_check.registration_gaps(ctx)
         self.assertEqual(gap.rule, report_check.LAB_010)
-        # the sentence cites the rule the finding records, and no other
-        self.assertIn("(LAB-010 Commit before the run)", gap.text)
-        self.assertNotIn("LAB-003", gap.text)
+        # the line cites the rule the finding records, and no other
+        self.assertIn("(LAB-010 Commit before the run). Next: ", gap.line)
+        self.assertNotIn("LAB-003", gap.line)
 
     def test_a_record_that_names_no_commit_cites_no_rule(self):
         """A record without a commit that does not say `no-git`: the basis

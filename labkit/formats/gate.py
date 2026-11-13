@@ -28,6 +28,14 @@ id's, or a code check's (`coded`: grade, where, what, rule, fix as fields,
 told as `BLOCKER · <where> · <what> · <rule> · <fix>`). No gate reads a
 grade back from a line's words.
 
+The rule a finding holds is data too (`GateFinding.rule`), and every form
+cites it from there: `BLOCKER: <what> (LAB-nnn <its name>). Next: <fix>`
+(`with_rule`), the dotted form as its own part. A site's text does not cite
+the rule it records — the line would name it twice, and a citation typed
+beside the datum can name another rule than the one counted
+(`tests/test_gate.py` holds the sites). A second rule a sentence explains
+itself by stays in its text.
+
 Every BLOCKER names its way out (`fix`): the step that closes it, as a
 command where one exists, and where the cause may not be fixable, the
 handover. A BLOCKER without one is refused here, and
@@ -219,6 +227,20 @@ def cited_rule(rule: str) -> RuleAssignment:
     return RuleAssignment(KNOWN_RULE, m.group(1), m.group(2))
 
 
+def with_rule(what: str, rule: RuleAssignment) -> str:
+    """WHAT with RULE cited after it as every line cites one — `<what>
+    (LAB-nnn <its name>)`, WHAT's own closing full stop dropped first; WHAT
+    unchanged where the assignment tells nothing (`RuleAssignment.line_part`:
+    an open assignment, a technical contract). The one spelling of a
+    sentence and its rule, for a finding's line and for a sentence told
+    outside a finding whose cause records its rule (`audit_gaps.RecordGap`).
+    The way out comes after it (`with_way_out`)."""
+    cited = rule.line_part
+    if cited is None:
+        return what
+    return f"{what.rstrip().removesuffix('.')} ({cited})"
+
+
 #: the assignments without a rule, one value each
 OPEN_RULE = RuleAssignment(OPEN_ASSIGNMENT)
 TECHNICAL_RULE = RuleAssignment(TECHNICAL_CONTRACT)
@@ -290,8 +312,10 @@ class GateFinding:
             a rule of the standard (`cited_rule`), TECHNICAL_RULE, or
             OPEN_RULE where the rule is recorded as not decided — the
             site says which, an assignment left out is refused, and so
-            are None and a plain string. An open one is not told in the
-            line as a rule; its outcome is (`outcome_mark`).
+            are None and a plain string. A rule of the standard is cited
+            in every form from here (`with_rule`), so `text` does not
+            cite it. An open one is not told in the line as a rule; its
+            outcome is (`outcome_mark`).
         fix: The way out — what closes the finding, a command where one
             exists. Required for a BLOCKER (refused without one), optional
             for a WARNING; told in every form (`line`).
@@ -400,8 +424,10 @@ class GateFinding:
         `<text> (<mark>)`, dotted as its own part after the grade
         (`WARNING · suspected, static evidence · …`). The dotted form names
         static evidence also where the mark does not, on a check not
-        executed. The way out (`way`) ends the line in every form: its own
-        dotted part (`Next: …`), else after `WAY_OUT`."""
+        executed. Every form cites the recorded rule after the text: its
+        own dotted part, else `<text> (LAB-nnn <its name>)` (`with_rule`).
+        The way out (`way`) ends the line in every form: its own dotted
+        part (`Next: …`), else after `WAY_OUT`."""
         mark = self.outcome_mark
         if self.form == DOTTED:
             # SUSPECTED's mark says "static evidence" already; the kind is
@@ -416,27 +442,26 @@ class GateFinding:
             rule = self.rule.line_part
             parts = (self.grade, kind, mark, self.where, self.text, rule, fix)
             return " · ".join(p for p in parts if p)
+        what = with_rule(self.text, self.rule)
         if self.form == AS_WRITTEN:
-            told = f"{self.text} ({mark})" if mark else self.text
+            told = f"{what} ({mark})" if mark else what
         else:
-            told = (
-                f"{self.grade} ({mark}): {self.text}"
-                if mark
-                else f"{self.grade}: {self.text}"
-            )
+            told = f"{self.grade} ({mark}): {what}" if mark else f"{self.grade}: {what}"
         return with_way_out(told, self.way)
 
     @property
     def message(self) -> str:
         """What the summary repeats. PREFIXED and AS_WRITTEN: the text with
-        its way out, the outcome named first where it is not a breach
-        (`(<mark>) <text>` — also for AS_WRITTEN, whose `line` names it
-        last). DOTTED: the whole line, the mark where the line has it — its
-        text alone would lose where it points and the fix."""
+        its rule cited (`with_rule`) and its way out, the outcome named
+        first where it is not a breach (`(<mark>) <text>` — also for
+        AS_WRITTEN, whose `line` names it last). DOTTED: the whole line, the
+        mark where the line has it — its text alone would lose where it
+        points and the fix."""
         if self.form == DOTTED:
             return self.line
         mark = self.outcome_mark
-        return with_way_out(f"({mark}) {self.text}" if mark else self.text, self.way)
+        what = with_rule(self.text, self.rule)
+        return with_way_out(f"({mark}) {what}" if mark else what, self.way)
 
 
 def withdrawn_first(

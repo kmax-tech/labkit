@@ -352,8 +352,11 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     return audit_gaps.covering_records(records, analysis_now(area, text, run))
 
 
-#: how a gate tells an audit finding nobody decided, after its line
-UNDECIDED = "undecided (LAB-015 Preflight audit before freezing)"
+#: the word after an open audit finding's line, in a gate finding and in
+#: finalize's note on a NOTE, and the rule that owes the decision: the
+#: finding records it, the note cites it with `gate.with_rule`
+UNDECIDED = "undecided"
+UNDECIDED_RULE = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 def check_audit_records_read(
@@ -396,11 +399,14 @@ def check_audit_findings_decided(
     own = followup.records_of(evidence.records, protocol_id)
     for u in findings.open_findings(own):
         line = f"{u.line} — {UNDECIDED}"
-        rule = cited_rule("LAB-015 Preflight audit before freezing")
         if u.grade == BLOCKER:
-            out.append(blocker(line, fix=way_out_of(u), rule=rule))
+            out.append(blocker(line, fix=way_out_of(u), rule=UNDECIDED_RULE))
         elif u.grade == WARNING:
-            out.append(GateFinding(WARNING, line, rule=rule, evidence_kind=GUARANTEED))
+            out.append(
+                GateFinding(
+                    WARNING, line, rule=UNDECIDED_RULE, evidence_kind=GUARANTEED
+                )
+            )
     return out
 
 

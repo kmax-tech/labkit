@@ -106,6 +106,7 @@ from labkit.formats.gate import (
     blocker,
     cited_rule,
     outcome_of_failed_read,
+    with_rule,
     withdrawn_first,
 )
 from labkit.formats.runs import metrics_path, metrics_text, read_data, read_metrics
@@ -178,6 +179,7 @@ from labkit.checks.run_record_check import (
 )
 from labkit.checks.audit_binding import (
     UNDECIDED,
+    UNDECIDED_RULE,
     check_audit_findings_decided,
     check_audit_records_read,
     check_audited_runs_kept,
@@ -388,7 +390,7 @@ def check_open_audit_findings(
     for u in audit_findings.open_findings(own):
         if u.grade == NOTE:  # no gate finding: told, never counted
             notes += 1
-            findings.note(f"  {u.line} — {UNDECIDED}")
+            findings.note("  " + with_rule(f"{u.line} — {UNDECIDED}", UNDECIDED_RULE))
     if not gone and not undecided and not notes:
         findings.note(
             f"  every finding decided ({len(own)} audit record(s) on {protocol.name})"

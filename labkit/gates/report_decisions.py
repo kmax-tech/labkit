@@ -247,8 +247,7 @@ def check_stands_upheld(
             BLOCKER if f.grade == BLOCKER else WARNING,
             f"{findings.limit_label(record, n)}: `stands` on a {f.grade} decided limitation "
             f"{reviews.state(record, n, found, text)} — no decision review "
-            f"upholds that the reported claim stands within this limit "
-            f"(LAB-015 Preflight audit before freezing)",
+            f"upholds that the reported claim stands within this limit",
             fix=f"{review_way()} asks a second auditor (owed at "
             f"every repeat cost); after a rejection, decide again",
             evidence_kind=GUARANTEED,
@@ -286,8 +285,7 @@ def check_contested_closings_upheld(
                 f"audit {record.path.stem} #{n}: `{f.status}` on a {f.grade} a "
                 f"review said {was.verdict} on ({was.why}) — closing a finding "
                 f"a reviewer did not uphold settles nothing by itself; the new "
-                f"decision is {reviews.state(record, n, found, text)} "
-                f"(LAB-015 Preflight audit before freezing)",
+                f"decision is {reviews.state(record, n, found, text)}",
                 fix=f"{review_way()} asks a second auditor whether the "
                 f"reason shows it {_closing_question(f.status)}",
                 evidence_kind=GUARANTEED,
@@ -324,7 +322,7 @@ def check_repaired_claims_upheld(
                 f"audit {record.path.stem} #{n}: `fixed` on a BLOCKER on the Conclusion "
                 f"{reviews.state(record, n, found, text)} — no follow-up audit is "
                 f"shown a repaired claim; a second auditor judges the Conclusion as "
-                f"it stands (LAB-015 Preflight audit before freezing)",
+                f"it stands",
                 fix=f"{review_way()} asks a second auditor whether the "
                 f"Conclusion as it stands no longer makes the claim the finding "
                 f"names; no new measurement and no analysis audit",
@@ -363,8 +361,7 @@ def check_first_dismissals_upheld(
                 BLOCKER,
                 f"audit {record.path.stem} #{n}: `false-positive` on a BLOCKER "
                 f"{reviews.state(record, n, found, text)} — a blocking finding is not "
-                f"released by the deciding agent's own decision (LAB-015 Preflight "
-                f"audit before freezing)",
+                f"released by the deciding agent's own decision",
                 fix=f"{review_way()} asks a second auditor whether the reason "
                 f"shows it {_closing_question('false-positive')}",
                 evidence_kind=GUARANTEED,
@@ -391,7 +388,7 @@ def check_earlier_blockers_released(
     not form a chain (`followup.chain`)."""
     return [
         blocker(
-            f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",
+            f"audit {h.ref}: {h.why}",
             fix=h.step,
             rule=LAB_015,
         )
@@ -416,8 +413,7 @@ def check_carried_closings_upheld(
         blocker(
             f"audit {record.path.stem} #{n}: a carried finding (from {f.carries}) "
             f"`{f.status}` — the follow-up did not find the fault gone, so "
-            f"closing it settles nothing by itself "
-            f"(LAB-015 Preflight audit before freezing)",
+            f"closing it settles nothing by itself",
             fix=f"{review_way()} asks a second auditor whether "
             f"the reason shows it {_closing_question(f.status)}",
             rule=LAB_015,

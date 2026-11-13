@@ -43,7 +43,13 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import adopt_command, fill_command, step_command
 from labkit.formats.audit_gaps import RecordGap, audit_record_gap
-from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding, with_way_out
+from labkit.formats.gate import (
+    BLOCKER,
+    EXIT_CONTRACT,
+    GateFinding,
+    with_rule,
+    with_way_out,
+)
 from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
@@ -747,7 +753,9 @@ def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  #
     if r.audit_drift:
         tell(
             f"{f}: WARNING: preflight_audit: "
-            + with_way_out(r.audit_drift.why, r.audit_drift.fix)
+            + with_way_out(
+                with_rule(r.audit_drift.why, r.audit_drift.rule), r.audit_drift.fix
+            )
         )
     for finding in r.id_findings:
         tell(finding.line)
