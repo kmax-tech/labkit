@@ -25,11 +25,14 @@ do not soften a claim the first reader made.
    reason since revised.
 2. `===== REPORT … =====` — the report, each line as `<line>: <text>`,
    exactly as the first reader saw it.
-3. `===== ADOPTED =====`, `===== DISCUSSED =====`, the protocol, each
-   run's `metrics.json`, `===== RUNS =====` and `===== AUDITS =====` —
-   the inputs the first reader was given: the run the protocol has
-   adopted (or none), the discussion blocks, what each run computed, and
-   every audit record with its decisions.
+3. `===== ADOPTED =====`, `===== DISCUSSED =====`, `===== OTHER
+   PROTOCOLS' RESULTS =====` (only when the report shows another
+   protocol's result block), the protocol, each run's `metrics.json`,
+   `===== RUNS =====` and `===== AUDITS =====` — the inputs the first
+   reader was given: the run the protocol has adopted (or none), the
+   discussion blocks, the result blocks of other protocols with their
+   protocol and run, what each run computed, and every audit record with
+   its decisions.
 4. The rules inlined from the standard: LAB-104 A number leaves the area
    only through its adoption (what makes a number a result, and how a
    run only looked at is cited) and LAB-050 Analysis audit before
@@ -42,7 +45,8 @@ Per decision, one of three verdicts:
 - **upheld** — what is inlined shows the claim does not apply. For a
   `result` claim: the number or verdict on the line is the adopted
   run's as it recorded it; or the line stands inside a discussion block
-  or a handover block, or under a heading that names what follows as
+  or a handover block, or inside a result block listed under OTHER
+  PROTOCOLS' RESULTS, or under a heading that names what follows as
   not adopted, or the same sentence names the run as no result; or the
   line states a fact of the setup the run did not compute. For a
   `contradiction` claim: the statement agrees with the record or the

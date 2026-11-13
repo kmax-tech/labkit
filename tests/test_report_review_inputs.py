@@ -132,6 +132,56 @@ class RunsText(unittest.TestCase):
         self.assertEqual(labels[-2:], ["RUNS", "AUDITS"], labels)
         self.assertIn("2026-01-01T00-00-01_a · completed", dict(pieces)["RUNS"])
 
+    def _pieces(self, area: Path, text: str) -> dict[str, str]:
+        report = area.parent.parent / "REPORT.md"
+        report.write_text(text, encoding="utf-8")
+        proto = area / "PROTOCOL-x.md"
+        return dict(
+            report_review_inputs.review_pieces(
+                area,
+                report,
+                text,
+                proto,
+                proto.read_text(encoding="utf-8"),
+                [],
+                state_of(area),
+                read_evidence(area, staged=False),
+            )
+        )
+
+    def test_another_protocols_result_block_is_named_as_its_result(self):
+        """A report shared by a handed-over predecessor and its successor
+        carries the successor's result block: the predecessor's reviewer is
+        told whose result it is and that report-check holds it against that
+        protocol, so it does not read the successor's number as one this
+        protocol presents unadopted (usage round 24, replay case 3). Its own
+        block is not listed there."""
+        area = self._area()
+        own = completed_run(area, "2026-01-01T00-00-01_a")
+        other = "2026-01-01T00-00-09_z"
+        text = (
+            "# Report\n\n"
+            f"<!-- labkit result: experiments/02-y/PROTOCOL-y.md run {other} "
+            "(protocol-fill --into; edit the protocol, not this block) -->\n"
+            "kept number: n = 3 documents\n"
+            "<!-- /labkit result -->\n\n"
+            f"<!-- labkit result: experiments/01-x/PROTOCOL-x.md run {own.name} "
+            "(protocol-fill --into; edit the protocol, not this block) -->\n"
+            "kept number: n = 1\n"
+            "<!-- /labkit result -->\n"
+        )
+        other_results = self._pieces(area, text)["OTHER PROTOCOLS' RESULTS"]
+        self.assertIn(
+            f"lines 3–5: experiments/02-y/PROTOCOL-y.md, run {other}", other_results
+        )
+        self.assertNotIn(own.name, other_results)
+
+    def test_the_twin_a_report_of_its_own_blocks_reads_as_before(self):
+        """No block of another protocol: no piece is added, so the review's
+        fingerprint of such a report is the one it had."""
+        area = self._area()
+        self.assertNotIn("OTHER PROTOCOLS' RESULTS", self._pieces(area, "# Report\n"))
+
 
 if __name__ == "__main__":
     unittest.main()

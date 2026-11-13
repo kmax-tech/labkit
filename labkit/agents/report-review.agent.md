@@ -24,23 +24,29 @@ propose repairs.
    on its criterion is a finding.
 3. `===== DISCUSSED =====` — the discussion blocks of the protocol, or
    `none`.
-4. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
+4. `===== OTHER PROTOCOLS' RESULTS =====` — only when the report shows
+   the result block of a protocol file other than the one you review (a
+   successor's, in a report the two share): where each stands, its
+   protocol and its run. Such a block belongs to that protocol, and
+   report-check holds it to that protocol; it is no result of the
+   protocol you review.
+5. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, promises) and what the protocol itself reports: its
    Conclusion and Recorded results, or none.
-5. `===== FILE: …/metrics.json (adopted | discussed | cited, not adopted) =====`
+6. `===== FILE: …/metrics.json (adopted | discussed | cited, not adopted) =====`
    — per run the review concerns, what it computed.
-6. `===== RUNS =====` — every run of the area, oldest first, one line
+7. `===== RUNS =====` — every run of the area, oldest first, one line
    each: state, kind, the protocol it was bound to, what the report makes
    of it (adopted, discussed, cited, not in the report), its commit and
    script, for a measurement the settings that vary across the protocol's
    measurements, its scalar metrics. A choice the report keeps silent about stands here: the same
    protocol measured under other settings before the adopted run.
-7. `===== AUDITS =====` — every audit record of the area: each finding's
+8. `===== AUDITS =====` — every audit record of the area: each finding's
    grade and text, the person's decision (status, reason, effect), and
    every audit attempt that failed, with the backend's words. An effect
    `<ID> not assessable` means this run does not judge that promise. A
    failed analysis audit means no audit saw the run's numbers.
-8. The rules inlined from the standard: LAB-104 A number leaves the area
+9. The rules inlined from the standard: LAB-104 A number leaves the area
    only through its adoption and LAB-050 Analysis audit before reporting.
 
 ## What to report
@@ -86,7 +92,10 @@ Not a claim:
   result)", "Run <id> — discussed, not adopted") and marks every line
   below it up to the next heading of the same or a higher level; (c) the
   line stands inside a discussion block or a handover block, whose why,
-  "Tried" and "Run" lines may show the numbers of the run they name. A
+  "Tried" and "Run" lines may show the numbers of the run they name; (d)
+  the line stands inside a result block listed under OTHER PROTOCOLS'
+  RESULTS — prose outside it that presents that number as this
+  protocol's finding is still a claim. A
   line outside every mark that states the same number as a finding is a
   claim.
 - Facts of the setup the run did not compute: dataset sizes taken from

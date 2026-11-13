@@ -135,6 +135,11 @@ class Block:
     body: str
 
 
+def block_protocol(report: Path, block: Block) -> Path:
+    """The protocol BLOCK of REPORT names, resolved against the report's directory."""
+    return (report.parent / block.protocol).resolve()
+
+
 #: the two lines a block opens with, the protocol's text carried over: the
 #: registered question and the author's answer, a statement to hold against
 #: the verdicts below it, not a recorded verdict (report-review brief)

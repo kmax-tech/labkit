@@ -17,7 +17,13 @@ from labkit.checks.audit_binding import AuditError
 from labkit.formats.area_state import AreaState
 from labkit.formats.repo import path_kind
 from labkit.formats.runs import RunDir, metrics_text
-from labkit.checks.report_blocks import Discussion, cited_run_ids, discuss_command
+from labkit.checks.report_blocks import (
+    Discussion,
+    block_protocol,
+    blocks,
+    cited_run_ids,
+    discuss_command,
+)
 from labkit.formats import protocol_block
 from labkit.formats import findings
 from labkit.formats import failed_attempts
@@ -116,8 +122,13 @@ def review_pieces(
             )
             or "none — the report discusses no run",
         ),
-        (f"FILE: {shown(protocol, repo)}", protocol_text),
     ]
+    # only when the report shows a block of another protocol file: a report
+    # without one keeps the inputs, and the review fingerprint, it had
+    others = other_results_text(report, text, protocol)
+    if others is not None:
+        pieces.append(("OTHER PROTOCOLS' RESULTS", others))
+    pieces.append((f"FILE: {shown(protocol, repo)}", protocol_text))
     present = {rd.dir.name for rd in state.runs}
     for d in discussed:
         run_dir = run_path(area, d.run_id)
@@ -164,6 +175,28 @@ def review_pieces(
     )
     pieces.append(("AUDITS", audits_text(area, held)))
     return pieces
+
+
+def other_results_text(report: Path, text: str, protocol: Path) -> str | None:
+    """The result blocks of REPORT (its TEXT) whose protocol path, resolved
+    against the report's directory (`block_protocol`), is not PROTOCOL's —
+    another protocol file, in this area or another —, one line each — where they stand, the protocol
+    (relative to REPO) and the run it shows —, or None when there is none.
+    A report one protocol hands over and its successor adopts in carries
+    the successor's number: its reviewer is told whose result that is.
+    Whether the block agrees with that protocol's adoption is not checked
+    here; report-check holds every result block to its own protocol
+    (`report_blocks.block_gaps`). None keeps
+    the inputs, and so the fingerprint, of a report without such a block."""
+    own = protocol.resolve()
+    lines = [
+        f"lines {b.first}–{b.last}: {b.protocol}, "
+        f"run {b.run_id} — a block protocol-fill writes for that protocol "
+        "file; not a result of the protocol under review"
+        for b in blocks(text)
+        if block_protocol(report, b) != own
+    ]
+    return "\n".join(lines) or None
 
 
 #: how a setting a measurement's config lacks is shown and compared — not

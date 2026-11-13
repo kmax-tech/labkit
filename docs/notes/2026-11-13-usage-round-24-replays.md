@@ -43,3 +43,15 @@ Cause: `report_review_inputs.review_pieces` (`labkit/checks/report_review_inputs
 Not replayed: the `[replaces]` block of the successor (the reviewer's input does not read it either way) and a real model's answer; the stand-in shows the input, the trace shows the answer. The second reviewer of a dismissed claim (`claim_review`) was not checked separately.
 
 Expected: a block another protocol generated, which report-check already holds against its own protocol, is not the predecessor's claim — either the reviewer is told so, or such lines are left out of what it judges. Which of the two is a design choice for step 2.
+
+## Repairs (2026-11-13, plan step 2)
+
+Each with a test that failed before, a twin, and the replay rerun through the real commands: the old readings of cases 1 and 2 no longer occur, and the predecessor's reviewer now reads the successor's block as the successor's.
+
+| Case | Commit      | What changed                                                                                                                                                                                        |
+|------|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1    | `c43c842e`  | the staging step also stands when only the tree holds a completed run or the adoption; the citation names the run as lying in the working tree, with its `git add`                                  |
+| 2    | `cde6124c`  | the review's state line follows the grade ("(grade WARNING) not released — nothing is held"); after a rejection the gate's way out is deciding again; the contract (a WARNING only warns) unchanged |
+| 3    | this commit | the review's inputs list result blocks of other protocol files with protocol and run; both reviewer briefs exempt them; reports without such a block keep their fingerprint                         |
+
+Not changed, open for the author: whether a rejected WARNING limitation should block, and whether the report's Limitation line ("the verdicts stand, read within this limit") should say that a second auditor rejected it. No real model was run on the new reviewer input; the stand-in shows the input, not an answer.

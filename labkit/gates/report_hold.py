@@ -19,7 +19,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
-from labkit.checks.report_blocks import discuss_command
+from labkit.checks.report_blocks import block_protocol, discuss_command
 from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -479,11 +479,6 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
         except protocol_block.BlockError as exc:
             out.unreadable[p] = str(exc)
     return out
-
-
-def block_protocol(report: Path, block: report_blocks.Block) -> Path:
-    """The protocol BLOCK of REPORT names, resolved against the report's directory."""
-    return (report.parent / block.protocol).resolve()
 
 
 def block_sources(
