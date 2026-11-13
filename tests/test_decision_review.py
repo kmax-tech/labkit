@@ -260,6 +260,38 @@ class ANotAssessableIsReviewed(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(f"`{self.EFFECT}` on a BLOCKER decided limitation rejected", out)
 
+    def test_an_insufficient_review_shows_the_recorded_verdict_and_still_holds(self):
+        """Not upheld is not confirmed: after `insufficient` the effect is
+        lifted as after a rejection — the Recorded results show the miss —,
+        and the BLOCKER stays held until a review upholds the decision; the
+        way out is the missing evidence and a review, not deciding again."""
+        area, record = self.area()
+        proto = area / "PROTOCOL-x.md"
+        rc, out, _, _ = run_review(area, INSUFFICIENT)
+        self.assertEqual(rc, 1, out)
+        rendered, written = protocol_result.render_result(
+            proto.read_text(encoding="utf-8"), area
+        )
+        label = f"Limitation (audit {record.stem} #1)"
+        self.assertEqual(written, ["Recorded results", label])
+        (results,) = [ln for ln in rendered.splitlines() if "Recorded results:" in ln]
+        self.assertIn("criterion-1 missed", results)
+        self.assertNotIn("not assessable", results)
+        self.assertIn(
+            f"- **{label}:** a limit proposed, not confirmed by a second auditor",
+            rendered,
+        )
+        proto.write_text(rendered, encoding="utf-8")
+        code, out = gate(area)
+        self.assertEqual(code, 1, out)
+        (held,) = [
+            ln for ln in out.splitlines() if ln.startswith("  BLOCKER: Limitation")
+        ]
+        self.assertIn(
+            f"`{self.EFFECT}` on a BLOCKER decided limitation insufficient", held
+        )
+        self.assertNotIn("decide it `limitation` with the effect `stands`", held)
+
     def test_the_twin_an_upheld_effect_leaves_the_criterion_unjudged(self):
         area, _ = self.area()
         proto = area / "PROTOCOL-x.md"
