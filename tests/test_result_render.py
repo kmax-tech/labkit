@@ -252,9 +252,7 @@ class RenderGaps(unittest.TestCase):
         self.assertEqual(len(gaps), 2, gaps)
         self.assertIn("Recorded results line differs from its rendering", gaps[0].text)
         self.assertIn("differs from the record", gaps[1].text)
-        self.assertEqual(
-            [g.rule for g in gaps], [TECHNICAL_RULE, result_render.LAB_015]
-        )
+        self.assertEqual([g.rule for g in gaps], [TECHNICAL_RULE, TECHNICAL_RULE])
         self.assertIn("--render", gaps[1].fix or "")
         rendered, written = protocol_result.render_result(edited, self.area)
         self.assertEqual(rendered, text)

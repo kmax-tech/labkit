@@ -611,7 +611,7 @@ def _load(path: Path, name: str):  # noqa: ANN202 — a test helper
 RUN = "2026-10-29T10-00-00_abcd"
 BODY = (
     "\n## Result\n\n- **Recorded results:** <generated metrics, run_id and limits note>\n"
-    "- **Conclusion:** <!-- l --> <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
+    "- **Conclusion:** <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
 )
 
 

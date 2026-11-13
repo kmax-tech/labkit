@@ -352,7 +352,9 @@ def block_gaps(
                     f"by hand: a stale rendering, no objection to the number",
                     fix=f"{into} writes it again",
                     step=into_cmd,
-                    rule=LAB_104,
+                    # equality with the protocol's rendering: a stale block
+                    # is no number leaving the area unadopted
+                    rule=TECHNICAL_RULE,
                 )
             )
     return gaps

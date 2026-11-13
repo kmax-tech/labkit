@@ -422,7 +422,9 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     f"or by hand: a stale rendering, no objection to the number",
                     fix=f"`{RENDER}` writes the record's line",
                     step=RENDER,
-                    rule=LAB_015,
+                    # equality with the rendering, as for Recorded results: a
+                    # stale line is no finding of the audit's rule
+                    rule=TECHNICAL_RULE,
                 )
             )
     expected_labels = {label for label, _ in expected.limits}

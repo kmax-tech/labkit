@@ -124,9 +124,7 @@ class Area(unittest.TestCase):
 
     def test_an_unwritten_answer_line_names_the_write_back(self):
         self.note.write_text(
-            "- **Recorded results:** <!-- l --> <per registered id its verdict>\n"
-            + "\n"
-            + head()
+            "- **Recorded results:** <per registered id its verdict>\n" + "\n" + head()
         )
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
