@@ -71,6 +71,22 @@ Focused existing tests: `PYTHONPATH=tests:. .venv/bin/python -m unittest test_st
 
 An independent reader reviewed this analysis and plan against the source and recomputed the 24 generated forms: the counts and inclusion comparison agreed, with zero review findings. This review does not establish the scientific adequacy of the forms.
 
+## Comparison tests before the rebuild (2026-11-13)
+
+Three tests fix the output in force since `5670d378`. The central field selection has to keep this output. They hold only what they cover:
+
+| Path                           | Test                                               | Covered                                                                                                                     | Result today                                                                                                                 |
+|--------------------------------|----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| New area, `protocol_stamp`     | `tests/test_form_stamps.py`                        | 24 combinations of kind, repeat cost, model and short or report form, byte for byte against `tests/form_stamps/stamp-*.txt` | kept as found                                                                                                                |
+| `--report` on an existing area | `tests/test_form_stamp_paths.py`, `ReportOnAnArea` | 3 kinds × 2 costs × model or not, through `stamp_area`                                                                      | low cost: protocol unchanged (nothing freezes there); high cost: byte for byte against `tests/form_stamps/report-high-*.txt` |
+| `--change-kind`                | `tests/test_form_stamp_paths.py`, `ChangeKind`     | 48 cases (every pair of kinds × 2 costs × model or not × short or report form), on unfilled protocols                       | the protocol equals the new kind's stamp under the same id in all 48                                                         |
+
+Checked against a known positive: with the condition of `5670d378` reverted, `test_form_stamps.py` fails in the four combinations that commit changed.
+
+Two observations from the `--report` path, recorded as found and not changed: at high repeat cost a computation gains `Noise ceiling → threshold`, and without a model `Answer form + resolution`, which its full form leaves out; `promote` inserts the template's daggered items without the field policy of `owed_cut`. The inserted items also keep the template's long placeholders, not the one-line hints of `short_placeholders`. Whether `--report` should follow the field policy is a separate decision.
+
+Not covered: `--change-kind` with fields the author filled in (held by `tests/test_scaffold.py`), protocols stamped by an earlier labkit version, the command-line parsing of `labkit-init exp`, and the consumers that read fields afterwards (`protocol-fill`, preflight, finalize).
+
 ## Implementation plan for approval
 
 1. **Record the intended inclusion matrix.** For the 24 combinations above, distinguish fields included in the form, fields due before measurement, and fields due after freeze or adoption. Include optional items absent from `FIELDS`. The low-cost full-form discrepancy is resolved (`5670d378`); do not silently turn a display cleanup into a new duty. Preserve the task-dependent placeholder meaning and the current TOML contracts.

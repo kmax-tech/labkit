@@ -1,0 +1,113 @@
+# Experiment protocol: x
+
+## Summary (after the run, for a person)
+
+- **Question †:** <the question in plain words. The Conclusion below answers it…>
+- **Conclusion:** <the answer in at most two plain sentences…>
+- **Limitations:** <how far the answer holds, in one sentence…>
+- **Next step:** <what follows: a decision, the next experiment, or "none">
+- **Did †:** <what was done, in one sentence, for a reader without context>
+
+## Intent (before the run)
+
+- **Terms of this protocol:** <one line per word you coin…>
+- **Question / hypothesis:** <the one question, and what you expect>
+- **Registered branch:** <if a result decides what follows, register it before the run, like this…>
+- **Timebox:** <the duration first, such as `45 min` or `4h`, then what follows: record and ask. A fit stops before this budget when its first fold projects over it.>
+- **Split touched:** <which split the run can touch: train | dev | test>
+- **Why this design †:** <the choice of model, dataset and method, in one sentence>
+- **Rival explanations †:** <per confound…>
+- **Out of scope †:** <the neighbouring questions this run leaves open>
+
+## Result (after the run — write back, don't go quiet)
+
+- **Recorded results:** <generated from the run and the audit records by `labkit-adopt`. Never…>
+- **Deviations after freeze:** <"none", or what changed after `frozen = true`. The Intent above stays…>
+- **Raw output:** <one real prompt+answer pair per finding, read from the run's kept output>
+- **Interpretation:** <one sentence. Keep findings about the instrument apart from findings…>
+- **Expected or surprising †:** <what was expected or surprising. Failures belong here.>
+- **Rival check †:** <which rivals are ruled out, and which still stand>
+- **Caps/drops †:** <what was left out or limited>
+- **Analysis audit †:** <date · scope sha · N findings…>
+
+<!-- APPARATUS — this part gets LOOKED UP, not read. -->
+
+## Context (self-contained)
+
+- **Problem in one sentence:** <what is found out, without technical terms>
+- **Prior threads:** <2–3 [[wikilinks]], each with why it leads here>
+
+## Setup
+
+- **Data / scope:** <source, N, producer script>
+- **Data profile:** <your judgement of the data before the run: could a surface feature answer the question without the model? Say what you looked at and what it cannot show.>
+- **Prompt (verbatim, per variant):**
+
+  ```text
+  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
+  ```
+
+- **Model I/O:** <in…>
+- **Exclusions / filters:** <what is dropped from the data or the output, and why. Write "none" if…>
+- **Unit:** <what one counted or judged thing is, and what is not one…>
+- **Data preparation †:** <raw → prepared…>
+- **Meaning of the gold label †:** <what the positive class really means, read on a rendered example…>
+- **Answer form + resolution †:** <how many states the answer can take, and where the expected value sits…>
+- **How measured †:** <the metric: what is compared and what is counted>
+- **Validation †:** <anchor items, a second model or self-consistency>
+- **Free knobs †:** <every preprocessing parameter with its value>
+- **Randomness controls †:** <seeds, number of runs, temperature and why. Write "deterministic" if…>
+
+## Checks (render check → instrument check → pilot)
+
+- **Render check (ZERO calls, `--show N`):** <one rendered prompt per gold class, read verbatim…>
+- **Instrument check (real pipeline, ~10 calls, `--probe N`):** <one rendered prompt+answer pair per gold class, from real data…>
+- **Yield per stage:** <expected vs. obtained per parse step>
+- **Parser cases harvested:** <the probe's answer forms, added to the parser test as real cases…>
+- **Clarified terms:** <what was ambiguous, and what it is called now>
+- **Changed — and in which class:** <before the freeze, the instrument can change…>
+- **Pilot:** <N items checked against a hand analysis or anchors, before scaling>
+
+## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
+
+- <run_id> — <one sentence: what this run was>
+
+## Follow-up
+
+- **Notes updated:** <[[…]], reconciled where they contradict>
+- **Prediction for the follow-up run †:** <the expected number, written HERE before the follow-up starts…>
+
+## Notes (by-catch: ideas, follow-up experiments — cheap now, expensive later)
+
+- <…>
+
+## Head (read by the checks)
+
+
+*How to fill each field: `protocol-check --guide`. What this protocol
+owes now: `protocol-check --contract`. To fill a field:
+`protocol-fill PROTOCOL-<name>.md "<label>=<value>"`.*
+
+```toml
+# `[result] run = "<run_id>"` below [protocol] is written by `labkit-adopt`:
+# the one declaration that this protocol reports a number.
+[protocol]
+standard = "0.28"
+id = "p-0000000000000000"
+type = "<exploratory | confirmatory>"
+repeat_cost = "high"
+kind = "compute"
+frozen = false
+preflight_audit = ""
+
+[kept]
+key = "<metrics key>"
+unit = "<unit>"
+
+[model]
+alias = "haiku"
+number_describes = "<model_outputs | target_property>"
+# annotation_validity = { protocol = "p-…" }   # or { doi = "10.…" }; with target_property only
+# A computation: `[kept]` key and unit. With a model: `[model] alias` (stamped by --model),
+# `[model.arms.<arm>]` with profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
+```

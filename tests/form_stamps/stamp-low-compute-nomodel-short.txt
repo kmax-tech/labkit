@@ -1,0 +1,51 @@
+# Experiment protocol: x
+
+## Summary (after the run, for a person)
+
+- **Conclusion:** <the answer in at most two plain sentences…>
+
+## Intent (before the run)
+
+- **Terms of this protocol:** <one line per coined house word — or "n/a — no coinage">
+- **Question / hypothesis:** <the one question: what is computed, over which items — a computation tests no hypothesis>
+
+## Result (after the run — write back, don't go quiet)
+
+- **Recorded results:** <generated from the run and the audit records by `labkit-adopt`. Never…>
+
+## Setup
+
+- **Data / scope:** <source, N, producer script>
+- **Exclusions / filters:** <what is dropped from the data or the output, and why. Write "none" if…>
+- **Unit:** <what one counted or judged thing is, and what is not one…>
+
+## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
+
+- <run_id> — <one sentence: what this run was>
+
+## Head (read by the checks)
+
+
+
+*How to fill each field: `protocol-check --guide`. What this protocol
+owes now: `protocol-check --contract`. To fill a field:
+`protocol-fill PROTOCOL-<name>.md "<label>=<value>"`.*
+
+```toml
+# `[result] run = "<run_id>"` below [protocol] is written by `labkit-adopt`:
+# the one declaration that this protocol reports a number.
+[protocol]
+standard = "0.28"
+id = "p-0000000000000000"
+type = "<exploratory | confirmatory>"
+repeat_cost = "low"
+kind = "compute"
+frozen = false
+preflight_audit = ""
+
+[kept]
+key = "<metrics key>"
+unit = "<unit>"
+# A computation: `[kept]` key and unit. With a model: `[model] alias` (stamped by --model),
+# `[model.arms.<arm>]` with profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
+```

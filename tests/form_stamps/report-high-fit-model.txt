@@ -1,0 +1,144 @@
+# Experiment protocol: x
+
+## Summary (after the run, for a person)
+
+- **Question †:** <the question in plain words. The Conclusion below answers it…>
+- **Conclusion:** <the answer in at most two plain sentences…>
+- **Limitations:** <how far the answer holds, in one sentence…>
+- **Next step:** <what follows: a decision, the next experiment, or "none">
+- **Did †:** <what was done, in one sentence, for a reader without context>
+
+## Intent (before the run)
+
+- **Terms of this protocol:** <one line per word you coin…>
+- **Question / hypothesis:** <the one question, and what you expect>
+- **Inference criterion:** [criterion-1] <how you recognise that it worked. Write one id per conjunct…>
+- **Quality check:** [quality-check-1] <what must hold in the same run before any verdict…>
+- **Registered branch:** <if a result decides what follows, register it before the run, like this…>
+- **Timebox:** <the duration first, such as `45 min` or `4h`, then what follows: record and ask. A fit stops before this budget when its first fold projects over it.>
+- **Split touched:** <which split the run can touch: train | dev | test>
+- **Why this design †:** <the choice of model, dataset and method, in one sentence>
+- **Rival explanations †:** <per confound…>
+- **Out of scope †:** <the neighbouring questions this run leaves open>
+
+## Result (after the run — write back, don't go quiet)
+
+- **Recorded results:** <generated from the run and the audit records by `labkit-adopt`. Never…>
+- **Deviations after freeze:** <"none", or what changed after `frozen = true`. The Intent above stays…>
+- **Raw output:** <one registered row and one null row per finding, read from the run's kept output>
+- **Interpretation:** <one sentence. Keep findings about the instrument apart from findings…>
+- **Expected or surprising †:** <what was expected or surprising. Failures belong here.>
+- **Rival check †:** <which rivals are ruled out, and which still stand>
+- **Caps/drops †:** <what was left out or limited>
+- **Analysis audit †:** <date · scope sha · N findings…>
+
+<!-- APPARATUS — this part gets LOOKED UP, not read. -->
+
+## Context (self-contained)
+
+- **Problem in one sentence:** <what is found out, without technical terms>
+- **Prior threads:** <2–3 [[wikilinks]], each with why it leads here>
+
+## Setup
+
+- **Data / scope:** <the source files and the producer script in your words · then the counts protocol-fill --data-counts writes after 00_prepare.py · never typed>
+- **Data profile:** <your judgement of the data before the run: could a surface feature answer the question without the model? Say what you looked at and what it cannot show.>
+- **Model / tool:** <what the model does here and what it sees. Its alias stands in the…>
+- **Prompt (verbatim, per variant):**
+
+  ```text
+  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
+  ```
+
+- **Model I/O:** <in · the feature fields per item · out · one prediction per item, scored out of fold>
+- **Null condition / anchors (in the same run):** [quality-check-2] <the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>
+- **Exclusions / filters:** <what is dropped from the data or the output, and why. Write "none" if…>
+- **Unit:** <what one counted or judged thing is, and what is not one…>
+- **Data preparation †:** <raw → prepared…>
+- **Meaning of the gold label †:** <what the positive class really means, read on a rendered example…>
+- **Answer form + resolution †:** <how many states the answer can take, and where the expected value sits…>
+- **How measured †:** <the metric: what is compared and what is counted>
+- **Validation †:** <anchor items, a second model or self-consistency>
+- **Noise ceiling → threshold †:** <the spread of repeats on the probe or the null lane, never on the…>
+- **Free knobs †:** <every preprocessing parameter with its value>
+- **Randomness controls †:** <seeds, number of runs, temperature and why. Write "deterministic" if…>
+
+## Checks (render check → instrument check → pilot)
+
+- **Resolution check (ZERO calls, real `evaluate()` on synthetic
+  extremes):** <a perfect effect and a null effect through the real evaluation…>
+- **Render check (ZERO calls, `--show N`):** <one rendered prompt per gold class, read verbatim…>
+- **Instrument check (real pipeline, ~10 calls, `--probe N`):** <`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>
+- **Yield per stage:** <expected vs. obtained per parse step>
+- **Parser cases harvested:** <the probe's answer forms, added to the parser test as real cases…>
+- **Clarified terms:** <what was ambiguous, and what it is called now>
+- **Changed — and in which class:** <before the freeze, the instrument can change…>
+- **Pilot:** <N items checked against a hand analysis or anchors, before scaling>
+
+## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
+
+- <run_id> — <one sentence: what this run was>
+
+## Follow-up
+
+- **Notes updated:** <[[…]], reconciled where they contradict>
+- **Prediction for the follow-up run †:** <the expected number, written HERE before the follow-up starts…>
+
+## Notes (by-catch: ideas, follow-up experiments — cheap now, expensive later)
+
+- <…>
+
+## Head (read by the checks)
+
+
+*How to fill each field: `protocol-check --guide`. What this protocol
+owes now: `protocol-check --contract`. To fill a field:
+`protocol-fill PROTOCOL-<name>.md "<label>=<value>"`.*
+
+```toml
+# `[result] run = "<run_id>"` below [protocol] is written by `labkit-adopt`:
+# the one declaration that this protocol reports a number.
+[protocol]
+standard = "0.28"
+id = "p-0000000000000000"
+type = "<exploratory | confirmatory>"
+repeat_cost = "high"
+kind = "fit"
+frozen = false
+preflight_audit = ""
+
+[model]
+alias = "haiku"
+# A computation: `[kept]` key and unit. With a model: `[model] alias` (stamped by --model),
+# `[model.arms.<arm>]` with profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
+
+# The promises as data, one table per id: the key the run reports, the
+# sentence (no `<…>` left at the freeze), the code region, and the constants
+# the script reads with promises.all_constants(). Each constant stands in one
+# table. The numbers below are the stamp's examples, not your design: set
+# each before the commit to the value its sentence states, chosen from the
+# question, never from a result. At an apply with the estimator skeleton,
+# `scripts/01_measure.py --calibrate-null --write` registers `null_band`
+# before the first measurement. After the first measurement none of them
+# changes.
+[[promise]]
+id = "criterion-1"
+key = "criterion_1_pass"
+sentence = "<the criterion · the registered lane's out-of-fold SCORE is at least the mean of the null lane's permuted-label refits plus margin — or, for a bar the task states, at least at_least, its source named (constants = { at_least = … } in place of margin)>"
+scope = ["scripts/01_measure.py"]
+constants = { margin = 0.25 }
+
+[[promise]]
+id = "quality-check-1"
+key = "quality_check_1_pass"
+sentence = "<the yield · at most max_empty labelled items without an out-of-fold prediction>"
+scope = ["scripts/01_measure.py"]
+constants = { max_empty = 0 }
+
+[[promise]]
+id = "quality-check-2"
+key = "quality_check_2_pass"
+sentence = "<the null condition · the mean of the permuted-label refits scores within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"
+scope = ["scripts/01_measure.py"]
+constants = { null_band = 0.1 }
+```
