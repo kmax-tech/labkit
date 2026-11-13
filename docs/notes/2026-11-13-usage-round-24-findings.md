@@ -1,0 +1,18 @@
+# Usage round 24 (labkit 0.113.0): result and findings from the traces
+
+2026-11-13. Task 7 of `TODO.md`, run in labkit-paper as area 24 (`experiments/24-reworked-package-lifts-complete-deliveries`, branch `usage-round-5`): two rounds of nine labkit-arm attempts under the result demand on v0.113.0, the same three tasks, prompts, solver (Haiku 4.5), judges and sheets as areas 21 and 23. The protocol there holds the registration, the run ids and the numbers; the traces and their readings stay in labkit-paper (`output/trace-readings/`), as evidence stays internal.
+
+## Result
+
+Complete deliveries 6 and 4 against the before's 7, 5 and 2: inside the band, so the registered reading is "not shown". Beside it, read descriptively: unsupported central claims 1 and 1 (before 2, 3, 2), `limitation` decisions 13 and 16 (19, 20, 36), `fixed` 15 and 7 (6, 6, 8), audit calls 80 and 81 (75, 85, 122). The API answered three to seven times slower than in the before rounds (median 20.8 seconds per tool call against 4.8 to 5.5); 6 of 18 attempts were cut at the 2400 s limit after 84 to 133 tool calls, so complete deliveries are biased low. Whether those six are rerun at normal speed is the author's decision.
+
+## Findings from the traces
+
+Read by subagents over all 18 traces, classed and evidenced in labkit-paper's readings; none is reproduced yet. Each is to be replayed on a real case before it becomes a repair (TODO: "Vor einer Änderung den aktuellen Fall nachstellen").
+
+1. **The commit hook reads the index, and unstaged runs read as "not measured".** The pre-commit asked to measure where the runs were only unstaged (assay, four times); the successor check asked for two opposite entries in turn (task 34); after an adoption with an unstaged protocol two sections of the hold contradict each other and `labkit-next` names a wrong step (sts512). The stop hook held a finished end that the pre-commit then refused (assay).
+2. **A crashed first run anchors the registration.** Kept by design (decided 2026-11-05), but the hold says "after a result was seen", and in one attempt no version of the question could be adopted afterwards (assay).
+3. **The report review pushes towards removing demanded numbers.** Weaker than area 23: in sts512 every report keeps its numbers, one drops the chance statement; in assay two reports end without the number. The review of a handed-over predecessor does not know the successor's adoption: one attempt drew 13 claims, decided all as false positives, and the second reviewer upheld none of them (task 34).
+4. **Single checks.** The apply template registers no comparison of the measurement with its null condition, which every auditor flags (sts512); `--not-assessable` locks the criterion (sts512); an analysis audit asked for hard labels instead of probabilities for ROC-AUC (assay); the review calls a rejected limitation held while `labkit-next` says nothing holds it (task 34); the audit of the valid second draft found nothing that the first draft's audit had found (task 34).
+5. **Agent errors that recur.** No task-34 agent registered the demanded values as a reference before the first measurement (0 of 6); every one filled the hand-checked test with its own run's values; one chose the R-peak detector by closeness to the demanded values; runs deleted, `git reset --hard`, `--no-verify` (three attempts); a finished report never registered, so never reviewed (sts512).
+6. **Environment.** API errors and retries cost about ten minutes per attempt in round a; the sandbox image still lacks a git identity (decided 2026-11-05, not built); `sandbox/labkit.pin` names the tag, not the commit the lab's test asks for.
