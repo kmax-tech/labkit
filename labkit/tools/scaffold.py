@@ -700,8 +700,9 @@ def protocol_stamp(
     reference: protocol_block.Reference | None = None,
     kept: protocol_block.Kept | None = None,
 ) -> str:
-    """The protocol `exp` stamps for these answers: the full form, or at
-    low repeat cost without REPORT the low cut — under a fresh id, or PID, with
+    """The protocol `exp` stamps for these answers: the full form, at every
+    repeat cost without the fields its kind and model do not owe
+    (`owed_cut`), or at low repeat cost without REPORT the low cut — under a fresh id, or PID, with
     REPORT_FILE registered in the head, REFERENCE as its `[reference]`
     table and, for a computation, KEPT as its `[kept]` (None: both
     placeholders). Reads
@@ -744,7 +745,7 @@ def protocol_stamp(
                 pilot, cut=True, kind=kind, model=bool(model)
             )
     stamped = blank_before_headings(short_placeholders(pilot))
-    if not quick:
+    if whole:
         stamped = owed_cut(stamped)  # the full form owes by kind and model too
     stamped = name_promise_ids(stamped, kind)
     check_stamped_head(

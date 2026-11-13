@@ -2256,6 +2256,30 @@ class OwedCut(unittest.TestCase):
                 self.assertIn(f"**{label}", apply_model)
         self.assertIn("**Question / hypothesis:**", compute)
 
+    def test_the_full_form_at_low_cost_owes_what_it_owes_at_high(self):
+        # `--report` at low repeat cost stamps the full form too; it must not
+        # carry a data profile, prompt or raw output a model-free area cannot have
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "lab"
+            scaffold.stamp_lab(root, "lab")
+            for kind in ("compute", "fit", "apply"):
+                for model in (False, "haiku"):
+                    with self.subTest(kind=kind, model=model):
+                        low, high = (
+                            scaffold.protocol_stamp(root, "a", cost, kind, model, True)
+                            for cost in ("low", "high")
+                        )
+                        self.assertEqual(
+                            [f.name for f in protocol_check.fields(low)],
+                            [f.name for f in protocol_check.fields(high)],
+                        )
+                        for label in ("Data profile", "Prompt (verbatim",
+                                      "Raw output", "Parser cases"):  # fmt: skip
+                            if model:
+                                self.assertIn(f"**{label}", low)
+                            else:
+                                self.assertNotIn(f"**{label}", low)
+
     def test_raw_output_asks_for_the_runs_rows_not_the_probes(self):
         # a field written after the run asks for the run's rows, not rows
         # "as --probe prints them"
