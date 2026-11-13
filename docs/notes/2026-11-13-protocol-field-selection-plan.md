@@ -2,7 +2,7 @@
 
 Reviewed commit: `faaf90f4`. Scope: creating and extending protocol forms, selecting scripts, and checking which prose fields are owed. This is a code analysis with a generated-output probe, not a scientific assessment of the fields or authorization to implement the plan. The analysis itself changed no product code.
 
-> **State 2026-11-13.** The author decided the form question of the first finding, and `5670d378` implements it: the full form at low repeat cost now leaves out the fields its kind and model do not owe, as at high repeat cost. The rest of the plan below consists of proposals that are not yet approved. The central field selection must keep the output in force since `5670d378`; any further change of behaviour is a separate decision.
+> **State 2026-11-13.** The author decided the form question of the first finding, and `5670d378` implements it: the full form at low repeat cost now leaves out the fields its kind and model do not owe, as at high repeat cost. The central field selection must keep the output in force since `5670d378`; any further change of behaviour is a separate decision. Steps 2 to 4 are built (the commit after `f590406e`): `protocol_check.in_form` decides inclusion for every template item, the twelve items outside FIELDS stand in `GUIDANCE`, the template carries no cut marks, and `protocol_cuts.form_cut` only lays the form out. The comparison tests pass unchanged; one changed policy entry makes four of them fail. Not done: the inclusion matrix of step 1 as a document (the comparison files are its executable form), and the command scenarios of step 5 beyond the existing suite. The empty line left where the head's mark stood is kept, since removing it changes every stamp.
 
 ## Verdict
 

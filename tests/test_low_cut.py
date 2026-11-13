@@ -1,6 +1,5 @@
-"""The low cut: one template, tagged `<!-- l -->`; the
-checker's FIELDS name exactly the tagged fields as the cut; the registration
-gate asks for question, criterion, quality check and cost."""
+"""The low cut: one template, cut by `protocol_check.in_form`; the
+registration gate asks for question, criterion, quality check and cost."""
 
 from __future__ import annotations
 
@@ -22,21 +21,39 @@ TEMPLATE = (
 )
 
 
-def _tagged(marker: str) -> set[str]:
-    """Names of the template fields whose label line carries `marker`."""
-    text = TEMPLATE.read_text(encoding="utf-8")
-    raw = text.splitlines()
-    return {f.name for f in protocol_check.fields(text) if marker in raw[f.line - 1]}
-
-
 class Cut(unittest.TestCase):
-    def test_the_cut_is_exactly_the_tagged_template_fields(self):
-        cut = {f.label.casefold() for f in protocol_check.FIELDS if f.low_cut == "l"}
-        cut_model = {
-            f.label.casefold() for f in protocol_check.FIELDS if f.low_cut == "lm"
-        }
-        self.assertEqual(cut, _tagged("<!-- l -->"))
-        self.assertEqual(cut_model, _tagged("<!-- lm -->"))
+    """`protocol_check.in_form`, from memory: which item each form carries."""
+
+    def test_the_low_form_carries_the_cut_fields_by_bar_and_model(self):
+        def low(name, kind="compute", model=False, section=""):
+            return protocol_check.in_form(name, kind, model, low=True, section=section)
+
+        self.assertTrue(low("conclusion"))
+        self.assertFalse(low("inference criterion"))
+        self.assertTrue(low("inference criterion", kind="fit"))
+        self.assertFalse(low("prompt"))
+        self.assertTrue(low("prompt", model=True))
+        self.assertFalse(low("why this design"))  # a should field: full form only
+        self.assertFalse(low("registered branch", kind="fit", model=True))
+        self.assertTrue(low(None, section="runs"))
+        self.assertTrue(low(None, section="head"))
+        self.assertFalse(low(None, section="notes"))
+
+    def test_the_full_form_carries_guidance_by_what_it_needs(self):
+        def full(name, kind, model):
+            return protocol_check.in_form(name, kind, model, low=False)
+
+        self.assertFalse(full("render check", "compute", False))
+        self.assertTrue(full("render check", "compute", True))
+        self.assertTrue(full("render check", "fit", False))
+        self.assertFalse(full("parser cases harvested", "fit", False))
+        self.assertTrue(full("parser cases harvested", "compute", True))
+        self.assertTrue(full("registered branch", "compute", False))
+        self.assertTrue(full(None, "compute", False))
+
+    def test_an_item_without_a_policy_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "neither a field"):
+            protocol_check.in_form("invented item", "fit", False, low=False)
 
     def test_count_without_model_owes_no_prompt(self):
         text = (
@@ -219,8 +236,13 @@ class CountPlaceholders(unittest.TestCase):
     read as an expectation to invent."""
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
-        cut = protocol_cuts.low_cut(
-            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "compute"
+        cut = protocol_cuts.form_cut(
+            protocol_cuts.promise_tables_for(
+                scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "compute"
+            ),
+            "compute",
+            False,
+            low=True,
         )
         out = protocol_cuts.count_placeholders(cut)
         self.assertIn(

@@ -109,18 +109,15 @@ from labkit.formats.repo import (
 from labkit.formats.requirements import requirement_lines
 from labkit.tools.repo_check import PIN_FILES, PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
-    CUT_MARK,
     ProtocolBlocks,
-    bar_cut,
     count_placeholders,
     estimator_placeholders,
+    form_cut,
     insert_report_fields,
     name_promise_ids,
     new_protocol_id,
-    owed_cut,
     pilot_and_report,
-    quick_block,
-    low_cut,
+    promise_tables_for,
     short_placeholders,
 )
 
@@ -734,9 +731,9 @@ def protocol_stamp(
     reference: protocol_block.Reference | None = None,
     kept: protocol_block.Kept | None = None,
 ) -> str:
-    """The protocol `exp` stamps for these answers: the full form, at every
-    repeat cost without the fields its kind and model do not owe
-    (`owed_cut`), or at low repeat cost without REPORT the low cut — under a fresh id, or PID, with
+    """The protocol `exp` stamps for these answers: the full form, or at
+    low repeat cost without REPORT the low form, each with the items it
+    carries for the kind and model (`form_cut`, `protocol_check.in_form`) — under a fresh id, or PID, with
     REPORT_FILE registered in the head, REFERENCE as its `[reference]`
     table and, for a computation, KEPT as its `[kept]` (None: both
     placeholders). Reads
@@ -758,29 +755,17 @@ def protocol_stamp(
         reference,
         kept,
     )
-    clean = CUT_MARK.sub(
-        "", bar_cut(tmpl, kind)
-    )  # every written protocol is free of the cut markers
     # the full form carries the † fields from the stamp: the freeze owes the
     # should ones and the adoption the result ones, and a frozen protocol
     # without them holds its agent; the low cut never owes them (REPORT
     # appends them to an existing area, `promote`).
     whole = report or not quick
-    if whole:
-        if skeleton is standard_contract.ESTIMATOR:
-            clean = estimator_placeholders(clean, kind=kind, model=bool(model))
-        pilot = clean
-    else:
-        pilot = low_cut(quick_block(tmpl, kind), kind, model=bool(model))
-        if skeleton is standard_contract.COMPUTE:
-            pilot = count_placeholders(pilot)
-        elif skeleton is standard_contract.ESTIMATOR:
-            pilot = estimator_placeholders(
-                pilot, cut=True, kind=kind, model=bool(model)
-            )
-    stamped = blank_before_headings(short_placeholders(pilot))
-    if whole:
-        stamped = owed_cut(stamped)  # the full form owes by kind and model too
+    form = form_cut(promise_tables_for(tmpl, kind), kind, bool(model), low=not whole)
+    if skeleton is standard_contract.ESTIMATOR:
+        form = estimator_placeholders(form, kind=kind, model=bool(model), low=not whole)
+    elif skeleton is standard_contract.COMPUTE and not whole:
+        form = count_placeholders(form)
+    stamped = blank_before_headings(short_placeholders(form))
     stamped = name_promise_ids(stamped, kind)
     check_stamped_head(
         stamped, repeat_cost, kind, bool(model), report_file, reference, kept

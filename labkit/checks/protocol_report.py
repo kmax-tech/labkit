@@ -213,9 +213,7 @@ def template_lines(path: Path | None) -> set[str]:
     lines = text.splitlines()
     starts = set(markdown.section_starts(lines))
     for i, line in enumerate(lines):
-        # The written protocol carries no cut markers; compared with them,
-        # the stamped Runs line `- <run_id> — <…> <!-- l -->` would never
-        # match its leftover.
+        # an HTML comment of the template is no text a protocol writes
         s = HTML_COMMENT.sub("", line).strip()
         if i in starts:
             in_body = True

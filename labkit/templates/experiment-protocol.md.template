@@ -4,7 +4,7 @@
 
 - **Question †:** <the question in plain words. The Conclusion below
   answers it.>
-- **Conclusion:** <!-- l --> <the answer in at most two plain sentences:
+- **Conclusion:** <the answer in at most two plain sentences:
   whether the bar set before the run was met, or why no verdict was
   possible. The result, not the procedure, and no intent ids, metric keys
   or run_ids.>
@@ -15,17 +15,17 @@
 
 ## Intent (before the run)
 
-- **Terms of this protocol:** <!-- l --> <one line per word you coin:
+- **Terms of this protocol:** <one line per word you coin:
   *everyday word · house term · code word*. Look up the field's term
   before you coin one. Write "n/a — standard vocabulary" if you coin
   nothing.>
-- **Question / hypothesis:** <!-- l --> <the one question, and what you expect>
-- **Inference criterion:** <!-- lb --> <how you recognise that it worked.
+- **Question / hypothesis:** <the one question, and what you expect>
+- **Inference criterion:** <how you recognise that it worked.
   Write one id per conjunct (`[criterion-…]`). The run reports each as its
   lowercase key (`criterion_1_pass`). Where a number stands, name its
   constant from the [[promise]] table ("in at least `min_draws` = 2 of 3
   draws")>
-- **Quality check:** <!-- lb --> <what must hold in the same run before any
+- **Quality check:** <what must hold in the same run before any
   verdict: yield, coverage, a control at its expected value. Write one
   `[quality-check-…]` id per condition, with why its failure makes the
   measurement uninterpretable. A threshold the hypothesis needs is a
@@ -44,12 +44,12 @@
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Recorded results:** <!-- l --> <generated from the run and the audit
+- **Recorded results:** <generated from the run and the audit
   records by `labkit-adopt`. Never retype it.>
 - **Deviations after freeze:** <"none", or what changed after
   `frozen = true`. The Intent above stays as registered. Name a deviation
   that touches the verdict under Limitations too.>
-- **Raw output:** <!-- lm --> <one real prompt+answer pair per finding, read from the run's kept output>
+- **Raw output:** <one real prompt+answer pair per finding, read from the run's kept output>
 - **Interpretation:** <one sentence. Keep findings about the instrument
   apart from findings about the subject.>
 - **Expected or surprising †:** <what was expected or surprising. Failures belong here.>
@@ -67,13 +67,13 @@
 
 ## Setup
 
-- **Data / scope:** <!-- l --> <source, N, producer script>
-- **Data profile:** <!-- lm --> <your judgement of the data before the run: could a surface feature answer the question without the model? Say what you looked at and what it cannot show.>
-- **Model / tool:** <!-- lb --> <what the model does here and what it
+- **Data / scope:** <source, N, producer script>
+- **Data profile:** <your judgement of the data before the run: could a surface feature answer the question without the model? Say what you looked at and what it cannot show.>
+- **Model / tool:** <what the model does here and what it
   sees. Its alias stands in the head's `[model]`. If two arms (profiles)
   are compared, say what `before` and `after` are. Their diff stands
   verbatim under Prompt.>
-- **Prompt (verbatim, per variant):** <!-- lm -->
+- **Prompt (verbatim, per variant):**
 
   ```text
   <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
@@ -81,13 +81,13 @@
 
 - **Model I/O:** <in: which fields · out as instructed: the format ·
   out in fact: what comes back, and which function parses it>
-- **Null condition / anchors (in the same run):** <!-- lb --> <one id per
+- **Null condition / anchors (in the same run):** <one id per
   anchor that runs in THIS run and must show null: an anchor of known
   rate, a placebo, a swap. Give each its expected outcome and the reason
   in half a sentence>
-- **Exclusions / filters:** <!-- l --> <what is dropped from the data or
+- **Exclusions / filters:** <what is dropped from the data or
   the output, and why. Write "none" if nothing is dropped.>
-- **Unit:** <!-- l --> <what one counted or judged thing is, and what is
+- **Unit:** <what one counted or judged thing is, and what is
   not one>
 - **Data preparation †:** <raw → prepared: which script wrote which file.
   The run reads prepared data only.>
@@ -127,7 +127,7 @@
 
 ## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
 
-- <run_id> — <one sentence: what this run was> <!-- l -->
+- <run_id> — <one sentence: what this run was>
 
 ## Follow-up
 
@@ -140,7 +140,7 @@
 - <…>
 
 ## Head (read by the checks)
-<!-- l -->
+
 
 *How to fill each field: `protocol-check --guide`. What this protocol
 owes now: `protocol-check --contract`. To fill a field:

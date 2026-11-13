@@ -749,7 +749,7 @@ def promise_tables_owed(
 
         registers = False (the prose names no promise id — a
             computation) → not owed, frozen or not: it judges no
-            prediction, and its stamp carries no table (`protocol_cuts.bar_cut`)
+            prediction, and its stamp carries no table (`protocol_cuts.promise_tables_for`)
         frozen = true            → owed (the freeze is the registration)
         full_run (runlog run_kind='measurement') → owed
         otherwise (an unfrozen pilot) → not owed

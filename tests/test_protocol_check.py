@@ -548,7 +548,7 @@ class TestCheckFields(unittest.TestCase):
 
     def test_a_count_owes_no_bar_field_at_any_tier(self):
         """A computation owes neither a success criterion nor the other fields
-        of a bar (`<!-- lb -->`), in the full form too; a fit owes them."""
+        of a bar (`Field.low_cut` "lb"), in the full form too; a fit owes them."""
         bar = [f.label for f in protocol_check.FIELDS if f.low_cut == "lb"]
         self.assertIn("Inference criterion", bar)
         for cost in ("high",):

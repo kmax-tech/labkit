@@ -125,7 +125,7 @@ class FreezeGate(unittest.TestCase):
         )
 
     def test_a_frozen_computation_without_promise_tables_starts(self):
-        # its stamp removes the tables (`protocol_cuts.bar_cut`), so the freeze
+        # its stamp removes the tables (`protocol_cuts.promise_tables_for`), so the freeze
         # does not ask for them again; a fit is still held
         r, out = self._start(
             self._audited(kind="compute", promises=None), run_kind="measurement"

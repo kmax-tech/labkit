@@ -1,7 +1,8 @@
 """protocol_cuts — the protocol template cut to what a repeat cost and a lane owe.
 
-The template's sections by key (`ProtocolBlocks`), the `low` cut and
-the quick block, short placeholders, the pilot part and the report fields
+The template's sections by key (`ProtocolBlocks`), the form cut to the
+items it carries (`form_cut`, by `protocol_check.in_form`), the promise
+tables a computation goes without, short placeholders, the pilot part and the report fields
 inserted later (`pilot_and_report`, `insert_report_fields`), the
 placeholders of the counting and the estimator skeleton, and a new
 protocol's id. Pure text in, text out;
@@ -17,7 +18,7 @@ from pathlib import Path
 from labkit.formats import markdown
 from labkit.formats import promises, protocol_block
 from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND, has_bar
-from labkit.formats.protocol_check import field_name, label_line, model_named, not_owed
+from labkit.formats.protocol_check import field_name, in_form, label_line
 from labkit.formats.repo import (
     repo_protocols,
 )
@@ -30,16 +31,8 @@ from labkit.formats.repo import (
 DAGGER = "†"
 
 
-LOW_TAG = "<!-- l -->"
-
-
-LOW_MODEL_TAG = "<!-- lm -->"  # owed at low repeat cost only with a model in the loop
-LOW_BAR_TAG = "<!-- lb -->"  # owed at low repeat cost when the number has a bar (kind fit or apply)
-#: any cut mark with its leading blank — the one pattern every writer strips
-CUT_MARK = re.compile(r" ?<!-- l[bm]? -->")
-
-
-#: which template section a heading is about — a report field is placed by topic
+#: which template section a heading is about — a report field is placed by
+#: topic, the low form carries unlabelled parts by it (`form_cut`)
 SECTION_KEYS = (
     "summary",
     "intent",
@@ -50,12 +43,13 @@ SECTION_KEYS = (
     "runs",
     "follow-up",
     "notes",
+    "head",
 )
 
 
 #: a template item's bold label — `- **Label:**`, or `- **Label**` with
 #: the colon outside or none —, a label wrapped over lines included; the
-#: label read lazily up to the first closing `**` (`_label_of`, `owed_cut`)
+#: label read lazily up to the first closing `**` (`_label_of`, `_form_name`)
 FIELD_LABEL = re.compile(r"^-\s+\*\*(.+?)\s*:?\*\*", re.S)
 
 
@@ -101,100 +95,53 @@ def _label_of(item: list[str]) -> str:
     return field_name(m.group(1) if m else item[0])
 
 
-def _untag(line: str) -> str:
-    return CUT_MARK.sub("", line)
+def _form_name(item: list[str]) -> str | None:
+    """The field name (`field_name`) of ITEM's bold label, a label wrapped
+    over lines read whole; None for an item without one."""
+    m = FIELD_LABEL.match("\n".join(item))
+    return field_name(" ".join(m.group(1).split())) if m else None
 
 
-def low_cut(tmpl: str, kind: str, model: bool = False) -> str:
-    """The `low` cut: the preamble, and of every section only the items
-    tagged `<!-- l -->` — with a bar (KIND fit or apply) also `<!-- lb -->`,
-    with a model also `<!-- lm -->` — under their heading."""
-    tags = (LOW_TAG,)
-    if has_bar(kind):
-        tags += (LOW_BAR_TAG,)
-    if model:
-        tags += (LOW_MODEL_TAG,)
+def form_cut(tmpl: str, kind: str, model: bool, *, low: bool) -> str:
+    """TMPL cut to the items the LOW form, else the full form, carries for
+    a number of KIND, a model named or not (MODEL): `protocol_check.in_form`
+    decides each item, here only the layout. The preamble stays whole. The
+    full form keeps every heading and the template's spacing; the low form
+    keeps a section only with an item it carries, each under its heading
+    and a blank line, and no item that is blank lines alone. Raises
+    ValueError for an item no policy names (`in_form`)."""
     out: list[str] = []
     for heading, body in _segments(tmpl):
         if not heading:
             out.extend(line for item in _items(body) for line in item)
             continue
-        kept = [item for item in _items(body) if any(t in item[0] for t in tags)]
+        section = section_key(heading) or ""
+        kept = [
+            item
+            for item in _items(body)
+            if (not low or any(line.strip() for line in item))
+            and in_form(_form_name(item), kind, model, low=low, section=section)
+        ]
+        if not low:
+            out.append(heading)
+            out.extend(line for item in kept for line in item)
+            continue
         if not kept:
             continue
         if out and out[-1].strip():
             out.append("")
-        out += [heading, ""] + [_untag(line) for item in kept for line in item]
+        out += [heading, ""] + [line for item in kept for line in item]
     return "\n".join(out).rstrip() + "\n"
 
 
-def bar_cut(tmpl: str, kind: str) -> str:
-    """TMPL as a KIND without a bar is stamped at every tier: the fields a
-    bar owes (tagged `<!-- lb -->`: criterion, quality check,
-    Model / tool, null condition) and the promise tables go — a computation owes
-    its question (standard 0.22). A fit or an apply comes back unchanged.
-    The low cut keeps fewer fields still (`low_cut`)."""
-    if has_bar(kind):
-        return tmpl
-    out: list[str] = []
-    for heading, body in _segments(tmpl):
-        if heading:
-            out.append(heading)
-        for item in _items(body):
-            if LOW_BAR_TAG not in item[0]:
-                out.extend(item)
-    return without_promise_tables("\n".join(out).rstrip() + "\n")
-
-
-#: template items the checker does not hold as fields, owed only with
-#: what they check: a render check needs an instrument to render (a model's
-#: prompt, an estimator's `--show`), parser cases a model's text to parse
-STAMP_ONLY_NEEDS = {"render check": "instrument", "parser cases harvested": "model"}
-
-
-def owed_cut(text: str) -> str:
-    """TEXT, a full-form protocol, without the field items its kind and
-    model do not owe (`protocol_check.not_owed`, the rule the checker
-    applies) and the template-only items whose instrument it lacks
-    (`STAMP_ONLY_NEEDS`), so a high computation without a model is not
-    stamped a data profile, a prompt, a render, instrument and resolution
-    check and parser cases it cannot have."""
-
-    head = protocol_block.head(text)
-    model = model_named(text)
-    has_bar_ = head.kind is None or has_bar(head.kind)
-    spared = {field_name(label) for label in not_owed(text)}
-    spared |= {
-        name
-        for name, needs in STAMP_ONLY_NEEDS.items()
-        if (needs == "model" and not model)
-        or (needs == "instrument" and not (model or has_bar_))
-    }
-    if not spared:
-        return text
-    out: list[str] = []
-    for heading, body in _segments(text):
-        if heading:
-            out.append(heading)
-        for item in _items(body):
-            m = FIELD_LABEL.match("\n".join(item))
-            if m and field_name(" ".join(m.group(1).split())) in spared:
-                continue
-            out.extend(item)
-    return "\n".join(out).rstrip() + "\n"
-
-
-def quick_block(tmpl: str, kind: str) -> str:
-    """The promise tables of the low cut. A number with a bar (KIND fit
-    or apply) keeps them: the measure skeletons read `margin`, `max_empty`
-    and the null band from the block. For a computation the tables go: it
-    has no bar to clear."""
-    if has_bar(kind):
-        return tmpl
-    # a deterministic computation has no bar to clear: no promise tables, no
-    # criterion — a cold agent would invent a tautological [criterion-1];
-    # the number is held by --check and finalize
-    return without_promise_tables(tmpl)
+def promise_tables_for(tmpl: str, kind: str) -> str:
+    """TMPL with its promise tables for a number with a bar (KIND fit or
+    apply): the measure skeletons read `margin`, `max_empty` and the null
+    band from the block. A computation's go (`without_promise_tables`): it
+    owes its question, no bar (standard 0.22) — a cold agent would invent a
+    tautological [criterion-1]; the number is held by --check and
+    finalize."""
+    return tmpl if has_bar(kind) else without_promise_tables(tmpl)
 
 
 def without_promise_tables(text: str) -> str:
@@ -261,7 +208,7 @@ def short_placeholders(text: str) -> str:
     while i < len(lines):
         line = lines[i]
         head = re.match(
-            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- l[bm]? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
+            r"^(- \*\*[^*]+\*\*:?\s*|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
             line,
         )
         if i in fenced or head is None or line.rstrip().endswith(">"):
@@ -312,7 +259,7 @@ def pilot_and_report(tmpl: str) -> tuple[str, ProtocolBlocks]:
         pilot.extend(line for item in keep for line in item)
         if moved:
             report.append((section_key(heading) or heading, heading, moved))
-    return "\n".join(_untag(line) for line in pilot).rstrip() + "\n", report
+    return "\n".join(pilot).rstrip() + "\n", report
 
 
 def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
@@ -502,18 +449,19 @@ def name_promise_ids(text: str, kind: str) -> str:
 
 
 def estimator_placeholders(
-    text: str, cut: bool = False, *, kind: str = "fit", model: bool = False
+    text: str, *, kind: str = "fit", model: bool = False, low: bool = False
 ) -> str:
     """The pilot protocol of an estimator area (kind fit, or apply without a
     model): fields and promise sentences describe fitting at KIND fit, or
     the unchanged predictor at KIND apply (its null lane on permuted
     labels). With MODEL named, the fields that say no model is called
     (`NO_MODEL_FIELDS`) keep the template's placeholders. The
-    constants and score formulas are shared. Raises when KIND is neither
-    fit nor apply or the stamp lacks a field or a table line
-    — a silently unfilled field is the leftover this exists to remove; in
-    the low CUT only the fields the cut carries are owed, the others
-    are not stamped at all."""
+    constants and score formulas are shared. TEXT is the LOW form, else
+    the full form (`form_cut`). Raises when KIND is neither
+    fit nor apply, or the stamp lacks a table line or a field its form
+    carries (`protocol_check.in_form`) — a silently unfilled field is the
+    leftover this exists to remove; a field the form does not carry is not
+    stamped at all."""
     if kind not in (FIT_KIND, APPLY_KIND):
         raise ValueError(
             f"estimator_placeholders: kind must be fit or apply, got {kind!r}"
@@ -523,7 +471,9 @@ def estimator_placeholders(
         values = {k: v for k, v in values.items() if k not in NO_MODEL_FIELDS}
     lines = text.split("\n")
     for label, value in values.items():
-        if not _replace_field(lines, label, value) and not cut:
+        if not _replace_field(lines, label, value) and in_form(
+            field_name(label), kind, model, low=low
+        ):
             raise ValueError(
                 f"estimator_placeholders: the stamp has no `{label}` field"
             )

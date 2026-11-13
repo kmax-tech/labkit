@@ -71,11 +71,12 @@ class Field:
                 the report half of the result; at low repeat cost never — the audit
                 comes at promotion there)
 
-    `low_cut`: owed in the low cut — "l" always, "lb" when the number
+    `low_cut`: owed in the low cut, and carried by its form (`in_form`) —
+    "l" always, "lb" when the number
     judges a prediction (`kind` fit or apply: it has a bar), "lm" when a
     model answers through `models.toml` (`[model]`); after/report fields
-    carry the template's marker but are owed by their level, not by the
-    cut. The template's † marks exactly the
+    with a mark are carried by the low form but owed by their level. The
+    template's † marks exactly the
     should and report fields it stamps with `--report` (a test holds this).
 
     `needs`: what the full form owes the field for — "" always, "bar" a
@@ -93,8 +94,8 @@ class Field:
 LEVELS = ("must", "should", "after", "report")
 
 # The one home of what a protocol owes, by the template's exact labels — a
-# test holds every label to the template, the low cut to its
-# `<!-- l -->` markers and the † marks to the should/report levels. Labels,
+# test holds every label to the template and the † marks to the
+# should/report levels; which form carries a field is `in_form`'s. Labels,
 # not keywords: a word anywhere would satisfy a field (`prompt` in a
 # sentence covering "Model I/O"), and a narrow word fail a filled one
 # (`**Terms:**` against `terms of`).
@@ -149,6 +150,44 @@ FIELDS = (
     # "fällig mit dem Zurückschreiben der Zahl" (LAB-050 Analysis audit before reporting)
     Field("Analysis audit", "report"),
 )
+
+
+@dataclass(frozen=True)
+class Guidance:
+    """A template item that is no field a protocol owes: guidance the full
+    form carries, the low form never (`in_form`). Held by its label as
+    `Field.label` is. `needs`: what the full form carries it for — ""
+    always, "instrument" a model or a bar (as `Field.needs`), "model" a
+    model named."""
+
+    label: str
+    needs: str = ""
+
+
+#: the template's items besides FIELDS, each with its policy: every labelled
+#: item of the template is one or the other (`in_form` refuses any other)
+GUIDANCE = (
+    Guidance("Registered branch"),
+    Guidance("Timebox"),
+    Guidance("Split touched"),
+    Guidance("Deviations after freeze"),
+    Guidance("Interpretation"),
+    Guidance("Prior threads"),
+    # a render check needs an instrument to render (a model's prompt, an
+    # estimator's `--show`), parser cases a model's text to parse
+    Guidance("Render check", needs="instrument"),
+    Guidance("Parser cases harvested", needs="model"),
+    Guidance("Clarified terms"),
+    Guidance("Changed — and in which class"),
+    Guidance("Pilot"),
+    Guidance("Notes updated"),
+)
+
+#: the sections whose unlabelled parts the low form carries, by the
+#: heading's first word: the run list's stamped entry and the TOML head with
+#: its pointer — the Notes list only the full form
+LOW_FORM_SECTIONS = frozenset({"runs", "head"})
+
 
 #: the fields an analysis record binds besides the registration: what the
 #: protocol says before the run, which the audit reads and may judge — every
@@ -500,7 +539,7 @@ class FieldLine:
     line: int  # 1-based line of the label
     name: str  # field_name() of the label
     label: str  # the label as written
-    value: str  # the value with its continuation lines, cut markers removed
+    value: str  # the value with its continuation lines, HTML comments removed
     # content below the label: a code fence or deeper-indented lines; the
     # stamp's own placeholder fence is none (`is_stamp_placeholder_block`)
     block: bool = False
@@ -798,10 +837,20 @@ def full_owed(f: Field, kind: str | None, model: bool) -> bool:
         return False
     if f.low_cut == "lm" and not model:
         return False
-    if kind is None or not f.needs:
+    return needs_met(f.needs, kind, model)
+
+
+def needs_met(needs: str, kind: str | None, model: bool) -> bool:
+    """Is what NEEDS asks for there, for a number of KIND, a model named or
+    not (MODEL)? "" always, "bar" a bar (kind fit or apply), "instrument" a
+    bar or a model, "model" a model. An undecided kind has every bar and
+    instrument (`Field.needs`, `Guidance.needs`)."""
+    if needs == "model":
+        return model
+    if not needs or kind is None:
         return True
     has_bar = standard_contract.has_bar(kind)
-    return has_bar if f.needs == "bar" else has_bar or model
+    return has_bar if needs == "bar" else has_bar or model
 
 
 #: the field a rendered example is the evidence of: the instrument check
@@ -826,7 +875,7 @@ def example_owed(repeat_cost: str | None, kind: str | None, model: bool) -> bool
 def not_owed(text: str) -> set[str]:
     """The labels of the must, should and after-run fields this protocol's
     full form does not owe (`full_owed`, by its kind and model: Raw output
-    only with a model) — the stamp leaves them out (`owed_cut`),
+    only with a model) — the stamp leaves them out (`in_form`),
     `protocol-fill --list` sets apart those an older stamp still carries,
     and `--from-run` does not name them as the author's. Empty when the
     head does not read."""
@@ -850,6 +899,39 @@ def in_cut(f: Field, kind: str | None, model: bool) -> bool:
     if f.low_cut == "lb":
         return bar_owed(f, kind)
     return f.low_cut == "lm" and model
+
+
+def in_form(
+    name: str | None,
+    kind: str | None,
+    model: bool,
+    *,
+    low: bool,
+    section: str = "",
+) -> bool:
+    """Does the stamped form — the LOW form, else the full — carry the
+    template item NAME (`field_name` of its label; None for a part without a
+    label, of SECTION, its heading's first word in lower case) for a number
+    of KIND, a model named or not (MODEL)? The one answer to which item a
+    form carries: a field (FIELDS) the low form carries when it is in the
+    cut (`in_cut`), the full form when it owes it (`full_owed`); a guidance
+    item (GUIDANCE) only the full form, when what it needs is there
+    (`needs_met`); a part without a label the full form always, the low form
+    in LOW_FORM_SECTIONS. Being carried is not being owed: when a carried
+    field is due is `owed`'s. Raises ValueError for a label neither FIELDS
+    nor GUIDANCE names — a template item has its policy here or nowhere."""
+    if name is None:
+        return not low or section in LOW_FORM_SECTIONS
+    f = next((f for f in FIELDS if field_name(f.label) == name), None)
+    if f is not None:
+        return in_cut(f, kind, model) if low else full_owed(f, kind, model)
+    g = next((g for g in GUIDANCE if field_name(g.label) == name), None)
+    if g is None:
+        raise ValueError(
+            f"in_form: the template item {name!r} is neither a field (FIELDS) nor "
+            "guidance (GUIDANCE) — give it its policy in protocol_check"
+        )
+    return not low and needs_met(g.needs, kind, model)
 
 
 def owed_fields(

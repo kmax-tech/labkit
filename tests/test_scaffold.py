@@ -327,7 +327,6 @@ class Exp(unittest.TestCase):
             self.assertTrue((area / f).is_file(), f)
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertRegex(proto, r'(?m)^id = "p-[0-9a-f]{16}"$')
-        self.assertNotRegex(proto, r"<!-- l[bm]? -->")
         test = (self.root / "tests" / "test_01_foo_bar.py").read_text(encoding="utf-8")
         ast.parse(test)
         self.assertIn('"experiments/01-foo-bar"', test)
@@ -357,9 +356,6 @@ class Exp(unittest.TestCase):
         self.assertEqual(fields(), [])
         quiet(scaffold.stamp_area, self.root, "other", report=True, kind="fit")
         self.assertGreater(len(fields()), 3)
-        # the cut marks are the template's, never a written protocol's, on
-        # the --report path too
-        self.assertNotRegex(proto.read_text(encoding="utf-8"), r"<!-- l[bm]? -->")
 
     def test_numbers_count_up_and_a_typed_number_is_dropped(self) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")

@@ -3,7 +3,6 @@ the same fields, or the checker holds a protocol to a label it never saw."""
 
 import contextlib
 import io
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,14 +17,9 @@ TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_
 )
 
 
-def template_fields() -> dict[str, str]:
-    """field name -> cut marker ("s", "lb", "lm" or "") as the template stamps them."""
-    out = {}
-    for f in protocol_check.fields(TEMPLATE):
-        line = TEMPLATE.splitlines()[f.line - 1]
-        m = re.search(r"<!--\s*(l[bm]?)\s*-->", line)
-        out.setdefault(f.name, m.group(1) if m else "")
-    return out
+def template_fields() -> set[str]:
+    """The field names of the template's labelled items."""
+    return {f.name for f in protocol_check.fields(TEMPLATE)}
 
 
 class Contract(unittest.TestCase):
@@ -34,10 +28,16 @@ class Contract(unittest.TestCase):
         for f in protocol_check.FIELDS:
             self.assertIn(f.label.casefold(), stamped, f.label)
 
-    def test_low_cut_is_the_template_markers(self):
-        stamped = template_fields()
-        for f in protocol_check.FIELDS:
-            self.assertEqual(f.low_cut, stamped[f.label.casefold()], f.label)
+    def test_every_template_item_has_one_policy(self):
+        """Which form carries an item is `in_form`'s alone: every labelled
+        item of the template is a field or guidance, never both, and no
+        guidance entry names an item the template lacks."""
+        fields = {protocol_check.field_name(f.label) for f in protocol_check.FIELDS}
+        guidance = {protocol_check.field_name(g.label) for g in protocol_check.GUIDANCE}
+        self.assertEqual(fields & guidance, set())
+        self.assertEqual(template_fields(), fields | guidance)
+        # a mark in the template would be a second decision no code reads
+        self.assertNotRegex(TEMPLATE, r"<!-- l[bm]? -->")
 
     def test_the_template_head_is_well_formed(self):
         stamped = TEMPLATE.replace("<protocol-id>", "p-0123456789abcdef")
