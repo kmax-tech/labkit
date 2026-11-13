@@ -475,10 +475,14 @@ DISCUSS_KEYS = ("protocol", "run", "why")
 REPORT_CHECK_AGAIN = "`report-check --if-reported <REPORT>`"
 
 
-#: the placeholder of a discussion's why in a printed command
+#: the placeholder of a discussion's why in a printed command: a run whose
+#: adoption was refused, looked at
 WHY_LOOKED_AT = "<what refused the adoption, what you found>"
 #: the placeholder of the progress account's why (`registered_report.progress_account`)
 WHY_PROGRESS = "<what was measured, what is still open>"
+#: the placeholder of a discussion's why for a number kept only as
+#: documentation of what was looked at or chosen (`report_hold.claim_ways`)
+WHY_DOCUMENTS = "<what the number documents, why it is no result>"
 
 
 def discuss_command(

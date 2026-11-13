@@ -83,8 +83,9 @@ Not a claim:
   registration's question; its `Answer:` line is no recorded verdict and
   can be a contradiction (above).
 - A number or verdict of a run that is not adopted, where the report
-  marks it as no result in one of these three ways — the only marks that
-  count: (a) the same sentence or the same bullet names the run as not a
+  marks it as no result in one of these four ways — the only marks that
+  count for such a number (the next item, a documented choice, needs
+  none): (a) the same sentence or the same bullet names the run as not a
   result ("the probe gave 0.89; the analysis is unchecked", "the first
   run was faulty and dropped", "processing stopped before the audit");
   (b) a heading names what follows as not adopted, not a result,
@@ -98,6 +99,16 @@ Not a claim:
   protocol's finding is still a claim. A
   line outside every mark that states the same number as a finding is a
   claim.
+- The numbers of the runs a choice was made on, where the line reports
+  them to document that choice — which model or setting was chosen over
+  which, with the scores compared ("logistic regression, 0.867, chosen
+  over random forest, 0.840"), with or without one of the marks above:
+  the contradiction rule above asks for this disclosure, and that their
+  runs are not adopted is no reason alone to call them a result. The line is still a claim where it presents such a
+  number as what the experiment found, or draws a conclusion from it
+  beyond the choice. Whether the number is right is a separate question:
+  a value RUNS shows otherwise is a contradiction, whatever role the line
+  gives it.
 - Facts of the setup the run did not compute: dataset sizes taken from
   the task, the search grid, a seed, a threshold the protocol registers.
 - A limitation the report states, or a failed audit it names.

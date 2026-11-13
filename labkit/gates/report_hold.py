@@ -19,7 +19,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
-from labkit.checks.report_blocks import block_protocol, discuss_command
+from labkit.checks.report_blocks import WHY_DOCUMENTS, block_protocol, discuss_command
 from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -985,13 +985,36 @@ def claim_ways(
     the decision `false-positive` and its confirmation, each as its
     command — for the first claim still open, and for the first decided
     one no second reviewer judged as it stands. A decision a reviewer did
-    not uphold is decided again, with the evidence in the reason. The one
+    not uphold is decided again, with the evidence in the reason. Where a
+    `result` claim holds — a number of a run the protocol has not adopted
+    — the first way names the discussion block (`report_blocks.discuss_command`)
+    as the place where a number that only documents what was looked at or
+    chosen may stay; the block makes no finding of a number, and being
+    unadopted alone is no reason to strike one. The one
     sentence `--report-review`'s refusal, its state line
     (`report_review.state_line`) and report-check's hold (`review_hold`)
     give."""
+    here = Path.cwd()
+    # usage round 24 (assay b2, b3): told only "no claim holds", agents
+    # struck the numbers a handover still owed as description
+    unadopted_number_held = any(
+        h.claim.kind == report_reviews.RESULT for h in standing.holding
+    )
+    discussion_hint = ""
+    if unadopted_number_held:
+        command = discuss_command(
+            shown(protocol, here), "<RUN>", shown(report, here), WHY_DOCUMENTS
+        )
+        discussion_hint = (
+            " — where a number of a run the protocol has not adopted only documents "
+            f"what was looked at or chosen, it may stay in a discussion block (`{command}`), "
+            "which makes no finding of it; being unadopted alone is no reason to "
+            "strike it"
+        )
     ways = [
         "change the report, or a source the reviewer read, so that no claim "
-        f"holds, then review that state (`{report_review_command(area, report, protocol)}`)"
+        f"holds{discussion_hint}, then review that state "
+        f"(`{report_review_command(area, report, protocol)}`)"
     ]
     undecided = next(
         (h for h in standing.holding if h.claim.status == report_reviews.OPEN), None

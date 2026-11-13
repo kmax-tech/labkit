@@ -238,6 +238,35 @@ class Command(unittest.TestCase):
         self.assertEqual((r.report, r.protocol), ("REPORT.md", P))
         self.assertEqual([(c.line, c.kind) for c in r.claims], [(5, "contradiction")])
 
+    def test_a_number_of_a_run_not_adopted_is_kept_through_a_discussion(self):
+        """A `result` claim — a number of a run the protocol has not
+        adopted — names the discussion block as the place where a number
+        that only documents may stay, instead of being struck (usage round
+        24, assay b2 and b3: after a handover the reports lost their
+        numbers); the block makes no finding of it. The twin: a
+        contradiction alone names no discussion."""
+        claimed = "CLAIM #1 · line 11 · result · AUROC 0.7795 of a run not adopted\nverdict: 1 claim(s)\n"
+        rc, out, _, _ = self.review(MARKED, claimed)
+        self.assertEqual(rc, 1, out)
+        (state,) = [
+            ln for ln in out.splitlines() if ln.startswith("report review state:")
+        ]
+        self.assertIn(
+            "where a number of a run the protocol has not adopted only documents "
+            "what was looked at or chosen, it may stay in a discussion block",
+            state,
+        )
+        self.assertIn("--discuss <RUN> --why", state)
+        self.assertIn('--why "<what the number documents, why it is no result>"', state)
+        self.assertIn("REPORT.md`", state)
+        self.assertIn("which makes no finding of it", state)
+        self.assertIn("being unadopted alone is no reason to strike it", state)
+
+    def test_the_twin_a_contradiction_names_no_discussion(self):
+        rc, out, _, _ = self.review(MARKED, self.CLAIMED)
+        self.assertEqual(rc, 1, out)
+        self.assertNotIn("--discuss", out)
+
     def test_a_state_with_a_claim_is_not_drawn_on_again(self):
         self.review(MARKED, self.CLAIMED)
         rc, _, err, calls = self.review(MARKED, self.CLEAN)
