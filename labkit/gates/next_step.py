@@ -11,9 +11,11 @@ The order, the first that applies is the step (`next_step`):
                                    `labkit-init exp … --report`
                                    (`protocol_check.check_fields`)
     the index's head declares a   → `git add -- AREA` stages the whole area
-      result and the area's tree    (`report_hold.staged_area_gap`, the
-      differs from the index        commit's hold before any station reads;
-      (the pre-commit's state)      the index alone)
+      result, or the tree holds a   (`report_hold.staged_area_gap`, the
+      completed run or adoption     commit's hold before any station reads;
+      the index lacks, and the      the index alone; `report_hold.
+      area's tree differs from the  result_outside_index`: never "measure"
+      index (the pre-commit's state) for a run the tree holds)
     committed evidence changed   → its restore, the first of report-check's
       against HEAD                 first station (`evidence.change_blockers`),
                                    before a handover can say "nothing"
@@ -352,24 +354,34 @@ def _before_the_chain(
     the area's state built once). None when none applies."""
     return (
         _field_step(protocol, report, hint)
-        or _staged_area_step(area, text, staged=staged)
+        or _staged_area_step(area, protocol, text, staged=staged)
         or _restore_step(held)
         or _handed_over(area, protocol, text, area_state, held, staged=staged)
     )
 
 
-def _staged_area_step(area: Path, text: str, *, staged: bool) -> Step | None:
-    """The commit's hold while the index's head declares a result and the
-    area's tree differs from the index (`report_hold.staged_area_gap`, the
-    hold of report-check's declared branch): the step stages the whole
-    area. None in the tree, for an undeclared head, or when the tree is
+def _staged_area_step(
+    area: Path, protocol: Path, text: str, *, staged: bool
+) -> Step | None:
+    """The commit's step while the area's tree differs from the index
+    (`report_hold.staged_area_gap`) and either the index's head declares a
+    result — the hold of report-check's declared branch — or the tree
+    holds a result the index lacks, a completed run or the adoption
+    (`report_hold.result_outside_index`): the step stages the whole area.
+    Read from the index alone, the second would ask for a measurement the
+    tree holds. None in the tree, when neither holds, or when the tree is
     what the commit would hold. Before the restore: report-check holds it
     before any station reads."""
-    from labkit.gates.report_hold import staged_area_gap
+    from labkit.gates.report_hold import result_outside_index, staged_area_gap
 
-    if not staged or protocol_block.declared_run(text) is None:
+    if not staged:
         return None
-    gap = staged_area_gap(layout_root(area), area, "the stations read")
+    repo = layout_root(area)
+    index_declares = protocol_block.declared_run(text) is not None
+    tree_only_result = result_outside_index(repo, area, protocol)
+    if not (index_declares or tree_only_result):
+        return None
+    gap = staged_area_gap(repo, area, "the stations read")
     if gap is None:
         return None
     return Step(

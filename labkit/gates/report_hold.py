@@ -23,7 +23,7 @@ from labkit.checks.report_blocks import discuss_command
 from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
-from labkit.formats.runs import run_path
+from labkit.formats.runs import COMPLETION_FILE, RUNS_DIR, run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
 from labkit.formats import (
     attempts,
@@ -148,6 +148,39 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     would hold."""
     rel = rel_posix(area, repo)
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
+
+
+def runs_outside_index(repo: Path, area: Path) -> dict[str, str]:
+    """The completed runs of AREA that only the working tree holds — a
+    `runs/<id>/` whose completion record git does not track (`??` in
+    `git status`) — as run id → its directory relative to REPO. A run the
+    index holds in another version is not among them. What the commit's
+    gates cannot see while they judge the index: a step read from there
+    would ask for the measurement again."""
+    prefix = f"{rel_posix(area, repo)}/{RUNS_DIR}/"
+    out: dict[str, str] = {}
+    for xy, path in status_entries(repo, (rel_posix(area, repo),)):
+        if xy != "??" or not path.startswith(prefix):
+            continue
+        run_id, _, name = path[len(prefix) :].partition("/")
+        if name == COMPLETION_FILE:
+            out[run_id] = f"{prefix}{run_id}"
+    return out
+
+
+def result_outside_index(repo: Path, area: Path, protocol: Path) -> bool:
+    """Whether AREA's working tree holds a result the index lacks: a
+    completed run only the tree holds (`runs_outside_index`), or
+    PROTOCOL's head in the tree declaring a result that the index's head
+    does not declare. Then the commit's step is to stage the area, not the
+    step the index alone would give."""
+    if runs_outside_index(repo, area):
+        return True
+    tree_text = file_text(protocol)
+    if tree_text is None or protocol_block.declared_run(tree_text) is None:
+        return False
+    index_text = state_text(repo, protocol, staged=True)
+    return index_text is None or protocol_block.declared_run(index_text) is None
 
 
 def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
@@ -359,6 +392,10 @@ class Sources:
     declared: dict[Path, str | None]
     unreadable: dict[Path, str]
     staged: bool = False  # the file state the sources were read from
+    # STAGED only: the completed runs only the tree holds, run id →
+    # directory (`runs_outside_index`), so a citation of one is named with
+    # its staging, not as gone
+    outside_index: dict[str, str] = field(default_factory=dict)
     _states: dict[Path, AreaState] = field(
         default_factory=dict, repr=False, compare=False
     )
@@ -425,6 +462,8 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
             rd.dir.name
             for rd in present_run_dirs(p.parent, repo=repo, file_state=file_state)
         )
+        if staged:
+            out.outside_index.update(runs_outside_index(repo, p.parent))
         if p in out.unreadable:
             continue  # a link: no text to read, the refusal stands
         try:
@@ -630,7 +669,13 @@ def hold_report(
     )
     cited = report_blocks.cited_run_ids(text)
     structured = report_blocks.structured_lines(found, discussed)
-    out.take_all(at_report(report_blocks.cited_gaps(cited, sources.known, structured)))
+    out.take_all(
+        at_report(
+            report_blocks.cited_gaps(
+                cited, sources.known, structured, outside_index=sources.outside_index
+            )
+        )
+    )
     out.take_all(at_report(owed_blocks(path, text, found, sources)))
     out.take_all(at_report(report_blocks.discussion_gaps(discussed)))
     out.take_all(at_report(discussion_sources(path, discussed, sources)))

@@ -944,3 +944,84 @@ class ReportInTheIndexOnly(unittest.TestCase):
             # the twin: the tree holds no such report, so nothing holds there
             tree = next_step.next_step(self.area, self.protocol.resolve())
         self.assertIn("nothing holds it", tree.where)
+
+
+class RunInTheTreeOnly(unittest.TestCase):
+    """A run measured and adopted, its result block in REPORT.md, and only
+    REPORT.md staged: the commit judges the index, where neither the run
+    nor the adoption stands. The step stages the area — never "measure",
+    which would open a second answering run beside the one the tree holds
+    — and the report's citation is named with its staging, not as gone (usage round
+    24, docs/notes/2026-11-13-usage-round-24-replays.md, case 1). Taking
+    the step releases the commit."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, "analysis", self.run_id)
+        rc, out = self.lab.adopt(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        self.report = self.lab.root / "REPORT.md"
+        self.report.write_text("# Report\n\nThe lines.\n", encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = protocol_fill.main([str(self.protocol), "--into", str(self.report)])
+        self.assertEqual(rc, 0)
+        self.lab.git("add", "--", str(self.report))
+
+    def commit_gate(self) -> tuple[int, str]:
+        from labkit.gates import agent_hooks
+
+        out = io.StringIO()
+        with contextlib.chdir(self.lab.root), contextlib.redirect_stdout(out):
+            rc = agent_hooks.commit_gates([])
+        return rc, out.getvalue()
+
+    def test_the_step_stages_the_area_and_taking_it_releases_the_commit(self):
+        with contextlib.chdir(self.lab.root):
+            staged = next_step.next_step(
+                self.area, self.protocol.resolve(), file_state=area_state.INDEX
+            )
+        self.assertEqual(
+            staged.next.split(" stages")[0], "`git add -- experiments/01-lines`"
+        )
+        rc, out = self.commit_gate()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(staged.render("experiments/01-lines"), out)
+        self.assertNotIn("measure:", out)
+        self.assertIn(
+            f"runs/{self.run_id}/ lies in the working tree, not in the index", out
+        )
+        self.assertNotIn("a run that is gone", out)
+        self.lab.git("add", "-A")
+        rc, out = self.commit_gate()
+        self.assertEqual(rc, 0, out)
+
+    def test_the_twin_a_run_the_index_holds_in_another_version_is_not_outside(self):
+        """A committed run whose completion record changed in the tree is
+        held by the index: no run outside it, so no staging step for it."""
+        self.lab.commit("all")
+        completion = self.area / "runs" / self.run_id / "completion.json"
+        completion.write_text(
+            completion.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+        )
+        self.assertEqual(report_hold.runs_outside_index(self.lab.root, self.area), {})
+
+    def test_the_twin_a_tree_with_no_run_and_no_adoption_keeps_its_step(self):
+        """Only a script edit in the tree, nothing measured: the index's
+        own step stands (measure), no staging asked for an edit the commit
+        may leave out on purpose."""
+        lab = Lab()
+        self.addCleanup(lab.close)
+        area, protocol = stamp_count(lab)
+        measure = area / "scripts" / "01_measure.py"
+        measure.write_text(
+            measure.read_text(encoding="utf-8") + "\n# an edit\n", encoding="utf-8"
+        )
+        with contextlib.chdir(lab.root):
+            staged = next_step.next_step(
+                area, protocol.resolve(), file_state=area_state.INDEX
+            )
+        self.assertNotIn("git add", staged.next)
+        self.assertIn("measure", staged.next)

@@ -128,6 +128,26 @@ class Blocks(unittest.TestCase):
             {("WARNING", "static evidence")},
         )
 
+    def test_a_cited_run_only_the_tree_holds_is_named_with_its_staging_not_gone(self):
+        """At the commit KNOWN is the index's runs: a run the tree holds and
+        the index does not is named with its staging, not as a run that is
+        gone (usage round 24: agents read "gone" and looked elsewhere). The
+        twin: a run neither holds keeps the sentence of a lost run."""
+        lost = "2026-10-07T10-00-00_ffff"
+        cited = report_blocks.cited_run_ids(f"see {RUN}\nand {lost}\n")
+        outside_index = {RUN: f"experiments/01-x/runs/{RUN}"}
+        gaps = report_blocks.cited_gaps(
+            cited, set(), structured={1, 2}, outside_index=outside_index
+        )
+        self.assertEqual(len(gaps), 2, gaps)
+        self.assertIn(
+            f"runs/{RUN}/ lies in the working tree, not in the index", gaps[0].line
+        )
+        self.assertIn(f"`git add -- experiments/01-x/runs/{RUN}`", gaps[0].line)
+        self.assertNotIn("gone", gaps[0].line)
+        self.assertIn(f"no runs/{lost}/ in the repo", gaps[1].line)
+        self.assertIn("a run that is gone", gaps[1].line)
+
     def test_numbers_outside_blocks_are_named_and_ids_dates_versions_are_not(self):
         text = (
             "28 training samples, median 0.449\n"

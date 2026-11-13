@@ -67,6 +67,7 @@ from __future__ import annotations
 import os
 import re
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -389,20 +390,33 @@ def structured_lines(found: list[Block], discussed: list["Discussion"]) -> set[i
 
 
 def cited_gaps(
-    cited: list[tuple[int, str]], known: set[str], structured: set[int]
+    cited: list[tuple[int, str]],
+    known: set[str],
+    structured: set[int],
+    *,
+    outside_index: Mapping[str, str] | None = None,
 ) -> list[GateFinding]:
     """Why a cited token names no run, one finding each with its way out:
     not in the shape runlog writes, or no `runs/<id>/` among KNOWN (the run
-    ids of the repo). A token on a STRUCTURED line (`structured_lines`, a
-    generated block) blocks: the block names the run its number comes
-    from. A token in prose warns as static evidence: a pattern over free
-    text reads an italic `_<id>_` or an `<id>-based` too, and shows no
-    invented source by itself."""
+    ids of the repo, the index's at the commit). OUTSIDE_INDEX, run id →
+    its directory, the completed runs only the working tree holds
+    (`report_hold.runs_outside_index`): such a run is named with its
+    staging, not as a run that is gone. A token on a STRUCTURED line
+    (`structured_lines`, a generated block) blocks: the block names the
+    run its number comes from. A token in prose warns as static evidence:
+    a pattern over free text reads an italic `_<id>_` or an `<id>-based`
+    too, and shows no invented source by itself."""
     gaps: list[GateFinding] = []
     for n, token in cited:
         if not runs.RUN_ID.fullmatch(token):
             why = f"line {n}: {token} reads as a run id but is not one runlog writes"
             fix = "cite a run by the id runlog wrote (its `runs/<id>/`), or reword the token"
+        elif token not in known and outside_index and token in outside_index:
+            why = (
+                f"line {n}: cites run {token} — runs/{token}/ lies in the working "
+                "tree, not in the index the commit carries"
+            )
+            fix = f"stage it: `git add -- {outside_index[token]}`"
         elif token not in known:
             why = f"line {n}: cites run {token} — no runs/{token}/ in the repo"
             fix = (
