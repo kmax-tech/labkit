@@ -1384,8 +1384,10 @@ class Judge(unittest.TestCase):
 
     def _adopted(self) -> str:
         """Run, finalize, record, adopt, commit — once per class; every later
-        test calls it first and so runs alone and in any order."""
+        test calls it first and so runs alone and in any order: after the
+        test the lab returns to that commit (`_back_to_adopted`)."""
         cls = type(self)
+        self.addCleanup(self._back_to_adopted)
         if cls.run_id:
             return cls.run_id
         lab = cls.lab
@@ -1425,6 +1427,14 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out_text)
         lab.commit("the verdict, adopted")
         return run_id
+
+    def _back_to_adopted(self) -> None:
+        """The lab as the adoption committed it: the records, decisions and
+        protocol edits a test leaves would otherwise reach the next test (an
+        accepted limit's line with its record decided otherwise since)."""
+        lab = type(self).lab
+        lab.git("reset", "-q", "--hard")
+        lab.git("clean", "-fdq")
 
     def test_02_run_finalize_audit_adopt(self):
         self._adopted()
@@ -1689,6 +1699,7 @@ class AdoptedRunWithoutIntentKeys(unittest.TestCase):
     _model = staticmethod(Judge._model)
     _measured = Judge._measured
     _adopted = Judge._adopted
+    _back_to_adopted = Judge._back_to_adopted
 
     @classmethod
     def setUpClass(cls) -> None:
