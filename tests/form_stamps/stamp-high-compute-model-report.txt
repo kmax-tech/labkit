@@ -83,7 +83,6 @@
 
 ## Head (read by the checks)
 
-
 *How to fill each field: `protocol-check --guide`. What this protocol
 owes now: `protocol-check --contract`. To fill a field:
 `protocol-fill PROTOCOL-<name>.md "<label>=<value>"`.*
