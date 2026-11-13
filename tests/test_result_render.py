@@ -96,7 +96,7 @@ class Rendering(unittest.TestCase):
     def test_the_rendering_is_the_answer_line_with_its_note_and_the_limit_lines(self):
         area, protocol = area_with_record()
         text = protocol.read_text(encoding="utf-8")
-        r = result_render.rendering(area, text, area / "runs" / RUN)
+        r = result_render.rendering(area, text, area / "runs" / RUN, found=())
         self.assertEqual(
             r.recorded_results,
             f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1; also recorded: criterion_1_accuracy = 0.83 (run {RUN}); "
@@ -111,7 +111,7 @@ class Rendering(unittest.TestCase):
     def test_no_decided_limit_renders_a_bare_answer(self):
         area, protocol = area_with_record(limit_reason=None)
         text = protocol.read_text(encoding="utf-8")
-        r = result_render.rendering(area, text, area / "runs" / RUN)
+        r = result_render.rendering(area, text, area / "runs" / RUN, found=())
         self.assertEqual(
             r.recorded_results,
             f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1; also recorded: criterion_1_accuracy = 0.83 (run {RUN})",
@@ -202,7 +202,7 @@ class ReportableVerdicts(unittest.TestCase):
             rec.path, 1, "limitation", "one draw", "quality-check-2 not assessable"
         )
         text = protocol.read_text(encoding="utf-8")
-        r = result_render.rendering(area, text, area / "runs" / RUN)
+        r = result_render.rendering(area, text, area / "runs" / RUN, found=())
         self.assertTrue(
             r.recorded_results.startswith(
                 "criterion-1 not assessable — quality-check-2 not assessable (Limit"
@@ -221,7 +221,7 @@ class RenderGaps(unittest.TestCase):
         self.area, self.protocol = area_with_record()
         self.text = self.protocol.read_text(encoding="utf-8")
         self.expected = result_render.rendering(
-            self.area, self.text, self.area / "runs" / RUN
+            self.area, self.text, self.area / "runs" / RUN, found=()
         )
 
     def written(self) -> str:

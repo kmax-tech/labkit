@@ -23,18 +23,19 @@ differs from its sources is a blocker, whatever it says — exact, and
 silent on whether a limit is enough (the audit's question). The Summary's
 Conclusion and the rest of the prose stay the author's.
 
-    r = result_render.rendering(area, text, run)     # what the text should say
+    r = result_render.rendering(area, text, run, found=held.reviews)  # what the text should say
     result_render.render_gaps(text, r)              # [] when it says exactly that
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.formats import findings, promises, protocol_block, reference, runs
+from labkit.formats import findings, promises, protocol_block, reference, reviews, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE
@@ -188,31 +189,48 @@ def _verdict(
     return f"{p.id}: no verdict — `{p.key}` not recorded as true or false"
 
 
-def limits_of(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
+def limits_of(
+    area: Path, text: str, run: Path, *, found: Sequence[reviews.Review]
+) -> list[tuple[str, str, str]]:
     """(label, value, effect) of every limit with its effect decided — an
     BLOCKER or WARNING decided limitation — in the analysis
-    records covering RUN. An area the gate cannot hold to that run gives
+    records covering RUN. A `stands` a decision review among FOUND
+    contested as decided and claimed now (`reviews.contested`) reads as
+    proposed, not confirmed (`findings.UNCONFIRMED`); an unreviewed or
+    upheld one as its effect. FOUND: AREA's decision reviews
+    (`evidence.AreaEvidence.reviews`). An area the gate cannot hold to that run gives
     none here: report-check names why (`analysis_audit_gap`)."""
     try:
         records = covering_analysis(area, text, run)
     except (AuditError, FileNotFoundError, ValueError):
         return []
     return [
-        (findings.limit_label(r, n), findings.limit_line(f), f.effect)
+        (
+            findings.limit_label(r, n),
+            findings.limit_line(
+                f,
+                contested=f.effect == findings.EFFECT_STANDS
+                and reviews.contested(r, n, list(found), text),
+            ),
+            f.effect,
+        )
         for r in records
         for n, f in r.limits()
         if f.effect
     ]
 
 
-def rendering(area: Path, text: str, run: Path) -> Rendering:
-    """The result section of TEXT as RUN's `metrics.json` and the covering
-    records render it. A protocol that replaces another (`[replaces]`)
+def rendering(
+    area: Path, text: str, run: Path, *, found: Sequence[reviews.Review]
+) -> Rendering:
+    """The result section of TEXT as RUN's `metrics.json`, the covering
+    records and AREA's decision reviews FOUND render it (`limits_of`). A
+    protocol that replaces another (`[replaces]`)
     opens with the predecessor's verdict as its own sources give it, then
     `this question:` (`predecessor_verdict`): the new answer never reads as
     the earlier question's. Raises what `runs.read_metrics` raises on a run
     without readable metrics."""
-    limits = limits_of(area, text, run)
+    limits = limits_of(area, text, run, found=found)
     note = findings.answer_note([(label, effect) for label, _, effect in limits])
     said, recorded = _verdicts_and_values(area, text, run, limits)
     before = predecessor_verdict(area, text, set())
@@ -297,7 +315,8 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
                     pred.parent,
                     pred_text,
                     pred_run,
-                    limits_of(pred.parent, pred_text, pred_run),
+                    # only the effects are read here, never the lines
+                    limits_of(pred.parent, pred_text, pred_run, found=()),
                 )
                 verdict = said or f"run {declared}, no promise to judge"
     except (OSError, ValueError, protocol_block.BlockError) as exc:
@@ -398,7 +417,9 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
         elif got != value:
             gaps.append(
                 blocker(
-                    f'"{label}" differs from the record',
+                    f'"{label}" differs from the record and its decision reviews — '
+                    f"a line written before the decision or a review changed it, "
+                    f"or by hand: a stale rendering, no objection to the number",
                     fix=f"`{RENDER}` writes the record's line",
                     step=RENDER,
                     rule=LAB_015,

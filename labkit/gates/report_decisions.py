@@ -81,7 +81,9 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
     if ctx.declared is None:
         return gaps  # nothing reported: the result section is not owed yet
     try:
-        expected = rendering(ctx.area, ctx.text, ctx.run)
+        # the reviews the gate judges by: one that does not read is named
+        # (`check_decision_reviews_read`) and the lines render as unreviewed
+        expected = rendering(ctx.area, ctx.text, ctx.run, found=ctx.evidence.reviews)
     except (OSError, ValueError) as exc:
         return gaps + [
             blocker(

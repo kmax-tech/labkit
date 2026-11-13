@@ -305,11 +305,84 @@ class TheCall(unittest.TestCase):
             "review state: finding(s) 1 (grade WARNING) not released — nothing is held",
             out,
         )
+        # the Limitation line now renders as not confirmed: written again first
+        proto = area / "PROTOCOL-x.md"
+        rendered, _ = protocol_result.render_result(
+            proto.read_text(encoding="utf-8"), area
+        )
+        proto.write_text(rendered, encoding="utf-8")
         code, out = gate(area)
         self.assertEqual(code, 0, out)
         (line,) = [ln for ln in out.splitlines() if "decided limitation rejected" in ln]
         self.assertIn("Next: decide the finding again first", line)
         self.assertNotIn("asks a second auditor", line)
+
+    def test_a_rejected_stands_renders_as_proposed_not_confirmed(self):
+        """After a rejection the Limitation line no longer says the verdicts
+        stand: it says the limit was proposed, not confirmed by a second
+        auditor, and is unresolved — neither that the number is wrong nor
+        that the limit holds. The line written before the review is a
+        stale rendering, told apart from an objection to the number; the
+        contract stays a warning (usage round 24, replay case 2)."""
+        area, record = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        proto = area / "PROTOCOL-x.md"
+        before = proto.read_text(encoding="utf-8")
+        label = f"Limitation (audit {record.stem} #1)"
+        self.assertIn(f"- **{label}:** the verdicts stand", before)
+        run_review(area, REJECTED)
+        code, out = gate(area)
+        self.assertEqual(code, 1, out)
+        (stale,) = [
+            ln for ln in out.splitlines() if "BLOCKER:" in ln and f'"{label}"' in ln
+        ]
+        self.assertIn("written before", stale)
+        self.assertIn("no objection to the number", stale)
+        rendered, written = protocol_result.render_result(before, area)
+        self.assertEqual(written, [label])
+        (line,) = [ln for ln in rendered.splitlines() if label in ln]
+        self.assertEqual(
+            line,
+            f"- **{label}:** a limit proposed, not confirmed by a second auditor "
+            "— unresolved — one seed, said so",
+        )
+        proto.write_text(rendered, encoding="utf-8")
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)  # the contract: a WARNING's rejection warns
+        self.assertNotIn("BLOCKER:", out)
+        self.assertIn("decided limitation rejected", out)
+
+    def test_the_twin_an_upheld_stands_keeps_its_line(self):
+        area, record = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        proto = area / "PROTOCOL-x.md"
+        before = proto.read_text(encoding="utf-8")
+        run_review(area, UPHELD)
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("WARNING:", out)
+        self.assertEqual(protocol_result.render_result(before, area), (before, []))
+        self.assertIn(
+            f"- **Limitation (audit {record.stem} #1):** the verdicts stand, read "
+            "within this limit — one seed, said so",
+            before,
+        )
+
+    def test_a_redraw_shows_the_reviewer_the_decision_not_the_rejection(self):
+        """The reviewer judges the decision as proposed: an `--again` draw
+        after a rejection is shown the line the decision writes, not the
+        earlier verdict."""
+        area, record = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        run_review(area, REJECTED)
+        _, _, _, sent = run_review(area, UPHELD, "--again")
+        self.assertIn(
+            f"- **Limitation (audit {record.stem} #1):** the verdicts stand", sent[0]
+        )
+        self.assertNotIn("not confirmed by a second auditor", sent[0])
 
     def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
         """A computation registers no promise and `--decide` refuses every id

@@ -1038,11 +1038,20 @@ def limit_label(record: Record, n: int) -> str:
     return f"{LIMIT_PREFIX}{record.path.stem} #{n})"
 
 
-def limit_line(finding: Finding) -> str:
+#: the Limitation line's opening for a `stands` a decision review did not
+#: confirm: it claims neither that the verdicts stand nor that they fall
+UNCONFIRMED = "a limit proposed, not confirmed by a second auditor — unresolved"
+
+
+def limit_line(finding: Finding, *, contested: bool) -> str:
     """The value of a Limitation line: FINDING's effect, then the person's reason
-    (`limit_label` is the label beside it)."""
+    (`limit_label` is the label beside it). CONTESTED: a decision review of
+    the decision as it stands said other than `upheld`
+    (`reviews.contested`) — the line then opens with UNCONFIRMED in place
+    of the effect."""
     reason = " ".join(finding.reason.split())
-    return f"{effect_sentence(finding.effect)} — {reason}"
+    opening = UNCONFIRMED if contested else effect_sentence(finding.effect)
+    return f"{opening} — {reason}"
 
 
 def answer_note(limits: list[tuple[str, str]]) -> str:

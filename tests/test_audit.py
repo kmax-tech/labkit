@@ -3480,7 +3480,9 @@ class FollowupGate(unittest.TestCase):
         self.assertEqual(self.gate(area), [])
         text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
         run = area / "runs" / "2026-01-01T00-00-00_0001"
-        labels = [label for label, _, _ in result_render.limits_of(area, text, run)]
+        labels = [
+            label for label, _, _ in result_render.limits_of(area, text, run, found=())
+        ]
         self.assertEqual(labels, [findings.limit_label(findings.read(r2.path), n)])
         # stands instead: the decision review is owed for it
         findings.write_decision(r2.path, n, "limitation", "kept as a limit", "stands")
@@ -3542,7 +3544,9 @@ class FollowupGate(unittest.TestCase):
                     )
                 text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
                 run = area / "runs" / "2026-01-01T00-00-00_0001"
-                self.assertEqual(len(result_render.limits_of(area, text, run)), limits)
+                self.assertEqual(
+                    len(result_render.limits_of(area, text, run, found=())), limits
+                )
                 self.assertEqual(len(carried), limits)
                 self.assertEqual(self.gate(area), [])
 

@@ -105,14 +105,15 @@ RESULT_LABEL = (
 
 def rendered_result(area: Path, text: str, run_dir: Path | None) -> str:
     """The result section as it renders for RUN_DIR under the decisions as
-    they stand (`result_render.rendering`): what the reviewer judges the
+    they stand, no review's verdict read (`result_render.rendering`): what the reviewer judges the
     Conclusion against, since `--from-run` writes these lines after the
     decision. A sentence instead when nothing renders (no run, or no
     metrics)."""
     if run_dir is None:
         return "no run: nothing renders"
     try:
-        r = rendering(area, text, run_dir)
+        # the decision as proposed: an earlier verdict is not shown to the next draw
+        r = rendering(area, text, run_dir, found=())
     except (OSError, ValueError) as exc:
         return f"nothing renders: {exc}"
     return "\n".join(

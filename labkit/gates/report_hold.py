@@ -513,7 +513,12 @@ def block_sources(
         else:
             try:
                 body = report_blocks.block_body(
-                    rendering(p.parent, sources.texts[p], run_path(p.parent, run_id))
+                    rendering(
+                        p.parent,
+                        sources.texts[p],
+                        run_path(p.parent, run_id),
+                        found=sources.held_evidence(p.parent).reviews,
+                    )
                 )
                 out[b.protocol] = report_blocks.BlockSource(run_id, body)
             except (OSError, ValueError) as exc:

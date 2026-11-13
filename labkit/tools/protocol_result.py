@@ -16,8 +16,10 @@ from pathlib import Path
 
 from labkit.formats import markdown
 from labkit.formats import (
+    evidence,
     findings,
     protocol_block,
+    reviews,
     runs,
 )
 from labkit.checks.result_render import Rendering, rendering
@@ -154,7 +156,7 @@ def from_run(
     Recorded results is refused without `force`; a `[result]` naming another
     run is refused always (`fill_result_run`: withdraw it first)."""
     run = recheck.chosen_run(area, text, run_id)
-    r = rendering(area, text, run)
+    r = rendering(area, text, run, found=decision_reviews(area))
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:
@@ -198,6 +200,20 @@ def drop_stray_limits(
     return "\n".join(lines), dropped
 
 
+def decision_reviews(area: Path) -> tuple[reviews.Review, ...]:
+    """AREA's decision reviews as the gates read them
+    (`evidence.read_evidence`, the tree's), for a rendering to be written.
+    Raises ValueError when one does not read: a line written past it would
+    read as unreviewed. Raises RuntimeError when git fails."""
+    held = evidence.read_evidence(area, staged=False)
+    if held.reviews_unread:
+        raise ValueError(
+            f"a decision review does not read: {held.reviews_unread} — repair "
+            "it before the result is written"
+        )
+    return held.reviews
+
+
 def declared_run_dir(text: str, area: Path, why: str) -> Path:
     """The run directory TEXT's head declares as its result, in AREA.
     Raises ValueError without a declaration (WHY says what the caller
@@ -224,7 +240,7 @@ def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     (text, what was written). Raises ValueError without a declared run or
     without `runs/<id>/` for it — `--from-run` declares first."""
     run = declared_run_dir(text, area, "--render only writes the result again")
-    r: Rendering = rendering(area, text, run)
+    r: Rendering = rendering(area, text, run, found=decision_reviews(area))
     written: list[str] = []
     before = text
     text = fill(text, RECORDED_RESULTS_LABEL, r.recorded_results, force=True)

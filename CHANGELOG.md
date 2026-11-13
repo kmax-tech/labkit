@@ -4,6 +4,10 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ## Unreleased
 
+### Changed
+
+- **A rejected `stands` reads as proposed, not confirmed, in the Limitation line.** The line said "the verdicts stand, read within this limit" even after a second auditor rejected the decision (usage round 24, replay case 2). When a decision review of the decision as decided and claimed now said other than `upheld` (`reviews.contested`), the line now opens "a limit proposed, not confirmed by a second auditor — unresolved" (`findings.UNCONFIRMED`), followed by the reason: it says neither that the number is wrong nor that the limit holds. The rendering takes the area's decision reviews as a required input (`result_render.rendering(..., found=)`, as `evidence.read_evidence` reads them; `protocol_result.decision_reviews` refuses a write past one that does not read; `findings.limit_line(..., contested=)`); the review's own input shows the decision as proposed (`found=()`). The contract is unchanged: a WARNING's rejected `stands` warns, a BLOCKER's blocks. A protocol or report result block written before the rejection now differs from its rendering; report-check names that as a stale rendering, no objection to the number, and `protocol-fill --render` and `--into` write it again. An unreviewed or upheld `stands` keeps its line.
+
 ### Fixed
 
 - **`--report` on an existing area adds the full form's report fields, with its placeholders.** `labkit-init exp NAME --report` inserted every † item of the raw template: a computation at high repeat cost gained Noise ceiling and, without a model, Answer form + resolution, which its full form leaves out, and every inserted item carried the template's long placeholder instead of the stamp's one-line hint and the estimator wording of a fit or an apply. The report fields now come from the full form `protocol_stamp` writes for the protocol's own head (`scaffold.report_blocks`: kind, repeat cost, model, id); a head without a kind is refused with the way to fill it, and every protocol of the area is judged before any is written, so a refusal leaves the area unchanged. The automatic "n/a — no model" in Parser cases harvested is gone with it (`protocol_cuts.auto_fill_deterministic`, `DETERMINISTIC_NA`): that field is no report field, and a protocol without a model is not stamped one.
@@ -12,7 +16,7 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **A run or adoption only the working tree holds is staged at the commit, not measured again.** The pre-commit judges the index; when the tree held a completed run or the protocol's adoption the index lacked, `labkit-next`'s step read the index alone and said "measure", and a report citing the run called it "gone" (usage round 24, `docs/notes/2026-11-13-usage-round-24-replays.md`, case 1). The staging step (`git add -- AREA`) now also stands for such a tree (`report_hold.result_outside_index`), and the citation names the run as lying in the working tree with its `git add` (`report_hold.runs_outside_index`, `report_blocks.cited_gaps(..., outside_index=)`). A run the index holds in another version is not counted.
 
-- **A rejected WARNING limitation reads the same at the review and the gate.** By contract a `stands` on a WARNING that no review upholds only warns. `labkit-audit --review` called such a finding "held" beside a commit that passed, and report-check's way out was the review already made (usage round 24, replay case 2). The review's state line now follows the grade (`decision_review.print_review_state`: "(grade WARNING) not released — nothing is held"; the exit code still says "not upheld"), and once a review of the state rejected the decision, report-check's way out is the one `--review` prints, deciding the finding again (`ways_out.rejected_way`, moved from `decision_review`; `check_stands_upheld` takes `way_after_rejection`). The contract itself and the report's Limitation line are unchanged.
+- **A rejected WARNING limitation reads the same at the review and the gate.** By contract a `stands` on a WARNING that no review upholds only warns. `labkit-audit --review` called such a finding "held" beside a commit that passed, and report-check's way out was the review already made (usage round 24, replay case 2). The review's state line now follows the grade (`decision_review.print_review_state`: "(grade WARNING) not released — nothing is held"; the exit code still says "not upheld"), and once a review of the state rejected the decision, report-check's way out is the one `--review` prints, deciding the finding again (`ways_out.rejected_way`, moved from `decision_review`; `check_stands_upheld` takes `way_after_rejection`). The contract itself is unchanged.
 
 - **The report reviewer is told whose result another protocol's block shows.** A report a handed-over predecessor and its successor share carries the successor's result block; the predecessor's reviewer, given nothing of the successor, had to name that number as a result the predecessor never adopted (usage round 24, replay case 3). When a report shows a result block of another protocol file, the review's inputs carry the piece `OTHER PROTOCOLS' RESULTS` (`report_review_inputs.other_results_text`: lines, protocol, run), and both reviewer briefs say such a block is no result of the protocol under review. A report without such a block keeps its inputs and so its review fingerprint; a review of a report with one, made before, no longer matches its state and is owed again. `block_protocol` moved from `gates/report_hold` to `checks/report_blocks`.
 
@@ -1049,14 +1053,14 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **The modules live in layer packages; imports name the package.** The layers of `docs/architecture.md` are folders now, and the package root holds only `__init__.py`, the packages and the shipped assets (`templates/`, `agents/`, `docs/`, read through `labkit.PACKAGE_DIR`):
 
-  | Package | Modules |
-  |---|---|
+  | Package          | Modules                                                                                                                                  |
+  |------------------|------------------------------------------------------------------------------------------------------------------------------------------|
   | `labkit.formats` | `protocol_block`, `promises`, `protocol_check`, `standard_contract`, `runs`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate` |
-  | `labkit.run` | `runlog`, `batch`, `llm`, `endpoint_lease` |
-  | `labkit.checks` | `intent_check`, `code_check`, `recheck`, `notes_check` |
-  | `labkit.gates` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` |
-  | `labkit.tools` | `protocol_fill`, `scaffold`, `repo_check`, `params`, `calltree` |
-  | `labkit.probes` | `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
+  | `labkit.run`     | `runlog`, `batch`, `llm`, `endpoint_lease`                                                                                               |
+  | `labkit.checks`  | `intent_check`, `code_check`, `recheck`, `notes_check`                                                                                   |
+  | `labkit.gates`   | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks`                                                        |
+  | `labkit.tools`   | `protocol_fill`, `scaffold`, `repo_check`, `params`, `calltree`                                                                          |
+  | `labkit.probes`  | `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation`                                                    |
 
   An experiment script writes `from labkit.run import runlog, batch, llm`, `from labkit.formats import promises, runs`, `from labkit.checks import recheck`; the templates `labkit-init` stamps do so. `python -m labkit.rules` is `python -m labkit.formats.rules`; the template `experiment-protocol.md.template` sits in `labkit/templates/`, the field guide in `labkit/docs/`, the audit agents' instructions in `labkit/agents/`. The console commands keep their names. 0.99.0 is the last version with the flat `from labkit import runlog`; a repo moves by rewriting its imports with its pin.
 - **Eight large modules are split inside their layer; private names that crossed are public in their new module.** No behaviour changed. `runlog` keeps the run writer; `provenance` (git, environment, data, snapshots), `start_check` (binding, preparation, the refusals before mkdir) and `runlog_command` (the `runlog` command) moved out. `protocol_check` keeps the field catalogue; `protocol_history` (what git knows of a protocol) and `protocol_report` (the file report and the `protocol-check` command) moved out. `code_check` keeps the id and promise checks and the bundle; `code_scan`, `gate_label_scan`, `import_check` and `prompt_check` moved out. `usability` keeps the staging; `usability_score` and `usability_command` moved out. `runs` keeps reading a run directory; `answering_run` (which run answers, repeats, the same-second tie) moved out — the analyze skeleton calls `answering_run.draws`. `scaffold` keeps stamping; `protocol_cuts` (the template cut to a tier) moved out. `llm` keeps resolve, complete and the retries; `llm_backends` (the call per backend, the endpoint choice, `PromptTruncated`) moved out — `llm.BackendError` still resolves. `finalize` keeps its stations and the answering run's citation; `checks/run_record_check` (what a run's record must show) and `checks/readme_check` (placeholders, the route block) moved out. A script that imports only the public helpers is unaffected; one that reached into `runlog._git_state` finds `provenance.git_state`.
@@ -1678,13 +1682,13 @@ Four levers from reading uniagent's 23 preflight and 21 analysis audits (2026-10
 
 One word, one thing. Every reader in the package, its tests and docs renamed with it; no alias kept.
 
-| was | is | because |
-|---|---|---|
-| `protocol_check.id_in_head` | `id_in_git_head` | it reads git HEAD, not the protocol head |
-| `promises.PromiseBlock` | `PromiseTables` | "block" is also the whole ```toml block |
-| `promises.block_owed` | `promise_tables_owed` | same; the docstring now holds the owed table |
-| `promises.registered_ids` | `ids_in_prose` | "registered" is also the data side |
-| `protocol_check.intent_missing` | `seconds_registration_missing` | "intent" is also the promise ids |
+| was                             | is                             | because                                      |
+|---------------------------------|--------------------------------|----------------------------------------------|
+| `protocol_check.id_in_head`     | `id_in_git_head`               | it reads git HEAD, not the protocol head     |
+| `promises.PromiseBlock`         | `PromiseTables`                | "block" is also the whole ```toml block      |
+| `promises.block_owed`           | `promise_tables_owed`          | same; the docstring now holds the owed table |
+| `promises.registered_ids`       | `ids_in_prose`                 | "registered" is also the data side           |
+| `protocol_check.intent_missing` | `seconds_registration_missing` | "intent" is also the promise ids             |
 
 `protocol_check` no longer repeats the owed condition around the call; `finalize` no longer shadows `dataclasses.field` with a local.
 

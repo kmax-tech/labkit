@@ -656,7 +656,9 @@ class Rendered(unittest.TestCase):
 
         area, protocol = area_with_run(reference_body, metrics, kept)
         text = protocol.read_text(encoding="utf-8")
-        return result_render.rendering(area, text, area / "runs" / RUN).recorded_results
+        return result_render.rendering(
+            area, text, area / "runs" / RUN, found=()
+        ).recorded_results
 
     def test_twin_1_without_a_reference_the_kept_number_stands_alone(self):
         self.assertEqual(
@@ -702,7 +704,7 @@ class Rendered(unittest.TestCase):
         metrics = reference.with_verdict({"lines_mean": 0.475}, ref, "lines_mean")
         area, protocol = area_with_run(WITHIN, metrics)
         text = protocol.read_text(encoding="utf-8")
-        expected = result_render.rendering(area, text, area / "runs" / RUN)
+        expected = result_render.rendering(area, text, area / "runs" / RUN, found=())
         written, _, _ = protocol_result.from_run(text, area)
         self.assertEqual(result_render.render_gaps(written, expected), [])
         protocol.write_text(written, encoding="utf-8")

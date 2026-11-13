@@ -347,7 +347,9 @@ def block_gaps(
         elif b.body != s.body:
             gaps.append(
                 blocker(
-                    f"{at} differs from the protocol's rendering",
+                    f"{at} differs from the protocol's rendering — written "
+                    f"before its Conclusion, a decision or a review changed, or "
+                    f"by hand: a stale rendering, no objection to the number",
                     fix=f"{into} writes it again",
                     step=into_cmd,
                     rule=LAB_104,

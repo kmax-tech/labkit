@@ -469,7 +469,7 @@ class Gate(_Areas):
         proto = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         text = proto.read_text(encoding="utf-8")
         line = result_render.rendering(
-            self.b, text, self.b / "runs" / B_RUN
+            self.b, text, self.b / "runs" / B_RUN, found=()
         ).recorded_results
         self.assertTrue(
             line.startswith(
@@ -478,7 +478,10 @@ class Gate(_Areas):
             line,
         )
         plain = result_render.rendering(
-            self.a, (self.a / "PROTOCOL-x.md").read_text(), self.a / "runs" / A_RUN
+            self.a,
+            (self.a / "PROTOCOL-x.md").read_text(),
+            self.a / "runs" / A_RUN,
+            found=(),
         )
         self.assertTrue(
             plain.recorded_results.startswith(
@@ -572,7 +575,7 @@ class ConflictingRegistrations(_Areas):
             )
         )
         line = result_render.rendering(
-            self.b, proto.read_text(encoding="utf-8"), self.b / "runs" / B_RUN
+            self.b, proto.read_text(encoding="utf-8"), self.b / "runs" / B_RUN, found=()
         ).recorded_results
         self.assertTrue(
             line.startswith(
@@ -608,7 +611,10 @@ class MovedPredecessor(_Areas):
         _git(self.root, "commit", "-qm", "run again")
         proto_b = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         line = result_render.rendering(
-            self.b, proto_b.read_text(encoding="utf-8"), self.b / "runs" / B_RUN
+            self.b,
+            proto_b.read_text(encoding="utf-8"),
+            self.b / "runs" / B_RUN,
+            found=(),
         ).recorded_results
         self.assertTrue(
             line.startswith(
