@@ -8,6 +8,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **A run or adoption only the working tree holds is staged at the commit, not measured again.** The pre-commit judges the index; when the tree held a completed run or the protocol's adoption the index lacked, `labkit-next`'s step read the index alone and said "measure", and a report citing the run called it "gone" (usage round 24, `docs/notes/2026-11-13-usage-round-24-replays.md`, case 1). The staging step (`git add -- AREA`) now also stands for such a tree (`report_hold.result_outside_index`), and the citation names the run as lying in the working tree with its `git add` (`report_hold.runs_outside_index`, `report_blocks.cited_gaps(..., outside_index=)`). A run the index holds in another version is not counted.
 
+- **A rejected WARNING limitation reads the same at the review and the gate.** By contract a `stands` on a WARNING that no review upholds only warns. `labkit-audit --review` called such a finding "held" beside a commit that passed, and report-check's way out was the review already made (usage round 24, replay case 2). The review's state line now follows the grade (`decision_review.print_review_state`: "(grade WARNING) not released — nothing is held"; the exit code still says "not upheld"), and once a review of the state rejected the decision, report-check's way out is the one `--review` prints, deciding the finding again (`ways_out.rejected_way`, moved from `decision_review`; `check_stands_upheld` takes `way_after_rejection`). The contract itself and the report's Limitation line are unchanged.
+
 ## 0.113.0 — 2026-11-13
 
 ### Breaking

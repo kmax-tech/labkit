@@ -28,7 +28,7 @@ a claim since changed. The call is an attempt in the area's journal
 the end naming the review file or why there is none — so a review
 deleted before the commit is named. After `rejected` the person decides
 again within the decisions the finding's subject allows
-(`findings.allowed_decisions`, `rejected_way`): repair or supply
+(`findings.allowed_decisions`, `ways_out.rejected_way`): repair or supply
 counter-evidence, or hand over; a permitted limitation may narrow the
 claim or leave a registered promise not assessable. A new audit is due
 when its basis changes or the finding is
@@ -44,7 +44,8 @@ The gate: report-check blocks on an
 `limitation` BLOCKER's `stands` no review upholds, and on a closed contested
 BLOCKER, and warns on a WARNING's (`report_decisions.review_findings`).
 
-Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
+Exit codes: 0 every decision upheld, 1 at least one not upheld (whether
+that holds the number is the finding's grade's), 2 no
 review — no record, nothing to review in it (no `stands`, no closed
 contested finding, no carried finding closed), the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
@@ -68,6 +69,7 @@ from labkit.checks.run_record_check import script_as_run
 from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, evidence, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
+from labkit.formats.gate import BLOCKER
 from labkit.formats.protocol_check import conclusion_written
 from labkit.formats.repo import layout_root, shown, the_protocol
 from labkit.formats.commands import audit_command
@@ -75,7 +77,7 @@ from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.formats.prompts import prompt_body
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import audit_call, audit_decisions, audit_prompt, audit_reply
-from labkit.gates.ways_out import ANSWER_AGAIN
+from labkit.gates.ways_out import ANSWER_AGAIN, rejected_way
 
 #: the review's mode: its instructions, the prompt's MODE line and its
 #: attempts in the area's journal (`attempts`)
@@ -485,14 +487,7 @@ def review(
         f"— {u} upheld, {r} rejected, {i} insufficient, recorded in "
         f"{shown(written, Path.cwd())}"
     )
-    print(
-        "review state: "
-        + (
-            f"held — finding(s) {', '.join(map(str, held))} not released"
-            if held
-            else "every decision reviewed is released"
-        )
-    )
+    print_review_state(rec, held)
     if r:
         promised = audit_decisions.may_leave_unassessed(area, chosen)
         for d in decisions:
@@ -509,32 +504,26 @@ def review(
     return 1 if held else 0
 
 
-def rejected_way(finding: findings.Finding, promised: bool) -> str:
-    """What a reviewed decision on FINDING owes first, within its allowed
-    decisions (`findings.allowed_decisions`). A permitted limitation may
-    leave a promise not assessable only when PROMISED. No state is read
-    or written; another draw alone settles nothing."""
-    if "limitation" not in findings.allowed_decisions(finding):
-        routes = (
-            "complete the repair or required check the finding names, supply "
-            "counter-evidence for `false-positive`, or hand the protocol over "
-            "with the finding open (`protocol-fill <PROTOCOL> --handover`)"
+def print_review_state(record: findings.Record, not_upheld: list[int]) -> None:
+    """Print the review state of RECORD after a draw: the findings among
+    NOT_UPHELD (`held_after`) by what report-check does with them — a
+    BLOCKER's decision holds the number, a WARNING's is only warned
+    (`report_decisions.check_stands_upheld`) —, or that every decision
+    reviewed is released. Side effect: stdout only."""
+    held = [n for n in not_upheld if record.findings[n - 1].grade == BLOCKER]
+    warned = [n for n in not_upheld if n not in held]
+    if held:
+        print(
+            f"review state: held — finding(s) {', '.join(map(str, held))} not released"
         )
-    elif promised:
-        routes = (
-            "limit the claim (the Conclusion), change the effect (`--decide N limitation "
-            '--why "REASON" --not-assessable <ID>`) or fix the fault'
+    if warned:
+        print(
+            f"review state: finding(s) {', '.join(map(str, warned))} (grade WARNING) "
+            "not released — nothing is held: report-check warns until the finding "
+            "is decided again and a review upholds it"
         )
-    else:
-        routes = (
-            "limit the claim (the Conclusion) or fix the fault — or hand the "
-            "protocol over (no promise is registered to leave not assessable)"
-        )
-    return (
-        f"decide the finding again first — {routes}; a new audit only when its "
-        "basis changes or the finding itself is disputed — auditing again does "
-        "not settle a rejection"
-    )
+    if not not_upheld:
+        print("review state: every decision reviewed is released")
 
 
 def held_after(

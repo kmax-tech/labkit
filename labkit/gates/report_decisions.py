@@ -51,6 +51,7 @@ from labkit.formats.commands import (
 )
 from labkit.formats.evidence import AreaEvidence
 from labkit.gates.report_context import Checked
+from labkit.gates.ways_out import offers_not_assessable, rejected_way
 
 #: the rule of a decision that does not release yet: a limitation carries
 #: its effect on the verdicts, and a decision that releases a BLOCKER is
@@ -123,9 +124,18 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     # a file nobody can read must not hide a BLOCKER's unupheld `stands`
     out = check_decision_reviews_read(ctx.evidence)
     found = list(ctx.evidence.reviews)
+    way_after_rejection = partial(
+        rejected_way, promised=offers_not_assessable(ctx.text)
+    )
     for r in records:
         step = partial(_review_step, ctx, r)
-        out += check_stands_upheld(r, found, text=ctx.text, review_way=step)
+        out += check_stands_upheld(
+            r,
+            found,
+            text=ctx.text,
+            review_way=step,
+            way_after_rejection=way_after_rejection,
+        )
         out += check_contested_closings_upheld(r, found, text=ctx.text, review_way=step)
         out += check_first_dismissals_upheld(r, found, text=ctx.text, review_way=step)
         out += check_repaired_claims_upheld(r, found, text=ctx.text, review_way=step)
@@ -228,12 +238,15 @@ def check_stands_upheld(
     *,
     text: str,
     review_way: Callable[[], str],
+    way_after_rejection: Callable[[findings.Finding], str],
 ) -> list[GateFinding]:
     """Every limit of RECORD whose effect is `stands` is upheld by a decision
     review among FOUND, as decided now and under the claim TEXT makes now
     (`reviews.upholding`). One that is not is held at the finding's grade:
     a BLOCKER limitation blocks, a WARNING limitation warns (LAB-015
-    Preflight audit before freezing, "By risk").
+    Preflight audit before freezing, "By risk"). Its way out: deciding the
+    finding again once a review of this state rejected it — another review
+    does not settle a rejection —, else the review.
 
     Args:
         record: One covering analysis record.
@@ -241,22 +254,37 @@ def check_stands_upheld(
         text: The protocol text; its Conclusion is the claim reviewed.
         review_way: Gives the way to the decision review of RECORD, as the
             station spells it (`_review_step`); called per finding held.
+        way_after_rejection: Gives what a rejected decision on the finding
+            owes first, in place of REVIEW_WAY once a review of this state
+            rejected it (`ways_out.rejected_way`, as `labkit-audit --review`
+            prints it).
     """
-    return [
-        GateFinding(
-            BLOCKER if f.grade == BLOCKER else WARNING,
-            f"{findings.limit_label(record, n)}: `stands` on a {f.grade} decided limitation "
-            f"{reviews.state(record, n, found, text)} — no decision review "
-            f"upholds that the reported claim stands within this limit",
-            fix=f"{review_way()} asks a second auditor (owed at "
-            f"every repeat cost); after a rejection, decide again",
-            evidence_kind=GUARANTEED,
-            rule=LAB_015,
+    out: list[GateFinding] = []
+    for n, f in record.limits():
+        if f.effect != findings.EFFECT_STANDS or reviews.upholding(
+            record, n, found, text
+        ):
+            continue
+        verdicts = reviews.verdicts_on_state(record, n, found, text)
+        rejected = any(d.verdict == reviews.REJECTED for d in verdicts)
+        # a rejection is settled by deciding again, not by another review
+        fix = (
+            way_after_rejection(f)
+            if rejected
+            else f"{review_way()} asks a second auditor (owed at every repeat cost)"
         )
-        for n, f in record.limits()
-        if f.effect == findings.EFFECT_STANDS
-        and not reviews.upholding(record, n, found, text)
-    ]
+        out.append(
+            GateFinding(
+                BLOCKER if f.grade == BLOCKER else WARNING,
+                f"{findings.limit_label(record, n)}: `stands` on a {f.grade} decided "
+                f"limitation {reviews.state(record, n, found, text)} — no decision "
+                "review upholds that the reported claim stands within this limit",
+                fix=fix,
+                evidence_kind=GUARANTEED,
+                rule=LAB_015,
+            )
+        )
+    return out
 
 
 def check_contested_closings_upheld(

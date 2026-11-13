@@ -10,6 +10,7 @@ names the cause rule and where the ways stand (`audit_decisions.CAUSE_FIRST`).
 
 from __future__ import annotations
 
+from labkit.formats import findings, promises
 from labkit.formats.commands import register_anew
 from labkit.checks.audit_binding import AuditError
 
@@ -208,4 +209,41 @@ def blocker_routes(promised: bool) -> tuple[str, ...]:
     )
 
 
-#: how long a finding's text stands in the decision list
+def rejected_way(finding: findings.Finding, promised: bool) -> str:
+    """What a reviewed decision on FINDING owes first, within its allowed
+    decisions (`findings.allowed_decisions`). A permitted limitation may
+    leave a promise not assessable only when PROMISED. No state is read
+    or written; another draw alone settles nothing."""
+    if "limitation" not in findings.allowed_decisions(finding):
+        routes = (
+            "complete the repair or required check the finding names, supply "
+            "counter-evidence for `false-positive`, or hand the protocol over "
+            "with the finding open (`protocol-fill <PROTOCOL> --handover`)"
+        )
+    elif promised:
+        routes = (
+            "limit the claim (the Conclusion), change the effect (`--decide N limitation "
+            '--why "REASON" --not-assessable <ID>`) or fix the fault'
+        )
+    else:
+        routes = (
+            "limit the claim (the Conclusion) or fix the fault — or hand the "
+            "protocol over (no promise is registered to leave not assessable)"
+        )
+    return (
+        f"decide the finding again first — {routes}; a new audit only when its "
+        "basis changes or the finding itself is disputed — auditing again does "
+        "not settle a rejection"
+    )
+
+
+def offers_not_assessable(text: str) -> bool:
+    """Whether a decision on the protocol TEXT may name the effect `<ID> not
+    assessable` (`rejected_way`'s PROMISED): False only when its block reads
+    and registers no promise — a computation —; True when it registers one,
+    and when the block does not read, so the route stays named and
+    `--decide` says why it refuses."""
+    try:
+        return bool(promises.table_ids(text))
+    except promises.PromiseError:
+        return True

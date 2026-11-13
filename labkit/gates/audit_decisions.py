@@ -975,9 +975,9 @@ def may_leave_unassessed(area: Path, protocol: Path | None) -> bool:
     refuses every id (protocol-check names a block's fault)."""
     try:
         chosen = the_protocol(area, protocol)
-        return bool(promises.table_ids(chosen.read_text(encoding="utf-8")))
-    except (ProtocolChoiceError, promises.PromiseError):
+    except ProtocolChoiceError:
         return True
+    return ways_out.offers_not_assessable(chosen.read_text(encoding="utf-8"))
 
 
 def effect_ids_named(area: Path, protocol: Path | None) -> str:

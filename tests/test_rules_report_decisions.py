@@ -177,6 +177,23 @@ def _held(check, rec: findings.Record, *found: reviews.Review) -> list[GateFindi
     return pure_call(check, rec, list(found), text=TEXT, review_way=lambda: STEP)
 
 
+#: what a stand-in `way_after_rejection` gives: the way the check names once a
+#: review of the state rejected the decision
+AFTER = "decide the finding again first"
+
+
+def _stands(rec: findings.Record, *found: reviews.Review) -> list[GateFinding]:
+    """`check_stands_upheld` on REC with the reviews FOUND, under TEXT's claim."""
+    return pure_call(
+        check_stands_upheld,
+        rec,
+        list(found),
+        text=TEXT,
+        review_way=lambda: STEP,
+        way_after_rejection=lambda f: AFTER,
+    )
+
+
 class AStandsIsUpheld(unittest.TestCase):
     """LAB-015 Preflight audit before freezing: a limitation whose effect is
     `stands` owes a second auditor, at the finding's grade
@@ -184,7 +201,7 @@ class AStandsIsUpheld(unittest.TestCase):
 
     def test_a_blocker_limitation_that_stands_unreviewed_blocks(self):
         rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
-        (f,) = _held(check_stands_upheld, rec)
+        (f,) = _stands(rec)
         self.assertEqual(
             (f.grade, f.evidence_kind, f.outcome), (BLOCKER, GUARANTEED, VIOLATED)
         )
@@ -197,39 +214,37 @@ class AStandsIsUpheld(unittest.TestCase):
         )
         self.assertEqual(
             f.fix,
-            f"{STEP} asks a second auditor (owed at every repeat cost); after a "
-            f"rejection, decide again",
+            f"{STEP} asks a second auditor (owed at every repeat cost)",
         )
 
     def test_a_warning_limitation_that_stands_unreviewed_warns(self):
         rec = record(finding(WARNING, "limitation", effect=findings.EFFECT_STANDS))
-        (f,) = _held(check_stands_upheld, rec)
+        (f,) = _stands(rec)
         self.assertEqual((f.grade, f.rule), (WARNING, LAB_015))
 
     def test_a_rejection_and_an_again_draw_release_nothing(self):
         rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
-        (f,) = _held(check_stands_upheld, rec, review(rec, "rejected"))
+        (f,) = _stands(rec, review(rec, "rejected"))
         self.assertIn("limitation rejected: the reviewer's why —", f.text)
+        # after a rejection the way is to decide again, not the review made
+        self.assertEqual(f.fix, AFTER)
         # a later `upheld` does not outvote the rejection
-        (f,) = _held(
-            check_stands_upheld,
+        (f,) = _stands(
             rec,
             review(rec, "rejected"),
             review(rec, reviews.UPHELD),
         )
         self.assertEqual(f.grade, BLOCKER)
-        (f,) = _held(check_stands_upheld, rec, review(rec, reviews.UPHELD, again=True))
+        (f,) = _stands(rec, review(rec, reviews.UPHELD, again=True))
         self.assertIn("only `--again` draws said upheld", f.text)
 
     def test_the_twin_an_upheld_stands_and_a_limit_not_assessable_pass(self):
         rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
-        self.assertEqual(
-            _held(check_stands_upheld, rec, review(rec, reviews.UPHELD)), []
-        )
+        self.assertEqual(_stands(rec, review(rec, reviews.UPHELD)), [])
         narrowed = record(
             finding(BLOCKER, "limitation", effect="criterion-1 not assessable")
         )
-        self.assertEqual(_held(check_stands_upheld, narrowed), [])
+        self.assertEqual(_stands(narrowed), [])
 
 
 class AContestedClosingIsUpheld(unittest.TestCase):

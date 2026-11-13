@@ -288,6 +288,29 @@ class TheCall(unittest.TestCase):
             out,
         )
 
+    def test_a_rejected_warning_limit_is_told_as_not_held_with_one_way(self):
+        """The contract: a WARNING's `stands` no review upholds warns, it
+        does not hold (`check_stands_upheld`). After a rejection the review
+        and the gate say the same — not released, nothing held, decide the
+        finding again — not "held" beside a commit that passes, and not the
+        review already made as the way out (usage round 24, replay case 2).
+        The twin, a BLOCKER, stays held: the test above."""
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        rc, out, _, _ = run_review(area, REJECTED)
+        self.assertEqual(rc, 1, out)  # not upheld: the exit code says so
+        self.assertNotIn("review state: held", out)
+        self.assertIn(
+            "review state: finding(s) 1 (grade WARNING) not released — nothing is held",
+            out,
+        )
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        (line,) = [ln for ln in out.splitlines() if "decided limitation rejected" in ln]
+        self.assertIn("Next: decide the finding again first", line)
+        self.assertNotIn("asks a second auditor", line)
+
     def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
         """A computation registers no promise and `--decide` refuses every id
         an effect names, so its review offers no `--effect "<ID> not
