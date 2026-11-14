@@ -632,7 +632,7 @@ def check_area_tests(findings: Findings, area: Path) -> None:
             findings,
             tests,
             "the area's own checks of evaluate() (its resolution check, where "
-            "it has a criterion) no longer hold",
+            "it has a criterion) do not hold",
             CODE_003,
         )
 

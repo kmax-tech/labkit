@@ -178,12 +178,17 @@ class TheChain(unittest.TestCase):
         self.assertIn(
             "the target in the first measurement's commit remains owed", step.next
         )
+        # a computation without [reference]: a stated value registered now,
+        # and the hand-checked case filled before the run
+        self.assertIn("`[reference]`", step.next)
+        self.assertIn("hand-checked case", step.next)
         self.assertIn("blocker(s) stand, and this is the first", step.held)
         run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
         # measured, no analysis audit: audit the run that answers; no report
         # registered, so no progress account and no registration hint
         step = self.step()
         self.assertNotIn("report=REPORT.md", step.next)
+        self.assertNotIn("[reference]", step.next)
         self.assertNotIn("--discuss", step.next)
         self.assertIn("labkit-audit", step.next, step)
         self.assertIn("--mode analysis", step.next, step)

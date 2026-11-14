@@ -32,7 +32,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats import commands
 from labkit.formats.protocol_block import PROTOCOL_KINDS
+from labkit.formats.protocol_block import head as head_of
+from labkit.formats.protocol_block import reference as reference_of
+from labkit.formats.repo import area_test_stem, split_area_name
 from labkit.formats.runs import REPEAT_COSTS
 
 LOW, HIGH = REPEAT_COSTS
@@ -382,3 +386,42 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
         + "with `stands` upheld by a decision review, `labkit-audit --review`), "
         + f"`{check}` passing",
     ]
+
+
+def first_measurement_hint(protocol: Path, text: str) -> str:
+    """The sentences a step before the first measurement adds for what
+    only the task can say and the run cannot change afterwards, each
+    beginning "; ": with no report registered, how to register one (the
+    target in the first measurement's commit creates a lasting duty; a
+    later one is allowed and creates none); for a computation, how to
+    register a value the task states as the head's `[reference]` when none
+    is, and that the area test's hand-checked case is filled now, by hand.
+    "" without a stamped id. The caller says whether a first measurement
+    exists; after one, none of this is to be added. Reads TEXT, writes
+    nothing."""
+    head = head_of(text)
+    if not head.id:
+        return ""
+    hint = ""
+    if head.report is None:
+        hint += (
+            f"; if the task asks for a report file, register it now: "
+            f"`{commands.fill_command(protocol, 'report=REPORT.md')}` — the target in the "
+            f"first measurement's commit remains owed"
+        )
+    if head.kind == COMPUTE_KIND:
+        if reference_of(text) is None:
+            hint += (
+                "; if the task states a value the kept number is to match "
+                '("0.62 within 0.01"), register it now as the head\'s `[reference]` '
+                "table (value, tolerance, relation, source) — it cannot change "
+                "after the first measurement, and a miss is the run's verdict"
+            )
+        nn, slug = split_area_name(protocol.parent.name)
+        hint += (
+            f"; fill the hand-checked case in `tests/{area_test_stem(nn, slug)}.py` "
+            f"before you measure, with values you worked out by hand from its rows "
+            f"— a value copied from a run's output tests only that the code "
+            f"repeats itself"
+        )
+    return hint

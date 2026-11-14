@@ -662,7 +662,9 @@ def tell_test_run(
         findings.block(
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
-            f"`.venv/bin/python -m pytest {files}` passes",
+            f"`.venv/bin/python -m pytest {files}` passes; a test's expected "
+            f"values are worked out by hand, never copied from a run's output, "
+            f"which tests only that the code repeats itself",
             rule=rule,
         )
 

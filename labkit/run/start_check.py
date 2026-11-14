@@ -33,7 +33,11 @@ from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
 from labkit.formats.gate import BLOCKER, with_rule, with_way_out
-from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
+from labkit.formats.standard_contract import (
+    PREFLIGHT_AUDIT,
+    first_measurement_hint,
+    lane,
+)
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
     COMPLETED,
@@ -196,32 +200,49 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
     """The next action before a full run: low's registration, or high's
     report commitment when missing, otherwise its freeze. Reads the first
     measurement and HEAD at high cost through the shared commitment check;
-    writes nothing.
+    writes nothing. Before the first measurement each step ends with what
+    only the task can say (`standard_contract.first_measurement_hint`): runlog is the
+    last stop before that run, and an agent that never ran labkit-next sees
+    only this line.
     """
     head = bound.head
+    hint = ""
+    rel = bound.binding.get("path")
+    if (
+        bound.text is not None
+        and head is not None
+        and head.id is not None
+        and isinstance(rel, str)
+        and not state.measured_of(head.id).firsts
+    ):
+        hint = first_measurement_hint(base_dir / rel, bound.text)
     if bound.text is not None and protocol_check.repeated_fields(bound.text):
         # at high cost the deletion changes what the preflight audit bound
         after = (
-            "commit the protocol, then start the run again."
+            "commit the protocol, then start the run again"
             if head is None or lane(head.repeat_cost).registration
             else "then `preflight <AREA>` clean, the preflight audit run anew on "
-            "the changed registration, and `protocol-fill <PROTOCOL> --freeze` again."
+            "the changed registration, and `protocol-fill <PROTOCOL> --freeze` again"
         )
-        return (
+        step = (
             f"For each field named above: {protocol_check.REPEATED_WAY_OUT}; " + after
         )
-    if head is not None and lane(head.repeat_cost).registration:
-        return (
+    elif head is not None and lane(head.repeat_cost).registration:
+        step = (
             f'At repeat_cost = "{head.repeat_cost}" nothing freezes: write and commit '
             "the registration the kind owes (`protocol-check --contract` names it), "
-            "then start the run again."
+            "then start the run again"
         )
-    if _committed_registration(base_dir, bound, state):
-        return "Commit the registered report path as named above, then start the run again."
-    return (
-        "Freeze first: `preflight <AREA>` clean, the preflight audit decided, then "
-        "`protocol-fill <PROTOCOL> --freeze`."
-    )
+    elif _committed_registration(base_dir, bound, state):
+        step = (
+            "Commit the registered report path as named above, then start the run again"
+        )
+    else:
+        step = (
+            "Freeze first: `preflight <AREA>` clean, the preflight audit decided, then "
+            "`protocol-fill <PROTOCOL> --freeze`"
+        )
+    return step + hint + "."
 
 
 def _freeze_findings(base_dir: Path, bound: _Bound, state: AreaState) -> list[str]:

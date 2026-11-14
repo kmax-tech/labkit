@@ -72,7 +72,7 @@ no check of its own: every hold it names is a gate's finding.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -83,7 +83,7 @@ from labkit.formats import (
     protocol_block,
     protocol_check,
 )
-from labkit.formats.standard_contract import ANALYSIS_AUDIT
+from labkit.formats.standard_contract import ANALYSIS_AUDIT, first_measurement_hint
 from labkit.formats.gate import Findings, GateFinding
 from labkit.formats.repo import layout_root, shown, state_text
 from labkit.formats.commands import (
@@ -180,7 +180,7 @@ def next_step(
         raise protocol_block.BlockError(report.head_error)
     held = evidence.read_evidence(area, staged=staged)
     measured = area_state.measured_of(protocol_block.head(text).id)
-    hint = _report_hint(protocol, text, measured)
+    hint = _before_first_hint(protocol, text, measured)
     before = _before_the_chain(
         area, protocol, text, report, hint, area_state, held, staged=staged
     )
@@ -495,7 +495,7 @@ def _held_step(
       answers after it. The first hold's own way out would send an agent
       who already measured the repaired code to measure again.
     - a measurement runlog would refuse: the refusal's first step
-      (`_refused_measurement`)."""
+      (`_refused_measurement`), which carries HINT itself."""
     first = held[0]
     if held_by is not None:
         return Step(
@@ -510,7 +510,8 @@ def _held_step(
         )
     refused = _refused_measurement(ctx, first)
     if refused is not None:
-        return replace(refused, next=refused.next + hint)
+        # runlog's first step ends with the same hint already
+        return refused
     return Step(
         first.text,
         (first.fix or "the line above names what holds")
@@ -613,7 +614,7 @@ def _field_step(
 ) -> Step | None:
     """The step the field report of PROTOCOL asks for first: a bound field
     written more than once (`FieldReport.repeated`), then the missing MUST
-    fields; None when neither. HINT closes the way (`_report_hint`)."""
+    fields; None when neither. HINT closes the way (`_before_first_hint`)."""
     named = shown(protocol, Path.cwd())
     if report.repeated:
         return Step(
@@ -653,20 +654,14 @@ def _field_step(
     return None
 
 
-def _report_hint(protocol: Path, text: str, measured: Measured) -> str:
-    """The sentence a step before the first measurement adds when the head
-    registers no report: how to register one before it creates a lasting
-    duty in the first measurement's commit. A later target is allowed but
-    creates no lasting duty. "" after a measurement (MEASURED), without a
-    stamped id, or with a target already registered."""
-    head = protocol_block.head(text)
-    if head.report is not None or not head.id or measured.has_measured:
+def _before_first_hint(protocol: Path, text: str, measured: Measured) -> str:
+    """The sentences a step before the first measurement adds
+    (`standard_contract.first_measurement_hint`: the report, a computation's
+    `[reference]` and its hand-checked case); "" after a measurement
+    (MEASURED)."""
+    if measured.has_measured:
         return ""
-    return (
-        f"; if the task asks for a report file, register it now: "
-        f"`{fill_command(protocol, 'report=REPORT.md')}` — the target in the "
-        f"first measurement's commit remains owed"
-    )
+    return first_measurement_hint(protocol, text)
 
 
 def _progress_step(ctx: "Checked") -> Step | None:

@@ -1331,6 +1331,8 @@ class BeforeTheFirstMeasurement(unittest.TestCase):
         self.assertIn("the registration as committed (HEAD) lacks", nxt)
         self.assertIn("commit the registration", nxt)
         self.assertNotIn("opens a run bound to", nxt)
+        # runlog's step carries what only the task can say; told once
+        self.assertEqual(nxt.count("`[reference]`"), 1, nxt)
         refused = self.run_(
             ".venv/bin/python", f"{AREA}/scripts/01_measure.py", ok=False
         )
