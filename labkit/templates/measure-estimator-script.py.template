@@ -53,8 +53,11 @@ apart from the run's seed. Every evaluation computes the permitted
 deviation from the run's own registered predictions and gold
 (`run_null_band`, `band_by_rule`), keeps it as `quality_check_2_null_band`
 and compares with it; the same inputs give the same value, whatever the
-run's seed or the rows' order. Registering `null_band` there is refused.
-`--calibrate-null` previews it. A protocol that registers a
+run's seed or the rows' order. Predictions that score alike under every
+permutation (one answer for every item) get 0, an exact null check;
+none at all, or none in the gold's labels, are refused. Registering
+`null_band` there is refused. `--calibrate-null` previews it. A
+protocol that registers a
 fixed null order (`NULL_ORDER`: a permutation file the organizer drew once)
 gets that order in the seed's place: it is one fixed control, so its score
 plus `margin` is the bar, and [quality-check-2]'s permitted deviation, a
@@ -553,14 +556,18 @@ def _accuracy(pairs: list[tuple]) -> Fraction:
     return Fraction(sum(1 for p, g in pairs if p is not None and p == g), len(pairs))
 
 
-def _r2(pairs: list[tuple]) -> float:
-    """1 - SSE/SST over every item; a missing prediction counts as the gold mean."""
-    golds = [float(g) for _, g in pairs]
-    mean = sum(golds) / len(golds)
-    sst = sum((g - mean) ** 2 for g in golds)
+def _r2(pairs: list[tuple]) -> Fraction:
+    """1 - SSE/SST over every item, exact over the float values; a missing
+    prediction counts as the gold mean."""
+    # exact: in floats constant predictions scored apart by rounding under a
+    # permutation, a spread of 1e-16 the rounded-up deviation made 0.01
+    golds = [Fraction(float(g)) for _, g in pairs]
+    mean = sum(golds, Fraction(0)) / len(golds)
+    sst = sum(((g - mean) ** 2 for g in golds), Fraction(0))
     if sst == 0:
         raise ValueError("r2: the gold values have no variance — nothing to explain")
-    sse = sum(((mean if p is None else float(p)) - g) ** 2 for p, g in pairs)
+    sse = sum((((mean if p is None else Fraction(float(p))) - g) ** 2
+               for (p, _), g in zip(pairs, golds)), Fraction(0))
     return 1 - sse / sst
 
 
@@ -637,16 +644,20 @@ def band_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int,
     (`permutation_expectation`), BAND the exact quantile, ROUNDED it
     rounded up to two places — the permitted deviation [quality-check-2]
     compares with. The one home of the rule: each evaluation
-    (`run_null_band`) and the `--calibrate-null` preview call it. Raises
-    ValueError for k < 1 or no pairs, and when no permutation moves the
-    null (every score equals the target): the predictions answer one class,
-    or match none of the gold — then there is no spread to take a deviation
-    from, and 0 is none (2026-10-29, apply-screen: a first calibration on
-    predictions that matched no gold registered `null_band = 0.0` without a
-    word)."""
+    (`run_null_band`) and the `--calibrate-null` preview call it.
+    Predictions that score alike under every permutation — one answer for
+    every item, or a gold of one value — give the deviation 0: the null
+    check is exact. Raises ValueError for k < 1 or no pairs, when no item
+    has a prediction, and at accuracy when no prediction is a gold value
+    (labels from another vocabulary): those score alike too, but 0 there
+    would hide a broken instrument. A score the predictions leave
+    undefined (spearman on constant predictions) raises in the score."""
     q, k, seed = rule
     if k < 1 or not pairs:
         raise ValueError(f"band_by_rule(): {k} permutation(s) of {len(pairs)} labelled item(s)")
+    if all(p is None for _, p, _ in pairs):
+        raise ValueError(f"band_by_rule(): none of the {len(pairs)} labelled items has a prediction — "
+                         "no permitted deviation from no answer; check the predictor's output")
     # the whole triple decides the order: ids that print alike (10 and "10",
     # a duplicate) must not leave it to the input's order
     ordered = sorted(pairs, key=lambda x: (str(x[0]), repr(x[1]), repr(x[2])))
@@ -659,13 +670,14 @@ def band_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int,
         random.Random(f"null-band:{seed}:{n}").shuffle(permuted)
         scores.append(SCORES[cfg.score](list(zip(preds, permuted))))
     off = sorted(abs(s - target) for s in scores)
-    if off[-1] == 0:
+    if off[-1] == 0 and cfg.score == "accuracy" and not set(preds) & set(golds):
+        # 2026-10-29, apply-screen: predictions that matched no gold
+        # registered null_band = 0.0 without a word
         raise ValueError(
-            f"band_by_rule(): every one of {k} permutations of the gold scores "
-            f"{float(target):.4f}, the permutation expectation — the null does not move: "
-            f"the predictions answer one class, or match none of the gold ({len(preds)} "
-            f"labelled items). No permitted deviation can be derived from no spread; check "
-            f"the predictions and the gold")
+            f"band_by_rule(): no prediction is a gold value — every one of {k} permutations "
+            f"scores {float(target):.4f}; the predictions answer {sorted(map(repr, set(preds)))[:5]}, "
+            f"the gold holds {sorted(map(repr, set(golds)))[:5]}. Check that the predictor "
+            f"answers in the gold's labels")
     # the quantile's rank, exact: a float 0.99 * 200 may land on either side of 198
     band = off[max(0, math.ceil(Fraction(str(q)) * len(off)) - 1)]
     rounded = math.ceil(Fraction(band) * 100) / 100
@@ -743,15 +755,16 @@ def null_plan(cfg: MeasureConfig) -> str:
 def null_check(cfg: MeasureConfig) -> None:
     """`null_plan` before the run opens, as SystemExit: evaluate_rows refuses
     the same registrations by the rows' shape, but only after every
-    prediction is spent. Not covered here: predictions that give no
-    permutation spread, which only the run's rows show."""
+    prediction is spent. Not covered here: predictions from which the rule
+    derives no deviation (none at all, or none a gold value), which only
+    the run's rows show."""
     try:
         null_plan(cfg)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
 
-def chance_of(score: str, golds: list) -> Fraction | float:
+def chance_of(score: str, golds: list) -> Fraction:
     """The score an estimator that learned nothing is expected to reach, derived
     from the gold alone (LAB-037 Every anchor carries its target and rationale):
     accuracy — the sum of squared class shares (two independent draws from the
@@ -765,7 +778,7 @@ def chance_of(score: str, golds: list) -> Fraction | float:
             counts[g] = counts.get(g, 0) + 1
         return sum(Fraction(c, n) ** 2 for c in counts.values())
     if score == "r2":
-        return 0.0
+        return Fraction(0)
     if score == "auc":
         return Fraction(1, 2)
     if score == "spearman":
@@ -773,7 +786,7 @@ def chance_of(score: str, golds: list) -> Fraction | float:
     raise ValueError(f"chance_of(): no chance rule for score {score!r} — one of {', '.join(SCORES)}")
 
 
-def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction | float:
+def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction:
     """The score the predictions of PAIRS (prediction, gold) reach, on
     average, against their gold permuted uniformly — exact, no draw: each
     item's permuted label is distributed as the gold. accuracy — the sum
@@ -798,12 +811,13 @@ def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction | float:
     if score == "spearman":
         return Fraction(0)
     if score == "r2":
-        ys = [float(g) for _, g in pairs]
-        mean = sum(ys) / n
-        sst = sum((y - mean) ** 2 for y in ys)
+        ys = [Fraction(float(g)) for _, g in pairs]
+        mean = sum(ys, Fraction(0)) / n
+        sst = sum(((y - mean) ** 2 for y in ys), Fraction(0))
         if sst == 0:
             raise ValueError("r2: the gold values have no variance — nothing to explain")
-        return -sum(((mean if p is None else float(p)) - mean) ** 2 for p, _ in pairs) / sst
+        return -sum((((mean if p is None else Fraction(float(p))) - mean) ** 2 for p, _ in pairs),
+                    Fraction(0)) / sst
     raise ValueError(f"permutation_expectation(): no rule for score {score!r} — one of {', '.join(SCORES)}")
 
 

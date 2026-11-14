@@ -101,9 +101,7 @@ def test_perfect_effect_fires_c1():
 
 def test_null_like_registered_lane_stays_silent():
     """Half right, its predictions mixed: every other item right (accuracy
-    1/2, auc 1/2; at spearman the first six, rho 0). A lane that answers one
-    class has no permutation spread, and the rule refuses a permitted
-    deviation from none."""
+    1/2, auc 1/2; at spearman the first six, rho 0)."""
     half = _twelve(6) if SCORE == "spearman" else [
         (predicted(i % 2 == 0, g), g) for i, g in enumerate(GOLDS)]
     m = measure.evaluate_rows(rows(half, _twelve(6)))

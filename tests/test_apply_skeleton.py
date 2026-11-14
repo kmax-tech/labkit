@@ -370,23 +370,96 @@ class ApplySkeleton(unittest.TestCase):
             null_band_seed=None,
         )
 
-    def test_a_null_that_does_not_move_gives_no_deviation(self):
-        """Predictions that answer one class score the same under every
-        permutation, a spread of zero that is no permitted deviation. The
-        rule's one home refuses it, in the preview and in the evaluation.
-        The twin: predictions that vary give one."""
-        _, measure = self.measure_module("apply")
+    @staticmethod
+    def permuted_rows(measure, preds: list, golds: list) -> list[dict]:
+        """The registered lane of PREDS against GOLDS and the seeded null
+        lane: the same predictions against the gold of a shuffled donor."""
+        import random as _random
+
+        donors = list(range(len(golds)))
+        _random.Random(5).shuffle(donors)
+        reg = [
+            measure.lane_row("registered", {"id": f"i{i}"}, p, g)
+            for i, (p, g) in enumerate(zip(preds, golds))
+        ]
+        null = [
+            measure.lane_row("null", {"id": f"i{i}"}, p, golds[d], gold_of=f"i{d}")
+            for i, (p, d) in enumerate(zip(preds, donors))
+        ]
+        return reg + null
+
+    def test_constant_predictions_give_the_deviation_zero(self):
+        """Predictions with one answer for every item score alike under
+        every permutation: the permitted deviation is 0, the null check
+        exact and passed, criterion-1 and the offered criterion-2 judged
+        (the score is the expectation, so criterion-2 is not reached), the
+        yield check reported — in the preview and in the evaluation. For
+        accuracy, auc and r2; r2 exactly, where floats scored the
+        permutations apart by rounding and the rounded-up deviation was
+        0.01. The twin: predictions that vary give a deviation above 0."""
+        area, _ = self.measure_module("apply")
+        self.activate(area, table=True, code=True)
+        measure = self.reloaded(area)
         one_class = mock.Mock()
         one_class.predict.side_effect = lambda xs: [0 for _ in xs]
         with mock.patch.object(measure, "make_estimator", return_value=one_class):
-            with self.assertRaisesRegex(ValueError, "the null does not move"):
-                measure.calibrate_null(measure.CONFIG, self.items())
+            cal = measure.calibrate_null(measure.CONFIG, self.items())
             rows = measure.apply_rows(measure.CONFIG, self.items(), False)
-        with self.assertRaisesRegex(ValueError, "the null does not move"):
-            measure.evaluate_rows(rows)
+        self.assertEqual((cal["band"], cal["rounded"]), (0, 0))
+        m = measure.evaluate_rows(rows)
+        self.assertEqual(m["quality_check_2_null_band"], 0)
+        self.assertIs(m["quality_check_2_pass"], True)
+        self.assertIs(m["quality_check_1_pass"], True)
+        self.assertIsNotNone(m["criterion_1_pass"])
+        self.assertEqual(m["criterion_2_threshold"], m["criterion_1_score"])
+        self.assertIs(m["criterion_2_pass"], False)
+        import random as _random
+
+        rng = _random.Random(2)
+        floats = [rng.uniform(0, 5) for _ in range(30)]
+        for score, preds, golds in (
+            ("auc", [0.7] * 12, [i % 2 for i in range(12)]),
+            ("r2", [2.3] * 30, floats),
+        ):
+            with self.subTest(score=score):
+                cfg = replace(measure.CONFIG, score=score)
+                m = measure.evaluate_rows(
+                    self.permuted_rows(measure, preds, golds), cfg
+                )
+                self.assertEqual(m["quality_check_2_null_band"], 0)
+                self.assertIs(m["quality_check_2_pass"], True)
         with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
             cal = measure.calibrate_null(measure.CONFIG, self.items())
         self.assertGreater(cal["band"], 0)
+
+    def test_no_prediction_or_an_undefined_score_gives_no_deviation(self):
+        """Three ways the null does not move that are no deviation 0, each
+        loud after the run: no item has a prediction; at accuracy no
+        prediction is a gold value (labels from another vocabulary, varied
+        or constant — apply-screen, 2026-10-29); spearman on constant
+        predictions, where rank correlation is undefined. The twin:
+        predictions in the gold's labels with one missing give a
+        deviation."""
+        _, measure = self.measure_module("apply")
+        golds = [i % 2 for i in range(12)]
+        with self.assertRaisesRegex(ValueError, "has a prediction"):
+            measure.evaluate_rows(self.permuted_rows(measure, [None] * 12, golds))
+        for preds in (["neg", "pos"] * 6, ["x"] * 12):
+            with (
+                self.subTest(preds=preds[:2]),
+                self.assertRaisesRegex(ValueError, "no prediction is a gold value"),
+            ):
+                measure.evaluate_rows(self.permuted_rows(measure, preds, golds))
+        with self.assertRaisesRegex(ValueError, "constant"):
+            measure.evaluate_rows(
+                self.permuted_rows(measure, [1.0] * 12, [float(i) for i in range(12)]),
+                replace(measure.CONFIG, score="spearman"),
+            )
+        m = measure.evaluate_rows(
+            self.permuted_rows(measure, [None, *golds[1:]], golds),
+            replace(measure.CONFIG, max_empty=1),
+        )
+        self.assertGreater(m["quality_check_2_null_band"], 0)
 
     def test_main_refuses_before_the_run_opens(self):
         _, measure = self.measure_module("apply")
@@ -431,7 +504,7 @@ class ApplySkeleton(unittest.TestCase):
                     for perm in itertools.permutations(golds)
                 ]
                 exact = measure.permutation_expectation(score, list(zip(preds, golds)))
-                if score in ("r2", "spearman"):
+                if score == "spearman":
                     self.assertAlmostEqual(exact, sum(draws) / len(draws), places=12)
                 else:
                     self.assertEqual(exact, sum(draws, Fraction(0)) / len(draws))
