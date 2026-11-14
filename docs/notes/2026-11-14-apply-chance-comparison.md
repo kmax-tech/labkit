@@ -39,18 +39,38 @@ sts512 for scale: the maximum over 200 permutations was 0.117 (attempt a-r2), th
 
 ## Open: the band at later measurements
 
-This concerns [quality-check-2]'s band comparison itself, not only `criterion-2`. Only the first measurement of a protocol is held to the band rule. After it, nothing ensures that the registered band belongs to a later run's predictions and items:
+This concerns [quality-check-2]'s band comparison itself, not only `criterion-2`. Only the first measurement of a protocol is held to the band rule:
 
 - `band_check` returns early once a first measurement exists (`labkit/templates/measure-estimator-script.py.template:717`, "the band stands as registered"). This was a deliberate decision (`56e98995`, 2026-10-29): "After the first measurement nothing is checked: a repair changes the predictions while the registered band stands." It is pinned by `tests/test_apply_skeleton.py:279`.
 - The registered band cannot change after the first measurement (report-check refuses a changed constant).
-- The registration hold compares the protocol's texts — question, data field, exclusions, unit, kind — and lets a code change measured again under the same fields pass (`labkit/gates/registration_hold.py:274`).
-- From reading the code, nothing compares the items' or the predictor's digests of a later run with those of the first measurement. This was not reproduced with a run.
+- The registration hold compares the protocol's texts and lets a code change measured again under the same fields pass (`labkit/gates/registration_hold.py:274`).
 
-So a later run with a repaired predictor, a changed predictor file or edited items under an unchanged protocol text is judged against a band calibrated on other predictions. Then [quality-check-2] holds its null draw to a spread that is not its own, and `criterion-2`'s threshold is not a quantile of this run's permutation distribution. Ways to decide, by the author:
+### Replayed 2026-11-14
 
-1. **Check the rule at every measurement:** recompute the band from the run's own predictions and items before the run opens, and refuse a mismatch. Since the band is frozen after the first measurement, a repair that moves the band then needs a new registration or a handover.
-2. **Record and compare:** each run records the band its own predictions give under the rule, and report-check or finalize compares it with the registered one, as a WARNING or BLOCKER. The measurement still runs, and the mismatch is visible at adoption.
-3. **Keep the current state and state the limit:** the band carries its meaning for the first measurement's predictions only; for a later run it is a registered constant.
+Setup: the end-to-end scenario's apply area (`tests/test_end_to_end.py`, `points_area`: 12 labelled points, 6 per class), a fixed threshold on feature 0, real commands in a temporary git lab. Steps: `--calibrate-null --write`, commit, first measurement, commit; then the threshold is repaired, committed, and measured again into a new output file. A first attempt to measure into the old output file was refused by runlog: rows from another instrument. Then `finalize`. Script and logs are internal (labkit-evidence, `usability/2026-11-14-band-second-run/`, `de62011d`); the numbers:
+
+| Repair         | Predictions pos/neg, 1st → 2nd | Registered band | Rule's band for the 2nd run | 2nd run: null draw off | finalize |
+|----------------|--------------------------------|-----------------|-----------------------------|------------------------|----------|
+| x > 4 → x > 0  | 4/8 → 6/6                      | 0.34            | 0.34                        | 0.0000                 | exit 0   |
+| x > 4 → x > 10 | 4/8 → 1/11                     | 0.34            | 0.09                        | 0.0833                 | exit 0   |
+| x > 10 → x > 4 | 1/11 → 4/8                     | 0.09            | 0.34                        | 0.0000                 | exit 0   |
+
+The second measurement prints nothing about the band. `finalize` passes all three. In the third row the registered band is a quarter of the run's own spread. With it, a `criterion-2` threshold would be 0.5 + 0.09 = 0.59, and the score 0.8333 would read as above the band. With the run's own band the threshold is 0.84, and the same score lies below it. A stale band can thus err in either direction: too wide makes [quality-check-2] lax and `criterion-2` strict, too narrow the reverse.
+
+### The variant the author prefers: a fixed rule, a band computed and kept per run
+
+The protocol registers only the rule (`null_band_quantile`, `null_permutations`) at apply with the permuted null. `evaluate_rows` computes the band from the run's own kept registered predictions and gold by `band_by_rule` and writes it to the metrics, for example as `quality_check_2_band`. [quality-check-2] and `criterion-2` then read that band. Checked against the code and the standard:
+
+- **Standard.** LAB-035 Thresholds belong to the run, not to the measure: "What can be preregistered is the *rule* …, not the *value*. A threshold with no reference to the null condition of the same run is a number without a unit." A per-run band from a registered rule is that rule's case. The registered value meets it only for the first measurement. The standard does not mention `null_band`, so the change needs no new standard version.
+- **What it removes.** `--calibrate-null --write` and `band_check` become unnecessary; `--calibrate-null` can stay as a preview. Both were a source of agent error: in the fifth SAB-like draw an agent registered 0.05 after reading 0.1276 (`56e98995`). No band is seen before the measurement any more.
+- **Validity.** Condition 2 of the derivation (the band belongs to these predictions on these items) holds by construction for every run. Conditions 1, 3 (as far as before the registration), 4 and 5 remain. No information about the measured score enters: the band reads the predictions and the gold only through permutations.
+- **The permutations' seed** is a decision of its own. Seeded from the run's seed, as today, a `--seed` run gets another band, and choosing among runs would select on it. Seeded from something the registration fixes, such as the protocol id, the band is a function of the rule, the predictions and the items only, and a repeat with the same predictions gives the same band.
+- **Reproducibility.** The band is a deterministic function of the kept rows and the config, so `--eval-only`, `02_analyze.py` and a recheck recompute it exactly. Cost per evaluation, measured with the skeleton's `band_by_rule` at 200 permutations: Spearman at 512 items 0.5 s, at 2000 items 2.1 s, accuracy at 2000 items 0.07 s, AUC at 2000 items 4.8 s.
+- **[quality-check-2]'s meaning** is unchanged: one permuted draw within the 0.99 quantile of its own permutation spread. With a correct null lane it fails in about 1 % of runs, as it does today at the first measurement, now at every run. A broken null lane, one that is not permuted, still fails it.
+- **Not covered.** At fit, with a registered `NULL_ORDER` or with a fixed null predictor there is no permutation spread of these predictions, and the band stays a registered, reasoned value. Two regimes remain; the same LAB-035 question at fit is not part of this change.
+- **Scope of the break.** No package code reads `null_band` outside the templates; areas keep the skeleton copy they were stamped with, and their protocols still read. New stamps, the skeleton, the area test template, the stamp comparison files and the field guide change. This is a contract change of its own, with a CHANGELOG entry under Breaking, not part of plan step 4.
+
+Against the three ways named before: check at every measurement and refuse a mismatch (it would force a new registration for every repair that moves the band); record and compare with the registered value (it keeps a value that is wrong for later runs and only signals); keep and state the limit (it leaves the gap the replay shows). The per-run band closes the gap without a new registration and without a refusal.
 
 ## What is built
 
