@@ -1,6 +1,6 @@
 # Explain the null comparison without overloading “band”
 
-> Plan requested by the author on 2026-11-14; wording changes are not implemented. [TODO](../../TODO.md) holds the work order. Field renaming and per-run calibration are separate changes.
+> Plan requested by the author on 2026-11-14. [TODO](../../TODO.md) holds the work order. Field renaming and per-run calibration are separate changes. The per-run calibration is built (2026-11-14, [chance-comparison note](2026-11-14-apply-chance-comparison.md)); the texts it touched use this plan's terms — the skeleton's docstrings, comments and calibration output, the apply and fit substitutions and criterion-2's comment in `protocol_cuts.py`, the protocol template's comment, `agent-guide.md` and the field guide's apply item. The rest of the plan is not implemented, the field guide's label "Noise ceiling → threshold" among it.
 
 Readers need to distinguish three quantities: the permitted absolute deviation from the null expectation, the interval around that expectation, and the upper threshold used to compare the measured score with chance. Current text calls several of these a “band”. Clarify the explanations, generated protocol text and messages while retaining the existing `null_band` field and calculation.
 

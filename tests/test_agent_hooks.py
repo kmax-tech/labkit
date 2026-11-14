@@ -387,7 +387,6 @@ class PreRun(unittest.TestCase):
             f"{python}/01-fit/scripts/00_prepare.py --show",
             f"{python}/02-judge/scripts/00_prepare.py --audit",
             f"{python}/03-local/scripts/01_measure.py --calibrate-null",
-            f"{python}/03-local/scripts/01_measure.py --calibrate-null 50",
         ):
             rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual((rc, out, err), (0, "", ""), cmd)

@@ -336,7 +336,7 @@ ESTIMATOR_FIELDS = {
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
-    "Null condition / anchors (in the same run)": "<the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>",
+    "Null condition / anchors (in the same run)": "<the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within the permitted deviation null_band of chance, a reasoned value, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>",
     # filled after the run from its kept rows, owed only with a model
     # (`protocol_check.not_owed`); --probe's rows are thrown away, so the
     # stamp does not ask for them here
@@ -370,7 +370,7 @@ ESTIMATOR_PROMISES = (
     (r"constants = \{ max_empty = 2 \}", "constants = { max_empty = 0 }"),
     (
         r'sentence = "<the null condition:[^"]*"',
-        'sentence = "<the null condition · the mean of the permuted-label refits scores within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"',
+        'sentence = "<the null condition · the mean of the permuted-label refits scores within the permitted deviation null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"',
     ),
     (r"constants = \{ null_band_items = 1 \}", "constants = { null_band = 0.1 }"),
 )
@@ -380,13 +380,15 @@ ESTIMATOR_PROMISES = (
 #: target are the exact permutation expectation, not one permuted draw
 APPLY_PROMISES = {
     r'sentence = "<the criterion in one sentence:[^"]*"': 'sentence = "<the criterion · the registered lane\'s SCORE is at least the permutation expectation plus margin — or, for a bar the task states, at least at_least, its source named (constants = { at_least = … } in place of margin)>"',
-    r'sentence = "<the null condition:[^"]*"': 'sentence = "<the null condition · the permuted-label lane scores within null_band of the permutation expectation, what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly>"',
-    # the band's rule registered beside it: the first measurement refuses a
-    # band the rule does not give, `--calibrate-null --write` registers it.
-    # After it, the comparison with chance, offered commented out: no duty
-    # (docs/notes/2026-11-14-apply-chance-comparison.md); its id stays out of
-    # brackets, since a bracketed id anywhere in the text registers a promise
-    r"constants = \{ null_band_items = 1 \}": "constants = { null_band = 0.1, null_band_quantile = 0.99, null_permutations = 200 }"
+    r'sentence = "<the null condition:[^"]*"': 'sentence = "<the null condition · the permuted-label lane scores within the permitted deviation of the permutation expectation, what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly · the permitted deviation is computed in each run from its own predictions by the registered rule, the null_band_quantile quantile of the absolute deviations over null_permutations permutations of the gold seeded by null_band_seed, rounded up to two places>"',
+    # the rule, not the value (LAB-035 Thresholds belong to the run, not to the
+    # measure): each run computes the permitted
+    # deviation; null_band_seed is the calibration's seed, apart from the
+    # run's. After it, the comparison with chance, offered commented out: no
+    # duty (docs/notes/2026-11-14-apply-chance-comparison.md); its id stays
+    # out of brackets, since a bracketed id anywhere in the text registers a
+    # promise
+    r"constants = \{ null_band_items = 1 \}": "constants = { null_band_quantile = 0.99, null_permutations = 200, null_band_seed = 1 }"
     + "\n\n"
     + "\n".join(
         (
@@ -396,12 +398,13 @@ APPLY_PROMISES = {
             "# block between the criterion-2 markers in evaluate_rows of",
             "# scripts/01_measure.py, which reports criterion_2_threshold and",
             "# criterion_2_pass. One step alone is held (code-check, intent-check).",
-            "# A pass says the score lies above the registered null band; nothing",
-            "# about size, and the task's bar stays criterion-1's.",
+            "# A pass says the measured score exceeds the comparison threshold",
+            "# derived from randomly permuted labels; nothing about size, and the",
+            "# task's bar stays criterion-1's.",
             "# [[promise]]",
             '# id = "criterion-2"',
             '# key = "criterion_2_pass"',
-            '# sentence = "<the comparison with chance · the registered lane\'s SCORE exceeds the permutation expectation plus null_band, the band quality-check-2 registers by its rule>"',
+            '# sentence = "<the comparison with chance · the registered lane\'s SCORE strictly exceeds the comparison threshold, the permutation expectation plus the permitted deviation quality-check-2 computes in the same run>"',
             '# scope = ["scripts/01_measure.py"]',
         )
     ),
@@ -411,7 +414,7 @@ APPLY_PROMISES = {
 APPLY_FIELDS = {
     "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` in scripts/01_measure.py",
     "Model I/O": "<in · the feature fields per item · out · one prediction from each unchanged instrument without fitting>",
-    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, one draw kept as the anchor, expected within null_band of the permutation expectation — what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly and the criterion's bar starts from · null_band by the registered rule null_band_quantile over null_permutations, written by --calibrate-null --write before the first measurement · or the registered fixed null of make_null_predictor() and why it targets chance>",
+    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, one draw kept as the anchor, expected within the permitted deviation of the permutation expectation — what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly and the criterion's bar starts from · the permitted deviation computed in each run by the registered rule, null_band_quantile over null_permutations seeded by null_band_seed, previewed by --calibrate-null · or the registered fixed null of make_null_predictor() with a reasoned null_band and why it targets chance>",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged predictor on N labelled items, both lanes · scores read, never reported>",
 }
 

@@ -2072,8 +2072,9 @@ class StatedBar(unittest.TestCase):
             "criterion-1 sentence=registered accuracy is at least at_least = 0.90, "
             "the bar the task text states",
             "quality-check-1 sentence=at most max_empty labelled items without a prediction",
-            "quality-check-2 sentence=the permuted-label lane within null_band of the "
-            "permutation expectation, by the rule null_band_quantile over null_permutations",
+            "quality-check-2 sentence=the permuted-label lane within the permitted deviation of the "
+            "permutation expectation, computed in each run by the rule null_band_quantile over "
+            "null_permutations seeded by null_band_seed",
         )
         lab.fill_open(
             protocol,
@@ -2082,14 +2083,13 @@ class StatedBar(unittest.TestCase):
                 "Question / hypothesis": "Does the fixed threshold reach the accuracy the task asks for?",
                 "Inference criterion": "[criterion-1] registered accuracy at least 0.90, the task's bar",
                 "Quality check": "[quality-check-1] at most max_empty items without a prediction; "
-                "[quality-check-2] the null lane within null_band of the permutation expectation",
+                "[quality-check-2] the null lane within the permitted deviation of the permutation expectation",
                 "Data / scope": "data/prepared/points_v1.jsonl, 12 labelled and 4 test points",
                 "Exclusions / filters": "none",
                 "Unit": "one point",
             },
         )
         lab.script(area, "00_prepare.py")
-        lab.script(area, "01_measure.py", "--calibrate-null", "--write")
         lab.commit("registered: the task's bar as at_least")
         run_id = lab.run_id_of(lab.script(area, "01_measure.py"))
         metrics = json.loads(

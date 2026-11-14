@@ -22,15 +22,6 @@ from protocol_fixture import run_record
 from labkit.formats import runs
 
 
-def _measured(*, firsts: tuple[str, ...]) -> mock.Mock:
-    """A stand-in for the stamped script's `state_of`: an area state whose
-    protocol has FIRSTS as its first measurements (`Measured.firsts`)."""
-    measured = mock.Mock(firsts=firsts)
-    return mock.Mock(
-        return_value=mock.Mock(measured_of=mock.Mock(return_value=measured))
-    )
-
-
 class ApplySkeleton(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -105,7 +96,7 @@ class ApplySkeleton(unittest.TestCase):
             [i % 2 for i in range(12)],
         )
         self.assertEqual([r["pred"] for r in rows if r["lane"] == "null"], [0] * 12)
-        metrics = measure.evaluate_rows(rows)
+        metrics = measure.evaluate_rows(rows, self.reasoned(measure))
         self.assertEqual(
             (
                 metrics["criterion_1_score"],
@@ -150,30 +141,28 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual(metrics["criterion_1_score"], 1.0)
         self.assertLess(metrics["quality_check_2_score"], 1.0)
 
-    def test_calibrate_null_measures_the_permutation_spread_before_registration(self):
-        # the band is derived, not the stamped default: it comes from
-        # permutations of the gold with the predictions fixed, by a rule
-        # fixed before calibration
+    def test_calibrate_null_previews_what_each_run_computes(self):
+        """The preview puts the predictions on the labelled items through the
+        registered rule, as each evaluation does on the kept rows: 200
+        permutations, the 0.99 quantile by its exact rank, rounded up, the
+        same each time. It never trains and registers nothing."""
         area, measure = self.measure_module("apply")
-        primary = mock.Mock()
-        primary.predict.side_effect = lambda xs: [x[0] for x in xs]
+        primary = self.primary()
         with mock.patch.object(measure, "make_estimator", return_value=primary):
             cal = measure.calibrate_null(measure.CONFIG, self.items())
             again = measure.calibrate_null(measure.CONFIG, self.items())
+            rows = measure.apply_rows(measure.CONFIG, self.items(), False)
         primary.fit.assert_not_called()
-        self.assertEqual(primary.predict.call_count, 2)  # once per calibration
-        # the stamp registers the rule beside the band: 0.99 over 200
         self.assertEqual(len(cal["null_scores"]), 200)
-        self.assertEqual(cal, again)  # seeded: the same band each time
-        # the band is the spread around the exact permutation expectation
+        self.assertEqual(cal, again)
         off = sorted(abs(s - cal["target"]) for s in cal["null_scores"])
-        self.assertEqual(
-            cal["band"], off[197]
-        )  # the 0.99 quantile of 200, its exact rank
-        self.assertEqual(cal["registered"], math.ceil(cal["band"] * 100) / 100)
+        self.assertEqual(cal["band"], off[197])
+        self.assertEqual(cal["rounded"], math.ceil(cal["band"] * 100) / 100)
         self.assertLess(cal["band"], 1 - cal["target"])  # no permutation is the truth
+        m = measure.evaluate_rows(rows)
+        self.assertEqual(m["quality_check_2_null_band"], cal["rounded"])
 
-    # -- [quality-check-2]'s band and its registered rule
+    # -- [quality-check-2]'s permitted deviation, computed per run by the registered rule
     def primary(self):
         primary = mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
@@ -194,154 +183,139 @@ class ApplySkeleton(unittest.TestCase):
                         code_check.constant_copies(area, measure.PROTOCOL, p), []
                     )
 
-    def test_another_count_than_the_registered_rule_is_refused(self):
-        """With the rule registered at 200 permutations, a calibration over
-        50 answers another rule. The twin: without a registered rule the
-        count is free."""
+    def test_the_permitted_deviation_is_the_runs_own_and_repeatable(self):
+        """Each run computes [quality-check-2]'s permitted deviation from its
+        own registered predictions: the same inputs give the same value in
+        any row order and under any run seed (the calibration seed is its
+        own), and repaired predictions get their own value — the second run
+        after a repair is no longer held to the first run's (replay
+        2026-11-14, docs/notes/2026-11-14-apply-chance-comparison.md)."""
         _, measure = self.measure_module("apply")
         with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
-            with self.assertRaisesRegex(ValueError, "null_permutations = 200"):
-                measure.calibrate_null(measure.CONFIG, self.items(), 50)
-            free = replace(
-                measure.CONFIG, null_band_quantile=None, null_permutations=None
+            rows = measure.apply_rows(measure.CONFIG, self.items(), False)
+            other_seed = measure.apply_rows(
+                replace(measure.CONFIG, seed=7), self.items(), False
             )
-            self.assertEqual(
-                len(measure.calibrate_null(free, self.items(), 50)["null_scores"]), 50
-            )
+        m = measure.evaluate_rows(rows)
+        rule = measure.band_rule(measure.CONFIG)
+        assert rule is not None
+        reg = [
+            (r["item"], r["pred"], r["gold"]) for r in rows if r["lane"] == "registered"
+        ]
+        self.assertEqual(
+            m["quality_check_2_null_band"],
+            measure.band_by_rule(measure.CONFIG, reg, rule)["rounded"],
+        )
+        self.assertEqual(
+            measure.evaluate_rows(list(reversed(rows)))["quality_check_2_null_band"],
+            m["quality_check_2_null_band"],
+        )
+        self.assertNotEqual(
+            [r["gold_of"] for r in other_seed if r["lane"] == "null"],
+            [r["gold_of"] for r in rows if r["lane"] == "null"],
+        )  # the run seed moves the null draw ...
+        self.assertEqual(
+            measure.evaluate_rows(other_seed, replace(measure.CONFIG, seed=7))[
+                "quality_check_2_null_band"
+            ],
+            m["quality_check_2_null_band"],
+        )  # ... and not the permitted deviation
+        repaired = mock.Mock()
+        repaired.predict.side_effect = lambda xs: [
+            1 if i == 0 else 0 for i, _ in enumerate(xs)
+        ]
+        with mock.patch.object(measure, "make_estimator", return_value=repaired):
+            after = measure.apply_rows(measure.CONFIG, self.items(), False)
+        self.assertNotEqual(
+            measure.evaluate_rows(after)["quality_check_2_null_band"],
+            m["quality_check_2_null_band"],
+        )
 
-    def test_the_first_measurement_refuses_a_band_its_rule_does_not_give(self):
-        """A registered band other than the one its rule gives is refused;
-        the check runs before the run opens (a started measurement binds the
-        registration) and never changes the band. The twin: the band the
-        rule gives passes, and its predictions are reused."""
+    def test_the_rule_is_registered_whole_and_null_band_is_not_registered_beside_it(
+        self,
+    ):
+        """At apply with the seeded permuted null the protocol registers the
+        rule — quantile, permutations, calibration seed — together, and no
+        null_band: a registered value beside the computed one would be a
+        second truth. Both refusals come before the run opens. The twin: the
+        stamped registration passes."""
         _, measure = self.measure_module("apply")
-        primary = self.primary()
-        with (
-            mock.patch.object(measure, "make_estimator", return_value=primary),
-            mock.patch.object(measure, "state_of", _measured(firsts=())),
-        ):
-            rule = measure.band_rule(measure.CONFIG)
-            assert rule is not None
-            golds = [it["gold"] for it in measure.labelled(self.items())]
-            preds = [it["features"][0] for it in measure.labelled(self.items())]
-            right = measure.band_by_rule(measure.CONFIG, preds, golds, *rule)[
-                "registered"
-            ]
-            wrong = replace(measure.CONFIG, null_band=right + 0.05)
-            with self.assertRaises(SystemExit) as cm:
-                measure.band_check(wrong, self.items())
-            self.assertIn(f"its registered rule gives {right}", str(cm.exception))
-            self.assertIn("--calibrate-null --write", str(cm.exception))
-            held = replace(measure.CONFIG, null_band=right)
-            self.assertEqual(measure.band_check(held, self.items()), preds)
+        with self.assertRaisesRegex(ValueError, "registered together"):
+            replace(measure.CONFIG, null_band_seed=None)
+        measure.null_check(measure.CONFIG)
+        both = replace(measure.CONFIG, null_band=0.1)
+        with self.assertRaisesRegex(SystemExit, "drop null_band"):
+            measure.null_check(both)
+        with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
+            rows = measure.apply_rows(measure.CONFIG, self.items(), False)
+        with self.assertRaisesRegex(ValueError, "registers null_band"):
+            measure.evaluate_rows(rows, both)
+        none = replace(
+            measure.CONFIG,
+            null_band_quantile=None,
+            null_permutations=None,
+            null_band_seed=None,
+        )
+        with self.assertRaisesRegex(SystemExit, "registers no calibration rule"):
+            measure.null_check(none)
 
-    def test_a_null_that_does_not_move_gives_no_band(self):
-        """Predictions that match no gold score 0.0 under every permutation,
-        a spread of zero that would register `null_band = 0.0` without a
-        word. The rule's one home refuses it, so the calibration, its
-        `--write` and the first measurement's check all refuse. The twin:
-        predictions that vary give a band."""
+    def test_a_reasoned_null_band_where_there_is_no_permutation_spread(self):
+        """At fit and with a fixed null predictor the permitted deviation is a
+        registered, reasoned null_band, and a calibration rule there is
+        refused: it would calibrate nothing. The twin: the fit stamp
+        passes."""
+        _, fit = self.measure_module("fit")
+        fit.null_check(fit.CONFIG)
+        _, measure = self.measure_module("apply")
+        with (
+            mock.patch.object(measure, "make_null_predictor", return_value=mock.Mock()),
+            self.assertRaisesRegex(SystemExit, "fixed null predictor"),
+        ):
+            measure.null_check(measure.CONFIG)
+        with mock.patch.object(
+            measure, "make_null_predictor", return_value=mock.Mock()
+        ):
+            measure.null_check(self.reasoned(measure))
+
+    @staticmethod
+    def reasoned(measure, band: float | None = 0.1):
+        """The apply CONFIG as a protocol with a fixed null or a null order
+        registers it: a reasoned null_band (or none), no calibration rule."""
+        return replace(
+            measure.CONFIG,
+            null_band=band,
+            null_band_quantile=None,
+            null_permutations=None,
+            null_band_seed=None,
+        )
+
+    def test_a_null_that_does_not_move_gives_no_deviation(self):
+        """Predictions that answer one class score the same under every
+        permutation, a spread of zero that is no permitted deviation. The
+        rule's one home refuses it, in the preview and in the evaluation.
+        The twin: predictions that vary give one."""
         _, measure = self.measure_module("apply")
         one_class = mock.Mock()
         one_class.predict.side_effect = lambda xs: [0 for _ in xs]
-        with (
-            mock.patch.object(measure, "make_estimator", return_value=one_class),
-            mock.patch.object(measure, "state_of", _measured(firsts=())),
-        ):
-            with self.assertRaises(ValueError) as cm:
+        with mock.patch.object(measure, "make_estimator", return_value=one_class):
+            with self.assertRaisesRegex(ValueError, "the null does not move"):
                 measure.calibrate_null(measure.CONFIG, self.items())
-            self.assertIn("the null does not move", str(cm.exception))
-            with self.assertRaises(SystemExit) as ex:
-                measure.band_check(measure.CONFIG, self.items())
-            self.assertIn("cannot be checked", str(ex.exception))
-            self.assertIn("the null does not move", str(ex.exception))
+            rows = measure.apply_rows(measure.CONFIG, self.items(), False)
+        with self.assertRaisesRegex(ValueError, "the null does not move"):
+            measure.evaluate_rows(rows)
         with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
             cal = measure.calibrate_null(measure.CONFIG, self.items())
         self.assertGreater(cal["band"], 0)
-
-    def test_the_measurement_reuses_the_checks_predictions(self):
-        area, measure = self.measure_module("apply")
-        primary = self.primary()
-        preds = [it["features"][0] for it in measure.labelled(self.items())]
-        with (
-            mock.patch.object(measure, "make_estimator", return_value=primary),
-            contextlib.redirect_stdout(io.StringIO()),
-        ):
-            measure.measure(
-                measure.CONFIG,
-                self.items(),
-                area / "output" / "kept.jsonl",
-                registered=preds,
-            )
-        # one call: the unlabelled item's test lane; the labelled ones came reused
-        self.assertEqual(primary.predict.call_count, 1)
-
-    def test_after_the_first_measurement_the_band_is_not_held_to_the_rule(self):
-        """A repair changes the predictions and so the rule's band, while the
-        registered band stands: no check after the first measurement."""
-        _, measure = self.measure_module("apply")
-        with (
-            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "state_of", _measured(firsts=("a run",))),
-        ):
-            self.assertIsNone(measure.band_check(measure.CONFIG, self.items()))
-
-    def test_no_rule_no_check_and_fit_no_check(self):
-        _, measure = self.measure_module("apply")
-        free = replace(measure.CONFIG, null_band_quantile=None, null_permutations=None)
-        self.assertIsNone(measure.band_check(free, self.items()))
-        _, fit = self.measure_module("fit")
-        self.assertIsNone(fit.band_check(fit.CONFIG, self.items()))
-
-    def test_write_registers_the_band_before_the_first_measurement_only(self):
-        area, measure = self.measure_module("apply")
-        protocol = measure.PROTOCOL
-        argv = ["01_measure.py", "--calibrate-null", "--write"]
-        with (
-            mock.patch.object(sys, "argv", argv),
-            mock.patch.object(measure, "read_jsonl", return_value=self.items()),
-            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "state_of", _measured(firsts=())),
-            contextlib.redirect_stdout(io.StringIO()),
-        ):
-            measure.main()
-        from labkit.formats import promises
-
-        written = promises.all_constants(promises.load(protocol))["null_band"]
-        cal = measure.band_by_rule(
-            measure.CONFIG,
-            [it["features"][0] for it in measure.labelled(self.items())],
-            [it["gold"] for it in measure.labelled(self.items())],
-            0.99,
-            200,
-        )
-        self.assertEqual(written, cal["registered"])
-        before = protocol.read_text(encoding="utf-8")
-        with (
-            mock.patch.object(sys, "argv", argv),
-            mock.patch.object(measure, "read_jsonl", return_value=self.items()),
-            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "state_of", _measured(firsts=("a run",))),
-            contextlib.redirect_stdout(io.StringIO()),
-            contextlib.redirect_stderr(io.StringIO()),
-            self.assertRaises(SystemExit),
-        ):
-            measure.main()
-        self.assertEqual(protocol.read_text(encoding="utf-8"), before)
-        with (
-            mock.patch.object(sys, "argv", ["01_measure.py", "--write"]),
-            contextlib.redirect_stderr(io.StringIO()),
-            self.assertRaises(SystemExit),
-        ):
-            measure.main()
 
     def test_main_refuses_before_the_run_opens(self):
         _, measure = self.measure_module("apply")
         with (
             mock.patch.object(sys, "argv", ["01_measure.py"]),
+            mock.patch.object(
+                measure, "CONFIG", replace(measure.CONFIG, null_band=0.1)
+            ),
             mock.patch.object(measure, "read_jsonl", return_value=self.items()),
             mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "state_of", _measured(firsts=())),
             mock.patch.object(measure.runlog, "run") as start,
             self.assertRaises(SystemExit),
         ):
@@ -422,7 +396,7 @@ class ApplySkeleton(unittest.TestCase):
         (area / "null_order.json").write_text(_json.dumps(order), encoding="utf-8")
         primary = mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
-        cfg = replace(measure.CONFIG, null_band=None)
+        cfg = self.reasoned(measure, None)
         with (
             mock.patch.object(measure, "NULL_ORDER", area / "null_order.json"),
             mock.patch.object(measure, "make_estimator", return_value=primary),
@@ -445,8 +419,8 @@ class ApplySkeleton(unittest.TestCase):
                 measure.apply_rows(cfg, self.items(), False)
         with mock.patch.object(measure, "make_estimator", return_value=primary):
             rows = measure.apply_rows(cfg, self.items(), False)
-        with self.assertRaisesRegex(ValueError, "registers no null_band"):
-            measure.evaluate_rows(rows, cfg)
+        with self.assertRaisesRegex(ValueError, "computed per run"):
+            measure.evaluate_rows(rows, cfg)  # seeded rows: the rule is owed
 
     def test_apply_holds_the_bar_and_the_null_to_the_expectation(self):
         """A permuted null's draw is the anchor, not the bar: the same
@@ -476,7 +450,7 @@ class ApplySkeleton(unittest.TestCase):
             self.assertEqual(
                 m["criterion_1_threshold"], 0.5 + cfg.margin
             )  # the draw moves nothing
-        fitted = measure.evaluate_rows(reg + null(7, False), cfg)
+        fitted = measure.evaluate_rows(reg + null(7, False), self.reasoned(measure))
         self.assertEqual(fitted["criterion_1_threshold"], 7 / 12 + cfg.margin)
 
     def chance_rows(self, measure, *, wrong: int, null_correct: int) -> list[dict]:
@@ -545,9 +519,11 @@ class ApplySkeleton(unittest.TestCase):
         return module
 
     def test_criterion_2_holds_the_score_strictly_above_expectation_plus_band(self):
-        """The offered comparison with chance, both steps taken: 12 of 16
-        right is 0.75, the expectation 1/2. With null_band 0.25 the score
-        sits on the edge and fails (strict); with 0.24 it passes. A failed
+        """The offered comparison with chance, both steps taken: the
+        comparison threshold is the permutation expectation plus the run's
+        own permitted deviation. Strictness, with the deviation held at a
+        known value: 12 of 16 right is 0.75, the expectation 1/2; at 0.25 the
+        score sits on the threshold and fails, at 0.24 it passes. A failed
         quality check gives no verdict. The twin: the stamp as it is reports
         no criterion-2 key at all."""
         area, plain = self.measure_module("apply")
@@ -558,30 +534,32 @@ class ApplySkeleton(unittest.TestCase):
         self.activate(area, table=True, code=True)
         measure = self.reloaded(area)
         self.assertTrue(measure.CONFIG.chance_criterion)
-        on = replace(measure.CONFIG, null_band=0.25)
-        m = measure.evaluate_rows(rows, on)
-        self.assertEqual(m["criterion_2_threshold"], 0.75)
-        self.assertIs(m["criterion_2_pass"], False)
-        m = measure.evaluate_rows(rows, replace(on, null_band=0.24))
-        self.assertIs(m["criterion_2_pass"], True)
+        m = measure.evaluate_rows(rows)
+        self.assertEqual(
+            m["criterion_2_threshold"], 0.5 + m["quality_check_2_null_band"]
+        )
+        for deviation, passed in ((0.25, False), (0.24, True)):
+            with mock.patch.object(measure, "run_null_band", return_value=deviation):
+                m = measure.evaluate_rows(rows)
+            self.assertEqual(m["criterion_2_threshold"], 0.5 + deviation)
+            self.assertIs(m["criterion_2_pass"], passed)
         far = self.chance_rows(measure, wrong=2, null_correct=16)  # null at 1.0
-        m = measure.evaluate_rows(far, on)
+        m = measure.evaluate_rows(far)
         self.assertIs(m["quality_check_2_pass"], False)
         self.assertIsNone(m["criterion_2_pass"])
-        m = measure.evaluate_rows(rows, replace(on, max_empty=-1))  # yield fails
+        m = measure.evaluate_rows(
+            rows, replace(measure.CONFIG, max_empty=-1)
+        )  # yield fails
         self.assertIs(m["quality_check_1_pass"], False)
         self.assertIsNone(m["criterion_2_pass"])
 
     def test_criterion_2_is_refused_where_the_band_is_no_permutation_quantile(self):
-        """Without a registered band rule, at fit, and with a registered null
-        order the band is no permutation quantile, so the comparison would
-        state a level it does not have."""
+        """At fit, with a registered null order and with a fixed null
+        predictor the permitted deviation is no permutation quantile of
+        these predictions, so the comparison would state a threshold it
+        does not have: refused in the evaluation and before the run opens."""
         _, measure = self.measure_module("apply")
-        with self.assertRaisesRegex(
-            ValueError, "null_band_quantile and null_permutations"
-        ):
-            replace(measure.CONFIG, chance_criterion=True, null_band_quantile=None)
-        on = replace(measure.CONFIG, chance_criterion=True)
+        on = replace(self.reasoned(measure), chance_criterion=True)
         rows = self.chance_rows(measure, wrong=2, null_correct=8)
         with (
             mock.patch.object(measure, "NULL_ORDER", Path("null_order.json")),
@@ -591,24 +569,25 @@ class ApplySkeleton(unittest.TestCase):
         fitted = [{k: v for k, v in r.items() if k != "gold_of"} for r in rows]
         with self.assertRaisesRegex(ValueError, "permutation quantile"):
             measure.evaluate_rows(fitted, on)
-        # the same refusal before the run opens, so no prediction is spent
-        measure.chance_check(on)
-        measure.chance_check(replace(on, chance_criterion=False))
-        with (
-            mock.patch.object(measure, "make_null_predictor", return_value=mock.Mock()),
-            self.assertRaisesRegex(SystemExit, "fixed null predictor registered"),
+        measure.null_check(replace(measure.CONFIG, chance_criterion=True))
+        for patch, where in (
+            (
+                mock.patch.object(
+                    measure, "make_null_predictor", return_value=mock.Mock()
+                ),
+                "a fixed null predictor",
+            ),
+            (
+                mock.patch.object(measure, "NULL_ORDER", Path("null_order.json")),
+                "a registered NULL_ORDER",
+            ),
+            (mock.patch.object(measure, "KIND", "fit"), "kind fit"),
         ):
-            measure.chance_check(on)
-        with (
-            mock.patch.object(measure, "NULL_ORDER", Path("null_order.json")),
-            self.assertRaisesRegex(SystemExit, "NULL_ORDER set"),
-        ):
-            measure.chance_check(on)
-        with (
-            mock.patch.object(measure, "KIND", "fit"),
-            self.assertRaisesRegex(SystemExit, "kind fit"),
-        ):
-            measure.chance_check(on)
+            with (
+                patch,
+                self.assertRaisesRegex(SystemExit, rf"\[criterion-2\].*{where}"),
+            ):
+                measure.null_check(on)
 
     def area_tests(self) -> subprocess.CompletedProcess:
         """The stamped area's own tests, run as finalize runs them."""
@@ -701,7 +680,7 @@ class ApplySkeleton(unittest.TestCase):
 
     def test_calibrate_null_has_no_free_path_at_fit_or_for_a_fixed_null(self):
         _, fit = self.measure_module("fit")
-        with self.assertRaisesRegex(ValueError, "apply only"):
+        with self.assertRaisesRegex(ValueError, "computed per run only at kind apply"):
             fit.calibrate_null(fit.CONFIG, self.items())
         _, measure = self.measure_module("apply")
         with (
@@ -874,7 +853,6 @@ class ApplySkeleton(unittest.TestCase):
         with (
             mock.patch.object(sys, "argv", ["01_measure.py"]),
             mock.patch.object(measure, "read_jsonl", return_value=self.items()),
-            mock.patch.object(measure, "band_check", return_value=None),
             mock.patch.object(
                 measure.runlog, "run", side_effect=RuntimeError("captured")
             ) as start,

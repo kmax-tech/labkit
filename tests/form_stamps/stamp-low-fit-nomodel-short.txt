@@ -19,7 +19,7 @@
 
 - **Data / scope:** <the source files and the producer script in your words · then the counts protocol-fill --data-counts writes after 00_prepare.py · never typed>
 - **Model / tool:** n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py
-- **Null condition / anchors (in the same run):** [quality-check-2] <the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>
+- **Null condition / anchors (in the same run):** [quality-check-2] <the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within the permitted deviation null_band of chance, a reasoned value, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>
 - **Exclusions / filters:** <what is dropped from the data or the output, and why. Write "none" if…>
 - **Unit:** <what one counted or judged thing is, and what is not one…>
 
@@ -54,9 +54,9 @@ preflight_audit = ""
 # table. The numbers below are the stamp's examples, not your design: set
 # each before the commit to the value its sentence states, chosen from the
 # question, never from a result. At an apply with the estimator skeleton,
-# `scripts/01_measure.py --calibrate-null --write` registers `null_band`
-# before the first measurement. After the first measurement none of them
-# changes.
+# the null condition registers the rule, not the value: each run computes its
+# permitted deviation (`--calibrate-null` previews it). After the first
+# measurement none of them changes.
 [[promise]]
 id = "criterion-1"
 key = "criterion_1_pass"
@@ -74,7 +74,7 @@ constants = { max_empty = 0 }
 [[promise]]
 id = "quality-check-2"
 key = "quality_check_2_pass"
-sentence = "<the null condition · the mean of the permuted-label refits scores within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"
+sentence = "<the null condition · the mean of the permuted-label refits scores within the permitted deviation null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"
 scope = ["scripts/01_measure.py"]
 constants = { null_band = 0.1 }
 ```

@@ -165,9 +165,9 @@ preflight_audit = ""
 # table. The numbers below are the stamp's examples, not your design: set
 # each before the commit to the value its sentence states, chosen from the
 # question, never from a result. At an apply with the estimator skeleton,
-# `scripts/01_measure.py --calibrate-null --write` registers `null_band`
-# before the first measurement. After the first measurement none of them
-# changes.
+# the null condition registers the rule, not the value: each run computes its
+# permitted deviation (`--calibrate-null` previews it). After the first
+# measurement none of them changes.
 [[promise]]
 id = "criterion-1"
 key = "criterion_1_pass"

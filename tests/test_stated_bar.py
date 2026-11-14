@@ -16,6 +16,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 from labkit.tools import scaffold
 
@@ -87,7 +88,10 @@ class StatedBar(unittest.TestCase):
         return reg + null
 
     def verdict(self, measure, cfg, pairs: list[tuple]) -> tuple[float, float, bool]:
-        m = measure.evaluate_rows(self.apply_rows(measure, pairs), cfg)
+        """[criterion-1] alone: the run's permitted deviation held wide, so
+        [quality-check-2] passes whatever the null draw."""
+        with mock.patch.object(measure, "run_null_band", return_value=1.0):
+            m = measure.evaluate_rows(self.apply_rows(measure, pairs), cfg)
         return m["criterion_1_score"], m["criterion_1_threshold"], m["criterion_1_pass"]
 
     def test_a_bar_the_task_states_holds_at_its_boundary_whatever_the_expectation(self):
@@ -97,7 +101,7 @@ class StatedBar(unittest.TestCase):
         0.40 over the null passes 0.89 at 1/3."""
         measure = self.stamp("apply", "constants = { at_least = 0.9 }")
         self.assertEqual((measure.CONFIG.at_least, measure.CONFIG.margin), (0.9, None))
-        cfg = replace(measure.CONFIG, null_band=1.0)  # the criterion alone
+        cfg = measure.CONFIG
         cases = [
             (binary(55, 5, 5, 35), 0.90, True),  # expectation 0.52
             (binary(54, 6, 5, 35), 0.89, False),  # 0.518
@@ -116,7 +120,7 @@ class StatedBar(unittest.TestCase):
         0.70 exactly (gold 150/50, predictions 180/20), 0.75 meets the bar
         0.75 and 0.74 misses it — exact, no float short by one ulp."""
         measure = self.stamp("apply", "constants = { margin = 0.05 }")
-        cfg = replace(measure.CONFIG, null_band=1.0)
+        cfg = measure.CONFIG
         self.assertEqual(
             self.verdict(measure, cfg, binary(140, 10, 40, 10)), (0.75, 0.75, True)
         )
@@ -141,7 +145,8 @@ class StatedBar(unittest.TestCase):
 
     def test_a_stated_bar_still_owes_the_null_lane(self):
         """The null lane and [quality-check-2] hold beside a stated bar: a null
-        off its band withholds the verdict, and a band is owed."""
+        outside the null-check interval withholds the verdict, and the rule
+        that gives the run's permitted deviation is owed."""
         measure = self.stamp("apply", "constants = { at_least = 0.9 }")
         pairs = binary(60, 0, 0, 40)
         reg = self.apply_rows(measure, pairs)[: len(pairs)]
@@ -151,16 +156,18 @@ class StatedBar(unittest.TestCase):
             )
             for r in reg
         ]
-        m = measure.evaluate_rows(
-            reg + null_as_registered, replace(measure.CONFIG, null_band=0.1)
-        )
+        m = measure.evaluate_rows(reg + null_as_registered)
         self.assertEqual(
             (m["quality_check_2_pass"], m["criterion_1_pass"]), (False, None)
         )
-        with self.assertRaisesRegex(ValueError, "registers no null_band"):
-            measure.evaluate_rows(
-                self.apply_rows(measure, pairs), replace(measure.CONFIG, null_band=None)
-            )
+        no_rule = replace(
+            measure.CONFIG,
+            null_band_quantile=None,
+            null_permutations=None,
+            null_band_seed=None,
+        )
+        with self.assertRaisesRegex(ValueError, "computed per run"):
+            measure.evaluate_rows(self.apply_rows(measure, pairs), no_rule)
 
     def test_fit_holds_a_stated_bar_whatever_its_refits(self):
         """At fit the null value is the mean of random refits; a stated bar
@@ -198,7 +205,7 @@ class StatedBar(unittest.TestCase):
         pairs swapped (rho 0.9515) meet it and five swapped (rho 0.9394) miss
         it."""
         measure = self.stamp("apply", "constants = { at_least = 0.95 }")
-        cfg = replace(measure.CONFIG, score="spearman", null_band=1.0)
+        cfg = replace(measure.CONFIG, score="spearman")
 
         def swapped(k: int) -> list[tuple]:
             preds = [float(i) for i in range(10)]

@@ -7,12 +7,15 @@ pytest run must not share `01_measure`) and never copies its formula; the
 estimator itself is not needed here, only `evaluate_rows()`. The check runs
 it on synthetic rows in the run's real shape — perfect effect fires [criterion-1], a
 null-like registered lane stays silent, missing predictions fail [quality-check-1] and
-withhold the verdict, a null lane off its target fails [quality-check-2] where it
-registers a band. At apply with a permuted null (no fixed null predictor)
-the null rows name the donor of their label (`gold_of`) as the run's do: the
-bar is then the permutation expectation plus margin — under a registered null
-order (`NULL_ORDER`) the null's score plus margin, and a band is owed only
-where [quality-check-2] registers one. [criterion-1]'s bar is held in both forms,
+withhold the verdict, a null lane off its target fails [quality-check-2]
+wherever a permitted deviation applies. At apply with a permuted null (no
+fixed null predictor) the null rows name the donor of their label
+(`gold_of`) as the run's do: the bar is then the permutation expectation
+plus margin, and with the seeded permutation the rows' own registered lane
+gives the permitted deviation (the registered rule) — under a registered
+null order (`NULL_ORDER`) the null's score plus margin, and a permitted
+deviation applies only where [quality-check-2] registers one (`null_band`).
+[criterion-1]'s bar is held in both forms,
 whichever the protocol registers: `at_least`, a bar the task states, is the
 bar as written whatever the null scores; `margin` a lead over the null. The rows below
 serve SCORE = "accuracy" (two labels), "auc" (0/1 gold, a score per item:
@@ -46,6 +49,10 @@ GOLDS = [float(i) for i in range(12)] if SCORE == "spearman" else [POS] * 6 + [N
 ORDERED_NULL = measure.NULL_ORDER is not None
 #: apply without a fixed null predictor: the null rows carry `gold_of`, as apply_rows writes them
 PERMUTED_NULL = measure.KIND == "apply" and measure.make_null_predictor(measure.CONFIG.seed) is None
+#: the seeded permuted null: each run computes [quality-check-2]'s permitted deviation by the registered rule
+PER_RUN = PERMUTED_NULL and not ORDERED_NULL
+#: a registered, reasoned permitted deviation for the cases below where no run computes one
+BAND = {} if PER_RUN else {"null_band": 0.25}
 #: [criterion-1] registers a bar the task states (`at_least`), not a lead over the null (`margin`)
 ABSOLUTE = measure.CONFIG.at_least is not None
 
@@ -93,7 +100,13 @@ def test_perfect_effect_fires_c1():
 
 
 def test_null_like_registered_lane_stays_silent():
-    m = measure.evaluate_rows(rows(_twelve(6), _twelve(6)))
+    """Half right, its predictions mixed: every other item right (accuracy
+    1/2, auc 1/2; at spearman the first six, rho 0). A lane that answers one
+    class has no permutation spread, and the rule refuses a permitted
+    deviation from none."""
+    half = _twelve(6) if SCORE == "spearman" else [
+        (predicted(i % 2 == 0, g), g) for i, g in enumerate(GOLDS)]
+    m = measure.evaluate_rows(rows(half, _twelve(6)))
     assert m["criterion_1_pass"] is False
 
 
@@ -112,23 +125,27 @@ def test_missing_predictions_withhold_the_verdict():
 
 
 def test_null_out_of_band_withholds_the_verdict():
-    """A registered band: a null lane far off its target withholds the verdict.
-    A registered null order without a band: there is no band to leave, and
-    the null's score raises the bar past the registered lane."""
+    """A permitted deviation, registered or computed in the run: a null lane
+    far off its target withholds the verdict. A registered null order
+    without one: there is no interval to leave, and the null's score raises
+    the bar past the registered lane."""
     m = measure.evaluate_rows(rows(_twelve(12), _twelve(12)))
-    if measure.CONFIG.null_band is None:
+    if ORDERED_NULL and measure.CONFIG.null_band is None:
         assert m["quality_check_2_pass"] is True and m["criterion_1_pass"] is False
     else:
         assert m["quality_check_2_pass"] is False and m["criterion_1_pass"] is None
 
 
 def test_only_a_registered_null_order_goes_without_a_band():
-    """[quality-check-2] owes a band unless the script registers a null order
-    and the null rows name their donors: then the null's score plus margin
-    is the bar. Null rows without donors — every null row when no order is
-    registered — are refused without a band."""
+    """[quality-check-2] owes a permitted deviation unless the script
+    registers a null order and the null rows name their donors: then the
+    null's score plus margin is the bar. Null rows without donors are
+    refused without one. With the seeded permuted null the run computes it,
+    so nothing is registered to drop."""
     from dataclasses import replace
 
+    if PER_RUN:
+        return
     no_band = replace(measure.CONFIG, null_band=None)
     kept = rows(_twelve(12), _twelve(6))
     without_donors = [{k: v for k, v in r.items() if k != "gold_of"} for r in kept]
@@ -198,7 +215,7 @@ def test_a_lane_exactly_at_null_plus_margin_passes():
     expectation = PERMUTED_NULL and not ORDERED_NULL
     margin, at, below, null = ((1.0, 12, 11, 6) if SCORE == "spearman"
                                else (0.25, 9, 8, 5) if expectation else (0.25, 8, 7, 5))
-    cfg = replace(measure.CONFIG, at_least=None, margin=margin, null_band=0.25)
+    cfg = replace(measure.CONFIG, at_least=None, margin=margin, **BAND)
     assert measure.evaluate_rows(rows(_twelve(at), _twelve(null)), cfg)["criterion_1_pass"] is True
     assert measure.evaluate_rows(rows(_twelve(below), _twelve(null)), cfg)["criterion_1_pass"] is False
 
@@ -211,7 +228,7 @@ def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
     from dataclasses import replace
 
     bar, at, below = (1.0, 12, 11) if SCORE == "spearman" else (0.75, 9, 8)
-    cfg = replace(measure.CONFIG, margin=None, at_least=bar, null_band=0.25)
+    cfg = replace(measure.CONFIG, margin=None, at_least=bar, **BAND)
     for null in (6,) if SCORE == "spearman" else (5, 7):
         m = measure.evaluate_rows(rows(_twelve(at), _twelve(null)), cfg)
         assert m["criterion_1_threshold"] == bar and m["criterion_1_pass"] is True

@@ -1767,20 +1767,22 @@ class Exp(unittest.TestCase):
     def test_the_stamped_estimator_test_serves_a_registered_null_order(
         self,
     ) -> None:
-        """An apply that registers a null order (`NULL_ORDER`) and no band:
-        the stamped test's null rows name their donors as the run's do, so
-        every test runs, the band tests only where a band is registered.
-        Null rows without donors would raise "registers no null_band"
+        """An apply that registers a null order (`NULL_ORDER`) and no
+        permitted deviation: the stamped test's null rows name their donors
+        as the run's do, so every test runs, the deviation tests only where a
+        reasoned null_band is registered; the calibration rule, which only the
+        seeded permuted null uses, goes
         (docs/notes/2026-11-01-registered-null-order.md). The twins: with a
-        band beside the order it passes too; without the order, the same
-        missing band is refused."""
+        reasoned null_band beside the order it passes too; without the order
+        and without the rule, the seeded null's missing rule is refused."""
         root, area = self._stamped_estimator_lab("apply")
         proto = area / "PROTOCOL-foo-bar.md"
         script = area / "scripts" / "01_measure.py"
         band = (
-            "constants = { null_band = 0.1, null_band_quantile = 0.99, "
-            "null_permutations = 200 }\n"
+            "constants = { null_band_quantile = 0.99, null_permutations = 200, "
+            "null_band_seed = 1 }\n"
         )
+        reasoned = "constants = { null_band = 0.1 }\n"
         no_order = "NULL_ORDER: Path | None = None"
         stamped_proto = proto.read_text(encoding="utf-8")
         stamped_script = script.read_text(encoding="utf-8")
@@ -1796,7 +1798,7 @@ class Exp(unittest.TestCase):
         for with_band in (False, True):
             with self.subTest(band=with_band):
                 proto.write_text(
-                    stamped_proto if with_band else stamped_proto.replace(band, ""),
+                    stamped_proto.replace(band, reasoned if with_band else ""),
                     encoding="utf-8",
                 )
                 r = self._run_stamped_test(root)
@@ -1810,7 +1812,7 @@ class Exp(unittest.TestCase):
         proto.write_text(stamped_proto.replace(band, ""), encoding="utf-8")
         r = self._run_stamped_test(root)
         self.assertEqual(r.returncode, 1, r.stdout)
-        self.assertIn("registers no null_band", r.stdout)
+        self.assertIn("computed per run", r.stdout)
 
     def test_the_stamped_area_test_holds_the_registered_null_band(self) -> None:
         """AGENTS.md calls the stamped promise numbers examples to set, so

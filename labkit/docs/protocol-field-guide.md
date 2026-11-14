@@ -402,12 +402,14 @@ result is only a plan.
   A filter that quietly loses the hard cases makes every score look better.
 - **Meaning of the gold label †:** judge it on the rendered example, not on
   the definition.
-- **Noise ceiling → threshold †:** calibrate bands on the null lane, never
-  on the registered lane before the freeze.
-  - At apply, run `--calibrate-null`. It permutes the gold with the
-    predictions fixed. [quality-check-2] registers the rule beside the band
-    (`null_band_quantile` over `null_permutations`). `--write` registers
-    the band before the first measurement.
+- **Noise ceiling → threshold †:** calibrate the permitted deviation on
+  the null lane or on permuted gold, never by scoring the registered lane
+  against its gold before the freeze.
+  - At apply, [quality-check-2] registers the rule, not the value
+    (`null_band_quantile` over `null_permutations`, seeded by
+    `null_band_seed`). Each run permutes the gold with its own predictions
+    fixed and keeps the permitted deviation as `quality_check_2_null_band`.
+    `--calibrate-null` previews it.
   - At fit, the null lane refits on permuted labels in every fold, as
     the script's fit plan says (`null_refits` in the run's config: 2 per
     fold at low repeat cost, 5 at high). Their scores

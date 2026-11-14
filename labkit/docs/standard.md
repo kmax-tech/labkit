@@ -568,6 +568,7 @@ Sources: Kapoor & Narayanan 2023, *Patterns* 4(9), 100804, "A taxonomy of data l
 
 ## Changes
 
+- 2026-11-14 — LAB-035 Thresholds belong to the run, not to the measure: at apply with the estimator skeleton and the seeded permuted null, the null condition registers the calibration rule — the quantile, the number of permutations and a calibration seed apart from the run's seed — and each run computes its permitted deviation from its own predictions and items and keeps it with its metrics. Before, the stamp registered the value computed on the first measurement's predictions, and a later run, a repaired predictor's included, was compared with that value. The rule already asked for the rule and not the value; the stamp and the skeleton now hold it so for every run. A protocol registered under the earlier stamp still reads and is judged with the skeleton it was stamped with. The version stays.
 - 2026-11-12 — LAB-015 Preflight audit before freezing: the decision on a claim the report review names is built (`labkit-audit --report-review REPORT --decide N false-positive`, confirmed by `--review --record <report review>`); the paragraph on the second auditor states it in place of "That decision is not built". The principle is unchanged.
 
 Dated changes that alter no rule; a change to a rule or a field is the next version of the standard.

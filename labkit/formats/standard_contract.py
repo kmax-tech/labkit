@@ -279,7 +279,6 @@ NO_RUN_FLAGS = (
     "--eval-only",
     "--audit",
     "--calibrate-null",
-    "--write",
 )
 
 
