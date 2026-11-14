@@ -647,7 +647,9 @@ def band_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int,
     q, k, seed = rule
     if k < 1 or not pairs:
         raise ValueError(f"band_by_rule(): {k} permutation(s) of {len(pairs)} labelled item(s)")
-    ordered = sorted(pairs, key=lambda x: str(x[0]))
+    # the whole triple decides the order: ids that print alike (10 and "10",
+    # a duplicate) must not leave it to the input's order
+    ordered = sorted(pairs, key=lambda x: (str(x[0]), repr(x[1]), repr(x[2])))
     preds = [p for _, p, _ in ordered]
     golds = [g for _, _, g in ordered]
     target = permutation_expectation(cfg.score, list(zip(preds, golds)))
@@ -710,8 +712,10 @@ def null_plan(cfg: MeasureConfig) -> str:
     predictor), else "registered". Raises ValueError for a registration
     that contradicts it: per run with `null_band` registered or the rule
     incomplete; registered with the rule's constants (they would calibrate
-    nothing); [criterion-2] registered anywhere but per run (its comparison
-    threshold needs the run's permutation quantile)."""
+    nothing), or without null_band where it is owed (fit, a fixed null
+    predictor; a NULL_ORDER may go without one); [criterion-2] registered
+    anywhere but per run (its comparison threshold needs the run's
+    permutation quantile)."""
     per_run = KIND == "apply" and NULL_ORDER is None and make_null_predictor(cfg.seed) is None
     if per_run:
         if cfg.null_band is not None:
@@ -727,6 +731,9 @@ def null_plan(cfg: MeasureConfig) -> str:
     if band_rule(cfg) is not None:
         raise ValueError(f"[quality-check-2] registers a calibration rule, and with {where} there is no "
                          "permutation spread of these predictions — register a reasoned null_band instead")
+    if cfg.null_band is None and NULL_ORDER is None:
+        raise ValueError(f"[quality-check-2] registers no null_band, and with {where} the permitted "
+                         "deviation is a registered, reasoned value — register null_band")
     if cfg.chance_criterion:
         raise ValueError(f"[criterion-2] compares with a permutation quantile, and with {where} there "
                          "is none — drop [criterion-2] from the block")
@@ -735,7 +742,9 @@ def null_plan(cfg: MeasureConfig) -> str:
 
 def null_check(cfg: MeasureConfig) -> None:
     """`null_plan` before the run opens, as SystemExit: evaluate_rows refuses
-    the same, but only after every prediction is spent."""
+    the same registrations by the rows' shape, but only after every
+    prediction is spent. Not covered here: predictions that give no
+    permutation spread, which only the run's rows show."""
     try:
         null_plan(cfg)
     except ValueError as exc:

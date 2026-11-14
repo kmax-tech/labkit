@@ -231,6 +231,87 @@ class ApplySkeleton(unittest.TestCase):
             m["quality_check_2_null_band"],
         )
 
+    @staticmethod
+    def rich_rows(measure) -> list[dict]:
+        """Forty items with continuous gold and noisy predictions (spearman),
+        and the seeded null lane: fine enough that the rows' order, the
+        seed and the quantile's rank each move the permitted deviation."""
+        import random as _random
+
+        rng = _random.Random(3)
+        golds = [rng.uniform(0, 5) for _ in range(40)]
+        preds = [g + rng.gauss(0, 2) for g in golds]
+        donors = list(range(40))
+        rng.shuffle(donors)
+        reg = [
+            measure.lane_row("registered", {"id": f"i{i}"}, p, g)
+            for i, (p, g) in enumerate(zip(preds, golds))
+        ]
+        null = [
+            measure.lane_row("null", {"id": f"i{i}"}, p, golds[d], gold_of=f"i{d}")
+            for i, (p, d) in enumerate(zip(preds, donors))
+        ]
+        return reg + null
+
+    def test_the_permitted_deviation_holds_on_fine_grained_data(self):
+        """On forty continuous items, the exact quantile: the rows' order and
+        the run's seed leave it as it is, the calibration seed moves it, and
+        it is the rule's exact rank (the 198th of 200 deviations), where the
+        neighbouring ranks differ, so an off-by-one shows. The kept value is
+        it rounded up to two places."""
+        _, measure = self.measure_module("apply")
+        cfg = replace(measure.CONFIG, score="spearman")
+        rows = self.rich_rows(measure)
+        reg = [
+            (r["item"], r["pred"], r["gold"]) for r in rows if r["lane"] == "registered"
+        ]
+        rule = (0.99, 200, cfg.null_band_seed)
+        held = measure.band_by_rule(cfg, reg, rule)
+        self.assertEqual(
+            measure.band_by_rule(cfg, list(reversed(reg)), rule)["band"], held["band"]
+        )
+        self.assertEqual(
+            measure.band_by_rule(replace(cfg, seed=7), reg, rule)["band"], held["band"]
+        )
+        self.assertNotEqual(
+            measure.band_by_rule(cfg, reg, (0.99, 200, 2))["band"], held["band"]
+        )
+        off = sorted(abs(s - held["target"]) for s in held["null_scores"])
+        self.assertEqual(held["band"], off[197])
+        self.assertNotEqual(off[196], off[197])
+        self.assertNotEqual(off[198], off[197])
+        value = measure.evaluate_rows(list(reversed(rows)), replace(cfg, seed=7))[
+            "quality_check_2_null_band"
+        ]
+        self.assertEqual(value, math.ceil(off[197] * 100) / 100)
+
+    def test_the_null_check_interval_is_inclusive(self):
+        """The null draw exactly at the permitted deviation from its target
+        passes; a hair inside the draw's distance fails."""
+        _, measure = self.measure_module("apply")
+        rows = self.chance_rows(
+            measure, wrong=2, null_correct=10
+        )  # null 10/16, target 1/2
+        for deviation, passed in ((0.125, True), (0.12, False)):
+            with mock.patch.object(measure, "run_null_band", return_value=deviation):
+                self.assertIs(
+                    measure.evaluate_rows(rows)["quality_check_2_pass"], passed
+                )
+
+    def test_the_evaluation_refuses_a_rule_without_a_permutation_spread(self):
+        """Null rows without donors (fit, a fixed null predictor) under a
+        registered calibration rule: refused in the evaluation too, not only
+        before the run. And a fit or fixed null without null_band is refused
+        before the run opens, not after its fits."""
+        _, measure = self.measure_module("apply")
+        rows = self.chance_rows(measure, wrong=2, null_correct=8)
+        fitted = [{k: v for k, v in r.items() if k != "gold_of"} for r in rows]
+        with self.assertRaisesRegex(ValueError, "registers a calibration rule"):
+            measure.evaluate_rows(fitted)
+        _, fit = self.measure_module("fit")
+        with self.assertRaisesRegex(SystemExit, "registers no null_band"):
+            fit.null_check(replace(fit.CONFIG, null_band=None))
+
     def test_the_rule_is_registered_whole_and_null_band_is_not_registered_beside_it(
         self,
     ):

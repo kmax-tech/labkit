@@ -62,6 +62,10 @@ report. Use the actual kind and any model options the task needs.
 **Allowed changes:** fill the scripts and area tests. Test the functions
 that produce numbers with independently checked examples. A local `apply`
 uses an unchanged predictor; declare its loaded artifacts as run inputs.
+With its seeded permuted null, the null condition registers the calibration
+rule (`null_band_quantile`, `null_permutations`, `null_band_seed`), not a
+value: each run computes its permitted deviation from its own predictions
+and keeps it as `quality_check_2_null_band`; `--calibrate-null` previews it.
 
 **Command and output:** edit the code, run the area tests, then
 `code-check AREA`. That command reads the code and promises and writes

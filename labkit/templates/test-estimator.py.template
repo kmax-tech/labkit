@@ -140,11 +140,15 @@ def test_only_a_registered_null_order_goes_without_a_band():
     """[quality-check-2] owes a permitted deviation unless the script
     registers a null order and the null rows name their donors: then the
     null's score plus margin is the bar. Null rows without donors are
-    refused without one. With the seeded permuted null the run computes it,
-    so nothing is registered to drop."""
+    refused without one. With the seeded permuted null the run computes it
+    from its own predictions, and a null_band registered beside the rule is
+    refused: one value, not two."""
     from dataclasses import replace
 
     if PER_RUN:
+        assert "quality_check_2_null_band" in measure.evaluate_rows(rows(_twelve(12), _twelve(6)))
+        with pytest.raises(ValueError, match="registers null_band"):
+            measure.evaluate_rows(rows(_twelve(12), _twelve(6)), replace(measure.CONFIG, null_band=0.1))
         return
     no_band = replace(measure.CONFIG, null_band=None)
     kept = rows(_twelve(12), _twelve(6))
