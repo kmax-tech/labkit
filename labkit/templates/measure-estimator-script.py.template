@@ -92,12 +92,12 @@ Measurement contract:
     verdict (None).
   - [criterion-2], only where the protocol registers it (the apply stamp
     offers it commented out): the registered lane's score exceeds the
-    permutation expectation plus `null_band` — above chance at a
-    false-alarm level of at most (1 + k − ceil(q·k))/(k + 1), 3/201 with
-    the stamp's rule; nothing about size. Apply with the permuted null and a
-    registered band rule only; elsewhere the band is no permutation
-    quantile and evaluate_rows refuses. No verdict when a quality check
-    fails (docs/notes/2026-11-14-apply-chance-comparison.md).
+    permutation expectation plus `null_band` — above the registered null
+    band; nothing about size. Apply with the permuted null and a registered
+    band rule only; elsewhere the band is no permutation quantile, and
+    chance_check refuses before the run opens (evaluate_rows by the rows'
+    shape). No verdict when a quality check fails. What the comparison
+    licenses beyond that: docs/notes/2026-11-14-apply-chance-comparison.md.
   - A withheld label is no label: the prepare step writes `gold: null` for
     the unlabelled split (a test file storing 0 or -999 is a placeholder),
     and a lane carrying an item without gold is never scored — a criterion
@@ -726,6 +726,24 @@ def band_check(cfg: MeasureConfig, items: list[dict]) -> list | None:
     return preds
 
 
+def chance_check(cfg: MeasureConfig) -> None:
+    """[criterion-2]'s precondition, before the run opens: its band must be a
+    permutation quantile, so kind apply with the seed's permuted null — no
+    NULL_ORDER, no fixed null predictor. Raises SystemExit naming what is
+    registered instead; evaluate_rows refuses the same by the rows' shape,
+    but only after every prediction is spent. Nothing when criterion-2 is
+    not registered."""
+    if not cfg.chance_criterion:
+        return
+    fixed = make_null_predictor(cfg.seed) is not None
+    if KIND != "apply" or NULL_ORDER is not None or fixed:
+        raise SystemExit(
+            f"[criterion-2] compares with null_band as a permutation quantile, and this protocol "
+            f"has none (kind {KIND}, NULL_ORDER {'set' if NULL_ORDER is not None else 'none'}, "
+            f"fixed null predictor {'registered' if fixed else 'none'}) "
+            f"— drop [criterion-2] from the block before the first measurement")
+
+
 def chance_of(score: str, golds: list) -> Fraction | float:
     """The score an estimator that learned nothing is expected to reach, derived
     from the gold alone (LAB-037 Every anchor carries its target and rationale):
@@ -1039,6 +1057,7 @@ def main() -> None:
     # (`reseed`) — the seed passed here is not used.
     # [quality-check-2]'s band against its registered rule, before the run opens (a
     # started measurement binds the registration); its predictions are reused
+    chance_check(cfg)
     registered = band_check(cfg, items) if args.repeat_of is None else None
     budget_s, budget_note = timebox.seconds_of(PROTOCOL.read_text(encoding="utf-8"))
     print(f"fit plan: {cfg.n_folds} folds × (1 + {cfg.null_refits}) fits at repeat_cost {HEAD.repeat_cost!r}; {budget_note}"

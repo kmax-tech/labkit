@@ -8,6 +8,7 @@ from dataclasses import asdict, replace
 import importlib.util
 import io
 import pickle
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -512,6 +513,9 @@ class ApplySkeleton(unittest.TestCase):
         m = measure.evaluate_rows(far, on)
         self.assertIs(m["quality_check_2_pass"], False)
         self.assertIsNone(m["criterion_2_pass"])
+        m = measure.evaluate_rows(rows, replace(on, max_empty=-1))  # yield fails
+        self.assertIs(m["quality_check_1_pass"], False)
+        self.assertIsNone(m["criterion_2_pass"])
         plain = measure.evaluate_rows(rows, replace(on, chance_criterion=False))
         self.assertFalse([k for k in plain if k.startswith("criterion_2")])
 
@@ -534,10 +538,40 @@ class ApplySkeleton(unittest.TestCase):
         fitted = [{k: v for k, v in r.items() if k != "gold_of"} for r in rows]
         with self.assertRaisesRegex(ValueError, "permutation quantile"):
             measure.evaluate_rows(fitted, on)
+        # the same refusal before the run opens, so no prediction is spent
+        measure.chance_check(on)
+        measure.chance_check(replace(on, chance_criterion=False))
+        with (
+            mock.patch.object(measure, "make_null_predictor", return_value=mock.Mock()),
+            self.assertRaisesRegex(SystemExit, "fixed null predictor registered"),
+        ):
+            measure.chance_check(on)
+        with (
+            mock.patch.object(measure, "NULL_ORDER", Path("null_order.json")),
+            self.assertRaisesRegex(SystemExit, "NULL_ORDER set"),
+        ):
+            measure.chance_check(on)
+        with (
+            mock.patch.object(measure, "KIND", "fit"),
+            self.assertRaisesRegex(SystemExit, "kind fit"),
+        ):
+            measure.chance_check(on)
+
+    def area_tests(self) -> subprocess.CompletedProcess:
+        """The stamped area's own tests, run as finalize runs them."""
+        (test,) = self.root.glob("tests/test_01_*.py")
+        return subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(test)],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+        )
 
     def test_the_apply_stamp_offers_criterion_2_commented_out(self):
         """The stamp registers no criterion-2 (no duty); its table, once
-        uncommented, is what the skeleton reads as registered."""
+        uncommented, is what the skeleton reads as registered, and the area's
+        own tests stay green either way — their null rows carry `gold_of`
+        as the run's do."""
         from labkit.formats import promises
 
         area, measure = self.measure_module("apply")
@@ -547,6 +581,8 @@ class ApplySkeleton(unittest.TestCase):
         self.assertNotIn("criterion-2", promises.load(protocol).by_id())
         self.assertNotIn("criterion-2", promises.ids_in_prose(text))
         self.assertFalse(measure.CONFIG.chance_criterion)
+        plain = self.area_tests()
+        self.assertEqual(plain.returncode, 0, plain.stdout)
         table = ("# [[promise]]", "# id =", "# key =", "# sentence =", "# scope =")
         uncommented = "\n".join(
             line[2:] if line.startswith(table) else line for line in text.split("\n")
@@ -564,6 +600,8 @@ class ApplySkeleton(unittest.TestCase):
         self.addCleanup(sys.modules.pop, name, None)
         spec.loader.exec_module(module)
         self.assertTrue(module.CONFIG.chance_criterion)
+        registered = self.area_tests()
+        self.assertEqual(registered.returncode, 0, registered.stdout)
 
     def test_the_scored_lanes_are_the_ones_finalize_reads(self):
         # the skeleton's lane names and finalize's null-lane station must

@@ -8,10 +8,11 @@ estimator itself is not needed here, only `evaluate_rows()`. The check runs
 it on synthetic rows in the run's real shape — perfect effect fires [criterion-1], a
 null-like registered lane stays silent, missing predictions fail [quality-check-1] and
 withhold the verdict, a null lane off its target fails [quality-check-2] where it
-registers a band. When the script registers a null order (`NULL_ORDER`, apply)
+registers a band. At apply with a permuted null (no fixed null predictor)
 the null rows name the donor of their label (`gold_of`) as the run's do: the
-bar is then the null's score plus margin, and a band is owed only where
-[quality-check-2] registers one. [criterion-1]'s bar is held in both forms,
+bar is then the permutation expectation plus margin — under a registered null
+order (`NULL_ORDER`) the null's score plus margin, and a band is owed only
+where [quality-check-2] registers one. [criterion-1]'s bar is held in both forms,
 whichever the protocol registers: `at_least`, a bar the task states, is the
 bar as written whatever the null scores; `margin` a lead over the null. The rows below
 serve SCORE = "accuracy" (two labels), "auc" (0/1 gold, a score per item:
@@ -41,8 +42,10 @@ SCORE = measure.CONFIG.score
 POS, NEG = ("pos", "neg") if SCORE == "accuracy" else (1, 0)
 #: the twelve items' gold: half of each class, at spearman the values 0 … 11
 GOLDS = [float(i) for i in range(12)] if SCORE == "spearman" else [POS] * 6 + [NEG] * 6
-#: a registered null order: its null rows carry `gold_of`, its band is optional
+#: a registered null order: its band is optional, its score the bar's base
 ORDERED_NULL = measure.NULL_ORDER is not None
+#: apply without a fixed null predictor: the null rows carry `gold_of`, as apply_rows writes them
+PERMUTED_NULL = measure.KIND == "apply" and measure.make_null_predictor(measure.CONFIG.seed) is None
 #: [criterion-1] registers a bar the task states (`at_least`), not a lead over the null (`margin`)
 ABSOLUTE = measure.CONFIG.at_least is not None
 
@@ -65,13 +68,13 @@ def test_the_score_has_cases_here():
 
 def rows(registered: list[tuple], null: list[tuple], test: int = 0) -> list[dict]:
     """Synthetic kept rows in the run's shape: (pred, gold) per scored lane,
-    plus TEST rows of the test lane (a prediction, no gold). Under a registered
-    null order each null row names the item whose label it carries (`gold_of`),
-    as `apply_rows` writes it."""
+    plus TEST rows of the test lane (a prediction, no gold). With a permuted
+    null each null row names the item whose label it carries (`gold_of`), as
+    `apply_rows` writes it."""
     out = []
     for lane, pairs in (("registered", registered), ("null", null)):
         for i, (pred, gold) in enumerate(pairs):
-            donor = {"gold_of": str(i)} if lane == "null" and ORDERED_NULL else {}
+            donor = {"gold_of": str(i)} if lane == "null" and PERMUTED_NULL else {}
             out.append({"id": f"{lane}:{i}", "lane": lane, "item": str(i), "fold": 0,
                         "pred": pred, "gold": gold, **donor})
     out += [{"id": f"test:{i}", "lane": "test", "item": f"t{i}", "fold": None,
@@ -186,11 +189,15 @@ def test_the_formula_reads_its_thresholds_from_the_config():
 
 def test_a_lane_exactly_at_null_plus_margin_passes():
     """8/12 against 5/12 + 0.25 is exactly the bar (accuracy and auc alike,
-    `predicted`), at spearman rho 1 against 0 + 1: in floats it fell one ulp
-    short (2026-10-14); the scores are exact, so it passes."""
+    `predicted`) — at apply with a permuted null 9/12 against the expectation
+    1/2 + 0.25, the null draw only the anchor —, at spearman rho 1 against
+    0 + 1: in floats it fell one ulp short (2026-10-14); the scores are exact,
+    so it passes."""
     from dataclasses import replace
 
-    margin, at, below, null = (1.0, 12, 11, 6) if SCORE == "spearman" else (0.25, 8, 7, 5)
+    expectation = PERMUTED_NULL and not ORDERED_NULL
+    margin, at, below, null = ((1.0, 12, 11, 6) if SCORE == "spearman"
+                               else (0.25, 9, 8, 5) if expectation else (0.25, 8, 7, 5))
     cfg = replace(measure.CONFIG, at_least=None, margin=margin, null_band=0.25)
     assert measure.evaluate_rows(rows(_twelve(at), _twelve(null)), cfg)["criterion_1_pass"] is True
     assert measure.evaluate_rows(rows(_twelve(below), _twelve(null)), cfg)["criterion_1_pass"] is False
