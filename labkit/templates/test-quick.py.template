@@ -35,7 +35,8 @@ KNOWN_METRICS: dict = {}
 def test_known_rows_give_the_known_number():
     assert len(KNOWN_ROWS) >= 1 and measure.metric_key() in KNOWN_METRICS, (
         "fill KNOWN_IDS, KNOWN_ROWS and KNOWN_METRICS with a case checked by hand, "
-        "its numbers worked out from the rows, never copied from a run's output"
+        "its numbers found apart from the run (by hand or from an independent "
+        "source), never copied from a run's output"
     )
     metrics = measure.evaluate_rows(KNOWN_ROWS, KNOWN_IDS)
     measure.kept_number(metrics)  # a number, never a flag

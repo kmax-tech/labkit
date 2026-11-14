@@ -663,8 +663,9 @@ def tell_test_run(
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
             f"`.venv/bin/python -m pytest {files}` passes; a test's expected "
-            f"values are worked out by hand, never copied from a run's output, "
-            f"which tests only that the code repeats itself",
+            f"values are found apart from the run under test (by hand or from "
+            f"an independent source), never copied from a run's output, which "
+            f"tests only that the code repeats itself",
             rule=rule,
         )
 

@@ -1,6 +1,6 @@
 # Usage round 24: recurring agent errors replayed against the guidance
 
-2026-11-15. Step 4 of the plan under task 7 in `TODO.md`: the recurring agent errors of [the round's findings](2026-11-13-usage-round-24-findings.md) (group 5) checked on concrete cases for missing or misleading guidance, and the environment problems (group 6) kept apart. Replayed with real commands in a freshly stamped count-task lab (`usability stage --task count`) plus a second area stamped as task 34's agents did (`labkit-init exp hrv --kind compute --repeat-cost low`), labkit `6236c799`. Each case: what the agents did (trace readings in labkit-paper, area 24, `output/trace-readings/`), what labkit printed at that point, and why.
+2026-11-15. Step 4 of the plan under task 7 in `TODO.md`: the recurring agent errors of [the round's findings](2026-11-13-usage-round-24-findings.md) (group 5) checked on concrete cases for missing or misleading guidance, and the environment problems (group 6) kept apart. Replayed with real commands in a freshly stamped count-task lab (`usability stage --task count`) plus a second area stamped as task 34's agents did (`labkit-init exp hrv --kind compute --repeat-cost low`), labkit `6236c799`. Each case: what the agents did (trace readings in labkit-paper, area 24, `output/trace-readings/`), what labkit printed at that point, and the gap in the guidance this shows. The replay shows the gap, not that it caused the agents' errors: whether closing it changes what agents do is not measured.
 
 ## 1. Stated values not registered before the first measurement
 
@@ -8,7 +8,7 @@ Agents: no task-34 agent registered the stated values (760 ms and 85 ms within 1
 
 What labkit says before the first measurement: `labkit-next` names the missing fields and "if the task asks for a report file, register it now"; `protocol-fill --list` and `protocol-check --contract` name `[kept]` but not `[reference]`; the stamped protocol has no `[reference]` placeholder; runlog's refusal of an uncommitted registration names neither the report nor `[reference]`. The rule stands only in the agent guide (`labkit/docs/agent-guide.md:55`) and in one sentence of the stamped `AGENTS.md`. One agent read the guide with `| head -50` and stopped five lines short of it.
 
-Cause: guidance missing at the step the agent reads. Not a gate defect: once a `[reference]` was entered after the first measurement, finalize held it as it should.
+Gap shown: guidance missing at the step the agent reads. Not a gate defect: once a `[reference]` was entered after the first measurement, finalize held it as it should.
 
 ## 2. The hand-checked case filled from the run
 
@@ -16,7 +16,7 @@ Agents: all six task-34 agents filled `KNOWN_ROWS` / `KNOWN_METRICS` with their 
 
 What labkit says: nothing asks for the test before the run. The first demand comes after it, from finalize and `labkit-next`: "test_… failed … the area's own checks of evaluate() … no longer hold", next "fix the code (or a test that asks the wrong thing) until … passes". The run's values are on screen at that moment. The stub's own assertion says "with a case checked by hand"; "never by calling the code" stands only in a comment above it.
 
-Cause: guidance comes after the run and reads as a repair ("no longer hold", "fix the code"), not as a test that was never filled.
+Gap shown: guidance comes after the run and reads as a repair ("no longer hold", "fix the code"), not as a test that was never filled.
 
 ## 3. A finished report never registered
 
@@ -24,11 +24,11 @@ Agents: sts512 b-r1 and task 34 b-r3 wrote REPORT.md without `report = "REPORT.m
 
 What labkit says: `labkit-next` names the entry before the first measurement; runlog's refusal does not, and task 34 b-r3 first called `labkit-next` after measuring.
 
-Cause: the hint stands in one of the two places an agent meets before the first run.
+Gap shown: the hint stands in one of the two places an agent meets before the first run.
 
 ## Repair: one hint, both places
 
-`standard_contract.first_measurement_hint` holds the sentences, and both `labkit-next` (`next_step._before_first_hint`) and runlog's first step (`start_check._first_step`) end with it, before the first measurement only: the report entry while none is registered; for a computation, a stated value as `[reference]` while none is registered, and the hand-checked case in `tests/test_<NN>_<name>.py` filled now, by hand. A failing area test's way out adds that expected values are worked out by hand, never copied from a run's output; finalize's sentence says "do not hold" instead of "no longer hold"; the stamped quick test's message says the same. No new check and no new refusal (TODO: "Daraus nicht automatisch neue Sperren ableiten").
+`standard_contract.first_measurement_hint` holds the sentences, and both `labkit-next` (`next_step._before_first_hint`) and runlog's first step (`start_check._first_step`) end with it, before the first measurement only: the report entry while none is registered; for a computation, a stated value as `[reference]` while none is registered, and the hand-checked case in `tests/test_<NN>_<name>.py` filled now, its expected values found apart from the run (by hand or from an independent source). The report and the reference sentences are conditional ("if the task asks …", "if the task states a value …"), as not every task asks for either; the test sentence is not, as finalize runs every computation's area test. A failing area test's way out adds that expected values are found apart from the run under test, never copied from a run's output; finalize's sentence says "do not hold" instead of "no longer hold"; the stamped quick test's message says the same. No new check and no new refusal (TODO: "Daraus nicht automatisch neue Sperren ableiten"); the ways out for a gap found after the first measurement (a successor with `[replaces]`, the report entered later, a repaired test) are unchanged.
 
 Replayed after the change, same lab: fresh area — all three sentences in `labkit-next`; filled but uncommitted — runlog's refusal carries them, and `labkit-next`, which shows runlog's step there, tells them once (the first replay printed them twice; fixed, `tests/test_repair_paths.py` holds the count); `[reference]` registered — that sentence drops; after the first measurement — none. Tests: `tests/test_first_measurement_hint.py`, `test_next_step.TheChain`, `test_adoption_order.FirstStepBeforeARun`.
 

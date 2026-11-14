@@ -391,11 +391,14 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
 def first_measurement_hint(protocol: Path, text: str) -> str:
     """The sentences a step before the first measurement adds for what
     only the task can say and the run cannot change afterwards, each
-    beginning "; ": with no report registered, how to register one (the
-    target in the first measurement's commit creates a lasting duty; a
-    later one is allowed and creates none); for a computation, how to
-    register a value the task states as the head's `[reference]` when none
-    is, and that the area test's hand-checked case is filled now, by hand.
+    beginning "; ": with no report registered, how to register one if the
+    task asks for it (the target in the first measurement's commit creates
+    a lasting duty; a later one is allowed and creates none); for a
+    computation, how to register a value the task states as the head's
+    `[reference]` when none is, and that the area test's hand-checked case
+    is filled now, its expected values found apart from the run. The first
+    two are conditional, as not every task asks for them; the third is not,
+    as finalize runs the area test of every computation.
     "" without a stamped id. The caller says whether a first measurement
     exists; after one, none of this is to be added. Reads TEXT, writes
     nothing."""
@@ -420,8 +423,8 @@ def first_measurement_hint(protocol: Path, text: str) -> str:
         nn, slug = split_area_name(protocol.parent.name)
         hint += (
             f"; fill the hand-checked case in `tests/{area_test_stem(nn, slug)}.py` "
-            f"before you measure, with values you worked out by hand from its rows "
-            f"— a value copied from a run's output tests only that the code "
-            f"repeats itself"
+            f"before you measure, its expected values found apart from the run — "
+            f"by hand from its rows or from an independent source; a value "
+            f"copied from a run's output tests only that the code repeats itself"
         )
     return hint
