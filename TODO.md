@@ -55,6 +55,12 @@ Der Autor möchte Exploration innerhalb eines Protokolls ermöglichen: Frage, Ve
 
 [Umsetzungsplan](docs/notes/2026-11-14-exploratory-workflow-plan.md): zuerst den Vertrag und die minimale Speicherung des jeweiligen Laufstands konkretisieren, dann Pflichten trennen, explorative Läufe einzeln binden, Audit und Bericht auf diesen Stand beziehen und den Übergang zur Bestätigung absichern. Als zusammenhängende Vertragsänderung versionieren und dokumentieren. **Noch nicht gebaut; eigener Folgeschritt nach den priorisierten Nutzungsreparaturen.** Der Auftrag hier ist TODO und Planung, kein Versuchsstart, Release oder Rollout. Die bereits beschlossene gezielte Wirkung von „nicht beurteilbar“ bleibt ein eigener Arbeitspunkt.
 
+### Geplant, noch nicht umgesetzt — Zufallsvergleich verständlich beschreiben (2026-11-14)
+
+„Band“ bezeichnet in den bisherigen Texten wechselnd den Wert `null_band`, den Bereich um den Zufallserwartungswert und die obere Vergleichsschwelle. [Eigener Plan](docs/notes/2026-11-14-null-band-wording-plan.md): Abweichungsgrenze, zulässigen Bereich und Vergleichsschwelle getrennt erklären; zentrale Kurzdefinition im Agentenleitfaden, Herleitung und Grenzen in der Entwicklernotiz. Feldhilfe, erzeugte Protokolltexte, Skelett-Erklärungen und Meldungen aufeinander abstimmen; apply-Kalibrierung, begründeten fit-Wert und die Item-Anzahl des Modellskeletts unterscheiden. Die Feldüberschrift „Noise ceiling → threshold“ fachlich prüfen und vor einer Umbenennung alle Leser erfassen.
+
+Der Auftrag hier ist TODO und Planung. Der spätere Schritt präzisiert Texte bei unverändertem Feldnamen und unveränderter Rechnung; bestehende Registrierungen nicht umschreiben. Eine Feldumbenennung und die laufbezogene Kalibrierung sind eigene Vertragsfragen. Keine neue Signifikanzbehauptung. Erzeugte Formulare und tatsächliche Meldungen lesen, betroffene Vergleichsdateien und Tests nachziehen. Die priorisierten Nutzungsreparaturen behalten ihre Reihenfolge.
+
 ## Offene Entscheidungen — kein Bauauftrag
 
 1. **Integrität von Laufausgaben und Audit-Belegen.** Zwei getrennte Verträge klären: Woher muss eine berichtete Zahl stammen, und welche Entscheidungen, Ergänzungen oder Korrekturen dürfen Belege verändern? Vor einem Vertrag zu Audit-Belegen die Änderungen lesen, die labkit selbst schreibt. Kein gemeinsamer pauschaler Unveränderlichkeitssatz; Grundsatz ist nachvollziehbare Herkunft. Bestehende Sperren bleiben bis zu einer ausdrücklichen Entscheidung bestehen. [Bisherige Einzelprüfungen](docs/notes/2026-11-11-open-assignments.md).
