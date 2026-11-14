@@ -29,7 +29,7 @@ class Head(unittest.TestCase):
                 h.preflight_audit,
             ),
             (
-                "0.28",
+                "0.29",
                 PID,
                 "exploratory",
                 "low",
@@ -121,12 +121,26 @@ class Head(unittest.TestCase):
 
     def test_other_standard_names_the_way_out(self):
         self.assertRejects(
-            head().replace('"0.28"', '"0.18"'), "reproduced with the labkit release"
+            head().replace('"0.29"', '"0.18"'), "reproduced with the labkit release"
         )
         # a protocol with runs is never offered the conversion
         self.assertRejects(
-            head().replace('"0.28"', '"0.18"'),
+            head().replace('"0.29"', '"0.18"'),
             "only a protocol not yet run may be updated",
+        )
+
+    def test_a_previous_standard_is_told_what_the_new_one_owes(self):
+        """A 0.28 protocol is refused with the one-line migration and what
+        0.29 adds: the second auditor for a limitation that leaves a promise
+        not assessable (LAB-015 Preflight audit before freezing)."""
+        old = head().replace('"0.29"', '"0.28"')
+        self.assertRejects(
+            old, 'from 0.24, 0.25, 0.26, 0.27 or 0.28: set standard = "0.29"'
+        )
+        self.assertRejects(
+            old,
+            "0.29 owes the second auditor for a limitation that leaves a promise "
+            "not assessable",
         )
 
     def test_no_block_or_no_table(self):
