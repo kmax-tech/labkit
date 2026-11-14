@@ -37,6 +37,28 @@ Not licensed in any case:
 
 sts512 for scale: the maximum over 200 permutations was 0.117 (attempt a-r2), the measurement 0.9225.
 
+## Open: the band at later measurements
+
+This concerns [quality-check-2]'s band comparison itself, not only `criterion-2`. Only the first measurement of a protocol is held to the band rule. After it, nothing ensures that the registered band belongs to a later run's predictions and items:
+
+- `band_check` returns early once a first measurement exists (`labkit/templates/measure-estimator-script.py.template:717`, "the band stands as registered"). This was a deliberate decision (`56e98995`, 2026-10-29): "After the first measurement nothing is checked: a repair changes the predictions while the registered band stands." It is pinned by `tests/test_apply_skeleton.py:279`.
+- The registered band cannot change after the first measurement (report-check refuses a changed constant).
+- The registration hold compares the protocol's texts — question, data field, exclusions, unit, kind — and lets a code change measured again under the same fields pass (`labkit/gates/registration_hold.py:274`).
+- From reading the code, nothing compares the items' or the predictor's digests of a later run with those of the first measurement. This was not reproduced with a run.
+
+So a later run with a repaired predictor, a changed predictor file or edited items under an unchanged protocol text is judged against a band calibrated on other predictions. Then [quality-check-2] holds its null draw to a spread that is not its own, and `criterion-2`'s threshold is not a quantile of this run's permutation distribution. Ways to decide, by the author:
+
+1. **Check the rule at every measurement:** recompute the band from the run's own predictions and items before the run opens, and refuse a mismatch. Since the band is frozen after the first measurement, a repair that moves the band then needs a new registration or a handover.
+2. **Record and compare:** each run records the band its own predictions give under the rule, and report-check or finalize compares it with the registered one, as a WARNING or BLOCKER. The measurement still runs, and the mismatch is visible at adoption.
+3. **Keep the current state and state the limit:** the band carries its meaning for the first measurement's predictions only; for a later run it is a registered constant.
+
 ## What is built
 
-The apply stamp carries, after [quality-check-2], a commented-out `[[promise]]` table `criterion-2`: "the registered SCORE exceeds the permutation expectation plus null_band". Uncommented, the skeleton reports `criterion_2_threshold` and `criterion_2_pass` (`MeasureConfig.chance_criterion`, set from the registered ids). Not registered, it reports neither, since intent-check would refuse a key that no promise registers. A failed quality check gives `criterion_2_pass` None, as for [criterion-1]. `chance_check` refuses a registered `criterion-2` before the run opens where the band is no permutation quantile. Making the comparison a duty, choosing another level, or extending it to fit would each be a separate decision.
+The comparison is offered in two places, both commented out; turning it on takes both steps:
+
+1. **Protocol:** after [quality-check-2] the apply stamp carries a commented-out `[[promise]]` table `criterion-2`: "the registered SCORE exceeds the permutation expectation plus null_band". Uncomment it and name the id, in brackets, in the Inference criterion field.
+2. **Skeleton:** uncomment the block between the `criterion-2` markers in `evaluate_rows` of `scripts/01_measure.py`. It reports `criterion_2_threshold` and `criterion_2_pass`; a failed quality check gives `criterion_2_pass` None, as for [criterion-1].
+
+Why the code is commented out too (decided by the author, 2026-11-14, after the review found it): with the key-writing lines active, code-check warned on every new fit and apply area of a key in the id namespace that no promise registers. Assembling the keys at run time to hide them would make code-check block a registered `criterion-2`, since it requires a key literal. Each step alone is held: the table without the code is a code-check BLOCKER (no script names the key), the code without the table a code-check WARNING and an intent-check BLOCKER at finalize. What stays active is the precondition: the registered table sets `MeasureConfig.chance_criterion`, and `chance_check` refuses before the run opens where the band is no permutation quantile.
+
+Making the comparison a duty, choosing another level, or extending it to fit would each be a separate decision.

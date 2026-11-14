@@ -495,15 +495,70 @@ class ApplySkeleton(unittest.TestCase):
             )
         return rows
 
+    def activate(self, area: Path, *, table: bool, code: bool) -> None:
+        """The two documented steps that turn the offered criterion-2 on:
+        TABLE uncomments its table in the protocol and names the id in the
+        Inference criterion field; CODE uncomments the block between the
+        criterion-2 markers in scripts/01_measure.py."""
+        if table:
+            protocol = next(area.glob("PROTOCOL-*.md"))
+            offered = (
+                "# [[promise]]",
+                "# id =",
+                "# key =",
+                "# sentence =",
+                "# scope =",
+            )
+            text = "\n".join(
+                line[2:] if line.startswith(offered) else line
+                for line in protocol.read_text(encoding="utf-8").split("\n")
+            )
+            named = text.replace(
+                "- **Inference criterion:** [criterion-1] ",
+                "- **Inference criterion:** [criterion-1] [criterion-2] <above the band> · ",
+                1,
+            )
+            self.assertNotEqual(named, text)
+            protocol.write_text(named, encoding="utf-8")
+        if code:
+            script = area / "scripts" / "01_measure.py"
+            out, inside = [], False
+            for line in script.read_text(encoding="utf-8").split("\n"):
+                if line.strip() in ("# --- criterion-2 begin", "# --- criterion-2 end"):
+                    inside = line.strip().endswith("begin")
+                elif inside:
+                    line = line.replace("# ", "", 1)
+                out.append(line)
+            script.write_text("\n".join(out), encoding="utf-8")
+
+    def reloaded(self, area: Path):
+        """The area's measure script imported afresh, under a unique name."""
+        name = f"chance_{id(self)}_{len(sys.modules)}"
+        spec = importlib.util.spec_from_file_location(
+            name, area / "scripts" / "01_measure.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        self.addCleanup(sys.modules.pop, name, None)
+        spec.loader.exec_module(module)
+        return module
+
     def test_criterion_2_holds_the_score_strictly_above_expectation_plus_band(self):
-        """The offered comparison with chance: 12 of 16 right is 0.75, the
-        expectation 1/2. With null_band 0.25 the score sits on the edge and
-        fails (strict); with 0.24 it passes. A failed quality check gives no
-        verdict. The twin: not registered, no criterion-2 key at all, since
-        intent-check refuses a key no promise registers."""
-        _, measure = self.measure_module("apply")
-        on = replace(measure.CONFIG, chance_criterion=True, null_band=0.25)
-        rows = self.chance_rows(measure, wrong=2, null_correct=8)
+        """The offered comparison with chance, both steps taken: 12 of 16
+        right is 0.75, the expectation 1/2. With null_band 0.25 the score
+        sits on the edge and fails (strict); with 0.24 it passes. A failed
+        quality check gives no verdict. The twin: the stamp as it is reports
+        no criterion-2 key at all."""
+        area, plain = self.measure_module("apply")
+        rows = self.chance_rows(plain, wrong=2, null_correct=8)
+        self.assertFalse(
+            [k for k in plain.evaluate_rows(rows) if k.startswith("criterion_2")]
+        )
+        self.activate(area, table=True, code=True)
+        measure = self.reloaded(area)
+        self.assertTrue(measure.CONFIG.chance_criterion)
+        on = replace(measure.CONFIG, null_band=0.25)
         m = measure.evaluate_rows(rows, on)
         self.assertEqual(m["criterion_2_threshold"], 0.75)
         self.assertIs(m["criterion_2_pass"], False)
@@ -516,8 +571,6 @@ class ApplySkeleton(unittest.TestCase):
         m = measure.evaluate_rows(rows, replace(on, max_empty=-1))  # yield fails
         self.assertIs(m["quality_check_1_pass"], False)
         self.assertIsNone(m["criterion_2_pass"])
-        plain = measure.evaluate_rows(rows, replace(on, chance_criterion=False))
-        self.assertFalse([k for k in plain if k.startswith("criterion_2")])
 
     def test_criterion_2_is_refused_where_the_band_is_no_permutation_quantile(self):
         """Without a registered band rule, at fit, and with a registered null
@@ -567,12 +620,34 @@ class ApplySkeleton(unittest.TestCase):
             text=True,
         )
 
-    def test_the_apply_stamp_offers_criterion_2_commented_out(self):
-        """The stamp registers no criterion-2 (no duty); its table, once
-        uncommented, is what the skeleton reads as registered, and the area's
-        own tests stay green either way — their null rows carry `gold_of`
-        as the run's do."""
+    def chance_findings(self, area: Path) -> list[tuple[str, str]]:
+        """code-check's (grade, text) findings that name criterion-2."""
+        from labkit.checks import code_check
+
+        protocol = next(area.glob("PROTOCOL-*.md"))
+        text = protocol.read_text(encoding="utf-8")
+        found = code_check.code_findings(
+            area, protocol, text, self.root, block_told=False
+        )
+        return [
+            (f.grade, f.text)
+            for f in found
+            if "criterion-2" in f.text or "criterion_2" in f.text
+        ]
+
+    def test_a_fit_area_gets_no_criterion_2_finding(self):
+        # the offered block is commented out in the skeleton both kinds share
+        area, _ = self.measure_module("fit")
+        self.assertEqual(self.chance_findings(area), [])
+
+    def test_the_apply_stamp_offers_criterion_2_in_two_steps(self):
+        """The stamp registers no criterion-2 and writes no key for it (no
+        duty, no standing warning). Each step alone is held by code-check —
+        the table without the code a BLOCKER, the code without the table a
+        WARNING —; both together are clean, and the area's own tests stay
+        green before and after."""
         from labkit.formats import promises
+        from labkit.formats.gate import BLOCKER, WARNING
 
         area, measure = self.measure_module("apply")
         protocol = next(area.glob("PROTOCOL-*.md"))
@@ -581,25 +656,25 @@ class ApplySkeleton(unittest.TestCase):
         self.assertNotIn("criterion-2", promises.load(protocol).by_id())
         self.assertNotIn("criterion-2", promises.ids_in_prose(text))
         self.assertFalse(measure.CONFIG.chance_criterion)
+        self.assertEqual(self.chance_findings(area), [])
         plain = self.area_tests()
         self.assertEqual(plain.returncode, 0, plain.stdout)
-        table = ("# [[promise]]", "# id =", "# key =", "# sentence =", "# scope =")
-        uncommented = "\n".join(
-            line[2:] if line.startswith(table) else line for line in text.split("\n")
+        script = area / "scripts" / "01_measure.py"
+        stamped_script = script.read_text(encoding="utf-8")
+
+        self.activate(area, table=False, code=True)
+        self.assertEqual({g for g, _ in self.chance_findings(area)}, {WARNING})
+        script.write_text(stamped_script, encoding="utf-8")
+
+        self.activate(area, table=True, code=False)
+        self.assertEqual(
+            promises.load(protocol).by_id()["criterion-2"].key, "criterion_2_pass"
         )
-        protocol.write_text(uncommented, encoding="utf-8")
-        block = promises.load(protocol)
-        self.assertEqual(block.by_id()["criterion-2"].key, "criterion_2_pass")
-        name = f"chance_{id(self)}"
-        spec = importlib.util.spec_from_file_location(
-            name, area / "scripts" / "01_measure.py"
-        )
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[name] = module
-        self.addCleanup(sys.modules.pop, name, None)
-        spec.loader.exec_module(module)
-        self.assertTrue(module.CONFIG.chance_criterion)
+        self.assertIn(BLOCKER, {g for g, _ in self.chance_findings(area)})
+
+        self.activate(area, table=False, code=True)
+        self.assertEqual(self.chance_findings(area), [])
+        self.assertTrue(self.reloaded(area).CONFIG.chance_criterion)
         registered = self.area_tests()
         self.assertEqual(registered.returncode, 0, registered.stdout)
 

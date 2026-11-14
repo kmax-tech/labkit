@@ -390,12 +390,14 @@ APPLY_PROMISES = {
     + "\n\n"
     + "\n".join(
         (
-            "# Optional, when the question asks whether the agreement exceeds chance:",
-            "# uncomment the table, then name its id, in brackets, in the",
-            "# Inference criterion field. The skeleton then reports",
-            "# criterion_2_threshold and criterion_2_pass. A pass says the",
-            "# score lies above the registered null band; nothing about size,",
-            "# and the task's bar stays criterion-1's.",
+            "# Optional, when the question asks whether the agreement exceeds chance,",
+            "# two steps, both owed: (1) uncomment the table below and name its id,",
+            "# in brackets, in the Inference criterion field; (2) uncomment the",
+            "# block between the criterion-2 markers in evaluate_rows of",
+            "# scripts/01_measure.py, which reports criterion_2_threshold and",
+            "# criterion_2_pass. One step alone is held (code-check, intent-check).",
+            "# A pass says the score lies above the registered null band; nothing",
+            "# about size, and the task's bar stays criterion-1's.",
             "# [[promise]]",
             '# id = "criterion-2"',
             '# key = "criterion_2_pass"',
