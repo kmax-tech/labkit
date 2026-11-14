@@ -1149,8 +1149,8 @@ def begin(
     """Start an attempt of MODE on AREA: under the area's lock, read the
     journal and the files, refuse when another attempt runs or a file is
     gone (`gaps`), mark every attempt without an end whose lock is free as
-    interrupted (named in `Running.notes`), take the new attempt's lock and
-    write its start — with BLOCK_SHA, the promise block an audit reads, and
+    interrupted (named in `Running.notes`), draw an id the journal does
+    not hold, take the new attempt's lock and write its start — with BLOCK_SHA, the promise block an audit reads, and
     PROTOCOL, the file name of the protocol it audits (None for a review,
     which binds neither of its own; the start then names none and reads
     back as ""). Raises AttemptError on an audit without either binding,
@@ -1180,8 +1180,13 @@ def begin(
                     )
                 ),
             )
+        # the minute and four hex digits repeat: a second start of the mode in
+        # the same minute drew the first one's id and the journal no longer read
+        taken = {a.id for a in attempts}
         stamp = name_minute()
         aid = f"{stamp}-{mode}-{secrets.token_hex(2)}"
+        while aid in taken:
+            aid = f"{stamp}-{mode}-{secrets.token_hex(2)}"
         for a in attempts:
             if alive.get(a.id) is False:
                 _append(area, {"event": "interrupted", "id": a.id, "found_by": aid})

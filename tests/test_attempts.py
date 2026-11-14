@@ -237,6 +237,32 @@ class Begin(unittest.TestCase):
             area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"
         ).end("none", error="again")
 
+    def test_a_second_start_in_the_same_minute_draws_an_id_of_its_own(self):
+        """Two attempts of one mode in one minute whose random suffix comes
+        out alike: the second takes another, so the journal reads and the
+        area stays open. The suffix had four hex digits and no check —
+        `--again` right after a review wrote "started twice" under load
+        (tests/test_claim_review.py, 2026-11-14)."""
+        area = area_in_repo()
+        drawn = iter(["e5a3", "e5a3", "0b1c"])
+        with (
+            mock.patch.object(attempts.secrets, "token_hex", lambda n: next(drawn)),
+            mock.patch.object(attempts, "name_minute", lambda: "2026-11-14T12-22"),
+        ):
+            for _ in range(2):
+                attempts.begin(
+                    area, "report-review", "m", "s", block_sha=None, protocol=None
+                ).end("none", error="no answer")
+        ids = [a.id for a in attempts.read_journal(area)]
+        self.assertEqual(
+            ids,
+            [
+                "2026-11-14T12-22-report-review-e5a3",
+                "2026-11-14T12-22-report-review-0b1c",
+            ],
+        )
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
     def test_a_committed_record_removed_refuses_the_next_attempt(self):
         area = area_in_repo()
         failed_attempts.write_failed(area, "analysis", "opus", "s", "b", 60, "e", "c",
