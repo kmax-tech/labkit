@@ -90,6 +90,14 @@ Measurement contract:
     target — the permutation expectation at apply, chance otherwise
     (`chance_of`, derived, not guessed). If either fails, [criterion-1] has no
     verdict (None).
+  - [criterion-2], only where the protocol registers it (the apply stamp
+    offers it commented out): the registered lane's score exceeds the
+    permutation expectation plus `null_band` — above chance at a
+    false-alarm level of at most (1 + k − ceil(q·k))/(k + 1), 3/201 with
+    the stamp's rule; nothing about size. Apply with the permuted null and a
+    registered band rule only; elsewhere the band is no permutation
+    quantile and evaluate_rows refuses. No verdict when a quality check
+    fails (docs/notes/2026-11-14-apply-chance-comparison.md).
   - A withheld label is no label: the prepare step writes `gold: null` for
     the unlabelled split (a test file storing 0 or -999 is a placeholder),
     and a lane carrying an item without gold is never scored — a criterion
@@ -276,6 +284,8 @@ class MeasureConfig:
     # both, the first measurement refuses a band the rule does not give
     null_band_quantile: float | None = None
     null_permutations: int | None = None
+    # [criterion-2] registered: score > permutation expectation + null_band (apply, band rule owed)
+    chance_criterion: bool = False
     seed: int = SEED            # folds, permutation, estimator
     n_folds: int = N_FOLDS      # fit: the plan by repeat cost (FIT_PLAN), recorded with the run
     null_refits: int = NULL_REFITS  # fit: permuted-label refits per fold; [criterion-1]'s bar and
@@ -290,11 +300,17 @@ class MeasureConfig:
 
     def __post_init__(self) -> None:
         criterion_bar.require_one_form(self.at_least, self.margin)
+        if self.chance_criterion and (self.null_band_quantile is None or self.null_permutations is None):
+            raise ValueError(
+                "[criterion-2] compares with null_band as a permutation quantile: register "
+                "null_band_quantile and null_permutations beside null_band in [quality-check-2]")
 
 
 # The registered execution: thresholds from the protocol, nothing copied;
 # `--seed` replaces one field.
-CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
+_BLOCK = promises.load(PROTOCOL)
+CONFIG = MeasureConfig(**promises.all_constants(_BLOCK),
+                       chance_criterion="criterion-2" in _BLOCK.by_id())
 #: the metrics key of the criterion's value — 02_analyze.py reads this name
 CRITERION_VALUE_KEY = "criterion_1_score"
 
@@ -791,10 +807,12 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
       criterion_1_score · criterion_1_threshold · criterion_1_pass  criterion: registered lane against cfg.at_least as
                                          registered, else the null value + cfg.margin
                                          (apply, permuted null: the permutation expectation; else the null)
+      criterion_2_threshold · criterion_2_pass  only with cfg.chance_criterion: registered lane
+                                         strictly above the permutation expectation + cfg.null_band
       n_items · n_rows · n_test          yield (→ LAB-023 No silent loss)
       scored_class_counts                accuracy/auc: items per gold value in the scored
                                          rows — not the class distribution of the input file
-    A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None).
+    A failed quality check reports its keys and no criterion verdict (`criterion_1_pass`, `criterion_2_pass` None).
     A number about the inputs the report states belongs in this dict, computed
     from the kept rows; one the rows cannot give owes rows that keep what it
     needs — never a count typed into the report."""
@@ -829,6 +847,10 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if cfg.null_band is None and not (permuted and NULL_ORDER is not None):
         raise ValueError("evaluate_rows(): [quality-check-2] registers no null_band — only a "
                          "registered NULL_ORDER may go without one")
+    if cfg.chance_criterion and not (permuted and NULL_ORDER is None):
+        raise ValueError("evaluate_rows(): [criterion-2] compares with a permutation quantile — only "
+                         "the seed's permuted null at apply has one (no fit, NULL_ORDER or fixed null)")
+    chance = {"criterion_2_threshold": float(target + Fraction(str(cfg.null_band)))} if cfg.chance_criterion else {}
     in_band = (cfg.null_band is None
                or abs(null_score - target) <= Fraction(str(cfg.null_band)))
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
@@ -841,12 +863,17 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
         metrics["scored_class_counts"] = scored_class_counts(reg)
     if not (metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]):
         metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
+        if chance:
+            metrics.update(chance, criterion_2_pass=None)
         return metrics
     # a bar the task states is the bar as registered; the null lane stays
     # [quality-check-2]'s anchor and moves it not
     bar = criterion_bar.bar_of(cfg.at_least, cfg.margin, base)
     metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
                     "criterion_1_pass": reg_score >= bar})
+    if chance:
+        # strict: a score on the band's edge may tie the draw at its rank
+        metrics.update(chance, criterion_2_pass=reg_score > target + Fraction(str(cfg.null_band)))
     return metrics
 
 
@@ -889,8 +916,10 @@ def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict
     balance(out, cfg, items)
     metrics = evaluate_rows(read_jsonl(out), cfg)
     for key in ("quality_check_1_pass", "quality_check_1_empty", "quality_check_2_score", "quality_check_2_target", "quality_check_2_pass",
-                "criterion_1_score", "criterion_1_threshold", "criterion_1_pass"):
-        print(f"  {key:<13} {metrics[key]}")
+                "criterion_1_score", "criterion_1_threshold", "criterion_1_pass",
+                "criterion_2_threshold", "criterion_2_pass"):
+        if key in metrics:  # criterion-2's keys only where it is registered
+            print(f"  {key:<13} {metrics[key]}")
     if run is not None:
         run.metrics(**metrics)
     return metrics

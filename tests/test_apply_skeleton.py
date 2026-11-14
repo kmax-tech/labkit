@@ -478,6 +478,93 @@ class ApplySkeleton(unittest.TestCase):
         fitted = measure.evaluate_rows(reg + null(7, False), cfg)
         self.assertEqual(fitted["criterion_1_threshold"], 7 / 12 + cfg.margin)
 
+    def chance_rows(self, measure, *, wrong: int, null_correct: int) -> list[dict]:
+        """Sixteen balanced items: the registered lane with WRONG errors per
+        class (the predictions stay balanced, so the expectation is 1/2), the
+        permuted null lane with NULL_CORRECT of 16 right."""
+        golds = ["pos"] * 8 + ["neg"] * 8
+        flip = {"pos": "neg", "neg": "pos"}
+        rows = []
+        for i, g in enumerate(golds):
+            pred = flip[g] if i % 8 < wrong else g
+            rows.append(measure.lane_row("registered", {"id": str(i)}, pred, g))
+            null_pred = g if i < null_correct else flip[g]
+            rows.append(
+                measure.lane_row("null", {"id": str(i)}, null_pred, g, gold_of=str(i))
+            )
+        return rows
+
+    def test_criterion_2_holds_the_score_strictly_above_expectation_plus_band(self):
+        """The offered comparison with chance: 12 of 16 right is 0.75, the
+        expectation 1/2. With null_band 0.25 the score sits on the edge and
+        fails (strict); with 0.24 it passes. A failed quality check gives no
+        verdict. The twin: not registered, no criterion-2 key at all, since
+        intent-check refuses a key no promise registers."""
+        _, measure = self.measure_module("apply")
+        on = replace(measure.CONFIG, chance_criterion=True, null_band=0.25)
+        rows = self.chance_rows(measure, wrong=2, null_correct=8)
+        m = measure.evaluate_rows(rows, on)
+        self.assertEqual(m["criterion_2_threshold"], 0.75)
+        self.assertIs(m["criterion_2_pass"], False)
+        m = measure.evaluate_rows(rows, replace(on, null_band=0.24))
+        self.assertIs(m["criterion_2_pass"], True)
+        far = self.chance_rows(measure, wrong=2, null_correct=16)  # null at 1.0
+        m = measure.evaluate_rows(far, on)
+        self.assertIs(m["quality_check_2_pass"], False)
+        self.assertIsNone(m["criterion_2_pass"])
+        plain = measure.evaluate_rows(rows, replace(on, chance_criterion=False))
+        self.assertFalse([k for k in plain if k.startswith("criterion_2")])
+
+    def test_criterion_2_is_refused_where_the_band_is_no_permutation_quantile(self):
+        """Without a registered band rule, at fit, and with a registered null
+        order the band is no permutation quantile, so the comparison would
+        state a level it does not have."""
+        _, measure = self.measure_module("apply")
+        with self.assertRaisesRegex(
+            ValueError, "null_band_quantile and null_permutations"
+        ):
+            replace(measure.CONFIG, chance_criterion=True, null_band_quantile=None)
+        on = replace(measure.CONFIG, chance_criterion=True)
+        rows = self.chance_rows(measure, wrong=2, null_correct=8)
+        with (
+            mock.patch.object(measure, "NULL_ORDER", Path("null_order.json")),
+            self.assertRaisesRegex(ValueError, "permutation quantile"),
+        ):
+            measure.evaluate_rows(rows, on)
+        fitted = [{k: v for k, v in r.items() if k != "gold_of"} for r in rows]
+        with self.assertRaisesRegex(ValueError, "permutation quantile"):
+            measure.evaluate_rows(fitted, on)
+
+    def test_the_apply_stamp_offers_criterion_2_commented_out(self):
+        """The stamp registers no criterion-2 (no duty); its table, once
+        uncommented, is what the skeleton reads as registered."""
+        from labkit.formats import promises
+
+        area, measure = self.measure_module("apply")
+        protocol = next(area.glob("PROTOCOL-*.md"))
+        text = protocol.read_text(encoding="utf-8")
+        self.assertIn('# id = "criterion-2"', text)
+        self.assertNotIn("criterion-2", promises.load(protocol).by_id())
+        self.assertNotIn("criterion-2", promises.ids_in_prose(text))
+        self.assertFalse(measure.CONFIG.chance_criterion)
+        table = ("# [[promise]]", "# id =", "# key =", "# sentence =", "# scope =")
+        uncommented = "\n".join(
+            line[2:] if line.startswith(table) else line for line in text.split("\n")
+        )
+        protocol.write_text(uncommented, encoding="utf-8")
+        block = promises.load(protocol)
+        self.assertEqual(block.by_id()["criterion-2"].key, "criterion_2_pass")
+        name = f"chance_{id(self)}"
+        spec = importlib.util.spec_from_file_location(
+            name, area / "scripts" / "01_measure.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        self.addCleanup(sys.modules.pop, name, None)
+        spec.loader.exec_module(module)
+        self.assertTrue(module.CONFIG.chance_criterion)
+
     def test_the_scored_lanes_are_the_ones_finalize_reads(self):
         # the skeleton's lane names and finalize's null-lane station must
         # agree, or the station holds nothing

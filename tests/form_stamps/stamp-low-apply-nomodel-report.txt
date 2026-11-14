@@ -128,4 +128,16 @@ key = "quality_check_2_pass"
 sentence = "<the null condition · the permuted-label lane scores within null_band of the permutation expectation, what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly>"
 scope = ["scripts/01_measure.py"]
 constants = { null_band = 0.1, null_band_quantile = 0.99, null_permutations = 200 }
+
+# Optional, when the question asks whether the agreement exceeds chance:
+# uncomment the table, then name its id, in brackets, in the
+# Inference criterion field. The skeleton then reports
+# criterion_2_threshold and criterion_2_pass. Above chance at a
+# false-alarm level of at most 3/201 with the rule above; it says
+# nothing about size, and the task's bar stays criterion-1's.
+# [[promise]]
+# id = "criterion-2"
+# key = "criterion_2_pass"
+# sentence = "<the comparison with chance · the registered lane's SCORE exceeds the permutation expectation plus null_band, the band quality-check-2 registers by its rule>"
+# scope = ["scripts/01_measure.py"]
 ```
