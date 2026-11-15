@@ -11,21 +11,23 @@ names the cause rule and where the ways stand (`audit_decisions.CAUSE_FIRST`).
 from __future__ import annotations
 
 from labkit.formats import findings, promises
-from labkit.formats.commands import register_anew
+from labkit.formats.commands import handover_command, register_anew
 from labkit.checks.audit_binding import AuditError
 
 
 #: how a question that cannot be answered leaves the session — the one
-#: sentence the ways out and report-check's holds (K1, K3) print. A run id
+#: sentence the ways out and report-check's holds (K1, K3) print, its
+#: command complete, as a handover needs no audit record. A run id
 #: in a report reads as that run's number: report-check holds the answering
 #: run of a protocol that declares no result, so a handover names the
 #: protocol (tests/test_counter_cases.py)
 HANDOVER = (
-    "hand over: `labkit-audit <area> --findings` prints the --decide and "
-    "`protocol-fill <PROTOCOL> --handover` commands — the handover leaves no "
-    "[result] table in the protocol's head, and its block in the report names "
-    "the protocol, not its runs (a cited run id reads as a reported number), "
-    "what stands in the way and what was tried; no number"
+    f"hand over: `{handover_command(None)}` (no model call; where an audit "
+    "ran, `labkit-audit <area> --findings` first prints the --decide commands "
+    "for its open BLOCKERs, which stay open in the handover) — the handover "
+    "leaves no [result] table in the protocol's head, and its block in the "
+    "report names the protocol, not its runs (a cited run id reads as a "
+    "reported number), what stands in the way and what was tried; no number"
 )
 
 #: the way out when a finding decided `fixed` names a place that begins

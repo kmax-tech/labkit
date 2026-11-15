@@ -69,7 +69,7 @@ class ChangedQuestion(e2e.CorrectionCommands):
 
     def assert_unread_blocks(self, out: str, why: str) -> None:
         """The hold names the source (the run), the reason and the way back."""
-        (line,) = [ln for ln in out.splitlines() if UNREAD in ln and "BLOCKER" in ln]
+        (line,) = [ln for ln in out.splitlines() if UNREAD in ln and "BLOCKER:" in ln]
         self.assertIn(self.run_a, line)
         self.assertIn(why, line)
         self.assertIn("git fetch", line)

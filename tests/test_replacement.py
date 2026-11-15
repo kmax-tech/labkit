@@ -641,7 +641,7 @@ class ConflictingRegistrations(_Areas):
         self.assertIn(f"its first measurement {self.A2_RUN} recorded block", gap)
         self.assertIn("cannot be read back", gap)
         self.assertIn(
-            "until they can, hand over: `labkit-audit <area> --findings`", gap
+            "until they can, hand over: `protocol-fill <PROTOCOL> --handover", gap
         )
         self.assertIn("the handover leaves no [result] table", gap)
         self.assertNotIn("fetch", gap)
