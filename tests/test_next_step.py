@@ -1047,6 +1047,17 @@ class RunInTheTreeOnly(unittest.TestCase):
             f"runs/{self.run_id}/ lies in the working tree, not in the index", out
         )
         self.assertNotIn("a run that is gone", out)
+        # the block's protocol: adopted in the tree, so staged, not adopted
+        # anew (acceptance replay 2026-11-15, case 1)
+        self.assertIn(
+            f"its head in the index has adopted no result; the working tree's "
+            f"has adopted {self.run_id}",
+            out,
+        )
+        self.assertIn(
+            f"stage it: `git add -- experiments/01-lines/{self.protocol.name}`", out
+        )
+        self.assertNotIn("or adopt a run in the protocol", out)
         self.lab.git("add", "-A")
         rc, out = self.commit_gate()
         self.assertEqual(rc, 0, out)

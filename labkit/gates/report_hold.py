@@ -507,9 +507,7 @@ def block_sources(
                 None, None, "no protocol of the repo there", LAB_104
             )
         elif (run_id := sources.declared[p]) is None:
-            out[b.protocol] = report_blocks.BlockSource(
-                None, None, "it has adopted no result", LAB_104
-            )
+            out[b.protocol] = _undeclared_source(p, sources)
         else:
             try:
                 body = report_blocks.block_body(
@@ -526,6 +524,32 @@ def block_sources(
                     run_id, None, f"cannot be rendered from {p.name}: {exc}"
                 )
     return out
+
+
+def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
+    """The block source of protocol P whose head in SOURCES' file state
+    declares no result: in the index while the working tree's head has
+    adopted a run, its staging is the way out, not a new adoption."""
+    tree_run = None
+    if sources.staged:
+        tree = state_text(sources.repo, p, staged=False)
+        if tree is not None:
+            try:
+                tree_run = protocol_block.declared_run(tree)
+            except protocol_block.BlockError:
+                tree_run = None  # the tree's own check names its head
+    if tree_run is None:
+        return report_blocks.BlockSource(
+            None, None, "it has adopted no result", LAB_104
+        )
+    return report_blocks.BlockSource(
+        None,
+        None,
+        f"its head in the index has adopted no result; the working tree's has "
+        f"adopted {tree_run}",
+        LAB_104,
+        stage=p.relative_to(sources.repo).as_posix(),
+    )
 
 
 def owed_blocks(

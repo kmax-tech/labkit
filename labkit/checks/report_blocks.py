@@ -280,13 +280,16 @@ class BlockSource:
     """What a block's protocol says now: the run it declares (None: no
     result declared, or no protocol there — WHY says which, RULE the rule
     assignment of that cause) and the body it renders for that run (None
-    when it cannot be rendered — WHY says why). Raises ValueError for a
-    source without a declared run that names no rule."""
+    when it cannot be rendered — WHY says why). STAGE: the protocol's path
+    to stage when only the working tree's head declares a result, the way
+    out then; "" otherwise. Raises ValueError for a source without a
+    declared run that names no rule."""
 
     run_id: str | None
     body: str | None
     why: str = ""
     rule: RuleAssignment | None = None
+    stage: str = ""
 
     def __post_init__(self) -> None:
         if self.run_id is None and self.rule is None:
@@ -311,7 +314,16 @@ def block_gaps(
         at = f"line {b.first}: the result block of {b.protocol} (run {b.run_id})"
         into_cmd = into_command(report.parent / b.protocol, report)
         into = f"`{into_cmd}`"
-        if s.run_id is None:
+        if s.run_id is None and s.stage:
+            assert s.rule is not None
+            gaps.append(
+                blocker(
+                    f"{at}: {s.why} — a block shows an adopted result only",
+                    fix=f"stage it: `git add -- {s.stage}`",
+                    rule=s.rule,
+                )
+            )
+        elif s.run_id is None:
             assert s.rule is not None, (
                 "a block source without a declared run names its rule (BlockSource)"
             )
