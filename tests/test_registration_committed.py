@@ -877,6 +877,20 @@ class ScopeAsFirstMeasured(_Repository):
         self.assertIn("hand over", line)
         self.assertNotIn("restore", line)
 
+    def test_an_unreadable_failure_record_is_named_inside_the_hold(self):
+        """A stopped first measurement whose failure.json does not read
+        is named in the hold, never raised past it as a traceback
+        (independent review of 4b6a076f, 2026-11-15)."""
+        second = self._first_at_one_commit_with_another_question(crashed=True)
+        (second / runs.FAILURE_FILE).write_text("{not json", encoding="utf-8")
+        (line,) = self._changes()
+        self.assertIn(
+            f"{second.name} (stopped without a number; its failure record does "
+            "not read:",
+            line,
+        )
+        self.assertIn("register anew", line)
+
     def test_the_twin_finished_first_measurements_are_held_the_same_way(self):
         second = self._first_at_one_commit_with_another_question(crashed=False)
         (line,) = self._changes()

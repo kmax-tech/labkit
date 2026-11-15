@@ -30,6 +30,7 @@ from labkit.formats import (
 )
 from labkit.formats.gate import Findings
 from labkit.formats.runs import (
+    RunConfigError,
     RunDir,
     patch_text,
     stopped_without_number,
@@ -537,8 +538,12 @@ def split_hold(
 def stopped_note(rd: RunDir) -> str:
     """` (stopped without a number[: <failure>])` for a run RD that wrote
     no metrics.json (`runs.stopped_without_number`), its failure cut to
-    SCOPE_QUOTE characters; "" otherwise."""
-    why = stopped_without_number(rd)
+    SCOPE_QUOTE characters — a failure.json that does not read named as
+    such, inside the hold that blocks —; "" otherwise."""
+    try:
+        why = stopped_without_number(rd)
+    except RunConfigError as exc:
+        return f" (stopped without a number; its failure record does not read: {_quoted(str(exc))})"
     if why is None:
         return ""
     return f" (stopped without a number{f': {_quoted(why)}' if why else ''})"
