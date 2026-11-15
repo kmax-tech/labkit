@@ -93,7 +93,10 @@ Not a claim:
   result)", "Run <id> — discussed, not adopted") and marks every line
   below it up to the next heading of the same or a higher level; (c) the
   line stands inside a discussion block or a handover block, whose why,
-  "Tried" and "Run" lines may show the numbers of the run they name; (d)
+  "Tried" and "Run" lines may show the numbers of the run they name — a
+  line there that presents such a number as what the experiment found,
+  or draws a conclusion from it, is still a claim: the block takes a
+  number that documents, it makes no finding admissible; (d)
   the line stands inside a result block listed under OTHER PROTOCOLS'
   RESULTS — prose outside it that presents that number as this
   protocol's finding is still a claim. A

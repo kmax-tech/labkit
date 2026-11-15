@@ -530,6 +530,26 @@ class Cli(unittest.TestCase):
         self.assertIn("Report review", audit_prompt.instructions("report"))
         self.assertEqual(audit_prompt.cited_rules("report"), ["LAB-104", "LAB-050"])
 
+    def test_a_finding_inside_a_discussion_block_is_still_a_claim(self):
+        """The discussion block takes a number that documents and makes no
+        finding admissible (decided by the author 2026-11-13): both
+        reviewers' exemptions for a line inside it carry that limit, as the
+        exemption for another protocol's block and a documented choice do
+        (independent review of 96711518, 2026-11-15)."""
+        report = " ".join(audit_prompt.instructions("report").split())
+        self.assertIn(
+            "the run they name — a line there that presents such a number as "
+            "what the experiment found, or draws a conclusion from it, is still "
+            "a claim",
+            report,
+        )
+        claim = " ".join(audit_prompt.instructions("claim").split())
+        self.assertIn(
+            "inside a discussion block or a handover block and documents the "
+            "number rather than presenting it as what the experiment found",
+            claim,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -45,7 +45,8 @@ Per decision, one of three verdicts:
 - **upheld** — what is inlined shows the claim does not apply. For a
   `result` claim: the number or verdict on the line is the adopted
   run's as it recorded it; or the line stands inside a discussion block
-  or a handover block, or inside a result block listed under OTHER
+  or a handover block and documents the number rather than presenting it
+  as what the experiment found, or inside a result block listed under OTHER
   PROTOCOLS' RESULTS, or under a heading that names what follows as
   not adopted, or the same sentence names the run as no result; or the
   line states a fact of the setup the run did not compute. For a
