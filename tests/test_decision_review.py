@@ -498,16 +498,33 @@ class TheCall(unittest.TestCase):
     def test_a_redraw_shows_the_reviewer_the_decision_not_the_rejection(self):
         """The reviewer judges the decision as proposed: an `--again` draw
         after a rejection is shown the line the decision writes, not the
-        earlier verdict."""
+        earlier verdict — also once `--render` wrote the rejection into
+        the protocol the reviewer reads (independent review, 2026-11-15)."""
         area, record = area_with(
             [WARNING], {1: ("limitation", "one seed, said so", "stands")}
         )
-        run_review(area, REJECTED)
+        _, said, _, _ = run_review(area, REJECTED)
+        # the review names the render the stale line now owes
+        self.assertIn("--render` writes it — report-check holds the lines", said)
+        proto = area / "PROTOCOL-x.md"
+        rendered, _ = protocol_result.render_result(
+            proto.read_text(encoding="utf-8"), area
+        )
+        self.assertIn("not confirmed by a second auditor", rendered)
+        proto.write_text(rendered, encoding="utf-8")
         _, _, _, sent = run_review(area, UPHELD, "--again")
         self.assertIn(
             f"- **Limitation (audit {record.stem} #1):** the verdicts stand", sent[0]
         )
         self.assertNotIn("not confirmed by a second auditor", sent[0])
+
+    def test_the_twin_an_upheld_review_owes_no_render(self):
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        rc, said, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, said)
+        self.assertNotIn("--render` writes it", said)
 
     def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
         """A computation registers no promise and `--decide` refuses every id

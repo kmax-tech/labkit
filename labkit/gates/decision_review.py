@@ -73,12 +73,20 @@ from typing import NamedTuple
 from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.run_record_check import script_as_run
-from labkit.checks.result_render import left_unjudged, rendering
-from labkit.formats import attempts, console, evidence, findings, promises, reviews
+from labkit.checks.result_render import left_unjudged, render_gaps, rendering
+from labkit.formats import (
+    attempts,
+    console,
+    evidence,
+    findings,
+    promises,
+    protocol_block,
+    reviews,
+)
 from labkit.formats.gate import BLOCKER
-from labkit.formats.protocol_check import conclusion_written
+from labkit.formats.protocol_check import conclusion_written, display_label, fields
 from labkit.formats.repo import layout_root, shown, the_protocol
-from labkit.formats.commands import audit_command
+from labkit.formats.commands import audit_command, render_command
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.formats.prompts import prompt_body
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
@@ -128,6 +136,28 @@ def rendered_result(area: Path, text: str, run_dir: Path | None) -> str:
             *(f"- **{lbl}:** {value}" for lbl, value in r.limits),
         ]
     )
+
+
+def as_proposed(area: Path, text: str, run_dir: Path | None) -> str:
+    """The protocol TEXT the reviewer reads: its generated result lines
+    (Recorded results, each Limitation line) as they render under the
+    decisions as proposed, no review's verdict read — once `--render` wrote
+    a not-upheld line into the protocol, a later draw would read the earlier
+    verdict there. TEXT unchanged without a run, or where nothing renders
+    (`rendered_result` names why)."""
+    if run_dir is None:
+        return text
+    try:
+        r = rendering(area, text, run_dir, found=())
+    except (OSError, ValueError):
+        return text
+    proposed = {"Recorded results": r.recorded_results, **dict(r.limits)}
+    lines = text.split("\n")
+    for f in sorted(fields(text), key=lambda f: -f.line):
+        label = display_label(f.label)
+        if label in proposed and not f.block:
+            lines[f.line - 1 : f.last] = [f"- **{label}:** {proposed[label]}"]
+    return "\n".join(lines)
 
 
 def reviewable(
@@ -344,7 +374,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
                 record, decided, found, seen.evidence(), promise_block(text)
             ),
         ),
-        (f"FILE: {shown(protocol, repo)}", text),
+        (f"FILE: {shown(protocol, repo)}", as_proposed(area, text, run_dir)),
         (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]
     code = [f for f in named_files(decided, repo, area) if f.resolve() in snap.contents]
@@ -522,6 +552,12 @@ def review(
         f"{shown(written, Path.cwd())}"
     )
     print_review_state(rec, held)
+    if _renders_differently(area, chosen):
+        print(
+            "  the result section differs from what it renders under this review: "
+            f"`{render_command(chosen)}` writes it — report-check holds the lines "
+            "written before until then, no objection to the number"
+        )
     if r or i:
         promised = audit_decisions.may_leave_unassessed(area, chosen)
         for d in decisions:
@@ -533,6 +569,24 @@ def review(
                 )
                 print(f"  {d.verdict}: {way} (finding #{d.finding})")
     return 1 if held else 0
+
+
+def _renders_differently(area: Path, protocol: Path) -> bool:
+    """Does PROTOCOL's result section, for its declared run, differ from
+    what it renders under AREA's decision reviews now (`render_gaps`)? A
+    review that did not uphold a decision changes its Limitation line.
+    False without a declared run: no line is written yet."""
+    text = protocol.read_text(encoding="utf-8")
+    declared = protocol_block.declared_run(text)
+    if declared is None:
+        return False
+    try:
+        expected = rendering(
+            area, text, run_path(area, declared), found=evidence.decision_reviews(area)
+        )
+    except (OSError, ValueError):
+        return False  # report-check names why the section does not render
+    return bool(render_gaps(text, expected))
 
 
 def print_review_state(record: findings.Record, not_upheld: list[int]) -> None:
