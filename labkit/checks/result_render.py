@@ -35,7 +35,15 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.formats import findings, promises, protocol_block, reference, reviews, runs
+from labkit.formats import (
+    evidence,
+    findings,
+    promises,
+    protocol_block,
+    reference,
+    reviews,
+    runs,
+)
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE
@@ -326,7 +334,10 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
     its declared run answers no registered question (its first
     measurements recorded different registrations, or the run recorded
     another block than theirs — a verdict there is no earlier miss or pass
-    to put first), `unresolved (<why>)` when its sources do not read or the
+    to put first); an effect of its limitations that none of its own
+    decision reviews upheld voids none of its verdicts, as in its own
+    rendering; `unresolved (<why>)` when its sources, its reviews included,
+    do not read or the
     chain runs in a circle (report-check holds that). SEEN: the ids already
     rendered. Raises RuntimeError when git fails."""
     try:
@@ -356,8 +367,14 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
                     pred.parent,
                     pred_text,
                     pred_run,
-                    # only the effects are read here, never the lines
-                    limits_of(pred.parent, pred_text, pred_run, found=()),
+                    # the predecessor's own reviews: an effect none upheld
+                    # is lifted there too, so its miss reads as a miss
+                    limits_of(
+                        pred.parent,
+                        pred_text,
+                        pred_run,
+                        found=evidence.decision_reviews(pred.parent),
+                    ),
                 )
                 verdict = said or f"run {declared}, no promise to judge"
     except (OSError, ValueError, protocol_block.BlockError) as exc:

@@ -140,7 +140,6 @@ from labkit.tools.protocol_edit import (
 from labkit.tools.protocol_result import (
     WRITTEN_AFTER_RUN,
     WRITTEN_BY_RUN,
-    decision_reviews,
     declared_run_dir,
     fill_prompts,
     from_run,
@@ -383,7 +382,7 @@ def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str,
     and on a block in REPORT that does not read."""
     run = declared_run_dir(text, area, "a report shows an adopted result only")
     body = report_blocks.block_body(
-        rendering(area, text, run, found=decision_reviews(area))
+        rendering(area, text, run, found=evidence.decision_reviews(area))
     )
     return report_blocks.with_block(report, protocol, run.name, body), run.name
 

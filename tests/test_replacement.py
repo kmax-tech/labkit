@@ -27,8 +27,10 @@ from labkit.formats import (  # noqa: E402
     findings,
     gate,
     handovers,
+    promises,
     protocol_block,
     protocol_history,
+    reviews,
     scope_sha,
 )
 from labkit.gates import report_check, report_hold  # noqa: E402
@@ -39,6 +41,7 @@ from protocol_fixture import (
     head,
     protocol_id_of,
     registration_of,
+    shown_sha,
     started_at,
 )  # noqa: E402
 
@@ -487,6 +490,83 @@ class Gate(_Areas):
             plain.recorded_results.startswith(
                 "criterion-1 missed; quality-check-1 met · recorded: kept number: n = 1; also recorded: criterion_1_score = 0.7"
             )
+        )
+
+    def _a_not_assessable(self, verdict: str) -> None:
+        """A's miss left not assessable by a BLOCKER limitation, and a
+        review of that decision saying VERDICT, in A's own audits/."""
+        proto = self.a / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        run = self.a / "runs" / A_RUN
+        shown = shown_sha(self.a, run)
+        record = findings.write(
+            self.a,
+            "analysis",
+            "opus",
+            scope_sha.area_stamp(self.a)[0],
+            promises.block_stamp(text),
+            (1, 0, 0),
+            [
+                (
+                    "BLOCKER",
+                    "BLOCKER · scripts/01_measure.py:1 · statement · the null lane reuses the gold order · x · LAB-019 r · z",
+                )
+            ],
+            run_id=A_RUN,
+            shown_sha=shown,
+            registration=registration_of(self.a),
+            protocol_id=protocol_id_of(self.a),
+        )
+        findings.write_decision(
+            record,
+            1,
+            "limitation",
+            "the null lane reused the gold order, so chance is unknown",
+            "criterion-1 not assessable",
+        )
+        rec = findings.read(record)
+        reviews.write_review(
+            self.a,
+            "opus",
+            record.name,
+            rec.scope_sha,
+            shown,
+            reviews.claim_digest(text),
+            [
+                reviews.Decision(
+                    1, findings.decision_digest(rec.findings[0]), verdict, "a why"
+                )
+            ],
+            again=False,
+        )
+
+    def test_a_rejected_not_assessable_in_the_predecessor_lets_its_miss_stand(self):
+        """The successor renders its predecessor's verdict with the
+        predecessor's own decision reviews: a `not assessable` no review
+        upheld voids no verdict there either, so the earlier miss is put
+        first as a miss (independent review of eb939a4e, 2026-11-15). The
+        twin: upheld, the criterion reads not assessable."""
+        self._a_not_assessable(reviews.REJECTED)
+        proto = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
+        line = result_render.rendering(
+            self.b,
+            proto.read_text(encoding="utf-8"),
+            self.b / "runs" / B_RUN,
+            found=(),
+        ).recorded_results
+        self.assertIn(f"replaces {A_ID} (01-a/PROTOCOL-x.md): criterion-1 missed", line)
+
+    def test_the_twin_an_upheld_not_assessable_in_the_predecessor_stays(self):
+        self._a_not_assessable(reviews.UPHELD)
+        proto = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
+        line = result_render.rendering(
+            self.b,
+            proto.read_text(encoding="utf-8"),
+            self.b / "runs" / B_RUN,
+            found=(),
+        ).recorded_results
+        self.assertIn(
+            f"replaces {A_ID} (01-a/PROTOCOL-x.md): criterion-1 not assessable", line
         )
 
 
