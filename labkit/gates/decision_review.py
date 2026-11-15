@@ -38,7 +38,9 @@ counter-evidence, or hand over; a permitted limitation may narrow the
 claim or leave a registered promise not assessable. A new audit is due
 when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
-`insufficient` the missing evidence is supplied and the review run again.
+`insufficient` the missing evidence goes into the decision's reason or
+the Conclusion, a new state, and that state is reviewed
+(`ways_out.contested_way`).
 Closing the finding instead — `false-positive`, `fixed`
 (`findings.CLOSING`) — is a decision like any other once a review did
 not uphold one on that finding: it is under review too
