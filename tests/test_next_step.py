@@ -29,7 +29,7 @@ from labkit.tools import next_command, report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
 from labkit.formats import protocol_block, report_reviews  # noqa: E402
 from labkit.formats import area_state  # noqa: E402
-from labkit.formats.gate import GateFinding  # noqa: E402
+from labkit.formats.gate import GUARANTEED, TECHNICAL_RULE, GateFinding  # noqa: E402
 from labkit.formats.repo import state_text  # noqa: E402
 from labkit.gates import report_check, report_hold  # noqa: E402
 from labkit.gates import undecided
@@ -949,6 +949,54 @@ class ReportInTheIndexOnly(unittest.TestCase):
             # the twin: the tree holds no such report, so nothing holds there
             tree = next_step.next_step(self.area, self.protocol.resolve())
         self.assertIn("nothing holds it", tree.where)
+
+
+class AWarningBesideTheAdoption(unittest.TestCase):
+    """An adopted run nothing holds, with a warning in report-check's chain
+    (a WARNING limitation no review upheld): `next` still says nothing holds
+    it, and names the warning and its way out, as report-check does (usage
+    round 24, acceptance 2026-11-15, case 2). The twin: no warning, the
+    plain end."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, "analysis", run_id)
+        rc, out = self.lab.adopt(self.protocol, run_id)
+        self.assertEqual(rc, 0, out)
+
+    def step(self, *found: GateFinding) -> next_step.Step:
+        with contextlib.chdir(self.lab.root):
+            return next_step.next_step(
+                self.area,
+                self.protocol.resolve(),
+                chain=report_check.ReleaseChain(list(found), None),
+            )
+
+    def test_the_warning_and_its_way_are_named(self):
+        warned = GateFinding(
+            report_check.WARNING,
+            "Limitation (audit x #1): `stands` on a WARNING decided limitation rejected",
+            fix="decide the finding again first",
+            evidence_kind=GUARANTEED,
+            rule=TECHNICAL_RULE,
+        )
+        step = self.step(warned)
+        self.assertIn(
+            "nothing holds it — report-check warns (1), first: Limitation", step.where
+        )
+        self.assertIn(
+            "the warning stands until settled: decide the finding again first",
+            step.next,
+        )
+        self.assertEqual(step.held, "")
+
+    def test_the_twin_no_warning_the_plain_end(self):
+        step = self.step()
+        self.assertTrue(step.where.endswith("nothing holds it"), step.where)
+        self.assertNotIn("warn", step.next)
 
 
 class RunInTheTreeOnly(unittest.TestCase):

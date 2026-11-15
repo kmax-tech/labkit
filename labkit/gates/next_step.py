@@ -84,7 +84,7 @@ from labkit.formats import (
     protocol_check,
 )
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, first_measurement_hint
-from labkit.formats.gate import Findings, GateFinding
+from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import layout_root, shown, state_text
 from labkit.formats.commands import (
     MEASURE,
@@ -230,21 +230,26 @@ def next_step(
         area=shown(area, Path.cwd()),
         audit=audit_command(area, protocol=protocol).line,
     )
-    filled.take_all(chain.blockers)
-    blocking = filled.found
+    filled.take_all(chain.found)
+    blocking = [f for f in filled.found if f.grade == BLOCKER]
     if blocking:
         return _held_step(ctx, blocking, chain.held_by, hint if ctx.run is None else "")
     # the stop's and the commit's own hold the chain carries no gap for
     undecided = _undecided_step(area, protocol, staged=staged)
     if undecided is not None:
         return undecided
-    return _closing_step(ctx, protocol, text)
+    warned = [f for f in filled.found if f.grade != BLOCKER]
+    return _closing_step(ctx, protocol, text, warned)
 
 
-def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
+def _closing_step(
+    ctx: Checked, protocol: Path, text: str, warned: list[GateFinding]
+) -> Step:
     """The steps past the chain and the undecided row: what the adoption
     would still owe (`_adoption_owes`), the adoption, a report citing the
-    adopted run without its block, and nothing."""
+    adopted run without its block, and nothing — WARNED, the chain's
+    warnings, then named with the first one's way out: they hold nothing,
+    and report-check tells them."""
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
         owed_then = _adoption_owes(protocol, text, run)
@@ -280,6 +285,15 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
         f"(`{into_command(protocol, protocol.parent / 'REPORT.md')}` writes its result "
         "block into a report the head does not register)"
     )
+    if warned:
+        first = warned[0]
+        return Step(
+            f"{protocol.name} has adopted {ctx.declared}; nothing holds it — "
+            f"report-check warns ({len(warned)}), first: {first.text}",
+            f"{finished}; the warning stands until settled"
+            + (f": {first.fix}" if first.fix else ""),
+            "",
+        )
     return Step(
         f"{protocol.name} has adopted {ctx.declared}; nothing holds it",
         finished,
