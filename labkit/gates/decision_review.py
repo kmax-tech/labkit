@@ -81,7 +81,7 @@ from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.formats.prompts import prompt_body
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import audit_call, audit_decisions, audit_prompt, audit_reply
-from labkit.gates.ways_out import ANSWER_AGAIN, rejected_way
+from labkit.gates.ways_out import ANSWER_AGAIN, contested_way
 
 #: the review's mode: its instructions, the prompt's MODE line and its
 #: attempts in the area's journal (`attempts`)
@@ -418,13 +418,29 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     return analysis[-1]
 
 
+def _way(
+    record: findings.Record,
+    n: int,
+    found: list[reviews.Review],
+    text: str,
+    promised: bool,
+) -> str:
+    """`ways_out.contested_way` for finding N of RECORD, rejected when any
+    review of its state in FOUND, under the claim TEXT makes, said so."""
+    return contested_way(
+        record.findings[n - 1],
+        promised,
+        rejected=reviews.rejected(record, n, found, text),
+    )
+
+
 def contested_gap(
     area: Path, protocol: Path, record: findings.Record
 ) -> AuditError | None:
     """Why another draw on RECORD's decisions settles nothing, as the refusal
     to raise, or None: a review of a decision as decided and claimed now
     already said `rejected` or `insufficient` (`reviews.contested`). Its way
-    out is deciding again, not another call."""
+    out changes that state (`ways_out.contested_way`), not another call."""
     text = protocol.read_text(encoding="utf-8")
     found = decided_reviews(area)
     held = [
@@ -436,7 +452,7 @@ def contested_gap(
         return None
     promised = audit_decisions.may_leave_unassessed(area, protocol)
     decide_again = "; ".join(
-        f"finding #{n}: {rejected_way(record.findings[n - 1], promised)}" for n in held
+        f"finding #{n}: {_way(record, n, found, text, promised)}" for n in held
     )
     return AuditError(
         f"{record.path.name}: finding(s) {', '.join(map(str, held))} were reviewed as "
@@ -514,19 +530,16 @@ def review(
         f"{shown(written, Path.cwd())}"
     )
     print_review_state(rec, held)
-    if r:
+    if r or i:
         promised = audit_decisions.may_leave_unassessed(area, chosen)
         for d in decisions:
-            if d.verdict == "rejected":
-                print(
-                    f"  rejected: {rejected_way(rec.findings[d.finding - 1], promised)} "
-                    f"(finding #{d.finding})"
+            if d.verdict in (reviews.REJECTED, reviews.INSUFFICIENT):
+                way = contested_way(
+                    rec.findings[d.finding - 1],
+                    promised,
+                    rejected=d.verdict == reviews.REJECTED,
                 )
-    if i:
-        print(
-            "  insufficient: supply the evidence the reviewer names (in the "
-            "protocol or the run's outputs) and review again"
-        )
+                print(f"  {d.verdict}: {way} (finding #{d.finding})")
     return 1 if held else 0
 
 

@@ -251,6 +251,28 @@ def rejected_way(finding: findings.Finding, promised: bool) -> str:
     )
 
 
+#: the way out of a decision a review of its state called `insufficient`
+#: and none rejected: the state a review judges is the decision (its reason,
+#: effect, status) and the Conclusion (`reviews.verdicts_on_state`), so
+#: evidence added anywhere else leaves the state, and its refusal, unchanged
+INSUFFICIENT_WAY = (
+    "the reviewer found the evidence insufficient: add the evidence it names "
+    "where the review reads it as this decision — the reason (`--decide N` "
+    'again with the same decision and effect, `--why "REASON"` naming the '
+    "evidence) or the Conclusion —, then review that state; another draw on "
+    "this state settles nothing"
+)
+
+
+def contested_way(finding: findings.Finding, promised: bool, *, rejected: bool) -> str:
+    """The way out of a decision on FINDING that a review of its state did
+    not uphold (`reviews.contested`): after a rejection (REJECTED) what
+    `rejected_way` gives, within PROMISED; after `insufficient` alone
+    INSUFFICIENT_WAY. Both ways change the state, as another draw on the
+    same state is refused (`decision_review.contested_gap`)."""
+    return rejected_way(finding, promised) if rejected else INSUFFICIENT_WAY
+
+
 def offers_not_assessable(text: str) -> bool:
     """Whether a decision on the protocol TEXT may name the effect `<ID> not
     assessable` (`rejected_way`'s PROMISED): False only when its block reads

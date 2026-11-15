@@ -179,7 +179,8 @@ run `labkit-audit AREA --review [--record FILE]`. It writes the second
 reviewer's verdicts under `audits/`.
 
 **Done / way out:** required decisions are upheld. On `rejected`, change the
-claim, decision or faulty work; on `insufficient`, supply the missing evidence.
+claim, decision or faulty work; on `insufficient`, add the missing evidence to
+the decision's reason (`--decide` again) or the Conclusion, then review again.
 Repeated draws do not erase a rejection. Details and exceptional cases:
 [decision review in the chain](architecture.md#the-chain). An accepted WARNING
 with `stands` does not carry the general BLOCKER review duty.

@@ -267,8 +267,8 @@ class ANotAssessableIsReviewed(unittest.TestCase):
         way out is the missing evidence and a review, not deciding again."""
         area, record = self.area()
         proto = area / "PROTOCOL-x.md"
-        rc, out, _, _ = run_review(area, INSUFFICIENT)
-        self.assertEqual(rc, 1, out)
+        rc, said, _, _ = run_review(area, INSUFFICIENT)
+        self.assertEqual(rc, 1, said)
         rendered, written = protocol_result.render_result(
             proto.read_text(encoding="utf-8"), area
         )
@@ -291,6 +291,27 @@ class ANotAssessableIsReviewed(unittest.TestCase):
             f"`{self.EFFECT}` on a BLOCKER decided limitation insufficient", held
         )
         self.assertNotIn("decide it `limitation` with the effect `stands`", held)
+        # the review and the gate name one way, and it is one that works: a
+        # draw on this state is refused, the evidence in the reason is a new
+        # state a review judges (usage round 24, acceptance 2026-11-15)
+        self.assertIn(
+            "insufficient: the reviewer found the evidence insufficient", said
+        )
+        self.assertIn("Next: the reviewer found the evidence insufficient", held)
+        self.assertNotIn("asks a second auditor", held)
+        rc, _, err, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, sent), (2, []), err)
+        self.assertIn("the reviewer found the evidence insufficient", err)
+        decide(
+            record,
+            1,
+            "limitation",
+            "the null lane drew 3 permutations, below the 200 the rule needs: "
+            "runs/x/null.json, n_permutations = 3",
+            self.EFFECT,
+        )
+        rc, out, _, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, len(sent)), (0, 1), out)
 
     def test_the_twin_an_upheld_effect_leaves_the_criterion_unjudged(self):
         area, _ = self.area()

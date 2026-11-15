@@ -361,6 +361,15 @@ def contested(
     return any(d.verdict != UPHELD for d in verdicts_on_state(record, n, reviews, text))
 
 
+def rejected(record: findings.Record, n: int, reviews: list[Review], text: str) -> bool:
+    """Has a review of finding N as decided and claimed now said `rejected`?
+    Then the way out decides again (`ways_out.rejected_way`); a state only
+    called `insufficient` owes its evidence instead."""
+    return any(
+        d.verdict == REJECTED for d in verdicts_on_state(record, n, reviews, text)
+    )
+
+
 def state(record: findings.Record, n: int, reviews: list[Review], text: str) -> str:
     """The review state of finding N of RECORD in words, for a gate's
     sentence: `upheld`, `rejected: <why>`, `insufficient: <why>`,

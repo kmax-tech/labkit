@@ -177,9 +177,10 @@ def _held(check, rec: findings.Record, *found: reviews.Review) -> list[GateFindi
     return pure_call(check, rec, list(found), text=TEXT, review_way=lambda: STEP)
 
 
-#: what a stand-in `way_after_rejection` gives: the way the check names once a
-#: review of the state rejected the decision
+#: what a stand-in `way_when_contested` gives: the way the check names once a
+#: review of the state rejected the decision, or only called it insufficient
 AFTER = "decide the finding again first"
+INSUFFICIENT_AFTER = "add the evidence the reviewer names"
 
 
 def _limits(rec: findings.Record, *found: reviews.Review) -> list[GateFinding]:
@@ -190,7 +191,9 @@ def _limits(rec: findings.Record, *found: reviews.Review) -> list[GateFinding]:
         list(found),
         text=TEXT,
         review_way=lambda: STEP,
-        way_after_rejection=lambda f: AFTER,
+        way_when_contested=lambda f, rejected: (
+            AFTER if rejected else INSUFFICIENT_AFTER
+        ),
     )
 
 
@@ -237,6 +240,19 @@ class AStandsIsUpheld(unittest.TestCase):
         self.assertEqual(f.grade, BLOCKER)
         (f,) = _limits(rec, review(rec, reviews.UPHELD, again=True))
         self.assertIn("only `--again` draws said upheld", f.text)
+
+    def test_after_insufficient_the_way_is_the_evidence_not_the_review(self):
+        """Another review of a state called insufficient is refused
+        (`decision_review.contested_gap`), so the gate names the evidence
+        that changes the state, not the review (usage round 24, acceptance
+        2026-11-15); with a rejection among the verdicts, deciding again."""
+        rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
+        (f,) = _limits(rec, review(rec, reviews.INSUFFICIENT))
+        self.assertEqual((f.grade, f.fix), (BLOCKER, INSUFFICIENT_AFTER))
+        (f,) = _limits(
+            rec, review(rec, reviews.INSUFFICIENT), review(rec, reviews.REJECTED)
+        )
+        self.assertEqual(f.fix, AFTER)
 
     def test_the_twin_an_upheld_stands_passes(self):
         rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))

@@ -51,7 +51,7 @@ from labkit.formats.commands import (
 )
 from labkit.formats.evidence import AreaEvidence
 from labkit.gates.report_context import Checked
-from labkit.gates.ways_out import offers_not_assessable, rejected_way
+from labkit.gates.ways_out import contested_way, offers_not_assessable
 
 #: the rule of a decision that does not release yet: a limitation carries
 #: its effect on the verdicts, and a decision that releases a BLOCKER is
@@ -127,8 +127,8 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     # a file nobody can read must not hide a BLOCKER's unupheld `stands`
     out = check_decision_reviews_read(ctx.evidence)
     found = list(ctx.evidence.reviews)
-    way_after_rejection = partial(
-        rejected_way, promised=offers_not_assessable(ctx.text)
+    way_when_contested = partial(
+        contested_way, promised=offers_not_assessable(ctx.text)
     )
     for r in records:
         step = partial(_review_step, ctx, r)
@@ -137,7 +137,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
             found,
             text=ctx.text,
             review_way=step,
-            way_after_rejection=way_after_rejection,
+            way_when_contested=way_when_contested,
         )
         out += check_contested_closings_upheld(r, found, text=ctx.text, review_way=step)
         out += check_first_dismissals_upheld(r, found, text=ctx.text, review_way=step)
@@ -241,7 +241,7 @@ def check_limits_upheld(
     *,
     text: str,
     review_way: Callable[[], str],
-    way_after_rejection: Callable[[findings.Finding], str],
+    way_when_contested: Callable[..., str],
 ) -> list[GateFinding]:
     """Every limit of RECORD with an effect — `stands`, or `<ID> not
     assessable` — is upheld by a decision review among FOUND, as decided now
@@ -250,9 +250,9 @@ def check_limits_upheld(
     fault prevents judging what it names. One that is not is held at the
     finding's grade:
     a BLOCKER limitation blocks, a WARNING limitation warns (LAB-015
-    Preflight audit before freezing, "By risk"). Its way out: deciding the
-    finding again once a review of this state rejected it — another review
-    does not settle a rejection —, else the review.
+    Preflight audit before freezing, "By risk"). Its way out: once a review
+    of this state did not uphold it (`reviews.contested`), changing that
+    state — another review of it is refused —, else the review.
 
     Args:
         record: One covering analysis record.
@@ -260,21 +260,19 @@ def check_limits_upheld(
         text: The protocol text; its Conclusion is the claim reviewed.
         review_way: Gives the way to the decision review of RECORD, as the
             station spells it (`_review_step`); called per finding held.
-        way_after_rejection: Gives what a rejected decision on the finding
-            owes first, in place of REVIEW_WAY once a review of this state
-            rejected it (`ways_out.rejected_way`, as `labkit-audit --review`
-            prints it).
+        way_when_contested: Gives, for the finding and whether a review
+            rejected it (`rejected=`), what a decision a review of this
+            state did not uphold owes first, in place of REVIEW_WAY
+            (`ways_out.contested_way`, as `labkit-audit --review` prints it).
     """
     out: list[GateFinding] = []
     for n, f in record.limits():
         if not f.effect or reviews.upholding(record, n, found, text):
             continue
-        verdicts = reviews.verdicts_on_state(record, n, found, text)
-        rejected = any(d.verdict == reviews.REJECTED for d in verdicts)
-        # a rejection is settled by deciding again, not by another review
+        # a state no review upheld is changed, not drawn on again
         fix = (
-            way_after_rejection(f)
-            if rejected
+            way_when_contested(f, rejected=reviews.rejected(record, n, found, text))
+            if reviews.contested(record, n, found, text)
             else f"{review_way()} asks a second auditor (owed at every repeat cost)"
         )
         out.append(
