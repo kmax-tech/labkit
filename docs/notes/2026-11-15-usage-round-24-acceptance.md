@@ -51,3 +51,21 @@ The findings of [the trace readings](2026-11-13-usage-round-24-findings.md), by 
 | 5 stated values, hand-checked case, unregistered report                                                  | yes                 | `6458354b`, `d5f4e2b7`                           | yes                   | effect on agents not measured                   |
 | 5 detector by closeness; deleted runs, `reset --hard`, `--no-verify`                                     | read                | —                                                | —                     | audit tier; index-against-tree group            |
 | 6 API errors, git identity, pin form                                                                     | read                | —                                                | —                     | labkit-paper's sandbox; no product fault        |
+
+## Repairs after the acceptance (2026-11-15)
+
+The confirmed review findings and the four replay gaps, repaired one commit each, every new test red against the code before it. The exact r2's run time stays open for a separate look before any change to its precision; the plausible findings stay unconfirmed.
+
+| What                                                                                   | Commit                 | How                                                                                                                         |
+|----------------------------------------------------------------------------------------|------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| after `insufficient` the gate named a review the command refuses                       | `d7a0937f`, `75281ba4` | gate, review output and refusal share `ways_out.contested_way`: the evidence into the decision's reason or the Conclusion   |
+| a successor rendered its predecessor without the predecessor's reviews                 | `08c88107`             | the predecessor's own reviews, through `evidence.decision_reviews` (two copies of that reader made one)                     |
+| case 5: the printed handover went through `--findings` and lacked `--into`             | `4eb6d637`             | `ways_out.HANDOVER` names the complete command; `--findings` still offers no handover in an area never audited (as decided) |
+| case 2: `labkit-next` silent on the open warning                                       | `8c112c1e`             | its last step names report-check's warnings, the first with its way out; nothing new holds                                  |
+| an unreadable `failure.json` ended finalize in a traceback                             | `1de0ca45`             | the hold names the run and the unreadable record                                                                            |
+| the CHANGELOG sentence on the review fingerprint                                       | `871a92c9`             | corrected: the brief changed, so every earlier report review is owed                                                        |
+| case 1: the block line offered a new adoption                                          | `408fe794`             | it names the tree's adoption and the protocol's staging                                                                     |
+| the review's "nothing is held" beside a stale line; an `--again` draw read the verdict | `e0f59790`             | the review names the `--render` step; the reviewer's protocol copy shows the lines as proposed                              |
+| two untested lines                                                                     | `3c80c7a7`             | the adoption-only staging branch and the stale block's rule, each red with the line reverted                                |
+
+Replayed at `3c80c7a7` with the script's gaps turned into checks: 50 checks as expected, no gap left. Full checks at `3c80c7a7` green: ruff, ruff format, pyright, the whole suite (3621 passed, 1 skipped), each exit 0; log in labkit-evidence, `test-runs/2026-11-15-full-checks-3c80c7a7.log`.
