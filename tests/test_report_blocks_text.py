@@ -83,6 +83,8 @@ class Blocks(unittest.TestCase):
         )
         (gap,) = report_blocks.block_gaps(found, {P: BlockSource(RUN, "a = 2")}, report)
         self.assertIn("differs from the protocol's rendering", gap.line)
+        # a stale projection, not a number leaving the area unadopted
+        self.assertEqual(gap.rule, TECHNICAL_RULE)
         (gap,) = report_blocks.block_gaps(
             found, {P: BlockSource("2026-10-08T10-00-00_cd34", "a = 2")}, report
         )

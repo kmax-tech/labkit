@@ -999,6 +999,47 @@ class AWarningBesideTheAdoption(unittest.TestCase):
         self.assertNotIn("warn", step.next)
 
 
+class AdoptionInTheTreeOnly(unittest.TestCase):
+    """The run committed, its adoption only in the working tree and only
+    the report staged: no run lies outside the index, yet the tree's head
+    declares a result the index's does not (`result_outside_index`, its
+    second branch), so the step stages the area (independent review of
+    c43c842e, 2026-11-15). The twin: the protocol staged too, nothing lies
+    outside."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, "analysis", run_id)
+        self.lab.commit("the run and its audit")
+        rc, out = self.lab.adopt(self.protocol, run_id)
+        self.assertEqual(rc, 0, out)
+        report = self.lab.root / "REPORT.md"
+        report.write_text("# Report\n\nThe lines.\n", encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = protocol_fill.main([str(self.protocol), "--into", str(report)])
+        self.assertEqual(rc, 0)
+        self.lab.git("add", "--", str(report))
+
+    def test_the_adoption_alone_is_named_as_outside_the_index(self):
+        root = self.lab.root
+        self.assertEqual(report_hold.runs_outside_index(root, self.area), {})
+        self.assertTrue(
+            report_hold.result_outside_index(root, self.area, self.protocol)
+        )
+        with contextlib.chdir(root):
+            staged = next_step.next_step(
+                self.area, self.protocol.resolve(), file_state=area_state.INDEX
+            )
+        self.assertIn("`git add -- experiments/01-lines`", staged.next)
+        self.lab.git("add", "--", str(self.protocol))
+        self.assertFalse(
+            report_hold.result_outside_index(root, self.area, self.protocol)
+        )
+
+
 class RunInTheTreeOnly(unittest.TestCase):
     """A run measured and adopted, its result block in REPORT.md, and only
     REPORT.md staged: the commit judges the index, where neither the run
