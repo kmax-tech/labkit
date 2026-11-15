@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -876,6 +877,38 @@ class ScopeAsFirstMeasured(_Repository):
         self.assertIn("register anew", line)
         self.assertIn("hand over", line)
         self.assertNotIn("restore", line)
+
+    def _second_without_a_number(self, *, alive: bool) -> tuple[Path, str]:
+        """The split with its second first measurement having left no
+        metrics and no failure record, its pid a process that still runs
+        its script (ALIVE) or one that has ended; (run, the hold's line)."""
+        second = self._first_at_one_commit_with_another_question(crashed=True)
+        (second / runs.FAILURE_FILE).unlink()
+        cfg = second / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        code = "import time; time.sleep(60)" if alive else "pass"
+        proc = subprocess.Popen([sys.executable, "-c", code, data["script"]])
+        self.addCleanup(proc.kill)
+        if not alive:
+            proc.wait()
+        data["pid"] = proc.pid
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        (line,) = self._changes()
+        return second, line
+
+    def test_a_first_measurement_still_running_is_named_so(self):
+        """A first measurement whose process still runs its script is no
+        stopped run: the hold names it running and still counts it
+        (independent review of 4b6a076f, replayed 2026-11-15). The twin: its
+        process ended, it stopped without a number."""
+        second, line = self._second_without_a_number(alive=True)
+        self.assertIn(f"{second.name} (still running, no number yet)", line)
+        self.assertNotIn("stopped without a number", line)
+        self.assertIn("the first measurements saw different texts", line)
+
+    def test_the_twin_a_first_measurement_whose_process_ended_stopped(self):
+        second, line = self._second_without_a_number(alive=False)
+        self.assertIn(f"{second.name} (stopped without a number)", line)
 
     def test_an_unreadable_failure_record_is_named_inside_the_hold(self):
         """A stopped first measurement whose failure.json does not read

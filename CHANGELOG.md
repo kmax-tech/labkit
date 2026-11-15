@@ -30,6 +30,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ### Fixed
 
+- **A first measurement still running is named as running in the hold.** The hold on first measurements that saw different texts named every run without metrics.json "stopped without a number", a run whose process still ran its script included (independent review of `4b6a076f`, replayed 2026-11-15 with a live process). It now says "still running, no number yet", or that whether it runs cannot be told; the hold counts it as before.
+
 - **A review that changes a Limitation line says so, and a later draw reads the decision as proposed.** After a review that did not uphold a decision, `--review` said "nothing is held: report-check warns" while report-check held the Limitation line written before as a stale rendering until `--render`; and once `--render` had written "not confirmed by a second auditor" into the protocol, an `--again` draw read that verdict in the protocol it was shown (independent review of `cde6124c` and `f590406e`, 2026-11-15). The review now names the `--render` step whenever the section differs from what it renders under the reviews, and the reviewer's copy of the protocol carries the result lines as they render with no verdict read (`decision_review.as_proposed`).
 
 - **A result block whose adoption only the working tree holds is told to be staged.** With the run and the adoption in the tree and only the report staged, the block's line said the protocol "has adopted no result" and offered `labkit-adopt`, beside the citation's and labkit-next's staging step (acceptance replay, case 1). It now says the index's head has adopted nothing and the tree's has adopted the run, and names `git add -- <protocol>` (`report_hold._undeclared_source`).

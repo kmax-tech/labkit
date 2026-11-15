@@ -32,6 +32,7 @@ from labkit.formats.gate import Findings
 from labkit.formats.runs import (
     RunConfigError,
     RunDir,
+    is_alive,
     patch_text,
     stopped_without_number,
     read_run_dir,
@@ -539,13 +540,27 @@ def stopped_note(rd: RunDir) -> str:
     """` (stopped without a number[: <failure>])` for a run RD that wrote
     no metrics.json (`runs.stopped_without_number`), its failure cut to
     SCOPE_QUOTE characters — a failure.json that does not read named as
-    such, inside the hold that blocks —; "" otherwise."""
+    such, inside the hold that blocks —; for one that left no failure
+    record and whose process still runs its script (`runs.is_alive`),
+    ` (still running, no number yet)`, and where that cannot be told,
+    ` (no number yet; whether it still runs cannot be told)`; "" otherwise.
+    Either way it is a first measurement the hold counts."""
     try:
         why = stopped_without_number(rd)
     except RunConfigError as exc:
         return f" (stopped without a number; its failure record does not read: {_quoted(str(exc))})"
     if why is None:
         return ""
+    if not why:  # no failure record: stopped, or still going
+        try:
+            cfg = read_run_config(rd.dir)
+        except RunConfigError:
+            cfg = None  # the config's own check names it; liveness unknown
+        alive = is_alive(cfg.pid, cfg.script) if cfg is not None else None
+        if alive is True:
+            return " (still running, no number yet)"
+        if alive is None:
+            return " (no number yet; whether it still runs cannot be told)"
     return f" (stopped without a number{f': {_quoted(why)}' if why else ''})"
 
 
