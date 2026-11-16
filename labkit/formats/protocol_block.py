@@ -8,7 +8,7 @@ unit) and may carry a `[reference]` table, the stated value that number is
 compared with (`reference`):
 
     [protocol]
-    standard = "0.30"
+    standard = "0.31"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     repeat_cost = "low"         # low | high — the price of a repeat
@@ -48,7 +48,7 @@ from labkit.formats.runs import REPEAT_COSTS, RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.30"
+STANDARD = "0.31"
 #: the field labels the migration renames, earlier label → label of STANDARD;
 #: the refusal says it, and a protocol that set the version but kept an
 #: earlier label is told to rename that line (`protocol_check.rename_way`),
@@ -57,7 +57,8 @@ RENAMED_LABELS = {"Noise ceiling → threshold": "Noise floor → threshold"}
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    f'from 0.24, 0.25, 0.26, 0.27, 0.28 or 0.29: set standard = "{STANDARD}" and '
+    f'from 0.30: set standard = "{STANDARD}"; from 0.24, 0.25, 0.26, 0.27, 0.28 '
+    "or 0.29: set it and "
     + "; ".join(
         f'rename the field label "{old}" to "{new}"'
         for old, new in RENAMED_LABELS.items()
@@ -79,7 +80,10 @@ MIGRATION = (
     "judging what the effect leaves unjudged; one it does not uphold voids no "
     "verdict (LAB-015 Preflight audit before freezing), 0.30 names that field "
     "after the noise floor the threshold derives from, not the best score "
-    "noisy labels allow; what it owes is unchanged (LAB-011 Required-field check)"
+    "noisy labels allow; what it owes is unchanged (LAB-011 Required-field check), "
+    "0.31 leaves not assessable only the promises a limitation names — a quality "
+    "check named alone voids no criterion; a decision meant to void the criteria "
+    "names each and is reviewed again (LAB-015 Preflight audit before freezing)"
 )
 TYPES = ("exploratory", "confirmatory")
 #: what the kept number asserts: a computation judges no

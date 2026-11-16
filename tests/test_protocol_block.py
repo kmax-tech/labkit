@@ -29,7 +29,7 @@ class Head(unittest.TestCase):
                 h.preflight_audit,
             ),
             (
-                "0.30",
+                "0.31",
                 PID,
                 "exploratory",
                 "low",
@@ -121,28 +121,37 @@ class Head(unittest.TestCase):
 
     def test_other_standard_names_the_way_out(self):
         self.assertRejects(
-            head().replace('"0.30"', '"0.18"'), "reproduced with the labkit release"
+            head().replace('"0.31"', '"0.18"'), "reproduced with the labkit release"
         )
         # a protocol with runs is never offered the conversion
         self.assertRejects(
-            head().replace('"0.30"', '"0.18"'),
+            head().replace('"0.31"', '"0.18"'),
             "only a protocol not yet run may be updated",
         )
 
     def test_a_previous_standard_is_told_what_the_new_one_owes(self):
-        """A 0.29 protocol is refused with the one-line migration — the
-        version and the renamed field label — and what 0.30 changes: the
-        field's name, not what it owes (LAB-011 Required-field check)."""
-        old = head().replace('"0.30"', '"0.29"')
+        """A 0.30 protocol is refused with the one-line migration — the
+        version — and what 0.31 changes: a limitation voids only the promises
+        it names (LAB-015 Preflight audit before freezing); a 0.29 one is
+        told to rename the field label as well."""
+        self.assertRejects(
+            head().replace('"0.31"', '"0.30"'),
+            'from 0.30: set standard = "0.31"; from 0.24',
+        )
+        self.assertRejects(
+            head().replace('"0.31"', '"0.30"'),
+            "0.31 leaves not assessable only the promises a limitation names",
+        )
+        old = head().replace('"0.31"', '"0.29"')
         self.assertRejects(
             old,
-            'from 0.24, 0.25, 0.26, 0.27, 0.28 or 0.29: set standard = "0.30" and '
+            "from 0.24, 0.25, 0.26, 0.27, 0.28 or 0.29: set it and "
             'rename the field label "Noise ceiling → threshold" to "Noise floor → '
             'threshold"',
         )
         self.assertRejects(old, "0.30 names that field after the noise floor")
         self.assertRejects(
-            head().replace('"0.30"', '"0.28"'),
+            head().replace('"0.31"', '"0.28"'),
             "0.29 owes the second auditor for a limitation that leaves a promise "
             "not assessable",
         )

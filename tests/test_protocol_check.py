@@ -589,7 +589,7 @@ WRITTEN = 'rename the label on line {line} from "Noise ceiling → threshold" to
 
 
 class TestRenamedLabel(unittest.TestCase):
-    """A protocol that set standard 0.30 and kept a label the migration
+    """A protocol that set standard 0.31 and kept a label the migration
     renames (`protocol_block.RENAMED_LABELS`) is told to rename that line,
     not to add the field beside it; the earlier label never counts."""
 
@@ -1399,7 +1399,7 @@ class TestHeadValues(unittest.TestCase):
         for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
-                    pilot().replace('standard = "0.30"', f'standard = "{std}"')
+                    pilot().replace('standard = "0.31"', f'standard = "{std}"')
                 )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)

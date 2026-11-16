@@ -40,8 +40,8 @@ class Parser(unittest.TestCase):
 class Head(unittest.TestCase):
     def test_a_numeric_standard_says_string(self):
         with self.assertRaises(protocol_block.BlockError) as cm:
-            protocol_block.head(head().replace('standard = "0.30"', "standard = 0.18"))
-        self.assertIn('a string, "0.30"', str(cm.exception))
+            protocol_block.head(head().replace('standard = "0.31"', "standard = 0.18"))
+        self.assertIn('a string, "0.31"', str(cm.exception))
 
 
 class Scopes(unittest.TestCase):
