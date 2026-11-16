@@ -66,10 +66,34 @@ class Lookup(unittest.TestCase):
 
     def test_a_run_that_does_not_read_is_never_eligible(self) -> None:
         damaged = AreaRun(A, COMPLETED, None, (OutputEntry(FILE, SHA, 1),), "bad json")
-        self.assertEqual(origin([damaged]), input_origins.NO_ORIGIN)
-        self.assertEqual(origin([damaged, done(B, (FILE, SHA))]).origin_run, B)
+        self.assertEqual(origin([damaged]), InputOrigin(None, False, None, (A,)))
+        self.assertEqual(
+            origin([damaged, done(B, (FILE, SHA))]), InputOrigin(B, False, None, (A,))
+        )
         with self.assertRaisesRegex(OriginRefused, f"{A} does not read: bad json"):
             origin([damaged], chosen=A)
+
+    def test_a_chosen_origin_skips_no_unreadable_run(self) -> None:
+        damaged = AreaRun(A, "unreadable", None, (), "bad json")
+        self.assertEqual(
+            origin([damaged, done(B, (FILE, SHA))], chosen=B),
+            InputOrigin(B, True, None),
+        )
+
+    def test_the_warning_names_the_input_the_decision_and_the_skipped_runs(
+        self,
+    ) -> None:
+        found = input_origins.skipped_warning(
+            "items", "data/out.jsonl", InputOrigin(B, False, None, (A, C))
+        )
+        self.assertIn("data['items'] = data/out.jsonl", found)
+        self.assertIn(f"origin was decided as {B}", found)
+        self.assertIn(f"looking into {A}, {C}", found)
+        self.assertIn('runlog.RunOutput("data/out.jsonl", run=', found)
+        plain = input_origins.skipped_warning(
+            "items", "data/out.jsonl", InputOrigin(None, False, None, (A,))
+        )
+        self.assertIn("decided as an input without origin", plain)
 
     def test_two_runs_with_the_same_file_and_bytes_need_a_choice(self) -> None:
         runs = [done(A, (FILE, SHA)), done(B, (FILE, SHA), repeat_of=A)]
@@ -348,15 +372,26 @@ class AtStart(unittest.TestCase):
             self.read_run(runlog.RunOutput(self.out, run=broke.run_id))
         self.assertIn(f"{broke.run_id} is not completed", str(cm.exception.code))
 
-    def test_a_damaged_run_holds_no_other_start(self) -> None:
+    def test_a_damaged_run_holds_no_other_start_and_is_warned_of(self) -> None:
         w = self.write_run('{"id": 1}\n')
         damaged = self.area / "runs" / "2026-10-15T00-00-00_dead"
         damaged.mkdir()
         (damaged / "config.json").write_text("{not json", encoding="utf-8")
         self.assertEqual(
-            self.origins(self.out), {"items": InputOrigin(w.run_id, False, None)}
+            self.origins(self.out),
+            {"items": InputOrigin(w.run_id, False, None, (damaged.name,))},
         )
-        self.read_run(self.out)
+        told = io.StringIO()
+        with contextlib.redirect_stdout(told):
+            self.read_run(self.out)
+        self.assertIn(
+            f"origin was decided as {w.run_id} without looking into {damaged.name}",
+            told.getvalue(),
+        )
+        told = io.StringIO()
+        with contextlib.redirect_stdout(told):
+            self.read_run(runlog.RunOutput(self.out, run=w.run_id))
+        self.assertNotIn("without looking into", told.getvalue())  # chosen
         with self.assertRaises(SystemExit) as cm:
             self.read_run(runlog.RunOutput(self.out, run=damaged.name))
         self.assertIn(f"{damaged.name} does not read", str(cm.exception.code))

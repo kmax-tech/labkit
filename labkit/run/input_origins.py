@@ -15,6 +15,13 @@ outputs.json holds the input's path with the input's digest, and:
                                   the chosen run must be eligible, else refused
     none eligible, none chosen    a plain input without origin — no refusal
 
+A run whose record does not read is never eligible, and what it wrote
+cannot be read: an automatic decision — the one eligible run, or no
+origin — is then made without it. The decision carries every such run of
+the area, for each input alike, since none can be ruled out
+(`InputOrigin.skipped_unread`, `skipped_warning`). A chosen origin skips
+nothing: the script named it.
+
 A repeat (`repeat_of`) is eligible: an origin says where a file came from,
 not that its run may be adopted or reported (`runs.unreportable` decides
 that). Runs of other areas are never looked up.
@@ -82,14 +89,20 @@ class InputOrigin:
             chosen by the script, not confirmed by an auditor.
         origin_repeat_of: The run ORIGIN_RUN repeats, for the auditor's
             evidence; None when it repeats none or there is no origin.
+        skipped_unread: Every run of the area whose record did not read,
+            left out of an automatic decision — not known to have written
+            the file, only not ruled out; () when there is none or the
+            script chose the run.
     """
 
     origin_run: str | None
     origin_chosen: bool
     origin_repeat_of: str | None
+    skipped_unread: tuple[str, ...] = ()
 
 
-#: what a plain input without origin is decided as
+#: a plain input without origin, decided with no unreadable run skipped;
+#: a plain input that skipped one carries it, so ask `origin_run is None`
 NO_ORIGIN = InputOrigin(None, False, None)
 
 
@@ -125,16 +138,18 @@ def decide_origin(
     PATH resolved, SHA256 its present digest — among RUNS, the runs of the
     area under RUNS_DIR, with CHOSEN_RUN the run the script named
     (`provenance.RunOutput`) or None. The table in the module docstring
-    decides. Raises OriginRefused naming KEY: several eligible runs and no
+    decides; an automatic decision carries the area's unreadable runs.
+    Raises OriginRefused naming KEY: several eligible runs and no
     choice; a chosen run that is no run of the area, not completed, did not
     register the file or recorded other bytes for it."""
     eligible = eligible_runs(path, sha256, runs)
     if chosen_run is None:
+        skipped = tuple(r.run_id for r in runs if r.unread is not None)
         if not eligible:
-            return NO_ORIGIN
+            return InputOrigin(None, False, None, skipped)
         if len(eligible) == 1:
             only = eligible[0]
-            return InputOrigin(only.run_id, False, only.repeat_of)
+            return InputOrigin(only.run_id, False, only.repeat_of, skipped)
         raise OriginRefused(
             with_way_out(
                 f"runlog: data[{key!r}] = {recorded}: {len(eligible)} completed "
@@ -160,6 +175,27 @@ def decide_origin(
                 "without origin"
             ),
         )
+    )
+
+
+def skipped_warning(key: str, recorded: str, origin: InputOrigin) -> str:
+    """What a start is told whose input KEY (RECORDED as the record writes
+    its path) was decided as ORIGIN while runs of the area did not read
+    (`InputOrigin.skipped_unread`, not empty): the decision, the area's
+    runs it could not look into — whether one wrote this file cannot be
+    told —, and the way to a decision that does not rest on them. A warning, not a refusal: a damaged run elsewhere in the area does
+    not hold this start."""
+    decided = (
+        f"its origin was decided as {origin.origin_run}"
+        if origin.origin_run is not None
+        else "it was decided as an input without origin"
+    )
+    return (
+        f"runlog: WARNING — data[{key!r}] = {recorded}: {decided} without "
+        f"looking into {', '.join(origin.skipped_unread)}, the area's runs "
+        f"whose record does not read; whether one of them wrote this file "
+        f"cannot be told. Repair that record, or name the origin in the "
+        f'script: `runlog.RunOutput("{recorded}", run="<the run>")`.'
     )
 
 

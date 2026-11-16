@@ -150,7 +150,12 @@ from labkit.formats.answering_run import (
     repeat_mismatch,
     repeat_seed,
 )
-from labkit.run.input_origins import InputOrigin, OriginRefused, input_origins
+from labkit.run.input_origins import (
+    InputOrigin,
+    OriginRefused,
+    input_origins,
+    skipped_warning,
+)
 from labkit.run.provenance import RunOutput as RunOutput  # public: runlog.RunOutput
 from labkit.run.provenance import (
     Provenance,
@@ -374,6 +379,23 @@ class NoInputs:
 NO_INPUTS = NoInputs()
 
 
+def _decide_origins_and_warn(
+    base_dir: Path, data: dict, described: dict
+) -> dict[str, InputOrigin]:
+    """The origin of every input in DATA (`input_origins`), DESCRIBED as
+    `describe_data` made it; each automatic decision made without an
+    unreadable run is warned of (`skipped_warning`). Raises SystemExit for
+    an origin that cannot be decided or a chosen one that does not hold."""
+    try:
+        origins = input_origins(base_dir, data, described)
+    except OriginRefused as exc:
+        raise SystemExit(str(exc)) from exc
+    for key, origin in origins.items():
+        if origin.skipped_unread:
+            print(skipped_warning(key, described[key]["path"], origin))
+    return origins
+
+
 class Run:
     """One measure run: its directory, its frozen config, the outputs it
     registers and the metrics it reports.
@@ -391,7 +413,8 @@ class Run:
          completed runs (`input_origins` — one eligible run is the origin,
          several need a `RunOutput` choice, a wrong choice is refused, none
          is a plain input; a run whose record does not read is never an
-         origin, and a choice that names it is refused)
+         origin, a choice that names it is refused, and an automatic
+         decision made without it is warned of, `skipped_warning`)
          (undecided blockers, the freeze or the registration, the
          acknowledgement over a failed audit); the imported code read per
          repository (`code_repos.read_code`), and for a full run refused when
@@ -450,10 +473,7 @@ class Run:
         else:
             described = describe_data(data, base_dir) if data else {}
             if data:
-                try:
-                    origins = input_origins(base_dir, data, described)
-                except OriginRefused as exc:
-                    raise SystemExit(str(exc)) from exc
+                origins = _decide_origins_and_warn(base_dir, data, described)
         unfrozen_ack, audit_failed = False, None
         if prepared.run_kind == MEASUREMENT:
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
