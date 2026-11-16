@@ -365,7 +365,7 @@ def _registration_at(
     anew = (
         "when the missing choices can be made on grounds the new registration "
         f"states, {commands.register_anew(str(ctx.head.id))}; else "
-        f"{ways_out.HANDOVER}"
+        f"{ways_out.handover(ctx.protocol)}"
     )
     if then.cause == NO_COMMIT:
         # NO_GIT is the run's own word that it started outside the history;
@@ -500,7 +500,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             fix=f"(a) bring the evidence back — the line names the first "
             f"restore, `{findings_command}` lists every loss with its restore —, "
             f"then {audit}; (b) where nothing restores it, no audit covers the "
-            f"area and no number leaves it: {ways_out.HANDOVER}",
+            f"area and no number leaves it: {ways_out.handover(ctx.protocol)}",
             rule=TECHNICAL_RULE,
         )
     # the rule of the lane: at low the cost tier's, which owes this one

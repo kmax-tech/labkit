@@ -56,7 +56,7 @@ from labkit.formats.commands import (
     measure_command,
     withdraw_command,
 )
-from labkit.gates.ways_out import unclear_correction, HANDOVER
+from labkit.gates.ways_out import handover, unclear_correction
 from labkit.formats.commands import register_anew
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.formats.protocol_check import (
@@ -184,7 +184,7 @@ def registration_changes(
                     "per change against each of these registrations (report-check "
                     "of the new protocol lists them)",
                 )
-                + f"; or {HANDOVER}",
+                + f"; or {handover(protocol)}",
                 rule=LAB_003,
             )
         ]
@@ -297,7 +297,7 @@ def scope_changes(
         needed = [*firsts, *([read_run_dir(run)] if others else [])]
         unread = protocol_history.unread_measurements(protocol, needed, root)
         if unread:
-            return [unread_hold(area, pid, unread)]
+            return [unread_hold(area, protocol, pid, unread)]
     try:
         return _scope_held(
             area, protocol, pid, run, root, firsts, others, measured, state, held
@@ -352,7 +352,7 @@ def _scope_held(
         for one, other, between in among:
             unsettled = [d for d in between if field_name(d[0]) not in corrected]
             if unsettled:
-                return split_hold(pid, one, other, unsettled)
+                return split_hold(protocol, pid, one, other, unsettled)
         # every difference among them is a corrected field: on to the holds
         # of the answering run's text and the protocol as it stands
     seen, _ = (
@@ -503,7 +503,11 @@ def seen_hold(
 
 
 def split_hold(
-    pid: str, one: RunDir, other: RunDir, diffs: list[tuple[str, str, str]]
+    protocol: Path,
+    pid: str,
+    one: RunDir,
+    other: RunDir,
+    diffs: list[tuple[str, str, str]],
 ) -> list[GateFinding]:
     """The BLOCKERs when the first measurements ONE and OTHER saw different
     texts of what the number is about (DIFFS, ONE's value → OTHER's), one
@@ -528,7 +532,7 @@ def split_hold(
             f"other first measurement held",
             fix="either "
             + register_anew(pid, "per change against each of these texts")
-            + f"; or {HANDOVER}",
+            + f"; or {handover(protocol)}",
             rule=scope_rule(cause),
         )
         # no correction ref to carry: a corrected field never reaches here
@@ -644,7 +648,7 @@ def now_hold(
     return withdrawn_first(found, withdraw)
 
 
-def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
+def unread_hold(area: Path, protocol: Path, pid: str, unread: list[str]) -> GateFinding:
     """The BLOCKER when the protocol as a first measurement or the answering
     run saw it cannot be read back (UNREAD, `unread_measurements`): what
     the number is about cannot be compared, so finalize does not say it is
@@ -660,7 +664,7 @@ def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
         fix=f"make it readable: the commit from a clone that holds it (`git fetch`), "
         f"the repository's missing objects restored (`git fsck` names them), then "
         f"`{gate_command('finalize', area)}`; where it cannot be read back at all, "
-        f"{anew_way(pid)}; or {HANDOVER}",
+        f"{anew_way(pid)}; or {handover(protocol)}",
         rule=TECHNICAL_RULE,
     )
 

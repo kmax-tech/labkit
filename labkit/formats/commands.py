@@ -132,6 +132,29 @@ def checkout_command(path: str | Path, rev: str = "HEAD") -> Command:
     )
 
 
+def report_shown(text: str, root: Path) -> str | None:
+    """The report the head in the protocol TEXT registers, under the repo
+    ROOT, as the working directory reaches it — the `--into` target of every
+    command that writes into it; None when the head registers none or does
+    not read: the gate reading it holds that. Reads no file, for a pure
+    check that holds the text (`AreaState.protocol_texts`)."""
+    try:
+        rel = protocol_block.head(text).report
+    except protocol_block.BlockError:
+        return None
+    return shown(own_path(root / rel), Path.cwd()) if rel is not None else None
+
+
+def registered_report_shown(protocol: Path) -> str | None:
+    """`report_shown` for the PROTOCOL file as it stands, under its layout
+    root; None as well when the file does not read."""
+    try:
+        text = protocol.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return report_shown(text, layout_root(protocol))
+
+
 def withdraw_command(protocol: Path) -> Command:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —
@@ -140,15 +163,8 @@ def withdraw_command(protocol: Path) -> Command:
     withdrawn run's result block and the commit refuses it. A protocol or
     head that does not read names no report here — the gate reading it
     holds that."""
-    try:
-        rel = protocol_block.head(protocol.read_text(encoding="utf-8")).report
-    except (OSError, protocol_block.BlockError):
-        rel = None
-    into = (
-        f" --into {shlex.quote(shown(own_path(layout_root(protocol) / rel), Path.cwd()))}"
-        if rel is not None
-        else ""
-    )
+    report = registered_report_shown(protocol)
+    into = f" --into {shlex.quote(report)}" if report is not None else ""
     return Command(
         WITHDRAW,
         f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"{into}',
@@ -326,15 +342,20 @@ def stage_command(area: Path) -> Command:
     return Command(STAGE, f"git add -- {shlex.quote(shown(area, Path.cwd()))}")
 
 
-def handover_command(protocol: Path | None, report: str = "REPORT.md") -> Command:
+def handover_command(protocol: Path | None, report: str | None = None) -> Command:
     """The `protocol-fill … --handover` line for PROTOCOL (None: the
     `<PROTOCOL>` placeholder, for a sentence that knows no path) into
-    REPORT, its why and tried as placeholders; it runs no model."""
+    REPORT — when not given, the report PROTOCOL's head registers
+    (`registered_report_shown`), else `REPORT.md` —, its why and tried as
+    placeholders; it runs no model."""
     named = (
         shlex.quote(shown(protocol, Path.cwd()))
         if protocol is not None
         else "<PROTOCOL>"
     )
+    if report is None:
+        registered = registered_report_shown(protocol) if protocol is not None else None
+        report = registered if registered is not None else "REPORT.md"
     return Command(
         HANDOVER,
         f"protocol-fill {named} --handover "

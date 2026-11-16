@@ -24,6 +24,7 @@ from labkit.formats.commands import (
     Command,
     checkout_command,
     handover_command,
+    report_shown,
     register_anew,
 )
 from labkit.formats import digests
@@ -447,9 +448,17 @@ def gone_run_way(state: AreaState, run_id: str) -> tuple[str, Command]:
     where git holds it (STATE's `deleted`: the commit that held it last,
     `area_state.gone_run_restore`), else hand the area over naming the
     loss, or register anew. Measuring again lifts nothing — the record
-    stays and names the gone run —, so the way out never offers it."""
+    stays and names the gone run —, so the way out never offers it. The
+    handover goes into the report the protocol's head registers, read from
+    STATE's text of it (a pure check opens no file), else `REPORT.md`."""
     protocol = only_protocol(state.protocols) or state.area / "PROTOCOL-<name>.md"
-    handover = handover_command(protocol)
+    text = state.protocol_texts.get(protocol)
+    report = (
+        report_shown(text, state.repo)
+        if text is not None and state.repo is not None
+        else None
+    )
+    handover = handover_command(protocol, report or "REPORT.md")
     held_back = next((rd for rd in state.deleted if rd.dir.name == run_id), None)
     put_back = (
         f"put it back where git holds it ({gone_run_restore(held_back)}); else"

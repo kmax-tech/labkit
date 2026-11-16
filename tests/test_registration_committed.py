@@ -595,8 +595,10 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn(later.name, finding.line)
         self.assertIn('[replaces] protocol = "', finding.line)
         self.assertIn("against each of these registrations", finding.line)
-        self.assertIn(
-            "or hand over: `protocol-fill <PROTOCOL> --handover --why", finding.line
+        # the protocol by its path, as the hold knows it
+        self.assertRegex(
+            finding.line,
+            r"or hand over: `protocol-fill \S+PROTOCOL-x\.md --handover --why",
         )
         self.assertIn("--into REPORT.md`", finding.line)
         self.assertIn("--handover", finding.line)

@@ -167,7 +167,7 @@ def _undeclared_changes(
         return [
             blocker(
                 f"the registrations cannot be compared — {'; '.join(gaps)}",
-                fix=f"until they can, {ways_out.HANDOVER}",
+                fix=f"until they can, {ways_out.handover(ctx.protocol)}",
                 rule=TECHNICAL_RULE,
             )
         ]

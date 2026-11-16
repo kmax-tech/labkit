@@ -640,8 +640,9 @@ class ConflictingRegistrations(_Areas):
         (gap,) = self.gaps()
         self.assertIn(f"its first measurement {self.A2_RUN} recorded block", gap)
         self.assertIn("cannot be read back", gap)
-        self.assertIn(
-            "until they can, hand over: `protocol-fill <PROTOCOL> --handover", gap
+        self.assertRegex(
+            gap,
+            r"until they can, hand over: `protocol-fill \S+PROTOCOL-x\.md --handover",
         )
         self.assertIn("the handover leaves no [result] table", gap)
         self.assertNotIn("fetch", gap)

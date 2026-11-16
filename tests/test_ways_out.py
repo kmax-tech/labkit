@@ -9,7 +9,9 @@ one the head parser reads (K1, docs/notes/2026-10-27-new-registration-contracts.
 from __future__ import annotations
 
 import re
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -17,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.formats import protocol_block  # noqa: E402
-from labkit.gates import audit, ways_out  # noqa: E402
+from labkit.gates import audit, registration_hold, ways_out  # noqa: E402
 from labkit.tools import protocol_fill, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
@@ -187,6 +189,40 @@ def flags_of(main, argv: list[str]) -> set[str]:
         except SystemExit:
             pass
     return seen
+
+
+class HandoverIntoTheRegisteredReport(unittest.TestCase):
+    """The handover a hold prints for a known protocol writes into the
+    report its head registers, not a fixed `REPORT.md` (final review,
+    2026-11-16: a head registering RESULTS.md got `--into REPORT.md`, which
+    wrote a second report and left the registered one owed)."""
+
+    def protocol(self, report: str | None) -> Path:
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        (root / "CLAUDE.md").write_text("", encoding="utf-8")
+        area = root / "experiments" / "01-a"
+        area.mkdir(parents=True)
+        path = area / "PROTOCOL-a.md"
+        path.write_text(f"# A\n\n{head(report=report)}\n", encoding="utf-8")
+        return path
+
+    def test_the_handover_names_the_registered_report(self):
+        protocol = self.protocol("RESULTS.md")
+        for said in (
+            ways_out.handover(protocol),
+            registration_hold.unread_hold(
+                protocol.parent, protocol, "p-aaaa", ["x"]
+            ).fix
+            or "",
+        ):
+            into = re.search(r"--into (\S+)`", said)
+            assert into is not None, said
+            self.assertTrue(into.group(1).endswith("RESULTS.md"), said)
+
+    def test_the_twin_a_head_without_a_report_names_the_default(self):
+        self.assertIn("--into REPORT.md`", ways_out.handover(self.protocol(None)))
+        self.assertIn("--into REPORT.md`", ways_out.HANDOVER)
 
 
 if __name__ == "__main__":

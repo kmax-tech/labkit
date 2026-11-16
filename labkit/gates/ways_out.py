@@ -10,25 +10,35 @@ names the cause rule and where the ways stand (`audit_decisions.CAUSE_FIRST`).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from labkit.formats import findings, promises
 from labkit.formats.commands import handover_command, register_anew
 from labkit.checks.audit_binding import AuditError
 
 
-#: how a question that cannot be answered leaves the session — the one
-#: sentence the ways out and report-check's holds (K1, K3) print, its
-#: command complete, as a handover needs no audit record. A run id
-#: in a report reads as that run's number: report-check holds the answering
-#: run of a protocol that declares no result, so a handover names the
-#: protocol (tests/test_counter_cases.py)
-HANDOVER = (
-    f"hand over: `{handover_command(None)}` (no model call; where an audit "
-    "ran, `labkit-audit <area> --findings` first prints the --decide commands "
-    "for its open BLOCKERs, which stay open in the handover) — the handover "
-    "leaves no [result] table in the protocol's head, and its block in the "
-    "report names the protocol, not its runs (a cited run id reads as a "
-    "reported number), what stands in the way and what was tried; no number"
-)
+def handover(protocol: Path | None) -> str:
+    """How a question that cannot be answered leaves the session — the one
+    sentence the ways out and report-check's holds (K1, K3) print, its
+    command complete (`handover_command`: PROTOCOL and the report its head
+    registers; None, the placeholders), as a handover needs no audit
+    record."""
+    # a run id in a report reads as that run's number: report-check holds the
+    # answering run of a protocol that declares no result, so a handover
+    # names the protocol (tests/test_counter_cases.py)
+    return (
+        f"hand over: `{handover_command(protocol)}` (no model call; where an "
+        "audit ran, `labkit-audit <area> --findings` first prints the --decide "
+        "commands for its open BLOCKERs, which stay open in the handover) — the "
+        "handover leaves no [result] table in the protocol's head, and its block "
+        "in the report names the protocol, not its runs (a cited run id reads as "
+        "a reported number), what stands in the way and what was tried; no number"
+    )
+
+
+#: the handover sentence where no protocol is known: the ways-out table and
+#: the agent guide (`handover`)
+HANDOVER = handover(None)
 
 #: the way out when a finding decided `fixed` names a place that begins
 #: several protocol fields or means one written twice
