@@ -2,6 +2,10 @@
 
 2026-11-15. Step 5 of the plan under task 7 in `TODO.md`: the cases replayed on [2026-11-13](2026-11-13-usage-round-24-replays.md) and [2026-11-15](2026-11-15-agent-guidance-replays.md) rerun through the same entry points at labkit `d5f4e2b7`, the printed way out followed to its end, the twin kept free; an independent code review of each repair commit that had none; the full checks at that state. The registered round's result stays "not shown"; nothing here measures whether agents now act differently.
 
+## What this acceptance covers
+
+It covers the five cases below, replayed through real commands on a count-task lab with the model calls stood in by a fixed answer, the per-run null deviation replay, and the three review suspects replayed on 2026-11-16. Within these cases the printed way closes the hold and the twin stays free. It does not cover: the other findings of the trace readings (see the balance; group 1's further index findings were not replayed), any other task, real model answers (the reviewers' briefs were read, not run), and whether agents now act differently. The registered round's result stays "not shown".
+
 ## Replay
 
 Real commands on fresh count-task labs; the model calls are stand-ins with a fixed answer. Script, logs and outputs stay internal (labkit-evidence, `usability/2026-11-15-usage-round-24-acceptance/`): 44 checks as expected, 4 gaps the repairs left open. The patterns of the old readings were confirmed present by the 2026-11-13 script, which at `d5f4e2b7` reports them gone (4 of its 15 checks now MISMATCH, as intended).
@@ -69,3 +73,18 @@ The confirmed review findings and the four replay gaps, repaired one commit each
 | two untested lines                                                                     | `3c80c7a7`             | the adoption-only staging branch and the stale block's rule, each red with the line reverted                                |
 
 Replayed at `3c80c7a7` with the script's gaps turned into checks: 50 checks as expected, no gap left. Full checks at `3c80c7a7` green: ruff, ruff format, pyright, the whole suite (3621 passed, 1 skipped), each exit 0; log in labkit-evidence, `test-runs/2026-11-15-full-checks-3c80c7a7.log`.
+
+## Review suspects replayed (2026-11-16)
+
+The three findings the review had marked plausible, each replayed with a twin before any change; only the confirmed ones repaired. Scripts internal (labkit-evidence, `usability/2026-11-15-usage-round-24-acceptance/suspects/`).
+
+| Suspect                                                                             | Replay                                                                                                                                                                                                | Verdict           | Repair                                                                                        |
+|-------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------|
+| a first measurement still running read as "stopped without a number"                | split-hold fixture, the second run's pid a live process running its script: labelled stopped; twin, the process ended: labelled stopped, rightly                                                      | confirmed         | `4ca896e6`: "still running, no number yet", or liveness unknown; the hold counts it as before |
+| a field decided `fixed` lets two disagreeing first measurements past the split hold | real commands (count lab): X committed, Y in the tree for the second run, the field corrected to Z and decided `fixed`, then followed up, then run A's adoption tried: the split hold stood each time | not confirmed     | none; the correction counts for run A, while the commands judge run B as the answering run    |
+| an outcome claim inside a discussion block passes the report reviewer               | stand-in reviewer on an unadopted plain outcome claim: labkit offers the discussion block; the brief exempted every line inside it, unlike the other exemptions                                       | confirmed (brief) | `35e56119`: both briefs keep a finding inside the block a claim; a model's answer not run     |
+
+## Final review of the repaired state (2026-11-16)
+
+Four reviewers, scope split by commit: the decision-review repairs (`d7a0937f`, `75281ba4`, `e0f59790`); the predecessor rendering and the briefs (`08c88107`, `35e56119`); the handover sentence, the block staging, labkit-next's warnings and the two tests (`4eb6d637`, `408fe794`, `8c112c1e`, `3c80c7a7`); the hold notes and the whole unreleased CHANGELOG (`1de0ca45`, `4ca896e6`, `871a92c9`). No regression; the contract holds in each scope; the new tests fail on the old code. Reports internal (labkit-evidence, `usability/2026-11-15-usage-round-24-acceptance/final-review/`). Confirmed and not yet repaired, in `TODO.md` under plan step 5: a failure record that cannot be opened still ends finalize in a traceback; the handover sentence names `REPORT.md` where the protocol registers another report; a rejection and a later `--again` `insufficient` get two different ways; staging is offered where the tree adopted another run than the block shows; the render hint can print when nothing changes; the reviewer's protocol copy can replace the wrong line (a form feed or U+2028 in the text, the same in `--render`) or keep a stray Limitation line; the claim reviewer's brief states the discussion-block limit more narrowly; stale names in the CHANGELOG; two branches untested.
+
