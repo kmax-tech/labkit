@@ -8,8 +8,10 @@ one the head parser reads (K1, docs/notes/2026-10-27-new-registration-contracts.
 
 from __future__ import annotations
 
+import contextlib
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -18,7 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.formats import protocol_block  # noqa: E402
+from labkit.checks.audit_binding import gone_run_way  # noqa: E402
+from labkit.formats import area_state, protocol_block  # noqa: E402
 from labkit.gates import audit, registration_hold, ways_out  # noqa: E402
 from labkit.tools import protocol_fill, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
@@ -219,6 +222,22 @@ class HandoverIntoTheRegisteredReport(unittest.TestCase):
             into = re.search(r"--into (\S+)`", said)
             assert into is not None, said
             self.assertTrue(into.group(1).endswith("RESULTS.md"), said)
+
+    def test_the_gone_run_way_names_it_for_an_area_spelled_relative(self):
+        """The way out of a gone run reads the head from the area state,
+        whose texts are keyed by resolved path: an area spelled relative
+        to the working directory named `REPORT.md` (review of e6c4b406,
+        2026-11-16). Both spellings name the registered report."""
+        protocol = self.protocol("RESULTS.md")
+        root = protocol.parents[2]
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        with contextlib.chdir(root):
+            for spelled in (Path("experiments/01-a"), protocol.parent.resolve()):
+                with self.subTest(area=str(spelled)):
+                    _, handover = gone_run_way(area_state.state_of(spelled), "r1")
+                    self.assertTrue(
+                        handover.line.endswith("--into RESULTS.md"), handover.line
+                    )
 
     def test_the_twin_a_head_without_a_report_names_the_default(self):
         self.assertIn("--into REPORT.md`", ways_out.handover(self.protocol(None)))

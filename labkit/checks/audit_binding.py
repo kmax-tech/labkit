@@ -452,7 +452,10 @@ def gone_run_way(state: AreaState, run_id: str) -> tuple[str, Command]:
     handover goes into the report the protocol's head registers, read from
     STATE's text of it (a pure check opens no file), else `REPORT.md`."""
     protocol = only_protocol(state.protocols) or state.area / "PROTOCOL-<name>.md"
-    text = state.protocol_texts.get(protocol)
+    try:
+        text = state.text_of(protocol)  # keyed by the resolved path
+    except ValueError:
+        text = None  # no protocol, or several: the placeholder's default
     report = (
         report_shown(text, state.repo)
         if text is not None and state.repo is not None
