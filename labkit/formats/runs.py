@@ -268,14 +268,20 @@ def stopped_without_number(rd: RunDir) -> str | None:
 
 def read_failure(run_dir: Path) -> str | None:
     """`<Type>: <message>` from RUN_DIR/failure.json, None when the run left
-    none; RunConfigError when it is there and cannot be read."""
+    none; RunConfigError when it is there and cannot be opened or read."""
     path = run_dir / FAILURE_FILE
     if not path.is_file():
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         return f"{data['error']}: {data['message']}"
-    except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
+    except (
+        OSError,
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+        KeyError,
+        TypeError,
+    ) as exc:
         raise RunConfigError(f"{path}: unreadable ({exc})") from exc
 
 

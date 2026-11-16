@@ -924,6 +924,22 @@ class ScopeAsFirstMeasured(_Repository):
         )
         self.assertIn("register anew", line)
 
+    def test_a_failure_record_that_cannot_be_opened_is_named_inside_the_hold(self):
+        """A failure.json without read permission is named in the hold like
+        one that does not parse, never raised past it (final review,
+        2026-11-16)."""
+        second = self._first_at_one_commit_with_another_question(crashed=True)
+        failure = second / runs.FAILURE_FILE
+        failure.chmod(0)
+        self.addCleanup(failure.chmod, 0o644)
+        (line,) = self._changes()
+        self.assertIn(
+            f"{second.name} (stopped without a number; its failure record does "
+            "not read:",
+            line,
+        )
+        self.assertIn("register anew", line)
+
     def test_the_twin_finished_first_measurements_are_held_the_same_way(self):
         second = self._first_at_one_commit_with_another_question(crashed=False)
         (line,) = self._changes()
