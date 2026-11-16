@@ -546,9 +546,23 @@ class Cli(unittest.TestCase):
         claim = " ".join(audit_prompt.instructions("claim").split())
         self.assertIn(
             "inside a discussion block or a handover block and documents the "
-            "number rather than presenting it as what the experiment found",
+            "number rather than presenting it as what the experiment found or "
+            "drawing a conclusion from it",
             claim,
         )
+
+    def test_the_second_reader_has_the_first_readers_exemption_for_a_choice(self):
+        """A line reporting the numbers a choice was made on is no claim to
+        the report reviewer; the claim reviewer, who judges a decision on
+        that finding, upholds it on the same terms and with the same limit
+        (final review, 2026-11-16: the claim brief had no such item)."""
+        claim = " ".join(audit_prompt.instructions("claim").split())
+        self.assertIn(
+            "the line reports the numbers of the runs a choice was made on to "
+            "document that choice",
+            claim,
+        )
+        self.assertIn("draws no conclusion from them beyond the choice", claim)
 
 
 if __name__ == "__main__":
