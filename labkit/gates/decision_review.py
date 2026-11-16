@@ -558,17 +558,32 @@ def review(
             f"`{render_command(chosen)}` writes it — report-check holds the lines "
             "written before until then, no objection to the number"
         )
-    if r or i:
-        promised = audit_decisions.may_leave_unassessed(area, chosen)
-        for d in decisions:
-            if d.verdict in (reviews.REJECTED, reviews.INSUFFICIENT):
-                way = contested_way(
-                    rec.findings[d.finding - 1],
-                    promised,
-                    rejected=d.verdict == reviews.REJECTED,
-                )
-                print(f"  {d.verdict}: {way} (finding #{d.finding})")
+    print_contested_ways(area, chosen, rec, held)
     return 1 if held else 0
+
+
+def print_contested_ways(
+    area: Path, protocol: Path, record: findings.Record, not_upheld: list[int]
+) -> None:
+    """Print the way out of each finding among NOT_UPHELD (`held_after`)
+    whose state a review of AREA contests (`reviews.contested`, under the
+    claim PROTOCOL makes): the way the gate and the refusal name (`_way`),
+    chosen by every draw on the state — this draw's verdict alone named the
+    evidence way after a rejection, or none after an upheld `--again`.
+    Side effect: stdout only."""
+    text = protocol.read_text(encoding="utf-8")
+    found = evidence.decision_reviews(area)
+    contested = [n for n in not_upheld if reviews.contested(record, n, found, text)]
+    if not contested:
+        return
+    promised = audit_decisions.may_leave_unassessed(area, protocol)
+    for n in contested:
+        word = (
+            reviews.REJECTED
+            if reviews.rejected(record, n, found, text)
+            else reviews.INSUFFICIENT
+        )
+        print(f"  {word}: {_way(record, n, found, text, promised)} (finding #{n})")
 
 
 def _renders_differently(area: Path, protocol: Path) -> bool:

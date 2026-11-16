@@ -413,6 +413,25 @@ class TheCall(unittest.TestCase):
             out,
         )
 
+    def test_a_later_draw_on_a_rejected_state_names_the_way_of_the_state(self):
+        """After a rejection, an `--again` draw that says `insufficient` or
+        `upheld` names the way the gate and the refusal name — decide again —,
+        not the evidence way of its own verdict, and not none (final review,
+        2026-11-16: the output chose by this draw's verdict)."""
+        for later in (INSUFFICIENT, UPHELD):
+            with self.subTest(later=later.split(" · ")[1]):
+                area, _ = area_with(
+                    [BLOCKER], {1: ("limitation", "Finding noted", "stands")}
+                )
+                run_review(area, REJECTED)
+                rc, out, _, _ = run_review(area, later, "--again")
+                self.assertEqual(rc, 1, out)
+                self.assertIn("rejected: decide the finding again first", out)
+                self.assertNotIn("add the evidence", out)
+                code, held = gate(area)
+                self.assertEqual(code, 1, held)
+                self.assertIn("Next: decide the finding again first", held)
+
     def test_a_rejected_warning_limit_is_told_as_not_held_with_one_way(self):
         """The contract: a WARNING's `stands` no review upholds warns, it
         does not hold (`check_limits_upheld`). After a rejection the review
