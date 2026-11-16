@@ -25,6 +25,7 @@ from labkit.formats.answering_run import RunFacts
 from labkit.formats.area_state import TREE, AreaState, FileState, Measured
 from labkit.formats.evidence import AreaEvidence
 from labkit.formats import protocol_block
+from labkit.formats.files import MALFORMED
 from labkit.formats.runs import RUNS_DIR, RunConfig, RunDir
 from labkit.gates.report_context import Checked
 from protocol_fixture import PID
@@ -96,8 +97,15 @@ def run_dir(
     from_commit: str | None = None,
 ) -> RunDir:
     """The `RunDir` of run NAME under AREA's `runs/`, its record CONFIG (None:
-    the directory holds no config.json), ERROR and FROM_COMMIT as given."""
-    return RunDir(area / RUNS_DIR / name, config, error, from_commit)
+    the directory holds no config.json), ERROR and FROM_COMMIT as given; an
+    ERROR is a malformed record (`files.MALFORMED`)."""
+    return RunDir(
+        area / RUNS_DIR / name,
+        config,
+        error,
+        from_commit,
+        MALFORMED if error is not None else None,
+    )
 
 
 def audit_record(

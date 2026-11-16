@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
+import os
 import pickle
 import tempfile
 import unittest
@@ -17,6 +19,8 @@ from pathlib import Path
 from labkit.formats import runs
 from labkit.formats.runs import COMPLETED, OutputEntry
 from labkit.run import input_origins, provenance, runlog
+from labkit.formats.files import ACCESS, MALFORMED
+from labkit.formats.runs import OTHER_SCHEMA, UnreadableRun
 from labkit.run.input_origins import AreaRun, InputOrigin, OriginRefused
 
 A, B, C = (
@@ -65,35 +69,54 @@ class Lookup(unittest.TestCase):
         self.assertEqual(origin([crashed]), input_origins.NO_ORIGIN)
 
     def test_a_run_that_does_not_read_is_never_eligible(self) -> None:
-        damaged = AreaRun(A, COMPLETED, None, (OutputEntry(FILE, SHA, 1),), "bad json")
-        self.assertEqual(origin([damaged]), InputOrigin(None, False, None, (A,)))
+        damaged = AreaRun(
+            A, COMPLETED, None, (OutputEntry(FILE, SHA, 1),), "bad json", MALFORMED
+        )
+        skipped = (UnreadableRun(A, MALFORMED),)
+        self.assertEqual(origin([damaged]), InputOrigin(None, False, None, skipped))
         self.assertEqual(
-            origin([damaged, done(B, (FILE, SHA))]), InputOrigin(B, False, None, (A,))
+            origin([damaged, done(B, (FILE, SHA))]),
+            InputOrigin(B, False, None, skipped),
         )
         with self.assertRaisesRegex(OriginRefused, f"{A} does not read: bad json"):
             origin([damaged], chosen=A)
 
     def test_a_chosen_origin_skips_no_unreadable_run(self) -> None:
-        damaged = AreaRun(A, "unreadable", None, (), "bad json")
+        damaged = AreaRun(A, "unreadable", None, (), "bad json", MALFORMED)
         self.assertEqual(
             origin([damaged, done(B, (FILE, SHA))], chosen=B),
             InputOrigin(B, True, None),
         )
 
-    def test_the_warning_names_the_input_the_decision_and_the_skipped_runs(
+    def test_an_unread_run_names_its_cause(self) -> None:
+        with self.assertRaises(ValueError):
+            AreaRun(A, "unreadable", None, (), "bad json")
+        with self.assertRaises(ValueError):
+            AreaRun(A, "unreadable", None, (), "bad json", "broken")
+
+    def test_one_warning_names_each_input_and_groups_the_skipped_runs_by_cause(
         self,
     ) -> None:
-        found = input_origins.unreadable_warning(
-            "items", "data/out.jsonl", InputOrigin(B, False, None, (A, C))
+        skipped = (UnreadableRun(A, OTHER_SCHEMA), UnreadableRun(C, ACCESS))
+        told = input_origins.unreadable_warning(
+            [
+                ("items", "data/out.jsonl", InputOrigin(B, False, None, skipped)),
+                ("extra", "data/x.jsonl", InputOrigin(None, False, None, skipped)),
+            ]
         )
-        self.assertIn("data['items'] = data/out.jsonl", found)
-        self.assertIn(f"origin was decided as {B}", found)
-        self.assertIn(f"looking into {A}, {C}", found)
-        self.assertIn('runlog.RunOutput("data/out.jsonl", run=', found)
-        plain = input_origins.unreadable_warning(
-            "items", "data/out.jsonl", InputOrigin(None, False, None, (A,))
+        self.assertEqual(told.count("WARNING"), 1)
+        self.assertIn(f"data['items'] = data/out.jsonl as {B}", told)
+        self.assertIn("data['extra'] = data/x.jsonl as an input without origin", told)
+        self.assertIn(f"of a schema version this labkit does not read: {A}", told)
+        self.assertIn(f"could not be opened (permissions or I/O): {C}", told)
+        self.assertNotIn("damaged", told.split("Decided:")[0].split("(", 1)[1][:60])
+        self.assertIn("runlog.RunOutput(", told)
+        self.assertIn("repair a record", told)  # the access failure
+        self.assertIn("read with the labkit that wrote it", told)
+        schema_only = input_origins.unreadable_warning(
+            [("items", "x", InputOrigin(B, False, None, skipped[:1]))]
         )
-        self.assertIn("decided as an input without origin", plain)
+        self.assertNotIn("repair", schema_only)
 
     def test_two_runs_with_the_same_file_and_bytes_need_a_choice(self) -> None:
         runs = [done(A, (FILE, SHA)), done(B, (FILE, SHA), repeat_of=A)]
@@ -389,25 +412,64 @@ class AtStart(unittest.TestCase):
         damaged = self.area / "runs" / "2026-10-15T00-00-00_dead"
         damaged.mkdir()
         (damaged / "config.json").write_text("{not json", encoding="utf-8")
+        skipped = (UnreadableRun(damaged.name, MALFORMED),)
         self.assertEqual(
             self.origins(self.out),
-            {"items": InputOrigin(w.run_id, False, None, (damaged.name,))},
+            {"items": InputOrigin(w.run_id, False, None, skipped)},
         )
         told = io.StringIO()
         with contextlib.redirect_stdout(told):
             r = self.read_run(self.out)
-        self.assertEqual(self.recorded(r).origin_unreadable_runs, (damaged.name,))
+        self.assertEqual(self.recorded(r).origin_unreadable_runs, skipped)
         self.assertIn(
-            f"origin was decided as {w.run_id} without looking into {damaged.name}",
+            f"is not what labkit writes (damaged or hand-edited): {damaged.name}",
             told.getvalue(),
         )
+        self.assertIn(f"data['items'] = out.jsonl as {w.run_id}", told.getvalue())
         told = io.StringIO()
         with contextlib.redirect_stdout(told):
             self.read_run(runlog.RunOutput(self.out, run=w.run_id))
-        self.assertNotIn("without looking into", told.getvalue())  # chosen
+        self.assertNotIn("does not read (", told.getvalue())  # chosen
         with self.assertRaises(SystemExit) as cm:
             self.read_run(runlog.RunOutput(self.out, run=damaged.name))
         self.assertIn(f"{damaged.name} does not read", str(cm.exception.code))
+
+    def skipped_as(self, run_dir: Path) -> tuple[UnreadableRun, ...]:
+        """What the record of a run reading out.jsonl says it skipped, with
+        RUN_DIR among the area's runs."""
+        with contextlib.redirect_stdout(io.StringIO()):
+            return self.recorded(self.read_run(self.out)).origin_unreadable_runs
+
+    def test_a_record_of_another_schema_is_skipped_as_such_not_as_damage(self) -> None:
+        w = self.write_run('{"id": 1}\n')
+        cfg = w.dir / "config.json"
+        record = json.loads(cfg.read_text(encoding="utf-8"))
+        for version in (4, 6, None):
+            with self.subTest(schema_version=version):
+                record["schema_version"] = version
+                cfg.write_text(json.dumps(record), encoding="utf-8")
+                self.assertEqual(
+                    self.skipped_as(w.dir), (UnreadableRun(w.run_id, OTHER_SCHEMA),)
+                )
+        record["schema_version"] = "5"  # no version at all: malformed
+        cfg.write_text(json.dumps(record), encoding="utf-8")
+        self.assertEqual(self.skipped_as(w.dir), (UnreadableRun(w.run_id, MALFORMED),))
+
+    def test_a_record_that_cannot_be_opened_is_skipped_as_access(self) -> None:
+        w = self.write_run('{"id": 1}\n')
+        cfg = w.dir / "config.json"
+        cfg.chmod(0)
+        self.addCleanup(cfg.chmod, 0o644)
+        if os.access(cfg, os.R_OK):
+            self.skipTest("this user reads a file of mode 000 (root)")
+        self.assertEqual(self.skipped_as(w.dir), (UnreadableRun(w.run_id, ACCESS),))
+
+    def test_a_completed_run_whose_outputs_do_not_read_is_skipped_as_malformed(
+        self,
+    ) -> None:
+        w = self.write_run('{"id": 1}\n')
+        (w.dir / "outputs.json").write_text("[{", encoding="utf-8")
+        self.assertEqual(self.skipped_as(w.dir), (UnreadableRun(w.run_id, MALFORMED),))
 
     def test_a_chosen_binary_origin_records_bytes_only(self) -> None:
         weights = self.area / "model.bin"

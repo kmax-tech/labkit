@@ -126,9 +126,11 @@ class TypedRecords(unittest.TestCase):
         d = self.area / "runs" / "x"
         record = runs.parse_run_config(dict(CONFIG))
         with self.assertRaises(ValueError):
-            runs.RunDir(d, record, "unreadable run metadata")
+            runs.RunDir(d, record, "unreadable run metadata", error_cause="malformed")
+        with self.assertRaises(ValueError):  # an error names its cause
+            runs.RunDir(d, None, "unreadable run metadata")
         runs.RunDir(d, record, None)  # the twins: each alone is a record
-        runs.RunDir(d, None, "unreadable run metadata")
+        runs.RunDir(d, None, "unreadable run metadata", error_cause="malformed")
         runs.RunDir(d, None, None)
 
     def test_the_binding_is_held_to_its_shape(self):
@@ -353,9 +355,28 @@ class DataEntries(unittest.TestCase):
                 {
                     runs.ORIGIN_RUN_KEY: run,
                     runs.ORIGIN_CHOSEN_KEY: True,
-                    runs.ORIGIN_UNREADABLE_KEY: [run],
+                    runs.ORIGIN_UNREADABLE_KEY: [{"run": run, "cause": "malformed"}],
                 },
                 "a choice looks into no other run",
+            ),
+            ({**PLAIN_ORIGIN, runs.ORIGIN_UNREADABLE_KEY: [run]}, "is not {"),
+            (
+                {**PLAIN_ORIGIN, runs.ORIGIN_UNREADABLE_KEY: [{"run": run}]},
+                "is not {",
+            ),
+            (
+                {
+                    **PLAIN_ORIGIN,
+                    runs.ORIGIN_UNREADABLE_KEY: [{"run": run, "cause": "older"}],
+                },
+                "cause is 'older', not one of missing, access, malformed, other_schema",
+            ),
+            (
+                {
+                    **PLAIN_ORIGIN,
+                    runs.ORIGIN_UNREADABLE_KEY: [{"run": "", "cause": "access"}],
+                },
+                "run is '', not a run id",
             ),
         ):
             with self.subTest(origin=origin):
@@ -371,12 +392,12 @@ class DataEntries(unittest.TestCase):
             "rows": 1,
             runs.ORIGIN_RUN_KEY: "r2",
             runs.ORIGIN_CHOSEN_KEY: False,
-            runs.ORIGIN_UNREADABLE_KEY: ["r1"],
+            runs.ORIGIN_UNREADABLE_KEY: [{"run": "r1", "cause": runs.OTHER_SCHEMA}],
         }
         (got,) = runs.data_entries({"b": entry}, "config.json")
         self.assertEqual(
             (got.origin_run, got.origin_chosen, got.origin_unreadable_runs),
-            ("r2", False, ("r1",)),
+            ("r2", False, (runs.UnreadableRun("r1", runs.OTHER_SCHEMA),)),
         )
 
 

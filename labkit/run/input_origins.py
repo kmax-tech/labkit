@@ -18,11 +18,12 @@ outputs.json holds the input's path with the input's digest, and:
 A run whose record does not read is never eligible, and what it wrote
 cannot be read: an automatic decision — the one eligible run, or no
 origin — is then made without it. The decision carries every such run of
-the area, for each input alike, since none can be ruled out
-(`InputOrigin.origin_unreadable_runs`, `unreadable_warning`). Unreadable
-includes a record of another schema version, so after a format break the
-area's older runs are among them. A chosen origin skips nothing: the
-script named it.
+the area with the kind of its failure (`runs.UnreadableRun`: missing,
+access, malformed, or a record of a schema version this labkit does not
+read), for each input alike, since none can be ruled out
+(`InputOrigin.origin_unreadable_runs`, `unreadable_warning`). After a
+format break the area's records of the earlier schema are among them. A
+chosen origin skips nothing: the script named it.
 
 A repeat (`repeat_of`) is eligible: an origin says where a file came from,
 not that its run may be adopted or reported (`runs.unreportable` decides
@@ -46,11 +47,15 @@ from labkit.formats.runs import (
     ORIGIN_CHOSEN_KEY,
     ORIGIN_RUN_KEY,
     ORIGIN_UNREADABLE_KEY,
+    OTHER_SCHEMA,
+    RECORD_CAUSE_TOLD,
+    RECORD_CAUSES,
     RESERVED_DATA_KEYS,
     UNREADABLE,
     ArtefactError,
     OutputEntry,
     RunState,
+    UnreadableRun,
     read_outputs,
     resolve_recorded,
     run_dirs,
@@ -76,7 +81,10 @@ class AreaRun:
         outputs: What its outputs.json registered, each path resolved;
             () for a run that is not completed or registered nothing.
         unread: Why its config.json or, completed, its outputs.json does
-            not read; None when both read. Such a run is never eligible.
+            not read, the reader's sentence; None when both read. Such a
+            run is never eligible.
+        unread_cause: The kind of that failure, one of
+            `runs.RECORD_CAUSES`; set exactly when UNREAD is.
     """
 
     run_id: str
@@ -84,6 +92,13 @@ class AreaRun:
     repeat_of: str | None
     outputs: tuple[OutputEntry, ...]
     unread: str | None = None
+    unread_cause: str | None = None
+
+    def __post_init__(self) -> None:
+        if (self.unread is None) != (self.unread_cause is None):
+            raise ValueError(f"{self.run_id}: an unread run names its cause")
+        if self.unread_cause is not None and self.unread_cause not in RECORD_CAUSES:
+            raise ValueError(f"{self.run_id}: cause {self.unread_cause!r}")
 
 
 @dataclass(frozen=True)
@@ -97,16 +112,17 @@ class InputOrigin:
             chosen by the script, not confirmed by an auditor.
         origin_repeat_of: The run ORIGIN_RUN repeats, for the auditor's
             evidence; None when it repeats none or there is no origin.
-        origin_unreadable_runs: Every run of the area whose record did not read,
-            left out of an automatic decision — not known to have written
-            the file, only not ruled out; () when there is none or the
-            script chose the run.
+        origin_unreadable_runs: Every run of the area whose record did
+            not read, with the kind of failure, left out of an automatic
+            decision — skipped records, not known to have written the
+            file, only not ruled out; () when there is none or the script
+            chose the run.
     """
 
     origin_run: str | None
     origin_chosen: bool
     origin_repeat_of: str | None
-    origin_unreadable_runs: tuple[str, ...] = ()
+    origin_unreadable_runs: tuple[UnreadableRun, ...] = ()
 
 
 #: a plain input without origin, decided with no unreadable run skipped;
@@ -152,7 +168,11 @@ def decide_origin(
     register the file or recorded other bytes for it."""
     eligible = eligible_runs(path, sha256, runs)
     if chosen_run is None:
-        skipped = tuple(r.run_id for r in runs if r.unread is not None)
+        skipped = tuple(
+            UnreadableRun(r.run_id, r.unread_cause)
+            for r in runs
+            if r.unread_cause is not None
+        )
         if not eligible:
             return InputOrigin(None, False, None, skipped)
         if len(eligible) == 1:
@@ -186,27 +206,47 @@ def decide_origin(
     )
 
 
-def unreadable_warning(key: str, recorded: str, origin: InputOrigin) -> str:
-    """What a start is told whose input KEY (RECORDED as the record writes
-    its path) was decided as ORIGIN while runs of the area did not read
-    (`InputOrigin.origin_unreadable_runs`, not empty) — damaged, or written
-    in another schema version: the decision, the area's runs it could not
-    look into — whether one wrote this file cannot be told —, and the way
-    to a decision that does not rest on them. A warning, not a refusal: an
-    unreadable run elsewhere in the area does not hold this start."""
-    decided = (
-        f"its origin was decided as {origin.origin_run}"
-        if origin.origin_run is not None
-        else "it was decided as an input without origin"
+def unreadable_warning(decided: Sequence[tuple[str, str, InputOrigin]]) -> str:
+    """What a start is told once whose inputs DECIDED — each (key, its path
+    as the record writes it, its origin) — were decided without the area's
+    unreadable runs (`InputOrigin.origin_unreadable_runs`, not empty): each
+    input with its decision, the skipped runs grouped by the kind of
+    failure (`runs.RECORD_CAUSE_TOLD`), and the ways to a decision that
+    does not rest on them. Whether a skipped run wrote one of the files
+    cannot be told. A warning, not a refusal: an unreadable run elsewhere
+    in the area does not hold this start."""
+    inputs = "; ".join(
+        f"data[{key!r}] = {recorded} as "
+        + (origin.origin_run or "an input without origin")
+        for key, recorded, origin in decided
+    )
+    skipped = list(
+        dict.fromkeys(u for _, _, o in decided for u in o.origin_unreadable_runs)
+    )
+    groups = "; ".join(
+        f"{RECORD_CAUSE_TOLD[cause]}: "
+        + ", ".join(u.run for u in skipped if u.cause == cause)
+        for cause in RECORD_CAUSES
+        if any(u.cause == cause for u in skipped)
     )
     return (
-        f"runlog: WARNING — data[{key!r}] = {recorded}: {decided} without "
-        f"looking into {', '.join(origin.origin_unreadable_runs)}, the area's "
-        f"runs whose record does not read (damaged, or written in another "
-        f"schema version — `runlog <area>` lists the reason); whether one of "
-        f"them wrote this file cannot be told. Repair a damaged record, or "
-        f"name the origin in the script: "
-        f'`runlog.RunOutput("{recorded}", run="<the run>")`.'
+        f"runlog: WARNING — origins decided without the area's runs whose "
+        f"record does not read ({groups}); whether one of them wrote these "
+        f"files cannot be told, and the record says so for each input. "
+        f"Decided: {inputs}. To decide without them, name an origin in the "
+        f'script (`runlog.RunOutput("<path>", run="<the run>")`)'
+        + (
+            ", or repair a record that is damaged or cannot be opened"
+            if any(u.cause != OTHER_SCHEMA for u in skipped)
+            else ""
+        )
+        + (
+            "; a run of another schema version is read with the labkit that "
+            "wrote it, or moved out of the area"
+            if any(u.cause == OTHER_SCHEMA for u in skipped)
+            else ""
+        )
+        + " (`runlog <area>` gives each one's reason)."
     )
 
 
@@ -252,21 +292,25 @@ def area_runs(area: Path) -> list[AreaRun]:
     out: list[AreaRun] = []
     for rd in run_dirs(area):
         if rd.error is not None:
-            out.append(AreaRun(rd.dir.name, UNREADABLE, None, (), rd.error))
+            out.append(
+                AreaRun(rd.dir.name, UNREADABLE, None, (), rd.error, rd.error_cause)
+            )
             continue
         if rd.config is None:
             continue
         state = run_state(rd.dir, alive=False)
         outputs: tuple[OutputEntry, ...] = ()
-        unread = None
+        unread, cause = None, None
         if state == COMPLETED:
             try:
                 registered = read_outputs(rd.dir) or []
             except ArtefactError as exc:
-                unread = str(exc)
+                unread, cause = str(exc), exc.cause
             else:
                 outputs = tuple(replace(e, path=e.path.resolve()) for e in registered)
-        out.append(AreaRun(rd.dir.name, state, rd.config.repeat_of, outputs, unread))
+        out.append(
+            AreaRun(rd.dir.name, state, rd.config.repeat_of, outputs, unread, cause)
+        )
     return out
 
 
@@ -307,7 +351,10 @@ def with_origins(described: dict, origins: dict[str, InputOrigin]) -> dict:
             **entry,
             ORIGIN_RUN_KEY: origins[key].origin_run,
             ORIGIN_CHOSEN_KEY: origins[key].origin_chosen,
-            ORIGIN_UNREADABLE_KEY: list(origins[key].origin_unreadable_runs),
+            ORIGIN_UNREADABLE_KEY: [
+                {"run": u.run, "cause": u.cause}
+                for u in origins[key].origin_unreadable_runs
+            ],
         }
         for key, entry in described.items()
     }

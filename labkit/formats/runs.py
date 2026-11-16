@@ -21,7 +21,15 @@ from pathlib import Path
 from typing import Any, Final, Literal, cast
 
 from labkit.formats.digests import DIGEST_CHARS, file_digest
-from labkit.formats.files import ReadError, read_cause, write_atomic
+from labkit.formats.files import (
+    ACCESS,
+    MALFORMED,
+    MISSING,
+    READ_CAUSES,
+    ReadError,
+    read_cause,
+    write_atomic,
+)
 from labkit.formats.jsonl import data_rows_of
 from labkit.formats.repo import layout_root, rel_posix
 
@@ -314,8 +322,35 @@ def run_started(run_id: str) -> datetime | None:
         return None
 
 
+#: a run record of a schema version this labkit does not read — older,
+#: newer or none; `_schema_problem` names the version, not its age
+OTHER_SCHEMA = "other_schema"
+#: why a run record does not read: the file causes (`files.READ_CAUSES`:
+#: missing, access, malformed) and OTHER_SCHEMA
+RECORD_CAUSES = (*READ_CAUSES, OTHER_SCHEMA)
+#: each record cause as a sentence tells it — an access failure is not
+#: damage, and a schema version is named neither older nor newer
+RECORD_CAUSE_TOLD = {
+    MISSING: "a record file not found",
+    ACCESS: "could not be opened (permissions or I/O)",
+    MALFORMED: "its record or outputs file is not what labkit writes "
+    "(damaged or hand-edited)",
+    OTHER_SCHEMA: "of a schema version this labkit does not read",
+}
+
+
 class RunConfigError(ValueError):
-    """A run directory whose config.json exists but cannot be read."""
+    """A run directory whose config.json exists but cannot be read. CAUSE,
+    one of RECORD_CAUSES, says which kind: the file could not be opened
+    (missing, access), its content is not the record labkit writes
+    (malformed, the default), or it is a record of another schema version
+    (OTHER_SCHEMA)."""
+
+    def __init__(self, message: str, *, cause: str = MALFORMED) -> None:
+        if cause not in RECORD_CAUSES:
+            raise ValueError(f"a record cause is one of {RECORD_CAUSES}, not {cause!r}")
+        super().__init__(message)
+        self.cause = cause
 
 
 def read_run_config(run_dir: Path) -> RunConfig | None:
@@ -335,7 +370,8 @@ def read_run_config(run_dir: Path) -> RunConfig | None:
     except (OSError, UnicodeDecodeError) as exc:
         raise RunConfigError(
             f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
-            f"say what it is; repair or move it aside"
+            f"say what it is; repair or move it aside",
+            cause=read_cause(exc),
         ) from exc
     return parse_run_record(text, cfg_file)
 
@@ -356,7 +392,8 @@ def parse_run_record(text: str, where: Path) -> RunConfig:
         return parse_run_config(cfg)
     except RunConfigError as exc:
         raise RunConfigError(
-            f"{where}: unreadable run metadata ({exc}) — repair or move it aside"
+            f"{where}: unreadable run metadata ({exc}) — repair or move it aside",
+            cause=exc.cause,
         ) from exc
 
 
@@ -417,10 +454,23 @@ ORIGIN_RUN_KEY = "origin_run"
 #: script, not confirmed by an auditor
 ORIGIN_CHOSEN_KEY = "origin_chosen"
 #: the area's runs whose record did not read when the origin was decided
-#: without a choice — damaged, or of another schema version (after a format
-#: break, the area's older runs): not known to have written the file, only
-#: not ruled out
+#: without a choice, each `{"run": id, "cause": one of RECORD_CAUSES}`
+#: (`UnreadableRun`): skipped records, not known to have written the file,
+#: only not ruled out
 ORIGIN_UNREADABLE_KEY = "origin_unreadable_runs"
+
+
+@dataclass(frozen=True)
+class UnreadableRun:
+    """A run of the area the origin lookup could not look into: RUN its id,
+    CAUSE why its record did not read, one of RECORD_CAUSES — the file was
+    gone or could not be opened (missing, access), its content is not the
+    record labkit writes (malformed), or it is of a schema version this
+    labkit does not read (OTHER_SCHEMA). Not a source of the file: a record
+    that was skipped."""
+
+    run: str
+    cause: str
 
 
 @dataclass(frozen=True)
@@ -438,7 +488,7 @@ class DataEntry:
     rows: int | None
     origin_run: str | None
     origin_chosen: bool
-    origin_unreadable_runs: tuple[str, ...]
+    origin_unreadable_runs: tuple[UnreadableRun, ...]
 
 
 def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
@@ -484,11 +534,12 @@ def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
 
 def _entry_origin(
     e: dict[str, object], where: str
-) -> tuple[str | None, bool, tuple[str, ...]]:
+) -> tuple[str | None, bool, tuple[UnreadableRun, ...]]:
     """The origin fields of input entry E, each present and of the shape
     `runlog` writes: ORIGIN_RUN_KEY a run id or null, ORIGIN_CHOSEN_KEY a
-    boolean, true only with a run, ORIGIN_UNREADABLE_KEY a list of run ids,
-    empty for a chosen origin (a choice looks into no other run). Raises
+    boolean, true only with a run, ORIGIN_UNREADABLE_KEY a list of
+    `{"run", "cause"}` objects (`UnreadableRun`), empty for a chosen origin
+    (a choice looks into no other run). Raises
     ArtefactError naming WHERE: a record that lost its origin must not
     read as a plain input."""
     missing = [
@@ -516,17 +567,35 @@ def _entry_origin(
         raise ArtefactError(
             f"{where}: {ORIGIN_CHOSEN_KEY} is true without an origin run"
         )
-    ids = cast(list[object], unreadable) if isinstance(unreadable, list) else None
-    if ids is None or not all(isinstance(r, str) and r for r in ids):
+    if not isinstance(unreadable, list):
         raise ArtefactError(
-            f"{where}: {ORIGIN_UNREADABLE_KEY} is {unreadable!r}, not a list of run ids"
+            f"{where}: {ORIGIN_UNREADABLE_KEY} is {unreadable!r}, not a list"
         )
-    if chosen and ids:
+    skipped = tuple(
+        _unreadable_run(u, f"{where}: {ORIGIN_UNREADABLE_KEY}")
+        for u in cast(list[object], unreadable)
+    )
+    if chosen and skipped:
         raise ArtefactError(
             f"{where}: a chosen origin names {ORIGIN_UNREADABLE_KEY} — a choice "
             f"looks into no other run"
         )
-    return run, chosen, tuple(cast(list[str], ids))
+    return run, chosen, skipped
+
+
+def _unreadable_run(u: object, where: str) -> UnreadableRun:
+    """U as `{"run": id, "cause": one of RECORD_CAUSES}`, nothing else.
+    Raises ArtefactError naming WHERE."""
+    if not isinstance(u, dict) or set(cast(dict[str, object], u)) != {"run", "cause"}:
+        raise ArtefactError(f'{where}: {u!r} is not {{"run", "cause"}}')
+    run, cause = cast(dict[str, object], u)["run"], cast(dict[str, object], u)["cause"]
+    if not isinstance(run, str) or not run:
+        raise ArtefactError(f"{where}: run is {run!r}, not a run id")
+    if cause not in RECORD_CAUSES:
+        raise ArtefactError(
+            f"{where}: cause is {cause!r}, not one of {', '.join(RECORD_CAUSES)}"
+        )
+    return UnreadableRun(run, cast(str, cause))
 
 
 def declares_no_inputs(data: JsonObject, where: str) -> bool:
@@ -1200,9 +1269,13 @@ def parse_run_config(obj: object) -> RunConfig:
     cfg = cast(JsonObject, obj)
     # the schema first: a record of another labkit names the version that
     # reads it, rather than its unfamiliar or missing keys
-    problem = _schema_problem(cfg.get("schema_version"))
+    sv = cfg.get("schema_version")
+    problem = _schema_problem(sv)
     if problem:
-        raise RunConfigError(problem)
+        # a version this labkit does not read is OTHER_SCHEMA; a value that
+        # is no version at all is a malformed record
+        named = sv is None or (isinstance(sv, int) and not isinstance(sv, bool))
+        raise RunConfigError(problem, cause=OTHER_SCHEMA if named else MALFORMED)
     unknown = sorted(set(cfg) - set(RUN_CONFIG_KEYS))
     if unknown:
         raise RunConfigError(
@@ -1254,7 +1327,8 @@ def parse_run_config(obj: object) -> RunConfig:
 class RunDir:
     """One directory under `runs/` and what its config.json says: `config`
     None and `error` None is no run (no config.json); `error` set is a run
-    whose metadata cannot be read (the RunConfigError's sentence).
+    whose metadata cannot be read (the RunConfigError's sentence), and
+    `error_cause` its kind (`RunConfigError.cause`), set exactly then.
     `from_commit` names the commit the record was read back from
     (`run_dir_from_text`) for a run the file state lacks and a commit
     holds — the commit a checkout restores it from; None for a directory
@@ -1264,11 +1338,17 @@ class RunDir:
     config: RunConfig | None
     error: str | None
     from_commit: str | None = None
+    error_cause: str | None = None
 
     def __post_init__(self) -> None:
         if self.config is not None and self.error is not None:
             raise ValueError(
                 f"{self.dir}: a RunDir is a read run or an unreadable one, not both"
+            )
+        if (self.error is None) != (self.error_cause is None):
+            raise ValueError(
+                f"{self.dir}: an unreadable RunDir carries its error and its "
+                f"cause, a readable one neither"
             )
 
 
@@ -1278,7 +1358,7 @@ def read_run_dir(d: Path) -> RunDir:
     try:
         return RunDir(d, read_run_config(d), None)
     except RunConfigError as exc:
-        return RunDir(d, None, str(exc))
+        return RunDir(d, None, str(exc), error_cause=exc.cause)
 
 
 def run_dir_from_text(d: Path, text: str, *, from_commit: str | None = None) -> RunDir:
@@ -1289,7 +1369,7 @@ def run_dir_from_text(d: Path, text: str, *, from_commit: str | None = None) -> 
     try:
         return RunDir(d, parse_run_record(text, d / CONFIG_FILE), None, from_commit)
     except RunConfigError as exc:
-        return RunDir(d, None, str(exc), from_commit)
+        return RunDir(d, None, str(exc), from_commit, exc.cause)
 
 
 def run_dirs(area: Path) -> list[RunDir]:

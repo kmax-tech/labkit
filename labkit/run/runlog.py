@@ -385,16 +385,21 @@ def _decide_origins_and_warn(
     base_dir: Path, data: dict, described: dict
 ) -> dict[str, InputOrigin]:
     """The origin of every input in DATA (`input_origins`), DESCRIBED as
-    `describe_data` made it; each automatic decision made without an
-    unreadable run is warned of (`unreadable_warning`). Raises SystemExit for
-    an origin that cannot be decided or a chosen one that does not hold."""
+    `describe_data` made it; the automatic decisions made without the
+    area's unreadable runs are warned of once (`unreadable_warning`).
+    Raises SystemExit for an origin that cannot be decided or a chosen one
+    that does not hold."""
     try:
         origins = input_origins(base_dir, data, described)
     except OriginRefused as exc:
         raise SystemExit(str(exc)) from exc
-    for key, origin in origins.items():
-        if origin.origin_unreadable_runs:
-            print(unreadable_warning(key, described[key]["path"], origin))
+    skipping = [
+        (key, described[key]["path"], origin)
+        for key, origin in origins.items()
+        if origin.origin_unreadable_runs
+    ]
+    if skipping:
+        print(unreadable_warning(skipping))
     return origins
 
 

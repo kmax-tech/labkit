@@ -420,6 +420,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                     None,
                     "unreadable",
                     "c" * 40,
+                    "malformed",
                 )
             ],
             {"2026-10-05T10-00-00_lost": PID},
