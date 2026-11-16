@@ -156,9 +156,10 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual(len(cal["null_scores"]), 200)
         self.assertEqual(cal, again)
         off = sorted(abs(s - cal["target"]) for s in cal["null_scores"])
-        self.assertEqual(cal["band"], off[197])
-        self.assertEqual(cal["rounded"], math.ceil(cal["band"] * 100) / 100)
-        self.assertLess(cal["band"], 1 - cal["target"])  # no permutation is the truth
+        self.assertEqual(cal["deviation"], off[197])
+        self.assertEqual(cal["rounded"], math.ceil(cal["deviation"] * 100) / 100)
+        # no permutation is the truth
+        self.assertLess(cal["deviation"], 1 - cal["target"])
         m = measure.evaluate_rows(rows)
         self.assertEqual(m["quality_check_2_null_band"], cal["rounded"])
 
@@ -169,7 +170,7 @@ class ApplySkeleton(unittest.TestCase):
         return primary
 
     def test_the_untouched_stamp_copies_no_constant(self):
-        """The band rule's None defaults are no copies of the registered
+        """The calibration rule's None defaults are no copies of the registered
         rule: an untouched apply or fit stamp reports none."""
         from labkit.checks import code_check
         from labkit.formats import promises
@@ -197,14 +198,14 @@ class ApplySkeleton(unittest.TestCase):
                 replace(measure.CONFIG, seed=7), self.items(), False
             )
         m = measure.evaluate_rows(rows)
-        rule = measure.band_rule(measure.CONFIG)
+        rule = measure.deviation_rule(measure.CONFIG)
         assert rule is not None
         reg = [
             (r["item"], r["pred"], r["gold"]) for r in rows if r["lane"] == "registered"
         ]
         self.assertEqual(
             m["quality_check_2_null_band"],
-            measure.band_by_rule(measure.CONFIG, reg, rule)["rounded"],
+            measure.deviation_by_rule(measure.CONFIG, reg, rule)["rounded"],
         )
         self.assertEqual(
             measure.evaluate_rows(list(reversed(rows)))["quality_check_2_null_band"],
@@ -266,18 +267,21 @@ class ApplySkeleton(unittest.TestCase):
             (r["item"], r["pred"], r["gold"]) for r in rows if r["lane"] == "registered"
         ]
         rule = (0.99, 200, cfg.null_band_seed)
-        held = measure.band_by_rule(cfg, reg, rule)
+        held = measure.deviation_by_rule(cfg, reg, rule)
         self.assertEqual(
-            measure.band_by_rule(cfg, list(reversed(reg)), rule)["band"], held["band"]
+            measure.deviation_by_rule(cfg, list(reversed(reg)), rule)["deviation"],
+            held["deviation"],
         )
         self.assertEqual(
-            measure.band_by_rule(replace(cfg, seed=7), reg, rule)["band"], held["band"]
+            measure.deviation_by_rule(replace(cfg, seed=7), reg, rule)["deviation"],
+            held["deviation"],
         )
         self.assertNotEqual(
-            measure.band_by_rule(cfg, reg, (0.99, 200, 2))["band"], held["band"]
+            measure.deviation_by_rule(cfg, reg, (0.99, 200, 2))["deviation"],
+            held["deviation"],
         )
         off = sorted(abs(s - held["target"]) for s in held["null_scores"])
-        self.assertEqual(held["band"], off[197])
+        self.assertEqual(held["deviation"], off[197])
         self.assertNotEqual(off[196], off[197])
         self.assertNotEqual(off[198], off[197])
         value = measure.evaluate_rows(list(reversed(rows)), replace(cfg, seed=7))[
@@ -405,7 +409,7 @@ class ApplySkeleton(unittest.TestCase):
         with mock.patch.object(measure, "make_estimator", return_value=one_class):
             cal = measure.calibrate_null(measure.CONFIG, self.items())
             rows = measure.apply_rows(measure.CONFIG, self.items(), False)
-        self.assertEqual((cal["band"], cal["rounded"]), (0, 0))
+        self.assertEqual((cal["deviation"], cal["rounded"]), (0, 0))
         m = measure.evaluate_rows(rows)
         self.assertEqual(m["quality_check_2_null_band"], 0)
         self.assertIs(m["quality_check_2_pass"], True)
@@ -430,7 +434,7 @@ class ApplySkeleton(unittest.TestCase):
                 self.assertIs(m["quality_check_2_pass"], True)
         with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
             cal = measure.calibrate_null(measure.CONFIG, self.items())
-        self.assertGreater(cal["band"], 0)
+        self.assertGreater(cal["deviation"], 0)
 
     def test_no_prediction_or_an_undefined_score_gives_no_deviation(self):
         """Three ways the null does not move that are no deviation 0, each

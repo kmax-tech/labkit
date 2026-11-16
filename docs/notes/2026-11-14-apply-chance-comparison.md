@@ -8,7 +8,7 @@ Terms, as in the [wording plan](2026-11-14-null-band-wording-plan.md): the *perm
 
 ## The permitted deviation at apply
 
-At kind apply with the seeded permuted null (no `NULL_ORDER`, no fixed null predictor), [quality-check-2] registers the rule, not the value (LAB-035 Thresholds belong to the run, not to the measure): `null_band_quantile`, `null_permutations` and `null_band_seed`, the calibration's seed, apart from the run's `seed` (the stamp registers 0.99, 200 and 1). Each evaluation (`run_null_band`, `band_by_rule` in the estimator skeleton):
+At kind apply with the seeded permuted null (no `NULL_ORDER`, no fixed null predictor), [quality-check-2] registers the rule, not the value (LAB-035 Thresholds belong to the run, not to the measure): `null_band_quantile`, `null_permutations` and `null_band_seed`, the calibration's seed, apart from the run's `seed` (the stamp registers 0.99, 200 and 1). Each evaluation (`run_null_band`, `deviation_by_rule` in the estimator skeleton):
 
 1. takes the run's own registered predictions and gold, ordered by item;
 2. scores them against `k` permutations of the gold, each seeded `null-band:<null_band_seed>:<n>`;

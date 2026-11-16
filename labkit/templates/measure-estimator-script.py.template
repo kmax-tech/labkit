@@ -51,7 +51,7 @@ the run, not to the measure): `null_band_quantile` over `null_permutations`
 permutations of the gold, seeded by `null_band_seed` — a calibration seed
 apart from the run's seed. Every evaluation computes the permitted
 deviation from the run's own registered predictions and gold
-(`run_null_band`, `band_by_rule`), keeps it as `quality_check_2_null_band`
+(`run_null_band`, `deviation_by_rule`), keeps it as `quality_check_2_null_band`
 and compares with it; the same inputs give the same value, whatever the
 run's seed or the rows' order. Predictions that score alike under every
 permutation (one answer for every item) get 0, an exact null check;
@@ -295,7 +295,7 @@ class MeasureConfig:
     null_band_quantile: float | None = None
     null_permutations: int | None = None
     null_band_seed: int | None = None  # the calibration's seed, apart from the run's `seed`
-    # [criterion-2] registered: score > permutation expectation + null_band (apply, band rule owed)
+    # [criterion-2] registered: score > permutation expectation + null_band (apply, calibration rule owed)
     chance_criterion: bool = False
     seed: int = SEED            # folds, permutation, estimator
     n_folds: int = N_FOLDS      # fit: the plan by repeat cost (FIT_PLAN), recorded with the run
@@ -624,7 +624,7 @@ def _spearman(pairs: list[tuple]) -> Fraction | float:
 SCORES = {"accuracy": _accuracy, "r2": _r2, "auc": _auc, "spearman": _spearman}
 
 
-def band_rule(cfg: MeasureConfig) -> tuple[float, int, int] | None:
+def deviation_rule(cfg: MeasureConfig) -> tuple[float, int, int] | None:
     """[quality-check-2]'s registered calibration rule (quantile,
     permutations, calibration seed) — None when the protocol registers none
     (`null_band_quantile`, `null_permutations`, `null_band_seed`;
@@ -633,15 +633,15 @@ def band_rule(cfg: MeasureConfig) -> tuple[float, int, int] | None:
     return None if q is None or k is None or s is None else (float(q), int(k), int(s))
 
 
-def band_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int, int]) -> dict:
+def deviation_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int, int]) -> dict:
     """The calibration RULE (quantile q, permutations k, calibration seed s)
     applied to PAIRS (item, prediction, gold) with the predictions fixed:
     the pairs ordered by item, k permutations of the gold, each seeded
     `null-band:<s>:<n>` — never the run's seed —, scored as the registered
     lane is; the q quantile of |score − target| by its exact rank. The same
     pairs give the same result in any order. Returns {"target",
-    "null_scores", "band", "rounded"}: TARGET the permutation expectation
-    (`permutation_expectation`), BAND the exact quantile, ROUNDED it
+    "null_scores", "deviation", "rounded"}: TARGET the permutation expectation
+    (`permutation_expectation`), DEVIATION the exact quantile, ROUNDED it
     rounded up to two places — the permitted deviation [quality-check-2]
     compares with. The one home of the rule: each evaluation
     (`run_null_band`) and the `--calibrate-null` preview call it.
@@ -654,9 +654,9 @@ def band_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int,
     undefined (spearman on constant predictions) raises in the score."""
     q, k, seed = rule
     if k < 1 or not pairs:
-        raise ValueError(f"band_by_rule(): {k} permutation(s) of {len(pairs)} labelled item(s)")
+        raise ValueError(f"deviation_by_rule(): {k} permutation(s) of {len(pairs)} labelled item(s)")
     if all(p is None for _, p, _ in pairs):
-        raise ValueError(f"band_by_rule(): none of the {len(pairs)} labelled items has a prediction — "
+        raise ValueError(f"deviation_by_rule(): none of the {len(pairs)} labelled items has a prediction — "
                          "no permitted deviation from no answer; check the predictor's output")
     # the whole triple decides the order: ids that print alike (10 and "10",
     # a duplicate) must not leave it to the input's order
@@ -674,33 +674,33 @@ def band_by_rule(cfg: MeasureConfig, pairs: list[tuple], rule: tuple[float, int,
         # 2026-10-29, apply-screen: predictions that matched no gold
         # registered null_band = 0.0 without a word
         raise ValueError(
-            f"band_by_rule(): no prediction is a gold value — every one of {k} permutations "
+            f"deviation_by_rule(): no prediction is a gold value — every one of {k} permutations "
             f"scores {float(target):.4f}; the predictions answer {sorted(map(repr, set(preds)))[:5]}, "
             f"the gold holds {sorted(map(repr, set(golds)))[:5]}. Check that the predictor "
             f"answers in the gold's labels")
     # the quantile's rank, exact: a float 0.99 * 200 may land on either side of 198
-    band = off[max(0, math.ceil(Fraction(str(q)) * len(off)) - 1)]
-    rounded = math.ceil(Fraction(band) * 100) / 100
-    return {"target": target, "null_scores": scores, "band": band, "rounded": rounded}
+    deviation = off[max(0, math.ceil(Fraction(str(q)) * len(off)) - 1)]
+    rounded = math.ceil(Fraction(deviation) * 100) / 100
+    return {"target": target, "null_scores": scores, "deviation": deviation, "rounded": rounded}
 
 
 def run_null_band(cfg: MeasureConfig, reg: list[dict]) -> float:
     """The permitted deviation of one run at apply with the seeded permuted
-    null: the registered rule (`band_rule`) over the run's own registered
-    rows REG (`band_by_rule`), rounded up. Raises ValueError when no rule is
+    null: the registered rule (`deviation_rule`) over the run's own registered
+    rows REG (`deviation_by_rule`), rounded up. Raises ValueError when no rule is
     registered or the rule derives none."""
-    rule = band_rule(cfg)
+    rule = deviation_rule(cfg)
     if rule is None:
         raise ValueError("evaluate_rows(): at apply with the seeded permuted null [quality-check-2]'s "
                          "permitted deviation is computed per run — register null_band_quantile, "
                          "null_permutations and null_band_seed")
-    return band_by_rule(cfg, [(r["item"], r["pred"], r["gold"]) for r in reg], rule)["rounded"]
+    return deviation_by_rule(cfg, [(r["item"], r["pred"], r["gold"]) for r in reg], rule)["rounded"]
 
 
 def calibrate_null(cfg: MeasureConfig, items: list[dict]) -> dict:
     """A preview of the permitted deviation each run computes: the unchanged
     predictor's predictions on the labelled items, fixed, put through the
-    registered rule (`band_by_rule`), as `run_null_band` does on the kept
+    registered rule (`deviation_by_rule`), as `run_null_band` does on the kept
     rows. It never scores a prediction against its true gold and registers
     nothing. Raises ValueError where the deviation is no permutation
     quantile (`null_plan`), without labelled items, or for a predictor
@@ -709,13 +709,13 @@ def calibrate_null(cfg: MeasureConfig, items: list[dict]) -> dict:
         raise ValueError(
             "calibrate_null(): the permitted deviation is computed per run only at kind apply "
             "with the seeded permuted null; here it is a registered, reasoned null_band")
-    rule = band_rule(cfg)
+    rule = deviation_rule(cfg)
     assert rule is not None  # null_plan refuses a missing rule
     train = labelled(items)
     if not train:
         raise ValueError("calibrate_null(): no labelled item")
     preds = predict_all(make_estimator(cfg.seed), train, "calibrate_null()")
-    return band_by_rule(cfg, [(it["id"], p, it[GOLD_FIELD]) for it, p in zip(train, preds)], rule)
+    return deviation_by_rule(cfg, [(it["id"], p, it[GOLD_FIELD]) for it, p in zip(train, preds)], rule)
 
 
 def null_plan(cfg: MeasureConfig) -> str:
@@ -734,13 +734,13 @@ def null_plan(cfg: MeasureConfig) -> str:
             raise ValueError("[quality-check-2] registers null_band, and at apply with the seeded "
                              "permuted null each run computes its permitted deviation by the registered "
                              "rule — drop null_band from its constants")
-        if band_rule(cfg) is None:
+        if deviation_rule(cfg) is None:
             raise ValueError("[quality-check-2] registers no calibration rule: name null_band_quantile, "
                              "null_permutations and null_band_seed in its constants")
         return "per run"
     where = (f"kind {KIND}" if KIND != "apply" else
              "a registered NULL_ORDER" if NULL_ORDER is not None else "a fixed null predictor")
-    if band_rule(cfg) is not None:
+    if deviation_rule(cfg) is not None:
         raise ValueError(f"[quality-check-2] registers a calibration rule, and with {where} there is no "
                          "permutation spread of these predictions — register a reasoned null_band instead")
     if cfg.null_band is None and NULL_ORDER is None:
@@ -893,7 +893,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if per_run and cfg.null_band is not None:
         raise ValueError("evaluate_rows(): seeded permuted null rows, and [quality-check-2] registers "
                          "null_band — each run computes its permitted deviation by the registered rule")
-    if not per_run and band_rule(cfg) is not None:
+    if not per_run and deviation_rule(cfg) is not None:
         raise ValueError("evaluate_rows(): [quality-check-2] registers a calibration rule, and these "
                          "null rows have no permutation spread of the predictions (fit, NULL_ORDER or "
                          "a fixed null predictor) — register a reasoned null_band")
@@ -904,11 +904,11 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if deviation is None and not (permuted and NULL_ORDER is not None):
         raise ValueError("evaluate_rows(): [quality-check-2] registers no null_band — only a "
                          "registered NULL_ORDER may go without one")
-    in_band = deviation is None or abs(null_score - target) <= Fraction(str(deviation))
+    within_deviation = deviation is None or abs(null_score - target) <= Fraction(str(deviation))
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
                      "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
                      "quality_check_2_score": float(null_score), "quality_check_2_target": float(target),
-                     "quality_check_2_pass": in_band}
+                     "quality_check_2_pass": within_deviation}
     if per_run:
         metrics["quality_check_2_null_band"] = deviation
     if len(draw_scores) > 1:
@@ -1033,13 +1033,13 @@ def main() -> None:
             cal = calibrate_null(cfg, items)
         except ValueError as exc:
             ap.error(str(exc))
-        q, k, seed = band_rule(cfg) or (None, None, None)
+        q, k, seed = deviation_rule(cfg) or (None, None, None)
         s = sorted(float(x) for x in cal["null_scores"])
         print(f"null over {len(s)} permutations of the gold, predictions fixed: min {s[0]:.4f}  "
               f"median {s[len(s) // 2]:.4f}  max {s[-1]:.4f}  permutation expectation "
               f"{float(cal['target']):.4f}")
         print(f"permitted deviation by the rule (the {q} quantile of |null - expectation| over "
-              f"{k} permutations, calibration seed {seed}): {float(cal['band']):.4f}, rounded up "
+              f"{k} permutations, calibration seed {seed}): {float(cal['deviation']):.4f}, rounded up "
               f"{cal['rounded']} — a preview: each run computes it from its own predictions "
               f"and keeps it as quality_check_2_null_band")
         return

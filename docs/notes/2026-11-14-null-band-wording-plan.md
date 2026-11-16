@@ -47,7 +47,7 @@ The per-run calibration proposal addresses whether the value belongs to the curr
 - `labkit/docs/agent-guide.md`, registration guidance: short field definition and fit/apply distinction.
 - `labkit/docs/protocol-field-guide.md`, “Noise ceiling → threshold”: field guidance.
 - `labkit/tools/protocol_cuts.py`, fit/apply substitutions and optional criterion-2: generated registration text.
-- `labkit/templates/measure-estimator-script.py.template`, `band_by_rule`, `band_check` and `evaluate_rows`: current calculation, lifetime check and comparisons.
+- `labkit/templates/measure-estimator-script.py.template`, `deviation_by_rule`, `band_check` and `evaluate_rows`: current calculation, lifetime check and comparisons.
 - [Chance-comparison note](2026-11-14-apply-chance-comparison.md): interpretation, reviewed limits and later-run calibration issue.
 
 These are source locations inspected during the terminology discussion, not immutable line references. Re-read their current state before implementation.
