@@ -6,7 +6,7 @@ Der vollständige Stand vor dieser Bereinigung liegt im [Verlauf vom 2026-11-12]
 
 ## Reihenfolge
 
-Die technischen Aufgaben 2–6 einschließlich 6b und 6c, die Nutzungsrunde vom 2026-11-13 und ihre priorisierten Reparaturen sind abgeschlossen; die gezielte Wirkung von „nicht beurteilbar“ ist unter Standard 0.31 gebaut und abgenommen. **Nächster Schritt ist die Entscheidung des Autors über den überarbeiteten Entwurf für den explorativen Arbeitsablauf** (Architektur entschieden; offen F12–F14 und Namen; 2026-11-16), siehe den Abschnitt „Beschlossener Arbeitsablauf, Vertragsplan konkretisiert — Exploration“ und den [Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#record-design-worked-through-2026-11-16). Erst nach dieser Entscheidung Code; noch keine Registrierungssperre lockern. Die globale Freigaberegel bleibt ein eigener Auftrag. Eine neue Nutzungsrunde ist nicht aus dieser Reihenfolge beauftragt.
+Die technischen Aufgaben 2–6 einschließlich 6b und 6c, die Nutzungsrunde vom 2026-11-13 und ihre priorisierten Reparaturen sind abgeschlossen; die gezielte Wirkung von „nicht beurteilbar“ ist unter Standard 0.31 gebaut und abgenommen. **Nächster Schritt ist die Entscheidung des Autors über den überarbeiteten Entwurf für den explorativen Arbeitsablauf** (Architektur entschieden; offen F13–F14 und Namen; 2026-11-16), siehe den Abschnitt „Beschlossener Arbeitsablauf, Vertragsplan konkretisiert — Exploration“ und den [Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#record-design-worked-through-2026-11-16). Erst nach dieser Entscheidung Code; noch keine Registrierungssperre lockern. Die globale Freigaberegel bleibt ein eigener Auftrag. Eine neue Nutzungsrunde ist nicht aus dieser Reihenfolge beauftragt.
 
 ### 7. Nutzungsrunde und Reparaturen — Verlauf und abgeschlossener Stand
 
@@ -93,9 +93,11 @@ Frage, Verfahren, Seeds, Filter und Bewertung dürfen sich zwischen explorativen
 
 **Bereichsgrenzen entschieden 2026-11-16 (F11):** Laufquellen von C nur aus demselben Bereich; fehlende Herkunft wird dem Prüfer gezeigt, nicht gesperrt; der Bestätigungsverweis darf Bereiche im selben Repository überschreiten. [Regeln im Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#provenance-between-runs).
 
-Offen beim Autor: F12–F14 und die Namen der neuen Tabellen und Kommandos (Namensprüfung).
+**Bestätigungsverweis entschieden 2026-11-16 (F12):** zwei Verweise (Explorationsprotokoll und dessen übernommener Lauf C), per Kommando eingetragen, beim Start der ersten bestätigenden Messung erneut geprüft. [Regeln im Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#link-from-a-confirmation-to-its-exploration).
 
-29 Abnahmefälle im Plan, je mit Testebene. Danach erst Bau, in der Reihenfolge des Plans.
+Offen beim Autor: F13–F14 und die Namen der neuen Tabellen und Kommandos (Namensprüfung).
+
+30 Abnahmefälle im Plan, je mit Testebene. Danach erst Bau, in der Reihenfolge des Plans.
 
 **Noch nicht gebaut.** Die zuvor priorisierte gezielte Wirkung von „nicht beurteilbar“ ist mit Standard 0.31 gebaut und abgenommen; dieser Plan ist der anschließende Arbeitsablauf. Die globale Freigaberegel bleibt ein eigener Auftrag. Der Auftrag dieser Sitzung ist Plan und TODO, kein Codeumbau, Versuchsstart, Release oder Rollout.
 
