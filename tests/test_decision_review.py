@@ -34,7 +34,7 @@ from protocol_fixture import (
 from labkit.formats import attempts, findings, promises, reviews, scope_sha
 from labkit.gates import audit, decision_review, report_check
 from labkit.run import llm_backends
-from labkit.tools import protocol_result
+from labkit.tools import protocol_fill, protocol_result
 
 RUN = "2026-10-07T10-00-00_ab12"
 BLOCKER = (
@@ -580,6 +580,32 @@ class TheCall(unittest.TestCase):
         _, _, _, sent = run_review(area, UPHELD)
         self.assertNotIn("not confirmed by a second auditor", sent[0])
         self.assertIn("- **Limitation (audit ", sent[0])  # the decided one stays
+
+    def test_a_decision_review_that_does_not_read_refuses_the_write(self):
+        """A decision review that does not read stops `--render` with a
+        sentence naming it, never a traceback, and writes nothing: a line
+        rendered past it would read the decision as unreviewed (final review,
+        2026-11-16: the raise of `evidence.decision_reviews` had no test at
+        a caller). The twin renders."""
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        proto = area / "PROTOCOL-x.md"
+        before = proto.read_text(encoding="utf-8")
+        (area / "audits" / "2026-11-16T09-00-review.toml").write_text(
+            "not toml [", encoding="utf-8"
+        )
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = protocol_fill.main([str(proto), "--render"])
+        self.assertNotEqual(rc, 0)
+        self.assertIn(
+            "a decision review does not read", err.getvalue() + out.getvalue()
+        )
+        self.assertEqual(proto.read_text(encoding="utf-8"), before)
+        (area / "audits" / "2026-11-16T09-00-review.toml").unlink()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            self.assertEqual(protocol_fill.main([str(proto), "--render"]), 0)
 
     def test_the_twin_an_upheld_review_owes_no_render(self):
         area, _ = area_with(

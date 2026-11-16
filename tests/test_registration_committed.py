@@ -911,6 +911,26 @@ class ScopeAsFirstMeasured(_Repository):
     def test_the_twin_a_first_measurement_whose_process_ended_stopped(self):
         second, line = self._second_without_a_number(alive=False)
         self.assertIn(f"{second.name} (stopped without a number)", line)
+        self.assertNotIn("still running", line)
+
+    def test_a_first_measurement_whose_liveness_cannot_be_told_says_so(self):
+        """Its pid exists and no `ps` reads its command line (a sandbox):
+        neither running nor stopped is claimed, and the hold counts it as
+        before (final review, 2026-11-16: the branch had no test)."""
+        second = self._first_at_one_commit_with_another_question(crashed=True)
+        (second / runs.FAILURE_FILE).unlink()
+        cfg = second / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["pid"] = os.getpid()  # a process that exists
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        with mock.patch.object(runs, "_command_of", return_value=None):
+            (line,) = self._changes()
+        self.assertIn(
+            f"{second.name} (no number yet; whether it still runs cannot be told)",
+            line,
+        )
+        self.assertNotIn("stopped without a number", line)
+        self.assertIn("the first measurements saw different texts", line)
 
     def test_an_unreadable_failure_record_is_named_inside_the_hold(self):
         """A stopped first measurement whose failure.json does not read
