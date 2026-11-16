@@ -6,7 +6,7 @@ Der vollständige Stand vor dieser Bereinigung liegt im [Verlauf vom 2026-11-12]
 
 ## Reihenfolge
 
-Die technischen Aufgaben 2–6 einschließlich 6b und 6c, die Nutzungsrunde vom 2026-11-13 und ihre priorisierten Reparaturen sind abgeschlossen; die gezielte Wirkung von „nicht beurteilbar“ ist unter Standard 0.31 gebaut und abgenommen. **Nächster Schritt ist die Entscheidung des Autors über den überarbeiteten Entwurf für den explorativen Arbeitsablauf** (Architektur entschieden; offen die Namen; 2026-11-16), siehe den Abschnitt „Beschlossener Arbeitsablauf, Vertragsplan konkretisiert — Exploration“ und den [Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#record-design-worked-through-2026-11-16). Erst nach dieser Entscheidung Code; noch keine Registrierungssperre lockern. Die globale Freigaberegel bleibt ein eigener Auftrag. Eine neue Nutzungsrunde ist nicht aus dieser Reihenfolge beauftragt.
+Die technischen Aufgaben 2–6 einschließlich 6b und 6c, die Nutzungsrunde vom 2026-11-13 und ihre priorisierten Reparaturen sind abgeschlossen; die gezielte Wirkung von „nicht beurteilbar“ ist unter Standard 0.31 gebaut und abgenommen. **Nächster Schritt ist der erste Bauschritt des explorativen Arbeitsablaufs:** gemeinsame Datentypen, Formatleser und Eingabeverarbeitung mit ihren Gegenfällen (Entwurf geschlossen, alle Format- und Namensentscheidungen getroffen; 2026-11-16), siehe den Abschnitt „Beschlossener Arbeitsablauf, Vertragsplan konkretisiert — Exploration“ und den [Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#record-design-worked-through-2026-11-16). Noch keine Registrierungssperre lockern, bevor Laufbindung, Audit und Darstellung die neuen Stände verarbeiten. Die globale Freigaberegel bleibt ein eigener Auftrag. Eine neue Nutzungsrunde ist nicht aus dieser Reihenfolge beauftragt.
 
 ### 7. Nutzungsrunde und Reparaturen — Verlauf und abgeschlossener Stand
 
@@ -97,9 +97,11 @@ Frage, Verfahren, Seeds, Filter und Bewertung dürfen sich zwischen explorativen
 
 **Quellenwahl entschieden 2026-11-16 (F14):** zusammengesetzter Wert aus Datei und Quelllauf im bestehenden `data=`, Pflicht nur bei mehreren passenden Läufen; Wiederholungsläufe sind zulässige Quellen (Übernahme davon getrennt); ausgepackt in `describe_data` vor allen Dateiprüfungen. [Regeln im Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#provenance-between-runs).
 
-Offen beim Autor: die Namen der neuen Tabellen, Kommandos und des Herkunftswerts (Namensprüfung).
+**Namen entschieden 2026-11-16:** `[builds_on]` (gleicher Arbeitsschritt = Protokollkennung plus `id`; `occasion` fester Wert, ein Pflicht-`why`, Einzelbegründungen nur bei Bedarf), `[explored_in]` mit `--explored-in`, `runlog.RunOutput` zusammengesetzt mit `BinaryInput`, `origin_run`/`origin_chosen` (vom Skript gewählt, nicht vom Auditor bestätigt), `--reported-through`. Der Entwurf ist damit geschlossen.
 
-32 Abnahmefälle im Plan, je mit Testebene. Danach erst Bau, in der Reihenfolge des Plans.
+**Nächster Bauschritt:** gemeinsame Datentypen, Formatleser und Eingabeverarbeitung mit ihren Gegenfällen. Die Registrierungssperren erst lockern, wenn Laufbindung, Audit und Darstellung die neuen Stände korrekt verarbeiten.
+
+34 Abnahmefälle im Plan, je mit Testebene. Danach erst Bau, in der Reihenfolge des Plans.
 
 **Noch nicht gebaut.** Die zuvor priorisierte gezielte Wirkung von „nicht beurteilbar“ ist mit Standard 0.31 gebaut und abgenommen; dieser Plan ist der anschließende Arbeitsablauf. Die globale Freigaberegel bleibt ein eigener Auftrag. Der Auftrag dieser Sitzung ist Plan und TODO, kein Codeumbau, Versuchsstart, Release oder Rollout.
 
