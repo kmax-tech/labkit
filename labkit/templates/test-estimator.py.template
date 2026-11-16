@@ -122,7 +122,7 @@ def test_missing_predictions_withhold_the_verdict():
     assert m["quality_check_1_pass"] is False and m["criterion_1_pass"] is None
 
 
-def test_null_out_of_band_withholds_the_verdict():
+def test_null_beyond_its_deviation_withholds_the_verdict():
     """A permitted deviation, registered or computed in the run: a null lane
     far off its target withholds the verdict. A registered null order
     without one: there is no interval to leave, and the null's score raises
@@ -134,7 +134,7 @@ def test_null_out_of_band_withholds_the_verdict():
         assert m["quality_check_2_pass"] is False and m["criterion_1_pass"] is None
 
 
-def test_only_a_registered_null_order_goes_without_a_band():
+def test_only_a_registered_null_order_goes_without_a_deviation():
     """[quality-check-2] owes a permitted deviation unless the script
     registers a null order and the null rows name their donors: then the
     null's score plus margin is the bar. Null rows without donors are

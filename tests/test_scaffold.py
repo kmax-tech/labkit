@@ -1804,8 +1804,8 @@ class Exp(unittest.TestCase):
                 r = self._run_stamped_test(root)
                 self.assert_passed(
                     r,
-                    "test_only_a_registered_null_order_goes_without_a_band",
-                    "test_null_out_of_band_withholds_the_verdict",
+                    "test_only_a_registered_null_order_goes_without_a_deviation",
+                    "test_null_beyond_its_deviation_withholds_the_verdict",
                     *STAMPED_BAR_TESTS,
                 )
         script.write_text(stamped_script, encoding="utf-8")
@@ -1836,7 +1836,7 @@ class Exp(unittest.TestCase):
         self.assertEqual(stamped_proto.count(example), 1)
         self.assertEqual(stamped_script.count(formula), 1)
 
-        def band_tests(band: int) -> subprocess.CompletedProcess[str]:
+        def deviation_tests(band: int) -> subprocess.CompletedProcess[str]:
             proto.write_text(
                 stamped_proto.replace(
                     example, f"constants = {{ null_band_items = {band} }}"
@@ -1853,7 +1853,7 @@ class Exp(unittest.TestCase):
                     "-p",
                     "no:cacheprovider",
                     "-k",
-                    "null_band or out_of_band or perfect_effect",
+                    "deviation or perfect_effect",
                     str(self.root / "tests" / "test_01_foo_bar.py"),
                 ],
                 cwd=self.root,
@@ -1863,11 +1863,11 @@ class Exp(unittest.TestCase):
             )
 
         for band in (1, 5, 7):
-            r = band_tests(band)
+            r = deviation_tests(band)
             self.assert_passed(
                 r,
-                "test_null_band_is_symmetric_at_the_registered_band",
-                "test_null_out_of_band_withholds_the_verdict",
+                "test_null_deviation_is_symmetric_around_chance",
+                "test_null_beyond_its_deviation_withholds_the_verdict",
                 "test_perfect_effect_fires_c1",
             )
         for wrong in (
@@ -1876,9 +1876,9 @@ class Exp(unittest.TestCase):
         ):
             script.write_text(stamped_script.replace(formula, wrong), encoding="utf-8")
             for band in (1, 5):
-                r = band_tests(band)
+                r = deviation_tests(band)
                 self.assertEqual(r.returncode, 1, f"{wrong}, band {band}: {r.stdout}")
-                self.assertIn("test_null_band_is_symmetric", r.stdout)
+                self.assertIn("test_null_deviation_is_symmetric", r.stdout)
 
     def test_the_model_stamp_holds_three_answer_words_and_unbalanced_gold(
         self,
@@ -1919,7 +1919,7 @@ class Exp(unittest.TestCase):
                 "-p",
                 "no:cacheprovider",
                 "-k",
-                "null_band or out_of_band or perfect_effect or placebo or parser",
+                "deviation or perfect_effect or placebo or parser",
                 str(self.root / "tests" / "test_01_three_words.py"),
             ],
             cwd=self.root,

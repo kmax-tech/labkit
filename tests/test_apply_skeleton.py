@@ -711,7 +711,7 @@ class ApplySkeleton(unittest.TestCase):
         self.assertIs(m["quality_check_1_pass"], False)
         self.assertIsNone(m["criterion_2_pass"])
 
-    def test_criterion_2_is_refused_where_the_band_is_no_permutation_quantile(self):
+    def test_criterion_2_is_refused_without_a_permutation_quantile(self):
         """At fit, with a registered null order and with a fixed null
         predictor the permitted deviation is no permutation quantile of
         these predictions, so the comparison would state a threshold it

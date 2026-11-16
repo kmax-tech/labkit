@@ -58,7 +58,7 @@ def _twelve(correct: int) -> list[tuple[str, str]]:
     return _lane(12, correct)
 
 
-def _band_lane() -> int:
+def _deviation_lane() -> int:
     """How many items a null lane needs so that the REGISTERED permitted
     deviation (`null_band_items`, your number, not the stamp's) has an item
     outside it on both sides: twelve, more for a deviation over four."""
@@ -70,12 +70,12 @@ def test_perfect_effect_fires_c1():
     assert m["criterion_1_pass"] is True and m["quality_check_2_pass"] is True and m["quality_check_1_pass"] is True
 
 
-def test_null_band_is_symmetric_at_the_registered_band():
+def test_null_deviation_is_symmetric_around_chance():
     """Chance ± the registered deviation d: chance − d, chance and chance + d
     correct are in, one item further on either side is out — at d = 1 on
     twelve items 5, 6 and 7 in, 4 and 8 out. In shares, 7/12 fell out by
     floating point (2026-10-06)."""
-    d, n = measure.CONFIG.null_band_items, _band_lane()
+    d, n = measure.CONFIG.null_band_items, _deviation_lane()
     chance = n // 2
     for correct, inside in ((chance - d - 1, False), (chance - d, True), (chance, True),
                             (chance + d, True), (chance + d + 1, False)):
@@ -126,14 +126,14 @@ def test_a_constant_placebo_sits_at_its_gold_share():
     permuted: a placebo answered the same on every item sits exactly at the
     gold count of that answer's class, also on unbalanced gold — two thirds
     of the items one label, far beyond any permitted deviation from half."""
-    n = 3 * _band_lane()
+    n = 3 * _deviation_lane()
     golds = [POS] * (2 * n // 3) + [NEG] * (n // 3)
     m = measure.evaluate_rows(rows(_lane(12, 12), [(YES, g) for g in golds]))
     assert m["quality_check_2_pass"] is True and m["quality_check_2_expected"] == 2 / 3
 
 
-def test_null_out_of_band_withholds_the_verdict():
-    n = _band_lane()  # every item right lies beyond the registered deviation
+def test_null_beyond_its_deviation_withholds_the_verdict():
+    n = _deviation_lane()  # every item right lies beyond the registered deviation
     m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, n)))
     assert m["quality_check_2_pass"] is False and m["criterion_1_pass"] is None
 
