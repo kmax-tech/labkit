@@ -462,6 +462,32 @@ class Runs(unittest.TestCase):
         self.assertIn(first.run_id, (self.area / "runs.tsv").read_text())
         self.assertEqual((first.draw, repeat.draw), (None, 2))
 
+    def test_run_output_names_the_writer_and_a_wrong_one_refuses_the_start(
+        self,
+    ) -> None:
+        out = self.area / "out.jsonl"
+        with runlog.run("e", {}, self.area, data=runlog.NO_INPUTS) as writer:
+            writer.output(out)
+            out.write_text('{"id": 1}\n', encoding="utf-8")
+        chosen = runlog.RunOutput(out, run=writer.run_id)
+        with runlog.run("e", {}, self.area, data={"items": chosen}) as reader:
+            pass
+        recorded = json.loads((reader.dir / "config.json").read_text())["data"]
+        self.assertEqual(set(recorded["items"]), {"path", "sha256", "rows"})
+        before = sorted((self.area / "runs").iterdir())
+        with self.assertRaises(SystemExit):
+            with runlog.run(
+                "e",
+                {},
+                self.area,
+                data={"items": runlog.RunOutput(out, run=reader.run_id)},
+            ):
+                self.fail("the body ran")
+        self.assertEqual(sorted((self.area / "runs").iterdir()), before)
+        with self.assertRaisesRegex(ValueError, r"data\['items'\]"):
+            nested = runlog.RunOutput(chosen, run=writer.run_id)  # type: ignore[arg-type]  # the wrong nesting under test
+            runlog.run("e", {}, self.area, data={"items": nested})
+
     def test_an_exception_is_recorded_and_re_raised_without_an_index_row(self) -> None:
         context = runlog.run("e", {}, self.area)
         run = context.__enter__()

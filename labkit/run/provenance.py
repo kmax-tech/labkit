@@ -11,12 +11,13 @@ run directory they are handed.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import importlib.metadata
 import json
 import re
 import sys
 from pathlib import Path
+from typing import cast
 
 from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats import requirements
@@ -405,6 +406,67 @@ class BinaryInput:
     path: Path
 
 
+@dataclass(frozen=True)
+class RunOutput:
+    """An input file the script names as the output of one run of its area.
+
+    Pass it as a value of runlog's ``data`` mapping
+    (``runlog.RunOutput(path, run=RUN_ID)``; for a binary file
+    ``runlog.RunOutput(provenance.BinaryInput(path), run=RUN_ID)``). It
+    states the file's origin and nothing about its handling: FILE is read
+    exactly as it would be without the wrapper. At start, RUN must be a
+    completed run of the area whose outputs.json holds that file with the
+    file's present digest (`input_origins.decide_origin`), else the run is
+    refused. A chosen origin means chosen by the script, not confirmed by an
+    auditor. Not `derived_from`, which re-reads a parent's rows.
+    """
+
+    file: str | Path | BinaryInput
+    run: str = field(kw_only=True)
+
+
+@dataclass(frozen=True)
+class DeclaredInput:
+    """One `data=` value taken apart: which file, how it is read, and the
+    origin run the script chose for it (`RunOutput`), None when it chose
+    none. The one place that unwraps a `data=` value (`declared_input`)."""
+
+    path: Path
+    binary: bool
+    chosen_run: str | None
+
+
+def declared_input(key: str, value: object) -> DeclaredInput:
+    """The file, its handling and its chosen origin of the `data=` value
+    VALUE under KEY: `RunOutput` is unwrapped first, then `BinaryInput`; a
+    plain path is a text input. Raises ValueError naming KEY for a nesting
+    with no meaning — `RunOutput(RunOutput(…))` or `BinaryInput(RunOutput(…))`
+    — and for a `RunOutput` whose run is no nonempty text."""
+    chosen_run = None
+    inner = value
+    if isinstance(value, RunOutput):
+        if not isinstance(value.run, str) or not value.run:
+            raise ValueError(
+                f"data[{key!r}]: RunOutput(…, run={value.run!r}) names no run — "
+                f"pass the id of the run that wrote the file"
+            )
+        chosen_run, inner = value.run, value.file
+        if isinstance(inner, RunOutput):
+            raise ValueError(
+                f"data[{key!r}]: RunOutput(RunOutput(…)) — one file has one "
+                f"origin; pass `runlog.RunOutput(path, run=RUN_ID)`"
+            )
+    if isinstance(inner, BinaryInput):
+        if isinstance(inner.path, RunOutput):
+            raise ValueError(
+                f"data[{key!r}]: BinaryInput(RunOutput(…)) — the origin wraps "
+                f"the handling, not the other way round; pass "
+                f"`runlog.RunOutput(provenance.BinaryInput(path), run=RUN_ID)`"
+            )
+        return DeclaredInput(Path(inner.path), True, chosen_run)
+    return DeclaredInput(Path(cast("str | Path", inner)), False, chosen_run)
+
+
 #: the way out of an ordinary data= input that is not UTF-8 text — the
 #: decode decides, not the file type: a binary file whose bytes decode is
 #: read as text, so a binary input is declared, never recognised
@@ -420,8 +482,11 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
     """path (as `runs.recorded_path` writes it, against BASE_DIR's repo) +
     sha256 + rows per split, and the leakage verdict across splits.
 
-    BinaryInput values record bytes only, with rows None; ordinary path
-    values remain text datasets and are checked for row-id overlap.
+    Each value is taken apart by `declared_input` first: a `RunOutput`
+    changes nothing recorded here (its origin is checked by
+    `input_origins`). BinaryInput values record bytes only, with rows None;
+    ordinary path values remain text datasets and are checked for row-id
+    overlap.
     Missing inputs and text decoding failures propagate before a run starts;
     a decoding failure names the key, the file and `BinaryInput`
     (`BINARY_INPUT_WAY`). A key labkit reserves (`runs.RESERVED_DATA_KEYS`)
@@ -436,8 +501,8 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
             f"name the input otherwise"
         )
     for key, value in paths.items():
-        binary = isinstance(value, BinaryInput)
-        p = Path(value.path if binary else value)
+        declared = declared_input(key, value)
+        binary, p = declared.binary, declared.path
         if not p.exists():
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
         try:
