@@ -549,6 +549,7 @@ def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
         f"adopted {tree_run}",
         LAB_104,
         stage=p.relative_to(sources.repo).as_posix(),
+        tree_run=tree_run,
     )
 
 

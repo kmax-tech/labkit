@@ -282,14 +282,17 @@ class BlockSource:
     assignment of that cause) and the body it renders for that run (None
     when it cannot be rendered — WHY says why). STAGE: the protocol's path
     to stage when only the working tree's head declares a result, the way
-    out then; "" otherwise. Raises ValueError for a source without a
-    declared run that names no rule."""
+    out then; "" otherwise. TREE_RUN: the run that head declares — staging
+    alone settles a block of that run, a block of another is written again
+    after. Raises ValueError for a source without a declared run that names
+    no rule."""
 
     run_id: str | None
     body: str | None
     why: str = ""
     rule: RuleAssignment | None = None
     stage: str = ""
+    tree_run: str | None = None
 
     def __post_init__(self) -> None:
         if self.run_id is None and self.rule is None:
@@ -316,10 +319,15 @@ def block_gaps(
         into = f"`{into_cmd}`"
         if s.run_id is None and s.stage:
             assert s.rule is not None
+            stage = f"git add -- {s.stage}"
             gaps.append(
                 blocker(
                     f"{at}: {s.why} — a block shows an adopted result only",
-                    fix=f"stage it: `git add -- {s.stage}`",
+                    fix=f"stage it: `{stage}`"
+                    if s.tree_run == b.run_id
+                    # staged, the head adopts another run than the block shows
+                    else f"stage it (`{stage}`), then {into} replaces the block "
+                    f"with run {s.tree_run}'s",
                     rule=s.rule,
                 )
             )

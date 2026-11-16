@@ -109,6 +109,30 @@ class Blocks(unittest.TestCase):
         with self.assertRaises(ValueError):
             BlockSource(None, None, "it has adopted no result")
 
+    def test_staging_is_the_whole_way_only_for_the_run_the_block_shows(self):
+        """Only the working tree's head has adopted a run: staging it is the
+        whole way out when that is the block's run; for another run the
+        block is written again after (final review, 2026-11-16: "stage it"
+        alone left the next commit holding the block)."""
+        found = report_blocks.blocks(report_blocks.with_block("", P, RUN, "a = 1"))
+        report = Path.cwd() / "REPORT.md"
+        other = "2026-10-08T10-00-00_cd34"
+
+        def fix(tree_run: str) -> str:
+            source = report_blocks.BlockSource(
+                None, None, "only the tree", TECHNICAL_RULE, stage=P, tree_run=tree_run
+            )
+            (gap,) = report_blocks.block_gaps(found, {P: source}, report)
+            return gap.line
+
+        self.assertIn(f"Next: stage it: `git add -- {P}`", fix(RUN))
+        self.assertNotIn("--into", fix(RUN))
+        self.assertIn(f"stage it (`git add -- {P}`), then", fix(other))
+        self.assertIn(
+            f"`protocol-fill {P} --into REPORT.md` replaces the block", fix(other)
+        )
+        self.assertIn(f"with run {other}", fix(other))
+
     def test_cited_ids_must_name_runs_of_the_repo(self):
         text = (
             f"see {RUN}\nand 2026-10-21T12-48-00_final\nand 2026-10-07T10-00-00_ffff\n"
