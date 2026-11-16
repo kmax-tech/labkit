@@ -39,7 +39,7 @@ A run records the protocol it belongs to. The binding lives in exactly one place
 
 ## Run completion
 
-A run directory says for itself whether it finished: complete when `metrics.json` AND `completion.json` exist. A run whose `config.json` is not schema 4 or lacks a valid `run_kind` is `unreadable`: listed with a reason, never chosen or indexed. Schema 2 records are read with labkit 0.99.0, schema 3 (`cost_tier` instead of `repeat_cost`) with 0.103.0; reproduce them with their original repo commit and pinned package.
+A run directory says for itself whether it finished: complete when `metrics.json` AND `completion.json` exist. A run whose `config.json` is not schema 5 or lacks a valid `run_kind` is `unreadable`: listed with a reason, never chosen or indexed. Schema 2 records are read with labkit 0.99.0, schema 3 (`cost_tier` instead of `repeat_cost`) with 0.103.0, schema 4 (inputs without their origin run) with 0.113.0; reproduce them with their original repo commit and pinned package.
 
 `schema_version` is stamped into `config.json` at run START: when a reader has to judge a run, `completion.json` may be exactly the file that is missing.
 
@@ -47,7 +47,7 @@ A run directory says for itself whether it finished: complete when `metrics.json
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "finished": "2026-09-26T21:14:02",
   "git": "a1b2c3d+dirty",
   "git_full": "a1b2c3d4e5f6...",

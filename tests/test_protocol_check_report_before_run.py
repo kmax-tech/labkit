@@ -47,7 +47,7 @@ def completed_run(area: Path) -> None:
         json.dumps(
             run_record(
                 {
-                    "schema_version": 4,
+                    "schema_version": 5,
                     "run_kind": "measurement",
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                 }

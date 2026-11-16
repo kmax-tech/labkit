@@ -19,15 +19,19 @@ A run whose record does not read is never eligible, and what it wrote
 cannot be read: an automatic decision — the one eligible run, or no
 origin — is then made without it. The decision carries every such run of
 the area, for each input alike, since none can be ruled out
-(`InputOrigin.skipped_unread`, `skipped_warning`). A chosen origin skips
-nothing: the script named it.
+(`InputOrigin.origin_unreadable_runs`, `unreadable_warning`). Unreadable
+includes a record of another schema version, so after a format break the
+area's older runs are among them. A chosen origin skips nothing: the
+script named it.
 
 A repeat (`repeat_of`) is eligible: an origin says where a file came from,
 not that its run may be adopted or reported (`runs.unreportable` decides
 that). Runs of other areas are never looked up.
 
-The origins are checked at start and not yet written: the run record
-carries them from schema 5 on, the plan's format step.
+The decided origin is written into each input's entry in config.json
+(`with_origins`; `runs.ORIGIN_RUN_KEY` and its neighbours, schema 5) and is
+final: a later run that writes the same file does not reopen it. The
+origin's own `repeat_of` is not copied; its record holds it.
 """
 
 from __future__ import annotations
@@ -39,6 +43,10 @@ from pathlib import Path
 from labkit.formats.gate import with_way_out
 from labkit.formats.runs import (
     COMPLETED,
+    ORIGIN_CHOSEN_KEY,
+    ORIGIN_RUN_KEY,
+    ORIGIN_UNREADABLE_KEY,
+    RESERVED_DATA_KEYS,
     UNREADABLE,
     ArtefactError,
     OutputEntry,
@@ -89,7 +97,7 @@ class InputOrigin:
             chosen by the script, not confirmed by an auditor.
         origin_repeat_of: The run ORIGIN_RUN repeats, for the auditor's
             evidence; None when it repeats none or there is no origin.
-        skipped_unread: Every run of the area whose record did not read,
+        origin_unreadable_runs: Every run of the area whose record did not read,
             left out of an automatic decision — not known to have written
             the file, only not ruled out; () when there is none or the
             script chose the run.
@@ -98,7 +106,7 @@ class InputOrigin:
     origin_run: str | None
     origin_chosen: bool
     origin_repeat_of: str | None
-    skipped_unread: tuple[str, ...] = ()
+    origin_unreadable_runs: tuple[str, ...] = ()
 
 
 #: a plain input without origin, decided with no unreadable run skipped;
@@ -178,13 +186,14 @@ def decide_origin(
     )
 
 
-def skipped_warning(key: str, recorded: str, origin: InputOrigin) -> str:
+def unreadable_warning(key: str, recorded: str, origin: InputOrigin) -> str:
     """What a start is told whose input KEY (RECORDED as the record writes
     its path) was decided as ORIGIN while runs of the area did not read
-    (`InputOrigin.skipped_unread`, not empty): the decision, the area's
-    runs it could not look into — whether one wrote this file cannot be
-    told —, and the way to a decision that does not rest on them. A warning, not a refusal: a damaged run elsewhere in the area does
-    not hold this start."""
+    (`InputOrigin.origin_unreadable_runs`, not empty) — damaged, or written
+    in another schema version: the decision, the area's runs it could not
+    look into — whether one wrote this file cannot be told —, and the way
+    to a decision that does not rest on them. A warning, not a refusal: an
+    unreadable run elsewhere in the area does not hold this start."""
     decided = (
         f"its origin was decided as {origin.origin_run}"
         if origin.origin_run is not None
@@ -192,10 +201,12 @@ def skipped_warning(key: str, recorded: str, origin: InputOrigin) -> str:
     )
     return (
         f"runlog: WARNING — data[{key!r}] = {recorded}: {decided} without "
-        f"looking into {', '.join(origin.skipped_unread)}, the area's runs "
-        f"whose record does not read; whether one of them wrote this file "
-        f"cannot be told. Repair that record, or name the origin in the "
-        f'script: `runlog.RunOutput("{recorded}", run="<the run>")`.'
+        f"looking into {', '.join(origin.origin_unreadable_runs)}, the area's "
+        f"runs whose record does not read (damaged, or written in another "
+        f"schema version — `runlog <area>` lists the reason); whether one of "
+        f"them wrote this file cannot be told. Repair a damaged record, or "
+        f"name the origin in the script: "
+        f'`runlog.RunOutput("{recorded}", run="<the run>")`.'
     )
 
 
@@ -280,3 +291,23 @@ def input_origins(area: Path, data: dict, described: dict) -> dict[str, InputOri
             runs_path(area),
         )
     return out
+
+
+def with_origins(described: dict, origins: dict[str, InputOrigin]) -> dict:
+    """DESCRIBED, the `data=` entries `provenance.describe_data` made, with
+    each input's decided origin from ORIGINS added to its entry — the form
+    `runs.data_entries` reads back; the reserved keys (`runs.RESERVED_DATA_KEYS`,
+    no input) stay as they are. A new dict; DESCRIBED is not changed.
+    Raises KeyError for an input without a decided origin: a gap fails at
+    the write, not at the next read."""
+    return {
+        key: entry
+        if key in RESERVED_DATA_KEYS
+        else {
+            **entry,
+            ORIGIN_RUN_KEY: origins[key].origin_run,
+            ORIGIN_CHOSEN_KEY: origins[key].origin_chosen,
+            ORIGIN_UNREADABLE_KEY: list(origins[key].origin_unreadable_runs),
+        }
+        for key, entry in described.items()
+    }

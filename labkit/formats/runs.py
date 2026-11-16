@@ -78,7 +78,10 @@ def runs_script(cmd: str, script: str) -> bool:
 JsonObject = dict[str, Any]
 
 #: Current run-record format; the writer and reader use the same version.
-RUN_SCHEMA = 4
+RUN_SCHEMA = 5
+#: the last release that writes and reads schema 4, the format before input
+#: origins (checked against the tags, tests/test_release_tags.py)
+SCHEMA_4_READ_BY = "0.113.0"
 
 RunKind = Literal["preparation", "probe", "measurement"]
 #: the run kind that measures the registered question — the one spelling
@@ -113,8 +116,8 @@ RunState = Literal[
 
 def run_state(run_dir: Path, alive: bool | None) -> RunState:
     """One of: completed · running · unknown · crashed · unfinalized · corrupt
-    (a run whose config.json cannot be read — damaged, or written before
-    schema 4 — is `unreadable`: `run_facts`, `runlog.active`; this function
+    (a run whose config.json cannot be read — damaged, or of another schema
+    than RUN_SCHEMA — is `unreadable`: `run_facts`, `runlog.active`; this function
     never sees one, its caller has read the config).
 
     metrics.json without completion.json is decided by liveness: alive →
@@ -407,28 +410,44 @@ NO_INPUTS_KEY = "no_input_files"
 NO_INPUTS_DECLARED = "declared by the author: the run reads no input file"
 #: the `data=` keys that hold no input
 RESERVED_DATA_KEYS = (LEAKAGE_CHECK_KEY, NO_INPUTS_KEY)
+#: an input entry's origin, decided at start (`input_origins`): the run
+#: that wrote the file, or null for a plain input without origin
+ORIGIN_RUN_KEY = "origin_run"
+#: true when the script chose that run (`RunOutput`) — chosen by the
+#: script, not confirmed by an auditor
+ORIGIN_CHOSEN_KEY = "origin_chosen"
+#: the area's runs whose record did not read when the origin was decided
+#: without a choice — damaged, or of another schema version (after a format
+#: break, the area's older runs): not known to have written the file, only
+#: not ruled out
+ORIGIN_UNREADABLE_KEY = "origin_unreadable_runs"
 
 
 @dataclass(frozen=True)
 class DataEntry:
     """One input a run read (`data=` in its record), as `runlog` writes it:
     KEY as given, the path as the record holds it (`resolve_recorded` reads
-    it back), its sha256 cut to RECORD_SHA_CHARS, and the rows of a text
-    input — None for a binary one (`provenance.BinaryInput`). Not the
-    outputs (`OutputEntry`)."""
+    it back), its sha256 cut to RECORD_SHA_CHARS, the rows of a text
+    input — None for a binary one (`provenance.BinaryInput`) — and its
+    origin as decided at start (ORIGIN_RUN_KEY, ORIGIN_CHOSEN_KEY,
+    ORIGIN_UNREADABLE_KEY). Not the outputs (`OutputEntry`)."""
 
     key: str
     recorded: str
     sha256: str
     rows: int | None
+    origin_run: str | None
+    origin_chosen: bool
+    origin_unreadable_runs: tuple[str, ...]
 
 
 def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
     """The inputs of a run record's `data=` table DATA, in its order, each
     held to the shape `runlog` writes — a path as nonempty text, sha256 as
-    text, rows a count or null (present); the leakage verdict (LEAKAGE_CHECK_KEY) is
-    no input. Raises ArtefactError naming WHERE (the record) and the key on
-    any other shape: whether an entry reads is decided here once, which of
+    text, rows a count or null (present), and the origin (`_entry_origin`);
+    the leakage verdict (LEAKAGE_CHECK_KEY) is no input. Raises
+    ArtefactError naming WHERE (the record) and the key on any other
+    shape: whether an entry reads is decided here once, which of
     its fields a check needs stays with that check, so no reader turns a
     missing path into the text "None"."""
     out: list[DataEntry] = []
@@ -456,8 +475,58 @@ def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
             )
         if rows is not None and not _is_count(rows):
             raise ArtefactError(f"{where}: data[{key!r}]: rows is {rows!r}")
-        out.append(DataEntry(key, path, sha, cast("int | None", rows)))
+        run, chosen, unreadable = _entry_origin(e, f"{where}: data[{key!r}]")
+        out.append(
+            DataEntry(key, path, sha, cast("int | None", rows), run, chosen, unreadable)
+        )
     return out
+
+
+def _entry_origin(
+    e: dict[str, object], where: str
+) -> tuple[str | None, bool, tuple[str, ...]]:
+    """The origin fields of input entry E, each present and of the shape
+    `runlog` writes: ORIGIN_RUN_KEY a run id or null, ORIGIN_CHOSEN_KEY a
+    boolean, true only with a run, ORIGIN_UNREADABLE_KEY a list of run ids,
+    empty for a chosen origin (a choice looks into no other run). Raises
+    ArtefactError naming WHERE: a record that lost its origin must not
+    read as a plain input."""
+    missing = [
+        k
+        for k in (ORIGIN_RUN_KEY, ORIGIN_CHOSEN_KEY, ORIGIN_UNREADABLE_KEY)
+        if k not in e
+    ]
+    if missing:
+        raise ArtefactError(
+            f"{where} has no {', '.join(missing)} — the record does not say "
+            f"where the file came from"
+        )
+    run, chosen, unreadable = (
+        e[ORIGIN_RUN_KEY],
+        e[ORIGIN_CHOSEN_KEY],
+        e[ORIGIN_UNREADABLE_KEY],
+    )
+    if run is not None and (not isinstance(run, str) or not run):
+        raise ArtefactError(f"{where}: {ORIGIN_RUN_KEY} is {run!r}, not a run id")
+    if not isinstance(chosen, bool):
+        raise ArtefactError(
+            f"{where}: {ORIGIN_CHOSEN_KEY} is {chosen!r}, not a boolean"
+        )
+    if chosen and run is None:
+        raise ArtefactError(
+            f"{where}: {ORIGIN_CHOSEN_KEY} is true without an origin run"
+        )
+    ids = cast(list[object], unreadable) if isinstance(unreadable, list) else None
+    if ids is None or not all(isinstance(r, str) and r for r in ids):
+        raise ArtefactError(
+            f"{where}: {ORIGIN_UNREADABLE_KEY} is {unreadable!r}, not a list of run ids"
+        )
+    if chosen and ids:
+        raise ArtefactError(
+            f"{where}: a chosen origin names {ORIGIN_UNREADABLE_KEY} — a choice "
+            f"looks into no other run"
+        )
+    return run, chosen, tuple(cast(list[str], ids))
 
 
 def declares_no_inputs(data: JsonObject, where: str) -> bool:
@@ -726,6 +795,11 @@ def _schema_problem(sv: object) -> str | None:
         return (
             "schema_version = 3; read this record with labkit 0.103.0 "
             "(`cost_tier` became `repeat_cost` in 0.104.0)"
+        )
+    if sv == 4:
+        return (
+            f"schema_version = 4; read this record with labkit {SCHEMA_4_READ_BY} "
+            f"(input origins are recorded from schema 5 on)"
         )
     if sv != RUN_SCHEMA:
         return f"schema_version = {sv}; expected {RUN_SCHEMA}"

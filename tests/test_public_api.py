@@ -473,7 +473,8 @@ class Runs(unittest.TestCase):
         with runlog.run("e", {}, self.area, data={"items": chosen}) as reader:
             pass
         recorded = json.loads((reader.dir / "config.json").read_text())["data"]
-        self.assertEqual(set(recorded["items"]), {"path", "sha256", "rows"})
+        self.assertEqual(recorded["items"]["origin_run"], writer.run_id)
+        self.assertIs(recorded["items"]["origin_chosen"], True)
         before = sorted((self.area / "runs").iterdir())
         with self.assertRaises(SystemExit):
             with runlog.run(

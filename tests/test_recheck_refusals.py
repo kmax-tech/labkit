@@ -36,7 +36,7 @@ class RecheckRefuses(unittest.TestCase):
         run = runs.run_path(self.area, "r1")
         run.mkdir(parents=True)
         (run / "completion.json").write_text(
-            json.dumps({"schema_version": 4, "finished": "x"})
+            json.dumps({"schema_version": 5, "finished": "x"})
         )
         (run / "config.json").write_text("{not json")
         said = self._refused(

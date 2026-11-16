@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import PLAIN_ORIGIN, run_record  # noqa: E402
 from labkit.checks import data_counts
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE
@@ -66,7 +66,14 @@ class HeldToTheRun(unittest.TestCase):
         run.mkdir(parents=True)
         record = run_record(
             run_kind="preparation",
-            data={"source": {"path": "data/raw/x.csv", "sha256": "ab", "rows": 5}},
+            data={
+                "source": {
+                    "path": "data/raw/x.csv",
+                    "sha256": "ab",
+                    "rows": 5,
+                    **PLAIN_ORIGIN,
+                }
+            },
         )
         (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
         (run / "metrics.json").write_text(

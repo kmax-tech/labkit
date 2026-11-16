@@ -90,7 +90,7 @@ def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "low") -
         json.dumps(
             run_record(
                 {
-                    "schema_version": 4,
+                    "schema_version": 5,
                     "run_kind": "measurement",
                     "protocol": {
                         "id": "p-0123456789abcdef",

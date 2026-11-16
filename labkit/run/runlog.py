@@ -52,7 +52,8 @@ Three ways a run depends on another run's rows — not one:
 Apart from these, an input FILE has an origin: the completed run of the
 area that registered it as an output with the same bytes, looked up at
 start (`input_origins`); where several did, the script names one with
-`runlog.RunOutput(path, run=ID)`. Checked, not yet recorded.
+`runlog.RunOutput(path, run=ID)`. The input's entry in config.json records
+the origin (`origin_run`, `origin_chosen`, `origin_unreadable_runs`).
 
 Usage:
     import runlog
@@ -154,7 +155,8 @@ from labkit.run.input_origins import (
     InputOrigin,
     OriginRefused,
     input_origins,
-    skipped_warning,
+    unreadable_warning,
+    with_origins,
 )
 from labkit.run.provenance import RunOutput as RunOutput  # public: runlog.RunOutput
 from labkit.run.provenance import (
@@ -384,15 +386,15 @@ def _decide_origins_and_warn(
 ) -> dict[str, InputOrigin]:
     """The origin of every input in DATA (`input_origins`), DESCRIBED as
     `describe_data` made it; each automatic decision made without an
-    unreadable run is warned of (`skipped_warning`). Raises SystemExit for
+    unreadable run is warned of (`unreadable_warning`). Raises SystemExit for
     an origin that cannot be decided or a chosen one that does not hold."""
     try:
         origins = input_origins(base_dir, data, described)
     except OriginRefused as exc:
         raise SystemExit(str(exc)) from exc
     for key, origin in origins.items():
-        if origin.skipped_unread:
-            print(skipped_warning(key, described[key]["path"], origin))
+        if origin.origin_unreadable_runs:
+            print(unreadable_warning(key, described[key]["path"], origin))
     return origins
 
 
@@ -414,7 +416,7 @@ class Run:
          several need a `RunOutput` choice, a wrong choice is refused, none
          is a plain input; a run whose record does not read is never an
          origin, a choice that names it is refused, and an automatic
-         decision made without it is warned of, `skipped_warning`)
+         decision made without it is warned of, `unreadable_warning`)
          (undecided blockers, the freeze or the registration, the
          acknowledgement over a failed audit); the imported code read per
          repository (`code_repos.read_code`), and for a full run refused when
@@ -467,13 +469,13 @@ class Run:
             _require_no_open_twin(base_dir)
         # NO_INPUTS: the author's declaration, recorded as such; a data= left
         # out or empty records nothing, and a check holds that apart
-        origins: dict[str, InputOrigin] = {}
         if isinstance(data, NoInputs):
             described: dict = {NO_INPUTS_KEY: NO_INPUTS_DECLARED}
         else:
             described = describe_data(data, base_dir) if data else {}
             if data:
                 origins = _decide_origins_and_warn(base_dir, data, described)
+                described = with_origins(described, origins)
         unfrozen_ack, audit_failed = False, None
         if prepared.run_kind == MEASUREMENT:
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
@@ -491,9 +493,6 @@ class Run:
         self._derived_from = prepared.derived_from
         self._run_kind = prepared.run_kind
         self._data = described
-        # checked, not yet written: the record carries the origins from
-        # schema 5 on (docs/notes/2026-11-14-exploratory-workflow-plan.md)
-        self._input_origins = origins
         self._unfrozen_ack = unfrozen_ack
         self._audit_failed = audit_failed
         self._code = code

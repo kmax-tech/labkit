@@ -79,7 +79,7 @@ def _run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 4,
+                    "schema_version": 5,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",

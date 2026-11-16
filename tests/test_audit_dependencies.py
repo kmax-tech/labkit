@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import PLAIN_ORIGIN, run_record  # noqa: E402
 from labkit.formats import digests
 from labkit.checks import audit_binding
 from labkit.formats import runs
@@ -45,6 +45,7 @@ class DeclaredDependencies(unittest.TestCase):
             "path": path.relative_to(self.root).as_posix(),
             "sha256": digests.file_digest(path)[: runs.RECORD_SHA_CHARS],
             "rows": rows,
+            **PLAIN_ORIGIN,
         }
 
     def test_a_small_text_dependency_is_shown_whole_and_a_dataset_is_not(self):

@@ -37,7 +37,7 @@ from labkit.formats.runs import DataEntry, KeptRows, OutputEntry, OutputNow
 
 pytestmark = pytest.mark.rule
 
-ITEMS = DataEntry("items", "data/items.jsonl", "ab", 12)
+ITEMS = DataEntry("items", "data/items.jsonl", "ab", 12, None, False, ())
 ROWS = OutputEntry(Path("out.jsonl"), "cd", 12)
 
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")

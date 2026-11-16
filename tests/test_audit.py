@@ -66,7 +66,7 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
     d = area / "runs" / "2026-01-01T00-00-00_0001"
     d.mkdir(parents=True)
     cfg = {
-        "schema_version": 4,
+        "schema_version": 5,
         "run_kind": "measurement",
         "script": "01_measure.py",
         "pid": 1,
@@ -85,7 +85,7 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 4,
+                "schema_version": 5,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",
@@ -2112,7 +2112,12 @@ class FileCheck(unittest.TestCase):
         cfg = json.loads(path.read_text(encoding="utf-8"))
         digest = digests.file_digest(model)[: runs.RECORD_SHA_CHARS]
         cfg["data"] = {
-            "predictor_primary": {"path": self.MODEL, "sha256": digest, "rows": None}
+            "predictor_primary": {
+                "path": self.MODEL,
+                "sha256": digest,
+                "rows": None,
+                **fixture.PLAIN_ORIGIN,
+            }
         }
         path.write_text(json.dumps(cfg), encoding="utf-8")
 

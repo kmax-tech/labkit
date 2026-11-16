@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import contextlib
 import io
-import json
 import pickle
 import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.formats import runs
 from labkit.formats.runs import COMPLETED, OutputEntry
 from labkit.run import input_origins, provenance, runlog
 from labkit.run.input_origins import AreaRun, InputOrigin, OriginRefused
@@ -83,14 +83,14 @@ class Lookup(unittest.TestCase):
     def test_the_warning_names_the_input_the_decision_and_the_skipped_runs(
         self,
     ) -> None:
-        found = input_origins.skipped_warning(
+        found = input_origins.unreadable_warning(
             "items", "data/out.jsonl", InputOrigin(B, False, None, (A, C))
         )
         self.assertIn("data['items'] = data/out.jsonl", found)
         self.assertIn(f"origin was decided as {B}", found)
         self.assertIn(f"looking into {A}, {C}", found)
         self.assertIn('runlog.RunOutput("data/out.jsonl", run=', found)
-        plain = input_origins.skipped_warning(
+        plain = input_origins.unreadable_warning(
             "items", "data/out.jsonl", InputOrigin(None, False, None, (A,))
         )
         self.assertIn("decided as an input without origin", plain)
@@ -307,20 +307,31 @@ class AtStart(unittest.TestCase):
     def runs_now(self) -> set[str]:
         return {p.name for p in (self.area / "runs").iterdir()}
 
-    def test_the_writer_is_found_and_nothing_new_is_recorded(self) -> None:
+    def recorded(self, r: runlog.Run) -> runs.DataEntry:
+        """The one input entry R's record holds, as a reader reads it back."""
+        (entry,) = runs.read_data(r.dir) or []
+        return entry
+
+    def test_the_writer_is_found_and_recorded(self) -> None:
         w = self.write_run('{"id": 1}\n')
         self.assertEqual(
             self.origins(self.out), {"items": InputOrigin(w.run_id, False, None)}
         )
-        r = self.read_run(self.out)
-        entry = json.loads((r.dir / "config.json").read_text())["data"]["items"]
-        self.assertEqual(set(entry), {"path", "sha256", "rows"})
+        got = self.recorded(self.read_run(self.out))
+        self.assertEqual(
+            (got.origin_run, got.origin_chosen, got.origin_unreadable_runs),
+            (w.run_id, False, ()),
+        )
 
     def test_a_file_no_run_wrote_is_a_plain_input(self) -> None:
         copied = self.area / "copied.jsonl"
         copied.write_text('{"id": 1}\n', encoding="utf-8")
         self.assertEqual(self.origins(copied), {"items": input_origins.NO_ORIGIN})
-        self.read_run(copied)
+        got = self.recorded(self.read_run(copied))
+        self.assertEqual(
+            (got.origin_run, got.origin_chosen, got.origin_unreadable_runs),
+            (None, False, ()),
+        )
 
     def test_two_writers_refuse_the_start_until_one_is_chosen(self) -> None:
         first = self.write_run('{"id": 1}\n')
@@ -336,7 +347,8 @@ class AtStart(unittest.TestCase):
         self.assertEqual(
             self.origins(chosen), {"items": InputOrigin(first.run_id, True, None)}
         )
-        self.read_run(chosen)
+        got = self.recorded(self.read_run(chosen))
+        self.assertEqual((got.origin_run, got.origin_chosen), (first.run_id, True))
 
     def test_a_wrong_choice_refuses_the_start(self) -> None:
         self.write_run('{"id": 1}\n')
@@ -383,7 +395,8 @@ class AtStart(unittest.TestCase):
         )
         told = io.StringIO()
         with contextlib.redirect_stdout(told):
-            self.read_run(self.out)
+            r = self.read_run(self.out)
+        self.assertEqual(self.recorded(r).origin_unreadable_runs, (damaged.name,))
         self.assertIn(
             f"origin was decided as {w.run_id} without looking into {damaged.name}",
             told.getvalue(),
@@ -395,6 +408,21 @@ class AtStart(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             self.read_run(runlog.RunOutput(self.out, run=damaged.name))
         self.assertIn(f"{damaged.name} does not read", str(cm.exception.code))
+
+    def test_a_chosen_binary_origin_records_bytes_only(self) -> None:
+        weights = self.area / "model.bin"
+        with runlog.run("w", {}, self.area, data=runlog.NO_INPUTS) as w:
+            w.output(weights)
+            weights.write_bytes(b"\xff\xfe")
+            w.metrics(n=1)
+        got = self.recorded(
+            self.read_run(
+                runlog.RunOutput(provenance.BinaryInput(weights), run=w.run_id)
+            )
+        )
+        self.assertEqual(
+            (got.rows, got.origin_run, got.origin_chosen), (None, w.run_id, True)
+        )
 
     def test_a_file_changed_after_its_run_matches_no_run(self) -> None:
         w = self.write_run('{"id": 1}\n')
@@ -416,7 +444,10 @@ class AtStart(unittest.TestCase):
             self.origins(chosen),
             {"items": InputOrigin(repeat.run_id, True, primary.run_id)},
         )
-        self.read_run(chosen)
+        got = self.recorded(self.read_run(chosen))
+        # the repeat's own record says what it repeats; the entry names it only
+        self.assertEqual((got.origin_run, got.origin_chosen), (repeat.run_id, True))
+        self.assertEqual(runs.read_run_config(repeat.dir).repeat_of, primary.run_id)  # type: ignore[union-attr]
 
 
 if __name__ == "__main__":

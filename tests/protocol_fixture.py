@@ -128,25 +128,37 @@ def script_sha_of(script: Path) -> str:
     return digests.file_digest(script)[: digests.DIGEST_CHARS]
 
 
+#: the origin fields of a plain input without origin run, as runlog writes
+#: them (`input_origins.with_origins`); a hand-written `data=` entry carries
+#: them, since `runs.data_entries` refuses an entry without
+PLAIN_ORIGIN = {
+    runs.ORIGIN_RUN_KEY: None,
+    runs.ORIGIN_CHOSEN_KEY: False,
+    runs.ORIGIN_UNREADABLE_KEY: [],
+}
+
+
 def source_entry(source: Path, recorded: str | None = None) -> dict:
     """A run record's `data=` entry for SOURCE as runlog writes it
     (`provenance.describe_data`): its path (RECORDED when the record names
     it relative to the repository), the sha256 of its bytes now, cut to
     the record's length, and its rows. finalize holds the source to that
-    sha256 at low repeat cost, so a fixture never invents one."""
+    sha256 at low repeat cost, so a fixture never invents one. No origin
+    run (PLAIN_ORIGIN)."""
     from labkit.run import provenance
 
     return {
         "path": recorded or str(source),
         "sha256": provenance.source_digest(source)[: runs.RECORD_SHA_CHARS],
         "rows": 1,
+        **PLAIN_ORIGIN,
     }
 
 
 def run_record(
     fields: dict | None = None, /, *, drop: tuple[str, ...] = (), **more: object
 ) -> dict:
-    """A complete config.json as runlog writes it — schema 4, every field of
+    """A complete config.json as runlog writes it — schema 5, every field of
     `runs.RUN_CONFIG_KEYS`: a measurement, unbound, no parent, no repeat, no
     data, an empty config. FIELDS and MORE replace what a test varies; a
     test of a damaged record breaks a field explicitly: DROP leaves fields
@@ -155,7 +167,7 @@ def run_record(
     the tests: a fixture that wrote a part of it would read as a record with
     defaults."""
     record: dict = {
-        "schema_version": 4,
+        "schema_version": 5,
         "experiment": "x",
         "script": "01_measure.py",
         "protocol": {"id": None, "path": None},
@@ -228,7 +240,7 @@ def completed_run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 4,
+                    "schema_version": 5,
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",

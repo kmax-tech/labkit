@@ -790,7 +790,7 @@ class StopFixture(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 4,
+                        "schema_version": 5,
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,
@@ -815,7 +815,7 @@ class StopFixture(unittest.TestCase):
             )
         )
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 4, "run_kind": "measurement"})
+            json.dumps({"schema_version": 5, "run_kind": "measurement"})
         )
         if not (self.area / "audits").is_dir():
             findings.write(

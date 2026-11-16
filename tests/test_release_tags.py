@@ -77,6 +77,34 @@ class TestReleaseTags(unittest.TestCase):
                     f"{tag} points at a commit declaring {declared}",
                 )
 
+    def test_the_schema_4_sentence_names_the_last_release_that_writes_it(self):
+        """`runs.SCHEMA_4_READ_BY` is the newest release whose runs.py writes
+        RUN_SCHEMA = 4: its tag says so, and no newer tag does. A release cut
+        from main before schema 5 lands moves the number, and this says so."""
+        from labkit.formats import runs
+
+        def schema_at(tag: str) -> int | None:
+            m = re.search(
+                r"^RUN_SCHEMA = (\d+)$",
+                _git("show", f"{tag}:labkit/formats/runs.py"),
+                re.M,
+            )
+            return int(m.group(1)) if m else None
+
+        named = f"v{runs.SCHEMA_4_READ_BY}"
+        self.assertIn(named, self.tags)
+        self.assertEqual(schema_at(named), 4)
+
+        def number(tag: str) -> tuple[int, ...]:
+            return tuple(int(x) for x in tag[1:].split("."))
+
+        for tag in self.tags:
+            if number(tag) > number(named):
+                with self.subTest(tag=tag):
+                    self.assertNotEqual(
+                        schema_at(tag), 4, f"{tag} writes schema 4 and is newer"
+                    )
+
     def test_the_package_keeps_no_second_version_literal(self):
         """No `__version__`: it would be a copy nobody reads, kept in step by a test.
 

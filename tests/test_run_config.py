@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -91,6 +92,12 @@ class Fields(unittest.TestCase):
             runs.parse_run_config({"schema_version": 2, "long": True})
         with self.assertRaisesRegex(runs.RunConfigError, "0.103.0"):
             runs.parse_run_config({"schema_version": 3, "cost_tier": "hours"})
+        with self.assertRaisesRegex(
+            runs.RunConfigError,
+            rf"schema_version = 4; read this record with labkit "
+            rf"{re.escape(runs.SCHEMA_4_READ_BY)} \(input origins",
+        ):
+            runs.parse_run_config({"schema_version": 4, "data": {}})
 
     def test_the_records_repeat_cost_holds_the_heads_two_values_or_null(self) -> None:
         """A retired or mistyped value is corrupt metadata, not a readable run."""

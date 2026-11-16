@@ -243,7 +243,7 @@ class TheChain(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 4,
+                        "schema_version": 5,
                         "run_kind": "measurement",
                         "pid": os.getpid(),
                         "script": me.split()[0],

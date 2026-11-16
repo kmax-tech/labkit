@@ -43,7 +43,7 @@ class Steps(unittest.TestCase):
             )
             (run / "metrics.json").write_text('{"criterion_1_pass": true}')
             (run / "completion.json").write_text(
-                json.dumps({"schema_version": 4, "run_kind": "measurement"})
+                json.dumps({"schema_version": 5, "run_kind": "measurement"})
             )
         return protocol
 
@@ -217,7 +217,7 @@ class ModelProvenanceGap(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 4,
+                        "schema_version": 5,
                         "run_kind": "measurement",
                         "models_resolved": models_resolved,
                         "config": {},

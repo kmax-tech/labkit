@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import PLAIN_ORIGIN, run_record  # noqa: E402
 from labkit.formats import runs, answering_run
 from labkit.formats.area_state import state_of
 
@@ -289,8 +289,20 @@ class DataEntries(unittest.TestCase):
     becomes the text "None"."""
 
     GOOD = {
-        "cases": {"path": "data/cases.jsonl", "sha256": "ab12", "rows": 3},
-        "model": {"path": "/scratch/model.bin", "sha256": "cd34", "rows": None},
+        "cases": {
+            "path": "data/cases.jsonl",
+            "sha256": "ab12",
+            "rows": 3,
+            **PLAIN_ORIGIN,
+        },
+        "model": {
+            "path": "/scratch/model.bin",
+            "sha256": "cd34",
+            "rows": None,
+            runs.ORIGIN_RUN_KEY: "2026-01-01T00-00-00_0001",
+            runs.ORIGIN_CHOSEN_KEY: True,
+            runs.ORIGIN_UNREADABLE_KEY: [],
+        },
         runs.LEAKAGE_CHECK_KEY: "skipped: need >=2 of train/dev/test",
     }
 
@@ -298,8 +310,16 @@ class DataEntries(unittest.TestCase):
         self.assertEqual(
             runs.data_entries(self.GOOD, "config.json"),
             [
-                runs.DataEntry("cases", "data/cases.jsonl", "ab12", 3),
-                runs.DataEntry("model", "/scratch/model.bin", "cd34", None),
+                runs.DataEntry("cases", "data/cases.jsonl", "ab12", 3, None, False, ()),
+                runs.DataEntry(
+                    "model",
+                    "/scratch/model.bin",
+                    "cd34",
+                    None,
+                    "2026-01-01T00-00-00_0001",
+                    True,
+                    (),
+                ),
             ],
         )
 
@@ -319,6 +339,45 @@ class DataEntries(unittest.TestCase):
                     runs.ArtefactError, rf"config.json: data\['b'\].*{re.escape(says)}"
                 ):
                     runs.data_entries({"b": broken}, "config.json")
+
+    def test_an_entry_without_a_readable_origin_is_refused_not_read_as_plain(self):
+        base = {"path": "x", "sha256": "ab", "rows": 1}
+        run = "2026-01-01T00-00-00_0001"
+        for origin, says in (
+            ({}, "has no origin_run, origin_chosen, origin_unreadable_runs"),
+            ({**PLAIN_ORIGIN, runs.ORIGIN_RUN_KEY: ""}, "origin_run is ''"),
+            ({**PLAIN_ORIGIN, runs.ORIGIN_CHOSEN_KEY: None}, "not a boolean"),
+            ({**PLAIN_ORIGIN, runs.ORIGIN_CHOSEN_KEY: True}, "true without an origin"),
+            ({**PLAIN_ORIGIN, runs.ORIGIN_UNREADABLE_KEY: "r"}, "not a list"),
+            (
+                {
+                    runs.ORIGIN_RUN_KEY: run,
+                    runs.ORIGIN_CHOSEN_KEY: True,
+                    runs.ORIGIN_UNREADABLE_KEY: [run],
+                },
+                "a choice looks into no other run",
+            ),
+        ):
+            with self.subTest(origin=origin):
+                with self.assertRaisesRegex(
+                    runs.ArtefactError, rf"config.json: data\['b'\].*{re.escape(says)}"
+                ):
+                    runs.data_entries({"b": {**base, **origin}}, "config.json")
+
+    def test_an_automatic_origin_with_skipped_runs_reads_back(self):
+        entry = {
+            "path": "x",
+            "sha256": "ab",
+            "rows": 1,
+            runs.ORIGIN_RUN_KEY: "r2",
+            runs.ORIGIN_CHOSEN_KEY: False,
+            runs.ORIGIN_UNREADABLE_KEY: ["r1"],
+        }
+        (got,) = runs.data_entries({"b": entry}, "config.json")
+        self.assertEqual(
+            (got.origin_run, got.origin_chosen, got.origin_unreadable_runs),
+            ("r2", False, ("r1",)),
+        )
 
 
 class TheRunStateAlphabetHasOneHome(unittest.TestCase):

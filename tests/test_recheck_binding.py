@@ -57,7 +57,7 @@ class TwoProtocols(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 4,
+                        "schema_version": 5,
                         "run_kind": "measurement",
                         "protocol": {"id": pid, "path": "x"},
                     }

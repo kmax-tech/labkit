@@ -24,7 +24,14 @@ from labkit.formats import promises  # noqa: E402
 from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
 from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
 from labkit.run import provenance  # noqa: E402
-from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
+from protocol_fixture import (
+    PLAIN_ORIGIN,
+    run_record,
+    PID,
+    head,
+    scope_file,
+    script_sha_of,
+)  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -100,7 +107,7 @@ class Provenance(unittest.TestCase):
             "script": "01_measure.py",
             "script_sha": script_sha_of(scope_file(self.area)),
             "pid": 1,
-            "schema_version": 4,
+            "schema_version": 5,
             "run_kind": "measurement",
             "git": started[:7],
             "git_full": started,
@@ -114,7 +121,7 @@ class Provenance(unittest.TestCase):
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 4,
+                    "schema_version": 5,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": started[:7],
@@ -150,6 +157,7 @@ class Provenance(unittest.TestCase):
             "path": str(source),
             "rows": 1,
             "sha256": provenance.source_digest(source)[:RECORD_SHA_CHARS],
+            **PLAIN_ORIGIN,
         }
 
     def test_frozen_and_tracked_is_clean(self):
@@ -206,7 +214,7 @@ class Provenance(unittest.TestCase):
 
     def test_a_data_entry_naming_no_path_blocks(self):
         data = self._frozen()
-        data["broken"] = {"rows": 1, "sha256": "ab"}
+        data["broken"] = {"rows": 1, "sha256": "ab", **PLAIN_ORIGIN}
         self._run(SHORT, data, commit=True)
         rc, out = self._finalize()
         self.assertEqual(rc, 1, out)
