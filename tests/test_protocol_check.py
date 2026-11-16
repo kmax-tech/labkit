@@ -110,7 +110,7 @@ REPORT_FIELDS = """\
 - **Answer form + resolution:** yes/no, two states
 - **How measured:** AUC over the judge's yes-probability
 - **Validation:** anchors of known label
-- **Noise ceiling → threshold:** spread 0.02 over three draws
+- **Noise floor → threshold:** spread 0.02 over three draws
 """
 
 

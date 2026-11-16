@@ -402,9 +402,12 @@ result is only a plan.
   A filter that quietly loses the hard cases makes every score look better.
 - **Meaning of the gold label †:** judge it on the rendered example, not on
   the definition.
-- **Noise ceiling → threshold †:** calibrate the permitted deviation on
-  the null lane or on permuted gold, never by scoring the registered lane
-  against its gold before the freeze.
+- **Noise floor → threshold †:** the noise floor is the spread of scores
+  that chance alone produces. The null check's permitted deviation and
+  the comparison threshold derive from it in the same run (LAB-035 Thresholds belong to the run, not to the
+  measure).
+  Calibrate it on the null lane or on permuted gold, never by scoring the
+  registered lane against its gold before the freeze.
   - At apply, [quality-check-2] registers the rule, not the value
     (`null_band_quantile` over `null_permutations`, seeded by
     `null_band_seed`). Each run permutes the gold with its own predictions

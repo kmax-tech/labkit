@@ -126,7 +126,7 @@ FIELDS = (
     Field("Answer form + resolution", "should", needs="instrument"),
     Field("How measured", "should"),
     Field("Validation", "should"),
-    Field("Noise ceiling → threshold", "should", needs="bar"),
+    Field("Noise floor → threshold", "should", needs="bar"),
     Field("Free knobs", "should"),
     Field("Randomness controls", "should"),
     Field("Instrument check", "should", needs="instrument"),

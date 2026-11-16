@@ -2226,7 +2226,7 @@ class Report(unittest.TestCase):
         self.assertNotIn("**Parser cases harvested:**", text)  # no model text to parse
         self.assertNotIn("n/a — deterministic", text)
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
-        self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
+        self.assertRegex(text, r"\*\*Noise floor → threshold †:\*\* <")
 
     def test_a_refused_protocol_leaves_every_protocol_unwritten(self) -> None:
         # the first protocol would gain report fields; the second has no kind
@@ -2266,7 +2266,7 @@ class OwedCut(unittest.TestCase):
                 root, "a", "high", "apply", "haiku", True
             )
         for label in ("Data profile", "Prompt (verbatim", "Model I/O", "Instrument check",
-                      "Resolution check", "Noise ceiling", "Render check", "Parser cases",
+                      "Resolution check", "Noise floor", "Render check", "Parser cases",
                       "Raw output"):  # fmt: skip
             with self.subTest(label=label):
                 self.assertNotIn(f"**{label}", compute)

@@ -97,7 +97,7 @@
   and where the expected value sits>
 - **How measured †:** <the metric: what is compared and what is counted>
 - **Validation †:** <anchor items, a second model or self-consistency>
-- **Noise ceiling → threshold †:** <the spread of repeats on the probe or
+- **Noise floor → threshold †:** <the spread of repeats on the probe or
   the null lane, never on the registered lane before the freeze. The
   threshold comes from this run's null condition.>
 - **Free knobs †:** <every preprocessing parameter with its value>

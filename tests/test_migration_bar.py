@@ -174,7 +174,7 @@ class LaneDuties(unittest.TestCase):
         "Answer form + resolution",
         "How measured",
         "Validation",
-        "Noise ceiling → threshold",
+        "Noise floor → threshold",
         "Free knobs",
         "Randomness controls",
         "Instrument check",
@@ -233,7 +233,7 @@ class LaneDuties(unittest.TestCase):
 
         compute, fit, apply_model = must("compute"), must("fit"), must("apply", "haiku")
         for label in ("Data profile", "Prompt", "Model I/O", "Instrument check",
-                      "Resolution check", "Noise ceiling → threshold"):  # fmt: skip
+                      "Resolution check", "Noise floor → threshold"):  # fmt: skip
             with self.subTest(label=label):
                 self.assertNotIn(label, compute)
                 self.assertIn(label, apply_model)
