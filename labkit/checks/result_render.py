@@ -2,10 +2,11 @@
 
 The Recorded results line and the Limitation lines are generated. Recorded
 results opens with the reportable verdict of every registered promise
-(`verdicts`, one derivation for every reader): a quality check
-not assessable — a limitation names it — or not met leaves every
-criterion not assessable, so a criterion's own `True` never reads as a
-pass beside it. The declared run's other
+(`verdicts`, one derivation for every reader): a quality check recorded
+as not met leaves every criterion not assessable, so a criterion's own
+`True` never reads as a pass beside it; a limitation leaves not
+assessable exactly the promises it names, a criterion it does not name
+keeping its recorded verdict. The declared run's other
 reported keys follow as recorded values — descriptive; the registered
 promises' keys stay in `metrics.json`, unchanged, and are not repeated as
 values —, a computation's kept number first, named with its unit
@@ -161,20 +162,21 @@ def verdicts(
     """The reportable verdict of every promise of BLOCK, in its order, one
     phrase each, from the run's METRICS read through each promise's key and
     UNJUDGED (an id a limitation leaves not assessable → that limit's
-    label). Every quality check conditions every criterion (each
-    `[quality-check-…]` says why its failure voids the verdict): one not assessable or
-    not met makes each criterion `not assessable`, with why; a criterion
-    otherwise `met` or `missed` as recorded, `not assessable` when a limit
-    names it. A key not recorded as true or false gives no verdict and says
-    so — intent-check holds that run. A branch reads as recorded. Pure; the
-    run's metrics are never changed."""
+    label). A quality check recorded as not met voids every criterion (each
+    `[quality-check-…]` says why its failure voids the verdict): each
+    criterion reads `not assessable`, with why — also where a limitation
+    names that check, since a limit hides verdicts and never restores one.
+    A limitation leaves not assessable only the promises it names: a
+    quality check it names reads not assessable, the criteria it does not
+    name read `met` or `missed` as recorded, unless a quality check is
+    recorded as not met (LAB-015 Preflight audit before freezing states a
+    decision's effect, standard 0.31). A key not recorded as true or false gives no
+    verdict and says so — intent-check holds that run. A branch reads as
+    recorded. Pure; the run's metrics are never changed."""
     blocked = [
-        f"{p.id} not assessable ({unjudged[p.id]})"
-        if p.id in unjudged
-        else f"{p.id} not met"
+        f"{p.id} not met"
         for p in block.promises
-        if p.kind == "quality-check"
-        and (p.id in unjudged or metrics.get(p.key) is False)
+        if p.kind == "quality-check" and metrics.get(p.key) is False
     ]
     return [_verdict(p, metrics.get(p.key), unjudged, blocked) for p in block.promises]
 
@@ -183,23 +185,19 @@ def left_unjudged(
     block: promises.PromiseTables, effect: str, metrics: dict | None
 ) -> str:
     """What a limitation's EFFECT (`<ID>[, <ID>] not assessable`) leaves
-    unjudged under BLOCK, by the rule `verdicts` applies — the promises it
-    names, and every criterion when one of them is a quality check —, each
-    with its verdict as METRICS (the run's, None: not read) record it: `criterion-1
-    (recorded as missed), quality-check-2 (recorded as met)`. What a decision
-    reviewer confirms the fault prevents judging. "" for an effect that
-    names no promise (`stands`, or none). Pure."""
+    unjudged under BLOCK, by the rule `verdicts` applies — exactly the
+    promises it names, a criterion beside a named quality check only when
+    named too —, each with its verdict as METRICS (the run's, None: not
+    read) record it, in the block's order: `criterion-1 (recorded as
+    missed), quality-check-2 (recorded as met)`. What a decision reviewer
+    confirms, promise by promise, the fault prevents judging. A criterion a
+    quality check recorded as not met voids is not listed unless named: that
+    void follows from the run, not from the decision, and is not reviewed. "" for an
+    effect that names no promise (`stands`, or none). Pure."""
     if not findings.leaves_unjudged(effect):
         return ""
     ids = set(findings.effect_ids(effect))
-    voids_criteria = any(
-        p.id in ids and p.kind == "quality-check" for p in block.promises
-    )
-    left = [
-        p
-        for p in block.promises
-        if p.id in ids or (voids_criteria and p.kind == "criterion")
-    ]
+    left = [p for p in block.promises if p.id in ids]
 
     def recorded(p: promises.Promise) -> str:
         value = None if metrics is None else metrics.get(p.key)
@@ -214,7 +212,7 @@ def _verdict(
     p: promises.Promise, value: object, unjudged: dict[str, str], blocked: list[str]
 ) -> str:
     """`verdicts` for one promise P, its recorded VALUE; BLOCKED the
-    quality checks that leave a criterion unjudged."""
+    quality checks recorded as not met, which leave a criterion unjudged."""
     if p.kind == "branch":
         return f"{p.id} {value}"
     if p.id in unjudged:

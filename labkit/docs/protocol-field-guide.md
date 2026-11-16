@@ -77,7 +77,7 @@ metrics of the run:
 | id | means | example in the field | key in metrics |
 |---|---|---|---|
 | `[criterion-1]` | inference criterion 1: what result supports which conclusion | `[criterion-1] accuracy >= 0.80` | `r.metrics(criterion_1_pass=True)` |
-| `[quality-check-1]` | quality check 1: if it is not met or not assessable, no criterion gets a verdict | `[quality-check-1] parse failures <= 10%` | `quality_check_1_pass` |
+| `[quality-check-1]` | quality check 1: if it is not met, no criterion gets a verdict | `[quality-check-1] parse failures <= 10%` | `quality_check_1_pass` |
 | `[quality-check-2]` | the null condition, stamped as a quality check: the control shows no effect | `[quality-check-2] shuffled labels show no effect` | `quality_check_2_pass` |
 | `[branch-1]` | registered branch 1: its outcomes in order | `[branch-1] ≥ 50 usable cases → full-report: all measures reported; otherwise → coverage-only: coverage reported, no accuracy` | `branch_1_outcome` = the selected outcome's name (`coverage-only`) |
 
@@ -303,8 +303,8 @@ result is only a plan.
   Never retype or reword it. `report-check` holds it exactly to the
   rendering. It gives the verdict of each registered promise, every other
   reported key and value, the run_id and one note on the recorded limits. A
-  quality check that is not met or not assessable leaves each criterion not
-  assessable. After a changed decision, `protocol-fill --render` writes it
+  quality check recorded as not met leaves each criterion not assessable; a
+  limitation leaves not assessable only the promises it names. After a changed decision, `protocol-fill --render` writes it
   again. The Limitation lines below it are rendered from the audit records.
   Write what the number means in the Conclusion. Example (the rendered form
   is one line):

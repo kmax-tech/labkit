@@ -209,13 +209,15 @@ class Reviewable(unittest.TestCase):
 
 
 class ANotAssessableIsReviewed(unittest.TestCase):
-    """A limitation that leaves a promise not assessable owes a second
-    auditor, who must confirm that the fault prevents judging what the
-    effect leaves unjudged; rejected, the effect falls and the verdicts read
-    as recorded (decided by the author 2026-11-13; usage round 24, sts512
-    a-r3: a doubtful null check left a plain miss "not assessable")."""
+    """A limitation that leaves promises not assessable owes a second
+    auditor, who must confirm, for each promise it names, that the fault
+    prevents judging it; not upheld, the whole effect falls and the verdicts
+    read as recorded (decided by the author 2026-11-13; usage round 24,
+    sts512 a-r3: a doubtful null check left a plain miss "not assessable").
+    Only the named promises lose their verdict (standard 0.31, decided
+    2026-11-14)."""
 
-    EFFECT = "quality-check-2 not assessable"
+    EFFECT = "quality-check-2, criterion-1 not assessable"
     MISSED = {"criterion_1_pass": False}
 
     def area(self) -> tuple[Path, Path]:
@@ -328,6 +330,31 @@ class ANotAssessableIsReviewed(unittest.TestCase):
         self.assertIn("criterion-1 not assessable", before)
         code, out = gate(area)
         self.assertEqual(code, 0, out)
+
+    def test_an_upheld_quality_check_alone_leaves_the_miss_standing(self):
+        """The sts512 a-r3 shape under 0.31: a decision naming only the
+        null check, upheld, leaves the criterion's miss as recorded — the
+        reviewer was shown the quality check alone."""
+        area, _ = area_with(
+            [BLOCKER],
+            {
+                1: (
+                    "limitation",
+                    "the null lane cannot judge chance",
+                    "quality-check-2 not assessable",
+                )
+            },
+            metrics=self.MISSED,
+        )
+        rc, _, _, sent = run_review(area, UPHELD)
+        self.assertEqual(rc, 0)
+        self.assertIn("leaves unjudged: quality-check-2 (recorded as met)\n", sent[0])
+        rendered, _ = protocol_result.render_result(
+            (area / "PROTOCOL-x.md").read_text(encoding="utf-8"), area
+        )
+        (results,) = [ln for ln in rendered.splitlines() if "Recorded results:" in ln]
+        self.assertIn("criterion-1 missed", results)
+        self.assertIn("quality-check-2 not assessable (Limitation", results)
 
 
 class TheCall(unittest.TestCase):

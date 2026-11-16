@@ -1063,10 +1063,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(rc, 1, err)
         self.assertIn(
             "limitation --not-assessable <ID>[,<ID>] (<ID>: criterion-1 (inference "
-            "criterion)) — a second auditor confirms that the fault prevents "
-            "judging what it leaves unjudged; a quality check left unjudged leaves "
-            "every criterion without a verdict by itself, so name the condition, "
-            "not the criteria",
+            "criterion)) — a second auditor confirms, for each promise named, that "
+            "the fault prevents judging it; name each criterion the fault prevents "
+            "judging, beside the quality check — one not named keeps its recorded "
+            "verdict, unless a quality check is recorded as not met",
             out,
         )
         refused = io.StringIO()

@@ -145,12 +145,14 @@ WAYS_OUT = (
     (
         UNJUDGED_PROMISE,
         "the run is right but cannot judge a promise (the auditor's `statement`): "
-        "decide it `limitation` with `--not-assessable <ID>`, which a second "
-        "auditor confirms prevents judging it (rejected, the recorded verdict "
-        "stands); the criterion then "
-        "reads not assessable — report the measured numbers as description, no "
-        "verdict. An `implementation` fault you cannot fix is handed over, not "
-        "limited",
+        "decide it `limitation` with `--not-assessable <ID>[,<ID>]`, naming "
+        "each promise the fault prevents judging — a criterion not named keeps "
+        "its recorded verdict, beside a named quality check too, unless a "
+        "quality check is recorded as not met —, which a "
+        "second auditor confirms for each (not upheld, every recorded verdict "
+        "stands); a named criterion then reads not assessable — report the "
+        "measured numbers as description, no verdict. An `implementation` "
+        "fault you cannot fix is handed over, not limited",
     ),
     (
         "an invalid registration",

@@ -120,49 +120,104 @@ class Rendering(unittest.TestCase):
 
 
 class ReportableVerdicts(unittest.TestCase):
-    """K2 (docs/notes/2026-10-27-new-registration-contracts.md): every
-    quality check conditions every criterion, so `criterion_1_pass = True`
-    is never rendered beside "quality-check-3 not assessable": the primary
-    verdict is the derived one, the run's metrics unchanged."""
+    """K2 (docs/notes/2026-10-27-new-registration-contracts.md): a quality
+    check recorded as not met conditions every criterion, so
+    `criterion_1_pass = True` is never rendered beside "quality-check-2 not
+    met"; a limitation leaves not assessable only the promises it names
+    (standard 0.31, decided by the author 2026-11-14). The primary verdict
+    is the derived one, the run's metrics unchanged."""
 
     def block(self) -> promises.PromiseTables:
         block = promises.parse_block(head(repeat_cost="low"))
         assert block is not None
         return block
 
-    def test_an_admissibility_not_assessable_leaves_the_criterion_unjudged(self):
+    MET = {
+        "criterion_1_pass": True,
+        "quality_check_1_pass": True,
+        "quality_check_2_pass": True,
+    }
+
+    def test_a_named_quality_check_leaves_the_criterion_its_verdict(self):
+        """A doubtful null check does not by itself prevent comparing the
+        score with its bar: the criterion not named reads as recorded."""
         said = result_render.verdicts(
             self.block(),
-            {
-                "criterion_1_pass": True,
-                "quality_check_1_pass": True,
-                "quality_check_2_pass": True,
-            },
+            {**self.MET, "criterion_1_pass": False},
             {"quality-check-2": "Limitation (audit x #1)"},
         )
         self.assertEqual(
             said,
             [
-                "criterion-1 not assessable — quality-check-2 not assessable (Limitation (audit x #1))",
+                "criterion-1 missed",
                 "quality-check-1 met",
                 "quality-check-2 not assessable (Limitation (audit x #1))",
             ],
         )
 
-    def test_an_admissibility_not_met_leaves_the_criterion_unjudged(self):
+    def test_a_criterion_named_beside_the_quality_check_is_unjudged(self):
+        """The twin: a fault that also prevents judging the criterion names
+        it, and only then does its recorded pass not read as met."""
+        limit = "Limitation (audit x #1)"
         said = result_render.verdicts(
             self.block(),
-            {
-                "criterion_1_pass": True,
-                "quality_check_1_pass": True,
-                "quality_check_2_pass": False,
-            },
+            self.MET,
+            {"quality-check-2": limit, "criterion-1": limit},
+        )
+        self.assertEqual(
+            said,
+            [
+                f"criterion-1 not assessable ({limit})",
+                "quality-check-1 met",
+                f"quality-check-2 not assessable ({limit})",
+            ],
+        )
+
+    def test_a_quality_check_not_met_leaves_the_criterion_unjudged(self):
+        said = result_render.verdicts(
+            self.block(),
+            {**self.MET, "quality_check_2_pass": False},
             {},
         )
         self.assertEqual(
             said[0], "criterion-1 not assessable — quality-check-2 not met"
         )
         self.assertEqual(said[2], "quality-check-2 not met")
+
+    def test_a_limit_on_a_check_not_met_restores_no_verdict(self):
+        """A limit hides verdicts and never restores one: a quality check
+        recorded as not met still voids every criterion when a limitation
+        names it alone."""
+        said = result_render.verdicts(
+            self.block(),
+            {**self.MET, "quality_check_2_pass": False},
+            {"quality-check-2": "Limitation (audit x #1)"},
+        )
+        self.assertEqual(
+            said[0],
+            "criterion-1 not assessable — quality-check-2 not met",
+        )
+        self.assertEqual(
+            said[2], "quality-check-2 not assessable (Limitation (audit x #1))"
+        )
+
+    def test_the_reviewer_is_shown_exactly_the_named_promises(self):
+        block = self.block()
+        self.assertEqual(
+            result_render.left_unjudged(
+                block, "quality-check-2 not assessable", self.MET
+            ),
+            "quality-check-2 (recorded as met)",
+        )
+        self.assertEqual(
+            result_render.left_unjudged(
+                block,
+                "quality-check-2, criterion-1 not assessable",
+                {**self.MET, "criterion_1_pass": False},
+            ),
+            "criterion-1 (recorded as missed), quality-check-2 (recorded as met)",
+        )
+        self.assertEqual(result_render.left_unjudged(block, "stands", self.MET), "")
 
     def test_the_twins_a_miss_stays_a_miss_and_a_pass_a_pass(self):
         """A failed criterion under satisfied quality checks is a
@@ -199,14 +254,16 @@ class ReportableVerdicts(unittest.TestCase):
         area, protocol = area_with_record(limit_reason=None)
         rec = findings.area_records(area)[0]
         findings.write_decision(
-            rec.path, 1, "limitation", "one draw", "quality-check-2 not assessable"
+            rec.path,
+            1,
+            "limitation",
+            "one draw",
+            "quality-check-2, criterion-1 not assessable",
         )
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN, found=())
         self.assertTrue(
-            r.recorded_results.startswith(
-                "criterion-1 not assessable — quality-check-2 not assessable (Limit"
-            )
+            r.recorded_results.startswith("criterion-1 not assessable (Limit")
         )
         self.assertNotIn("criterion_1_pass", r.recorded_results)
         self.assertIn("criterion_1_accuracy = 0.83", r.recorded_results)

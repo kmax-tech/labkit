@@ -66,19 +66,26 @@ Per decision, one of three verdicts:
 
 For a limitation whose effect is `<ID> not assessable`, the question
 is whether the fault prevents judging each promise listed under `leaves
-unjudged:` — a quality check named there leaves every criterion
-unjudged, so each criterion listed is part of the question:
+unjudged:` — exactly the promises the decision names. A criterion not
+listed keeps its recorded verdict, also beside a quality check listed
+there: a doubtful null check does not by itself prevent comparing a
+score with its bar. (A quality check the run records as not met voids
+every criterion by itself; that is not part of your question.) Check each listed promise in turn; one verdict
+answers for all of them:
 
-- **upheld** — the reason shows, for every promise listed, how the
-  fault makes its verdict unreadable from this run: the score the
-  criterion compares is itself unreliable, or the promise asks what the
-  run cannot measure.
+- **upheld** — for every promise listed, the fault as described makes its
+  verdict unreadable from this run: the score the criterion compares is
+  itself unreliable (labels the criterion relies on are invalid, say), or
+  the promise asks what the run cannot measure.
 - **rejected** — for at least one promise listed, its verdict can be
   read from the run as recorded despite the fault: a criterion compared
   directly with its bar, whose score the fault does not touch, is
-  judged, and its recorded verdict — a miss too — stands. Name that
-  promise and its recorded verdict.
-- **insufficient** — the reason points to evidence that is not inlined.
+  judged, and its recorded verdict — a miss too — stands. Name each such
+  promise and its recorded verdict; the effect then voids none of the
+  listed promises, and the person decides again.
+- **insufficient** — the reason points to evidence that is not inlined,
+  or does not say how the fault reaches a listed promise. Name the
+  promise and what is missing.
 
 For a BLOCKER decided `false-positive`, a BLOCKER on the Conclusion
 decided `fixed`, and a finding closed after a review did not uphold it,

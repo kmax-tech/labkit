@@ -16,9 +16,10 @@ rows' excerpts and metrics.json, held to the record's `shown_sha`). The
 finding and the reason alone would only test whether the reason sounds
 plausible; the claim and the evidence are what it is tested against.
 A limitation whose effect is `<ID> not assessable` releases the finding
-too: the reviewer is told what it leaves unjudged, each promise with its
-recorded verdict (`result_render.left_unjudged`), and confirms that the
-fault prevents judging every one; rejected, the effect voids no verdict
+too: the reviewer is told what it leaves unjudged — exactly the promises
+it names, each with its recorded verdict (`result_render.left_unjudged`)
+— and upholds only when the fault prevents judging every one; any other
+verdict lifts the whole effect, no promise of it voided
 (`result_render.limits_of`). Instructions: `decision-review.agent.md`.
 
 The verdicts are written beside the records (`formats/reviews`,
