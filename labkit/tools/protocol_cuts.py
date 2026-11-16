@@ -137,7 +137,7 @@ def form_cut(tmpl: str, kind: str, model: bool, *, low: bool) -> str:
 def promise_tables_for(tmpl: str, kind: str) -> str:
     """TMPL with its promise tables for a number with a bar (KIND fit or
     apply): the measure skeletons read `margin`, `max_empty` and the null
-    band from the block. A computation's go (`without_promise_tables`): it
+    check's permitted deviation from the block. A computation's go (`without_promise_tables`): it
     owes its question, no bar (standard 0.22) — a cold agent would invent a
     tautological [criterion-1]; the number is held by --check and
     finalize."""

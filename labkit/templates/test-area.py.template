@@ -7,7 +7,8 @@ pytest run must not share `01_measure`) and never copies its formula. The
 resolution check runs `evaluate_rows()` on synthetic rows in the run's real
 shape — perfect effect fires [criterion-1], a null-like registered lane stays silent,
 too many empty answers fail [quality-check-1] and withhold the verdict, the registered
-null band holds the null lane symmetric around chance. [criterion-1]'s bar is
+permitted deviation (`null_band_items`) holds the null lane symmetric around
+chance. [criterion-1]'s bar is
 held in both forms, whichever the protocol registers: `at_least`, a bar the
 task states, is the bar as written whatever the null lane answers; `margin`
 a lead over the null lane's accuracy. The parser cases
@@ -58,9 +59,9 @@ def _twelve(correct: int) -> list[tuple[str, str]]:
 
 
 def _band_lane() -> int:
-    """How many items a null lane needs so that the REGISTERED band
-    (`null_band_items`, your number, not the stamp's) has an item outside it
-    on both sides: twelve, more for a band wider than four."""
+    """How many items a null lane needs so that the REGISTERED permitted
+    deviation (`null_band_items`, your number, not the stamp's) has an item
+    outside it on both sides: twelve, more for a deviation over four."""
     return max(12, 2 * measure.CONFIG.null_band_items + 4)
 
 
@@ -70,14 +71,14 @@ def test_perfect_effect_fires_c1():
 
 
 def test_null_band_is_symmetric_at_the_registered_band():
-    """Chance ± the registered band: chance − band, chance and chance + band
-    correct are in, one item further on either side is out — at band 1 on
+    """Chance ± the registered deviation d: chance − d, chance and chance + d
+    correct are in, one item further on either side is out — at d = 1 on
     twelve items 5, 6 and 7 in, 4 and 8 out. In shares, 7/12 fell out by
     floating point (2026-10-06)."""
-    band, n = measure.CONFIG.null_band_items, _band_lane()
+    d, n = measure.CONFIG.null_band_items, _band_lane()
     chance = n // 2
-    for correct, inside in ((chance - band - 1, False), (chance - band, True), (chance, True),
-                            (chance + band, True), (chance + band + 1, False)):
+    for correct, inside in ((chance - d - 1, False), (chance - d, True), (chance, True),
+                            (chance + d, True), (chance + d + 1, False)):
         m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, correct)))
         assert m["quality_check_2_pass"] is inside, correct
 
@@ -124,7 +125,7 @@ def test_a_constant_placebo_sits_at_its_gold_share():
     """Chance is what the null lane's own answers reach against its gold
     permuted: a placebo answered the same on every item sits exactly at the
     gold count of that answer's class, also on unbalanced gold — two thirds
-    of the items one label, far outside any band around half."""
+    of the items one label, far beyond any permitted deviation from half."""
     n = 3 * _band_lane()
     golds = [POS] * (2 * n // 3) + [NEG] * (n // 3)
     m = measure.evaluate_rows(rows(_lane(12, 12), [(YES, g) for g in golds]))
@@ -132,7 +133,7 @@ def test_a_constant_placebo_sits_at_its_gold_share():
 
 
 def test_null_out_of_band_withholds_the_verdict():
-    n = _band_lane()  # every item right lies outside the registered band
+    n = _band_lane()  # every item right lies beyond the registered deviation
     m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, n)))
     assert m["quality_check_2_pass"] is False and m["criterion_1_pass"] is None
 

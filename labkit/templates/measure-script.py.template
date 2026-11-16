@@ -42,7 +42,8 @@ Measurement contract:
     the parser.
 
 What to fill is the block below — the items, the text field, the answer
-words, both prompts — and the null band in `evaluate_rows()`; every place
+words, both prompts — and the null lane's permitted deviation in
+`evaluate_rows()`; every place
 carries a TODO. Everything from `MeasureConfig` on is the experiment, and
 stays. How the calls are made — one job per item and lane, the batches,
 resume, the probe, the balance of the rows against the items, the command
@@ -97,7 +98,7 @@ ANSWER_LINE = f"Answer with a single word, {' or '.join(ANSWERS)}."
 PROMPT = ("TODO: the question about this text.\n\n"
           "Text: {text}\n\n" + ANSWER_LINE + "\n\nAnswer:")
 # TODO: the null lane — same renderer, same parser, same label mapping, a
-# question the data CANNOT answer. Its accuracy is the noise ceiling of THIS
+# question the data CANNOT answer. Its accuracy is the noise floor of THIS
 # run; derive its expected value in the protocol's null-condition field
 # (LAB-037 Every anchor carries its target and rationale). Safest placebo:
 # one whose true answer is the SAME for every item ("Is this text written in
@@ -200,7 +201,7 @@ def answer_of(r: dict) -> str | None:
 
 
 def _counts(rows: list[dict]) -> tuple[int, int, int]:
-    """(correct, items, empty) — integers, so a band is compared exactly. The
+    """(correct, items, empty) — integers, so a deviation is compared exactly. The
     denominator is every item of the lane: an empty or unreadable answer is
     not correct, and is counted on its own (LAB-030 Reasoning models)."""
     labels = [(parse_answer(r["answer"]), r["gold"]) for r in rows]
@@ -227,8 +228,8 @@ def _expected_correct(rows: list[dict]) -> Fraction:
 
 def _within_chance(rows: list[dict], items: int) -> bool:
     """Is the lane within `items` items of chance (`_expected_correct`)?
-    Compared in item counts as fractions — in shares the band was
-    asymmetric in floating point (7/12 out, 5/12 in)."""
+    Compared in item counts as fractions — in shares the interval around
+    chance was asymmetric in floating point (7/12 out, 5/12 in)."""
     correct, n, _ = _counts(rows)
     return n > 0 and abs(correct - _expected_correct(rows)) <= items
 
@@ -238,7 +239,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
 
     Returns every registered id's keys on every lane:
       quality_check_1_empty · quality_check_1_pass           quality check: yield of the registered lane
-      quality_check_2_accuracy · quality_check_2_expected · quality_check_2_pass   quality check: the null lane inside its band around chance
+      quality_check_2_accuracy · quality_check_2_expected · quality_check_2_pass   quality check: the null lane within null_band_items items of chance
       criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against cfg.at_least as
                                    registered, else the null lane's accuracy + cfg.margin
       n_items · n_rows             yield (→ LAB-023 No silent loss)

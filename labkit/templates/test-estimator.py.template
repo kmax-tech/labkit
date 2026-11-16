@@ -45,7 +45,7 @@ SCORE = measure.CONFIG.score
 POS, NEG = ("pos", "neg") if SCORE == "accuracy" else (1, 0)
 #: the twelve items' gold: half of each class, at spearman the values 0 … 11
 GOLDS = [float(i) for i in range(12)] if SCORE == "spearman" else [POS] * 6 + [NEG] * 6
-#: a registered null order: its band is optional, its score the bar's base
+#: a registered null order: its null_band is optional, its score the bar's base
 ORDERED_NULL = measure.NULL_ORDER is not None
 #: apply without a fixed null predictor: the null rows carry `gold_of`, as apply_rows writes them
 PERMUTED_NULL = measure.KIND == "apply" and measure.make_null_predictor(measure.CONFIG.seed) is None

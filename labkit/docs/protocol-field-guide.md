@@ -397,7 +397,7 @@ result is only a plan.
   question has the same true answer for every item ("Is this text written
   in English?"). Its expected accuracy is then the gold share of the class
   that this answer maps to. A placebo whose answer varies per item can
-  track the gold label and fail its band.
+  track the gold label and fall outside its permitted deviation.
 - **Exclusions / filters:** also name the outputs that get no gate label.
   A filter that quietly loses the hard cases makes every score look better.
 - **Meaning of the gold label †:** judge it on the rendered example, not on
