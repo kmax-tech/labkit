@@ -93,7 +93,7 @@ Frage, Verfahren, Seeds, Filter und Bewertung dürfen sich zwischen explorativen
 
 **Bereichsgrenzen entschieden 2026-11-16 (F11):** Laufquellen von C nur aus demselben Bereich; fehlende Herkunft wird dem Prüfer gezeigt, nicht gesperrt; der Bestätigungsverweis darf Bereiche im selben Repository überschreiten. [Regeln im Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#provenance-between-runs).
 
-**Bestätigungsverweis entschieden 2026-11-16 (F12):** zwei Verweise (Explorationsprotokoll und dessen übernommener Lauf C), per Kommando eingetragen, beim Start der ersten bestätigenden Messung erneut geprüft. [Regeln im Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#link-from-a-confirmation-to-its-exploration).
+**Bestätigungsverweis entschieden 2026-11-16 (F12):** zwei Verweise (Explorationsprotokoll und dessen übernommener Lauf C), per Kommando eingetragen, beim Start der ersten bestätigenden Messung erneut geprüft. Geprüft werden gültige Zuordnung, Übernahme und erforderlicher Prüfstand, nicht die Urheberschaft der Felder; eine gültige manuelle Eintragung wird nicht allein deshalb abgelehnt. Weitere Angaben werden aus den Verweisen erschlossen und nicht doppelt gepflegt. [Regeln im Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#link-from-a-confirmation-to-its-exploration).
 
 Offen beim Autor: F13–F14 und die Namen der neuen Tabellen und Kommandos (Namensprüfung).
 
