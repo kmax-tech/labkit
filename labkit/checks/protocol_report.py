@@ -73,6 +73,7 @@ from labkit.formats.protocol_check import (
     kind_registers,
     model_named,
     owed_fields,
+    rename_way,
     recorded_results_without_run,
     template_text,
     written_before_run,
@@ -660,10 +661,22 @@ def check_protocol(
     missing_should = report.missing_should
     pilot_note = ""
     if not frozen and missing_should:
+        renames = {s: rename_way(text, s) for s in missing_should}
+        ways = [way for way in renames.values() if way]
+        others = [s for s, way in renames.items() if not way]
+        if others:
+            ways.append(
+                (
+                    "append them"
+                    if len(others) == len(missing_should)
+                    else f"append {', '.join(others)}"
+                )
+                + ": labkit-init exp <name> --report"
+            )
         pilot_note = (
             f"pilot (frozen = false) — {len(missing_should)} "
             f"should-field(s) due only at report time "
-            f"({', '.join(missing_should)}; append them: labkit-init exp <name> --report)"
+            f"({', '.join(missing_should)}; {'; '.join(ways)})"
         )
         missing_should = []
     # A placeholder is reported as one already, and a comment can never

@@ -492,7 +492,9 @@ def promote(root: Path, area: Path) -> list[str]:
     into each of an existing area's protocols whose repeat cost freezes
     (`lane.freeze`: high); a protocol at low repeat cost is skipped.
     Every protocol is read and judged before any is written, so a refusal
-    (`report_blocks`) leaves the area unchanged. Returns the log."""
+    (`report_blocks`, or a label the migration renames still standing —
+    the field would come in beside it, `protocol_check.rename_way`)
+    leaves the area unchanged. Returns the log."""
     protos = area_protocols(area)
     if not protos:
         raise console.Refused("labkit-init", f"no PROTOCOL-*.md in {area}")
@@ -506,6 +508,12 @@ def promote(root: Path, area: Path) -> list[str]:
                 f"  skip (repeat_cost {lane.repeat_cost}: nothing freezes, no report fields)  {proto}"
             )
             continue
+        for label in protocol_block.RENAMED_LABELS.values():
+            way = protocol_check.rename_way(text, label)
+            if way:
+                raise console.Refused(
+                    "labkit-init", f"{proto}: {way}; then run --report again"
+                )
         new, added = insert_report_fields(text, report_blocks(root, proto, text))
         if not added:
             log.append(f"  skip (report fields already there)  {proto}")

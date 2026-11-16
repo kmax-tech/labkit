@@ -429,6 +429,27 @@ def field_name(label: str) -> str:
     return label.split("(")[0].replace("†", "").strip().casefold()
 
 
+def rename_way(text: str, label: str) -> str | None:
+    """The way out for LABEL, a field TEXT misses, when TEXT still carries
+    the label the migration renames to it (`protocol_block.RENAMED_LABELS`):
+    rename that line, naming it — adding the field would leave two. None
+    when no earlier label of LABEL stands in TEXT, or LABEL stands there
+    too. The earlier label never counts as the field; the gap stays until
+    the line is renamed."""
+    written = {f.name: f.line for f in fields(text)}
+    for old, new in protocol_block.RENAMED_LABELS.items():
+        if field_name(new) != field_name(label) or field_name(new) in written:
+            continue
+        line = written.get(field_name(old))
+        if line is not None:
+            return (
+                f'rename the label on line {line} from "{old}" to "{new}" '
+                f"(standard {protocol_block.STANDARD}) — adding the field "
+                "would leave two"
+            )
+    return None
+
+
 #: the three ways a place names no one field (`FieldPlaceError.kind`)
 UNKNOWN_PLACE, AMBIGUOUS_PLACE, TWICE_WRITTEN = "unknown", "ambiguous", "twice"
 
@@ -1268,7 +1289,7 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
     must, should = owed(text, head, adopting=adopting)
     present = {f.name for f in fields(text)}
     must_gaps = [
-        MustGap(f.label, LAB_011, MISSING)
+        MustGap(f.label, LAB_011, MISSING, way=rename_way(text, f.label))
         for f in must
         if f.label.casefold() not in present
     ]

@@ -583,6 +583,43 @@ class TestCheckFields(unittest.TestCase):
             self.assertNotIn(label, report.missing_should)
 
 
+EARLIER_NOISE = "- **Noise ceiling → threshold:** spread 0.02 over three draws"
+NOW_NOISE = "- **Noise floor → threshold:** spread 0.02 over three draws"
+WRITTEN = 'rename the label on line {line} from "Noise ceiling → threshold" to "Noise floor → threshold"'
+
+
+class TestRenamedLabel(unittest.TestCase):
+    """A protocol that set standard 0.30 and kept a label the migration
+    renames (`protocol_block.RENAMED_LABELS`) is told to rename that line,
+    not to add the field beside it; the earlier label never counts."""
+
+    def test_a_frozen_gap_names_the_line_to_rename(self):
+        text = frozen().replace(NOW_NOISE, EARLIER_NOISE)
+        line = text.splitlines().index(EARLIER_NOISE) + 1
+        (gap,) = protocol_check.check_fields(text).must_gaps
+        self.assertEqual(gap.told, "MISSING (must): Noise floor → threshold")
+        self.assertIn(WRITTEN.format(line=line), gap.repair)
+
+    def test_the_twin_an_absent_field_is_written(self):
+        (gap,) = protocol_check.check_fields(
+            frozen().replace(NOW_NOISE + "\n", "")
+        ).must_gaps
+        self.assertIsNone(gap.way)
+        self.assertEqual(gap.repair, "write the field")
+
+    def test_the_pilot_note_renames_it_and_appends_the_others(self):
+        text = pilot() + EARLIER_NOISE + "\n"
+        line = text.splitlines().index(EARLIER_NOISE) + 1
+        _, out = run_main(text)
+        self.assertIn(WRITTEN.format(line=line), out)
+        self.assertIn("; append Problem in one sentence, ", out)
+        self.assertNotIn("append them", out)
+        # the twin: nothing to rename, every should field is appended
+        self.assertIn(
+            "append them: labkit-init exp <name> --report", run_main(pilot())[1]
+        )
+
+
 class TestCheckFileAsData(unittest.TestCase):
     """`check_protocol` hands every finding back as data; `print_report` only
     renders. A test asserts on fields, not on lines read back from stdout."""

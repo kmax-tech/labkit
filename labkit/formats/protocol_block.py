@@ -49,12 +49,20 @@ from labkit.formats.runs import REPEAT_COSTS, RUN_ID
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
 STANDARD = "0.30"
+#: the field labels the migration renames, earlier label → label of STANDARD;
+#: the refusal says it, and a protocol that set the version but kept an
+#: earlier label is told to rename that line (`protocol_check.rename_way`),
+#: not to add the field beside it — the earlier label never reads as the field
+RENAMED_LABELS = {"Noise ceiling → threshold": "Noise floor → threshold"}
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    'from 0.24, 0.25, 0.26, 0.27, 0.28 or 0.29: set standard = "0.30" and rename '
-    'the field label "Noise ceiling → threshold" to "Noise floor → threshold"; '
-    "nothing else in the head changes — "
+    f'from 0.24, 0.25, 0.26, 0.27, 0.28 or 0.29: set standard = "{STANDARD}" and '
+    + "; ".join(
+        f'rename the field label "{old}" to "{new}"'
+        for old, new in RENAMED_LABELS.items()
+    )
+    + "; nothing else in the head changes — "
     "0.25 admits a success bar the task states as an absolute value (LAB-035 "
     "Thresholds belong to the run, not to the measure), 0.26 keeps the question as "
     "registered after the first measurement, a typo included (LAB-003 No run "

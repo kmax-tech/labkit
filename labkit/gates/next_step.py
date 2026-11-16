@@ -640,7 +640,10 @@ def _field_step(
             "copy is registered cannot be told",
         )
     if report.missing_must:
-        fill = fill_line(protocol, report.missing_must[0], absent=True)
+        first = report.missing_must[0]
+        # a label the migration renames stands: renaming it closes the gap
+        way = next((g.way for g in report.must_gaps if g.label == first), None)
+        fill = way or fill_line(protocol, first, absent=True)
         return Step(
             f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
             + ", ".join(report.missing_must),

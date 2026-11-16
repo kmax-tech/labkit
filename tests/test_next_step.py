@@ -27,7 +27,8 @@ from labkit.gates import registered_report
 from labkit.formats.area_state import state_of
 from labkit.tools import next_command, report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
-from labkit.formats import protocol_block, report_reviews  # noqa: E402
+from labkit.formats import protocol_block, protocol_check, report_reviews  # noqa: E402
+import test_protocol_check as fixtures  # noqa: E402
 from labkit.formats import area_state  # noqa: E402
 from labkit.formats.gate import GUARANTEED, TECHNICAL_RULE, GateFinding  # noqa: E402
 from labkit.formats.repo import state_text  # noqa: E402
@@ -333,6 +334,25 @@ class ADetachedStartBeforeItsRecord(unittest.TestCase):
         now = step()
         self.assertNotIn("still running", now.where)
         self.assertIn("01_measure.py", now.next)
+
+
+class RenamedLabel(unittest.TestCase):
+    """The field step of a protocol that kept a label the migration renames
+    names renaming that line; the twin, a field absent, the `--report`
+    command that appends it."""
+
+    def test_the_step_renames_the_earlier_label(self):
+        earlier = fixtures.frozen().replace(fixtures.NOW_NOISE, fixtures.EARLIER_NOISE)
+        line = earlier.splitlines().index(fixtures.EARLIER_NOISE) + 1
+        protocol = Path("experiments/01-x/PROTOCOL-x.md")
+        step = next_step._field_step(protocol, protocol_check.check_fields(earlier), "")
+        assert step is not None
+        self.assertIn(fixtures.WRITTEN.format(line=line), step.next)
+        self.assertNotIn("--report", step.next)
+        absent = fixtures.frozen().replace(fixtures.NOW_NOISE + "\n", "")
+        twin = next_step._field_step(protocol, protocol_check.check_fields(absent), "")
+        assert twin is not None
+        self.assertIn("--report", twin.next)
 
 
 class BeforeTheChain(unittest.TestCase):

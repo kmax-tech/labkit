@@ -367,6 +367,37 @@ class Exp(unittest.TestCase):
         with self.assertRaisesRegex(console.Refused, "already exists"):
             quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
 
+    def test_report_refuses_beside_a_label_the_migration_renames(self) -> None:
+        """A protocol that kept "Noise ceiling → threshold" would get the
+        renamed field beside it: `--report` refuses naming the line to
+        rename, nothing changed; the twin, renamed, appends what is missing."""
+        quiet(scaffold.stamp_area, self.root, "x", "high", kind="fit")
+        (proto,) = (self.root / "experiments" / "01-x").glob("PROTOCOL-*.md")
+        now = proto.read_text(encoding="utf-8")
+        validation = next(
+            line for line in now.splitlines() if line.startswith("- **Validation †:**")
+        )
+        missing = now.replace(validation + "\n", "")
+        earlier = missing.replace(
+            "Noise floor → threshold", "Noise ceiling → threshold"
+        )
+        line = (
+            earlier.splitlines().index(
+                next(s for s in earlier.splitlines() if "Noise ceiling" in s)
+            )
+            + 1
+        )
+        proto.write_text(earlier, encoding="utf-8")
+        before = self._snapshot()
+        with self.assertRaisesRegex(
+            console.Refused, f"rename the label on line {line} from"
+        ):
+            quiet(scaffold.stamp_area, self.root, "x", report=True)
+        self.assertEqual(self._snapshot(), before)
+        proto.write_text(missing, encoding="utf-8")
+        quiet(scaffold.stamp_area, self.root, "x", report=True)
+        self.assertIn(validation, proto.read_text(encoding="utf-8"))
+
     def _two_areas_of_one_name(self) -> Path:
         """`experiments/` with `01-x` (high fit) and its copy `02-x`, and
         `03-y` (low computation) beside a hand-made `y` — two areas for each

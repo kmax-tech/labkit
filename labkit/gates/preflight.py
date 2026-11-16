@@ -103,7 +103,7 @@ from labkit.formats.repo import (
     area_test_stem,
     split_area_name,
 )
-from labkit.formats.protocol_check import check_fields
+from labkit.formats.protocol_check import check_fields, rename_way
 from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
@@ -368,7 +368,10 @@ def check_protocol_fields(
     # field not owed as a must is written
     for label in report.missing_should:
         findings.warn(
-            f"missing (should): {label}", evidence_kind=GUARANTEED, rule=OPEN_RULE
+            f"missing (should): {label}",
+            evidence_kind=GUARANTEED,
+            fix=rename_way(text, label),
+            rule=OPEN_RULE,
         )
     for n, label in report.soft_holes:
         findings.warn(

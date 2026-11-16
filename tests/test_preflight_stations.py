@@ -53,9 +53,10 @@ class PreflightStations(unittest.TestCase):
         (f,) = found.found
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
 
-    def _field_findings(self, **lists: list) -> Findings:
-        """Station 1 on a field report holding only LISTS."""
-        text = head()
+    def _field_findings(self, text: str | None = None, **lists: list) -> Findings:
+        """Station 1 on a field report holding only LISTS, over TEXT (a bare
+        head when None)."""
+        text = head() if text is None else text
         protocol = self.area / "PROTOCOL-x.md"
         protocol.write_text(text, encoding="utf-8")
         parsed = protocol_block.head(text)
@@ -80,6 +81,21 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual(
             [(f.grade, f.rule) for f in found.found], [(WARNING, OPEN_RULE)] * 2
         )
+
+    def test_a_should_field_under_its_earlier_label_is_renamed_not_added(self):
+        """A label the migration renames still stands: the warning's way is
+        renaming that line; the twin, no earlier label, names no way."""
+        text = head() + "\n- **Noise ceiling → threshold:** spread 0.02\n"
+        line = (
+            text.splitlines().index("- **Noise ceiling → threshold:** spread 0.02") + 1
+        )
+        (f,) = self._field_findings(
+            text, missing_should=["Noise floor → threshold"]
+        ).found
+        self.assertEqual(f.grade, WARNING)
+        self.assertIn(f"rename the label on line {line} from", f.fix or "")
+        (twin,) = self._field_findings(missing_should=["Noise floor → threshold"]).found
+        self.assertIsNone(twin.fix)
 
     def test_the_twin_a_must_placeholder_breaks_the_required_field_rule(self):
         (f,) = self._field_findings(must_holes=[(7, "Unit")]).found
