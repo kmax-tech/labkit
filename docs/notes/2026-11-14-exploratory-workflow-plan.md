@@ -1,6 +1,6 @@
 # Exploratory workflow: one investigation, each run bound to its own intent
 
-> Workflow direction approved by the author on 2026-11-14; the investigation boundary was agreed on 2026-11-16. This is the contract and implementation plan, not an implemented feature. Current standard 0.31 still applies. [TODO](../../TODO.md) holds the work order. No experiment, release or rollout follows from this plan. Step 1 (record design) is worked through against the code at `89815c4f` in [Record design worked through](#record-design-worked-through-2026-11-16). The author answered two drafts on 2026-11-16 and kept the architecture; the remaining format decisions and names await the author.
+> Workflow direction approved by the author on 2026-11-14; the investigation boundary was agreed on 2026-11-16. This is the contract and implementation plan, not an implemented feature. Current standard 0.31 still applies. [TODO](../../TODO.md) holds the work order. No experiment, release or rollout follows from this plan. Step 1 (record design) is worked through against the code at `89815c4f` in [Record design worked through](#record-design-worked-through-2026-11-16). The author answered two drafts on 2026-11-16 and kept the architecture; the remaining format decisions and names await the author. The first build step, inputs and origins, is built in part (`9c694796`): see [Implementation status](#implementation-status).
 
 One exploratory protocol may contain several related questions and measurements. The investigation develops as results are seen; each run retains the question, procedure, inputs, settings and assessment that it actually investigated. A new protocol is needed for an independent investigation or a separate confirmation, not for every justified refinement within exploration.
 
@@ -470,6 +470,25 @@ Each case names the level at which its test stands (rule test from data, gate te
 | 6. Version, document and accept      | Make standard and format changes coherent; write Breaking and migration guidance. Update workflow, architecture, promise and run-binding docs, templates and agent guidance.                                                                                                                                                   | Old runs remain reproducible with their original commit and pin; all readers are checked; command scenarios and final checks pass.                                                                                                                                            |
 
 The targeted non-assessability change is completed under standard 0.31 (`e97aa0bd`, `4546ffe8`, command replay `8f85253d`); this plan is the subsequent workflow work item. The global release-policy change remains separate. Choose the actual new standard version when implementing, rather than reserving a number here. Respect public-API transition requirements and do not publish a partly relaxed gate before the supporting evidence and report bindings are ready.
+
+## Implementation status
+
+**Build step "inputs and origins" (2026-11-16), partial.** Built:
+
+- `runlog.RunOutput(path, run=RUN_ID)` and its composition `runlog.RunOutput(provenance.BinaryInput(path), run=RUN_ID)` (`labkit/run/provenance.py`, re-exported by `labkit/run/runlog.py`; public API row in `docs/architecture.md`).
+- `provenance.declared_input`, the one unwrapping of a `data=` value into file, handling and chosen run; `describe_data` uses it, so the recorded entry and every file check are the same with and without an origin. Nestings without meaning raise `ValueError` naming the key.
+- `labkit/run/input_origins.py`: the eligibility rule, the four outcomes of [Origins of input files](#provenance-between-runs) and the refusals with their reasons (not a run of the area, not completed, file not registered, other bytes). `runlog.run` calls it at start, before the run directory exists; a refusal is a `SystemExit`.
+- Tests: `tests/test_input_origins.py` (rules from data in memory, file checks with and without origin, real runs through `runlog.run`), one contract test in `tests/test_public_api.py`.
+
+Acceptance cases covered: 8; 28 (i) as a start refusal and (ii) as a plain input; 31 as far as the decided origin carries `repeat_of`; 32; 33 except that the control records no `origin_run` yet.
+
+Deliberately not built, and why:
+
+- **No origin is written.** The decided origins are held on the `Run` object only. Under run schema 4 an older labkit would read a record with `origin_run` and silently ignore the key ([What the format break affects](#what-the-format-break-affects)); the fields appear together with `schema_version = 5`.
+- **One new start refusal under the old schema.** Several eligible runs without a choice (rule 2); it does not depend on persistence. Recorded as Breaking in `CHANGELOG.md`.
+- **A run whose record does not read is not eligible.** Its `config.json`, or as a completed run its `outputs.json`, does not read: a choice naming it is refused with the reason, any other start is not held. A first version refused every start with inputs in such an area; the commit hook showed it pre-empting the narrower refusals of `repeat_of` and `derived_from` (`tests/test_repeats.py`), and the damage is already held where the run is read for what it is. Open for the format step: whether the record notes that the lookup passed over an unreadable run, since such a run may have written the file.
+
+What the format step needs next: `RUN_SCHEMA = 5` for `config.json`, `completion.json` and `code.json`; `origin_run` and, for a choice, `origin_chosen = true` in each input's entry, written from `Run._input_origins`; the data entry parser (`runs.data_entries`) reading and checking both keys; the schema-4 sentence in `runs._schema_problem` naming the last release that writes schema 4, with its tag test; every reader of `config.json` and `code.json` inventoried; acceptance cases 20 and the recorded part of 31 and 33. Not yet decided there: whether the origin's `repeat_of` is recorded in the input entry or read from the origin's record when the auditor's evidence is built (the plan names only `origin_run` and `origin_chosen`).
 
 ## Acceptance scenarios and limits
 
