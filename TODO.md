@@ -6,7 +6,7 @@ Der vollständige Stand vor dieser Bereinigung liegt im [Verlauf vom 2026-11-12]
 
 ## Reihenfolge
 
-Die technischen Aufgaben 2–6 einschließlich 6b und 6c, die Nutzungsrunde vom 2026-11-13 und ihre priorisierten Reparaturen sind abgeschlossen; die gezielte Wirkung von „nicht beurteilbar“ ist unter Standard 0.31 gebaut und abgenommen. **Nächster Schritt ist die Entscheidung des Autors über den überarbeiteten Entwurf für den explorativen Arbeitsablauf** (Architektur entschieden; offen F3, F7, F11–F14 und Namen; 2026-11-16), siehe den Abschnitt „Beschlossener Arbeitsablauf, Vertragsplan konkretisiert — Exploration“ und den [Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#record-design-worked-through-2026-11-16). Erst nach dieser Entscheidung Code; noch keine Registrierungssperre lockern. Die globale Freigaberegel bleibt ein eigener Auftrag. Eine neue Nutzungsrunde ist nicht aus dieser Reihenfolge beauftragt.
+Die technischen Aufgaben 2–6 einschließlich 6b und 6c, die Nutzungsrunde vom 2026-11-13 und ihre priorisierten Reparaturen sind abgeschlossen; die gezielte Wirkung von „nicht beurteilbar“ ist unter Standard 0.31 gebaut und abgenommen. **Nächster Schritt ist die Entscheidung des Autors über den überarbeiteten Entwurf für den explorativen Arbeitsablauf** (Architektur entschieden; offen F7, F11–F14 und Namen; 2026-11-16), siehe den Abschnitt „Beschlossener Arbeitsablauf, Vertragsplan konkretisiert — Exploration“ und den [Plan](docs/notes/2026-11-14-exploratory-workflow-plan.md#record-design-worked-through-2026-11-16). Erst nach dieser Entscheidung Code; noch keine Registrierungssperre lockern. Die globale Freigaberegel bleibt ein eigener Auftrag. Eine neue Nutzungsrunde ist nicht aus dieser Reihenfolge beauftragt.
 
 ### 7. Nutzungsrunde und Reparaturen — Verlauf und abgeschlossener Stand
 
@@ -83,9 +83,13 @@ Frage, Verfahren, Seeds, Filter und Bewertung dürfen sich zwischen explorativen
 3. **Mehrere Prüfsummen-Treffer:** ausdrückliche Quellenwahl im Skript, gegen Datei und `outputs.json` geprüft; ohne Wahl wird der Start mit Liste der Treffer abgelehnt (F14, ein neuer öffentlicher Name).
 4. **Version:** Laufdatensatz `schema_version` 5, exakt gelesen (F13). Ältere labkit-Versionen lehnen neue Protokolle schon an der Standardversion ab und zeigen neue Laufdatensätze als unlesbar mit Versionssatz; keine liest die Herkunft still nicht mit. Korrigiert: Protokolle mit Läufen unter 0.31 laufen nicht unverändert weiter, sondern werden wie bei jedem Standardwechsel mit ihrem Release reproduziert; der Schemawechsel bricht darüber hinaus nichts. Werkzeuge ohne Protokoll (`runlog`-Liste, `reindex`, Usability-Scorer) zeigen alte Datensätze als unlesbar — im Breaking-Eintrag zu nennen.
 
-Offen beim Autor: F3, F7, F11–F14 und die Namen der neuen Tabellen und Kommandos (Namensprüfung).
+**Arbeitsschritte entschieden 2026-11-16:** Ein aktueller Schrittblock genügt; jeder Lauf behält seine damalige Fassung. Ein neuer Schritt nennt Ausgangspunkt, Anlass und Begründung; der Anlass darf eine Beobachtung, geplante Variante oder Reparatur sein. Wiederholungen und Seed-Varianten im selben Schritt brauchen keinen neuen Begründungstext. Keine zusätzliche Commit-Pflicht vor jeder Messung. Der Ausgangslauf steht vorerst ausschließlich im Schrittblock, mit eigener Bedeutung gegenüber `derived_from`; kein zusätzliches Feld im Laufdatensatz für diese Beziehung. Alle Leser nutzen die gemeinsame Rekonstruktion. Fehlt sie, wird die Grundlage als unbekannt gemeldet; nur davon abhängige Prüfung oder Freigabe wird gehalten, keine pauschale Sperre anderer Arbeit.
 
-21 Abnahmefälle im Plan, je mit Testebene. Danach erst Bau, in der Reihenfolge des Plans.
+**Unterschiede innerhalb eines Schritts sichtbar machen:** Der Prüfer bekommt tatsächliche Unterschiede der gemeinsam geprüften Läufe, einschließlich Patches. Die Vergleichsgrundlage und Darstellung mehrerer Varianten müssen im Entwurf konkretisiert werden; kein vollständiger paarweiser Vergleich erforderlich. Der Hinweis ist keine neue inhaltliche Sperre und kein Beweis einer Methodenänderung. Nicht jede Codeänderung verlangt automatisch einen neuen Schritt. Der Codeunterschied ist bereits gespeichert; ergänzt wird die Gegenüberstellung im Prüferauftrag. Die bisherigen engen Prüfungen erklärter Protokollunterschiede bleiben davon getrennt.
+
+Offen beim Autor: F7, F11–F14 und die Namen der neuen Tabellen und Kommandos (Namensprüfung).
+
+24 Abnahmefälle im Plan, je mit Testebene. Danach erst Bau, in der Reihenfolge des Plans.
 
 **Noch nicht gebaut.** Die zuvor priorisierte gezielte Wirkung von „nicht beurteilbar“ ist mit Standard 0.31 gebaut und abgenommen; dieser Plan ist der anschließende Arbeitsablauf. Die globale Freigaberegel bleibt ein eigener Auftrag. Der Auftrag dieser Sitzung ist Plan und TODO, kein Codeumbau, Versuchsstart, Release oder Rollout.
 
