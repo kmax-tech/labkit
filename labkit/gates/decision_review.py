@@ -90,6 +90,7 @@ from labkit.formats.protocol_check import (
     display_label,
     field_lines,
     fields,
+    replace_lines,
 )
 from labkit.formats.repo import layout_root, shown, the_protocol
 from labkit.formats.commands import audit_command, render_command
@@ -151,8 +152,7 @@ def as_proposed(area: Path, text: str, run_dir: Path | None) -> str:
     a not-upheld line into the protocol, a later draw would read the earlier
     verdict there; a Limitation line no covering record decides is dropped,
     as `--render` drops it. TEXT unchanged without a run, or where nothing
-    renders (`rendered_result` names why). Raises ValueError where TEXT
-    holds a line break the field parser alone sees (`field_lines`)."""
+    renders (`rendered_result` names why)."""
     if run_dir is None:
         return text
     try:
@@ -166,10 +166,10 @@ def as_proposed(area: Path, text: str, run_dir: Path | None) -> str:
         if f.block:
             continue
         if label in proposed:
-            lines[f.line - 1 : f.last] = [f"- **{label}:** {proposed[label]}"]
+            replace_lines(lines, f.line, f.last, f"- **{label}:** {proposed[label]}")
         elif label.startswith(findings.LIMIT_PREFIX):
             del lines[f.line - 1 : f.last]  # stray: an earlier verdict
-    return "\n".join(lines)
+    return "".join(lines)
 
 
 def reviewable(

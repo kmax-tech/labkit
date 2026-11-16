@@ -28,6 +28,7 @@ from labkit.formats.protocol_check import (
     field_name,
     fields,
     placeholder_fields,
+    replace_lines,
 )
 
 
@@ -132,8 +133,7 @@ def fill(
     VALUE names no id; a VALUE with its own ids replaces it.
 
     Raises ValueError with a human-readable reason (unknown label, ambiguous
-    label, already filled without force, a line break only the field parser
-    sees — `field_lines`) — the CLI prints it verbatim.
+    label, already filled without force) — the CLI prints it verbatim.
     """
     want = field_for(text, field, line_no)
     hits = [
@@ -160,8 +160,8 @@ def fill(
     lines = field_lines(text)
     lead = FIELD_LEAD.match(lines[f.line - 1])
     assert lead is not None, "the pattern matches the empty prefix"
-    lines[f.line - 1 : f.last] = [f"{lead.group(0)}**{f.label}:** {value}"]
-    return "\n".join(lines)
+    replace_lines(lines, f.line, f.last, f"{lead.group(0)}**{f.label}:** {value}")
+    return "".join(lines)
 
 
 #: what `--list` says a free head value takes, by its label in protocol_block.FILLABLE_HEAD_KEYS

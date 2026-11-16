@@ -537,29 +537,43 @@ class TheCall(unittest.TestCase):
         )
         self.assertNotIn("not confirmed by a second auditor", sent[0])
 
-    def test_a_line_break_other_than_a_newline_is_refused_not_misplaced(self):
-        """A U+2028 or a form feed counts as a line break to the field parser
-        and not to the writers: the reviewer's copy and `--render` replaced
-        the wrong line (final review, 2026-11-16). Both refuse, naming the
-        character and its line; the twin without one reviews."""
-        for odd in (" ", "\x0c"):
-            with self.subTest(odd=f"U+{ord(odd):04X}"):
-                area, _ = area_with(
-                    [WARNING], {1: ("limitation", "one seed, said so", "stands")}
-                )
-                proto = area / "PROTOCOL-x.md"
-                text = proto.read_text(encoding="utf-8").replace("\n", odd, 1)
-                proto.write_text(text, encoding="utf-8")
-                rc, _, err, sent = run_review(area, UPHELD)
-                self.assertEqual((rc, sent), (2, []), err)
-                self.assertIn(f"line 1 holds U+{ord(odd):04X}", err)
-                with self.assertRaisesRegex(ValueError, f"U\\+{ord(odd):04X}"):
-                    protocol_result.render_result(text, area)
-        area, _ = area_with(
+    def test_other_line_breaks_stay_and_move_no_line(self):
+        """A U+2028, a form feed or Windows line endings: the field parser
+        breaks lines there, and the writers now split the same way and keep
+        each line's own break — the reviewer's copy and `--render` replaced
+        the wrong line before, and the fix after it refused the text
+        (reviews of 2026-11-16). The rendering is the plain text's with the
+        break kept; the review is drawn on the right Limitation line."""
+        area, record = area_with(
             [WARNING], {1: ("limitation", "one seed, said so", "stands")}
         )
+        proto = area / "PROTOCOL-x.md"
+        plain = proto.read_text(encoding="utf-8")
+        rendered, _ = protocol_result.render_result(plain, area)
+        for odd, text in (
+            ("U+2028", plain.replace("\n", "\u2028", 1)),
+            ("form feed", plain.replace("\n", "\x0c", 1)),
+            ("CRLF", plain.replace("\n", "\r\n")),
+        ):
+            with self.subTest(odd=odd):
+                again, _ = protocol_result.render_result(text, area)
+                expected = (
+                    rendered.replace("\n", "\r\n")
+                    if odd == "CRLF"
+                    else rendered.replace("\n", text[len(plain.split("\n")[0])], 1)
+                )
+                self.assertEqual(again, expected)
+        twin, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        _, _, _, clean = run_review(twin, UPHELD)
+        proto.write_text(plain.replace("\n", "\u2028", 1), encoding="utf-8")
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual((rc, len(sent)), (0, 1), err)
+        label = "- **Limitation (audit "
+        self.assertEqual(sent[0].count(label), clean[0].count(label))
+        self.assertGreater(sent[0].count(label), 0)
+        self.assertIn(f"{record.stem} #1):** the verdicts stand", sent[0])
 
     def test_a_stray_limitation_line_is_not_shown_to_the_reviewer(self):
         """A Limitation line no covering record decides — left from an

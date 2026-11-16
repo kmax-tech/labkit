@@ -32,6 +32,8 @@ from labkit.formats.protocol_check import (
     field_lines,
     field_name,
     fields,
+    insert_line,
+    replace_lines,
 )
 from labkit.tools.protocol_edit import fill
 
@@ -197,7 +199,7 @@ def drop_stray_limits(
         if label.startswith(findings.LIMIT_PREFIX) and label not in keep_labels:
             del lines[f.line - 1 : f.last]
             dropped.append(label)
-    return "\n".join(lines), dropped
+    return "".join(lines), dropped
 
 
 def declared_run_dir(text: str, area: Path, why: str) -> Path:
@@ -267,7 +269,7 @@ def limit_lines(
                     f"line {have.line} ({label!r}) says {have.value[:80]!r}, the "
                     f"record says otherwise — --force to write the record's"
                 )
-            lines[have.line - 1 : have.last] = [line]
+            replace_lines(lines, have.line, have.last, line)
         else:
             answer = next(
                 (
@@ -286,8 +288,8 @@ def limit_lines(
             for f in fields(text):
                 if f.line == at + 1 and f.label.startswith(findings.LIMIT_PREFIX):
                     at = f.last
-            lines.insert(at, line)
-        text = "\n".join(lines)
+            insert_line(lines, at, line)
+        text = "".join(lines)
         written.append(label)
     return text, written
 

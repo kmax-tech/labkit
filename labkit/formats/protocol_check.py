@@ -574,26 +574,34 @@ class FieldLine:
         )
 
 
-#: the line breaks `str.splitlines` honours beyond "\n" and "\r\n": `fields`
-#: numbers lines with it, a writer replacing a field by its number splits at
-#: "\n" — one of these between them shifts every later line
-ODD_LINE_BREAK = re.compile("\r(?!\n)|[\x0b\x0c\x1c\x1d\x1e\x85  ]")
-
-
 def field_lines(text: str) -> list[str]:
-    """TEXT split at "\n", as `FieldLine.line` and `last` number it — the
-    lines a writer replaces a field in. Raises ValueError naming the line
-    and the character where TEXT holds a line break only `fields` sees
-    (`ODD_LINE_BREAK`): which line a field stands on cannot be told."""
-    odd = ODD_LINE_BREAK.search(text)
-    if odd is not None:
-        line = text.count("\n", 0, odd.start()) + 1
-        raise ValueError(
-            f"line {line} holds U+{ord(odd.group()):04X}, a line break only some "
-            f"readers see, so which line a field stands on cannot be told: "
-            f"replace it with a newline or a space"
-        )
-    return text.split("\n")
+    """TEXT's lines as `FieldLine.line` and `last` number them
+    (`str.splitlines`, as `fields` reads them), each with its own line break:
+    the lines a writer replaces a field in, `"".join` giving TEXT back — a
+    U+2028, a form feed or a "\r\n" stays as written."""
+    return text.splitlines(keepends=True)
+
+
+def line_break(line: str) -> str:
+    """The line break LINE (one of `field_lines`) ends with, "" for none."""
+    return line[len(line.splitlines()[0]) :] if line else ""
+
+
+def replace_lines(lines: list[str], first: int, last: int, new: str) -> None:
+    """Put NEW, one line, in place of LINES[FIRST..LAST] (1-based and
+    inclusive, as a `FieldLine` numbers them; LINES from `field_lines`),
+    ending as the last replaced line did. Side effect: changes LINES."""
+    lines[first - 1 : last] = [new + line_break(lines[last - 1])]
+
+
+def insert_line(lines: list[str], at: int, new: str) -> None:
+    """Put NEW, one line, below line AT (1-based) of LINES (`field_lines`),
+    ending as that line does; below a last line without a break, that line
+    gets "\n" and NEW none. Side effect: changes LINES."""
+    above = line_break(lines[at - 1])
+    if not above:
+        lines[at - 1] += "\n"
+    lines.insert(at, new + above)
 
 
 def fields(text: str) -> list[FieldLine]:
