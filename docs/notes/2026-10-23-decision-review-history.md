@@ -1,24 +1,24 @@
 # Note 2026-10-23 — decision review history
 
-## How the check works today — standard 0.29
+## How the check works today — standard 0.31
 
 This check acts after measurement, when an analysis finding is decided and the result is prepared for adoption and reporting. It changes the reportable verdict, never the measured values in the run's `metrics.json`. The workflow stages are [analysis audit, decision review and adoption](../workflow.md#the-steps-at-a-glance).
 
 1. The run records each promise's value. A score of 0.9225 against a target of 0.95 records a missed criterion.
 2. The analysis auditor raises a finding. The agent may decide it as a limitation with an effect such as `quality-check-2 not assessable`: the fault prevents judging that promise.
-3. Today, `result_render.verdicts` propagates a quality check's non-assessability to every criterion. `result_render.left_unjudged` shows the second auditor all promises affected, beside their recorded verdicts. The second auditor must confirm that the fault prevents judging each one.
+3. `result_render.verdicts` leaves not assessable exactly the promises the decision names; a criterion not named keeps its recorded verdict, also beside a named quality check. A quality check the run records as not met still voids every criterion by itself, named or not: a limit hides verdicts and never restores one. `result_render.left_unjudged` shows the second auditor exactly the named promises, beside their recorded verdicts. The second auditor checks each and gives one verdict for all; only `upheld` keeps the effect.
 4. `report_decisions.check_limits_upheld` holds an unconfirmed decision at the finding's grade: a BLOCKER blocks release, a WARNING warns. Once a review of the current decision does not uphold it, including `insufficient` or conflicting draws, `result_render.limits_of` removes the proposed non-assessability effect. Recorded verdicts reappear and the Limitation line says the limit was proposed but not confirmed. This restores the recorded judgement; it does not establish that the measurement is scientifically valid. An unconfirmed BLOCKER still blocks release.
 5. Adoption and report generation use `result_render.rendering`; report-check checks the generated lines against that rendering. Agreement with the rendering is a mechanical check. Whether the fault really prevents judging a promise is the second auditor's semantic judgement.
 
 The second-review duty for non-assessability was added in standard 0.29 (`eb939a4e`, versioned in `0a42e8f7`). The insufficient-review case is covered by `tests/test_decision_review.py`, `test_an_insufficient_review_shows_the_recorded_verdict_and_still_holds` (`0e33157c`). These tests use supplied reviewer answers; they do not establish that reviewer models judge the dependency correctly in real cases.
 
-## Criterion-specific effects — decided 2026-11-14, not implemented
+## Criterion-specific effects — decided 2026-11-14, built 2026-11-16 (standard 0.31)
 
 The author decided to replace the blanket propagation for a limitation that leaves a quality check not assessable. The decision must explicitly name the criteria whose assessment the fault prevents and explain the dependency for each. The second auditor must confirm each dependency. Only those criteria lose their verdict; other criteria retain their recorded verdict. An unresolved BLOCKER continues to block release independently of which verdicts remain visible.
 
 For example, uncertainty about a null run does not by itself prevent comparing 0.9225 with the target of 0.95. The result could state that the target was missed while the comparison with chance is not assessable. A fault in the test labels could instead prevent assessment of every criterion relying on those labels. Which dependency holds must be justified from the particular fault; selecting fewer criteria is not sufficient evidence.
 
-This is a future contract change, not current behaviour. Implementation must version the standard, explain migration, and keep the same affected criteria in the decision, reviewer context and result rendering. The decision does not separately settle the automatic effect of a quality check recorded as not met. [TODO](../../TODO.md) holds the implementation status and work order.
+Built in `e97aa0bd`, versioned as standard 0.31 in `4546ffe8`. The author settled the open details on 2026-11-16: no mechanical check that the reason names each id — the second auditor judges each named promise; one verdict for all, no partial effect, so a rejection or `insufficient` lifts the whole effect and the agent decides again. Not settled by the decision and kept as it was: a quality check recorded as not met voids every criterion, also when a limitation names it; otherwise declaring a failed check not assessable would restore the verdicts it hides. Tests: `tests/test_result_render.py` (`ReportableVerdicts`) and `tests/test_decision_review.py` (`test_an_upheld_quality_check_alone_leaves_the_miss_standing`), each new one red on the code before. Whether reviewer models judge each dependency correctly is not measured.
 
 ## Historical grounds
 
