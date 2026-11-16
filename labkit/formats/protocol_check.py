@@ -574,6 +574,28 @@ class FieldLine:
         )
 
 
+#: the line breaks `str.splitlines` honours beyond "\n" and "\r\n": `fields`
+#: numbers lines with it, a writer replacing a field by its number splits at
+#: "\n" — one of these between them shifts every later line
+ODD_LINE_BREAK = re.compile("\r(?!\n)|[\x0b\x0c\x1c\x1d\x1e\x85  ]")
+
+
+def field_lines(text: str) -> list[str]:
+    """TEXT split at "\n", as `FieldLine.line` and `last` number it — the
+    lines a writer replaces a field in. Raises ValueError naming the line
+    and the character where TEXT holds a line break only `fields` sees
+    (`ODD_LINE_BREAK`): which line a field stands on cannot be told."""
+    odd = ODD_LINE_BREAK.search(text)
+    if odd is not None:
+        line = text.count("\n", 0, odd.start()) + 1
+        raise ValueError(
+            f"line {line} holds U+{ord(odd.group()):04X}, a line break only some "
+            f"readers see, so which line a field stands on cannot be told: "
+            f"replace it with a newline or a space"
+        )
+    return text.split("\n")
+
+
 def fields(text: str) -> list[FieldLine]:
     """Every bold field label in the prose, outside code fences. A label may
     wrap onto the next line (`- **Resolution check (ZERO calls, …\n

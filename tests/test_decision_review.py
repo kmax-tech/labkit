@@ -537,6 +537,50 @@ class TheCall(unittest.TestCase):
         )
         self.assertNotIn("not confirmed by a second auditor", sent[0])
 
+    def test_a_line_break_other_than_a_newline_is_refused_not_misplaced(self):
+        """A U+2028 or a form feed counts as a line break to the field parser
+        and not to the writers: the reviewer's copy and `--render` replaced
+        the wrong line (final review, 2026-11-16). Both refuse, naming the
+        character and its line; the twin without one reviews."""
+        for odd in (" ", "\x0c"):
+            with self.subTest(odd=f"U+{ord(odd):04X}"):
+                area, _ = area_with(
+                    [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+                )
+                proto = area / "PROTOCOL-x.md"
+                text = proto.read_text(encoding="utf-8").replace("\n", odd, 1)
+                proto.write_text(text, encoding="utf-8")
+                rc, _, err, sent = run_review(area, UPHELD)
+                self.assertEqual((rc, sent), (2, []), err)
+                self.assertIn(f"line 1 holds U+{ord(odd):04X}", err)
+                with self.assertRaisesRegex(ValueError, f"U\\+{ord(odd):04X}"):
+                    protocol_result.render_result(text, area)
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        rc, _, err, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, len(sent)), (0, 1), err)
+
+    def test_a_stray_limitation_line_is_not_shown_to_the_reviewer(self):
+        """A Limitation line no covering record decides — left from an
+        earlier rendering — would show the reviewer an earlier verdict: the
+        copy drops it, as `--render` does (final review, 2026-11-16)."""
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        proto = area / "PROTOCOL-x.md"
+        lines = proto.read_text(encoding="utf-8").split("\n")
+        (i,) = [k for k, ln in enumerate(lines) if ln.startswith("- **Limitation")]
+        stray = (
+            "- **Limitation (audit 2026-01-01T00-00-analysis #9):** a limit "
+            "proposed, not confirmed by a second auditor — unresolved"
+        )
+        lines.insert(i + 1, stray)
+        proto.write_text("\n".join(lines), encoding="utf-8")
+        _, _, _, sent = run_review(area, UPHELD)
+        self.assertNotIn("not confirmed by a second auditor", sent[0])
+        self.assertIn("- **Limitation (audit ", sent[0])  # the decided one stays
+
     def test_the_twin_an_upheld_review_owes_no_render(self):
         area, _ = area_with(
             [WARNING], {1: ("limitation", "one seed, said so", "stands")}

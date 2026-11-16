@@ -88,6 +88,7 @@ from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     conclusion_written,
     display_label,
+    field_lines,
     fields,
 )
 from labkit.formats.repo import layout_root, shown, the_protocol
@@ -148,20 +149,26 @@ def as_proposed(area: Path, text: str, run_dir: Path | None) -> str:
     (Recorded results, each Limitation line) as they render under the
     decisions as proposed, no review's verdict read — once `--render` wrote
     a not-upheld line into the protocol, a later draw would read the earlier
-    verdict there. TEXT unchanged without a run, or where nothing renders
-    (`rendered_result` names why)."""
+    verdict there; a Limitation line no covering record decides is dropped,
+    as `--render` drops it. TEXT unchanged without a run, or where nothing
+    renders (`rendered_result` names why). Raises ValueError where TEXT
+    holds a line break the field parser alone sees (`field_lines`)."""
     if run_dir is None:
         return text
     try:
         r = rendering(area, text, run_dir, found=())
     except (OSError, ValueError):
         return text
-    proposed = {"Recorded results": r.recorded_results, **dict(r.limits)}
-    lines = text.split("\n")
+    proposed = {RECORDED_RESULTS_LABEL: r.recorded_results, **dict(r.limits)}
+    lines = field_lines(text)
     for f in sorted(fields(text), key=lambda f: -f.line):
         label = display_label(f.label)
-        if label in proposed and not f.block:
+        if f.block:
+            continue
+        if label in proposed:
             lines[f.line - 1 : f.last] = [f"- **{label}:** {proposed[label]}"]
+        elif label.startswith(findings.LIMIT_PREFIX):
+            del lines[f.line - 1 : f.last]  # stray: an earlier verdict
     return "\n".join(lines)
 
 

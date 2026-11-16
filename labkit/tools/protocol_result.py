@@ -29,6 +29,7 @@ from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
+    field_lines,
     field_name,
     fields,
 )
@@ -190,7 +191,7 @@ def drop_stray_limits(
     KEEP) — written by hand or from an older record. (text, labels dropped)."""
     keep_labels = {label for label, _ in keep}
     dropped: list[str] = []
-    lines = text.split("\n")
+    lines = field_lines(text)
     for f in sorted(fields(text), key=lambda f: -f.line):
         label = display_label(f.label)
         if label.startswith(findings.LIMIT_PREFIX) and label not in keep_labels:
@@ -254,7 +255,7 @@ def limit_lines(
     no Recorded results line to stand under."""
     written: list[str] = []
     for label, value in limits:
-        lines = text.split("\n")
+        lines = field_lines(text)
         by_label = {display_label(f.label): f for f in fields(text)}
         line = f"- **{label}:** {value}"
         have = by_label.get(label)
