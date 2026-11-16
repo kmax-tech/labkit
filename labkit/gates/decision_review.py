@@ -73,7 +73,7 @@ from typing import NamedTuple
 from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.run_record_check import script_as_run
-from labkit.checks.result_render import left_unjudged, render_gaps, rendering
+from labkit.checks.result_render import left_unjudged, rendering
 from labkit.formats import (
     attempts,
     console,
@@ -84,7 +84,12 @@ from labkit.formats import (
     reviews,
 )
 from labkit.formats.gate import BLOCKER
-from labkit.formats.protocol_check import conclusion_written, display_label, fields
+from labkit.formats.protocol_check import (
+    RECORDED_RESULTS_LABEL,
+    conclusion_written,
+    display_label,
+    fields,
+)
 from labkit.formats.repo import layout_root, shown, the_protocol
 from labkit.formats.commands import audit_command, render_command
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
@@ -552,12 +557,9 @@ def review(
         f"{shown(written, Path.cwd())}"
     )
     print_review_state(rec, held)
-    if _renders_differently(area, chosen):
-        print(
-            "  the result section differs from what it renders under this review: "
-            f"`{render_command(chosen)}` writes it — report-check holds the lines "
-            "written before until then, no objection to the number"
-        )
+    hint = render_hint(area, chosen, written)
+    if hint:
+        print(f"  {hint}")
     print_contested_ways(area, chosen, rec, held)
     return 1 if held else 0
 
@@ -586,22 +588,54 @@ def print_contested_ways(
         print(f"  {word}: {_way(record, n, found, text, promised)} (finding #{n})")
 
 
-def _renders_differently(area: Path, protocol: Path) -> bool:
-    """Does PROTOCOL's result section, for its declared run, differ from
-    what it renders under AREA's decision reviews now (`render_gaps`)? A
-    review that did not uphold a decision changes its Limitation line.
-    False without a declared run: no line is written yet."""
+def render_hint(area: Path, protocol: Path, written: Path) -> str:
+    """The line after a draw whose review WRITTEN changes what PROTOCOL's
+    result section renders for its declared run, while the section still
+    shows the lines from before it; "" when the review changes nothing
+    there, the section already shows the change, no run is declared, or
+    it does not render (report-check names why). A changed line written
+    more than once is removed by hand first: `--render` rewrites one."""
     text = protocol.read_text(encoding="utf-8")
     declared = protocol_block.declared_run(text)
     if declared is None:
-        return False
+        return ""
+    found = evidence.decision_reviews(area)
+    before = [r for r in found if r.path.name != written.name]
     try:
-        expected = rendering(
-            area, text, run_path(area, declared), found=evidence.decision_reviews(area)
-        )
+        run = run_path(area, declared)
+        now = rendering(area, text, run, found=found)
+        then = rendering(area, text, run, found=before)
     except (OSError, ValueError):
-        return False  # report-check names why the section does not render
-    return bool(render_gaps(text, expected))
+        return ""  # report-check names why the section does not render
+    before_lines = dict([(RECORDED_RESULTS_LABEL, then.recorded_results), *then.limits])
+    after_lines = dict([(RECORDED_RESULTS_LABEL, now.recorded_results), *now.limits])
+    changed = {
+        label: value
+        for label, value in after_lines.items()
+        if before_lines.get(label) != value
+    }
+    written_lines: dict[str, list[str]] = {}
+    for f in fields(text):
+        written_lines.setdefault(display_label(f.label), []).append(f.value)
+    stale = [
+        label for label, value in changed.items() if written_lines.get(label) != [value]
+    ]
+    if not stale:
+        return ""
+    render = f"`{render_command(protocol)}`"
+    twice = [label for label in stale if len(written_lines.get(label, [])) > 1]
+    if twice:
+        return (
+            f"the result section differs from what it renders under this review, "
+            f"and {', '.join(f'{label!r}' for label in twice)} is written more than "
+            f"once: remove the extra line(s) by hand, then {render} — report-check "
+            "holds the lines written before until then, no objection to the number"
+        )
+    return (
+        "the result section differs from what it renders under this review: "
+        f"{render} writes it — report-check holds the lines written before until "
+        "then, no objection to the number"
+    )
 
 
 def print_review_state(record: findings.Record, not_upheld: list[int]) -> None:

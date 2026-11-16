@@ -545,6 +545,35 @@ class TheCall(unittest.TestCase):
         self.assertEqual(rc, 0, said)
         self.assertNotIn("--render` writes it", said)
 
+    def test_the_render_hint_follows_what_the_review_changed(self):
+        """The hint names the lines this review changes and the way that
+        writes them: a line edited by hand that the review does not touch
+        draws none (report-check names it), and a Limitation line written
+        twice names its removal by hand, which `--render` does not do
+        (final review, 2026-11-16)."""
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        proto.write_text(
+            text.replace("kept number: n = 1", "kept number: n = 2"), encoding="utf-8"
+        )
+        rc, said, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, said)
+        self.assertNotIn("differs from what it renders", said)
+        area, _ = area_with(
+            [BLOCKER], {1: ("limitation", "one seed, said so", "stands")}
+        )
+        proto = area / "PROTOCOL-x.md"
+        lines = proto.read_text(encoding="utf-8").split("\n")
+        (i,) = [k for k, ln in enumerate(lines) if ln.startswith("- **Limitation")]
+        proto.write_text("\n".join([*lines[: i + 1], *lines[i:]]), encoding="utf-8")
+        rc, said, _, _ = run_review(area, REJECTED)
+        self.assertEqual(rc, 1, said)
+        self.assertIn("remove the extra line(s) by hand", said)
+        self.assertNotIn("--render` writes it", said)
+
     def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
         """A computation registers no promise and `--decide` refuses every id
         an effect names, so its review offers no `--effect "<ID> not
