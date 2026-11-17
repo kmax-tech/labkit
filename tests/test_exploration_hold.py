@@ -304,6 +304,38 @@ class CorrectionInExploration(e2e.CorrectionCommands):
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.declared(), run_c)
 
+    def test_a_correction_after_a_step_is_shown_against_the_audited_runs_text(self):
+        """A step on A changes Data / scope to 2 documents, C is measured
+        under it, and C's audit has the field corrected in place to 3. The
+        hold releases against C's own text, so the follow-up shows C's value
+        as the one corrected — not the first measurement A's — and its
+        `resolved` lets C be adopted."""
+        two = "data/raw/docs, 2 documents, read directly"
+        self.describe(two)
+        self.lab.fill(
+            self.protocol,
+            "--builds-on",
+            self.run_a,
+            "--step-id",
+            "two",
+            "--occasion",
+            "planned",
+            "--why",
+            "two documents only",
+        )
+        self.lab.commit("step two on A")
+        run_c = self.measure()
+        blocking = self.audited("BLOCKER", "Data / scope")
+        self.describe(self.RIGHT)
+        self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
+        rc, out, prompt = self.follow_up(blocking, "resolved", "3 documents, as C read")
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"Data / scope registered (as the run audited {run_c}", prompt)
+        self.assertIn(f"): {two}", prompt)
+        self.assertNotIn(f"): {self.WRONG}", prompt)
+        rc, out = self.lab.adopt(self.protocol, run_c)
+        self.assertEqual(rc, 0, out)
+
     def test_the_correction_measured_without_a_step_is_held_naming_the_step(self):
         self.describe(self.RIGHT)
         self.lab.commit("Data / scope corrected, no step")

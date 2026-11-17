@@ -42,6 +42,7 @@ from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_history import (
     ABSENT,
     BoundValidation,
+    as_measured,
     bound_validation,
     registrations_as_first_measured,
 )
@@ -53,7 +54,7 @@ from labkit.formats.repo import (
     shown,
     the_protocol,
 )
-from labkit.formats.runs import metrics_path, run_path
+from labkit.formats.runs import metrics_path, read_run_dir, run_path
 from labkit.formats.scope_sha import (
     area_files,
     area_snapshot,
@@ -62,8 +63,10 @@ from labkit.formats.scope_sha import (
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     COMPUTE_KIND,
+    EXPLORATORY,
 )
 from labkit.gates import ways_out
+from labkit.gates.registration_hold import workflow
 from labkit.gates.ways_out import (
     AUDIT_AGAIN,
     PROTOCOL_NAMED,
@@ -691,6 +694,7 @@ def earlier_of(
     pid: str,
     current: Callable[[findings.Record], bool],
     metrics: dict | None,
+    run: Path | None = None,
 ) -> Followup:
     """The follow-up of PROTOCOL (stamped id PID) in AREA: the earlier
     decided BLOCKERs and corrections of a field of PROTOCOL
@@ -698,9 +702,9 @@ def earlier_of(
     area's records that name PID — those of a record that CURRENT does not
     tell as the state now audited — with the origin of each, each
     correction's change — a BLOCKER's too — (`FieldChange`: the field as
-    the first measurement registered it, `protocol_history.
-    registrations_as_first_measured`, and as it reads now), and METRICS as
-    shown. A record of another protocol of the area is not followed up
+    the text the hold compares with holds it, `_field_change`, and as it
+    reads now), and METRICS as shown. RUN is the run audited, None without
+    one. A record of another protocol of the area is not followed up
     here: it judged another question. Raises AuditError when the records
     do not read (`findings.FindingsError`) or a finding's place names no
     single field."""
@@ -725,17 +729,23 @@ def earlier_of(
     shown = blockers + corrections
     origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
     changes = {
-        e.ref: _field_change(protocol, text, e.finding)
+        e.ref: _field_change(protocol, text, e.finding, run)
         for e in shown
         if field_of(e.finding) is not None
     }
     return Followup(shown, metrics, origins, changes)
 
 
-def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange:
+def _field_change(
+    protocol: Path, text: str, f: findings.Finding, run: Path | None
+) -> FieldChange:
     """The change of the field F corrects in PROTOCOL (TEXT now): its value
-    as the first measurement registered it and as it reads now. Raises
-    RuntimeError when git fails."""
+    in the text the registration hold compares with, and as it reads now.
+    That text is the first measurement's (`registrations_as_first_measured`)
+    — and in an exploratory protocol RUN's own (`as_measured`), since there
+    the hold compares the protocol as it stands with the answering run
+    (`exploration_hold.live_holds`), and a verdict releases only the change
+    it judged. Raises RuntimeError when git fails."""
     at = f.place
     if at is None:
         raise ValueError(f"{f.one_line}: names no field of {protocol.name}")
@@ -745,8 +755,20 @@ def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange
     pid = protocol_block.head(text).id
     if pid is None:
         return FieldChange(hit.label, None, "the protocol has no id", hit.value)
-    groups = state_of(protocol.parent).measured_of(pid).first_groups
-    texts, why = registrations_as_first_measured(protocol, groups, git_root(protocol))
+    state = state_of(protocol.parent)
+    measured = state.measured_of(pid)
+    root = git_root(protocol)
+    if run is not None and workflow(protocol, pid, run, root, measured, state)[0] == (
+        EXPLORATORY
+    ):
+        own, why = as_measured(
+            protocol, read_run_dir(run), root, role="the run audited"
+        )
+        texts = [(own, why)] if own is not None else []
+    else:
+        texts, why = registrations_as_first_measured(
+            protocol, measured.first_groups, root
+        )
     if not texts:
         return FieldChange(hit.label, None, why, hit.value)
     then, where = texts[0]
@@ -809,6 +831,7 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     full = {c.resolve() for c in reading.code}
     indexed = [f for f in snap.files if f.resolve() not in full]
     run_id: str | None = None
+    run_dir: Path | None = None
     shown: RunShown | None = None
     if mode == ANALYSIS:
         run_dir, why = audited_run(state_of(area), protocol, text)
@@ -835,7 +858,14 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
         return r.mode == ANALYSIS and r.state == state
 
     earlier_repairs = (
-        earlier_of(area, protocol, pid, current, shown.evidence() if shown else None)
+        earlier_of(
+            area,
+            protocol,
+            pid,
+            current,
+            shown.evidence() if shown else None,
+            run_dir,
+        )
         if mode == ANALYSIS
         else Followup([], None, {}, {})
     )
