@@ -557,6 +557,8 @@ Limits, in the plan's order: the readers that still read the live protocol (`res
 
 Not built yet, in the plan's order: the audit and report binding (item 4), the separate confirmation (item 5), the standard version (item 6).
 
+**Order to the merge (author, 2026-11-17), fixed:** item 4 (audit and report bound to the historical states), then the two open parts of the recalculation, then a full green check run and the walkthrough A → B → C with real commands at the final state. Two points for item 4: (a) `exploration_hold.live_holds` holds finalize on A as soon as step B is prepared but not measured; wanted is that an older run stays visible and checkable under its own text, and only its adoption as the answer may require the current protocol to match it — move the hold to the adoption and show both with real commands. (b) The tests switched to confirmatory fixtures show only the advance commitment; the exploratory twins of the same cases (declared changes allowed, undeclared ones caught, the correction route included) are still owed beyond `tests/test_exploration_hold.py`.
+
 ## Acceptance scenarios and limits
 
 Use pure tests for conditions, gate tests for selection and wiring, and scenarios with real commands for state passed between commands. Before claiming the new behaviour, show the old exploratory refusal and retain the corresponding confirmatory countercase.
