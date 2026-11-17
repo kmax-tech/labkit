@@ -411,7 +411,9 @@ class RegistrationAsFirstMeasured(_Repository):
     answering run holds the registration its protocol's first measurement
     recorded. The repair case: run 98dd fails [quality-check-2] at
     null_band 0.1, the band becomes 0.15 "to accommodate observed null
-    score", and the next run passes — held."""
+    score", and the next run passes — held. Confirmatory, whose lock this
+    is; exploration binds each run to its step
+    (tests/test_exploration_hold.py)."""
 
     # named before RUN: the answering run is still the newest by name
     FIRST = "2026-10-07T09-25-31_98dd"
@@ -420,7 +422,8 @@ class RegistrationAsFirstMeasured(_Repository):
         """Commit the protocol with BLOCK as its promises, adopting RESULT —
         the run the checks then hold (`answering_run.bound_answering_run`)."""
         self.proto.write_text(
-            head(repeat_cost="low", result=result, promises=block) + REGISTRATION,
+            head(repeat_cost="low", type="confirmatory", result=result, promises=block)
+            + REGISTRATION,
             encoding="utf-8",
         )
         _git(self.root, "add", "-A")
@@ -531,7 +534,12 @@ class RegistrationAsFirstMeasured(_Repository):
         first = self._register(_block(0.1))
         # the first run saw a sentence its commit does not hold, and kept no patch
         self.proto.write_text(
-            head(repeat_cost="low", result=RUN, promises=_block(0.1, "uncommitted"))
+            head(
+                repeat_cost="low",
+                type="confirmatory",
+                result=RUN,
+                promises=_block(0.1, "uncommitted"),
+            )
             + REGISTRATION,
             encoding="utf-8",
         )
@@ -572,7 +580,13 @@ class RegistrationAsFirstMeasured(_Repository):
         sha = self._register(_block(0.1))
         early = self._run(sha, "2026-10-07T08-00-00_aaaa")
         self.proto.write_text(
-            head(repeat_cost="low", result=RUN, promises=_block(0.15)) + REGISTRATION,
+            head(
+                repeat_cost="low",
+                type="confirmatory",
+                result=RUN,
+                promises=_block(0.15),
+            )
+            + REGISTRATION,
             encoding="utf-8",
         )  # not committed: the second run at the same commit saw another block
         later = self._run(sha, "2026-10-07T09-00-00_bbbb")
@@ -621,7 +635,7 @@ class ScopeAsFirstMeasured(_Repository):
     0.4749 against a stated 0.62; the roads are then filtered to BR highways
     in the script and in Data / scope and Exclusions / filters, and the next
     run gives 0.6259 — a computation has no promise block, so the fields
-    themselves are held."""
+    themselves are held. Confirmatory, whose lock this is."""
 
     FIRST = "2026-10-07T09-25-31_98dd"
 
@@ -635,6 +649,7 @@ class ScopeAsFirstMeasured(_Repository):
         self.proto.write_text(
             head(
                 repeat_cost="low",
+                type="confirmatory",
                 kind="compute",
                 promises=None,
                 reference=reference,

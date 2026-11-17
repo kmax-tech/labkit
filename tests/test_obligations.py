@@ -20,7 +20,10 @@ from unittest import mock
 
 from labkit.checks import result_render
 from labkit.formats import promises, protocol_block, protocol_check, standard_contract
-from labkit.formats.protocol_history import registration_missing
+from labkit.formats.protocol_history import (
+    registration_differences,
+    registration_missing,
+)
 from labkit.tools import scaffold
 from protocol_fixture import DEFAULT_BLOCK, head, take_criterion_offer
 
@@ -177,12 +180,19 @@ class Confirmation(unittest.TestCase):
         self.assertEqual(protocol_check.low_registration_missing(text), [])
         self.assertEqual(criterion_gaps(text), [])
 
-    def test_an_undecided_type_owes_the_most(self):
-        text = protocol("<exploratory | confirmatory>", criterion=False)
-        self.assertIn(
-            standard_contract.CRITERION_FIELD,
-            protocol_check.low_registration_missing(text),
+    def test_an_undecided_type_owes_the_most_and_the_type(self):
+        """Undecided is an incomplete registration, never an exploration:
+        the criterion is owed, and the type itself before the first
+        measurement — the workflow that binds later runs is read from it."""
+        text = protocol("<exploratory | confirmatory>", criterion=True)
+        self.assertEqual(
+            protocol_check.low_registration_missing(text), ["[protocol] type"]
         )
+        missing = protocol_check.low_registration_missing(
+            protocol("<exploratory | confirmatory>", criterion=False)
+        )
+        self.assertIn(standard_contract.CRITERION_FIELD, missing)
+        self.assertIn("[protocol] type", missing)
 
     def test_a_type_turned_confirmatory_after_the_measurement_owes_it_then(self):
         """The first measurement's commit held an exploration without a
@@ -280,3 +290,49 @@ class StampedSkeleton(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CriterionTextInExploration(unittest.TestCase):
+    """The registration stamp keeps the criterion's field at every fit and
+    apply (author, 2026-11-17): a criterion written or changed after an
+    audit makes that audit stale. It binds the audit only — no
+    registration lock reads it, and the comparison a step is held to
+    (`registration_differences`) does not hold the criterion's prose, so
+    exploration may change a criterion; its table is a declared change."""
+
+    BEFORE = protocol("exploratory", criterion=True)
+    AFTER = BEFORE.replace(
+        "the kept score clears its bar", "the kept score clears 0.9 on held-out data"
+    )
+
+    def test_a_changed_criterion_text_makes_the_audit_stale(self):
+        self.assertNotEqual(self.BEFORE, self.AFTER)
+        audited = protocol_check.registration_stamp(self.BEFORE)
+        now = protocol_check.registration_stamp(self.AFTER)
+        self.assertEqual(
+            protocol_check.registration_drift(audited, now),
+            [standard_contract.CRITERION_FIELD],
+        )
+
+    def test_the_twin_an_unchanged_text_keeps_the_audit(self):
+        stamp = protocol_check.registration_stamp(self.BEFORE)
+        self.assertEqual(protocol_check.registration_drift(stamp, stamp), [])
+
+    def test_no_step_hold_comes_from_the_prose_alone(self):
+        self.assertEqual(registration_differences(self.BEFORE, self.AFTER), [])
+
+    def test_the_criterion_table_added_is_a_change_a_step_declares(self):
+        diffs = registration_differences(
+            protocol("exploratory", criterion=False), self.BEFORE
+        )
+        self.assertEqual([what for what, _, _ in diffs], ["criterion-1"])
+
+    def test_no_registration_lock_reads_the_stamp(self):
+        """The stamp's readers are the audit's binding; the station, the
+        confirmatory lock and the exploratory one never read it."""
+        from labkit.gates import exploration_hold, registration_hold
+        from labkit.gates import registration_station
+
+        for module in (registration_station, registration_hold, exploration_hold):
+            source = Path(module.__file__ or "").read_text(encoding="utf-8")
+            self.assertNotIn("registration_stamp(", source, module.__name__)

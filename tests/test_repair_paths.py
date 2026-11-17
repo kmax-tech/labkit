@@ -153,7 +153,8 @@ class StagedLab(unittest.TestCase):
     "needs the suite's venv with labkit's commands, and git",
 )
 class RepairPaths(StagedLab):
-    """Each test starts from one lab: registered, measured once, committed."""
+    """Each test starts from one lab: registered, measured once, committed.
+    Confirmatory: the correction route releases the first-measurement lock."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -178,7 +179,7 @@ class RepairPaths(StagedLab):
             [
                 ".venv/bin/protocol-fill",
                 P,
-                "type=exploratory",
+                "type=confirmatory",
                 "kept.key=mean_docs_per_case",
                 "kept.unit=documents",
                 f"Terms of this protocol={TERMS}",
@@ -423,7 +424,7 @@ class RegisteredReportRepairs(StagedLab):
             [
                 ".venv/bin/protocol-fill",
                 P,
-                "type=exploratory",
+                "type=confirmatory",
                 "kept.key=mean_docs_per_case",
                 "kept.unit=documents",
                 f"Terms of this protocol={TERMS}",

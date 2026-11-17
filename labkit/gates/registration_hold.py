@@ -1,14 +1,18 @@
-"""registration_hold — whether the answering run holds what its protocol's
-first measurement registered, finalize's station 2 (and the declaring
-protocol station 3 withdraws first): the promise block as the first measurement recorded it
-(`registration_changes`, `check_registration`), what the number is about
-as first measured (`scope_changes`), which change a correction in place
-releases (`resolved_corrections`, `awaiting_followup`) and the phrasing
-of each hold and its way back. Read-only; finalize tells what it finds.
+"""registration_hold — the confirmatory workflow's lock, finalize's station
+2 (`registration_station`; the declaring protocol station 3 withdraws
+first): whether the answering run holds what its protocol's first
+measurement registered — the promise block as the first measurement
+recorded it (`registration_changes`), what the number is about as first
+measured (`scope_changes`) —, which change a correction in place releases
+(`resolved_corrections`, `awaiting_followup`) and the phrasing of each
+hold and its way back. Here too: which workflow the first measurements'
+own type names, and the hold on a type changed since (`workflow`,
+`type_hold`). Read-only; finalize tells what it finds.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,7 +32,6 @@ from labkit.formats import (
     promises,
     protocol_block,
 )
-from labkit.formats.gate import Findings
 from labkit.formats.runs import (
     RunConfigError,
     RunDir,
@@ -158,7 +161,10 @@ def registration_changes(
     registration that declares its changes against each (K1,
     `report_replacement.replacement_gaps`) or a handover without a declared
     result. Empty without an answering run, a stamped id PID, or a block in
-    the records. Raises RuntimeError when git fails."""
+    the records. That is the confirmatory workflow's hold — and the hold of
+    an undecided type; which workflow binds the runs is the station's
+    choice (`registration_station.station_changes`, `workflow`). Raises
+    RuntimeError when git fails."""
     if pid is None or run is None:
         return []
     root = git_root(protocol)
@@ -212,6 +218,118 @@ def registration_changes(
             rule=registration_rule(snap, now),
         )
     ]
+
+
+def type_of(text: str) -> str | None:
+    """The `type` TEXT's head declares, None while it holds the stamp's
+    placeholder — or when the head does not read: either way no workflow
+    can be read from it, and the strict one applies (`workflow`). Pure."""
+    try:
+        return protocol_block.head(text).type
+    except protocol_block.BlockError:
+        return None
+
+
+def workflow(
+    protocol: Path,
+    pid: str,
+    run: Path,
+    root: Path | None,
+    measured: Measured,
+    state: AreaState,
+) -> tuple[str | None, list[GateFinding]]:
+    """(the workflow, the holds on the type): the type the first
+    measurements of PROTOCOL registered, read from their own texts
+    (`protocol_history.as_measured`) — the head as it stands names no
+    workflow, so relabelling lifts no lock and makes no confirmation. None
+    where no type can be read: an undecided one (`type_of`), first
+    measurements that registered different types, or no first measurement
+    whose text reads (outside a repository none does) — the caller then
+    holds the confirmatory way, the most, never the least. The holds
+    (`type_changes`): the type of the answering RUN as it saw the protocol,
+    and of the protocol as it stands, against the first measurements'.
+    Raises RuntimeError when git fails."""
+    firsts = [rd for group in measured.first_groups for rd in group]
+    seen = [
+        (rd, text)
+        for rd in firsts
+        if (text := protocol_history.as_measured(protocol, rd, root)[0]) is not None
+    ]
+    types = list(dict.fromkeys(type_of(text) for _, text in seen))
+    if len(types) > 1:
+        return None, [types_split_hold(protocol, pid, seen)]
+    if not types:
+        return None, []
+    registered = types[0]
+    first = seen[0][0]
+    answering = read_run_dir(run)
+    then = (
+        protocol_history.as_measured(protocol, answering, root)[0]
+        if all(rd.dir.resolve() != run.resolve() for rd, _ in seen)
+        else None
+    )
+    texts = [
+        (f"as the answering run {run.name} saw the protocol", then),
+        ("as the protocol stands now", state.text_of(protocol)),
+    ]
+    holds = [
+        type_hold(protocol, pid, first, registered, type_of(text), where, root)
+        for where, text in texts
+        if text is not None and type_of(text) != registered
+    ]
+    return registered, holds
+
+
+def types_split_hold(
+    protocol: Path, pid: str, seen: list[tuple[RunDir, str]]
+) -> GateFinding:
+    """The BLOCKER when the first measurements SEEN (each with its own
+    text) registered different types: which workflow binds the runs
+    cannot be told, so no restore closes it — the ways out are a new
+    registration or a handover, as for first measurements that saw
+    different texts (`split_hold`)."""
+    named = ", ".join(
+        f"{rd.dir.name} ({type_of(text) or 'undecided'})" for rd, text in seen
+    )
+    return blocker(
+        f"the first measurements registered different types: {named} — which "
+        f"workflow binds the runs cannot be told, exploration or confirmation",
+        fix="either " + register_anew(pid) + f"; or {handover(protocol)}",
+        rule=OPEN_RULE,
+    )
+
+
+def type_hold(
+    protocol: Path,
+    pid: str,
+    first: RunDir,
+    registered: str | None,
+    now: str | None,
+    where: str,
+    root: Path | None,
+) -> GateFinding:
+    """The BLOCKER on a `type` changed after the first measurement FIRST,
+    from REGISTERED to NOW, WHERE naming the text (the answering run's or
+    the protocol as it stands), in either direction: relabelling lifts no
+    confirmatory lock and makes no exploration a confirmation (the plan's
+    decision 1 of "Exploratory per-run binding"). The ways out: the type
+    back as FIRST registered it — and, where a run measured under the
+    change, measured again —, or a new protocol of the other type; the
+    earlier runs and their findings stay as they are."""
+    was, then = registered or "undecided", now or "undecided"
+    return blocker(
+        f'the type changed after the first measurement {first.dir.name}: "{was}" → '
+        f'"{then}" ({where}) — the workflow that binds the runs is the one the '
+        f"first measurement registered; a changed type lifts no earlier lock and "
+        f"turns no exploration into a confirmation",
+        fix=f'put `type = "{was}"` back as {first.dir.name} registered it'
+        f"{shown_then(protocol, first, root)} — and measure again where a run "
+        f"measured under the change —; or, for the other workflow, "
+        + register_anew(pid)
+        + " — the earlier protocol, its runs and their findings stay",
+        step=restore_step(protocol, first, root),
+        rule=OPEN_RULE,
+    )
 
 
 def restore_step(protocol: Path, first: RunDir, root: Path | None) -> Command | None:
@@ -779,6 +897,7 @@ def scope_now(
     measured: Measured,
     state: AreaState,
     held: evidence.AreaEvidence,
+    against: Sequence[RunDir] | None = None,
 ) -> ScopeNow | None:
     """PROTOCOL as it stands against the first measurements in what the
     number is about (`protocol_history.first_measured_differences`,
@@ -788,9 +907,15 @@ def scope_now(
     the hold compares is released that way but for
     `protocol_history.UNCORRECTABLE_FIELDS`; the head's kind, `[kept]` and
     `[reference]` never — they name no field a finding can place itself in
-    (`protocol_history.correctable`). None without a difference. Raises RuntimeError when
-    git fails."""
-    firsts = [rd for group in measured.first_groups for rd in group]
+    (`protocol_history.correctable`). AGAINST, when given, the runs
+    compared with instead of the first measurements (an exploration's
+    answering run, `exploration_hold.live_holds`). None without a
+    difference. Raises RuntimeError when git fails."""
+    firsts = (
+        [rd for group in measured.first_groups for rd in group]
+        if against is None
+        else list(against)
+    )
     text = state.text_of(protocol)
     found = protocol_history.first_measured_differences(
         protocol, firsts, text, root, protocol_history.scope_differences
@@ -936,28 +1061,35 @@ def corrected_in_place(
     run: Path | None,
     state: AreaState,
     held: evidence.AreaEvidence,
+    *,
+    exploring: bool = False,
 ) -> list[str]:
     """One line per field of PROTOCOL changed since its first measurement
     that a correction released (`scope_now`): the field, its old and new
     value, the correction and the follow-up's why — what the release says
-    of a description corrected in place. Empty without an answering run, a
-    stamped id or such a field. Raises RuntimeError when git fails."""
+    of a description corrected in place. EXPLORING (an exploratory
+    workflow, `workflow`): compared with the answering run's own text
+    instead. Empty without an answering run, a stamped id or such a field.
+    Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
+    root, measured = git_root(protocol), state.measured_of(pid)
     now = scope_now(
         area,
         protocol,
         pid,
         run,
-        git_root(protocol),
-        state.measured_of(pid),
+        root,
+        measured,
         state,
         held,
+        against=[read_run_dir(run)] if exploring else None,
     )
     if now is None:
         return []
+    since = "the answering run" if exploring else "the first measurement"
     return [
-        f"corrected in place after the first measurement {now.first.dir.name}: "
+        f"corrected in place after {since} {now.first.dir.name}: "
         f'{what} "{_quoted(old)}" → "{_quoted(new)}" — {c.ref} resolved in '
         f"{c.judged_in}: {_quoted(c.why)}"
         for (what, old, new), c in now.corrected
@@ -1051,31 +1183,3 @@ def _restored(change: str) -> str:
     if change.endswith(" dropped"):
         return change.removesuffix(" dropped") + " back in"
     return "every sentence as then"
-
-
-def check_registration(
-    findings: Findings,
-    area: Path,
-    protocol: Path,
-    pid: str | None,
-    run: Path,
-    state: AreaState,
-    held: evidence.AreaEvidence,
-) -> None:
-    """Hold the answering RUN to the registration of the first measurement
-    (`registration_changes`: what the number is about, and the promise
-    block, read from STATE, the area's state built once); a note when it
-    holds, and one per field a correction released (`corrected_in_place`),
-    so the release names what changed and why.
-    HELD is the area's audit evidence, read once at the entry."""
-    changes = registration_changes(area, protocol, pid, run, state, held)
-    findings.take_all(changes)
-    if not changes:
-        corrected = corrected_in_place(area, protocol, pid, run, state, held)
-        findings.note(
-            "  what the number is about and the promise block are the ones the first "
-            "measurement registered"
-            + (", but for the fields corrected in place below" if corrected else "")
-        )
-        for line in corrected:
-            findings.note(f"  {line}")

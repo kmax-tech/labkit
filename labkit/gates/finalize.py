@@ -159,10 +159,8 @@ from labkit.formats.commands import (
     measure_command,
     withdraw_command,
 )
-from labkit.gates.registration_hold import (
-    check_registration,
-    declaring_protocol,
-)
+from labkit.gates.registration_hold import declaring_protocol
+from labkit.gates.registration_station import check_registration
 from labkit.gates.ways_out import PROTOCOL_NAMED
 from labkit.formats.commands import register_anew
 from labkit.checks.intent_check import NoRunChosen
@@ -1061,9 +1059,12 @@ def finalize_area(
     1. answering run — choose the run the later steps examine
        (`answering_run`); none bound is a blocker, and steps 2, 4, 6, 7
        and 9 then skip.
-    2. registration — only with a run: its promise block as the first
-       measurement registered it (`registration_changes`), a blocker
-       naming every change.
+    2. registration — only with a run: the type the first measurement
+       registered decides the workflow (`registration_station`); a
+       confirmatory or undecided one holds the promise block as the first
+       measurement registered it (`registration_changes`), an exploratory
+       one each step of the answering run against its basis
+       (`exploration_hold`); a blocker names every change.
     3. intent-check — always; with an answering run it reads its metrics,
        without one it holds the promise block alone (step 1 names the run).
     4. the run's code and the declared scopes — only with a run: the code

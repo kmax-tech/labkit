@@ -268,13 +268,17 @@ def assert_draws(
 
 
 def stamp_count(
-    lab: "Lab", deliverables: tuple[str, ...] = (), report_file: str | None = None
+    lab: "Lab",
+    deliverables: tuple[str, ...] = (),
+    report_file: str | None = None,
+    protocol_type: str = "exploratory",
 ) -> tuple[Path, Path]:
     """The counting skeleton at low repeat cost in LAB, filled and committed:
     lines per document over three documents (1, 2, 6 lines — mean 3.0).
     With DELIVERABLES (stamped into the script) each is one row of the mean
     under the kept key (`[kept] key = "lines_mean"`, filled through
-    protocol-fill); REPORT_FILE registers a report. Returns (area, protocol)."""
+    protocol-fill); REPORT_FILE registers a report; PROTOCOL_TYPE is the
+    head's type. Returns (area, protocol)."""
     root = lab.root
     docs = root / "data" / "raw" / "docs"
     docs.mkdir(parents=True)
@@ -321,7 +325,7 @@ def stamp_count(
     fill_known_case(area, KNOWN_IDS, KNOWN_ROWS, KNOWN_METRICS)
     lab.fill(
         protocol,
-        "type=exploratory",
+        f"type={protocol_type}",
         "kept.key=lines_mean",
         "kept.unit=lines",
         "Terms of this protocol=n/a — no coinage",
@@ -596,10 +600,15 @@ class CountCommands(unittest.TestCase):
     measure, labkit-audit with the model's answer given, --decide,
     --withdraw, the adoption. A base without tests of its own."""
 
+    #: the head's type (`stamp_count`)
+    PROTOCOL_TYPE = "exploratory"
+
     def setUp(self) -> None:
         self.lab = Lab()
         self.addCleanup(self.lab.close)
-        self.area, self.protocol = stamp_count(self.lab)
+        self.area, self.protocol = stamp_count(
+            self.lab, protocol_type=self.PROTOCOL_TYPE
+        )
         rel = self.area.relative_to(self.lab.root).as_posix()
         self.clean = (
             "verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n"
@@ -1022,8 +1031,10 @@ class Withdraw(CountCommands):
 class CorrectionCommands(CountCommands):
     """The count registered with a document count the data does not hold
     (Data / scope says 4, the run reads 3), run A measured: the commands of
-    a correction in place. A base without tests of its own."""
+    a correction in place. A base without tests of its own. Confirmatory:
+    a correction in place releases the first-measurement lock."""
 
+    PROTOCOL_TYPE = "confirmatory"
     RIGHT = "data/raw/docs, 3 documents, read directly"
     WRONG = "data/raw/docs, 4 documents, read directly"
     HELD = "what the number is about changed after the first measurement"

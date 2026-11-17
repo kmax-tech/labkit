@@ -216,6 +216,18 @@ def fill_command(protocol: Path | None, assignment: str) -> Command:
     return Command(FILL, f'protocol-fill {named} "{assignment}"')
 
 
+def builds_on_command(protocol: Path, basis: str) -> Command:
+    """The `protocol-fill … --builds-on BASIS` line that writes PROTOCOL's
+    step on run BASIS with its changes computed (`tools.protocol_step`),
+    the step's name, occasion and reason left for the agent to fill — the
+    one wording of an exploratory hold's way out."""
+    return Command(
+        FILL,
+        f"protocol-fill {shlex.quote(shown(protocol, Path.cwd()))} --builds-on "
+        f'{basis} --step-id <step> --occasion <observation | planned | repair> --why "…"',
+    )
+
+
 def step_command(area: Path) -> Command:
     """The `labkit-next …` line that names AREA's one next step, the area
     named as the working directory reaches it (`shown`)."""

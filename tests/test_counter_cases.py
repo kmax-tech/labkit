@@ -307,7 +307,10 @@ class ConflictHandedOver(_Chain):
         self.assertEqual(rc, 0, out)
         rc, out = self.lab.adopt(self.protocol, second)
         self.assertEqual(rc, 1, out)
-        self.assertIn("the first measurements recorded different registrations", out)
+        # the judge is exploratory: its station names the split by the texts
+        # the first measurements saw (`exploration_hold.unstepped_holds`)
+        self.assertIn("the first measurements", out)
+        self.assertIn("cannot be told", out)
         self.assertIn("not adopted", out)
         self.assertIsNone(
             protocol_block.declared_run(self.protocol.read_text(encoding="utf-8"))
