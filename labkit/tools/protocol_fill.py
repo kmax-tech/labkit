@@ -58,6 +58,12 @@ command line.
                                                passes on them; the Summary's Conclusion — the
                                                question's answer in two sentences, within the
                                                Limitations — stays yours
+    protocol-fill PROTOCOL-x.md --builds-on RUN_ID --id STEP --occasion OCCASION --why "…"
+                                               the step the next runs make: `[builds_on]`
+                                               naming RUN_ID as its basis and every change
+                                               of the registration against RUN_ID's own
+                                               text, computed (`protocol_step`); an
+                                               earlier step replaced
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -126,6 +132,7 @@ from labkit.formats.protocol_check import (
     not_owed,
     placeholder_fields,
 )
+from labkit.tools import protocol_step
 from labkit.tools.protocol_edit import (
     HEAD_HINTS,
     as_filled,
@@ -548,8 +555,8 @@ def _evidence_mode(args: argparse.Namespace, text: str) -> int | None:
 
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the mode ARGS name (--withdraw, --data-counts,
-    --handover, --list, --prompts, --render, --discuss, --into, --from-run),
-    or None when they name none: a field fill."""
+    --handover, --list, --prompts, --render, --discuss, --into, --from-run,
+    --builds-on), or None when they name none: a field fill."""
     evidence = _evidence_mode(args, text)
     if evidence is not None:
         return evidence
@@ -565,7 +572,33 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
         return _into_file(args.protocol, text, args.into)
     if args.from_run is not None:
         return _write_back(args, text)
+    if args.builds_on is not None:
+        return _step_file(args, text)
     return None
+
+
+def _step_file(args: argparse.Namespace, text: str) -> int:
+    """`--builds-on`: the step on ARGS.builds_on written as the protocol's
+    one `[builds_on]` (`protocol_step`). Refused with exit 2, the file
+    untouched: a basis the start would refuse (the start's own rule,
+    `start_check.require_step_basis`), a basis whose own text cannot be
+    read back — the changes are never computed from today's text —, or a
+    head that does not read."""
+    try:
+        step = protocol_step.step_with_changes(
+            args.protocol, text, args.builds_on, args.step_id, args.occasion, args.why
+        )
+        new = protocol_step.with_step(text, step)
+    except (ValueError, protocol_block.BlockError) as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+    files.write_atomic(args.protocol, new)
+    changed = (
+        "; ".join(f"{c.what}: {c.from_} → {c.to}" for c in step.changes)
+        or "no change of the registration"
+    )
+    print(f"step {step.id} on {step.run} ({step.occasion}): {changed}")
+    return 0
 
 
 def newest_preparation(area: Path) -> Path:
@@ -833,6 +866,30 @@ def _check_data_counts_args(
         ap.error("--data-counts goes alone: it writes the end of Data / scope")
 
 
+def _check_step_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Refuse an incomplete or combined --builds-on, and --id or --occasion
+    without it, before file access."""
+    if args.builds_on is None:
+        if args.step_id is not None or args.occasion is not None:
+            ap.error("--id and --occasion go with --builds-on")
+        return
+    if not args.step_id or not args.occasion or not args.why:
+        ap.error("--builds-on RUN_ID requires --id STEP, --occasion and --why TEXT")
+    if (
+        args.discuss is not None
+        or args.from_run is not None
+        or args.into is not None
+        or args.withdraw
+        or args.handover
+        or args.force
+        or args.list
+        or args.prompts
+        or args.render
+        or args.field is not None
+    ):
+        ap.error("--builds-on cannot be combined with another operation")
+
+
 def _check_report_mode_args(
     ap: argparse.ArgumentParser, args: argparse.Namespace
 ) -> None:
@@ -873,8 +930,9 @@ def _check_report_mode_args(
             ap.error("--handover cannot be combined with another operation")
     elif args.tried is not None:
         ap.error("--tried goes with --handover")
-    elif (args.discuss is None) != (args.why is None) or (
-        args.discuss is not None and args.into is None
+    elif args.builds_on is None and (
+        (args.discuss is None) != (args.why is None)
+        or (args.discuss is not None and args.into is None)
     ):
         ap.error("--discuss RUN_ID goes with --why TEXT and --into REPORT")
 
@@ -934,7 +992,8 @@ def main(argv: list[str]) -> int:
         default=None,
         help="one line: with --discuss what refused the adoption and what you "
         "found; with --handover what blocks, naming the protocol, no run ids; "
-        "with --withdraw why the run is no longer the result",
+        "with --withdraw why the run is no longer the result; with --builds-on "
+        "why the step is taken",
     )
     ap.add_argument(
         "--freeze",
@@ -985,6 +1044,29 @@ def main(argv: list[str]) -> int:
         "(without RUN_ID the protocol's answering run — the one finalize and report-check hold it to: completed, bound to its id, never a repeat); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limitations",
     )
     ap.add_argument(
+        "--builds-on",
+        default=None,
+        metavar="RUN_ID",
+        help="with --id, --occasion and --why: write the step the next runs make — "
+        "[builds_on] naming RUN_ID as its basis (a completed run of this protocol, "
+        "no repeat) and every change of the registration against RUN_ID's own "
+        "text, computed, never typed; an earlier step is replaced",
+    )
+    ap.add_argument(
+        "--id",
+        dest="step_id",
+        default=None,
+        metavar="STEP",
+        help="with --builds-on: the step's name; runs of this protocol with the "
+        "same name are one step (repeats and seed variants need no new one)",
+    )
+    ap.add_argument(
+        "--occasion",
+        default=None,
+        choices=protocol_block.OCCASIONS,
+        help="with --builds-on: what gave rise to the step",
+    )
+    ap.add_argument(
         "--line",
         type=int,
         default=None,
@@ -999,6 +1081,7 @@ def main(argv: list[str]) -> int:
     )
     args = ap.parse_args(argv)
     _check_data_counts_args(ap, args)
+    _check_step_args(ap, args)
     _check_report_mode_args(ap, args)
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")

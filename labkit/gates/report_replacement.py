@@ -19,6 +19,7 @@ from labkit.formats.gate import (
     blocker,
 )
 from labkit.formats.protocol_history import (
+    change_list_gaps,
     registration_differences,
     registrations_as_first_measured,
 )
@@ -176,7 +177,9 @@ def _undeclared_changes(
     for old, old_where in olds:
         for change in registration_differences(old, new):
             computed.setdefault(change, old_where)
-    listed = {(c.what, c.from_, c.to) for c in rep.changes}
+    gaps = change_list_gaps(
+        list(computed), [(c.what, c.from_, c.to) for c in rep.changes]
+    )
     s = protocol_block.toml_string
     # the change list is a format convention (labkit/docs/agent-guide.md): it
     # equals the differences `registration_differences` computes, no more
@@ -184,15 +187,14 @@ def _undeclared_changes(
     # suffices is not judged here
     out = [
         blocker(
-            f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
+            f"changed against {pred.name} ({computed[(what, x, y)]}) and not declared: {what} {x} → "
             f"{y}",
             fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
             f'{s(x)}, to = {s(y)}, why = "…"; then '
             f"`{gate_command('report-check', ctx.area)}`",
             rule=TECHNICAL_RULE,
         )
-        for (what, x, y), old_where in computed.items()
-        if (what, x, y) not in listed
+        for what, x, y in gaps.undeclared
     ]
     against = "; ".join(where for _, where in olds)
     out += [
@@ -203,7 +205,7 @@ def _undeclared_changes(
             f"`{gate_command('report-check', ctx.area)}`",
             rule=TECHNICAL_RULE,
         )
-        for what, x, y in sorted(listed - set(computed))
+        for what, x, y in gaps.not_shown
     ]
     return out
 

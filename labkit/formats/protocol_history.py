@@ -725,7 +725,10 @@ def as_measured(
     blob, or a patch that does not apply (git's own error), a tree without
     the protocol (untracked when the run started), a text whose block is
     not the one the run recorded. A comparison that needs the text holds
-    on None (`unread_measurements`), never reads it as no change. ROLE
+    on None (`unread_measurements`), never reads it as no change. A
+    missing uncommitted.patch is read as a clean tree; a reader that must
+    not take the commit alone for a run's text reads
+    `as_measured_patch_checked`. ROLE
     opens each WHERE sentence before RD's id: "its first measurement"
     (the default) or "origin run"."""
     from labkit.formats.runs import patch_path, recorded_commit
@@ -782,6 +785,110 @@ def patch_lost(rd: "RunDir") -> bool:
 
     assert rd.config is not None, "a run whose config reads"
     return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
+
+
+def as_measured_patch_checked(
+    protocol: Path, rd: "RunDir", root: Path | None, *, role: str
+) -> tuple[str | None, str]:
+    """(text, where): PROTOCOL as run RD saw it when it started, as
+    `as_measured` reads it — but a run started from a changed tree whose
+    uncommitted.patch is gone (`patch_lost`) is not read back, since the
+    commit alone is not what it saw. The reading for every consumer of a
+    run's own text that must not take a commit for it (an origin run's
+    protocol, a run's step and its basis). ROLE opens WHERE before RD's id.
+    RD's config must read. Raises RuntimeError when git fails."""
+    assert rd.config is not None, "a run whose config reads"
+    if patch_lost(rd):
+        return None, (
+            f"{role} {rd.dir.name} started from a tree with changes "
+            f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
+            f"alone is not what it saw"
+        )
+    return as_measured(protocol, rd, root, role=role)
+
+
+@dataclass(frozen=True)
+class StepThen:
+    """The step a run made, read from its own protocol text (`step_then`).
+
+    Attributes:
+        run_id: The run.
+        text: The protocol as the run saw it, None when it cannot be read
+            back.
+        step: Its `[builds_on]` then, None when it declared none — or when
+            the step cannot be told (UNKNOWN set).
+        where: Where TEXT was read from, or why it cannot be.
+        unknown: Why the step cannot be told — the text cannot be read back,
+            or its `[builds_on]` does not read; None when it can.
+    """
+
+    run_id: str
+    text: str | None
+    step: protocol_block.BuildsOn | None
+    where: str
+    unknown: str | None
+
+
+def step_then(protocol: Path, rd: "RunDir", root: Path | None) -> StepThen:
+    """The step run RD of PROTOCOL made, as its own text holds it
+    (`as_measured_patch_checked`): the one reconstruction every consumer of a run's basis
+    shares — the basis is stored only there, never in the run record. When
+    it cannot be read back the step is unknown and says why; nothing is
+    invented in its place. RD's config must read. Raises RuntimeError when
+    git fails."""
+    text, where = as_measured_patch_checked(protocol, rd, root, role="run")
+    if text is None:
+        return StepThen(rd.dir.name, None, None, where, where)
+    try:
+        step = protocol_block.builds_on(text)
+    except protocol_block.BlockError as exc:
+        why = f"run {rd.dir.name}: its [builds_on] then does not read — {exc}"
+        return StepThen(rd.dir.name, text, None, where, why)
+    return StepThen(rd.dir.name, text, step, where, None)
+
+
+@dataclass(frozen=True)
+class ChangeListGaps:
+    """How a declared change list departs from the differences computed
+    (`change_list_gaps`): UNDECLARED, computed and not listed, in the
+    computed order; NOT_SHOWN, listed and not computed, sorted. Each entry
+    is (what, from, to)."""
+
+    undeclared: tuple[tuple[str, str, str], ...]
+    not_shown: tuple[tuple[str, str, str], ...]
+
+
+def change_list_gaps(
+    computed: Sequence[tuple[str, str, str]], listed: Sequence[tuple[str, str, str]]
+) -> ChangeListGaps:
+    """COMPUTED, the differences of two registrations
+    (`registration_differences`), against LISTED, the (what, from, to) a
+    change list declares: a format convention held exactly in both
+    directions — no more and no fewer. Whether a change's reason suffices
+    is not decided here. The one comparison of `[[replaces.change]]` and
+    `[[builds_on.change]]`. Pure."""
+    wanted = set(listed)
+    found = set(computed)
+    return ChangeListGaps(
+        tuple(dict.fromkeys(c for c in computed if c not in wanted)),
+        tuple(sorted(wanted - found)),
+    )
+
+
+def step_change_gaps(
+    basis_text: str, run_text: str, step: protocol_block.BuildsOn
+) -> ChangeListGaps:
+    """STEP's declared changes against the differences between its basis
+    run's own text BASIS_TEXT and the run's own text RUN_TEXT
+    (`registration_differences`: the protocol parts a number is about and
+    the promise block; never code, settings or data, which the auditor is
+    shown). A guaranteed statement only about those fields: a method
+    changed in code alone differs in none of them. Pure; raises BlockError
+    or PromiseError on a head or block that does not read."""
+    return change_list_gaps(
+        registration_differences(basis_text, run_text),
+        [(c.what, c.from_, c.to) for c in step.changes],
+    )
 
 
 def _block_sha(text: str) -> str | None:
