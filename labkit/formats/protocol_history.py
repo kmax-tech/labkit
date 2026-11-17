@@ -728,18 +728,23 @@ def as_measured(
     (`git fetch` brings it), git unable to read that commit's tree or the
     blob, or a patch that does not apply (git's own error), a tree without
     the protocol (untracked when the run started), a text whose block is
-    not the one the run recorded. A comparison that needs the text holds
-    on None (`unread_measurements`), never reads it as no change. A
-    missing uncommitted.patch is read as a clean tree; a reader that must
-    not take the commit alone for a run's text reads
-    `as_measured_patch_checked`. ROLE
-    opens each WHERE sentence before RD's id: "its first measurement"
-    (the default) or "origin run"."""
+    not the one the run recorded, a run started from a changed tree whose
+    uncommitted.patch is gone (`patch_lost`: the commit alone is not what
+    it saw). A comparison that needs the text holds on None
+    (`unread_measurements`), never reads it as no change. ROLE opens each
+    WHERE sentence before RD's id: "its first measurement" (the default),
+    "run" or "origin run"."""
     from labkit.formats.runs import patch_path, recorded_commit
 
     commit = recorded_commit(rd.config) if rd.config is not None else None
     if commit is None or root is None:
         return None, f"{role} {rd.dir.name} recorded no commit"
+    if rd.config is not None and patch_lost(rd):
+        return None, (
+            f"{role} {rd.dir.name} started from a tree with changes "
+            f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
+            f"alone is not what it saw"
+        )
     if not commit_known(root, commit):
         return None, (
             f"{role} {rd.dir.name} started at {commit[:12]}, a commit "
@@ -782,33 +787,12 @@ def patch_lost(rd: "RunDir") -> bool:
     """Whether run RD started from a changed tree and its uncommitted.patch
     is gone: runlog writes the patch whenever the tree was not clean (its
     `git` ends in `runs.DIRTY_MARK`), so without the file the commit alone
-    is not what the run saw. `as_measured` reads a missing patch as a clean
-    tree; a reader that must not take the commit alone for the run's text
-    asks this first. RD's config must read."""
+    is not what the run saw, and `as_measured` does not read it back. RD's
+    config must read."""
     from labkit.formats.runs import DIRTY_MARK, patch_path
 
     assert rd.config is not None, "a run whose config reads"
     return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
-
-
-def as_measured_patch_checked(
-    protocol: Path, rd: "RunDir", root: Path | None, *, role: str
-) -> tuple[str | None, str]:
-    """(text, where): PROTOCOL as run RD saw it when it started, as
-    `as_measured` reads it — but a run started from a changed tree whose
-    uncommitted.patch is gone (`patch_lost`) is not read back, since the
-    commit alone is not what it saw. The reading for every consumer of a
-    run's own text that must not take a commit for it (an origin run's
-    protocol, a run's step and its basis). ROLE opens WHERE before RD's id.
-    RD's config must read. Raises RuntimeError when git fails."""
-    assert rd.config is not None, "a run whose config reads"
-    if patch_lost(rd):
-        return None, (
-            f"{role} {rd.dir.name} started from a tree with changes "
-            f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
-            f"alone is not what it saw"
-        )
-    return as_measured(protocol, rd, root, role=role)
 
 
 @dataclass(frozen=True)
@@ -835,12 +819,12 @@ class StepThen:
 
 def step_then(protocol: Path, rd: "RunDir", root: Path | None) -> StepThen:
     """The step run RD of PROTOCOL made, as its own text holds it
-    (`as_measured_patch_checked`): the one reconstruction every consumer of a run's basis
+    (`as_measured`): the one reconstruction every consumer of a run's basis
     shares — the basis is stored only there, never in the run record. When
     it cannot be read back the step is unknown and says why; nothing is
     invented in its place. RD's config must read. Raises RuntimeError when
     git fails."""
-    text, where = as_measured_patch_checked(protocol, rd, root, role="run")
+    text, where = as_measured(protocol, rd, root, role="run")
     if text is None:
         return StepThen(rd.dir.name, None, None, where, where)
     try:

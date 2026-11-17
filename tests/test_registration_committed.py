@@ -525,9 +525,9 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertEqual(self._changes(), [])
 
     def test_unread_sentences_are_said_with_what_the_records_hold(self):
-        """A first measurement whose commit this clone does not hold: the
-        constants come from the run records, and the hold says why the
-        sentences are not named."""
+        """A first measurement whose text cannot be read back — it started
+        from a changed tree and kept no patch: the constants come from the
+        run records, and the hold says why the sentences are not named."""
         first = self._register(_block(0.1))
         # the first run saw a sentence its commit does not hold, and kept no patch
         self.proto.write_text(
@@ -541,7 +541,7 @@ class RegistrationAsFirstMeasured(_Repository):
         (line,) = [ln for ln in lines if "null_band" in ln]
         self.assertIn("[quality-check-2] null_band 0.1 → 0.15", line)
         self.assertIn("the sentences unread (its first measurement", line)
-        self.assertIn("cannot be read back", line)
+        self.assertIn("its uncommitted.patch is gone", line)
         # what the number is about could not be compared either: held on its
         # own, never read as unchanged (tests/test_unread_registration.py)
         self.assertTrue(

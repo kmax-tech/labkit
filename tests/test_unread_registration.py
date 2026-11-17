@@ -108,6 +108,26 @@ class UnreadFirstMeasurement(ChangedQuestion):
         self.lab.commit("the patch run A recorded, as an older labkit wrote it")
         self.assert_unread_blocks(self.finalized(), "apply")
 
+    def test_a_lost_patch_of_a_changed_tree_blocks_and_restored_holds_again(self):
+        """Run A started from a changed tree and its uncommitted.patch is
+        gone: the commit alone is not what it saw, so the comparison does not
+        run on it (`protocol_history.patch_lost`)."""
+        cfg_path = self.area / "runs" / self.run_a / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["git"] += "+dirty"
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+        patch = self.area / "runs" / self.run_a / "uncommitted.patch"
+        patch.unlink(missing_ok=True)
+        self.lab.commit("run A recorded a changed tree, its patch lost")
+        out = self.finalized()
+        self.assert_unread_blocks(out, "uncommitted.patch is gone")
+        self.assertIn("uncommitted.patch restored", out)
+        patch.write_text("", encoding="utf-8")  # the tree's changes were elsewhere
+        self.lab.commit("run A's patch restored")
+        out = self.finalized()
+        self.assertIn(self.HELD, out)
+        self.assertNotIn(UNREAD, out)
+
 
 class UnreadCommitAtTheRegistrationStation(ChangedQuestion):
     """report-check's registration station reads the protocol as the first

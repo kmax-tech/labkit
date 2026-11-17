@@ -54,7 +54,7 @@ from labkit.formats.gate import (
     with_way_out,
 )
 from labkit.formats.protocol_block import BlockError, find_by_id
-from labkit.formats.protocol_history import as_measured_patch_checked
+from labkit.formats.protocol_history import as_measured
 from labkit.formats.repo import (
     git_root,
     layout_root,
@@ -242,13 +242,13 @@ def source_protocol_then(
     area: Path, run_id: str, root: Path | None
 ) -> SourceProtocolThen:
     """The protocol origin run RUN_ID of AREA was bound to, as it saw it
-    when it started (`protocol_history.as_measured_patch_checked`: its recorded commit
+    when it started (`protocol_history.as_measured`: its recorded commit
     with its uncommitted.patch, held to the promise block it recorded),
     found by the run's protocol id — the protocol carrying it now, else the
     path the run recorded, and at that commit by the id again. No text, the
     reason in WHERE: no directory of that id, a record that does not read
     or is missing, a run bound to no protocol, AREA in no repository (ROOT
-    None), or `as_measured_patch_checked`'s causes — a run started from a changed tree
+    None), or `as_measured`'s causes — a run started from a changed tree
     whose uncommitted.patch is gone among them. Never the protocol's text
     as it stands. Reads files and git. Raises RuntimeError when git
     fails."""
@@ -300,7 +300,7 @@ def source_protocol_then(
             if recorded and not Path(recorded).is_absolute()
             else area / f"PROTOCOL-{binding.id}.md"
         )
-    text, where = as_measured_patch_checked(protocol, rd, root, role="origin run")
+    text, where = as_measured(protocol, rd, root, role="origin run")
     return SourceProtocolThen(run_id, True, text, where)
 
 

@@ -4,7 +4,7 @@
 
 The step names its basis run, why it is taken and every change of the
 registration against the basis run's own text — computed here from that
-text (`protocol_history.as_measured_patch_checked`) and the protocol as it stands
+text (`protocol_history.as_measured`) and the protocol as it stands
 (`protocol_history.registration_differences`), never typed. A run id is
 written by this command, never by hand. The basis is held as the start
 holds it (`start_check.require_step_basis`): a completed run of this
@@ -22,7 +22,7 @@ from labkit.formats import protocol_block, runs
 from labkit.formats.protocol_block import BuildsOn, StepChange, toml_string
 from labkit.formats.protocol_history import (
     registration_differences,
-    as_measured_patch_checked,
+    as_measured,
 )
 from labkit.formats.repo import git_root
 from labkit.run.start_check import require_step_basis
@@ -52,9 +52,7 @@ def step_with_changes(
     except SystemExit as exc:  # the start's rule, held before the file is written
         raise ValueError(str(exc.code).removeprefix("runlog: ")) from exc
     rd = runs.read_run_dir(runs.run_path(area, basis))
-    then, where = as_measured_patch_checked(
-        protocol.resolve(), rd, git_root(area), role="basis run"
-    )
+    then, where = as_measured(protocol.resolve(), rd, git_root(area), role="basis run")
     if then is None:
         raise ValueError(
             f"the basis's own text cannot be read back — {where}; a step's "

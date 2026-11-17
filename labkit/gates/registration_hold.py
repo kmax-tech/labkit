@@ -653,16 +653,18 @@ def unread_hold(area: Path, protocol: Path, pid: str, unread: list[str]) -> Gate
     run saw it cannot be read back (UNREAD, `unread_measurements`): what
     the number is about cannot be compared, so finalize does not say it is
     unchanged. The way back: make the text readable — the commit from a
-    clone that holds it, the repository's missing objects restored — then
-    finalize again; where it cannot be read back at all, the registration
-    cannot be held and is made anew or handed over."""
+    clone that holds it, the repository's missing objects restored, a lost
+    uncommitted.patch restored — then finalize again; where it cannot be
+    read back at all, the registration cannot be held and is made anew or
+    handed over."""
     return blocker(
         f"what the number is about cannot be compared with its first measurement: "
         f"{'; '.join(' '.join(why.split()) for why in unread)} — the comparison "
         f"did not run, so nothing says the "
         f"registration is unchanged",
         fix=f"make it readable: the commit from a clone that holds it (`git fetch`), "
-        f"the repository's missing objects restored (`git fsck` names them), then "
+        f"the repository's missing objects restored (`git fsck` names them), a run's "
+        f"uncommitted.patch restored from git or a backup, then "
         f"`{gate_command('finalize', area)}`; where it cannot be read back at all, "
         f"{anew_way(pid)}; or {handover(protocol)}",
         rule=TECHNICAL_RULE,
