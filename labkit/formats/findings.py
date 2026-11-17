@@ -735,7 +735,9 @@ def check_order(check: str, note: str = "") -> str:
             f"nothing to build or measure — the follow-up analysis audit shows "
             f"the code difference of run {asked.new} from run {asked.old}"
             f"{section}{shows} whole, ahead of every other diff, as long as it "
-            f"fits the audit's budget for diffs"
+            f"fits the audit's budget for diffs; `fixed` says only: evidence "
+            f"supplied — it confirms neither the code nor the claim, the "
+            f"follow-up judges the suspicion on the diff"
         )
     if check.startswith(FILE_CHECK):
         # a file's content, not a computed value: shown once the run declares

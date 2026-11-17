@@ -117,7 +117,7 @@ For a confirmed fault (`implementation` or `statement`), `fixed` means that you 
 
 If the finding ends in `check: file:<path>`, declare that file among the files the run reads (`PREDICTOR_FILES`, else runlog's `data=`). Then measure and audit again. Without that value or file, the follow-up judges the repair not assessable.
 
-If the finding ends in `check: diff:<run>..<run>` or `check: diff:<run>..<run>:<path>`, the auditor asks for a code diff it was shown cut, whole or one file's or folder's section of it. Build and measure nothing: decide `fixed` and run the analysis audit again. It shows that diff under `REQUESTED DIFF`, ahead of every other diff. A section past the audit's budget for diffs stays `not shown:`, and the judgement stays open.
+If the finding ends in `check: diff:<run>..<run>` or `check: diff:<run>..<run>:<path>`, the auditor asks for a code diff it was shown cut, whole or one file's or folder's section of it. Build and measure nothing: decide `fixed` and run the analysis audit again. Here `fixed` says only that the evidence is supplied; it confirms neither the code nor the claim. The follow-up audit judges the suspicion on the diff. It shows that diff under `REQUESTED DIFF`, ahead of every other diff. A section past the audit's budget for diffs stays `not shown:`, and the judgement stays open.
 
 After a fix of the measurement code, repeat steps 2 to 4. Give the new output file a new name in the measuring script. Keep the earlier file and its runs. Decide the unresolved BLOCKERs that the new audit carries into its record. Editing code does not repair an old run. At `high`, first set `frozen = false`. Do not change the question, criteria or constants. Then take step 3 again.
 

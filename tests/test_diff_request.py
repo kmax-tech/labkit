@@ -59,6 +59,14 @@ class Read(unittest.TestCase):
         with self.assertRaises(ValueError):
             findings.check_of(line.replace(NEW, "latest"))
 
+    def test_its_fixed_is_named_as_evidence_supplied_only(self):
+        """The one wording of the decision list, the decide output and the
+        follow-up's holds: `fixed` on a request says the evidence is
+        supplied, never that code or claim is confirmed."""
+        said = findings.check_order(f"diff:{OLD}..{NEW}", "")
+        self.assertIn("`fixed` says only: evidence supplied", said)
+        self.assertIn("confirms neither the code nor the claim", said)
+
 
 class Section(unittest.TestCase):
     def test_a_file_or_a_folder_takes_its_sections_only(self):
