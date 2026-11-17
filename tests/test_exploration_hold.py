@@ -33,6 +33,7 @@ pytestmark = pytest.mark.slow
 FIRST_LOCK = "what the number is about changed after the first measurement"
 FILTER = "Exclusions / filters=hidden entries, nested directories and empty documents"
 UNIT = "Unit=one visible document of data/raw/docs"
+UNIT_BEFORE = "Unit=one document of data/raw/docs"
 EXPLORING = "exploratory: each step the answering run builds on declares its changes"
 SPLIT = "the first measurements saw different texts"
 
@@ -383,6 +384,31 @@ class TwoPatchesAtOneCommit(e2e.CountCommands):
         _, out = self.lab.adopt(self.protocol, self.run_a)
         self.assertNotIn(SPLIT, out)
         self.assertIn(f"changed after the answering run {self.run_a}", out)
+
+    def test_a_later_run_without_a_step_may_repeat_either_first_text(self):
+        """Committed after both, D repeats A's text (the Unit undone): it
+        reads as one of the first texts and passes."""
+        self.lab.fill(self.protocol, "--force", UNIT_BEFORE)
+        self.lab.commit("back to A's text")
+        self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertNotIn("without a step", out)
+        self.assertEqual(rc, 0, out)
+
+    def test_a_later_run_without_a_step_may_not_bring_a_new_text(self):
+        """Committed after both, D brings a text neither first measurement
+        saw: an undeclared change, held — the commit does not make it
+        allowed."""
+        self.lab.commit("B's text committed")
+        self.lab.fill(self.protocol, "--force", "Unit=one line of data/raw/docs")
+        self.lab.commit("a new Unit, no step")
+        run_d = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        (line,) = [
+            ln for ln in out.splitlines() if "BLOCKER" in ln and "without a step" in ln
+        ]
+        self.assertIn(f"run {run_d} was measured without a step", line)
+        self.assertEqual(rc, 1, out)
 
     def test_a_step_on_either_goes_on_at_the_same_commit(self):
         self.lab.fill(
