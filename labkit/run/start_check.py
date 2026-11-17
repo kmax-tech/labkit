@@ -279,7 +279,8 @@ def _freeze_findings(base_dir: Path, bound: _Bound, state: AreaState) -> list[st
             f"`protocol-check --contract` names) — at low repeat cost the gate is the "
             f"registration the kind owes (a computation its question; a fit or an apply "
             f"also criterion · quality check · null condition; with a "
-            f"model the data profile), not the freeze (LAB-003 No run without an "
+            f"model the data profile; every kind its type, exploratory or "
+            f"confirmatory), not the freeze (LAB-003 No run without an "
             f"intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
     out = twice + _committed_registration(base_dir, bound, state)
@@ -288,6 +289,13 @@ def _freeze_findings(base_dir: Path, bound: _Bound, state: AreaState) -> list[st
         out.append(
             f"{path.name}: [protocol] kind is still a placeholder — compute, fit or "
             f"apply (`{fill_command(path, 'kind=…')}`)"
+        )
+    if head.type is None:
+        # the workflow that binds the runs is read from the first
+        # measurement's type; undecided, it is never read as exploratory
+        out.append(
+            f"{path.name}: [protocol] type is still a placeholder — exploratory or "
+            f"confirmatory (`{fill_command(path, 'type=…')}`)"
         )
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")

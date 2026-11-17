@@ -1375,7 +1375,9 @@ def low_registration_missing(
     prediction (kind fit or apply) also quality check and null condition,
     and — unless the protocol is exploratory (`criterion_owed`) — the
     criterion, field and table (`criterion_table_gap`); with a model named also the judged data profile;
-    the repeat_cost and the kind declared, the kind not contradicting the
+    the repeat_cost, the kind and the type declared — the type decides
+    which workflow binds the runs, so an undecided one is never read as
+    exploratory —, the kind not contradicting the
     head (`kind_gap`, `reference_gap`), and the kept number named
     (`kept_gaps`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
@@ -1416,6 +1418,9 @@ def low_registration_missing(
     missing += [label for label in labels if label.casefold() not in written]
     missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
+    # which workflow binds the runs is read from the first measurement's
+    # type: undecided, no run tells exploration from confirmation
+    missing += [] if head.type else ["[protocol] type"]
     contradictions = (kind_gap(text, head), reference_gap(text, head))
     try:
         criterion = criterion_table_gap(promises.parse_block(text), kind, type_owing)

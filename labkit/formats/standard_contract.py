@@ -381,9 +381,11 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
         "the registration written and committed (the first measurement is held "
         "to what its commit holds): "
         + ", ".join(registration_fields(kind, model))
+        + ", and the head's type (exploratory or confirmatory: the first "
+        "measurement's type decides how later runs are bound)"
         # runlog checks these; the pre-commit hook every must field of the
         # cut, so the commit holds all of them
-        + " — runlog checks these; the pre-commit hook holds every field the "
+         + " — runlog checks these; the pre-commit hook holds every field the "
         "low cut owes (the first lines above name them), so the commit carries "
         "all of them"
         + (

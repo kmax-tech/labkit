@@ -317,6 +317,26 @@ class FreezeGate(unittest.TestCase):
             self.assertIn("id is not stamped", str(cm.exception))
             self.assertFalse((area / "runs").exists())
 
+    def test_full_run_on_an_undecided_type_is_refused_before_mkdir(self):
+        """Frozen, its type still the stamp's placeholder: the workflow that
+        binds later runs is read from the first measurement's type, so
+        undecided is refused, never read as exploratory. At low repeat cost
+        the registration names it the same way."""
+        for text in (
+            FROZEN.replace(
+                'type = "exploratory"', 'type = "<exploratory | confirmatory>"'
+            ),
+            head(repeat_cost="low", type="<exploratory | confirmatory>") + REGISTRATION,
+        ):
+            self.assertNotEqual(text, FROZEN)
+            area = self._area(text)
+            with self.assertRaises(SystemExit) as cm:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    runlog.Run("t", {}, area, run_kind="measurement")
+            self.assertIn("type", str(cm.exception))
+            self.assertIn("exploratory or confirmatory", str(cm.exception))
+            self.assertFalse((area / "runs").exists())
+
     def test_full_run_on_unfrozen_protocol_is_refused_before_mkdir(self):
         area = self._area(UNFROZEN)
         with self.assertRaises(SystemExit) as cm:
