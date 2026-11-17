@@ -15,10 +15,10 @@ on, and no other:
    from its basis run's own text (`protocol_history.step_change_gaps`) —
    a guaranteed statement about the registered protocol parts only; a
    method changed in code alone is the analysis audit's question;
-3. the run without a step (`unstepped_holds`): a first measurement the
-   answering run builds on is a basis by its own text; any other reads as
-   the registration the first measurements agree on, none preferred — a
-   change in exploration is declared;
+3. the run without a step (`unstepped_holds`): a first measurement stands
+   by its own text, and first measurements that saw different texts hold
+   nothing here; a later run without a step that differs from every first
+   measurement is a change undeclared;
 4. once the protocol adopts the answering run as its result (`adopted`),
    the protocol as it stands is that run's own text in what the number is
    about (`live_holds`): the result is read under the text it was
@@ -58,7 +58,6 @@ from labkit.gates.registration_hold import (
     quoted_changes,
     scope_now,
     scope_rule,
-    split_hold,
     unread_hold,
     waiting_refs,
 )
@@ -95,12 +94,7 @@ def exploration_changes(
         for later, basis in zip(chain, chain[1:])
         if (hold := step_gap_hold(protocol, pid, later, basis)) is not None
     ]
-    # a first measurement the answering run builds on is a basis by its own
-    # text, as any basis is: which first measurement was the registration
-    # does not concern a run whose question is that text and its steps
-    firsts = {rd.dir.name for group in measured.first_groups for rd in group}
-    if len(chain) == 1 or chain[-1].run_id not in firsts:
-        found += unstepped_holds(area, protocol, pid, chain[-1], measured, root)
+    found += unstepped_holds(area, protocol, pid, chain[-1], measured, root)
     if adopted(state.text_of(protocol), run):
         found += live_holds(
             area, protocol, pid, run, chain[0], root, measured, state, held
@@ -218,22 +212,22 @@ def unstepped_holds(
     measured: Measured,
     root: Path,
 ) -> list[GateFinding]:
-    """The holds on ORIGIN, the run of the chain that declares no step,
-    where the chain needs the registration: ORIGIN is the answering run
-    itself, or a later run than the first measurements (a first
-    measurement the answering run builds on is a basis by its own text;
-    `exploration_changes`). The registration is the text the first
-    measurements without a step (MEASURED's first groups) agree on, none
-    preferred: one whose text or step cannot be read back holds the
-    comparison (`unread_hold`); first measurements that saw different
-    texts hold as in confirmation (`split_hold`: which stood cannot be
-    told) — a later run building on one of them does not lift that hold
-    from the others; ORIGIN differing from them is a change without a
-    step, named with the way to declare it. Raises RuntimeError when git
-    fails."""
+    """The holds on ORIGIN, the run of the chain that declares no step. A
+    first measurement (MEASURED's first groups) stands by its own text:
+    first measurements that saw different texts are no hold in
+    exploration — each is checked by its own text and the steps that
+    build on it; their differences are the audit's to see. A later run
+    without a step is held when its registration differs from every first
+    measurement without a step: a change undeclared, named against the
+    first with the way to declare it. A first measurement whose text or
+    step cannot be read back holds that comparison (`unread_hold`).
+    Raises RuntimeError when git fails."""
+    firsts = [rd for group in measured.first_groups for rd in group]
+    if any(rd.dir.name == origin.run_id for rd in firsts):
+        return []
     registered: list[tuple[RunDir, str]] = []
     unread: list[str] = []
-    for rd in (rd for group in measured.first_groups for rd in group):
+    for rd in firsts:
         st = protocol_history.step_then(protocol, rd, root)
         if st.unknown is not None or st.text is None:
             unread.append(st.unknown or st.where)
@@ -241,19 +235,15 @@ def unstepped_holds(
             registered.append((rd, st.text))
     if unread:
         return [unread_hold(area, protocol, pid, unread)]
-    if not registered:
-        return []
-    (first, first_text), *rest = registered
-    for other, other_text in rest:
-        diffs = protocol_history.registration_differences(first_text, other_text)
-        if diffs:
-            return split_hold(protocol, pid, first, other, diffs)
-    if any(rd.dir.name == origin.run_id for rd, _ in registered):
-        return []
     assert origin.text is not None
-    diffs = protocol_history.registration_differences(first_text, origin.text)
-    if not diffs:
+    gaps = [
+        (rd, diffs)
+        for rd, text in registered
+        if (diffs := protocol_history.registration_differences(text, origin.text))
+    ]
+    if len(gaps) < len(registered) or not gaps:
         return []
+    first, diffs = gaps[0]
     return [
         blocker(
             f"run {origin.run_id} was measured without a step, and its registration "

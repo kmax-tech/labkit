@@ -280,29 +280,31 @@ class CorrectionInExploration(e2e.CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
 
-    def test_a_repair_step_on_a_goes_on_and_b_stays_held(self):
+    def test_a_first_measurement_changed_in_the_tree_stands_by_its_own_text(self):
         """The correction left in the tree, B measured at A's commit
         without a step: A and B are two first measurements with different
-        texts, none preferred, and B stays held as before. C, a repair step
-        on A at the same commit, rests on A's own text and its declared
-        change, so it is measured, audited and adopted; B is not healed."""
+        texts, and in exploration that alone holds nothing — B stands by
+        its own text and is audited and adopted. C, a repair step on A at
+        the same commit, is measured and finalized too."""
         self.describe(self.RIGHT)
         run_b = self.measure()
         rc, out = self.lab.finalize(self.area)
-        self.assertIn(SPLIT, out)
-        self.assertEqual(rc, 1, out)
-        self.repair_step()
-        run_c = self.measure()
-        rc, out = self.lab.finalize(self.area)
+        self.assertNotIn(SPLIT, out)
         self.assertEqual(rc, 0, out)
-        rc, out = self.lab.adopt(self.protocol, run_b)
-        self.assertIn(SPLIT, out)
-        self.assertNotEqual(rc, 0, out)
         rc, out, _ = self.analysis(self.clean)
         self.assertEqual(rc, 0, out)
-        rc, out = self.lab.adopt(self.protocol, run_c)
+        rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
-        self.assertEqual(self.declared(), run_c)
+        self.assertEqual(self.declared(), run_b)
+
+    def test_a_repair_step_on_a_at_the_same_commit_goes_on(self):
+        self.describe(self.RIGHT)
+        self.measure()
+        self.repair_step()
+        self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertNotIn(SPLIT, out)
+        self.assertEqual(rc, 0, out)
 
     def test_a_correction_after_a_step_is_shown_against_the_audited_runs_text(self):
         """A step on A changes Data / scope to 2 documents, C is measured
@@ -351,9 +353,10 @@ class CorrectionInExploration(e2e.CorrectionCommands):
 
 
 class TwoPatchesAtOneCommit(e2e.CountCommands):
-    """The counter-case: two first measurements at one commit, each with
-    its own uncommitted.patch, both read back in full. Neither is preferred
-    as the registration — not the one closer to the commit either."""
+    """Two first measurements at one commit, each with its own
+    uncommitted.patch, both read back in full: in exploration neither is
+    held for the other, each stands by its own text. The confirmatory twin
+    keeps the split hold."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -365,12 +368,21 @@ class TwoPatchesAtOneCommit(e2e.CountCommands):
             patch = self.area / "runs" / run / "uncommitted.patch"
             self.assertTrue(patch.is_file(), run)
 
-    def test_each_first_measurement_is_held_none_preferred(self):
-        for run in (self.run_a, self.run_b):
-            rc, out = self.lab.adopt(self.protocol, run)
-            self.assertIn(SPLIT, out)
-            self.assertNotEqual(rc, 0, out)
-            self.assertIsNone(self.declared())
+    def test_the_newer_stands_by_its_own_text_and_is_adopted(self):
+        rc, out = self.lab.finalize(self.area)
+        self.assertNotIn(SPLIT, out)
+        self.assertEqual(rc, 0, out)
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_b)
+        self.assertEqual(rc, 0, out)
+
+    def test_the_older_is_held_only_by_the_text_changed_since(self):
+        """A's adoption is held because the protocol now reads B's text —
+        the hold of the protocol as it stands, not a split."""
+        _, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertNotIn(SPLIT, out)
+        self.assertIn(f"changed after the answering run {self.run_a}", out)
 
     def test_a_step_on_either_goes_on_at_the_same_commit(self):
         self.lab.fill(
@@ -384,14 +396,24 @@ class TwoPatchesAtOneCommit(e2e.CountCommands):
             "--why",
             "visible documents only",
         )
-        run_c = self.measure()
+        self.measure()
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn(SPLIT, out)
-        rc, out = self.lab.adopt(self.protocol, self.run_b)
+
+
+class TwoPatchesAtOneCommitConfirmatory(e2e.CountCommands):
+    """The confirmatory twin: the first-measurement lock holds the split."""
+
+    PROTOCOL_TYPE = "confirmatory"
+
+    def test_the_split_holds(self):
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.measure()
+        self.lab.fill(self.protocol, "--force", UNIT)
+        self.measure()
+        rc, out = self.lab.finalize(self.area)
         self.assertIn(SPLIT, out)
-        self.assertNotEqual(rc, 0, out)
-        self.assertNotEqual(run_c, self.run_b)
+        self.assertEqual(rc, 1, out)
 
 
 class Confirmation(_Exploration):
