@@ -102,6 +102,7 @@ _TOP_LEVEL = {
     "model",
     "gate",
     "replaces",
+    "builds_on",
     "reference",
     "kept",
 }
@@ -870,6 +871,107 @@ def replaces(text: str) -> Replaces | None:
             )
         changes.append(Change(what, from_, to, why))
     return Replaces(pid, tuple(changes))
+
+
+#: the fields of `[builds_on]`, the step the next run or runs make
+BUILDS_ON_KEYS = ("id", "run", "occasion", "why", "change")
+#: what gave rise to a step: something a run showed, a variant planned
+#: beforehand, or a technical repair — checked as one of these, never as true
+OCCASIONS = ("observation", "planned", "repair")
+#: a step's id: runs of one protocol with the same id belong to one step
+STEP_ID = re.compile(r"^[a-z][a-z0-9-]{0,39}$")
+
+
+@dataclass(frozen=True)
+class StepChange:
+    """One difference a step declares against its basis run's own text:
+    WHAT, FROM and TO as `protocol_history.registration_differences` names
+    them, and WHY — None where the step's own `why` explains it."""
+
+    what: str
+    from_: str
+    to: str
+    why: str | None
+
+
+@dataclass(frozen=True)
+class BuildsOn:
+    """`[builds_on]`: the step the next run or runs make — ID (runs of this
+    protocol with the same id are one step), the basis RUN they start from,
+    OCCASION (one of OCCASIONS), WHY the step is taken, and every CHANGE of
+    the registration against the basis run's own text. Distinct from a
+    run's `derived_from`, which re-reads retained rows."""
+
+    id: str
+    run: str
+    occasion: str
+    why: str
+    changes: tuple[StepChange, ...]
+
+
+def builds_on(text: str) -> BuildsOn | None:
+    """The protocol's `[builds_on]` table, or None without one: no step
+    declared. Written by `protocol-fill --builds-on`, which computes the
+    changes; `id` in the shape STEP_ID, `run` a run id as runlog writes it
+    (`runs.RUN_ID`), `occasion` one of OCCASIONS, `why` not empty, each
+    `[[builds_on.change]]` with `what`, `from`, `to` and an optional `why`.
+    Raises BlockError naming the field on any other shape."""
+    data = parse_toml_block(text)
+    if "builds_on" not in data:
+        return None
+    table = data["builds_on"]
+    if not isinstance(table, dict):
+        raise BlockError("`builds_on` must be a table: [builds_on]")
+    _only_keys(table, "[builds_on]", BUILDS_ON_KEYS)
+    step_id, run = table.get("id"), table.get("run")
+    occasion, why = table.get("occasion"), table.get("why")
+    if not isinstance(step_id, str) or not STEP_ID.match(step_id):
+        raise BlockError(
+            f"[builds_on] id = {step_id!r} — the step's name: a lowercase "
+            f"letter, then up to 39 lowercase letters, digits or hyphens"
+        )
+    if not isinstance(run, str) or not RUN_ID.fullmatch(run):
+        raise BlockError(
+            f"[builds_on] run = {run!r} — no run id runlog writes; the basis is "
+            f"written by `protocol-fill <PROTOCOL> --builds-on <run_id>`, never typed"
+        )
+    if occasion not in OCCASIONS:
+        raise BlockError(
+            f"[builds_on] occasion = {occasion!r} — one of {', '.join(OCCASIONS)}"
+        )
+    if not isinstance(why, str) or not why.strip():
+        raise BlockError("[builds_on] why — empty or missing: a step owes its reason")
+    return BuildsOn(step_id, run, occasion, why, _step_changes(table.get("change", [])))
+
+
+def _step_changes(rows: object) -> tuple[StepChange, ...]:
+    """The `[[builds_on.change]]` rows of a `[builds_on]` table. Raises
+    BlockError on a row that is not a table, an unknown key, or a missing
+    or non-string field (`why` may be absent, never a non-string)."""
+    if not isinstance(rows, list):
+        raise BlockError("[builds_on] change must be [[builds_on.change]] tables")
+    out = []
+    for i, row in enumerate(rows, start=1):
+        where = f"[[builds_on.change]] #{i}"
+        if not isinstance(row, dict):
+            raise BlockError(f"{where} is not a table")
+        _only_keys(row, where, CHANGE_KEYS)
+        values = {k: row.get(k) for k in ("what", "from", "to")}
+        missing = [k for k, v in values.items() if not isinstance(v, str)]
+        if missing:
+            raise BlockError(f"{where}: {', '.join(missing)} missing or not a string")
+        why = row.get("why")
+        if why is not None and not isinstance(why, str):
+            raise BlockError(f"{where}: why = {why!r} — a string, or absent")
+        out.append(
+            StepChange(
+                str(values["what"]),
+                str(values["from"]),
+                str(values["to"]),
+                why if why and why.strip() else None,
+            )
+        )
+    return tuple(out)
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:

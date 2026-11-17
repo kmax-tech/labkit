@@ -662,6 +662,50 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     return derived_from
 
 
+def require_step_basis(base_dir: Path, pid: str | None, text: str | None) -> None:
+    """Refuse a start under a protocol TEXT (id PID) whose `[builds_on]`
+    cannot be built on, before mkdir: a table that does not read, or a
+    basis run that is no completed run of this area (`completed_parent`),
+    a repeat — supporting evidence, never a basis —, or bound to another
+    protocol. Nothing without a protocol or a `[builds_on]` table. Whether
+    the declared changes match the basis's own text is the gates', not the
+    start's. Raises SystemExit with the sentence and its way out."""
+    if text is None:
+        return
+    try:
+        step = protocol_block.builds_on(text)
+    except protocol_block.BlockError as exc:
+        raise SystemExit(
+            with_way_out(
+                f"runlog: {exc}",
+                "write the step with `protocol-fill <PROTOCOL> --builds-on <run_id> "
+                '--id <step> --occasion <occasion> --why "…"`',
+            )
+        ) from exc
+    if step is None:
+        return
+    basis = completed_parent(
+        base_dir, "[builds_on] run", step.run, " — a step builds on a finished run"
+    )
+    if basis.repeat_of is not None:
+        raise SystemExit(
+            with_way_out(
+                f"runlog: [builds_on] run = {step.run!r} is a repeat of "
+                f"{basis.repeat_of} — supporting evidence, never a step's basis",
+                f"build on {basis.repeat_of}",
+            )
+        )
+    if basis.protocol.id != pid:
+        raise SystemExit(
+            with_way_out(
+                f"runlog: [builds_on] run = {step.run!r} is bound to "
+                f"{basis.protocol.id or 'no protocol'}, not to this protocol ({pid})",
+                "build on a run of this protocol; a run of another protocol is "
+                "read as an input (its origin), not built on",
+            )
+        )
+
+
 @dataclass(frozen=True)
 class Prepared:
     """Phase 1 of a run's start, the preparation: what the run is held to,
@@ -702,7 +746,8 @@ def prepare(
     """Phase 1 — preparation. Reads what every check holds the run to,
     each once, and refuses what cannot be read, before any check and
     before mkdir: a parent that is no completed run (`_derived_parent`),
-    a protocol that cannot be bound (`protocol_binding`), a promise block
+    a protocol that cannot be bound (`protocol_binding`), a step basis
+    that cannot be built on (`require_step_basis`), a promise block
     that does not parse or names code that does not exist
     (`_promise_snapshot`) — each a SystemExit. Freezes the config: what
     the registration check holds is what config.json records, but for a
@@ -722,6 +767,9 @@ def prepare(
                 "run the full measurement with run_kind='measurement'",
             )
         )
+    require_step_basis(
+        base_dir, bound.head.id if bound.head is not None else None, bound.text
+    )
     block, snapshot = _promise_snapshot(base_dir, bound.text)
     return Prepared(
         derived_from=derived,
