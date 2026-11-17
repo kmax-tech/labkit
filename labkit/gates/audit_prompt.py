@@ -97,7 +97,9 @@ INLINE_NOTE = (
     "protocol, with its state, result, registration and code then, under "
     "`===== RUNS OF THIS PROTOCOL <id> =====` and `===== RUNS OF SOURCE "
     "PROTOCOL <id> =====` lines and each run's whole code diff under "
-    "`===== RUN DIFF <compared> → <run> =====` lines, and for a computation over a model's annotations the "
+    "`===== RUN DIFF <compared> → <run> =====` lines, a diff an earlier "
+    "finding asked for under `===== REQUESTED DIFF <old> → <new>[, <path>] "
+    "=====` lines, and for a computation over a model's annotations the "
     "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
     "(the bound apply protocol and its result as FILE lines), for a "
     "confirmatory protocol that replaces another the predecessor's "
@@ -580,7 +582,8 @@ class Followup(NamedTuple):
 def required_check_line(f: findings.Finding, metrics: dict | None) -> str:
     """The line a prompt shows under F when F requires a check: the
     metrics.json key with its note and its whole value as METRICS shows it
-    (a `file:` check: where the dependency is shown whole), or that it is
+    (a `file:` check: where the dependency is shown whole; a `diff:` check:
+    where the requested diff is), or that it is
     missing; "" when F requires none. METRICS is the snapshot the prompt
     renders (`RunShown.evidence`), never the file read again. The one
     wording of the follow-up piece (`earlier_piece`) and the decision
@@ -589,11 +592,16 @@ def required_check_line(f: findings.Finding, metrics: dict | None) -> str:
         return ""
     note = f" ({f.check_note})" if f.check_note else ""
     present = metrics is not None and f.check in metrics
-    if present and f.check.startswith(findings.FILE_CHECK):
+    if present and f.check.startswith((findings.FILE_CHECK, findings.DIFF_CHECK)):
         return f"required check `{f.check}`{note}: shown above under `{(metrics or {})[f.check]}`"
     if present:
         value = json.dumps((metrics or {})[f.check], ensure_ascii=False)
         return f"required check `{f.check}`{note} = {value}"
+    if f.check.startswith(findings.DIFF_CHECK):
+        return (
+            f"required check `{f.check}`: not shown — its `REQUESTED DIFF` "
+            f"piece above says why"
+        )
     if f.check.startswith(findings.FILE_CHECK):
         return (
             f"required check `{f.check}`: not among the answering run's "

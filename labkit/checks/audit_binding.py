@@ -41,7 +41,12 @@ from labkit.formats import (
     runs,
 )
 from labkit.checks.origin_check import origin_piece
-from labkit.checks.protocol_runs import bound_protocol_file, protocol_runs_pieces
+from labkit.checks.protocol_runs import (
+    NOT_SHOWN,
+    REQUEST_LABEL,
+    bound_protocol_file,
+    protocol_runs_pieces,
+)
 from labkit.formats.area_state import AreaState, gone_run_restore
 from labkit.formats.evidence import AreaEvidence
 from labkit.formats.gate import (
@@ -116,7 +121,9 @@ def audited_run(state: AreaState, protocol: Path, text: str) -> tuple[Path | Non
     return choice.run_dir, ""
 
 
-def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]]:
+def run_rows(
+    area: Path, run_dir: Path | None, why: str, requests: Iterable[str] = ()
+) -> list[tuple[str, str]]:
     """What MODE analysis is told to read of RUN_DIR, the answering run as
     `audited_run` chose it ONCE for both the prompt and the record: `(label,
     text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
@@ -124,7 +131,8 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     its declared dependencies (`dependency_pieces`), its input origins
     with their state now (`origin_check.origin_piece`) and the protocol each
     origin run was measured under as it saw it then
-    (`source_protocol_pieces`). The dependency, origin and source protocol
+    (`source_protocol_pieces`), and every run of those protocols with the
+    diffs REQUESTS asks for (`protocol_runs_pieces`). The dependency, origin and source protocol
     pieces are absent when RUN_DIR's input record does not read: the record
     checks name that, so absent here is no "nothing to judge". One `(label, note)`
     pair says why there is nothing: WHY (no protocol id, no completed bound
@@ -153,7 +161,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     out += dependency_pieces(run_dir)
     out += origin_piece(area, run_dir)
     out += source_protocol_pieces(area, run_dir)
-    out += protocol_runs_pieces(area, run_dir)
+    out += protocol_runs_pieces(area, run_dir, requests)
     return out
 
 
@@ -325,20 +333,29 @@ def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding
 DEPENDENCY_SHOW_MAX = 64_000
 
 
-#: how a dependency piece's label opens, and how a piece not shown whole opens
+#: how a dependency piece's label opens; a piece not shown whole opens
+#: with NOT_SHOWN, as a requested diff's does
 DEPENDENCY_LABEL = "DEPENDENCY "
-NOT_SHOWN = "not shown:"
 
 
 def shown_files(pieces: Iterable[tuple[str, str]]) -> dict[str, str]:
     """`file:<recorded path>` → its piece's label, for every dependency piece
     of PIECES (`dependency_pieces`) shown whole — what a required `check:
-    file:<path>` is found in. A file named but not shown is not there."""
+    file:<path>` is found in —, and `diff:<old>..<new>[:<path>]` → its
+    label for every requested diff shown (`protocol_runs.requested_pieces`).
+    A file or diff named but not shown is not there."""
     out: dict[str, str] = {}
     for label, text in pieces:
-        if label.startswith(DEPENDENCY_LABEL) and not text.startswith(NOT_SHOWN):
+        if text.startswith(NOT_SHOWN):
+            continue
+        if label.startswith(DEPENDENCY_LABEL):
             recorded = label.removeprefix(DEPENDENCY_LABEL).split(" (", 1)[0]
             out[f"{findings.FILE_CHECK}{recorded}"] = label
+        elif label.startswith(REQUEST_LABEL):
+            runs_part, _, path = label.removeprefix(REQUEST_LABEL).partition(", ")
+            old, _, new = runs_part.partition(" → ")
+            section = f":{path}" if path else ""
+            out[f"{findings.DIFF_CHECK}{old}..{new}{section}"] = label
     return out
 
 
@@ -476,10 +493,18 @@ def run_shown(area: Path, run_dir: Path | None, why: str, text: str) -> RunShown
     prose is not a piece: the prompt inlines the protocol whole. Binding it
     makes a corrected description (a count in Data / scope) a new state the
     next audit follows earlier findings up in; the fields written after the
-    audit are not in it."""
+    audit are not in it. The diffs the protocol's decided findings ask for
+    (`followup.diff_requests`) are among the pieces, so deciding one makes
+    the state the follow-up shows them in. Raises AuditError when the
+    area's records do not read."""
+    pid = protocol_block.id_of(text)  # None asks for nothing
+    try:
+        requests = followup.diff_requests(followup.protocol_records(area, pid))
+    except findings.FindingsError as exc:
+        raise AuditError(str(exc), fix=findings.record_way(area)) from exc
     pieces = tuple(
         [
-            *run_rows(area, run_dir, why),
+            *run_rows(area, run_dir, why, requests),
             *declared_piece(run_dir, protocol_block.declared_run_shown(text)),
         ]
     )

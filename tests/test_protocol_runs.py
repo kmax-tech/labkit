@@ -225,6 +225,127 @@ class ChosenRun(e2e.CountCommands):
         self.assertIn("a judgement that needs it stays open", prompt)
 
 
+#: a shared table the code of run B adds beside the decisive change: it
+#: makes the whole diff larger than the patched budget, the script's
+#: section alone smaller
+LARGE_TABLE = "\n".join(
+    ["WEIGHTS = ("] + [f"    {n},  # weight class {n}" for n in range(2000)] + [")"]
+)
+#: the patched budget for diffs: between the script's section and the whole
+REQUEST_BUDGET = 20_000
+
+
+class RequestedDiff(e2e.CountCommands):
+    """The way to evidence past the budget, on real commands: run B's code
+    adds a large table to `lib/` and, in the measuring script past the
+    excerpt, drops the one-line documents. The first audit is shown the
+    diff cut; its auditor asks for the script's section with a `diff:`
+    check. Decided, the request stales that audit, the follow-up is shown
+    the section whole as a REQUESTED DIFF piece bound in its digest, and
+    its record covers the state. Twin: a section past the budget stays
+    `not shown:`, and the follow-up's `resolved` is refused while
+    `not_assessable` stands. Every command runs under one patched budget,
+    report-check's recomputed digest among them."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        budget = mock.patch.object(protocol_runs, "DIFF_BUDGET", REQUEST_BUDGET)
+        budget.start()
+        self.addCleanup(budget.stop)
+        self.run_a = self.measure()
+        script = self.area / "scripts" / "01_measure.py"
+        e2e._replace(
+            script,
+            [
+                ('COUNT_FIELD = "lines"', f'COUNT_FIELD = "lines"\n{PADDING}'),
+                (KEEP_ALL, DROP_SHORT),
+            ],
+        )
+        table = self.lab.root / "lib" / "weights.py"
+        table.parent.mkdir(exist_ok=True)
+        table.write_text(LARGE_TABLE + "\n", encoding="utf-8")
+        self.lab.commit("a shared weight table; count only longer documents")
+        self.run_b = self.measure()
+        self.rel = self.area.relative_to(self.lab.root).as_posix()
+        self.path = f"{self.rel}/scripts/01_measure.py"
+        self.check = f"diff:{self.run_b}..{self.run_a}:{self.path}"
+        self.label = (
+            f"{protocol_runs.REQUEST_LABEL}{self.run_b} → {self.run_a}, {self.path}"
+        )
+        self.decisive = f"-{DROP_SHORT}"
+
+    def asked(self) -> Path:
+        """The first audit, its BLOCKER asking for the script's section; the
+        record it wrote."""
+        answer = (
+            f"BLOCKER · {self.path}:1 · undetermined · B's code differs from "
+            f"A's past the excerpt shown; the change that moves lines_mean may "
+            f"stand there · lines_mean of B against A · new class · show the "
+            f"omitted lines · check: {self.check} — confirms if a filter on the "
+            f"documents stands there, clears if only the table does\n\n"
+            f"{self.clean.replace('verdict: 0 blockers', 'verdict: 1 blockers')}"
+        )
+        _, out, prompt = self.analysis(answer)
+        self.assertIsNotNone(self.record, out)
+        self.assertIn("[not shown in full:", prompt)
+        self.assertIn(f"check: diff:{self.run_b}..{self.run_a}[:<path>]", prompt)
+        self.assertNotIn(self.decisive, prompt)
+        self.assertNotIn(f"===== {self.label}", prompt)
+        assert self.record is not None
+        return self.record
+
+    def test_the_section_asked_for_reaches_the_follow_up_and_binds_it(self):
+        first = self.asked()
+        # undecided, the request moves nothing: the audit that asked covers
+        self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
+        said = self.decide(
+            first, 1, "fixed", "the omitted section is asked of the follow-up"
+        )
+        self.assertIn("nothing to build or measure", said)
+        # decided, the request enters the state: the follow-up is owed, no run
+        _, out = _verdict(self.area, self.protocol)
+        self.assertNotEqual(stale_lines(out), [], out)
+        self.assertNotIn("then a new run", out)
+
+        verdict = (
+            f"FIX · {first.name}#1 · unresolved · implementation · the "
+            f"requested diff shows B dropping the one-line documents\n\n{self.clean}"
+        )
+        _, out, prompt = self.analysis(verdict)
+        self.assertIsNotNone(self.record, out)  # held by the carried finding
+        section = piece(prompt, self.label)
+        self.assertIn(self.decisive, section)
+        self.assertNotIn("weight class", section)  # the section, not the table
+        # the piece, not the instructions' mention of its label
+        earlier = prompt.split(
+            "===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n"
+        )[-1]
+        self.assertIn(f"required check `{self.check}`", earlier)
+        self.assertIn(f"shown above under `{self.label}`", earlier)
+        # the follow-up's record covers the state it was shown, the carried
+        # finding keeping the request in it
+        self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
+
+    def test_a_section_past_the_budget_leaves_the_judgement_open(self):
+        first = self.asked()
+        self.decide(first, 1, "fixed", "the omitted section is asked of the follow-up")
+        with mock.patch.object(protocol_runs, "DIFF_BUDGET", 100):
+            resolved = f"FIX · {first.name}#1 · resolved · only the table changed\n\n{self.clean}"
+            rc, out, prompt = self.analysis(resolved)
+            self.assertNotEqual(rc, 0, out)
+            self.assertIsNone(self.record)
+            self.assertTrue(
+                piece(prompt, self.label).split("\n", 1)[1].startswith("not shown:")
+            )
+            self.assertIn(f"required check `{self.check}`: not shown", prompt)
+            self.assertNotIn(self.decisive, prompt)
+            # the same answer but its verdict is recorded: the refusal above
+            # was the verdict's, and the finding is carried open
+            _, out, _ = self.analysis(resolved.replace("resolved", "not_assessable", 1))
+            self.assertIsNotNone(self.record, out)
+            self.assertIn(f"carried from {first.name}#1 (not_assessable)", out)
+
+
 def _verdict(area: Path, protocol: Path) -> tuple[int, str]:
     """report-check on PROTOCOL: (exit, everything it told)."""
     out = io.StringIO()

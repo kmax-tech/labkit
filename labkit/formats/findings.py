@@ -64,7 +64,8 @@ instead of read.
 
 The statuses are named by their consequence: `fixed` — the person claims
 the whole confirmed fault repaired, with confirmation still owed; on an
-`undetermined` finding the required check is built and run, and the
+`undetermined` finding the required check is built and run (a `diff:`
+check is shown by the follow-up audit, nothing is built), and the
 follow-up audit settles the suspicion from its value, carrying a confirmed
 fault as `implementation` or `statement`; `limitation` — the
 finding is true and the number carries it as a Limitation line; `false-positive`
@@ -122,7 +123,7 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.commands import audit_command, decide_command
-from labkit.formats.runs import as_stored, date_minute, name_minute
+from labkit.formats.runs import RUN_ID, as_stored, date_minute, name_minute
 from labkit.formats.digests import digest
 from labkit.formats import rules
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
@@ -390,20 +391,56 @@ CHECK_FIELD = re.compile(r"·\s*check\s*:")
 #: its last character, after the parenthesis it closes the line and is no
 #: part of the note
 _CHECK = re.compile(
-    r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*|file:[^\s`()]+)`?"
+    r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*|(?:file|diff):[^\s`()]+)`?"
     r"(?:\s*\((?P<paren>.*\S.*)\)\.?|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
 )
-CHECK_KEY = re.compile(r"^(?:[a-z][a-z0-9_]*|file:[^\s`()]+)$")
+CHECK_KEY = re.compile(r"^(?:[a-z][a-z0-9_]*|(?:file|diff):[^\s`()]+)$")
 #: a check that asks for a file's content, not a computed value: the run
 #: declares the file as a dependency, so the follow-up is shown it
 FILE_CHECK = "file:"
+#: a check that asks for evidence the audit was not shown for want of
+#: room: the code difference of two runs, whole or one path's section of
+#: it (`diff_request`) — nothing to build or measure, the follow-up audit
+#: shows it (`protocol_runs.requested_pieces`)
+DIFF_CHECK = "diff:"
 #: how a carried finding names the one it continues: `<record file>#<n>`
 CARRIES_REF = re.compile(r"^[^\s#/]+\.toml#[1-9]\d*$")
 CHECK_FORM = (
-    "a closing `· check: <metrics key>` (lowercase snake_case) or `· check: "
-    "file:<repository path>`, optionally followed by ` (<what it must show>)` "
+    "a closing `· check: <metrics key>` (lowercase snake_case), `· check: "
+    "file:<repository path>` or `· check: diff:<run>..<run>[:<repository "
+    "path>]`, optionally followed by ` (<what it must show>)` "
     "or ` — <what it must show>` to the end of the line"
 )
+
+
+@dataclass(frozen=True)
+class DiffRequest:
+    """A `diff:` check read (`diff_request`): the code difference of run
+    NEW from run OLD, both of the audited area, and PATH, the repository
+    path (a file or a folder) whose section of it is asked — None for the
+    whole difference."""
+
+    old: str
+    new: str
+    path: str | None
+
+
+def diff_request(check: str) -> DiffRequest:
+    """CHECK, `diff:<OLD>..<NEW>` or `diff:<OLD>..<NEW>:<path>`, read.
+    Raises ValueError, quoting it, when a run is no run id or the path is
+    empty, absolute or climbs out of the repository."""
+    rest = check.removeprefix(DIFF_CHECK)
+    pair, colon, path = rest.partition(":")
+    old, dots, new = pair.partition("..")
+    form = f"`{DIFF_CHECK}<run>..<run>` or `{DIFF_CHECK}<run>..<run>:<repository path>`"
+    if not dots or not all(RUN_ID.fullmatch(r) for r in (old, new)):
+        raise ValueError(f"check {check!r}: two run ids expected — {form}")
+    if colon and (not path or path.startswith("/") or ".." in path.split("/")):
+        raise ValueError(
+            f"check {check!r}: the path is a repository path, relative and inside "
+            f"it — {form}"
+        )
+    return DiffRequest(old, new, path if colon else None)
 
 
 def check_of(text: str) -> tuple[str, str]:
@@ -434,6 +471,8 @@ def check_of(text: str) -> tuple[str, str]:
             f"a check field that does not read: {held.strip()[-160:]!r} — the form "
             f"is {CHECK_FORM}"
         )
+    if m["key"].startswith(DIFF_CHECK):
+        diff_request(m["key"])  # a request no follow-up could serve is refused here
     return m["key"], (m["paren"] or m["dash"] or "").strip()
 
 
@@ -563,6 +602,13 @@ def subject_refusal(f: Finding, status: str) -> str | None:
     built and run), and the follow-up judges the value."""
     if status != "limitation" or f.subject not in (IMPLEMENTATION, UNDETERMINED):
         return None
+    if f.subject == UNDETERMINED and f.check.startswith(DIFF_CHECK):
+        return (
+            "an undetermined finding is no limitation: a limit line does not "
+            "settle the suspicion — decide `fixed` (nothing to build: the "
+            "follow-up analysis audit shows the diff the check asks for) and "
+            "the follow-up judges it. `false-positive` when the auditor misread"
+        )
     if f.subject == UNDETERMINED:
         return (
             "an undetermined finding is no limitation: a limit line does not "
@@ -675,10 +721,22 @@ def check_order(check: str, note: str = "") -> str:
     kept rows carry what the value needs, `evaluate_rows()` computes it from
     them and writes it to metrics.json under CHECK, where the recheck
     recomputes it; NOTE, what it must show. A `file:<path>`
-    check asks for the file declared as the run's dependency instead. A key alone shows
+    check asks for the file declared as the run's dependency instead; a
+    `diff:` check asks nothing of the code, the follow-up audit shows the
+    code difference it names. A key alone shows
     nothing: the follow-up judges the computed value; with the check
     unwritten, every follow-up judges the repair not assessable."""
     shows = f" ({note})" if note else ""
+    if check.startswith(DIFF_CHECK):
+        # evidence the audit had no room for: nothing to build or measure
+        asked = diff_request(check)
+        section = f", the section of `{asked.path}`" if asked.path else ""
+        return (
+            f"nothing to build or measure — the follow-up analysis audit shows "
+            f"the code difference of run {asked.new} from run {asked.old}"
+            f"{section}{shows} whole, ahead of every other diff, as long as it "
+            f"fits the audit's budget for diffs"
+        )
     if check.startswith(FILE_CHECK):
         # a file's content, not a computed value: shown once the run declares
         # it, which no other audit piece shows
@@ -1573,8 +1631,13 @@ def _auditor_fields(
     if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
         raise FindingsError(
             f"{path}: finding {i}: check {check!r} is no metrics key (lowercase "
-            f"snake_case) and no `file:<path>`"
+            f"snake_case), no `file:<path>` and no `diff:<run>..<run>[:<path>]`"
         )
+    if check.startswith(DIFF_CHECK):
+        try:
+            diff_request(check)
+        except ValueError as exc:
+            raise FindingsError(f"{path}: finding {i}: {exc}") from exc
     note = row.get("check_note", "")
     if not isinstance(note, str) or (note and not check):
         raise FindingsError(

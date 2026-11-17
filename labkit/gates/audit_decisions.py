@@ -127,23 +127,7 @@ def decision_lines(
                     area, n, "STATUS", "<why>", where, protocol=protocol, base=here
                 ).line
             )
-            if f.check and f.grade != BLOCKER:
-                # a follow-up is shown decided BLOCKERs only: "the follow-up
-                # judges" would promise a check that never comes, and the
-                # WARNING would lapse undecided
-                out.append(
-                    f"      check asked: {findings.check_order(f.check, f.check_note)} "
-                    f"— no follow-up audit judges a {f.grade}; decide it now"
-                )
-            elif f.check:
-                # where the decision is made: a check left unwritten has every
-                # follow-up judge the repair not assessable
-                out.append(
-                    f"      check owed before `fixed` holds: "
-                    f"{findings.check_order(f.check, f.check_note)}; then measure "
-                    f"again and run `{audit_command(area, '--mode', 'analysis', protocol=protocol, base=here)}` "
-                    f"— the follow-up judges `fixed` by that value"
-                )
+            out += _check_lines(f, area, protocol, here)
             review = audit_command(
                 area,
                 "--review",
@@ -787,6 +771,36 @@ def decide(
     return 0
 
 
+def _check_lines(
+    f: findings.Finding, area: Path, protocol: Path | None, here: Path
+) -> list[str]:
+    """The line under F in the decision list that says what its required
+    check asks; none when F requires none."""
+    if not f.check:
+        return []
+    follow_up = audit_command(area, "--mode", "analysis", protocol=protocol, base=here)
+    asked = findings.check_order(f.check, f.check_note)
+    if f.grade != BLOCKER:
+        # a follow-up is shown decided BLOCKERs only: "the follow-up
+        # judges" would promise a check that never comes, and the
+        # WARNING would lapse undecided
+        return [
+            f"      check asked: {asked} — no follow-up audit judges a {f.grade}; "
+            f"decide it now"
+        ]
+    if f.check.startswith(findings.DIFF_CHECK):
+        # settled as a fault, the diff was shown: the repair follows the subject
+        if f.subject != findings.UNDETERMINED:
+            return []
+        return [f"      evidence asked: {asked}; decide `fixed` and run `{follow_up}`"]
+    # where the decision is made: a check left unwritten has every
+    # follow-up judge the repair not assessable
+    return [
+        f"      check owed before `fixed` holds: {asked}; then measure again and "
+        f"run `{follow_up}` — the follow-up judges `fixed` by that value"
+    ]
+
+
 def decision_lines_after(
     area: Path, record: Path, protocol: Path | None, rec: findings.Record, n: int
 ) -> list[str]:
@@ -817,7 +831,7 @@ def stands_check_hint(area: Path, record: findings.Record, f: findings.Finding) 
     the run's metrics that cannot be read."""
     if f.effect != findings.EFFECT_STANDS or not f.check:
         return ""
-    if f.check.startswith(findings.FILE_CHECK):
+    if f.check.startswith((findings.FILE_CHECK, findings.DIFF_CHECK)):
         return ""
     if record.run_id is None or record.run_id == findings.NO_RUN:
         return ""

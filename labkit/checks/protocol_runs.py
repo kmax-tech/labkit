@@ -10,7 +10,11 @@ differs from the compared run's, and how its code then differs (commit
 plus `uncommitted.patch`, `run_code`): git's file summary in the list,
 the whole diff as a RUN DIFF piece of its own while the audit's DIFF_BUDGET
 lasts; past it the list names the diff not shown in full, with an excerpt
-and the rest unread (`labkit-run-diff` prints it for a person). The pieces are in the digest the audit record binds
+and the rest unread (`labkit-run-diff` prints it for a person). A finding
+asks for such a diff, or one path's section of it, with a `diff:` check
+(`findings.diff_request`); once it is decided, every later audit shows it
+as a REQUESTED DIFF piece, taken from the budget before any other
+(`requested_pieces`). The pieces are in the digest the audit record binds
 (`audit_binding.run_shown`), so a new run of such a protocol stales the
 audit. Reads files and git, writes only git objects (`run_code`).
 """
@@ -18,12 +22,14 @@ audit. Reads files and git, writes only git objects (`run_code`).
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit.formats import runs
 from labkit.formats.area_state import Measured, state_of
+from labkit.formats.findings import DIFF_CHECK, DiffRequest, diff_request
 from labkit.formats.protocol_block import BlockError, find_by_id
 from labkit.formats.protocol_history import (
     StepThen,
@@ -47,6 +53,11 @@ DIFF_LABEL = "RUN DIFF "
 DIFF_BUDGET = 300_000
 #: the diff lines of the excerpt of a diff not shown in full
 DIFF_SHOW_LINES = 80
+#: how a requested diff's piece label opens; "<old> → <new>" and, for a
+#: section, ", <path>" follow (`request_label`)
+REQUEST_LABEL = "REQUESTED DIFF "
+#: how a piece that names evidence without showing it opens
+NOT_SHOWN = "not shown:"
 #: the characters of a run's metrics.json shown inline
 RESULT_SHOW_CHARS = 600
 
@@ -72,9 +83,11 @@ READING = (
     + " Each run's whole diff stands under its own `RUN DIFF <compared> → "
     "<run>` piece. Where the audit's budget for diffs is spent, a diff is "
     "marked not shown in full: the lines past its excerpt are unread, and a "
-    "judgement that needs them stays open — you have no shell, so write the "
-    "finding with an assignment naming `{command}` (run from the repository "
-    "root); never judge code you were not shown."
+    "judgement that needs them stays open — write it as an undetermined "
+    "BLOCKER closed by `· check: {check}` (the whole diff) or `· check: "
+    "{check}:<repository path>` (one file's or folder's section of it): "
+    "decided, the follow-up audit is shown it under `REQUESTED DIFF`, ahead "
+    "of every other diff. Never judge code you were not shown."
 )
 
 
@@ -120,20 +133,27 @@ class RunSeen:
 @dataclass
 class DiffBudget:
     """The characters of full diffs an audit may still be shown (LEFT,
-    from DIFF_BUDGET), and the RUN DIFF pieces taken so far — one budget
-    for all the protocol pieces of one audit."""
+    from DIFF_BUDGET), the RUN DIFF pieces taken so far, and the whole
+    differences a requested piece already shows (ASKED, (old run, new run)
+    → its label), which a RUN DIFF does not show twice — one budget for
+    all the protocol pieces of one audit."""
 
     left: int
     pieces: list[tuple[str, str]] = field(default_factory=list)
+    asked: dict[tuple[str, str], str] = field(default_factory=dict)
 
 
-def protocol_runs_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
+def protocol_runs_pieces(
+    area: Path, run_dir: Path, requests: Iterable[str] = ()
+) -> list[tuple[str, str]]:
     """The pieces MODE analysis is shown of the runs around RUN_DIR, the
     run audited: one for its own protocol, compared with RUN_DIR, then one
     per further protocol an origin run of RUN_DIR's inputs was bound to,
-    compared with the first such origin run, its origins marked. [] for a
-    run bound to no protocol or whose record does not read (the record
-    checks name that). Raises RuntimeError when git fails."""
+    compared with the first such origin run, its origins marked, then one
+    per `diff:` check in REQUESTS (`requested_pieces`, served first from
+    the budget), then the RUN DIFF pieces. [] for a run bound to no
+    protocol or whose record does not read (the record checks name that).
+    Raises RuntimeError when git fails."""
     rd = runs.read_run_dir(run_dir)
     if rd.config is None or rd.config.protocol.id is None:
         return []
@@ -141,13 +161,10 @@ def protocol_runs_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     root = git_root(area)
     pid = rd.config.protocol.id
     budget = DiffBudget(DIFF_BUDGET)
-    out = [
-        protocol_piece(area, root, state.measured_of(pid), rd, OWN_LABEL, set(), budget)
-    ]
     try:
         entries = runs.read_data(run_dir) or []
     except runs.ArtefactError:
-        return out + budget.pieces
+        entries = []  # the record checks name it; no source protocol is shown
     origins = [e.origin_run for e in entries if e.origin_run is not None]
     by_protocol: dict[str, list[runs.RunDir]] = {}
     for run_id in dict.fromkeys(origins):
@@ -155,15 +172,124 @@ def protocol_runs_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
         opid = origin.config.protocol.id if origin.config is not None else None
         if opid is not None and opid != pid:
             by_protocol.setdefault(opid, []).append(origin)
-    for opid, sources in by_protocol.items():
+    listed = [state.measured_of(pid), *map(state.measured_of, by_protocol)]
+    asked = requested_pieces(area, root, requests, listed, budget)
+    out = [protocol_piece(area, root, listed[0], rd, OWN_LABEL, set(), budget)]
+    for (opid, sources), measured in zip(by_protocol.items(), listed[1:]):
         marked = {s.dir.name for s in sources}
-        measured = state.measured_of(opid)
         out.append(
             protocol_piece(
                 area, root, measured, sources[0], SOURCE_LABEL, marked, budget
             )
         )
-    return out + budget.pieces
+    return out + asked + budget.pieces
+
+
+def request_label(asked: DiffRequest) -> str:
+    """The label of the piece that shows ASKED: REQUEST_LABEL, the runs,
+    and for a section its path."""
+    section = f", {asked.path}" if asked.path else ""
+    return f"{REQUEST_LABEL}{asked.old} → {asked.new}{section}"
+
+
+def requested_pieces(
+    area: Path,
+    root: Path | None,
+    requests: Iterable[str],
+    listed: list[Measured],
+    budget: DiffBudget,
+) -> list[tuple[str, str]]:
+    """One `(label, text)` piece per `diff:` check of REQUESTS
+    (`findings.diff_request`), in their order: the code difference of its
+    new run from its old one, both runs of the protocols LISTED shows, or
+    the section of it whose file paths are its path or lie under it —
+    whole, from BUDGET before any RUN DIFF piece takes from it. NOT_SHOWN
+    and why, with nothing of the diff, when a run is listed nowhere or its
+    code does not read back, the path names nothing that differs, or the
+    text is past what BUDGET has left: a section is the narrower request.
+    A whole difference shown is noted in BUDGET.asked. Raises
+    RuntimeError when git fails."""
+    by_name = {rd.dir.name: rd for m in listed for rd in m.runs}
+    out: list[tuple[str, str]] = []
+    for check in requests:
+        asked = diff_request(check)
+        label = request_label(asked)
+        missing = [r for r in (asked.old, asked.new) if r not in by_name]
+        if missing:
+            out.append(
+                (
+                    label,
+                    f"{NOT_SHOWN} run {missing[0]} is no run of the protocols this "
+                    f"audit lists",
+                )
+            )
+            continue
+        if root is None:
+            out.append((label, f"{NOT_SHOWN} the area lies in no git repository"))
+            continue
+        old, new = (code_then(by_name[r], root) for r in (asked.old, asked.new))
+        if old.tree is None or new.tree is None:
+            unread = old if old.tree is None else new
+            out.append((label, f"{NOT_SHOWN} {unread.where}"))
+            continue
+        try:
+            diff = code_difference(root, code_scope(area, root), old.tree, new.tree)
+        except GitError as exc:
+            out.append((label, f"{NOT_SHOWN} {exc}"))
+            continue
+        text = diff.diff if asked.path is None else diff_section(diff.diff, asked.path)
+        files = [ln.split("|")[0].strip() for ln in diff.stat.splitlines() if "|" in ln]
+        if not text:
+            out.append(
+                (
+                    label,
+                    f"{NOT_SHOWN} no file of the code compared at or under "
+                    f"`{asked.path or '.'}` differs; the files that do: "
+                    f"{', '.join(files) or 'none'}",
+                )
+            )
+            continue
+        if len(text) > budget.left:
+            out.append(
+                (
+                    label,
+                    f"{NOT_SHOWN} {len(text)} characters, past the {budget.left} "
+                    f"left of the {DIFF_BUDGET} this audit may be shown of all "
+                    f"diffs — ask for the section of one path, "
+                    f"`{DIFF_CHECK}{asked.old}..{asked.new}:<path>`; the files "
+                    f"that differ: {', '.join(files)}",
+                )
+            )
+            continue
+        budget.left -= len(text)
+        if asked.path is None:
+            budget.asked[(asked.old, asked.new)] = label
+        head = f"{asked.old}: {old.where}\n{asked.new}: {new.where}\n"
+        out.append((label, head + text))
+    return out
+
+
+def diff_section(diff: str, path: str) -> str:
+    """The file sections of the unified DIFF (each from its `diff --git`
+    line to the next) whose old or new path is PATH or lies under it; ""
+    when none does."""
+    sections = re.split(r"(?m)^(?=diff --git )", diff)
+    path = path.rstrip("/")
+    return "".join(
+        part
+        for part in sections
+        if any(
+            p == path or p.startswith(f"{path}/")
+            for p in _section_paths(part.split("\n", 1)[0])
+        )
+    )
+
+
+def _section_paths(line: str) -> list[str]:
+    """The old and new path of a `diff --git a/<old> b/<new>` LINE; none
+    for any other line (the text before the first section)."""
+    m = re.match(r"diff --git a/(.*) b/(.*)$", line)
+    return [m[1], m[2]] if m else []
 
 
 def protocol_piece(
@@ -189,8 +315,7 @@ def protocol_piece(
     seen = [_seen(protocol, rd, root, states) for rd in measured.runs]
     lines = [
         READING.format(
-            base=f"run {base.dir.name}",
-            command=run_diff_command(area, base.dir.name, "<run>"),
+            base=f"run {base.dir.name}", check=f"{DIFF_CHECK}{base.dir.name}..<run>"
         ),
         "",
         f"Compared with: run {base.dir.name}, its text {base_step.where}; its "
@@ -377,6 +502,10 @@ def _code_lines(
     out = [f"    code ({code.where}), files changed:"]
     out += [f"      {line}" for line in diff.stat.splitlines()]
     label = f"{DIFF_LABEL}{base.dir.name} → {rd.dir.name}"
+    asked = budget.asked.get((base.dir.name, rd.dir.name))
+    if asked is not None:
+        out.append(f"      the whole diff: under {asked}")
+        return out
     if len(diff.diff) <= budget.left:
         budget.left -= len(diff.diff)
         budget.pieces.append((label, diff.diff))
@@ -389,7 +518,8 @@ def _code_lines(
         f"      [not shown in full: {len(diff.diff)} characters, past the "
         f"{DIFF_BUDGET} this audit may be shown of all diffs; {len(shown)} of "
         f"{len(rows)} diff lines above, the rest unread — a judgement that "
-        f"needs it stays open; "
-        f"`{run_diff_command(area, base.dir.name, rd.dir.name)}` prints all]"
+        f"needs it stays open: ask for it with "
+        f"`· check: {DIFF_CHECK}{base.dir.name}..{rd.dir.name}[:<path>]`; "
+        f"`{run_diff_command(area, base.dir.name, rd.dir.name)}` prints all for a person]"
     )
     return out

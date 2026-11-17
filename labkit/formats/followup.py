@@ -38,6 +38,7 @@ from pathlib import Path
 from labkit.formats.gate import BLOCKER
 from labkit.formats.findings import (
     DECIDED,
+    DIFF_CHECK,
     Finding,
     FindingsError,
     FixVerdict,
@@ -186,6 +187,25 @@ def earlier_blockers(
         and m.finding.status in DECIDED
         and not current(m.record)
     ]
+
+
+def diff_requests(records: list[Record]) -> list[str]:
+    """The `diff:` checks (`findings.diff_request`) of the heads of
+    RECORDS' chain that are BLOCKERs decided or carried, once each, in
+    record order — the code differences an analysis audit of their
+    protocol is shown whole (`protocol_runs.requested_pieces`). A request
+    counts from its decision on, not from the record alone, so the audit
+    that asked still covers its state until the person decides; a carried
+    head keeps it, so the follow-up's own record covers the state it was
+    shown. Raises what `chain` raises."""
+    asked = [
+        m.finding.check
+        for m in chain(records).heads()
+        if m.finding.grade == BLOCKER
+        and m.finding.check.startswith(DIFF_CHECK)
+        and (m.finding.status in DECIDED or m.finding.carries)
+    ]
+    return list(dict.fromkeys(asked))
 
 
 def earlier_corrections(
@@ -347,8 +367,11 @@ def _earlier_hold(
     on_head = [v for v in verdicts if v.ref == m.ref]
     now = decision_digest(f)
     valid = [v for v in on_head if v.decision_sha == now]
+    # a `diff:` check is the follow-up's own to show, nothing a run carries
+    owes_run = bool(f.check) and not f.check.startswith(DIFF_CHECK)
+    then = "then a new run, and " if owes_run else "then "
     if not on_head:
-        if f.check and (metrics is None or f.check not in metrics):
+        if owes_run and (metrics is None or f.check not in metrics):
             return Hold(
                 m.ref,
                 f"no follow-up, and the run lacks the required check `{f.check}`",
@@ -373,7 +396,7 @@ def _earlier_hold(
         return Hold(
             m.ref,
             f"`resolved`, but the required check `{f.check}` was not in the run shown",
-            f"{check_order(f.check, f.check_note)}; then a new run, and {STEP_AUDIT}",
+            f"{check_order(f.check, f.check_note)}; {then}{STEP_AUDIT}",
         )
     return None
 
