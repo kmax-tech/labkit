@@ -22,6 +22,11 @@ import pytest
 from labkit.formats import runs
 from labkit.formats.runs import RUN_ID_TIME
 from labkit.checks import recheck
+from labkit.checks.audit_binding import (
+    NOT_RECONSTRUCTED,
+    SOURCE_PROTOCOL_LABEL,
+    run_rows,
+)
 from labkit.gates import report_check
 from labkit.gates.finalize import finalize_area
 from labkit.formats import standard_contract as sc
@@ -134,6 +139,13 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
 
+#: the measurement protocol's run list, and a line of it as A0 started
+#: under it and as it reads for A1
+RUNS_LINE = "- <run_id> — <one sentence: what this run was>"
+THEN = "- planned: one count of the lines per document (written for A0)"
+NOW = "- planned: count again into a file of its own (written for A1)"
+
+
 def _recount(inputs: Mapping[str, Path]) -> dict:
     """The computation's evaluation over its recorded inputs: the mean
     line count of the documents under its `source` input."""
@@ -151,7 +163,9 @@ class TwoProtocolsOfOneArea(CountCommands):
     its own stamped id and script (`03_compare.py`), reading A0's rows.
     The station finds the origin in the other protocol's run, keeps it when
     the measurement is run again (A1), and holds C when that origin is gone; the measurement protocol's own result gets no
-    finding from it. Existing area or repository checks may hold too —
+    finding from it. The measurement protocol changes between A0 and A1:
+    C's auditor is shown it as A0 started under it (commit and patch), and
+    told it cannot be read back once A0 is gone. Existing area or repository checks may hold too —
     asserted here is only the input-origins station's part of each gate's
     output."""
 
@@ -186,9 +200,12 @@ class TwoProtocolsOfOneArea(CountCommands):
         lab, measured = self.lab, self.protocol
         text = measured.read_text(encoding="utf-8")
         pid = protocol_block.head(text).id
-        assert pid is not None
+        assert pid is not None and RUNS_LINE in text
         computed = self.area / "PROTOCOL-compared.md"
         computed.write_text(text.replace(pid, "p-0123456789abcdef"), encoding="utf-8")
+        # A0 starts with a line of the measurement protocol not yet committed:
+        # its uncommitted.patch holds it
+        measured.write_text(text.replace(RUNS_LINE, f"{RUNS_LINE}\n{THEN}"), "utf-8")
         a0 = self.run_script("01_measure.py")
         (written,) = runs.read_outputs(self.area / "runs" / a0) or []
         script = (self.area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
@@ -207,6 +224,8 @@ class TwoProtocolsOfOneArea(CountCommands):
         measure.write_text(
             script.replace('"lines.jsonl"', '"lines-again.jsonl"'), encoding="utf-8"
         )
+        # the measurement protocol changed for A1; C still reads A0's rows
+        measured.write_text(text.replace(RUNS_LINE, f"{RUNS_LINE}\n{NOW}"), "utf-8")
         lab.commit("C, and the measurement writes anew to its own file")
         a1 = self.run_script("01_measure.py")
         lab.commit("A1")
@@ -232,6 +251,15 @@ class TwoProtocolsOfOneArea(CountCommands):
         self.assertNotIn(f"the output of {a0}", prompt_m)
         self.assertNotIn(c, prompt_m)
         self.assertNotIn(a1, prompt_c)
+        # C's auditor is shown the measurement protocol as A0 started under
+        # it — commit and patch —, never as it reads now for A1
+        source = prompt_c.split(f"===== SOURCE PROTOCOL {a0} =====", 1)[1]
+        source = source.split("\n===== ", 1)[0]
+        self.assertIn(f"as origin run {a0} saw it", source)
+        self.assertIn("with its uncommitted.patch", source)
+        self.assertIn(THEN, source)
+        self.assertNotIn(NOW, prompt_c)
+        self.assertNotIn(THEN, computed.read_text(encoding="utf-8"))
 
         # recheck over C's inputs: pinned, then recomputed — A0 is not run again
         note = self.area / "notes-compared.md"
@@ -265,6 +293,13 @@ class TwoProtocolsOfOneArea(CountCommands):
         self.assertNotIn(
             gone, out
         )  # other checks may hold it: the committed run's removal
+        # and C's auditor is told the source protocol cannot be read back,
+        # with no other text in its place
+        pieces = dict(run_rows(self.area, self.area / "runs" / c, ""))
+        told = pieces[f"{SOURCE_PROTOCOL_LABEL}{a0}"]
+        self.assertTrue(told.startswith(NOT_RECONSTRUCTED), told)
+        self.assertNotIn(THEN, told)
+        self.assertNotIn(NOW, told)
 
 
 if __name__ == "__main__":

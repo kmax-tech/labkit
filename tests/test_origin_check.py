@@ -15,7 +15,13 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import origin_check
-from labkit.checks.audit_binding import run_rows
+from labkit.checks.audit_binding import (
+    NO_TEXT_IN_ITS_PLACE,
+    NOT_RECONSTRUCTED,
+    SOURCE_PROTOCOL_LABEL,
+    run_rows,
+    source_protocol_pieces,
+)
 from labkit.checks.origin_check import (
     BYTES_CHANGED,
     GONE,
@@ -293,6 +299,51 @@ class Piece(_Area):
         labels = [label for label, _ in run_rows(self.area, self.writer.dir, "")]
         self.assertNotIn(ORIGINS_LABEL, labels)
         self.assertEqual(origin_check.origin_piece(self.area, self.writer.dir), [])
+        self.assertEqual(source_protocol_pieces(self.area, self.writer.dir), [])
+
+
+class SourceProtocol(_Area):
+    """The source protocol piece where none can be read back: told why, and
+    no other text in its place. The text as an origin run saw it, read from
+    git, is shown in tests/test_origin_scenario.py (`TwoProtocolsOfOneArea`)."""
+
+    def source_piece(self) -> str:
+        (text,) = [
+            t
+            for label, t in run_rows(self.area, self.reader, "")
+            if label == f"{SOURCE_PROTOCOL_LABEL}{self.writer.run_id}"
+        ]
+        return text
+
+    def test_a_source_run_bound_to_no_protocol_is_told(self) -> None:
+        text = self.source_piece()
+        self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
+        self.assertIn("bound to no protocol", text)
+        self.assertIn(NO_TEXT_IN_ITS_PLACE, text)
+
+    def test_a_gone_source_run_is_told_not_replaced(self) -> None:
+        shutil.move(self.writer.dir, self.aside)
+        text = self.source_piece()
+        self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
+        self.assertIn(f"origin run {self.writer.run_id} is gone", text)
+
+    def test_a_source_directory_without_its_record_is_told(self) -> None:
+        (self.writer.dir / "config.json").rename(self.aside)
+        text = self.source_piece()
+        self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
+        self.assertIn(f"origin run {self.writer.run_id} has no record", text)
+
+    def test_one_piece_per_source_run_however_many_inputs_it_wrote(self) -> None:
+        with runlog.run(
+            "r", {}, self.area, data={"items": self.out, "again": self.out}
+        ) as r:
+            r.metrics(n=1)
+        labels = [
+            label
+            for label, _ in source_protocol_pieces(self.area, r.dir)
+            if label.startswith(SOURCE_PROTOCOL_LABEL)
+        ]
+        self.assertEqual(labels, [f"{SOURCE_PROTOCOL_LABEL}{self.writer.run_id}"])
 
 
 if __name__ == "__main__":

@@ -710,7 +710,11 @@ def differences_among_first_measurements(
 
 
 def as_measured(
-    protocol: Path, rd: "RunDir", root: Path | None
+    protocol: Path,
+    rd: "RunDir",
+    root: Path | None,
+    *,
+    role: str = "its first measurement",
 ) -> tuple[str | None, str]:
     """(text, where): PROTOCOL as run RD saw it — its recorded commit's text
     with the part of the run's `uncommitted.patch` that touches the protocol
@@ -721,15 +725,17 @@ def as_measured(
     blob, or a patch that does not apply (git's own error), a tree without
     the protocol (untracked when the run started), a text whose block is
     not the one the run recorded. A comparison that needs the text holds
-    on None (`unread_measurements`), never reads it as no change."""
+    on None (`unread_measurements`), never reads it as no change. ROLE
+    opens each WHERE sentence before RD's id: "its first measurement"
+    (the default) or "origin run"."""
     from labkit.formats.runs import patch_path, recorded_commit
 
     commit = recorded_commit(rd.config) if rd.config is not None else None
     if commit is None or root is None:
-        return None, f"its first measurement {rd.dir.name} recorded no commit"
+        return None, f"{role} {rd.dir.name} recorded no commit"
     if not commit_known(root, commit):
         return None, (
-            f"its first measurement {rd.dir.name} started at {commit[:12]}, a commit "
+            f"{role} {rd.dir.name} started at {commit[:12]}, a commit "
             f"this clone does not hold — `git fetch` brings it"
         )
     patch_file = patch_path(rd.dir)
@@ -741,27 +747,27 @@ def as_measured(
         if then is not None:  # renamed or moved since: found by its id
             blob = blobs_then(root, commit, patch, [then])[then]
     except GitError as exc:
-        return None, f"its first measurement {rd.dir.name}: {exc}"
+        return None, f"{role} {rd.dir.name}: {exc}"
     if blob is None:
         return None, (
-            f"its first measurement {rd.dir.name} ran with the protocol untracked: "
+            f"{role} {rd.dir.name} ran with the protocol untracked: "
             f"no commit holds what it registered"
         )
     try:
         text = blob_text(root, blob)
     except RuntimeError as exc:  # `git cat-file` could not read the blob
-        return None, f"its first measurement {rd.dir.name}: {exc}"
+        return None, f"{role} {rd.dir.name}: {exc}"
     patched = " with its uncommitted.patch" if patch.strip() else ""
     recorded = (rd.config.promises or {}).get("block_sha") if rd.config else None
     if recorded is not None and _block_sha(text) != recorded:
         return None, (
-            f"its first measurement {rd.dir.name} recorded block {recorded}, and "
+            f"{role} {rd.dir.name} recorded block {recorded}, and "
             f"{commit[:12]}{patched} gives {_block_sha(text)}: what it registered "
             f"cannot be read back"
         )
     return (
         text,
-        f"as its first measurement {rd.dir.name} saw it ({commit[:12]}{patched})",
+        f"as {role} {rd.dir.name} saw it ({commit[:12]}{patched})",
     )
 
 

@@ -18,7 +18,9 @@ part that fails is named (`origin_gap`):
 A stored origin is never decided again: a later run that writes the same
 file does not change it. A plain input (no origin) and the runs the lookup
 skipped are facts for the auditor, not findings (`origin_notes`). The
-facts are read once (`origin_now`); the decision opens no file. Read-only.
+facts are read once (`origin_now`); the decision opens no file. The
+protocol each origin run was measured under is the audit's evidence
+(`audit_binding.source_protocol_pieces`), not this check's. Read-only.
 """
 
 from __future__ import annotations

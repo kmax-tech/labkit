@@ -51,7 +51,16 @@ from labkit.formats.gate import (
     cited_rule,
     with_way_out,
 )
-from labkit.formats.repo import layout_root, only_protocol, path_kind, shown, rel_posix
+from labkit.formats.protocol_block import BlockError, find_by_id
+from labkit.formats.protocol_history import as_measured
+from labkit.formats.repo import (
+    git_root,
+    layout_root,
+    only_protocol,
+    path_kind,
+    rel_posix,
+    shown,
+)
 from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
@@ -110,8 +119,12 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     `audited_run` chose it ONCE for both the prompt and the record: `(label,
     text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
     output the run registered, numbered as `<n>: <row>`, its metrics.json,
-    its declared dependencies (`dependency_pieces`) and its input origins
-    with their state now (`origin_check.origin_piece`). One `(label, note)`
+    its declared dependencies (`dependency_pieces`), its input origins
+    with their state now (`origin_check.origin_piece`) and the protocol each
+    origin run was measured under as it saw it then
+    (`source_protocol_pieces`). The dependency, origin and source protocol
+    pieces are absent when RUN_DIR's input record does not read: the record
+    checks name that, so absent here is no "nothing to judge". One `(label, note)`
     pair says why there is nothing: WHY (no protocol id, no completed bound
     run), or no registered output."""
     repo = layout_root(area)
@@ -137,7 +150,112 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
         out.append((f"FILE: {rel_run}/metrics.json", shown_metrics))
     out += dependency_pieces(run_dir)
     out += origin_piece(area, run_dir)
+    out += source_protocol_pieces(area, run_dir)
     return out
+
+
+#: how the label of the piece MODE analysis shows of one origin run's
+#: protocol opens — the protocol an input's source was measured under, the
+#: source being its origin run (`origin_check`); the run's id follows
+#: (`source_protocol_pieces`)
+SOURCE_PROTOCOL_LABEL = "SOURCE PROTOCOL "
+
+#: what a source protocol shown is, and what it is not
+SOURCE_THEN = (
+    "the question, criteria and method this origin run was measured under, as "
+    "they stood when it started — evidence of the input's source, not the "
+    "conclusion of the run audited here (its own protocol states that), and "
+    "not the origin run's protocol as it reads today"
+)
+
+#: how a source protocol that cannot be read back is told
+NOT_RECONSTRUCTED = "not reconstructable:"
+NO_TEXT_IN_ITS_PLACE = (
+    "today's text is not shown in its place; a judgement that needs the origin "
+    "run's question, criteria or method names it as missing"
+)
+
+
+def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
+    """What MODE analysis shows of the protocol each origin run of RUN_DIR's
+    inputs was measured under: one `(label, text)` piece per origin run, in
+    the inputs' order — the protocol as that run saw it when it started,
+    its recorded commit with its uncommitted.patch (`source_protocol_then`),
+    marked as the origin run's then (SOURCE_THEN), never the protocol as it
+    reads now and never a newer run's; the text once, a later origin run
+    that saw the same text pointing to it. Where it cannot be read back the
+    piece says why (NOT_RECONSTRUCTED) and shows no other text. [] for a run
+    without an input from an origin run, or whose input record does not
+    read (the record checks name that). Reads files and git, writes
+    nothing."""
+    try:
+        entries = runs.read_data(run_dir) or []
+    except runs.ArtefactError:
+        return []  # a record that does not read: the record checks name it
+    origins = dict.fromkeys(e.origin_run for e in entries if e.origin_run is not None)
+    root = git_root(area)
+    first_with: dict[str, str] = {}  # a text shown → the origin run it was shown for
+    out: list[tuple[str, str]] = []
+    for run_id in origins:
+        text, where = source_protocol_then(area, run_id, root)
+        label = f"{SOURCE_PROTOCOL_LABEL}{run_id}"
+        if text is None:
+            out.append((label, f"{NOT_RECONSTRUCTED} {where} — {NO_TEXT_IN_ITS_PLACE}"))
+        elif text in first_with:
+            shown_as = f"{SOURCE_PROTOCOL_LABEL}{first_with[text]}"
+            out.append((label, f"{where}: the same text as under {shown_as}"))
+        else:
+            first_with[text] = run_id
+            out.append((label, f"{where} — {SOURCE_THEN}\n\n{text}"))
+    return out
+
+
+def source_protocol_then(
+    area: Path, run_id: str, root: Path | None
+) -> tuple[str | None, str]:
+    """(text, where): the protocol origin run RUN_ID of AREA was bound to,
+    as it saw it when it started (`protocol_history.as_measured`: its
+    recorded commit with its uncommitted.patch, held to the promise block
+    it recorded), found by the run's protocol id — the protocol carrying
+    it now, else the path the run recorded, and at that commit by the id
+    again. TEXT None, WHERE saying why: no directory of that id, a record
+    that does not read or is missing, a run bound to no protocol, AREA in
+    no repository (ROOT None), or `as_measured`'s causes. Never the
+    protocol's text as it stands. Reads files and git. Raises RuntimeError
+    when git fails."""
+    run_dir = runs.runs_path(area) / run_id
+    if path_kind(run_dir) != "dir":
+        return None, f"origin run {run_id} is gone (no run of that id under runs/)"
+    rd = runs.read_run_dir(run_dir)
+    if rd.error is not None:
+        return None, f"origin run {run_id} does not read: {rd.error}"
+    if rd.config is None:  # the directory stands, its config.json does not
+        return None, (
+            f"origin run {run_id} has no record (no config.json in runs/{run_id}/)"
+        )
+    binding = rd.config.protocol
+    if binding.id is None:
+        return None, (
+            f"origin run {run_id} was started bound to no protocol: no question, "
+            f"criteria or method was registered for it"
+        )
+    if root is None:
+        return None, (
+            f"origin run {run_id}: the area lies in no git repository, so no "
+            f"commit holds what it was measured under"
+        )
+    try:
+        protocol = find_by_id(area, binding.id)
+    except BlockError:
+        # none or several carry the id now: the recorded path, and at the
+        # run's commit `as_measured` finds the file by the id again
+        recorded = binding.path or ""
+        protocol = (
+            area / recorded
+            if recorded and not Path(recorded).is_absolute()
+            else area / f"PROTOCOL-{binding.id}.md"
+        )
+    return as_measured(protocol, rd, root, role="origin run")
 
 
 #: how large a declared dependency may be to be shown whole: a JSON model of
