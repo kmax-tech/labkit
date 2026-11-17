@@ -15,8 +15,10 @@ on, and no other:
    from its basis run's own text (`protocol_history.step_change_gaps`) —
    a guaranteed statement about the registered protocol parts only; a
    method changed in code alone is the analysis audit's question;
-3. the run without a step reads as the first measurements without a step
-   registered (`unstepped_holds`): a change in exploration is declared;
+3. the run without a step reads as the registration (`unstepped_holds`,
+   `registration_of`): a change in exploration is declared; a first
+   measurement that ran with the protocol changed in the tree and no step
+   holds only the runs that build on it;
 4. once the protocol adopts the answering run as its result (`adopted`),
    the protocol as it stands is that run's own text in what the number is
    about (`live_holds`): the result is read under the text it was
@@ -212,14 +214,15 @@ def unstepped_holds(
     root: Path,
 ) -> list[GateFinding]:
     """The holds on ORIGIN, the run of the chain that declares no step: it
-    is measured under the registration, which is the text of the first
-    measurements that declare no step (MEASURED's first groups). A first
-    measurement whose text or step cannot be read back holds the
-    comparison (`unread_hold`); first measurements without a step that saw
-    different registrations hold as in confirmation (`split_hold`: which
-    stood cannot be told); ORIGIN differing from them is a change without
-    a step, named with the way to declare it. Raises RuntimeError when
-    git fails."""
+    is measured under the registration (`registration_of`), read from the
+    first measurements that declare no step (MEASURED's first groups). A
+    first measurement whose text or step cannot be read back holds the
+    comparison (`unread_hold`); a registration that cannot be told holds
+    as in confirmation (`split_hold`); ORIGIN differing from it is a
+    change without a step, named with the way to declare it. A first
+    measurement outside the chain that differs from the registration holds
+    nothing here: it holds only what builds on it. Raises RuntimeError
+    when git fails."""
     registered: list[tuple[RunDir, str]] = []
     unread: list[str] = []
     for rd in (rd for group in measured.first_groups for rd in group):
@@ -232,13 +235,10 @@ def unstepped_holds(
         return [unread_hold(area, protocol, pid, unread)]
     if not registered:
         return []
-    (first, first_text), *rest = registered
-    for other, other_text in rest:
-        diffs = protocol_history.registration_differences(first_text, other_text)
-        if diffs:
-            return split_hold(protocol, pid, first, other, diffs)
-    if any(rd.dir.name == origin.run_id for rd, _ in registered):
-        return []
+    found = registration_of(protocol, pid, registered, root)
+    if isinstance(found, list):
+        return found
+    first, first_text = found
     assert origin.text is not None
     diffs = protocol_history.registration_differences(first_text, origin.text)
     if not diffs:
@@ -255,6 +255,41 @@ def unstepped_holds(
             rule=OPEN_RULE,
         )
     ]
+
+
+def registration_of(
+    protocol: Path, pid: str, registered: list[tuple[RunDir, str]], root: Path
+) -> tuple[RunDir, str] | list[GateFinding]:
+    """(run, text) of the registration among REGISTERED, the first
+    measurements without a step with their own texts: their text when they
+    agree; when they differ, the text of those whose own text is their
+    recorded commit's (`committed_at`) — a first measurement that ran with
+    the protocol changed in the tree is one measured without a step, not
+    the registration. The split hold (`split_hold`) when that leaves no
+    one text: none ran as committed, or those that did disagree. Raises
+    RuntimeError when git fails."""
+
+    def one_text(
+        pool: list[tuple[RunDir, str]],
+    ) -> tuple[RunDir, str] | list[GateFinding]:
+        (first, first_text), *rest = pool
+        for other, other_text in rest:
+            diffs = protocol_history.registration_differences(first_text, other_text)
+            if diffs:
+                return split_hold(protocol, pid, first, other, diffs)
+        return first, first_text
+
+    found = one_text(registered)
+    if not isinstance(found, list):
+        return found
+    as_committed = [
+        (rd, text)
+        for rd, text in registered
+        if (committed := protocol_history.committed_at(protocol, rd, root).text)
+        is not None
+        and not protocol_history.registration_differences(committed, text)
+    ]
+    return one_text(as_committed) if as_committed else found
 
 
 def live_holds(

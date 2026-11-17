@@ -279,6 +279,32 @@ class CorrectionInExploration(e2e.CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
 
+    def test_a_change_left_in_the_tree_holds_only_what_builds_on_it(self):
+        """The correction left in the tree, B measured at A's commit: B is
+        a first measurement without a step, A the one as committed. B is
+        held as measured without a step; C, a repair step on A at the same
+        commit, is measured, audited and adopted."""
+        self.describe(self.RIGHT)
+        run_b = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        (line,) = [
+            ln for ln in out.splitlines() if "BLOCKER" in ln and "without a step" in ln
+        ]
+        self.assertIn(f"run {run_b} was measured without a step", line)
+        self.assertIn(f"first measurement {self.run_a}'s", line)
+        self.assertIn("declare the step", line)
+        self.assertNotIn("first measurements saw different texts", out)
+        self.assertEqual(rc, 1, out)
+        self.repair_step()
+        run_c = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, run_c)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared(), run_c)
+
     def test_the_correction_measured_without_a_step_is_held_naming_the_step(self):
         self.describe(self.RIGHT)
         self.lab.commit("Data / scope corrected, no step")
@@ -290,6 +316,21 @@ class CorrectionInExploration(e2e.CorrectionCommands):
         self.assertIn(f"run {run_b} was measured without a step", line)
         self.assertIn("Data / scope", line)
         self.assertIn("declare the step", line)
+        self.assertEqual(rc, 1, out)
+
+
+class EveryFirstMeasurementChangedInTheTree(e2e.CountCommands):
+    """The twin: both first measurements ran with their own change in the
+    tree, none as committed — which text was the registration cannot be
+    told, and the split hold stays."""
+
+    def test_the_split_hold_stays(self):
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.measure()
+        self.lab.fill(self.protocol, "--force", UNIT)
+        self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertIn("first measurements saw different texts", out)
         self.assertEqual(rc, 1, out)
 
 
