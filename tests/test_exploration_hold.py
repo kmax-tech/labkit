@@ -114,18 +114,39 @@ class NoStepDeclared(_Exploration):
         rc, out, blockers = self.holds()
         self.assertEqual((rc, blockers), (0, []), out)
 
-    def test_a_text_changed_after_the_answering_run_is_held_before_any_run(self):
-        """Case 18: the result would be read under a text no run measured."""
+    def test_a_prepared_step_leaves_the_older_run_checkable(self):
+        """Step B written on A, not yet measured: A is not adopted, so
+        finalize reads it under its own text and does not hold it."""
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.step_on(self.run_a)
+        self.lab.commit("step B prepared on A, not measured")
+        rc, out, blockers = self.holds()
+        self.assertEqual((rc, blockers), (0, []), out)
+        self.assertIn("once it adopts that run as its result", out)
+
+    def test_adopting_a_run_under_a_text_changed_since_is_held(self):
+        """Case 18: the result would be read under a text no run measured —
+        held at the adoption, which checks its proposal through
+        report-check, and not written."""
         self.lab.fill(self.protocol, "--force", FILTER)
         self.lab.commit("the filter changed, not measured")
-        rc, out, blockers = self.holds()
-        (line,) = [ln for ln in blockers if "after the answering run" in ln]
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        (line,) = [
+            ln
+            for ln in out.splitlines()
+            if "BLOCKER" in ln and "after the answering run" in ln
+        ]
         self.assertIn(f"changed after the answering run {self.run_a}", line)
         self.assertIn("Exclusions / filters", line)
         self.assertIn(f"measure the change as a step on {self.run_a}", line)
         self.assertIn("--builds-on", line)
         self.assertNotIn(FIRST_LOCK, out)
-        self.assertEqual(rc, 1, out)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIsNone(self.declared())
+
+    def test_the_twin_adopting_under_the_unchanged_text_is_not_held_so(self):
+        _, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertNotIn("after the answering run", out)
 
     def test_a_run_measured_under_a_change_without_a_step_is_held(self):
         """Case 6, changed: declare its step."""

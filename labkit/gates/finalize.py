@@ -1063,8 +1063,9 @@ def finalize_area(
        registered decides the workflow (`registration_station`); a
        confirmatory or undecided one holds the promise block as the first
        measurement registered it (`registration_changes`), an exploratory
-       one each step of the answering run against its basis
-       (`exploration_hold`); a blocker names every change.
+       one each step of the answering run against its basis and, once the
+       protocol adopts that run, the protocol as it stands against the
+       run's own text (`exploration_hold`); a blocker names every change.
     3. intent-check — always; with an answering run it reads its metrics,
        without one it holds the promise block alone (step 1 names the run).
     4. the run's code and the declared scopes — only with a run: the code

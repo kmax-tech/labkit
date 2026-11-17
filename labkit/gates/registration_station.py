@@ -75,8 +75,13 @@ def check_registration(
     findings.note(
         (
             "  exploratory: each step the answering run builds on declares its "
-            "changes, and what the number is about is the text the answering run "
-            "measured"
+            "changes"
+            + (
+                ", and what the number is about is the text the answering run measured"
+                if exploration_hold.adopted(state.text_of(protocol), run)
+                else "; the protocol as it stands is held to the answering run's "
+                "text once it adopts that run as its result"
+            )
             if exploring
             else "  what the number is about and the promise block are the ones "
             "the first measurement registered"

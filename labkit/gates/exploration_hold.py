@@ -17,9 +17,11 @@ on, and no other:
    method changed in code alone is the analysis audit's question;
 3. the run without a step reads as the first measurements without a step
    registered (`unstepped_holds`): a change in exploration is declared;
-4. the protocol as it stands is the answering run's own text in what the
-   number is about (`live_holds`): the result is read under the text it
-   was measured under.
+4. once the protocol adopts the answering run as its result (`adopted`),
+   the protocol as it stands is that run's own text in what the number is
+   about (`live_holds`): the result is read under the text it was
+   measured under. Before the adoption a newer text — a step prepared,
+   not yet measured — leaves the older run checkable under its own text.
 
 Read-only; finalize tells what it finds.
 """
@@ -29,7 +31,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
-from labkit.formats import evidence, protocol_history
+from labkit.formats import evidence, protocol_block, protocol_history
 from labkit.formats.area_state import AreaState, Measured
 from labkit.formats.commands import (
     builds_on_command,
@@ -73,8 +75,9 @@ def exploration_changes(
     answering RUN, in the module's order: a chain that cannot be read
     stops there (what follows needs its texts); otherwise every step whose
     declared changes do not match, the run without a step against the
-    first measurements, and the protocol as it stands against RUN's own
-    text. MEASURED is what the area measured of PID, STATE the area's
+    first measurements, and — once PROTOCOL adopts RUN (`adopted`) — the
+    protocol as it stands against RUN's own text. MEASURED is what the
+    area measured of PID, STATE the area's
     state, HELD its audit evidence. Outside a repository (ROOT None) no
     run's text reads back and nothing is held here. Raises RuntimeError
     when git fails."""
@@ -89,8 +92,21 @@ def exploration_changes(
         if (hold := step_gap_hold(protocol, pid, later, basis)) is not None
     ]
     found += unstepped_holds(area, protocol, pid, chain[-1], measured, root)
-    found += live_holds(area, protocol, pid, run, chain[0], root, measured, state, held)
+    if adopted(state.text_of(protocol), run):
+        found += live_holds(
+            area, protocol, pid, run, chain[0], root, measured, state, held
+        )
     return found
+
+
+def adopted(text: str, run: Path) -> bool:
+    """Does the protocol TEXT declare RUN as its reported result (`[result]
+    run`, written by `protocol-fill --from-run`)? Only then is RUN read
+    under the protocol as it stands; adoption checks its proposal through
+    report-check, so the hold reaches it there. A `[result]` that does
+    not read adopts nothing here; the gates refuse it on their own
+    (`protocol_block.declared_run`)."""
+    return protocol_block.declared_run_shown(text) == run.name
 
 
 def step_chain(
