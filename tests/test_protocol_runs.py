@@ -39,9 +39,10 @@ STALE = "no analysis audit saw the area as it is now"
 
 
 def piece(prompt: str, label: str) -> str:
-    """The text of the prompt's piece LABEL, up to the next piece."""
-    start = prompt.index(label)
-    end = re.search(r"\n(?:={3,}|-{3,}|#{2,} )", prompt[start + len(label) :])
+    """The text of the prompt's piece LABEL (its `===== LABEL` line), up to
+    the next piece."""
+    start = prompt.index(f"===== {label}") + len("===== ")
+    end = re.search(r"\n===== ", prompt[start + len(label) :])
     return prompt[start : start + len(label) + end.start()] if end else prompt[start:]
 
 
@@ -82,7 +83,8 @@ class OwnProtocol(e2e.CountCommands):
         return prompt
 
     def test_every_run_is_shown_with_its_step_text_and_code(self):
-        shown = piece(self.audited_prompt(), self.label)
+        prompt = self.audited_prompt()
+        shown = piece(prompt, self.label)
         self.assertIn(
             f"- {self.run_a}: completed, measurement, first measurement", shown
         )
@@ -94,7 +96,9 @@ class OwnProtocol(e2e.CountCommands):
         # A, compared with B: its text lacks the filter, its code the field
         a_lines = shown.split(f"- {self.run_a}:")[1].split("\n- ")[0]
         self.assertIn("differs — Exclusions / filters", a_lines)
-        self.assertIn('"bytes"', a_lines)
+        diff_label = f"{protocol_runs.DIFF_LABEL}{self.run_b} → {self.run_a}"
+        self.assertIn(f"the whole diff: under {diff_label}", a_lines)
+        self.assertIn('"bytes"', piece(prompt, diff_label))
         self.assertIn("with its uncommitted.patch", shown)  # B's code then
 
     def test_a_run_that_did_not_complete_is_listed_with_its_result(self):
@@ -106,11 +110,17 @@ class OwnProtocol(e2e.CountCommands):
         self.assertIn("result: {", lines)
         self.assertIn("code: not compared — the run did not complete", lines)
 
-    def test_a_cut_diff_is_marked_and_the_command_prints_all(self):
-        with mock.patch.object(protocol_runs, "DIFF_SHOW_LINES", 3):
-            shown = piece(self.audited_prompt(), self.label)
-        self.assertIn("[cut: 3 of", shown)
-        self.assertIn("unread here", shown)
+    def test_a_diff_past_the_budget_is_marked_and_the_command_prints_all(self):
+        with (
+            mock.patch.object(protocol_runs, "DIFF_BUDGET", 10),
+            mock.patch.object(protocol_runs, "DIFF_SHOW_LINES", 3),
+        ):
+            prompt = self.audited_prompt()
+        shown = piece(prompt, self.label)
+        self.assertIn("[not shown in full:", shown)
+        self.assertIn("3 of", shown)
+        self.assertIn("the rest unread — a judgement that needs it stays open", shown)
+        self.assertNotIn(f"===== {protocol_runs.DIFF_LABEL}{self.run_b}", prompt)
         command = f"labkit-run-diff {self.area.relative_to(self.lab.root).as_posix()}"
         self.assertIn(f"`{command} {self.run_b} {self.run_a}` prints all", shown)
         out = io.StringIO()
@@ -147,6 +157,72 @@ class OwnProtocol(e2e.CountCommands):
         self.assertIn(f"run {self.run_b}", stale_lines(out)[0])
         self.audited_prompt()
         self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
+
+
+#: a helper table the code grows by, ahead of the decisive change, so that
+#: change stands past the excerpt's lines in the diff
+PADDING = "\n".join(
+    ["SIZES = ("] + [f"    {n},  # size class {n}" for n in range(120)] + [")"]
+)
+#: the decisive change: documents of one line are dropped, the mean rises
+KEEP_ALL = "    return [p.name for p in visible(SOURCE)]"
+DROP_SHORT = (
+    "    return [p.name for p in visible(SOURCE) "
+    'if (SOURCE / p.name).read_text(encoding="utf-8").count("\\n") > 1]'
+)
+
+
+class ChosenRun(e2e.CountCommands):
+    """The selection the audit controls: run A counts every document; run
+    B's code, changed without a step, grows by a helper table and drops the
+    one-line documents — the change that moves the number stands past line
+    DIFF_SHOW_LINES of the diff. B is the run the agent adopts. Whether a
+    model would judge the choice is not tested; that the evidence reaches it is.
+    Its auditor is shown A's result beside B's and the whole diff, the
+    decisive line in it; past the budget, the twin shows that line absent and
+    the diff marked not shown in full."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.run_a = self.measure()
+        script = self.area / "scripts" / "01_measure.py"
+        e2e._replace(
+            script,
+            [
+                ('COUNT_FIELD = "lines"', f'COUNT_FIELD = "lines"\n{PADDING}'),
+                (KEEP_ALL, DROP_SHORT),
+            ],
+        )
+        self.lab.commit("count only documents of more than one line")
+        self.run_b = self.measure()
+        # as the diff from B's code to A's shows it: B's line taken out
+        self.decisive = f"-{DROP_SHORT}"
+
+    def test_the_decisive_change_past_the_excerpt_reaches_the_auditor(self):
+        rc, out, prompt = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        label = f"{protocol_runs.DIFF_LABEL}{self.run_b} → {self.run_a}"
+        diff = piece(prompt, label)
+        rows = diff.splitlines()
+        (at,) = [n for n, row in enumerate(rows) if self.decisive in row]
+        self.assertGreater(at, protocol_runs.DIFF_SHOW_LINES)
+        pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id
+        listed = piece(prompt, f"{protocol_runs.OWN_LABEL}{pid}")
+        a_lines = listed.split(f"- {self.run_a}:")[1].split("\n- ")[0]
+        self.assertIn('"lines_mean"', a_lines)  # the result B was preferred to
+        self.assertIn(f"the whole diff: under {label}", a_lines)
+        # the agent adopts the run it chose; the audit that saw both stands
+        rc, out = self.lab.adopt(self.protocol, self.run_b)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared(), self.run_b)
+
+    def test_past_the_budget_the_decisive_change_is_named_unread(self):
+        with mock.patch.object(protocol_runs, "DIFF_BUDGET", 100):
+            rc, out, prompt = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(self.decisive, prompt)
+        self.assertIn("[not shown in full:", prompt)
+        self.assertIn("a judgement that needs it stays open", prompt)
 
 
 def _verdict(area: Path, protocol: Path) -> tuple[int, str]:
@@ -224,7 +300,9 @@ class SourceProtocol(e2e.CountCommands):
         _, _, prompt = self.analysis(self.clean, self.computed)
         a1_lines = piece(prompt, self.label).split(f"- {a1}:")[1].split("\n- ")[0]
         self.assertIn("completed, measurement", a1_lines)
-        self.assertIn("lines-again.jsonl", a1_lines)  # its code then, against A0's
+        # its code then, against A0's
+        diff = piece(prompt, f"{protocol_runs.DIFF_LABEL}{self.a0} → {a1}")
+        self.assertIn("lines-again.jsonl", diff)
         self.assertEqual(self.stale(), [])
 
     def test_a_run_of_a_protocol_c_draws_nothing_from_stales_nothing(self):

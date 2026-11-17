@@ -7,9 +7,10 @@ measured under — completed or not, present, deleted from the tree or only
 in the run index —, never only the runs the answering run builds on. Per
 run: its state, its result, its step then, how its registration then
 differs from the compared run's, and how its code then differs (commit
-plus `uncommitted.patch`, `run_code`). The diff is cut at DIFF_SHOW_LINES
-inline, the cut marked as unread and the full diff a command away
-(`labkit-run-diff`). The pieces are in the digest the audit record binds
+plus `uncommitted.patch`, `run_code`): git's file summary in the list,
+the whole diff as a RUN DIFF piece of its own while the audit's DIFF_BUDGET
+lasts; past it the list names the diff not shown in full, with an excerpt
+and the rest unread (`labkit-run-diff` prints it for a person). The pieces are in the digest the audit record binds
 (`audit_binding.run_shown`), so a new run of such a protocol stales the
 audit. Reads files and git, writes only git objects (`run_code`).
 """
@@ -18,7 +19,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit.formats import runs
@@ -39,7 +40,12 @@ OWN_LABEL = "RUNS OF THIS PROTOCOL "
 #: how the label of the piece of a source run's protocol opens; its id follows
 SOURCE_LABEL = "RUNS OF SOURCE PROTOCOL "
 
-#: the diff lines shown inline per run; the rest is named, never dropped
+#: how a full code difference's piece label opens; "<base> → <run>" follows
+DIFF_LABEL = "RUN DIFF "
+#: the characters of full diffs one audit is shown, over all its pieces; a
+#: diff past it is named not shown, with an excerpt of DIFF_SHOW_LINES
+DIFF_BUDGET = 300_000
+#: the diff lines of the excerpt of a diff not shown in full
 DIFF_SHOW_LINES = 80
 #: the characters of a run's metrics.json shown inline
 RESULT_SHOW_CHARS = 600
@@ -63,11 +69,12 @@ READING = (
     "chosen because its result suits, and whether a change between runs is "
     "declared and explained. "
     + CODE_LIMIT
-    + " A diff shown cut is unread beyond its cut, and so is every run's "
-    "code you were not shown: you have no shell, so where a judgement needs "
-    "the omitted lines, write the finding with an assignment that names "
-    "`{command}` (run from the repository root); never judge code you were "
-    "not shown."
+    + " Each run's whole diff stands under its own `RUN DIFF <compared> → "
+    "<run>` piece. Where the audit's budget for diffs is spent, a diff is "
+    "marked not shown in full: the lines past its excerpt are unread, and a "
+    "judgement that needs them stays open — you have no shell, so write the "
+    "finding with an assignment naming `{command}` (run from the repository "
+    "root); never judge code you were not shown."
 )
 
 
@@ -110,6 +117,16 @@ class RunSeen:
     step: StepThen | None
 
 
+@dataclass
+class DiffBudget:
+    """The characters of full diffs an audit may still be shown (LEFT,
+    from DIFF_BUDGET), and the RUN DIFF pieces taken so far — one budget
+    for all the protocol pieces of one audit."""
+
+    left: int
+    pieces: list[tuple[str, str]] = field(default_factory=list)
+
+
 def protocol_runs_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     """The pieces MODE analysis is shown of the runs around RUN_DIR, the
     run audited: one for its own protocol, compared with RUN_DIR, then one
@@ -123,11 +140,14 @@ def protocol_runs_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     state = state_of(area)
     root = git_root(area)
     pid = rd.config.protocol.id
-    out = [protocol_piece(area, root, state.measured_of(pid), rd, OWN_LABEL, set())]
+    budget = DiffBudget(DIFF_BUDGET)
+    out = [
+        protocol_piece(area, root, state.measured_of(pid), rd, OWN_LABEL, set(), budget)
+    ]
     try:
         entries = runs.read_data(run_dir) or []
     except runs.ArtefactError:
-        return out
+        return out + budget.pieces
     origins = [e.origin_run for e in entries if e.origin_run is not None]
     by_protocol: dict[str, list[runs.RunDir]] = {}
     for run_id in dict.fromkeys(origins):
@@ -139,9 +159,11 @@ def protocol_runs_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
         marked = {s.dir.name for s in sources}
         measured = state.measured_of(opid)
         out.append(
-            protocol_piece(area, root, measured, sources[0], SOURCE_LABEL, marked)
+            protocol_piece(
+                area, root, measured, sources[0], SOURCE_LABEL, marked, budget
+            )
         )
-    return out
+    return out + budget.pieces
 
 
 def protocol_piece(
@@ -151,6 +173,7 @@ def protocol_piece(
     base: runs.RunDir,
     label: str,
     sources: set[str],
+    budget: DiffBudget,
 ) -> tuple[str, str]:
     """`(label, text)`: every run of MEASURED's protocol (`Measured.runs`
     and the ids only the run index lists), grouped by step, each compared
@@ -188,6 +211,7 @@ def protocol_piece(
                 base_code,
                 scope,
                 shown_trees,
+                budget,
                 firsts=firsts,
                 sources=sources,
             )
@@ -249,6 +273,7 @@ def _run_lines(
     base_code: CodeThen | None,
     scope: list[str],
     shown_trees: dict[str, str],
+    budget: DiffBudget,
     *,
     firsts: set[str],
     sources: set[str],
@@ -275,7 +300,7 @@ def _run_lines(
     if run.state != runs.COMPLETED:
         out.append("    code: not compared — the run did not complete")
         return out
-    out += _code_lines(area, root, rd, base, base_code, scope, shown_trees)
+    out += _code_lines(area, root, rd, base, base_code, scope, shown_trees, budget)
     return out
 
 
@@ -327,9 +352,12 @@ def _code_lines(
     base_code: CodeThen | None,
     scope: list[str],
     shown_trees: dict[str, str],
+    budget: DiffBudget,
 ) -> list[str]:
     """RD's code against BASE's: the same, the same as a run shown before,
-    or git's file summary in full and the diff cut at DIFF_SHOW_LINES."""
+    or git's file summary in full and the whole diff as its own RUN DIFF
+    piece in BUDGET; past the budget the diff is named not shown in full,
+    with an excerpt of DIFF_SHOW_LINES and the rest marked unread."""
     if root is None or base_code is None:
         return ["    code: not compared — no git repository"]
     code = code_then(rd, root)
@@ -346,14 +374,22 @@ def _code_lines(
         return [f"    code ({code.where}): not compared — {exc}"]
     if not diff.diff:
         return [f"    code ({code.where}): the same as the compared run's"]
-    rows = diff.diff.splitlines()
     out = [f"    code ({code.where}), files changed:"]
     out += [f"      {line}" for line in diff.stat.splitlines()]
-    out += [f"      {line}" for line in rows[:DIFF_SHOW_LINES]]
-    if len(rows) > DIFF_SHOW_LINES:
-        out.append(
-            f"      [cut: {DIFF_SHOW_LINES} of {len(rows)} diff lines shown; the "
-            f"other {len(rows) - DIFF_SHOW_LINES} are unread here — "
-            f"`{run_diff_command(area, base.dir.name, rd.dir.name)}` prints all]"
-        )
+    label = f"{DIFF_LABEL}{base.dir.name} → {rd.dir.name}"
+    if len(diff.diff) <= budget.left:
+        budget.left -= len(diff.diff)
+        budget.pieces.append((label, diff.diff))
+        out.append(f"      the whole diff: under {label}")
+        return out
+    rows = diff.diff.splitlines()
+    shown = rows[:DIFF_SHOW_LINES]
+    out += [f"      {line}" for line in shown]
+    out.append(
+        f"      [not shown in full: {len(diff.diff)} characters, past the "
+        f"{DIFF_BUDGET} this audit may be shown of all diffs; {len(shown)} of "
+        f"{len(rows)} diff lines above, the rest unread — a judgement that "
+        f"needs it stays open; "
+        f"`{run_diff_command(area, base.dir.name, rd.dir.name)}` prints all]"
+    )
     return out
