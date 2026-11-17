@@ -30,6 +30,7 @@ from labkit.formats import (
     findings,
     protocol_block,
     report_reviews,
+    runs,
 )
 from labkit.gates.ways_out import report_way_while_lost
 from labkit.checks.audit_binding import (
@@ -553,14 +554,41 @@ def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
     )
 
 
+def drawn_citations(
+    report: Path, text: str, found: list[report_blocks.Block]
+) -> set[tuple[int, str]]:
+    """(line, run id) of every run TEXT, the report at REPORT, cites
+    inside a result block of FOUND as an origin run of that block's run
+    (its inputs' record, `runs.read_data`) — the source lines the block's
+    rendering generates (`result_render.source_phrases`). Such a citation
+    shows the source as evidence of the block's number, not as a result of
+    its own: it owes no block of the source's protocol and is no promotion.
+    The same run cited anywhere else is not among them. A run whose input
+    record does not read draws on nothing here; `block_gaps` holds its
+    block."""
+    out: set[tuple[int, str]] = set()
+    cited = report_blocks.cited_run_ids(text)
+    for b in found:
+        run_dir = run_path(block_protocol(report, b).parent, b.run_id)
+        try:
+            entries = runs.read_data(run_dir) or []
+        except runs.ArtefactError:
+            continue
+        origins = {e.origin_run for e in entries if e.origin_run is not None}
+        out |= {(n, r) for n, r in cited if b.first <= n <= b.last and r in origins}
+    return out
+
+
 def owed_blocks(
     report: Path, text: str, found: list[report_blocks.Block], sources: Sources
 ) -> list[GateFinding]:
     """Why REPORT owes a block it does not carry, one blocker each: for
     every run it cites that a protocol declares as its result, that
     protocol's block (`report_blocks.blocks_owed`), named as the report
-    names it (`path_from_report`) so the sentence carries the command."""
-    cited = report_blocks.cited_run_ids(text)
+    names it (`path_from_report`) so the sentence carries the command. A
+    source cited in the block it is a source of owes none (`drawn_citations`)."""
+    drawn = drawn_citations(report, text, found)
+    cited = [c for c in report_blocks.cited_run_ids(text) if c not in drawn]
     named: dict[str, Path] = {}
     declaring: dict[str, list[str]] = {}
     for run_id in {r for _, r in cited}:
@@ -708,7 +736,9 @@ def hold_report(
     report_hints(out, rel, text, discussed)
     for line in replacement_hints(path, rel, text, repo, sources):
         out.warn(line, evidence_kind=STATIC_EVIDENCE, rule=LAB_003)
-    out.take_all(undeclared_findings(path, rel, cited, discussed, sources))
+    drawn = drawn_citations(path, text, found)
+    claimed = [c for c in cited if c not in drawn]
+    out.take_all(undeclared_findings(path, rel, claimed, discussed, sources))
     return out.report("report-check", "reporting")
 
 

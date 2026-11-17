@@ -15,7 +15,10 @@ the head's `[kept]`), then, for a computation whose head registers a `[reference
 the comparison as the run recorded it (`reference 0.62 ± 0.01 (within):
 not met, distance 0.145`, or `not comparable: <key> absent` — never a
 "met" the run did not record; `comparison_phrase`), then the run id and
-one note on the limits. Each Limitation line comes
+one note on the limits, then, for a run that computes from other runs'
+outputs, one source per origin run of its inputs, its values as that run
+recorded them under the text it was measured under (`source_phrases`; no
+verdict of its own). Each Limitation line comes
 from a finding decided limitation in the analysis records covering
 that run (`audit_binding.covering_analysis`). `protocol-fill --from-run`
 writes them, `--render` writes them again, and report-check holds the
@@ -34,7 +37,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.checks.audit_binding import AuditError, covering_analysis
+from labkit.checks.audit_binding import (
+    AuditError,
+    covering_analysis,
+    source_protocol_then,
+)
 from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import (
     evidence,
@@ -51,6 +58,7 @@ from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.commands import render_command
+from labkit.formats.repo import git_root
 from labkit.formats.protocol_check import (
     display_label,
     CONCLUSION_LABEL,
@@ -279,11 +287,13 @@ def rendering(
     note = findings.answer_note([(label, effect) for label, _, effect in limits])
     said, recorded = _verdicts_and_values(area, text, run, limits)
     before = predecessor_verdict(area, text, set())
+    drawn = source_phrases(area, run)
     recorded_results = (
         (f"{before} · this question: " if before else "")
         + (f"{said} · recorded: " if said else "")
         + recorded
         + note
+        + (f" · sources: {'; '.join(drawn)}" if drawn else "")
     )
     return Rendering(
         recorded_results,
@@ -321,6 +331,59 @@ def _verdicts_and_values(
         "; ".join(verdicts(block, metrics, unjudged)),
         recorded_results_line(metrics, run.name, keys, comparison, kept),
     )
+
+
+def source_phrases(area: Path, run: Path) -> list[str]:
+    """One phrase per origin run of RUN's inputs (`runs.read_data`), in
+    the inputs' order: `<protocol id> as run <id> saw it: <its values>` —
+    the values as that run's metrics.json recorded them, every key, ordered
+    and with the comparison as the text it was measured under orders them
+    (`source_protocol_then`: its commit with its uncommitted.patch, never
+    today's text; `recorded_results_line` with that text's `[kept]` and
+    `[reference]`) and no verdict derived — a source is evidence of C's
+    number, not a result reported beside it. A run bound to no protocol
+    reads `no protocol, run <id>: …`; a run gone or whose record does not
+    read, a text or metrics that do not read back say so in place of the
+    values (finalize holds them, `origin_check`,
+    `source_protocol_finding`). [] for a run without origins or whose
+    input record does not read (the record checks name that). Raises
+    RuntimeError when git fails."""
+    try:
+        entries = runs.read_data(run) or []
+    except runs.ArtefactError:
+        return []
+    origins = dict.fromkeys(e.origin_run for e in entries if e.origin_run is not None)
+    root = git_root(area)
+    out: list[str] = []
+    for run_id in origins:
+        then = source_protocol_then(area, run_id, root)
+        source = runs.run_path(area, run_id)
+        pid = runs.read_run_config(source)
+        named = (
+            f"{pid.protocol.id} as run {run_id} saw it"
+            if pid is not None and pid.protocol.id is not None
+            else f"no protocol, run {run_id}"
+        )
+        if then.bound is None:  # gone, or its record does not read
+            out.append(f"run {run_id}: {then.where}")
+            continue
+        if then.bound and then.text is None:
+            out.append(f"{named}: not reconstructable — {then.where}")
+            continue
+        try:
+            metrics = runs.read_metrics(runs.metrics_path(source))
+        except (OSError, ValueError) as exc:
+            out.append(f"{named}: no values — {exc}")
+            continue
+        own = then.text or ""
+        line = recorded_results_line(
+            metrics,
+            run_id,
+            comparison=comparison_phrase(own, metrics),
+            kept=kept_of(own),
+        )
+        out.append(f"{named}: {line}")
+    return out
 
 
 def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
