@@ -508,6 +508,21 @@ The command's flag for the step's name is `--step-id`, not `--id` (author, 2026-
 
 **Open integration point for the lock split (author, 2026-11-17): a missing `uncommitted.patch` is read two ways.** The registration readers read a run's protocol through `as_measured`, which takes a missing patch for a clean tree and so reads the commit alone, even for a run whose record says it started from a changed tree (`+dirty`). The source protocols and the steps read through `as_measured_patch_checked`, which names such a run's text not reconstructable (`patch_lost`). The registration locks were left as they are on purpose. When they are rebuilt for the lock split, decide whether they read through the checked form too, with a test of a first measurement whose patch is lost; until then the two readings differ.
 
+**Separation of obligations: the result number and the criterion (decided 2026-11-17).** Found at the code: a fit or an apply reports its number only through its criterion — the score under `criterion_1_score`, the verdict under `criterion_1_pass` — and `[kept]` is refused on a kind with a bar (`scaffold.refuse_kept_with_bar`, `protocol_check.kept_gaps`). Without a criterion the number had no home; loosening `has_bar` and the owed fields alone would not do. Decided by the author:
+
+1. The result number of an exploratory fit or apply always stands under `[kept]` (key and unit of the registered lane's score), with or without a criterion: one home for the number, an optional criterion for judging it. The skeleton computes the score once and writes it under the kept key; a registered `criterion-1` reads that very value and adds only its threshold and verdict, so score and criterion cannot drift through two computations. Measured cost before deciding: `criterion_1_score` is read only by the two measure skeletons (3 and 7 places), the analysis template (1), `standard_contract.criterion_key` and two usability probes; no gate, report or check of the package reads it; 8 test files.
+2. A newly stamped exploratory fit or apply carries `[kept]` active and `criterion-1` commented out, as an offer in two steps (table and code block between markers), like `criterion-2`: a success bar is optional, and an active stamp would make it the default again.
+3. What stays owed: the quality checks, the null condition where the instrument's validity needs it, a null comparison only where the task asks for one (no general duty for every exploration), and the cost-based duties. A confirmatory fit or apply keeps its present requirements.
+
+| Case                            | Reported                                                           |
+|---------------------------------|--------------------------------------------------------------------|
+| Exploration without a criterion | the score and its unit; no success verdict                         |
+| Exploration with a criterion    | the score and the verdict against the registered bar               |
+| A quality check fails           | the measured value stays traceable; its use is limited accordingly |
+| Confirmation                    | the present strict requirements                                    |
+
+Open before the build, to settle at the code: whether a confirmatory fit or apply also carries `[kept]` for its number (one result path for both types, the criterion owed only for confirmation) — recommended, since two result paths by type are what the decision avoids; and how `[reference]` (a stated value, a computation's today) relates to a kept fit or apply.
+
 Not built yet, in the plan's order: the separation of obligations, the lock split (with the step's hold), the standard version. The registration locks stay as they are until run binding, audit and display handle the new states.
 
 ## Acceptance scenarios and limits
