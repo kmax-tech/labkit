@@ -26,7 +26,7 @@ from labkit.formats import (
     rules,
     standard_contract,
 )
-from protocol_fixture import head, run_record  # noqa: E402
+from protocol_fixture import head, run_record, take_criterion_offer  # noqa: E402
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -37,7 +37,8 @@ def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test hel
 #: the tests of [criterion-1]'s bar that both stamped area tests carry
 #: (test-estimator.py.template, test-area.py.template): the reach of a
 #: perfect lane, `margin` and `at_least` each at its boundary, and the
-#: refusal of both or neither (docs/notes/2026-11-02-absolute-task-bar.md)
+#: refusal of both or neither (docs/notes/2026-11-02-absolute-task-bar.md);
+#: all but the last skip, saying so, while the criterion is only offered
 STAMPED_BAR_TESTS = (
     "test_perfect_effect_fires_c1",
     "test_a_lane_exactly_at_null_plus_margin_passes",
@@ -308,7 +309,15 @@ class Exp(unittest.TestCase):
                 )
                 by_label = {f.label: f for f in protocol_check.fields(text)}
                 for label, pid in protocol_cuts.PROMISE_FIELDS.items():
-                    self.assertTrue(by_label[label].value.startswith(f"[{pid}] <"))
+                    value = by_label[label].value
+                    if pid == protocol_cuts.OFFERED_CRITERION:
+                        # offered, not registered: no id in the prose
+                        self.assertNotIn(pid, block.by_id())
+                        self.assertTrue(
+                            value.startswith("<optional in exploration"), value
+                        )
+                    else:
+                        self.assertTrue(value.startswith(f"[{pid}] <"), value)
                     self.assertTrue(by_label[label].placeholder, label)
 
     def test_an_area_with_protocol_scripts_readme_and_test(self) -> None:
@@ -556,6 +565,7 @@ class Exp(unittest.TestCase):
             model="haiku",
             kind="apply",
         )
+        take_criterion_offer(self.area())
         proto = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         for needle in (
             'id = "criterion-1"',
@@ -657,6 +667,7 @@ class Exp(unittest.TestCase):
         import sys
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
+        take_criterion_offer(self.area())
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_measure", path)
         assert spec is not None and spec.loader is not None
@@ -906,12 +917,16 @@ class Exp(unittest.TestCase):
         area = self._stamped_by_an_earlier_labkit(
             "fit",
             scaffold.PROTOCOL_TEMPLATE.name,
-            "constants = { margin = 0.2 }",
-            "constants = { margin = 0.25 }",
+            # a live line of the block: criterion-1's constants are only
+            # offered, commented out, and no promise
+            'key = "quality_check_1_passed"',
+            'key = "quality_check_1_pass"',
         )
         proto = area / "PROTOCOL-foo-bar.md"
         committed = proto.read_text(encoding="utf-8")
-        proto.write_text(committed.replace("margin = 0.2 ", "margin = 0.3 "))
+        proto.write_text(
+            committed.replace("quality_check_1_passed", "quality_check_1_held")
+        )
         with self.assertRaises(console.Refused) as caught:
             scaffold.change_kind(self.root, "foo-bar", "compute")
         self.assertIn("the promise block differs", str(caught.exception))
@@ -1450,8 +1465,7 @@ class Exp(unittest.TestCase):
         gaps = protocol_check.check_fields(frozen).missing_must
         self.assertTrue(
             any(
-                "criterion-1, quality-check-1, quality-check-2 still carries the stamp's"
-                in g
+                "quality-check-1, quality-check-2 still carries the stamp's" in g
                 for g in gaps
             ),
             gaps,
@@ -1575,7 +1589,9 @@ class Exp(unittest.TestCase):
         block = promises.parse_block(proto)
         assert block is not None
         consts = promises.all_constants(block)
-        self.assertEqual(consts, {"margin": 0.25, "max_empty": 0, "null_band": 0.1})
+        # criterion-1 and its margin are offered, commented out
+        self.assertEqual(consts, {"max_empty": 0, "null_band": 0.1})
+        self.assertIn("# constants = { margin = 0.25 }", proto)
         self.assertNotIn("null_band_items", proto)
         self.assertIn("the mean of the permuted-label refits", proto)
         # protocol-check reads the stamp as a clean pilot with placeholders only
@@ -1592,6 +1608,7 @@ class Exp(unittest.TestCase):
         from dataclasses import replace
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", repeat_cost="high", kind="fit")
+        take_criterion_offer(self.area())
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_estimator", path)
         assert spec is not None and spec.loader is not None
@@ -1658,14 +1675,19 @@ class Exp(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             measure.make_estimator(0)
 
-    def _stamped_estimator_lab(self, kind: str, label: str = "") -> tuple[Path, Path]:
+    def _stamped_estimator_lab(
+        self, kind: str, label: str = "", *, criterion: bool = True
+    ) -> tuple[Path, Path]:
         """A fresh lab with one estimator area of KIND, its directory told
-        apart by LABEL: (lab root, area)."""
+        apart by LABEL, the [criterion-1] offer taken unless CRITERION is
+        false: (lab root, area)."""
         root = Path(self.tmp.name) / f"estimator-{kind}{label}"
         root.mkdir()
         quiet(scaffold.stamp_lab, root, "lab")
         quiet(scaffold.stamp_area, root, "foo-bar", repeat_cost="high", kind=kind)
         (area,) = (root / "experiments").glob("[0-9]*-foo-bar")
+        if criterion:
+            take_criterion_offer(area)
         return root, area
 
     def _run_stamped_test(self, root: Path) -> subprocess.CompletedProcess[str]:
@@ -1699,8 +1721,20 @@ class Exp(unittest.TestCase):
     def test_the_stamped_estimator_test_passes_as_stamped(self) -> None:
         """The area's test (`test-estimator.py.template`) runs green on the
         fresh stamp of a fit and of an apply (the seeded null, a band): the
-        resolution check needs no estimator library."""
+        resolution check needs no estimator library. As stamped, the
+        criterion only offered, its tests skip with the reason and the
+        rest pass; with the offer taken, nothing skips."""
         for kind in ("fit", "apply"):
+            with self.subTest(kind=kind, criterion=False):
+                root, _ = self._stamped_estimator_lab(kind, "-offered", criterion=False)
+                r = self._run_stamped_test(root)
+                self.assertIn("[criterion-1] is offered, not registered", r.stdout)
+                self.assert_passed(
+                    r,
+                    "test_the_score_has_cases_here",
+                    "test_missing_predictions_withhold_the_verdict",
+                    "test_criterion_1_registers_exactly_one_bar",
+                )
             with self.subTest(kind=kind):
                 root, _ = self._stamped_estimator_lab(kind)
                 r = self._run_stamped_test(root)
@@ -1763,6 +1797,7 @@ class Exp(unittest.TestCase):
                     model="haiku",
                 )
                 (area,) = (root / "experiments").glob("[0-9]*-foo-bar")
+                take_criterion_offer(area)
                 protocol = next(area.glob("PROTOCOL-*.md"))
                 text = protocol.read_text(encoding="utf-8")
                 self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)
@@ -1867,6 +1902,7 @@ class Exp(unittest.TestCase):
             model="haiku",
             kind="apply",
         )
+        take_criterion_offer(self.area())
         proto = self.area() / "PROTOCOL-foo-bar.md"
         script = self.area() / "scripts" / "01_measure.py"
         stamped_proto = proto.read_text(encoding="utf-8")
@@ -1940,6 +1976,7 @@ class Exp(unittest.TestCase):
             kind="apply",
         )
         (area,) = (self.root / "experiments").glob("[0-9]*-three-words")
+        take_criterion_offer(area)
         script = area / "scripts" / "01_measure.py"
         stamped = script.read_text(encoding="utf-8")
         two = 'ANSWERS = {"Yes": "TODO-positive-gold", "No": "TODO-negative-gold"}'

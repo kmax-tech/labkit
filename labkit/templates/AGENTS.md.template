@@ -12,7 +12,7 @@ must pass `--protocol <PROTOCOL>` to every command that accepts it.
 |---|---|
 | protocol | `experiments/<area>/PROTOCOL-*.md`: registered question and data; a `fit` or an `apply` also registers an inference criterion. |
 | run | Execution recorded by `runlog` under `runs/<run_id>/`: preparation, probe or measurement. Only measurements supply reported results. |
-| criterion | The registered bar of a `fit` or an `apply` (`criterion-1`). A `compute` has none. |
+| criterion | The registered bar of a `fit` or an `apply` (`criterion-1`): owed if confirmatory, optional if exploratory. A `compute` has none. |
 | audit | `labkit-audit`: a second model checks code and run against the protocol and records findings. |
 | decision | What you record for each finding: `fixed`, `limitation` or `false-positive`. |
 | adoption | `labkit-adopt`: the step that makes one run's number the protocol's result. |
@@ -67,9 +67,9 @@ Choose `kind` by what the reported result claims:
   examples. Choose each from the question, never from a result.
 - Define your own terms (margins, arms, item ids) in "Terms of this
   protocol".
-- The head's `[kept]` names the reported number (key, unit); a criterion
-  judges it. A computation compares with a stated reference only through
-  the head's `[reference]` table. A miss ends with `not met` and a valid
+- `[kept]` names the reported number; a criterion judges it. A
+  computation compares with a stated reference only through the head's
+  `[reference]` table. A miss ends with `not met` and a valid
   delivery; never move the number or the value to meet it.
 - After `scripts/00_prepare.py`, `protocol-fill <PROTOCOL> --data-counts`
   writes the data counts. Never type a count.

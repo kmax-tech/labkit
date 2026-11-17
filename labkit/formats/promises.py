@@ -740,6 +740,14 @@ def placeholder_sentences(block: PromiseTables) -> list[str]:
     ]
 
 
+def tables_owed(*, frozen: bool, full_run: bool) -> bool:
+    """Are a protocol's [[promise]] tables owed at all — frozen (the freeze
+    is the registration) or a full run (every run at low cost)? The one
+    condition `promise_tables_owed` and the criterion's table
+    (`protocol_check.criterion_table_gap`'s caller) are held under."""
+    return frozen or full_run
+
+
 def promise_tables_owed(
     block: PromiseTables | None, *, frozen: bool, full_run: bool, registers: bool = True
 ) -> str | None:
@@ -761,7 +769,7 @@ def promise_tables_owed(
     "Block" elsewhere (`protocol_block.block_text`, `parse_toml_block`)
     means the whole ```toml block, [protocol] head included; this function
     and `PromiseTables` mean the [[promise]] tables alone."""
-    if not (frozen or full_run):
+    if not tables_owed(frozen=frozen, full_run=full_run):
         return None
     if block is not None:
         open_ids = placeholder_sentences(block)

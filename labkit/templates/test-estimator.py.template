@@ -5,8 +5,10 @@
 Imports the area's script by path under a unique name (two areas in one
 pytest run must not share `01_measure`) and never copies its formula; the
 estimator itself is not needed here, only `evaluate_rows()`. The check runs
-it on synthetic rows in the run's real shape — perfect effect fires [criterion-1], a
-null-like registered lane stays silent, missing predictions fail [quality-check-1] and
+it on synthetic rows in the run's real shape — the kept score is reported on every
+evaluation; where [criterion-1] is registered (an offer in exploration, owed in
+confirmation; its tests skip, saying so, while it is not) perfect effect fires it, a
+null-like registered lane stays silent; missing predictions fail [quality-check-1] and
 withhold the verdict, a null lane off its target fails [quality-check-2]
 wherever a permitted deviation applies. At apply with a permuted null (no
 fixed null predictor) the null rows name the donor of their label
@@ -55,6 +57,10 @@ PER_RUN = PERMUTED_NULL and not ORDERED_NULL
 BAND = {} if PER_RUN else {"null_band": 0.25}
 #: [criterion-1] registers a bar the task states (`at_least`), not a lead over the null (`margin`)
 ABSOLUTE = measure.CONFIG.at_least is not None
+#: [criterion-1] registered (both steps of the offer taken); without it no verdict is judged
+CRITERION = measure.CONFIG.bar_criterion
+needs_criterion = pytest.mark.skipif(
+    not CRITERION, reason="[criterion-1] is offered, not registered: the kept score has no verdict")
 
 
 def predicted(right: bool, gold):
@@ -94,11 +100,13 @@ def _twelve(correct: int) -> list[tuple]:
     return [(predicted(i < correct, g), g) for i, g in enumerate(GOLDS)]
 
 
+@needs_criterion
 def test_perfect_effect_fires_c1():
     m = measure.evaluate_rows(rows(_twelve(12), _twelve(6)))
     assert m["criterion_1_pass"] is True and m["quality_check_2_pass"] is True and m["quality_check_1_pass"] is True
 
 
+@needs_criterion
 def test_null_like_registered_lane_stays_silent():
     """Half right, its predictions mixed: every other item right (accuracy
     1/2, auc 1/2; at spearman the first six, rho 0)."""
@@ -119,7 +127,10 @@ def test_missing_predictions_withhold_the_verdict():
     max_empty = measure.CONFIG.max_empty
     reg = [(None, g) for _, g in _twelve(12)[: max_empty + 1]] + _twelve(12)[max_empty + 1:]
     m = measure.evaluate_rows(rows(reg, _twelve(6)))
-    assert m["quality_check_1_pass"] is False and m["criterion_1_pass"] is None
+    # the kept score stays visible (a missing prediction may still rank last at
+    # auc or spearman, so its value is not asserted here); no criterion judges it
+    assert m["quality_check_1_pass"] is False and isinstance(m[measure.KEPT_KEY], float)
+    assert not CRITERION or m["criterion_1_pass"] is None
 
 
 def test_null_beyond_its_deviation_withholds_the_verdict():
@@ -129,9 +140,12 @@ def test_null_beyond_its_deviation_withholds_the_verdict():
     the bar past the registered lane."""
     m = measure.evaluate_rows(rows(_twelve(12), _twelve(12)))
     if ORDERED_NULL and measure.CONFIG.null_band is None:
-        assert m["quality_check_2_pass"] is True and m["criterion_1_pass"] is False
+        assert m["quality_check_2_pass"] is True
+        assert not CRITERION or m["criterion_1_pass"] is False
     else:
-        assert m["quality_check_2_pass"] is False and m["criterion_1_pass"] is None
+        assert m["quality_check_2_pass"] is False
+        assert not CRITERION or m["criterion_1_pass"] is None
+    assert m[measure.KEPT_KEY] == 1
 
 
 def test_only_a_registered_null_order_goes_without_a_deviation():
@@ -153,7 +167,7 @@ def test_only_a_registered_null_order_goes_without_a_deviation():
     without_donors = [{k: v for k, v in r.items() if k != "gold_of"} for r in kept]
     with pytest.raises(ValueError, match="registers no null_band"):
         measure.evaluate_rows(without_donors, no_band)
-    if ORDERED_NULL:
+    if ORDERED_NULL and CRITERION:
         m = measure.evaluate_rows(kept, no_band)
         bar = no_band.at_least if ABSOLUTE else m["quality_check_2_score"] + no_band.margin
         assert m["criterion_1_threshold"] == pytest.approx(bar)
@@ -162,7 +176,7 @@ def test_only_a_registered_null_order_goes_without_a_deviation():
 
 def test_the_test_lane_is_counted_never_scored():
     m = measure.evaluate_rows(rows(_twelve(12), _twelve(6), test=5))
-    assert m["n_test"] == 5 and m["n_items"] == 12 and m["criterion_1_pass"] is True
+    assert m["n_test"] == 5 and m["n_items"] == 12 and m[measure.KEPT_KEY] == 1
 
 
 def test_class_counts_are_the_scored_items_per_gold():
@@ -200,12 +214,15 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     assert set(asdict(measure.CONFIG)) == {f.name for f in fields(measure.MeasureConfig)}
     registered = promises.all_constants(promises.load(measure.PROTOCOL))
     assert registered and all(asdict(measure.CONFIG)[k] == v for k, v in registered.items())
+    if not CRITERION:
+        return
     # past every score's reach (from its null)
     strict = replace(measure.CONFIG, at_least=1.5) if ABSOLUTE else replace(measure.CONFIG, margin=1.5)
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)), strict)["criterion_1_pass"] is False
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)))["criterion_1_pass"] is True
 
 
+@needs_criterion
 def test_a_lane_exactly_at_null_plus_margin_passes():
     """8/12 against 5/12 + 0.25 is exactly the bar (accuracy and auc alike,
     `predicted`) — at apply with a permuted null 9/12 against the expectation
@@ -222,6 +239,7 @@ def test_a_lane_exactly_at_null_plus_margin_passes():
     assert measure.evaluate_rows(rows(_twelve(below), _twelve(null)), cfg)["criterion_1_pass"] is False
 
 
+@needs_criterion
 def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
     """`at_least`, a bar the task states, is the bar as written: 9/12
     against 0.75 passes and 8/12 fails with the null lane at 5 or 7 of 12
@@ -238,11 +256,16 @@ def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
 
 
 def test_criterion_1_registers_exactly_one_bar():
-    """Both forms or neither are refused before any row is read: a task's bar
-    beside a margin would leave the verdict to whichever the code reads."""
+    """Registered, both forms or neither are refused before any row is
+    read: a task's bar beside a margin would leave the verdict to whichever
+    the code reads. Not registered, either constant is refused: a bar
+    nothing judges."""
     from dataclasses import replace
 
+    on = replace(measure.CONFIG, bar_criterion=True, at_least=None, margin=0.25)
     with pytest.raises(ValueError, match="both `at_least` and `margin`"):
-        replace(measure.CONFIG, at_least=0.9, margin=0.25)
+        replace(on, at_least=0.9)
     with pytest.raises(ValueError, match="neither `at_least` nor `margin`"):
-        replace(measure.CONFIG, at_least=None, margin=None)
+        replace(on, margin=None)
+    with pytest.raises(ValueError, match="without \\[criterion-1\\]"):
+        replace(on, bar_criterion=False)

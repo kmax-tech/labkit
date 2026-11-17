@@ -198,20 +198,29 @@ class LaneDuties(unittest.TestCase):
 
     def test_low_owes_the_cut_and_nothing_graduates(self):
         self.assertEqual(self.owed(head(repeat_cost="low")), (self.LOW, []))
-        with_model = head(repeat_cost="low", model="haiku")
+        with_model = head(repeat_cost="low", model="haiku", type="confirmatory")
         self.assertEqual(self.owed(with_model), (self.SECONDS_MODEL, []))
+        # exploratory, the criterion is an offer: everything else stays owed
+        exploring = head(repeat_cost="low", model="haiku")
+        self.assertEqual(
+            self.owed(exploring),
+            ([f for f in self.SECONDS_MODEL if f != "Inference criterion"], []),
+        )
         prose_only = head(repeat_cost="low") + "- **Model / tool:** haiku\n"
         self.assertEqual(self.owed(prose_only), (self.LOW, []))  # prose decides nothing
 
     def test_the_full_form_graduates_its_shoulds_at_the_freeze(self):
         self.assertEqual(
-            self.owed(head(repeat_cost="high", kind="fit", model="haiku")),
+            self.owed(
+                head(repeat_cost="high", kind="fit", model="haiku", type="confirmatory")
+            ),
             (self.FULL_MUST, self.FULL_SHOULD),
         )
         frozen = head(
             repeat_cost="high",
             kind="fit",
             model="haiku",
+            type="confirmatory",
             frozen=True,
             preflight_audit="2026-10-21 · x",
         )
@@ -249,6 +258,7 @@ class LaneDuties(unittest.TestCase):
             repeat_cost="high",
             kind="fit",
             model="haiku",
+            type="confirmatory",
             frozen=True,
             preflight_audit="2026-10-21 · x",
         )
@@ -256,6 +266,7 @@ class LaneDuties(unittest.TestCase):
             repeat_cost="high",
             kind="fit",
             model="haiku",
+            type="confirmatory",
             frozen=True,
             preflight_audit="2026-10-21 · x",
             result=RUN,

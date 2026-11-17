@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.tools import scaffold
+from protocol_fixture import take_criterion_offer
 
 
 def binary(tp1: int, fn1: int, fp0: int, tn0: int) -> list[tuple]:
@@ -51,6 +52,7 @@ class StatedBar(unittest.TestCase):
             area, _ = scaffold.stamp_area(
                 self.root, f"{name}-{kind}", repeat_cost="low", kind=kind
             )
+        take_criterion_offer(area)
         if constants is not None:
             protocol = next(area.glob("PROTOCOL-*.md"))
             text = protocol.read_text(encoding="utf-8")
@@ -249,6 +251,7 @@ class PromptSkeleton(unittest.TestCase):
             area, _ = scaffold.stamp_area(
                 self.root, name, repeat_cost="low", kind="apply", model="haiku"
             )
+        take_criterion_offer(area)
         protocol = next(area.glob("PROTOCOL-*.md"))
         text = protocol.read_text(encoding="utf-8")
         self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)

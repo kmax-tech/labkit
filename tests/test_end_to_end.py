@@ -47,6 +47,7 @@ from labkit.formats import (
     standard_contract as sc,
 )
 from protocol_fixture import (
+    take_criterion_offer,
     decide_words,
     fill_known_case,
     protocol_id_of,
@@ -523,6 +524,9 @@ def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
         encoding="utf-8",
     )
     area, protocol = lab.exp(name, repeat_cost="low", kind="apply", model="haiku")
+    take_criterion_offer(
+        area, name_in_field=False
+    )  # the judge registers its success criterion
     scripts = area / "scripts"
     _replace(
         scripts / "00_prepare.py",
@@ -1838,6 +1842,9 @@ class Estimator(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.lab = Lab()
         cls.area, cls.protocol = points_area(cls.lab, "high", "fit")
+        take_criterion_offer(
+            cls.area, name_in_field=False
+        )  # an exploration that registers a criterion
         scripts = cls.area / "scripts"
         cls.measure = scripts / "01_measure.py"
         _replace(
@@ -2038,6 +2045,9 @@ class StatedBar(unittest.TestCase):
         lab = Lab()
         self.addCleanup(lab.close)
         area, protocol = points_area(lab, "low", "apply")
+        take_criterion_offer(
+            area, name_in_field=False
+        )  # the task states a bar: a criterion
         _replace(
             area / "scripts" / "01_measure.py",
             [

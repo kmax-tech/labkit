@@ -142,8 +142,12 @@ class Registration(unittest.TestCase):
         """A RandomForest at low repeat cost owes more than its question: a
         fit owes criterion, admissibility and the null condition, and a
         computation with a [model] table that does not say what its number
-        describes is a gap (test_annotation_validity)."""
-        text = head(repeat_cost="low", kind="fit") + "- **Question / hypothesis:** q\n"
+        describes is a gap (test_annotation_validity). Exploratory, the
+        criterion is an offer: the rest stays owed."""
+        text = (
+            head(repeat_cost="low", kind="fit", type="confirmatory")
+            + "- **Question / hypothesis:** q\n"
+        )
         self.assertEqual(
             protocol_check.low_registration_missing(text),
             [
@@ -151,6 +155,13 @@ class Registration(unittest.TestCase):
                 "Quality check",
                 "Null condition / anchors",
             ],
+        )
+        exploratory = (
+            head(repeat_cost="low", kind="fit") + "- **Question / hypothesis:** q\n"
+        )
+        self.assertEqual(
+            protocol_check.low_registration_missing(exploratory),
+            ["Quality check", "Null condition / anchors"],
         )
         contradiction = (
             head(repeat_cost="low", kind="compute", model="haiku") + self.QUESTION
@@ -160,7 +171,7 @@ class Registration(unittest.TestCase):
             any(m.startswith("[model] number_describes") for m in missing), missing
         )
         placeholder = (
-            head(repeat_cost="low", kind="<compute | fit | apply>")
+            head(repeat_cost="low", kind="<compute | fit | apply>", type="confirmatory")
             + "- **Question / hypothesis:** q\n"
         )
         missing = protocol_check.low_registration_missing(placeholder)

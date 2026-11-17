@@ -527,7 +527,8 @@ class TestCheckFields(unittest.TestCase):
         """With a head, its bold labels (H1, Flip-Test) are no template field:
         it misses all of them, Terms and Model I/O among them."""
         report = protocol_check.check_fields(
-            head(kind="fit", model="haiku") + REAL_FREEFORM_PROTOCOL
+            head(kind="fit", model="haiku", type="confirmatory")
+            + REAL_FREEFORM_PROTOCOL
         )
         self.assertEqual(report.missing_must, MUST)
         self.assertIn("Terms of this protocol", report.missing_must)
@@ -542,7 +543,10 @@ class TestCheckFields(unittest.TestCase):
         self.assertEqual(report.must_holes, [])
 
     def test_head_alone_misses_everything(self):
-        report = protocol_check.check_fields(head(kind="fit", model="haiku"))
+        # confirmatory: every must, the criterion among them
+        report = protocol_check.check_fields(
+            head(kind="fit", model="haiku", type="confirmatory")
+        )
         self.assertEqual(report.missing_must, MUST)
         self.assertEqual(report.missing_should, SHOULD)
 
@@ -556,7 +560,9 @@ class TestCheckFields(unittest.TestCase):
                 count = protocol_check.check_fields(
                     head(repeat_cost=cost, kind="compute")
                 )
-                fit = protocol_check.check_fields(head(repeat_cost=cost, kind="fit"))
+                fit = protocol_check.check_fields(
+                    head(repeat_cost=cost, kind="fit", type="confirmatory")
+                )
                 for label in bar:
                     self.assertNotIn(label, count.missing_must + count.missing_should)
                     self.assertIn(label, fit.missing_must + fit.missing_should)
@@ -570,7 +576,7 @@ class TestCheckFields(unittest.TestCase):
         """A word anywhere satisfies no field (`prompt` in a sentence does not
         cover Model I/O). Only the label line counts."""
         text = (
-            head(kind="fit", model="haiku")
+            head(kind="fit", model="haiku", type="confirmatory")
             + "We ask the model a prompt about terms, model I/O and anchors.\n"
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, MUST)
@@ -775,7 +781,9 @@ class TestPlaceholders(unittest.TestCase):
 
     def test_pipeline_exits_one_on_must_placeholder(self):
         rc, out = run_main(
-            pilot().replace("[criterion-1] AUC > 0.6", "<how do we recognise it?>")
+            pilot(type="confirmatory").replace(
+                "[criterion-1] AUC > 0.6", "<how do we recognise it?>"
+            )
         )
         self.assertEqual(rc, 1)
         self.assertIn("PLACEHOLDER ONLY (must): Inference criterion", out)
@@ -1017,8 +1025,8 @@ class TestGraduationGate(unittest.TestCase):
             self.assertIn(f"MISSING (must): {label}", out)
 
     def test_the_graduation_lives_in_owed(self):
-        h = protocol_block.head(pilot(frozen=True))
-        must, should = protocol_check.owed(pilot(frozen=True), h)
+        text = pilot(frozen=True, type="confirmatory")
+        must, should = protocol_check.owed(text, protocol_block.head(text))
         self.assertEqual([f.label for f in must], MUST + SHOULD)
         self.assertEqual(should, [])
 
@@ -1110,10 +1118,12 @@ class TestPromptAndExample(unittest.TestCase):
         ):
             self.assertNotIn(label, out)
         # the twin: a model declared in the head brings the criterion back
-        # (prose alone decides nothing)
+        # (prose alone decides nothing) — in confirmation, where it is owed
         rc, out = run_main(
             text.replace(
-                head(repeat_cost="low"), head(repeat_cost="low", model="haiku"), 1
+                head(repeat_cost="low"),
+                head(repeat_cost="low", model="haiku", type="confirmatory"),
+                1,
             )
         )
         self.assertEqual(rc, 1)

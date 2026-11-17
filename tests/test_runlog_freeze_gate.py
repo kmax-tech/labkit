@@ -61,9 +61,10 @@ SECONDS_COMPUTE = (
     + "\n- **Question / hypothesis:** how many documents per case?\n"
 )
 LOW = head(repeat_cost="low", model="haiku") + REGISTRATION
+#: confirmatory: there the criterion is owed (an exploration may go without)
 LOW_NO_CRITERION = LOW.replace(
     "[criterion-1] accuracy above the trivial decider", "<the criterion>"
-)
+).replace('type = "exploratory"', 'type = "confirmatory"')
 HOURS_UNFROZEN = head(repeat_cost="high", promises=DEFAULT_BLOCK) + REGISTRATION
 PROSE_HEAD = """\
 - **Protocol id:** p-0123456789abcdef

@@ -116,6 +116,7 @@ from labkit.tools.protocol_cuts import (
     insert_report_fields,
     name_promise_ids,
     new_protocol_id,
+    offer_criterion,
     pilot_and_report,
     promise_tables_for,
     short_placeholders,
@@ -770,6 +771,10 @@ def protocol_stamp(
         form = estimator_placeholders(form, kind=kind, model=bool(model), low=not whole)
     elif skeleton is standard_contract.COMPUTE and not whole:
         form = count_placeholders(form)
+    if standard_contract.has_bar(kind):
+        # the criterion is an offer: optional in exploration, owed in
+        # confirmation; the stamp does not know the type
+        form = offer_criterion(form)
     stamped = blank_before_headings(short_placeholders(form))
     stamped = name_promise_ids(stamped, kind)
     check_stamped_head(

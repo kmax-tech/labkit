@@ -445,19 +445,91 @@ PROMISE_FIELDS = {
 }
 
 
+#: the criterion offered, not registered: the stamp comments its table out
+#: (`offer_criterion`), so the field names no id — a bracketed id anywhere
+#: in the text registers a promise
+OFFERED_CRITERION = "criterion-1"
+#: the Inference criterion field while the criterion is offered; no `: `,
+#: ` — `, `; ` or ` (` in the first 72 characters (`short_placeholders`)
+OFFERED_CRITERION_PLACEHOLDER = (
+    "<optional in exploration, owed in confirmation · to register it follow "
+    "the criterion-1 offer in the head's block>"
+)
+
+
+def offer_criterion(text: str) -> str:
+    """TEXT with its `criterion-1` [[promise]] table commented out, line by
+    line, under a comment that says how to turn it on — the criterion is an
+    offer: an exploratory fit or apply reports its kept number without a
+    success verdict, a confirmatory one owes the criterion
+    (`standard_contract.criterion_owed`, `protocol_check.criterion_table_gap`).
+    Two steps, like the chance comparison's (`APPLY_PROMISES`): the table and
+    the id in the field, then the block between the criterion-1 markers in
+    the measure script. Raises ValueError unless the block declared
+    criterion-1 before and no longer does after."""
+    lines = text.split("\n")
+    start = next(
+        (
+            i
+            for i, line in enumerate(lines[:-1])
+            if protocol_block.PROMISE_HEADER.match(line)
+            and lines[i + 1].strip() == f'id = "{OFFERED_CRITERION}"'
+        ),
+        None,
+    )
+    if start is None:
+        raise ValueError(
+            f"offer_criterion: the stamp's block has no {OFFERED_CRITERION} table"
+        )
+    end = start
+    while end < len(lines) and lines[end].strip():
+        end += 1
+    offer = [
+        "# The criterion — the bar the kept number is judged against: optional",
+        '# while type = "exploratory", owed when "confirmatory" (or undecided).',
+        "# Two steps, both owed: (1) uncomment the table below and name its id,",
+        "# in brackets, in the Inference criterion field; (2) uncomment the",
+        "# block between the criterion-1 markers in evaluate_rows of",
+        "# scripts/01_measure.py, which reports criterion_1_threshold and",
+        "# criterion_1_pass. One step alone is held (code-check, intent-check).",
+    ]
+    out = (
+        lines[:start] + offer + [f"# {line}" for line in lines[start:end]] + lines[end:]
+    )
+    new = "\n".join(out)
+    before, after = promises.parse_block(text), promises.parse_block(new)
+    if (
+        before is None
+        or OFFERED_CRITERION not in before.by_id()
+        or (after is not None and OFFERED_CRITERION in after.by_id())
+    ):
+        raise ValueError(
+            f"offer_criterion: the block did not read back without {OFFERED_CRITERION}"
+        )
+    return new
+
+
 def name_promise_ids(text: str, kind: str) -> str:
     """The stamped promise ids written before the placeholders of the fields
-    that state them (PROMISE_FIELDS): `- **Inference criterion:**
-    [criterion-1] <…>` — for a KIND with a bar; a computation's text comes back unchanged
-    (an id in its prose would register a promise). Raises ValueError when a
-    field is not stamped or the stamped block does not declare its id: the
-    prose names only what the block already promises."""
+    that state them (PROMISE_FIELDS): `- **Quality check:** [quality-check-1]
+    <…>` — for a KIND with a bar; a computation's text comes back unchanged
+    (an id in its prose would register a promise). The offered criterion
+    (`offer_criterion`) is no id yet: its field gets
+    OFFERED_CRITERION_PLACEHOLDER. Raises ValueError when a field is not
+    stamped or the stamped block does not declare its id: the prose names
+    only what the block already promises."""
     if not has_bar(kind):
         return text
     block = promises.parse_block(text)
     declared = {p.id for p in block.promises} if block is not None else set()
     lines = text.split("\n")
     for label, pid in PROMISE_FIELDS.items():
+        if pid == OFFERED_CRITERION and pid not in declared:
+            if not _replace_placeholder(lines, label, OFFERED_CRITERION_PLACEHOLDER):
+                raise ValueError(
+                    f"name_promise_ids: the stamp has no `{label}` placeholder"
+                )
+            continue
         if pid not in declared:
             raise ValueError(f"name_promise_ids: the stamped block declares no {pid}")
         head = label_line(label, placeholder=True)

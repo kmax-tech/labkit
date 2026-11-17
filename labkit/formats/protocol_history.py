@@ -116,7 +116,7 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
 
 
 def registration_in_commit(
-    path: Path, commit: str, kind_now: str | None = None
+    path: Path, commit: str, kind_now: str | None = None, type_now: str | None = None
 ) -> list[str] | None:
     """What the low registration lacked in the protocol PATH as COMMIT
     holds it (`protocol_check.low_registration_missing`: the fields the
@@ -126,19 +126,23 @@ def registration_in_commit(
     now says nothing about what stood before the number. KIND_NOW, the
     kind the protocol declares today: the fields are owed by it, and a
     commit that declared another kind lacks the kind — a kind changed after
-    the measurement is not registered before it."""
+    the measurement is not registered before it. TYPE_NOW likewise: the
+    criterion is owed when either type owes it."""
     root = git_root(path)
     if root is None:
         return None
     shown = text_at(root, path, commit)
     if shown is None:
         return None
-    return registration_missing(shown, kind_now)
+    return registration_missing(shown, kind_now, type_now)
 
 
-def registration_missing(shown: str, kind_now: str | None = None) -> list[str]:
+def registration_missing(
+    shown: str, kind_now: str | None = None, type_now: str | None = None
+) -> list[str]:
     """What the low registration lacks in SHOWN, a protocol as a commit held
-    it (`registration_in_commit`): the fields KIND_NOW owes, the repeat_cost,
+    it (`registration_in_commit`): the fields KIND_NOW owes (the criterion
+    where its type then or TYPE_NOW owes one), the repeat_cost,
     one copy of each bound field (`repeated_fields`: `one copy of <label>
     (written N times, lines a and b)`), or a head this labkit cannot read —
     [] when it stood whole. Pure."""
@@ -149,7 +153,7 @@ def registration_missing(shown: str, kind_now: str | None = None) -> list[str]:
         # repeat_cost"; here the committed text is older than the reader, and the
         # sentence says so instead of naming a field
         return [f"a head this labkit reads ({exc})"]
-    return low_registration_missing(shown, kind_now) + [
+    return low_registration_missing(shown, kind_now, type_now) + [
         f"one copy of {label} (written {len(at)} times, lines {line_list(at)})"
         for label, at in repeated_fields(shown)
     ]

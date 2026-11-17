@@ -10,6 +10,7 @@ from labkit.formats import digests
 from labkit.formats.runs import RunKind
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -421,3 +422,46 @@ def fill_known_case(area: Path, ids: str, rows: str, metrics: str) -> None:
         assert text.count(stamped) == 1, f"{test}: no stamped {name}"
         text = text.replace(stamped, f"{name} = {value}\n")
     test.write_text(text, encoding="utf-8")
+
+
+def take_criterion_offer(area: Path, *, name_in_field: bool = True) -> None:
+    """Take the stamped [criterion-1] offer in AREA, both steps as the stamp
+    describes them: its commented table in the protocol's block
+    uncommented and its id named in the Inference criterion field (unless
+    NAME_IN_FIELD is false: the caller fills the field with its own
+    sentence), then the block between the criterion-1 markers in
+    scripts/01_measure.py uncommented. Raises AssertionError when the stamp
+    holds no such offer. Side effects: rewrites the protocol and the
+    measure script."""
+    protocol = next(area.glob("PROTOCOL-*.md"))
+    lines = protocol.read_text(encoding="utf-8").split("\n")
+    start = next(
+        i
+        for i, line in enumerate(lines[:-1])
+        if line == "# [[promise]]" and lines[i + 1] == '# id = "criterion-1"'
+    )
+    end = start
+    while end < len(lines) and lines[end].startswith("# "):
+        lines[end] = lines[end][2:]
+        end += 1
+    text = "\n".join(lines)
+    field = re.compile(r"^- \*\*Inference criterion:\*\* <[^\n]*>$", re.M)
+    assert field.search(text), "the stamp offers no criterion-1 field"
+    if name_in_field:
+        text = field.sub(
+            "- **Inference criterion:** [criterion-1] the kept score clears its bar",
+            text,
+            count=1,
+        )
+    protocol.write_text(text, encoding="utf-8")
+    script = area / "scripts" / "01_measure.py"
+    out, inside, taken = [], False, False
+    for line in script.read_text(encoding="utf-8").split("\n"):
+        if line.strip() in ("# --- criterion-1 begin", "# --- criterion-1 end"):
+            inside = line.strip().endswith("begin")
+            taken = True
+        elif inside:
+            line = line.replace("# ", "", 1)
+        out.append(line)
+    assert taken, "the measure script offers no criterion-1 block"
+    script.write_text("\n".join(out), encoding="utf-8")

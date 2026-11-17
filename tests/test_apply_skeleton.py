@@ -18,7 +18,7 @@ from unittest import mock
 from labkit.tools import scaffold
 from labkit.run import batch, provenance
 from labkit.formats import answering_run
-from protocol_fixture import run_record
+from protocol_fixture import run_record, take_criterion_offer
 from labkit.formats import runs
 
 
@@ -29,9 +29,13 @@ class ApplySkeleton(unittest.TestCase):
         self.root = Path(self.tmp.name)
         scaffold.stamp_lab(self.root, "local-predictor")
 
-    def measure_module(self, kind):
+    def measure_module(self, kind, *, criterion: bool = True):
+        """KIND's stamped area and its measure script loaded, the
+        [criterion-1] offer taken unless CRITERION is false."""
         with contextlib.redirect_stdout(io.StringIO()):
             area, _ = scaffold.stamp_area(self.root, kind, repeat_cost="low", kind=kind)
+        if criterion:
+            take_criterion_offer(area)
         name = f"fixed_predictor_{kind}_{id(self)}"
         spec = importlib.util.spec_from_file_location(
             name, area / "scripts" / "01_measure.py"

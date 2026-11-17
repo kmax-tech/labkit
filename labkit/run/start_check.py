@@ -168,7 +168,7 @@ def _committed_registration(
             f"intent paragraph)"
         ]
     if lane(head.repeat_cost).registration:
-        missing = registration_in_commit(protocol, "HEAD", head.kind)
+        missing = registration_in_commit(protocol, "HEAD", head.kind, head.type)
         if missing is None:
             return [
                 f"{protocol.name} is not committed — the first measurement is held to "

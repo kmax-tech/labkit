@@ -5,7 +5,9 @@
 Imports the area's script by path under a unique name (two areas in one
 pytest run must not share `01_measure`) and never copies its formula. The
 resolution check runs `evaluate_rows()` on synthetic rows in the run's real
-shape — perfect effect fires [criterion-1], a null-like registered lane stays silent,
+shape — the kept accuracy is reported on every evaluation; where [criterion-1] is
+registered (an offer in exploration, owed in confirmation; its tests skip, saying so,
+while it is not) perfect effect fires it, a null-like registered lane stays silent;
 too many empty answers fail [quality-check-1] and withhold the verdict, the registered
 permitted deviation (`null_band_items`) holds the null lane symmetric around
 chance. [criterion-1]'s bar is
@@ -34,6 +36,10 @@ POS, NEG, *_ = list(measure.ANSWERS.values())  # two gold labels, from the one c
 YES, NO, *_ = list(measure.ANSWERS)             # their answer words
 #: [criterion-1] registers a bar the task states (`at_least`), not a lead over the null (`margin`)
 ABSOLUTE = measure.CONFIG.at_least is not None
+#: [criterion-1] registered (both steps of the offer taken); without it no verdict is judged
+CRITERION = measure.CONFIG.bar_criterion
+needs_criterion = pytest.mark.skipif(
+    not CRITERION, reason="[criterion-1] is offered, not registered: the kept accuracy has no verdict")
 
 
 def rows(registered: list[tuple[str, str]], null: list[tuple[str, str]]) -> list[dict]:
@@ -65,6 +71,7 @@ def _deviation_lane() -> int:
     return max(12, 2 * measure.CONFIG.null_band_items + 4)
 
 
+@needs_criterion
 def test_perfect_effect_fires_c1():
     m = measure.evaluate_rows(rows(_twelve(12), _twelve(6)))
     assert m["criterion_1_pass"] is True and m["quality_check_2_pass"] is True and m["quality_check_1_pass"] is True
@@ -83,6 +90,7 @@ def test_null_deviation_is_symmetric_around_chance():
         assert m["quality_check_2_pass"] is inside, correct
 
 
+@needs_criterion
 def test_null_like_registered_lane_stays_silent():
     m = measure.evaluate_rows(rows(_twelve(6), _twelve(6)))
     assert m["criterion_1_pass"] is False
@@ -92,7 +100,9 @@ def test_too_many_empty_answers_withhold_the_verdict():
     max_empty = measure.CONFIG.max_empty
     reg = [("", g) for _, g in _twelve(12)[: max_empty + 1]] + _twelve(12)[max_empty + 1:]
     m = measure.evaluate_rows(rows(reg, _twelve(6)))
-    assert m["quality_check_1_pass"] is False and m["criterion_1_pass"] is None
+    # the kept accuracy stays visible; no criterion judges it
+    assert m["quality_check_1_pass"] is False and m[measure.KEPT_KEY] < 1
+    assert not CRITERION or m["criterion_1_pass"] is None
 
 
 def test_the_formula_reads_its_thresholds_from_the_config():
@@ -107,6 +117,8 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     # every registered constant is a field, read from the block, not copied
     registered = promises.all_constants(promises.load(measure.PROTOCOL))
     assert registered and all(asdict(measure.CONFIG)[k] == v for k, v in registered.items())
+    if not CRITERION:
+        return
     # past the reach of twelve right (over a null of six)
     strict = replace(measure.CONFIG, at_least=1.5) if ABSOLUTE else replace(measure.CONFIG, margin=0.9)
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)), strict)["criterion_1_pass"] is False
@@ -135,7 +147,8 @@ def test_a_constant_placebo_sits_at_its_gold_share():
 def test_null_beyond_its_deviation_withholds_the_verdict():
     n = _deviation_lane()  # every item right lies beyond the registered deviation
     m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, n)))
-    assert m["quality_check_2_pass"] is False and m["criterion_1_pass"] is None
+    assert m["quality_check_2_pass"] is False and m[measure.KEPT_KEY] == 1
+    assert not CRITERION or m["criterion_1_pass"] is None
 
 
 # The forms the answer line asks for — the parser must read them before any
@@ -192,6 +205,7 @@ def test_parser_reads_the_probe_forms(raw, expected):
     assert measure.parse_answer(raw) == expected
 
 
+@needs_criterion
 def test_a_lane_exactly_at_null_plus_margin_passes():
     """8/12 against 5/12 + 0.25 is exactly the bar and passes, 7/12 fails:
     in floats a lane exactly at null + margin failed by one ulp."""
@@ -202,6 +216,7 @@ def test_a_lane_exactly_at_null_plus_margin_passes():
     assert measure.evaluate_rows(rows(_twelve(7), _twelve(5)), cfg)["criterion_1_pass"] is False
 
 
+@needs_criterion
 def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
     """`at_least`, a bar the task states, is the bar as written: 9/12
     against 0.75 passes and 8/12 fails, with the null lane at 5 or 7 of 12 —
@@ -216,11 +231,16 @@ def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
 
 
 def test_criterion_1_registers_exactly_one_bar():
-    """Both forms or neither are refused before any row is read: a task's bar
-    beside a margin would leave the verdict to whichever the code reads."""
+    """Registered, both forms or neither are refused before any row is
+    read: a task's bar beside a margin would leave the verdict to whichever
+    the code reads. Not registered, either constant is refused: a bar
+    nothing judges."""
     from dataclasses import replace
 
+    on = replace(measure.CONFIG, bar_criterion=True, at_least=None, margin=0.25)
     with pytest.raises(ValueError, match="both `at_least` and `margin`"):
-        replace(measure.CONFIG, at_least=0.9, margin=0.25)
+        replace(on, at_least=0.9)
     with pytest.raises(ValueError, match="neither `at_least` nor `margin`"):
-        replace(measure.CONFIG, at_least=None, margin=None)
+        replace(on, margin=None)
+    with pytest.raises(ValueError, match="without \\[criterion-1\\]"):
+        replace(on, bar_criterion=False)

@@ -163,11 +163,15 @@ def lane(repeat_cost: str | None) -> Lane:
 #: (the null condition or anchors, computed in the same run); with a model
 #: answering through `models.toml` also the judged data profile — read
 #: before the model is asked, or a cue in the data answers in its place
-#: (LAB-003 No run without an intent paragraph). The labels are the
-#: template's, held to `protocol_check.FIELDS` by a test.
+#: (LAB-003 No run without an intent paragraph). The criterion is owed
+#: only where `criterion_owed` says so: an exploratory fit or apply may go
+#: without one. The labels are the template's, held to
+#: `protocol_check.FIELDS` by a test.
 REGISTRATION_FIELDS = ("Question / hypothesis",)
+#: the field that states the bar, owed with it (`criterion_owed`)
+CRITERION_FIELD = "Inference criterion"
 REGISTRATION_FIELDS_WITH_BAR = (
-    "Inference criterion",
+    CRITERION_FIELD,
     "Quality check",
     "Null condition / anchors",
 )
@@ -183,13 +187,47 @@ def has_bar(kind: str) -> bool:
     return kind != COMPUTE_KIND
 
 
+#: the protocol type that may go without a criterion
+#: (`protocol_block.TYPES`)
+EXPLORATORY = "exploratory"
+
+
+def criterion_owed(kind: str, protocol_type: str | None) -> bool:
+    """Does a protocol of KIND and PROTOCOL_TYPE owe a criterion — a bar its
+    kept number is judged against? A computation never (it has no bar); a
+    fit or an apply in confirmation, and while its type is undecided (the
+    most, never the least); in exploration the criterion is an offer, the
+    kept number reported without a success verdict. Raises ValueError for a
+    kind the head cannot carry (`has_bar`)."""
+    return has_bar(kind) and protocol_type != EXPLORATORY
+
+
 def registration_fields(kind: str, model: bool) -> tuple[str, ...]:
-    """The labels the registration owes written for a number of KIND, with
-    or without a model answering through `models.toml`."""
+    """The labels the registration records for a number of KIND, with or
+    without a model answering through `models.toml` — what the
+    registration stamp digests and the registration locks compare
+    (`protocol_check.registration_stamp`), the criterion field included
+    at every fit and apply. What a run owes written before it starts is
+    `registration_owed_before_run`."""
     return (
         REGISTRATION_FIELDS
         + (REGISTRATION_FIELDS_WITH_BAR if has_bar(kind) else ())
         + (REGISTRATION_FIELDS_WITH_MODEL if model else ())
+    )
+
+
+def registration_owed_before_run(
+    kind: str, model: bool, protocol_type: str | None
+) -> tuple[str, ...]:
+    """The labels a run owes written before it starts, for a number of KIND
+    and PROTOCOL_TYPE, with or without a model: `registration_fields`
+    without the criterion field where no criterion is owed
+    (`criterion_owed`)."""
+    owed = criterion_owed(kind, protocol_type)
+    return tuple(
+        label
+        for label in registration_fields(kind, model)
+        if owed or label != CRITERION_FIELD
     )
 
 
@@ -348,6 +386,13 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
         + " — runlog checks these; the pre-commit hook holds every field the "
         "low cut owes (the first lines above name them), so the commit carries "
         "all of them"
+        + (
+            f"; {CRITERION_FIELD} and a criterion table only in confirmation — "
+            'type = "exploratory" may leave them out and report the kept number '
+            "without a success verdict"
+            if has_bar(kind)
+            else ""
+        )
         if ln.registration
         else "`preflight` clean, the preflight audit decided and its record named "
         "in the head (`preflight_audit`), `frozen = true`"

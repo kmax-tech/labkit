@@ -426,7 +426,7 @@ def _registration_at(
                 rule=LAB_003,
             )
         ]
-    missing = registration_missing(then.text, ctx.head.kind)
+    missing = registration_missing(then.text, ctx.head.kind, ctx.head.type)
     if missing:
         return [
             blocker(

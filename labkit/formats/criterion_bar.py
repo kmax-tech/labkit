@@ -1,10 +1,11 @@
 """criterion_bar — [criterion-1]'s bar in the estimator and prompt skeletons.
 
-    criterion_bar.require_one_form(cfg.at_least, cfg.margin)   # MeasureConfig.__post_init__
+    criterion_bar.require_form_if_registered(cfg.bar_criterion, cfg.at_least, cfg.margin)   # MeasureConfig.__post_init__
     bar = criterion_bar.bar_of(cfg.at_least, cfg.margin, null_value)   # evaluate_rows
     passed = score >= bar
 
-[criterion-1] registers exactly one of two constants (LAB-035 Thresholds
+[criterion-1], where registered (an offer in exploration, owed in
+confirmation), registers exactly one of two constants (LAB-035 Thresholds
 belong to the run, not to the measure; docs/notes/2026-11-02-absolute-task-bar.md):
 `at_least`, a bar the task states, is the bar as written whatever the null
 lane scores; `margin` is a lead over the null value the skeleton computes
@@ -42,6 +43,25 @@ def require_one_form(at_least: float | None, margin: float | None) -> None:
         f"source in the sentence), or `{MARGIN} = <value>` for a lead over the "
         "null value"
     )
+
+
+def require_form_if_registered(
+    registered: bool, at_least: float | None, margin: float | None
+) -> None:
+    """Return when the bar's constants fit whether [criterion-1] is
+    REGISTERED: registered, exactly one of AT_LEAST and MARGIN
+    (`require_one_form`); not registered — the criterion offered, not taken
+    — neither. Raises ValueError naming the form otherwise: a constant
+    without its criterion is a bar nothing judges."""
+    if registered:
+        require_one_form(at_least, margin)
+        return
+    given = [n for n, v in ((AT_LEAST, at_least), (MARGIN, margin)) if v is not None]
+    if given:
+        raise ValueError(
+            f"`{'` and `'.join(given)}` registered without [criterion-1] — a bar "
+            "nothing judges: register the criterion's table, or drop the constant"
+        )
 
 
 def bar_of(

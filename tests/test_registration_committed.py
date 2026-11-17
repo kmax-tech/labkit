@@ -244,7 +244,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         """Registered and measured as a computation, then turned into a fit
         with its bar written: the bar did not stand before the number. The
         commit is judged by today's kind, not its own, and the change is
-        named."""
+        named. Exploratory then and now, the criterion is no part of it."""
         sha = self._commit(REGISTRATION, kind="compute")
         self._run(sha)
         self._commit(REGISTRATION + BAR, kind="fit")
@@ -253,7 +253,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertIn(
             f"the registration as committed at the first measurement {RUN} "
             f"({sha[:12]}) lacks [protocol] kind = 'fit' (it said 'compute' then), "
-            f"Inference criterion, Quality check, Null "
+            f"Quality check, Null "
             f"condition / anchors",
             out,
         )

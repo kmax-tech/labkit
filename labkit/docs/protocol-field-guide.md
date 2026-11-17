@@ -245,8 +245,15 @@ the detail below does not hold.
   standard. Reuse a word that you find (LAB-084 Double-coinage check).
 - **Question / hypothesis:** even "just try it" has a question behind it.
   If you cannot state it, ask before you build.
-- **Inference criterion:** a number, a behavior or a visual check. Ask four
-  questions of it:
+- **Inference criterion:** a number, a behavior or a visual check — the
+  bar the kept number (`[kept]`) is judged against. Owed by a fit or an
+  apply with `type = "confirmatory"` (or a type not yet set); with `type =
+  "exploratory"` it is an offer: the stamp leaves `criterion-1` commented
+  out, and the run reports the kept number without a success verdict. A
+  comparison the task asks for (a null comparison, `criterion-2`) stays
+  owed then. To take the offer, uncomment its table and name
+  `[criterion-1]` here, then uncomment its block in `evaluate_rows`. Ask
+  four questions of it:
   1. Does it test the mechanism, or only a number?
   2. Is the target a property of one item? A relation between items has no
      single-item criterion.

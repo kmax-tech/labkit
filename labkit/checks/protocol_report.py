@@ -90,7 +90,7 @@ def unreported(text: str, head: protocol_block.Head) -> list[str]:
     found = {f.name: f for f in lines}
     owed = [
         f
-        for f in owed_fields(head.repeat_cost, head.kind, model_named(text))
+        for f in owed_fields(head.repeat_cost, head.kind, model_named(text), head.type)
         if f.level == "after"
     ]
     return [
@@ -323,7 +323,7 @@ class OwedFields:
 def owed_by_occasion(head: protocol_block.Head, model: bool) -> OwedFields:
     """What a protocol of HEAD, a model named or not (MODEL), owes by
     occasion — the fields protocol-check holds it to."""
-    owed_here = owed_fields(head.repeat_cost, head.kind, model)
+    owed_here = owed_fields(head.repeat_cost, head.kind, model, head.type)
     low = standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT
 
     def labels(level: str) -> list[str]:

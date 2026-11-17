@@ -51,6 +51,7 @@ from labkit.formats import (
     answering_run,
 )
 
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_011 = cited_rule("LAB-011 Required-field check")
 LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
@@ -986,17 +987,28 @@ def in_form(
 
 
 def owed_fields(
-    repeat_cost: str | None, kind: str | None, model: bool
+    repeat_cost: str | None,
+    kind: str | None,
+    model: bool,
+    protocol_type: str | None = None,
 ) -> tuple[Field, ...]:
-    """Every field a protocol of REPEAT_COST and KIND, a model named or not
-    (MODEL), owes, each at its level's occasion (`Field.level`): the low
-    cut's marked fields (`in_cut`; nothing graduates there, and no report
-    field is owed), else the full form's (`full_owed`). The one answer
-    `owed`, protocol-check's result check and `protocol-check PROTOCOL
-    --contract` read."""
+    """Every field a protocol of REPEAT_COST, KIND and PROTOCOL_TYPE, a
+    model named or not (MODEL), owes, each at its level's occasion
+    (`Field.level`): the low cut's marked fields (`in_cut`; nothing
+    graduates there, and no report field is owed), else the full form's
+    (`full_owed`) — the Inference criterion only where a criterion is owed
+    (`standard_contract.criterion_owed`: not in exploration; an undecided
+    kind or type owes it). The form still carries the field
+    (`in_form`): carried is not owed. The one answer `owed`,
+    protocol-check's result check and `protocol-check PROTOCOL --contract`
+    read."""
     if standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT:
-        return tuple(f for f in FIELDS if in_cut(f, kind, model))
-    return tuple(f for f in FIELDS if full_owed(f, kind, model))
+        carried = tuple(f for f in FIELDS if in_cut(f, kind, model))
+    else:
+        carried = tuple(f for f in FIELDS if full_owed(f, kind, model))
+    if kind is None or standard_contract.criterion_owed(kind, protocol_type):
+        return carried
+    return tuple(f for f in carried if f.label != standard_contract.CRITERION_FIELD)
 
 
 def _kind_gap(text: str, head: protocol_block.Head) -> tuple[str, str] | None:
@@ -1125,7 +1137,7 @@ def owed(
     refuses without it, leaving the protocol as it was."""
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.low_cut`) are this module's
-    owed_here = owed_fields(head.repeat_cost, head.kind, model_named(text))
+    owed_here = owed_fields(head.repeat_cost, head.kind, model_named(text), head.type)
     # a declared result, or one being adopted, makes the result fields due;
     # its answer, the Conclusion, joins the must on every branch below
     due = adopting or answering_run.adopted_run(text) is not None
@@ -1232,8 +1244,8 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
             )
         )
     # Whether the tables are owed is decided in ONE place,
-    # promises.promise_tables_owed: frozen, or at low repeat cost (every run there is
-    # the full run). No condition repeated here.
+    # promises.tables_owed: frozen, or at low repeat cost (every run there is
+    # the full run); the criterion's table below is owed under it too.
     try:
         block = promises.parse_block(text)
         tables_gap = promises.promise_tables_owed(
@@ -1260,7 +1272,45 @@ def freeze_must_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
             must_gaps.append(
                 MustGap(tables_gap, LAB_004, MISSING if block is None else PLACEHOLDER)
             )
+        elif promises.tables_owed(frozen=head.frozen, full_run=lane.registration):
+            # an undecided kind owes nothing here: the head check names it
+            missing = criterion_table_gap(block, head.kind, head.type)
+            if missing:
+                must_gaps.append(MustGap(missing, LAB_003, MISSING))
     return must_gaps
+
+
+#: the way to the offered criterion, as the stamp writes it
+CRITERION_OFFER = (
+    "uncomment the offered `criterion-1` table in the head's block and name "
+    "its id in brackets in the Inference criterion field, then uncomment the "
+    "block between the `criterion-1` markers in evaluate_rows of "
+    "scripts/01_measure.py (both steps; one alone is held by code-check)"
+)
+
+
+def criterion_table_gap(
+    block: promises.PromiseTables | None,
+    kind: str | None,
+    protocol_type: str | None,
+) -> str | None:
+    """Why a protocol of KIND and PROTOCOL_TYPE owes a criterion its
+    [[promise]] tables BLOCK do not declare, or None: a fit or an apply
+    owes one in confirmation and while its type is undecided
+    (`standard_contract.criterion_owed`); in exploration it is an offer.
+    An undecided kind owes nothing here — the head check names it. Pure;
+    when the tables are owed at all is the caller's (`freeze_must_gaps`,
+    `low_registration_missing`)."""
+    if kind is None or not standard_contract.criterion_owed(kind, protocol_type):
+        return None
+    if block is not None and any(p.kind == "criterion" for p in block.promises):
+        return None
+    shown_type = protocol_type or "undecided"
+    return (
+        f'[[promise]] criterion — kind = "{kind}" with type {shown_type!r} owes a '
+        f"criterion, the bar its kept number is judged against: {CRITERION_OFFER}; "
+        f'only type = "exploratory" may report the kept number without one'
+    )
 
 
 def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
@@ -1317,11 +1367,14 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
     )
 
 
-def low_registration_missing(text: str, kind_now: str | None = None) -> list[str]:
+def low_registration_missing(
+    text: str, kind_now: str | None = None, type_now: str | None = None
+) -> list[str]:
     """The registration a run at low repeat cost owes before its number counts:
     the question written (not a placeholder); for a number that judges a
-    prediction (kind fit or apply) also criterion, quality check
-    and null condition; with a model named also the judged data profile;
+    prediction (kind fit or apply) also quality check and null condition,
+    and — unless the protocol is exploratory (`criterion_owed`) — the
+    criterion, field and table (`criterion_table_gap`); with a model named also the judged data profile;
     the repeat_cost and the kind declared, the kind not contradicting the
     head (`kind_gap`, `reference_gap`), and the kept number named
     (`kept_gaps`). Returns what is missing — empty means the gate is
@@ -1332,7 +1385,11 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     KIND_NOW, when TEXT is an earlier version of the protocol: the kind it
     declares today. The fields are then owed by that kind, and a TEXT that
     declared another kind misses the kind itself — a fit's criterion added
-    after a computation measured was not registered before that number."""
+    after a computation measured was not registered before that number.
+    TYPE_NOW, likewise the type it declares today (None: not given, TEXT's
+    own type decides alone): the criterion is owed when either type owes it (`standard_contract.criterion_owed`) — a
+    protocol made confirmatory after an exploratory first measurement
+    still lacks the criterion that measurement had."""
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
@@ -1340,9 +1397,16 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     lines = fields(text)
     written = {f.name for f in lines if f.value and not f.placeholder}
     kind = kind_now or head.kind
-    # the most is owed while the kind is undecided — and the kind itself
-    labels = standard_contract.registration_fields(
-        kind or standard_contract.APPLY_KIND, model_named(text)
+    # the most is owed while the kind is undecided — and the kind itself;
+    # the criterion only where it is owed (an exploratory fit may go
+    # without), its table too — under the stricter of the two types
+    types = (head.type,) if type_now is None else (head.type, type_now)
+    type_owing = next(
+        (t for t in types if t != standard_contract.EXPLORATORY),
+        standard_contract.EXPLORATORY,
+    )
+    labels = standard_contract.registration_owed_before_run(
+        kind or standard_contract.APPLY_KIND, model_named(text), type_owing
     )
     missing = (
         [f"[protocol] kind = {kind_now!r} (it said {head.kind!r} then)"]
@@ -1353,9 +1417,13 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
     contradictions = (kind_gap(text, head), reference_gap(text, head))
+    try:
+        criterion = criterion_table_gap(promises.parse_block(text), kind, type_owing)
+    except promises.PromiseError:
+        criterion = None  # a block that does not read is named where it is read
     return (
         missing
-        + [c for c in contradictions if c]
+        + [c for c in (*contradictions, criterion) if c]
         + [g.label for g in kept_gaps(text, head)]
     )
 
