@@ -33,7 +33,7 @@ record held to the config object's fields) proves completeness. The model
 is read from the run's record, never resolved against today's models.toml,
 and so are the registered constants and the script's literals: a named
 older run shows what it ran with, not today's protocol or script. A run
-that kept no script copy says so in each literal's home.
+that kept no script copy shows its literals as not available.
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ from labkit.formats.repo import (
 from labkit.formats.runs import read_run_config
 from labkit.formats.scope_sha import parse_source
 from labkit.formats.area_state import state_of
-from labkit.formats.runs import MEASURE_SCRIPT, lineage, model_provenance_run
+from labkit.formats.runs import lineage, model_provenance_run
 
 
 @dataclass(frozen=True)
@@ -266,23 +266,33 @@ def script_constant_rows(
     ]
 
 
-def ran_script(area: Path, run_dir: Path) -> tuple[Path, str]:
-    """(file, as shown) of the measuring script RUN_DIR ran: its kept copy
-    (`runs.script_copy_path`), or — a run that kept none — AREA's script
-    as it reads now, the shown name saying so."""
+def ran_script(run_dir: Path) -> Path | None:
+    """The copy of the measuring script RUN_DIR kept as it ran
+    (`runs.script_copy_path`), None when it kept none: today's script is
+    never read in its place, since its values are not the run's."""
     copy = script_copy_path(run_dir, ".py")
-    if copy.is_file():
-        return copy, f"{run_dir.name}/{copy.name}"
-    return (
-        area / MEASURE_SCRIPT,
-        f"{MEASURE_SCRIPT} as it reads now (the run kept no copy)",
+    return copy if copy.is_file() else None
+
+
+def no_script_row(run_dir: Path) -> ParamRow:
+    """The one row of a run that kept no script copy: its module literals
+    are not available, and no row stands in for them."""
+    return ParamRow(
+        name="script literals",
+        value="not available",
+        home=f"{run_dir.name}/script-source.py is missing",
+        meaning="the script's values as the run ran are not available; "
+        "today's script is not shown in their place",
+        in_run="—",
+        evidence_kind=GUARANTEED,
     )
 
 
-def params_table(area: Path, run_dir: Path) -> list[ParamRow]:
+def params_table(run_dir: Path) -> list[ParamRow]:
     """Every row of the view for one run, registered constants first — each
     from the run itself: its record, its promise snapshot, its script copy
-    (`ran_script`).
+    (`ran_script`); without that copy the literals are not available
+    (`no_script_row`).
 
     Raises:
         ValueError: An unreadable run config or promise snapshot, or a
@@ -292,8 +302,9 @@ def params_table(area: Path, run_dir: Path) -> list[ParamRow]:
     if cfg is None:
         raise ValueError(f"{run_dir}: no config.json")
     run_config = cfg.config  # an object, held where the config is read
-    script, script_shown = ran_script(area, run_dir)
-    literals = script_literals(script)
+    script = ran_script(run_dir)
+    literals = script_literals(script) if script is not None else {}
+    script_shown = f"{run_dir.name}/{script.name}" if script is not None else ""
     rows: list[ParamRow] = []
     if cfg.promises is not None:
         registered_then = promises.snapshot_constants(cfg.promises)
@@ -307,7 +318,10 @@ def params_table(area: Path, run_dir: Path) -> list[ParamRow]:
         {k: v for k, v in run_config.items() if k not in registered}, run_dir.name
     )
     rows += model_rows(run_dir)
-    rows += script_constant_rows(literals, run_config, registered, script_shown)
+    if script is None:
+        rows.append(no_script_row(run_dir))
+    else:
+        rows += script_constant_rows(literals, run_config, registered, script_shown)
     return rows
 
 
@@ -386,7 +400,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
         how = f"the run that answers for {pid}" + "".join(f" ({ln})" for ln in lines)
     print(f"params: {area.name} · {protocol.name} · run {run_dir.name} ({how})")
     try:
-        rows = params_table(area, run_dir)
+        rows = params_table(run_dir)
     except ValueError as exc:
         console.refuse("labkit-params", str(exc))
         return 2

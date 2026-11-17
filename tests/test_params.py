@@ -112,7 +112,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7, "model": "m"},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, run))
+            rows = _by_name(params.params_table(run))
             self.assertEqual(
                 {r.evidence_kind for r in rows.values()}, {gate.GUARANTEED}
             )
@@ -140,7 +140,7 @@ class Table(unittest.TestCase):
                     "judge": {"alias": "m", "model": "A", "endpoint": "http://a"},
                 },
             )
-            rows = _by_name(params.params_table(area, run))
+            rows = _by_name(params.params_table(run))
             self.assertEqual(rows["judge"].evidence_kind, gate.STATIC_EVIDENCE)
             self.assertIn("runlog does not read", rows["judge"].meaning)
             self.assertIn("not recorded in models_resolved", rows["model"].meaning)
@@ -154,7 +154,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, run))
+            rows = _by_name(params.params_table(run))
             row = rows["SOME_CONSTANT"]
             self.assertEqual(
                 (row.evidence_kind, row.in_run, row.home),
@@ -171,7 +171,7 @@ class Table(unittest.TestCase):
                 {"margin": 0.1},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, run))
+            rows = _by_name(params.params_table(run))
             self.assertEqual(
                 rows["min_acc"].in_run,
                 f"— (not recorded; {run.name}/script-source.py:1 holds min_acc = 0.7)",
@@ -189,7 +189,7 @@ class Table(unittest.TestCase):
                 {"margin": 0.1},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, run))
+            rows = _by_name(params.params_table(run))
             self.assertEqual(
                 rows["min_acc"].in_run,
                 f"— (not recorded; {run.name}/script-source.py:1 holds MIN_ACC = 0.7)",
@@ -205,7 +205,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.5},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, run))
+            rows = _by_name(params.params_table(run))
             self.assertEqual(rows["min_acc"].in_run, "0.5  ≠ DIFFERS")
             self.assertEqual(rows["min_acc"].evidence_kind, gate.GUARANTEED)
 
@@ -230,7 +230,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7},
                 derived_from="2026-10-02T10-00-00_bbbb",
             )
-            rows = _by_name(params.params_table(area, child))
+            rows = _by_name(params.params_table(child))
             self.assertEqual(rows["model m"].in_run, f"inherited from {parent.name}")
             self.assertEqual(
                 rows["model m"].home,
@@ -247,7 +247,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7},
                 derived_from=parent.name,
             )
-            rows = _by_name(params.params_table(area, child))
+            rows = _by_name(params.params_table(child))
             self.assertIn(
                 "not recorded in models_resolved along lineage", rows["model"].meaning
             )
@@ -317,24 +317,25 @@ class CommandLine(unittest.TestCase):
             script = area / "scripts" / "01_measure.py"
             script.write_text(SCRIPT + "BATCH = 16\n", encoding="utf-8")
             new = _run(area, "2026-10-02T10-00-00_bbbb", {"min_acc": 0.8})
-            then = _by_name(params.params_table(area, old))
+            then = _by_name(params.params_table(old))
             self.assertEqual(
                 (then["min_acc"].value, then["min_acc"].in_run), ("0.7", "0.7")
             )
             self.assertEqual(then["BATCH"].value, "8")
-            now = _by_name(params.params_table(area, new))
+            now = _by_name(params.params_table(new))
             self.assertEqual((now["min_acc"].value, now["BATCH"].value), ("0.8", "16"))
 
-    def test_a_run_without_its_script_copy_says_whose_literals_it_shows(self) -> None:
+    def test_a_run_without_its_script_copy_shows_its_literals_as_not_available(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d, SCRIPT + "BATCH = 8\n")
             run = _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7})
             (run / "script-source.py").unlink()
-            rows = _by_name(params.params_table(area, run))
-            self.assertEqual(
-                rows["BATCH"].home,
-                "scripts/01_measure.py as it reads now (the run kept no copy):7",
-            )
+            rows = _by_name(params.params_table(run))
+            self.assertNotIn("BATCH", rows)  # today's value is not the run's
+            self.assertEqual(rows["script literals"].value, "not available")
+            self.assertEqual(rows["min_acc"].in_run, "0.7")
 
     def test_no_bound_run_is_a_refusal(self) -> None:
         with tempfile.TemporaryDirectory() as d:
