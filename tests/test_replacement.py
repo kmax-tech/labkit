@@ -126,9 +126,6 @@ class Differences(unittest.TestCase):
                     "R² beats the null",
                 ),
                 ("criterion-1 margin", "0.25", "0.15"),
-                # the fixture's fit head stamps no [kept]: what the number is
-                # about, compared as finalize compares a first measurement
-                ("[kept]", '[kept] key = "n" unit = "1"', "(none)"),
                 ("Data profile", "944 compounds", "232 compounds"),
             ],
         )

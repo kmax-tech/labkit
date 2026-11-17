@@ -1,7 +1,7 @@
-"""A computation's kept number, registered in the head's `[kept]` table
+"""The kept number, registered in the head's `[kept]` table at every kind
 (docs/notes/2026-11-01-kept-key-in-the-head.md): the
 metrics key and its unit, read in one place (`protocol_block.kept`), owed
-or refused by kind in one (`protocol_check.kept_gaps`), filled by
+in one (`protocol_check.kept_gaps`), filled by
 `protocol-fill kept.key=… kept.unit=…`, held to the answering run by
 finalize (`run_record_check.kept_number_gaps`, a guaranteed blocker) and
 rendered first in the Recorded results line. Each blocking check has its
@@ -92,8 +92,9 @@ class KeptTable(unittest.TestCase):
 
 
 class OwedByKind(unittest.TestCase):
-    """A computation owes `[kept]`; a fit or an apply refuses it — named by
-    protocol-check and at the start of a low run."""
+    """Every decided kind owes `[kept]` — the one home of the number a
+    protocol reports; a fit's or an apply's criterion judges exactly that
+    number — named by protocol-check and at the start of a low run."""
 
     def gaps(self, text: str) -> list[str]:
         return [
@@ -110,16 +111,22 @@ class OwedByKind(unittest.TestCase):
             with self.subTest(text=text[-60:]):
                 self.assertEqual(self.rules(text), [protocol_check.LAB_011])
 
-    def test_a_table_on_a_fit_is_the_technical_contract(self):
-        text = with_table('key = "n"\nunit = "1"\n', kind="fit")
-        self.assertEqual(self.rules(text), [gate.TECHNICAL_RULE])
+    def test_a_table_that_does_not_read_is_the_technical_contract(self):
+        for kind in ("compute", "fit", "apply"):
+            with self.subTest(kind=kind):
+                text = with_table('key = "n"\n', kind=kind)
+                self.assertEqual(self.rules(text), [gate.TECHNICAL_RULE])
 
-    def test_a_computation_without_the_table_owes_it(self):
-        text = compute(None)
-        (gap,) = self.gaps(text)
-        self.assertIn('[kept] — kind = "compute" names its kept number', gap)
-        self.assertIn(gap, protocol_check.check_fields(text).missing_must)
-        self.assertIn(gap, protocol_check.low_registration_missing(text))
+    def test_every_kind_without_the_table_owes_it(self):
+        for kind in ("compute", "fit", "apply"):
+            with self.subTest(kind=kind):
+                text = head(repeat_cost="low", kind=kind, promises=None, kept=None)
+                (gap,) = self.gaps(text)
+                self.assertIn(
+                    f'[kept] — kind = "{kind}" names the number it reports', gap
+                )
+                self.assertIn(gap, protocol_check.check_fields(text).missing_must)
+                self.assertIn(gap, protocol_check.low_registration_missing(text))
 
     def test_a_placeholder_is_an_unfilled_field(self):
         text = compute(("<metrics key>", "ms"))
@@ -127,25 +134,22 @@ class OwedByKind(unittest.TestCase):
         self.assertIn("[kept] key", protocol_check.check_fields(text).missing_must)
         self.assertIn("[kept] key", protocol_check.low_registration_missing(text))
 
-    def test_the_twin_a_filled_table_owes_nothing(self):
-        text = compute()
-        self.assertEqual(self.gaps(text), [])
-        self.assertEqual(
-            [m for m in protocol_check.check_fields(text).missing_must if "kept" in m],
-            [],
-        )
-
-    def test_a_fit_or_an_apply_refuses_the_table(self):
-        for kind in ("fit", "apply"):
+    def test_the_twin_a_filled_table_owes_nothing_at_every_kind(self):
+        for kind in ("compute", "fit", "apply"):
             with self.subTest(kind=kind):
-                text = with_table('key = "n"\nunit = "1"\n', kind=kind)
-                (gap,) = self.gaps(text)
-                self.assertIn(f'[kept] with kind = "{kind}"', gap)
-                self.assertIn("promise keys", gap)
-                self.assertIn(gap, protocol_check.check_fields(text).missing_must)
+                text = with_table('key = "score"\nunit = "1"\n', kind=kind)
+                self.assertEqual(self.gaps(text), [])
+                self.assertEqual(
+                    [
+                        m
+                        for m in protocol_check.check_fields(text).missing_must
+                        if "kept" in m
+                    ],
+                    [],
+                )
 
-    def test_the_twin_a_fit_without_the_table_owes_nothing(self):
-        text = head(repeat_cost="low", kind="fit", kept=None)
+    def test_an_undecided_kind_owes_nothing_yet(self):
+        text = head(repeat_cost="low", kind="<compute | fit | apply>", kept=None)
         self.assertEqual(self.gaps(text), [])
 
     def test_a_table_that_does_not_read_is_named_by_its_sentence(self):
@@ -215,7 +219,7 @@ class HeldToTheRun(unittest.TestCase):
             ({"HRV_MeanNN": None}, "holds `HRV_MeanNN` = None"),
         ):
             with self.subTest(metrics=metrics):
-                (gap,) = kept_number_gaps("HRV_MeanNN", metrics, RUN, area)
+                (gap,) = kept_number_gaps("HRV_MeanNN", metrics, RUN, area, "compute")
                 self.assertIn(f"metrics.json of {RUN} {said}", gap.text)
                 self.assertEqual(gap.grade, gate.BLOCKER)
                 self.assertEqual(gap.evidence_kind, gate.GUARANTEED)
@@ -225,7 +229,9 @@ class HeldToTheRun(unittest.TestCase):
                     gap.rule,
                     gate.cited_rule("LAB-041 Generate numbers, don't retype them"),
                 )
-        (gap,) = kept_number_gaps("HRV_MeanNN", {"hrv_computed": True}, RUN, area)
+        (gap,) = kept_number_gaps(
+            "HRV_MeanNN", {"hrv_computed": True}, RUN, area, "compute"
+        )
         self.assertIn("it holds hrv_computed = True", gap.text)
 
     def test_the_twin_a_finite_number_passes(self):
@@ -233,7 +239,11 @@ class HeldToTheRun(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(
                     kept_number_gaps(
-                        "HRV_MeanNN", {"HRV_MeanNN": value, "n": 3}, RUN, Path(".")
+                        "HRV_MeanNN",
+                        {"HRV_MeanNN": value, "n": 3},
+                        RUN,
+                        Path("."),
+                        "compute",
                     ),
                     [],
                 )

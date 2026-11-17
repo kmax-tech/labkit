@@ -365,9 +365,11 @@ FILLABLE_HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     # [model] number_describes, a MUST of a computation with a model: listed
     # here so a fill can set it and `--list` names it
     "number_describes": ("number_describes", NUMBER_DESCRIBES),
-    # a computation's [kept]: the key of its kept number and
-    # its unit, stamped as placeholders unless `labkit-init exp --kept/--unit`
-    # named them; `table.key` reads the key inside that table only
+    # [kept]: the key of the reported number and its unit — a computation's
+    # stamped as placeholders unless `labkit-init exp --kept/--unit` named
+    # them, a fit's or an apply's as its skeleton's score
+    # (`standard_contract.stamped_kept`); `table.key` reads the key inside
+    # that table only
     "kept.key": ("kept.key", None),
     "kept.unit": ("kept.unit", None),
 }
@@ -502,9 +504,11 @@ def declared_labels(text: str) -> tuple[str, ...] | None:
     return tuple(labels)
 
 
-#: the `[kept]` table of a computation: the metrics.json key
-#: of its kept number and that number's unit
-#: (docs/notes/2026-11-01-kept-key-in-the-head.md)
+#: the `[kept]` table of every kind: the metrics.json key of the number
+#: the protocol reports and that number's unit
+#: (docs/notes/2026-11-01-kept-key-in-the-head.md; a fit's and an apply's
+#: since the separation of obligations,
+#: docs/notes/2026-11-14-exploratory-workflow-plan.md)
 KEPT_KEYS = ("key", "unit")
 #: the stamp's placeholders for the two values, read as None (`kept`)
 KEPT_KEY_PLACEHOLDER = "<metrics key>"
@@ -515,9 +519,11 @@ DIMENSIONLESS = "1"
 
 @dataclass(frozen=True)
 class Kept:
-    """A computation's kept number as the head's `[kept]` registers it: the
-    metrics.json key the run must hold as a finite number, and its unit.
-    None marks a value still holding the stamp's placeholder."""
+    """The kept number — the one number a protocol reports — as the head's
+    `[kept]` registers it: the metrics.json key the run must hold as a
+    finite number, and its unit. A fit's or an apply's criterion judges
+    exactly this number. None marks a value still holding the stamp's
+    placeholder."""
 
     key: str | None  # one word, the metrics.json key; None while `"<…>"`
     unit: str | None  # a short text, DIMENSIONLESS for none; None while `"<…>"`
@@ -579,17 +585,18 @@ def kept(text: str) -> Kept | None:
 
 
 def kept_key(text: str) -> str:
-    """The metrics key the head's `[kept]` table names — what the compute
-    skeleton reads (`metric_key()`) and finalize holds the run to. Raises
-    BlockError naming `[kept]` when the table is absent, its key still the
-    placeholder, or the table does not read (`kept`)."""
+    """The metrics key the head's `[kept]` table names — what every measure
+    skeleton reads (the compute skeleton's `metric_key()`, the estimator's
+    and the prompt skeleton's `KEPT_KEY`) and finalize holds the run to.
+    Raises BlockError naming `[kept]` when the table is absent, its key
+    still the placeholder, or the table does not read (`kept`)."""
     k = kept(text)
     if k is None:
         raise BlockError(
-            "the head has no [kept] table — a computation names its kept "
-            'number there: `[kept]` with `key = "<metrics.json key>"` and '
-            '`unit = "<unit>"` (`labkit-init exp <name> --kind compute --kept '
-            "KEY --unit UNIT` stamps it)"
+            "the head has no [kept] table — a protocol names the number it "
+            'reports there: `[kept]` with `key = "<metrics.json key>"` and '
+            '`unit = "<unit>"` (`labkit-init exp <name> --kept KEY --unit '
+            "UNIT` stamps it)"
         )
     if k.key is None:
         raise BlockError(

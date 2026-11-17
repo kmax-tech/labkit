@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
-from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import findings, promises, protocol_block, scope_sha  # noqa: E402
 from labkit.tools import protocol_result
 from protocol_fixture import (
     protocol_id_of,
@@ -85,9 +85,10 @@ class Rendering(unittest.TestCase):
         section = guide.split("- **Recorded results:**", 1)[1]
         example = section.split("```text\n", 1)[1].split("```", 1)[0].strip()
         expected = result_render.recorded_results_line(
-            {"criterion_1_pass": True, "criterion_1_accuracy": 0.83},
+            {"criterion_1_pass": True, "accuracy": 0.83},
             "2026-10-22T09-13-08_0dc3",
             frozenset({"criterion_1_pass"}),
+            kept=protocol_block.Kept("accuracy", protocol_block.DIMENSIONLESS),
         )
         self.assertEqual(
             example, f"- **Recorded results:** criterion-1 met · recorded: {expected}"

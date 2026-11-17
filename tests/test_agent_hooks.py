@@ -90,7 +90,7 @@ def _protocol(frozen: bool, repeat_cost: str = "high") -> str:
 RUN_SCRIPT = (
     "from labkit.run import runlog\n"
     'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
-    '    metrics = {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n'
+    '    metrics = {"n": 1, "criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n'
 )
 
 
@@ -808,6 +808,7 @@ class StopFixture(unittest.TestCase):
         (d / "metrics.json").write_text(
             json.dumps(
                 {
+                    "n": 1,  # the fixture head's [kept] key
                     "criterion_1_pass": True,
                     "quality_check_1_pass": True,
                     "quality_check_2_pass": True,
@@ -840,7 +841,7 @@ class StopFixture(unittest.TestCase):
         # that does not exist
         p.write_text(
             protocol_result.fill_result_run(p.read_text(), run_id)
-            + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {run_id})\n"
+            + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1 (run {run_id})\n"
         )
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:

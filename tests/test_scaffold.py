@@ -684,7 +684,7 @@ class Exp(unittest.TestCase):
             row["answer"] = ""
         two_empty = measure.evaluate_rows(empty + lane("null", 6))
         self.assertEqual(
-            (two_empty["quality_check_1_empty"], two_empty["criterion_1_accuracy"]),
+            (two_empty["quality_check_1_empty"], two_empty[measure.KEPT_KEY]),
             (2, 10 / 12),
         )
 
@@ -1202,13 +1202,14 @@ class Exp(unittest.TestCase):
         self.assertEqual(exited.exception.code, 2)
         self.assertIn("go with --reference", err.getvalue())
 
-    def test_the_kept_number_is_stamped_for_a_computation_and_refused_on_a_bar(
+    def test_the_kept_number_is_stamped_at_every_kind(
         self,
     ) -> None:
-        """A computation's head carries `[kept]`: `--kept KEY --unit UNIT`
-        stamp it filled, without them it stands as placeholders the checks
-        name unfilled; a fit or an apply is refused with nothing written, and
-        a key of two words is refused before anything is written."""
+        """Every head carries `[kept]`: `--kept KEY --unit UNIT` stamp it
+        filled at every kind; without them a computation's stands as
+        placeholders the checks name unfilled, a fit's or an apply's as its
+        skeleton's score (`score`, with a model `accuracy`, unit "1"); a key
+        of two words is refused before anything is written."""
         argv = ["exp", "hrv", "--repo", str(self.root), "--repeat-cost", "low"]
         self.assertEqual(
             quiet(
@@ -1234,26 +1235,34 @@ class Exp(unittest.TestCase):
         missing = protocol_check.check_fields(open_text).missing_must
         self.assertIn("[kept] key", missing)
         self.assertIn("[kept] unit", missing)
-        for kind in ("fit", "apply"):
-            with self.subTest(kind=kind), self.assertRaises(console.Refused) as caught:
-                scaffold.stamp_area(
-                    self.root,
-                    "fitted",
-                    "low",
-                    kind=kind,
-                    kept=protocol_block.Kept("n", "1"),
+        for name, kind, model, key in (
+            ("fit-plain", "fit", False, "score"),
+            ("apply-plain", "apply", False, "score"),
+            ("apply-model", "apply", "haiku", "accuracy"),
+        ):
+            with self.subTest(kind=kind, model=model):
+                stamped_area, _ = quiet(
+                    scaffold.stamp_area, self.root, name, "low", kind=kind, model=model
                 )
-            self.assertIn(
-                "binds its answer through its promise keys", caught.exception.why
-            )
-            self.assertEqual(list((self.root / "experiments").glob("*-fitted")), [])
-        # a fit stamped without it carries no [kept]
-        quiet(scaffold.stamp_area, self.root, "fit-plain", "low", kind="fit")
-        (fit_area,) = (self.root / "experiments").glob("*-fit-plain")
-        self.assertIsNone(
+                stamped = (stamped_area / f"PROTOCOL-{name}.md").read_text(
+                    encoding="utf-8"
+                )
+                self.assertEqual(
+                    protocol_block.kept(stamped), protocol_block.Kept(key, "1")
+                )
+        asked, _ = quiet(
+            scaffold.stamp_area,
+            self.root,
+            "fit-named",
+            "low",
+            kind="fit",
+            kept=protocol_block.Kept("val_auc", "1"),
+        )
+        self.assertEqual(
             protocol_block.kept(
-                (fit_area / "PROTOCOL-fit-plain.md").read_text(encoding="utf-8")
-            )
+                (asked / "PROTOCOL-fit-named.md").read_text(encoding="utf-8")
+            ),
+            protocol_block.Kept("val_auc", "1"),
         )
         with self.assertRaises(console.Refused) as caught:
             scaffold.parse_kept_flags("two words", "ms")

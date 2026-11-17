@@ -99,7 +99,7 @@ class ApplySkeleton(unittest.TestCase):
         metrics = measure.evaluate_rows(rows, self.reasoned(measure))
         self.assertEqual(
             (
-                metrics["criterion_1_score"],
+                metrics[measure.KEPT_KEY],
                 metrics["quality_check_2_score"],
                 metrics["n_test"],
             ),
@@ -138,7 +138,7 @@ class ApplySkeleton(unittest.TestCase):
             [r["gold_of"] for r in again if r["lane"] == "null"],
         )
         metrics = measure.evaluate_rows(rows)
-        self.assertEqual(metrics["criterion_1_score"], 1.0)
+        self.assertEqual(metrics[measure.KEPT_KEY], 1.0)
         self.assertLess(metrics["quality_check_2_score"], 1.0)
 
     def test_calibrate_null_previews_what_each_run_computes(self):
@@ -415,7 +415,7 @@ class ApplySkeleton(unittest.TestCase):
         self.assertIs(m["quality_check_2_pass"], True)
         self.assertIs(m["quality_check_1_pass"], True)
         self.assertIsNotNone(m["criterion_1_pass"])
-        self.assertEqual(m["criterion_2_threshold"], m["criterion_1_score"])
+        self.assertEqual(m["criterion_2_threshold"], m[measure.KEPT_KEY])
         self.assertIs(m["criterion_2_pass"], False)
         import random as _random
 
@@ -823,18 +823,35 @@ class ApplySkeleton(unittest.TestCase):
         _, measure = self.measure_module("apply")
         self.assertEqual(measure.SCORED_LANES, run_record_check.NULL_LANES)
 
-    def test_each_skeleton_keeps_c1_under_its_contract_key(self):
-        # the key comes from the contract, not typed by hand
-        from labkit.formats import standard_contract
+    def test_each_skeleton_reads_its_kept_key_from_the_head(self):
+        """The key is the head's, read at import, never a constant of the
+        script; the stamp writes the contract's key, which the script then
+        holds. A head without `[kept]` fails at import, no key chosen."""
+        from labkit.formats import protocol_block, standard_contract
         from labkit.tools.scaffold import template
 
         for sk in (standard_contract.ESTIMATOR, standard_contract.MODEL):
             with self.subTest(sk=sk.instrument):
                 measure = next(t for t, dest in sk.scripts if dest == "01_measure.py")
-                key = standard_contract.criterion_key(sk)
-                self.assertIn(f'CRITERION_VALUE_KEY = "{key}"', template(measure))
+                self.assertIn(
+                    "KEPT_KEY = protocol_block.kept_key(PROTOCOL.read_text(",
+                    template(measure),
+                )
         with self.assertRaises(ValueError):
-            standard_contract.criterion_key(standard_contract.COMPUTE)
+            standard_contract.stamped_kept_key(standard_contract.COMPUTE)
+        area, measure = self.measure_module("apply")
+        self.assertEqual(
+            measure.KEPT_KEY,
+            standard_contract.stamped_kept_key(standard_contract.ESTIMATOR),
+        )
+        protocol = next(area.glob("PROTOCOL-*.md"))
+        text = protocol.read_text(encoding="utf-8")
+        protocol.write_text(
+            text.replace('[kept]\nkey = "score"\nunit = "1"\n', ""), encoding="utf-8"
+        )
+        self.assertIsNone(protocol_block.kept(protocol.read_text(encoding="utf-8")))
+        with self.assertRaisesRegex(protocol_block.BlockError, r"no \[kept\] table"):
+            self.reloaded(area)
 
     def test_calibrate_null_has_no_free_path_at_fit_or_for_a_fixed_null(self):
         _, fit = self.measure_module("fit")

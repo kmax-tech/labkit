@@ -178,8 +178,8 @@ def scopes_unchanged(run: Path, area: Path) -> None:
 
 
 def kept_keys(run: Path, area: Path) -> frozenset[str]:
-    """The `[kept]` key of the protocol RUN is bound to — the number a
-    computation reports, compared exactly by `agree` —, empty for an
+    """The `[kept]` key of the protocol RUN is bound to — the number the
+    protocol reports, compared exactly by `agree` —, empty for an
     unbound run or a protocol without the table. Raises SystemExit when the
     protocol's head does not read."""
     cfg = runs.read_run_config(run)
@@ -231,7 +231,7 @@ def agree(
     As LAB-041 Generate numbers, don't retype them states it: the
     registered identifiers (`INTENT_KEY`) are compared exactly — on one side
     only, or with another value, the check fails —, and so are the REPORTED
-    keys (the computation's `[kept]` key, `kept_keys`: the number it
+    keys (the protocol's `[kept]` key, `kept_keys`: the number it
     reports); of the other descriptive keys none may disappear, and a value
     that differs or a key that grew is no failure. Compared as JSON, the way the run recorded it
     (`runs.as_stored`): a tuple from evaluate() is the list in metrics.json,

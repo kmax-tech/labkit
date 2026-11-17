@@ -64,13 +64,13 @@ each step's condition):
                     included — a warning, static evidence
                     (`null_lane_findings`, LAB-034 Null condition in the
                     same run); without both lanes, a note
-     kept number    a computation's kept number: the answering run's
+     kept number    the kept number, at every kind: the answering run's
                     metrics.json holds the key the head's `[kept]` names as a
                     finite number — a blocker naming the key, the run and
                     what it holds instead (`kept_number_gaps`); a `[kept]`
-                    missing, unfilled or on a fit or an apply blocks too
-                    (`kept_gaps`). The key, not its meaning: a wrong
-                    computation under the right key passes
+                    missing or unfilled blocks too (`kept_gaps`). The key,
+                    not its meaning: a wrong computation under the right
+                    key passes
      reference      a computation's comparison with the stated value its
                     head registers (`[reference]`): the run recorded the
                     verdict and it reads; `not comparable` — the key absent
@@ -132,7 +132,7 @@ from labkit.formats import (
     protocol_block,
     reference,
 )
-from labkit.formats.standard_contract import COMPUTE_KIND, lane
+from labkit.formats.standard_contract import lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
     NO_MEASUREMENT,
@@ -828,11 +828,12 @@ def check_reference(
     metrics.json (`reference.comparison_gaps`, each a guaranteed blocker):
     a table that does not read, or one on a kind with a bar
     (`reference_gap`), blocks too; metrics that do not read block as the
-    other stations' do. At kind compute the kept-number station holds the
-    same metrics and key: metrics that do not read, and a verdict not
-    comparable for want of a finite kept number, are its blockers, told
-    here as a note — one cause, one blocker. Without a table: a note, nothing owed — unless the
-    run wrote `ref_*` keys. `not met` is a valid outcome, told as a note."""
+    other stations' do. Once the kind is decided the kept-number station
+    holds the same metrics and key: metrics that do not read, and a
+    verdict not comparable for want of a finite kept number, are its
+    blockers, told here as a note — one cause, one blocker. Without a
+    table: a note, nothing owed — unless the run wrote `ref_*` keys. `not
+    met` is a valid outcome, told as a note."""
     gap = reference_gap(text, head)
     if gap:
         findings.block(
@@ -858,13 +859,14 @@ def check_reference(
             rule=TECHNICAL_RULE,
         )
         return
-    # at kind compute the kept-number station reads the same metrics.json
-    # and holds the same key: a cause it names is not told a second time
-    kept_held = head.kind == COMPUTE_KIND
+    # with the kind decided the kept-number station reads the same
+    # metrics.json and holds the same key: a cause it names is not told a
+    # second time
+    kept_station_holds = head.kind is not None
     try:
         metrics = runs_metrics(answering_run)
     except MetricsError as exc:
-        if kept_held:
+        if kept_station_holds:
             findings.note("  not read — the kept-number station names the metrics")
             return
         findings.take(
@@ -875,7 +877,10 @@ def check_reference(
             )
         )
         return
-    if kept_held and metrics.get(reference.STATE_KEY) == reference.NOT_COMPARABLE:
+    if (
+        kept_station_holds
+        and metrics.get(reference.STATE_KEY) == reference.NOT_COMPARABLE
+    ):
         findings.note(
             "  not compared — the kept-number station names the kept key it lacks"
         )
@@ -885,7 +890,7 @@ def check_reference(
     if held:
         return
     if ref is None or key is None:
-        findings.note("  n/a — no [reference] registered: a pure computation")
+        findings.note("  n/a — no [reference] registered")
     else:
         findings.note(
             f"  {reference.phrase(metrics, ref, key)} — as the run recorded it"
@@ -899,15 +904,15 @@ def check_kept_number(
     head: protocol_block.Head,
     answering_run: Path,
 ) -> None:
-    """Station 9: a computation's kept number — the key the head's `[kept]`
-    names — held as a finite number in the answering run's metrics.json
-    (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check
-    the agent cannot edit away, where the skeleton's own `kept_number()`
-    sits in its script. A `[kept]` table missing, unfilled, malformed or on
-    a fit or an apply (`protocol_check.kept_gaps`) blocks too. A fit or an
-    apply binds its answer through its promise keys: a note. The key binds
-    the name, not the meaning: a wrong computation under the right key
-    passes — the tests and the analysis audit judge that."""
+    """Station 9: the kept number — the key the head's `[kept]` names, at
+    every kind — held as a finite number in the answering run's
+    metrics.json (`run_record_check.kept_number_gaps`, a guaranteed
+    blocker): the check the agent cannot edit away, where the skeleton's
+    own check sits in its script. A `[kept]` table missing, unfilled or
+    malformed (`protocol_check.kept_gaps`) blocks too; an undecided kind is
+    a note. The key binds the name, not the meaning: a wrong computation
+    under the right key passes — the tests and the analysis audit judge
+    that."""
     gaps = kept_gaps(text, head)
     for gap in gaps:
         # an unfilled value is the stamp's placeholder, which protocol-fill
@@ -929,11 +934,6 @@ def check_kept_number(
     if head.kind is None:
         findings.note("  n/a — the head's kind is undecided (open fields name it)")
         return
-    if head.kind != COMPUTE_KIND:
-        findings.note(
-            f"  n/a — kind = {head.kind!r} binds its answer through its promise keys"
-        )
-        return
     key = protocol_block.kept_key(text)  # kept_gaps found the table filled
     try:
         metrics = runs_metrics(answering_run)
@@ -947,7 +947,7 @@ def check_kept_number(
         )
         return
     held = kept_number_gaps(
-        key, metrics, answering_run.name, answering_run.parent.parent
+        key, metrics, answering_run.name, answering_run.parent.parent, head.kind
     )
     findings.take_all(held)
     if not held:

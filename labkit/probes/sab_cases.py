@@ -63,13 +63,13 @@ class Case:
 
 #: relative error the evaluation allows on heart rate and RMSSD — the R peaks sit on a 10 ms grid
 HRV_TOLERANCE = 0.10
-#: Where a stamped skeleton with a criterion keeps the number: the estimator
-#: skeleton (fit; apply without a model in the loop) reports [criterion-1] as
-#: `criterion_1_score`, by labkit's contract (intent-check holds every registered id
-#: to its key). Asking for the task's own name (`val_roc_auc`, `agreement`)
-#: would measure the harness, not labkit.
-#: A computation has no criterion; its sheet names the key (`rmssd_ms`).
-CRITERION_KEY = standard_contract.criterion_key(standard_contract.ESTIMATOR)
+#: Where a stamped estimator skeleton (fit; apply without a model in the
+#: loop) keeps the number: the `[kept] key` its stamp writes
+#: (`standard_contract.stamped_kept_key`), which the skeleton reads from the head.
+#: Asking for the task's own name (`val_roc_auc`, `agreement`) would measure
+#: the harness, not labkit.
+#: A computation's author names its key; its sheet names it (`rmssd_ms`).
+STAMPED_KEPT_KEY = standard_contract.stamped_kept_key(standard_contract.ESTIMATOR)
 CASES = {
     c.task: c
     for c in (
@@ -89,7 +89,7 @@ CASES = {
             "assay",
             "test_pred.csv",
             ("compound_id", "p_active"),
-            CRITERION_KEY,
+            STAMPED_KEPT_KEY,
             None,
             ("numpy", "pandas", "scikit-learn"),
         ),
@@ -99,7 +99,7 @@ CASES = {
             "screening",
             "screen_pred.csv",
             ("person_id", "probability", "flag"),
-            CRITERION_KEY,
+            STAMPED_KEPT_KEY,
             1e-6,
             ("numpy", "pandas"),
         ),
@@ -432,7 +432,7 @@ def task_text(root: Path, task: str) -> str:
 def truth(root: Path, task: str) -> float | None:
     """The kept number's true value — regenerated from the seed, never read
     from a file the agent could write; None for the fit (a fitted model's
-    validation score has no single true value). apply-screen's `criterion_1_score` is
+    validation score has no single true value). apply-screen's kept `score` is
     the agreement when the skeleton's SCORE is accuracy; another SCORE is
     named by `meaning_gap`, not taken for a wrong number."""
     del root  # the truth depends on the seed alone; the probe directory is not read
@@ -450,7 +450,7 @@ class Meaning:
     SCORE, the labelled ITEMS it is scored over (metrics' `n_items`), and
     the quantity in words (SAID). A key that matches proves the name only;
     SCORE and ITEMS show whether the number is the task's (fit-assay's
-    `criterion_1_score` is an out-of-fold AUC over train and val, never an
+    kept `score` is an out-of-fold AUC over train and val, never an
     AUC on the validation split alone)."""
 
     score: str

@@ -133,13 +133,14 @@ parser. A typo is an error that names the field. The same block holds the
   registers a criterion, a quality check and a null condition in the same
   run. A run that only produces predictions declares no result and needs
   no kind.
-- **[kept] key, unit:** owed with `kind = "compute"`, refused on a fit or
-  an apply (they bind their answer through their promise keys). `key` is
-  the metrics.json key of the number the computation reports — the value
-  the Unit field and the question describe, never a flag such as
-  `hrv_computed`. `unit` is its unit, a short text (`"ms"`, `"documents"`;
-  `"1"` for a dimensionless number). The compute skeleton reads the key
-  from here; finalize refuses a run that does not hold it as a finite
+- **[kept] key, unit:** owed at every kind. `key` is the metrics.json key
+  of the number the protocol reports — the value the Unit field and the
+  question describe, never a flag such as `hrv_computed`. `unit` is its
+  unit, a short text (`"ms"`, `"documents"`; `"1"` for a dimensionless
+  number, an accuracy as 0.85, not 85). A fit's or an apply's criterion
+  judges exactly this number; the stamp writes its skeleton's score
+  (`score`, or `accuracy` with a model), which you may rename before the
+  first measurement. Every measure skeleton reads the key from here; finalize refuses a run that does not hold it as a finite
   number, and the Recorded results line names it first with its unit.
   `labkit-init exp --kind compute --kept KEY --unit UNIT` stamps it; else
   `protocol-fill <PROTOCOL> "kept.key=KEY" "kept.unit=UNIT"`. A stated
@@ -310,7 +311,7 @@ result is only a plan.
   is one line):
 
   ```text
-  - **Recorded results:** criterion-1 met · recorded: criterion_1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
+  - **Recorded results:** criterion-1 met · recorded: kept number: accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
 - **Raw output:** a prompt+answer pair, or the registered and null row of
   an estimator. Read it from the kept output of the run. Never use the

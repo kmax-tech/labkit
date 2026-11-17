@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import commands
-from labkit.formats.protocol_block import PROTOCOL_KINDS
+from labkit.formats.protocol_block import DIMENSIONLESS, PROTOCOL_KINDS, Kept
 from labkit.formats.protocol_block import head as head_of
 from labkit.formats.protocol_block import reference as reference_of
 from labkit.formats.repo import area_test_stem, split_area_name
@@ -231,11 +231,13 @@ class Skeleton:
     scripts: tuple[tuple[str, str], ...]
     test: str
     probe: bool
-    # the metrics.json key the measure script keeps [criterion-1]'s number under
-    # (its `CRITERION_VALUE_KEY`); None for the compute skeleton, which has no
-    # criterion. One home: the probes read it here, never by hand; tests hold
-    # each template to it
-    criterion_key: str | None = None
+    # the `[kept] key` the stamp writes for the number this skeleton
+    # computes — the registered lane's score; the measure script reads the
+    # key from the head, so a key set before the first measurement needs no
+    # code edit. None for the compute skeleton: what a computation keeps
+    # only its author can name. One home: the stamp and the probes read it
+    # here, never by hand
+    kept_key: str | None = None
 
 
 COMPUTE = Skeleton(
@@ -256,7 +258,7 @@ ESTIMATOR = Skeleton(
     ),
     test="test-estimator.py.template",
     probe=True,
-    criterion_key="criterion_1_score",
+    kept_key="score",
 )
 MODEL = Skeleton(
     instrument="model",
@@ -267,7 +269,7 @@ MODEL = Skeleton(
     ),
     test="test-area.py.template",
     probe=True,
-    criterion_key="criterion_1_accuracy",
+    kept_key="accuracy",
 )
 SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
 
@@ -286,13 +288,29 @@ NO_RUN_FLAGS = (
 )
 
 
-def criterion_key(sk: Skeleton) -> str:
-    """The key SK's measure script keeps [criterion-1]'s number under
-    (`Skeleton.criterion_key`). Raises ValueError for a skeleton without a
-    criterion: a computation keeps its own keys."""
-    if sk.criterion_key is None:
-        raise ValueError(f"the {sk.instrument} skeleton keeps no criterion key")
-    return sk.criterion_key
+#: the `[kept] unit` the stamp writes beside `Skeleton.kept_key`: the
+#: registered lane's score (accuracy as a share, 0.85 not 85; auc, r2,
+#: spearman) is dimensionless
+STAMPED_KEPT_UNIT = DIMENSIONLESS
+
+
+def stamped_kept_key(sk: Skeleton) -> str:
+    """The `[kept] key` the stamp writes for SK's number
+    (`Skeleton.kept_key`) — where a probe reads the number of an area it
+    stamped. Raises ValueError for the compute skeleton: a computation's
+    kept number is named by its author."""
+    if sk.kept_key is None:
+        raise ValueError(
+            f"the {sk.instrument} skeleton stamps no [kept] key — its author names it"
+        )
+    return sk.kept_key
+
+
+def stamped_kept(sk: Skeleton) -> Kept:
+    """The `[kept]` the stamp writes for SK's number: its key
+    (`stamped_kept_key`, which raises for the compute skeleton) and
+    STAMPED_KEPT_UNIT."""
+    return Kept(stamped_kept_key(sk), STAMPED_KEPT_UNIT)
 
 
 def skeleton(repeat_cost: str | None, kind: str, model: bool) -> Skeleton:

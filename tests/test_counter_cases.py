@@ -166,7 +166,7 @@ class RepairUnderUnchangedPromises(_Chain):
         rc, out = self.audit(
             SIMULATED
             + "BLOCKER · scripts/01_measure.py:82 · statement · ANSWERS reads Yes as not_causal · "
-            "criterion_1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
+            "accuracy counts every causal sentence wrong · LAB-038 What the prompt "
             "demands · map Yes to causal\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
         )
@@ -179,8 +179,7 @@ class RepairUnderUnchangedPromises(_Chain):
         rc, out = self.audit(
             SIMULATED
             + f"FIX · {record.path.name}#1 · resolved · scripts/01_measure.py:82 maps Yes "
-            f"to causal; criterion_1_accuracy 1.0 in run {second}\n"
-            + CLEAN.removeprefix(SIMULATED)
+            f"to causal; accuracy 1.0 in run {second}\n" + CLEAN.removeprefix(SIMULATED)
         )
         self.assertEqual(rc, 0, out)
         text = self.released(second)
@@ -205,8 +204,8 @@ class SupersededCallReleasesNothing(_Chain):
         rc, out = self.audit(
             SIMULATED
             + "BLOCKER · scripts/01_measure.py:82 · statement · ANSWERS reads Yes as not_causal · "
-            "criterion_1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
-            "demands · map Yes to causal · check: criterion_1_accuracy\n"
+            "accuracy counts every causal sentence wrong · LAB-038 What the prompt "
+            "demands · map Yes to causal · check: accuracy\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
         )
         self.assertEqual(rc, 1, out)
@@ -238,7 +237,7 @@ class SupersededCallReleasesNothing(_Chain):
         rc, out = self.audit(
             SIMULATED
             + f"FIX · {record.path.name}#1 · resolved · scripts/01_measure.py:82 maps "
-            f"Yes to causal; criterion_1_accuracy 1.0 in run {second}\n"
+            f"Yes to causal; accuracy 1.0 in run {second}\n"
             + CLEAN.removeprefix(SIMULATED)
         )
         self.assertEqual(rc, 0, out)

@@ -44,8 +44,8 @@ scope = ["scripts/01_measure.py"]
 #: metrics key a block id lacks, fails intent-check
 C1_BLOCK = DEFAULT_BLOCK.split("\n\n")[0] + "\n"
 C1_PROSE = "- **Inference criterion:** [criterion-1] the criterion holds\n"
-#: the `[kept]` a computation's fixture head carries unless it says otherwise:
-#: the key its runs hold as their kept number, and its unit
+#: the `[kept]` a fixture head carries unless it says otherwise, at every
+#: kind: the key its runs hold as their kept number, and its unit
 KEPT = ("n", "1")
 
 
@@ -282,9 +282,8 @@ def head(
     states only what it varies; a literal `kind="<compute | fit | apply>"`
     writes the placeholder. REPORT is the head's optional `report`, the
     registered report file. REFERENCE is TOML written into a `[reference]`
-    table verbatim — a computation's stated value. KEPT is a computation's
-    `[kept]` (key, unit), written only with kind = "compute"; None leaves
-    the table out."""
+    table verbatim — a computation's stated value. KEPT is the `[kept]`
+    (key, unit) every kind owes; None leaves the table out."""
     if kind is None:
         kind = "apply" if model is not None else "compute"
     if promises == "" and (frozen or repeat_cost == "low"):
@@ -309,7 +308,7 @@ def head(
         lines += ["", "[result]", f'run = "{result}"']
     if model is not None:
         lines += _model_tables(model, claim, arms)
-    if kept is not None and kind == "compute":
+    if kept is not None:
         lines += ["", "[kept]", f'key = "{kept[0]}"', f'unit = "{kept[1]}"']
     if reference is not None:
         lines += ["", "[reference]", *reference.strip().splitlines()]

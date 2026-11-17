@@ -130,11 +130,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"pytest is not installed in this",
         {"preflight"},
     ),
-    # a skeleton's criterion key named by hand drifts, and a draw scores
-    # "absent"; `standard_contract.criterion_key`
+    # a skeleton's stamped kept key named by hand in a probe drifts, and a
+    # draw scores "absent"; `standard_contract.stamped_kept_key`
     (
-        "a criterion key named by hand",
-        r"\"criterion_1_(?:score|accuracy)\"",
+        "a stamped kept key named by hand",
+        r"\"metric_key\":\s*\"(?:score|accuracy)\"",
         {"standard_contract"},
     ),
     # audit modes, the experiments folder and a file:// URL have one
@@ -371,7 +371,7 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
-            "a criterion key named by hand": '"metric_key": "criterion_1_score",',
+            "a stamped kept key named by hand": '"metric_key": "score",',
             "an audit mode spelled by hand": 'if record.mode == "analysis":',
             "the experiments folder named by hand": 'experiments = root / "experiments"',
             "a file:// URL read by hand": "return Path(url[7:])",

@@ -1327,7 +1327,7 @@ class FieldAddressGuidance(unittest.TestCase):
             protocol_edit.fill_many(SAMPLE, [("Concluion", "answer")])
         self.assertIn("did you mean conclusion", str(cm.exception))
         with self.assertRaises(ValueError) as cm:
-            protocol_edit.fill_many(head(kind="fit"), [("key", "score")])
+            protocol_edit.fill_many(head(kind="fit", kept=None), [("key", "score")])
         self.assertNotIn("kept.key", str(cm.exception))
 
 

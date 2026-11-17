@@ -170,7 +170,7 @@ TASKS = {
     },
     "judge": {
         "area": "causal-claims-judge",
-        "metric_key": standard_contract.criterion_key(standard_contract.MODEL),
+        "metric_key": standard_contract.stamped_kept_key(standard_contract.MODEL),
         "template": "usability-task-judge.md.template",
     },
     # a fit: the DILI molecules of labkit-paper area 09 (ScienceAgentBench
@@ -178,7 +178,7 @@ TASKS = {
     # package's
     "fit": {
         "area": "dili-forest",
-        "metric_key": standard_contract.criterion_key(standard_contract.ESTIMATOR),
+        "metric_key": standard_contract.stamped_kept_key(standard_contract.ESTIMATOR),
         "template": "usability-task-fit.md.template",
     },
     # SAB-like cases, one per kind: a ScienceAgentBench-shaped task with a

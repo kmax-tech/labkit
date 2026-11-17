@@ -1157,9 +1157,9 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
     a kind with a bar (`standard_contract.has_bar`). The one refusal of
     the table by kind: `protocol-check`, the start of a low run
     (`low_registration_missing`) and finalize read it. The table is
-    refused by its presence, whatever it holds: a fit carries no `[kept]`,
-    so its `[reference]` never reads, and the way out is to drop it. A
-    block that does not parse is the head check's."""
+    refused by its presence, whatever it holds: no criterion's bar becomes
+    a stated value, and the way out is to drop it. A block that does not
+    parse is the head check's."""
     try:
         present = "reference" in protocol_block.parse_toml_block(text)
     except protocol_block.BlockError:
@@ -1176,42 +1176,28 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
 
 
 def kept_gaps(text: str, head: protocol_block.Head) -> list[MustGap]:
-    """What the head owes or refuses of its `[kept]` table by its kind, one
-    entry each with the rule its cause breaks, or []: a computation names its kept number there — the
-    table missing, or a value still the placeholder (`[kept]
-    key`, `[kept] unit`, unfilled fields); a fit or an apply binds its
-    answer through its promise keys, so the table is refused there; a
-    table that does not read is named by its sentence. A table or value
-    that is owed and missing breaks the required-field rule; a table that
-    has no place on the kind, the technical contract; a promise block that
-    does not read, the rule its error names (`promises.PromiseError.rule`).
-    Nothing while the kind is undecided. The one answer `protocol-check`, the start of a low
-    run (`low_registration_missing`) and finalize read."""
+    """What the head owes of its `[kept]` table, one entry each with the
+    rule its cause breaks, or []: every kind names the number it reports
+    there — the table missing, or a value still the placeholder (`[kept]
+    key`, `[kept] unit`, unfilled fields); a fit's or an apply's criterion
+    judges exactly that number. A table that does not read is named by its
+    sentence and breaks the technical contract; a table or value that is
+    owed and missing, the required-field rule. Nothing while the kind is
+    undecided. The one answer `protocol-check`, the start of a low run
+    (`low_registration_missing`) and finalize read."""
     try:
         k = protocol_block.kept(text)
     except protocol_block.BlockError as exc:
         return [MustGap(str(exc), TECHNICAL_RULE, INVALID)]
     if head.kind is None:
         return []
-    if head.kind != standard_contract.COMPUTE_KIND:
-        if k is None:
-            return []
-        return [
-            MustGap(
-                f'[kept] with kind = "{head.kind}" — a {head.kind} binds its answer '
-                f"through its promise keys (`[[promise]] key`), so the kept number a "
-                f"computation names has no place here; drop the table",
-                TECHNICAL_RULE,
-                INVALID,
-            )
-        ]
     if k is None:
         return [
             MustGap(
-                '[kept] — kind = "compute" names its kept number in the head: '
-                '`[kept]` with `key = "<metrics.json key>"` and `unit = "<unit>"` '
-                '("1" for a dimensionless number); the run must hold that key as a '
-                "finite number",
+                f'[kept] — kind = "{head.kind}" names the number it reports in the '
+                'head: `[kept]` with `key = "<metrics.json key>"` and `unit = '
+                '"<unit>"` ("1" for a dimensionless number); the run must hold that '
+                "key as a finite number",
                 LAB_011,
                 MISSING,
             )
@@ -1337,8 +1323,8 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     prediction (kind fit or apply) also criterion, quality check
     and null condition; with a model named also the judged data profile;
     the repeat_cost and the kind declared, the kind not contradicting the
-    head (`kind_gap`, `reference_gap`), and a computation's kept number
-    named (`kept_gaps`). Returns what is missing — empty means the gate is
+    head (`kind_gap`, `reference_gap`), and the kept number named
+    (`kept_gaps`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
     clear). A head that does not read
     is named as such: nothing falls back to a computation.

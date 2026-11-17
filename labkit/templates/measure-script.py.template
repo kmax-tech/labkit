@@ -23,7 +23,12 @@ Measurement contract:
   - Accuracy is correct answers over EVERY item of the lane: an empty or
     unreadable answer counts as not correct (else a model would gain
     accuracy by not answering) and is counted on its own as `*_empty`.
-  - [criterion-1] passes when the registered lane's accuracy is at least its
+  - The registered lane's accuracy, a share (0.85, not 85), is the kept
+    number: computed once, stored under the key the protocol head's
+    `[kept]` names (`KEPT_KEY`; key and unit set there, never here), on
+    every evaluation — also when a quality check fails, where it stays
+    visible and no criterion judges it.
+  - [criterion-1] passes when the kept accuracy is at least its
     bar, registered in one of two forms (LAB-035 Thresholds belong to the
     run, not to the measure; `criterion_bar`): `at_least`, a bar the task
     states, is the bar as written, whatever the null lane answers;
@@ -76,7 +81,7 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.formats import criterion_bar, promises
+from labkit.formats import criterion_bar, promises, protocol_block
 from labkit.run import lanes
 
 # ===== What this measurement asks — fill every TODO of this block ==========
@@ -165,8 +170,12 @@ class MeasureConfig:
 # The registered execution: thresholds from the protocol, nothing copied;
 # `--model` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
-#: the metrics key of the criterion's value — 02_analyze.py reads this name
-CRITERION_VALUE_KEY = "criterion_1_accuracy"
+#: the kept number's key in metrics.json, as the protocol head's `[kept]`
+#: names it — set there, never here; 02_analyze.py and the test read this
+#: name. Read at import: a head without the table, or with its key still
+#: the placeholder, stops the script and the area's test here with the
+#: head's own sentence, before any gate runs; no key is chosen in its place
+KEPT_KEY = protocol_block.kept_key(PROTOCOL.read_text(encoding="utf-8"))
 
 
 # The first token with its markdown or quote marks and trailing punctuation
@@ -237,13 +246,14 @@ def _within_chance(rows: list[dict], items: int) -> bool:
 def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
-    Returns every registered id's keys on every lane:
+    Returns the kept number and every registered id's keys on every lane:
+      KEPT_KEY                     the kept number: the registered lane's accuracy, computed once
       quality_check_1_empty · quality_check_1_pass           quality check: yield of the registered lane
       quality_check_2_accuracy · quality_check_2_expected · quality_check_2_pass   quality check: the null lane within null_band_items items of chance
-      criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against cfg.at_least as
+      criterion_1_threshold · criterion_1_pass   criterion: the kept accuracy against cfg.at_least as
                                    registered, else the null lane's accuracy + cfg.margin
       n_items · n_rows             yield (→ LAB-023 No silent loss)
-    A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None)."""
+    A failed quality check reports its keys, the kept number, and no criterion verdict (`criterion_1_pass` None)."""
     if not rows:
         raise ValueError("evaluate_rows(): no rows — refusing a number over nothing")
     reg = [r for r in rows if r["lane"] == "registered"]
@@ -252,22 +262,22 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
         raise ValueError("evaluate_rows(): both lanes must be in the same run (LAB-034 Null condition in the same run)")
     reg_acc, reg_empty = _accuracy(reg)
     null_acc, null_empty = _accuracy(null)
-    metrics: dict = {"n_items": len(reg), "n_rows": len(rows),
+    metrics: dict = {KEPT_KEY: reg_acc, "n_items": len(reg), "n_rows": len(rows),
                      "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
                      "quality_check_2_accuracy": null_acc, "quality_check_2_empty": null_empty,
                      "quality_check_2_expected": float(_expected_correct(null) / len(null)),
                      "quality_check_2_pass": _within_chance(null, cfg.null_band_items)}
     admissible = metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]
     if not admissible:
-        metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": None, "criterion_1_pass": None})
+        metrics.update({"criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
     # in fractions, the bar as registered (`criterion_bar`): a lane exactly at
-    # the bar passes
+    # the bar passes. The verdict judges the kept accuracy, the exact share
+    # behind the float stored above
     rc, rn, _ = _counts(reg)
     nc, nn, _ = _counts(null)
     bar = criterion_bar.bar_of(cfg.at_least, cfg.margin, Fraction(nc, nn))
-    metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": float(bar),
-                    "criterion_1_pass": Fraction(rc, rn) >= bar})
+    metrics.update({"criterion_1_threshold": float(bar), "criterion_1_pass": Fraction(rc, rn) >= bar})
     return metrics
 
 

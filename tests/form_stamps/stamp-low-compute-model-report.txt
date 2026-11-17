@@ -107,6 +107,7 @@ unit = "<unit>"
 alias = "haiku"
 number_describes = "<model_outputs | target_property>"
 # annotation_validity = { protocol = "p-…" }   # or { doi = "10.…" }; with target_property only
-# A computation: `[kept]` key and unit. With a model: `[model] alias` (stamped by --model),
+# `[kept]`: the key and unit of the number this protocol reports, at every kind; a
+# criterion judges that number. With a model: `[model] alias` (stamped by --model),
 # `[model.arms.<arm>]` with profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
 ```

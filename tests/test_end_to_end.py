@@ -255,14 +255,15 @@ class Lab:
 def assert_draws(
     test: unittest.TestCase, lab: "Lab", area: Path, run_id: str, key: str, other: str
 ) -> None:
-    """`02_analyze.py --draws` on the kept run prints its criterion value
-    under the measure skeleton's key (`CRITERION_VALUE_KEY`): the value metrics.json
-    holds, never the other skeleton's key. The analysis skeleton is shared,
-    so it must not read the model's key for every skeleton."""
+    """`02_analyze.py --draws` on the kept run prints its kept number under
+    the key the head's `[kept]` names (the skeleton's `KEPT_KEY`) with the
+    criterion's verdict: the value metrics.json holds, never the other
+    skeleton's key. The analysis skeleton is shared, so it must not read
+    the model's key for every skeleton."""
     metrics = json.loads((area / "runs" / run_id / "metrics.json").read_text())
     out = lab.script(area, "02_analyze.py", "--draws")
     test.assertIn(f"draw 1  {run_id}  {key} {metrics[key]}  criterion_1_pass True", out)
-    test.assertNotIn(other, out)
+    test.assertNotIn(f"  {other} ", out)
 
 
 def stamp_count(
@@ -1413,9 +1414,7 @@ class Judge(unittest.TestCase):
             text,
         )
         self.assertIn(f"(run {run_id})", text)
-        assert_draws(
-            self, lab, self.area, run_id, "criterion_1_accuracy", "criterion_1_score"
-        )
+        assert_draws(self, lab, self.area, run_id, "accuracy", "score")
         yours = out_text.partition("still yours")[2]
         self.assertIn("output/", yours)  # the run's rows, where the pair is read
         self.assertIn("Raw output", yours)
@@ -1544,7 +1543,7 @@ class Judge(unittest.TestCase):
             f"- **Recorded results:** criterion-1 not assessable ({label})", text
         )
         self.assertIn(
-            "criterion_1_accuracy = 1.0", text
+            "kept number: accuracy = 1.0", text
         )  # the measurement stays reported
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
@@ -1947,9 +1946,7 @@ class Estimator(unittest.TestCase):
         )
         self.assertIn(f"(run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
-        assert_draws(
-            self, lab, self.area, run_id, "criterion_1_score", "criterion_1_accuracy"
-        )
+        assert_draws(self, lab, self.area, run_id, "score", "accuracy")
         self._a_repeat_draws_a_derived_seed_and_never_answers(run_id)
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
@@ -1992,7 +1989,7 @@ class Estimator(unittest.TestCase):
             {answering_run.repeat_seed(run_id, 2)},
         )
         out = lab.script(self.area, "02_analyze.py", "--draws")
-        self.assertIn(f"draw 2  {repeat}  criterion_1_score", out)
+        self.assertIn(f"draw 2  {repeat}  score", out)
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
         pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id
@@ -2097,7 +2094,7 @@ class StatedBar(unittest.TestCase):
         )
         self.assertEqual(
             (
-                metrics["criterion_1_score"],
+                metrics["score"],
                 metrics["criterion_1_threshold"],
                 metrics["criterion_1_pass"],
                 metrics["quality_check_2_pass"],
@@ -2194,7 +2191,7 @@ class StatedBarJudge(unittest.TestCase):
         metrics, printed, text = self._run_to_adoption("judge-at-bar", "0.75")
         self.assertEqual(
             (
-                metrics["criterion_1_accuracy"],
+                metrics["accuracy"],
                 metrics["criterion_1_threshold"],
                 metrics["criterion_1_pass"],
                 metrics["quality_check_2_accuracy"],
@@ -2210,7 +2207,7 @@ class StatedBarJudge(unittest.TestCase):
         metrics, printed, text = self._run_to_adoption("judge-below-bar", "0.76")
         self.assertEqual(
             (
-                metrics["criterion_1_accuracy"],
+                metrics["accuracy"],
                 metrics["criterion_1_threshold"],
                 metrics["criterion_1_pass"],
             ),

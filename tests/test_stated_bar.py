@@ -92,7 +92,7 @@ class StatedBar(unittest.TestCase):
         [quality-check-2] passes whatever the null draw."""
         with mock.patch.object(measure, "run_null_band", return_value=1.0):
             m = measure.evaluate_rows(self.apply_rows(measure, pairs), cfg)
-        return m["criterion_1_score"], m["criterion_1_threshold"], m["criterion_1_pass"]
+        return m[measure.KEPT_KEY], m["criterion_1_threshold"], m["criterion_1_pass"]
 
     def test_a_bar_the_task_states_holds_at_its_boundary_whatever_the_expectation(self):
         """Accuracy at least 0.90: 0.89 misses and 0.90 meets it, with the
@@ -192,7 +192,7 @@ class StatedBar(unittest.TestCase):
             )
             self.assertEqual(
                 (
-                    m["criterion_1_score"],
+                    m[measure.KEPT_KEY],
                     m["criterion_1_threshold"],
                     m["criterion_1_pass"],
                 ),
@@ -289,7 +289,7 @@ class PromptSkeleton(unittest.TestCase):
         )
         self.assertTrue(m["quality_check_2_pass"])
         return (
-            m["criterion_1_accuracy"],
+            m[measure.KEPT_KEY],
             m["criterion_1_threshold"],
             m["criterion_1_pass"],
         )

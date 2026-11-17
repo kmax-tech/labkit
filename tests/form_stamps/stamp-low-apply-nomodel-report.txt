@@ -96,7 +96,12 @@ repeat_cost = "low"
 kind = "apply"
 frozen = false
 preflight_audit = ""
-# A computation: `[kept]` key and unit. With a model: `[model] alias` (stamped by --model),
+
+[kept]
+key = "score"
+unit = "1"
+# `[kept]`: the key and unit of the number this protocol reports, at every kind; a
+# criterion judges that number. With a model: `[model] alias` (stamped by --model),
 # `[model.arms.<arm>]` with profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
 
 # The promises as data, one table per id: the key the run reports, the

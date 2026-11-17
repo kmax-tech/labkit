@@ -67,8 +67,8 @@ Choose `kind` by what the reported result claims:
   examples. Choose each from the question, never from a result.
 - Define your own terms (margins, arms, item ids) in "Terms of this
   protocol".
-- A computation names its kept number in the head's `[kept]` (key, unit;
-  the skeleton reads it) and compares with a stated reference only through
+- The head's `[kept]` names the reported number (key, unit); a criterion
+  judges it. A computation compares with a stated reference only through
   the head's `[reference]` table. A miss ends with `not met` and a valid
   delivery; never move the number or the value to meet it.
 - After `scripts/00_prepare.py`, `protocol-fill <PROTOCOL> --data-counts`

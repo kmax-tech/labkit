@@ -71,7 +71,7 @@ fit plan by repeat cost, `FIT_PLAN`), each draw seeded from the run's seed, its 
 mean of their scores plus `margin`, [quality-check-2] holds that mean within
 `null_band` of `chance_of()`, and the draws' scores (`quality_check_2_draw_scores`)
 show how far one strays — one refit's draw decided a fit's verdict
-(fourth SAB-like draw: `criterion_1_score` = `criterion_1_threshold`). A registered constant changed after the first measurement is
+(fourth SAB-like draw: the kept score = `criterion_1_threshold`). A registered constant changed after the first measurement is
 refused (report-check). All lanes are
 recorded in the same run (LAB-034 Null condition in the same run).
 Unlabelled predictions are never scored.
@@ -83,7 +83,11 @@ Measurement contract:
     labelled item of the lane: an item without a prediction scores as wrong
     (accuracy), as the mean (r2) or ranks below every real prediction (auc,
     spearman), and is counted on its own as `quality_check_1_empty`.
-  - [criterion-1] passes when the registered lane's score is at least its
+  - The registered lane's score is the kept number: computed once, stored
+    under the key the protocol head's `[kept]` names (`KEPT_KEY`; key and
+    unit set there, never here), on every evaluation — also when a quality
+    check fails, where it stays visible and no criterion judges it.
+  - [criterion-1] passes when the kept score is at least its
     bar, registered in one of two forms (LAB-035 Thresholds belong to the
     run, not to the measure): `at_least`, a bar the task states, is the
     bar as written, whatever the null lane scores; `margin` is a lead over
@@ -322,8 +326,12 @@ class MeasureConfig:
 _BLOCK = promises.load(PROTOCOL)
 CONFIG = MeasureConfig(**promises.all_constants(_BLOCK),
                        chance_criterion="criterion-2" in _BLOCK.by_id())
-#: the metrics key of the criterion's value — 02_analyze.py reads this name
-CRITERION_VALUE_KEY = "criterion_1_score"
+#: the kept number's key in metrics.json, as the protocol head's `[kept]`
+#: names it — set there, never here; 02_analyze.py and the test read this
+#: name. Read at import: a head without the table, or with its key still
+#: the placeholder, stops the script and the area's test here with the
+#: head's own sentence, before any gate runs; no key is chosen in its place
+KEPT_KEY = protocol_block.kept_key(PROTOCOL.read_text(encoding="utf-8"))
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -838,14 +846,15 @@ def scored_class_counts(rows: list[dict]) -> dict[str, int]:
 def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
-    Returns every registered id's keys on every evaluation:
+    Returns the kept number and every registered id's keys on every evaluation:
+      KEPT_KEY                           the kept number: the registered lane's score, computed once
       quality_check_1_empty · quality_check_1_pass                 quality check: yield of the registered lane
       quality_check_2_score · quality_check_2_target · quality_check_2_pass     quality check: the null lane inside the null-check
                                          interval, its target ± the permitted deviation
                                          (apply, permuted null: the permutation expectation; else chance);
       quality_check_2_null_band          apply, seeded permuted null: the run's permitted deviation (`run_null_band`);
                                          at fit quality_check_2_score is the mean of the draws, quality_check_2_draw_scores each
-      criterion_1_score · criterion_1_threshold · criterion_1_pass  criterion: registered lane against cfg.at_least as
+      criterion_1_threshold · criterion_1_pass  criterion: the kept score against cfg.at_least as
                                          registered, else the null value + cfg.margin
                                          (apply, permuted null: the permutation expectation; else the null)
       criterion_2_threshold · criterion_2_pass  only once the offered block below is uncommented:
@@ -854,7 +863,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
       n_items · n_rows · n_test          yield (→ LAB-023 No silent loss)
       scored_class_counts                accuracy/auc: items per gold value in the scored
                                          rows — not the class distribution of the input file
-    A failed quality check reports its keys and no criterion verdict (`criterion_1_pass`, `criterion_2_pass` None).
+    A failed quality check reports its keys, the kept number, and no criterion verdict (`criterion_1_pass`, `criterion_2_pass` None).
     A number about the inputs the report states belongs in this dict, computed
     from the kept rows; one the rows cannot give owes rows that keep what it
     needs — never a count typed into the report."""
@@ -905,7 +914,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
         raise ValueError("evaluate_rows(): [quality-check-2] registers no null_band — only a "
                          "registered NULL_ORDER may go without one")
     within_deviation = deviation is None or abs(null_score - target) <= Fraction(str(deviation))
-    metrics: dict = {"n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
+    metrics: dict = {KEPT_KEY: float(reg_score), "n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
                      "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
                      "quality_check_2_score": float(null_score), "quality_check_2_target": float(target),
                      "quality_check_2_pass": within_deviation}
@@ -925,13 +934,13 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     #                criterion_2_pass=None if gated else reg_score > chance_bar)
     # --- criterion-2 end
     if gated:
-        metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
+        metrics.update({"criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
     # a bar the task states is the bar as registered; the null lane stays
-    # [quality-check-2]'s anchor and moves it not
+    # [quality-check-2]'s anchor and moves it not. The verdict judges the
+    # kept score, the exact value stored as float above
     bar = criterion_bar.bar_of(cfg.at_least, cfg.margin, base)
-    metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
-                    "criterion_1_pass": reg_score >= bar})
+    metrics.update({"criterion_1_threshold": float(bar), "criterion_1_pass": reg_score >= bar})
     return metrics
 
 
@@ -973,9 +982,9 @@ def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict
     """Balance the kept rows against ITEMS, then gates first, then the metrics on the run."""
     balance(out, cfg, items)
     metrics = evaluate_rows(read_jsonl(out), cfg)
-    shown = ("quality_check_1_pass", "quality_check_1_empty", "quality_check_2_score", "quality_check_2_target",
-             "quality_check_2_null_band", "quality_check_2_pass", "criterion_1_score", "criterion_1_threshold",
-             "criterion_1_pass")
+    shown = (KEPT_KEY, "quality_check_1_pass", "quality_check_1_empty", "quality_check_2_score",
+             "quality_check_2_target", "quality_check_2_null_band", "quality_check_2_pass",
+             "criterion_1_threshold", "criterion_1_pass")
     # an offered criterion's keys, once its block is uncommented, by prefix:
     # a key literal here would read as reported where it is not registered
     for key in shown + tuple(k for k in metrics if k.startswith("criterion_") and k not in shown):
@@ -1053,7 +1062,7 @@ def main() -> None:
         few = labelled(items)[:args.probe] + unlabelled(items)[:5]
         rows = measure(cfg, few, out, probe=True)
         m = evaluate_rows(rows, cfg)
-        print(f"probe: registered {m['criterion_1_score']}  null {m['quality_check_2_score']}  target {m['quality_check_2_target']}  — not reported")
+        print(f"probe: registered {m[KEPT_KEY]}  null {m['quality_check_2_score']}  target {m['quality_check_2_target']}  — not reported")
         print("\n# one row per lane, as the run will keep them (Raw output comes from the run):")
         for lane in LANES:
             first = next((r for r in rows if r["lane"] == lane), None)
