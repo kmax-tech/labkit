@@ -39,10 +39,19 @@ each step's condition):
                     — the two of the three questions the
                     agent audit asks that a machine can answer (LAB-017 The number of audits follows the cost tier);
                     the third, the counted unit, is the protocol's `Unit` field
-  7. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
+  7. input origins  on every repeat cost: each input whose record names an
+                    origin run is that run's registered output, the bytes
+                    both records hold — the first part that fails (origin
+                    gone or unreadable, not completed, no such output, other
+                    bytes registered, the file changed) is a blocker whose
+                    way out restores evidence, never rewrites it
+                    (`origin_check`); a plain input and the runs the lookup
+                    skipped are notes. At low repeat cost changed bytes are
+                    station 6's blocker, told here as a note
+  8. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
                     its resolution check), a missing one no finding here
-  8. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
+  9. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known
@@ -67,7 +76,7 @@ each step's condition):
                     without a registered reference, and a reference changed
                     after the run, block too (`reference.comparison_gaps`);
                     `not met` is a valid outcome, a note
-  9. audit findings every finding still `open` in `audits/` (any mode), with
+ 10. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
                     (LAB-015 Preflight audit before freezing). And every
@@ -103,6 +112,7 @@ from labkit.formats.gate import (
     TECHNICAL_RULE,
     WARNING,
     GateFinding,
+    RuleAssignment,
     blocker,
     cited_rule,
     outcome_of_failed_read,
@@ -163,6 +173,13 @@ from labkit.formats.protocol_check import (
     repeated_findings,
 )
 from labkit.checks import data_counts
+from labkit.checks.origin_check import (
+    BYTES_CHANGED,
+    LOOKED_UP_WITHIN_AREA,
+    origin_finding,
+    origin_held,
+    origin_state,
+)
 from labkit.checks.result_render import kept_phrase
 from labkit.checks.run_record_check import (
     arm_findings,
@@ -358,7 +375,7 @@ def check_open_audit_findings(
     protocol: Path,
     protocol_id: str | None,
 ) -> None:
-    """Station 9: every finding still `open` in the audit records of
+    """Station 10: every finding still `open` in the audit records of
     PROTOCOL (those that name PROTOCOL_ID, `followup.records_of`), any
     mode (`findings.open_findings`, with the table of the gates' rules) — a
     BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
@@ -617,8 +634,56 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
         )
 
 
+def check_input_origins(
+    findings: Findings,
+    area: Path,
+    answering_run: Path,
+    *,
+    provenance_holds_bytes: bool,
+) -> None:
+    """Station 7: each input of the answering run whose record names an
+    origin run is that run's registered output, its bytes as both records
+    hold them (`origin_check.origin_gap`) — the first part that fails is a
+    blocker naming the input, the origin and the condition, with the way
+    out that restores evidence (`origin_finding`). A plain input and the
+    runs the lookup skipped are notes (`origin_notes`). PROVENANCE_HOLDS_BYTES:
+    station 6 ran and holds every input's bytes, so changed bytes and a
+    record that does not read are its blockers, told here as a note — one
+    cause, one blocker."""
+    try:
+        entries = read_data(answering_run) or []
+    except ArtefactError as exc:
+        if provenance_holds_bytes:
+            findings.note("  not read — the provenance station names the record")
+            return
+        findings.take(
+            run_file_unread(
+                f"the record of {answering_run.name} does not read: {exc}",
+                exc,
+                answering_run,
+            )
+        )
+        return
+    if not entries:
+        findings.note("  n/a — the run recorded no input file")
+        return
+    findings.note(f"  {LOOKED_UP_WITHIN_AREA}")
+    for entry in entries:
+        state = origin_state(area, entry)
+        for line in state.notes:
+            findings.note(f"  {line}")
+        if state.now is None:
+            continue  # a plain input: a note, never a finding
+        if state.gap is None:
+            findings.note(f"  {origin_held(entry)}")
+        elif state.gap.part == BYTES_CHANGED and provenance_holds_bytes:
+            findings.note(f"  {state.gap.told} — the provenance station names it")
+        else:
+            findings.take(origin_finding(state.gap, area))
+
+
 def check_area_tests(findings: Findings, area: Path) -> None:
-    """Station 7: the area's own tests. The resolution check runs again before a number leaves: a later edit
+    """Station 8: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
     tier, low included, where preflight is not owed. A
     missing test is no finding here; preflight owes it at the freeze."""
@@ -663,7 +728,7 @@ def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateF
 
 
 def check_null_lane(findings: Findings, answering_run: Path) -> None:
-    """Station 8: the kept rows' null lane moved (`null_lane_findings`) —
+    """Station 9: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
         kept = kept_jsonl_rows(answering_run)
@@ -685,7 +750,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
 
 
 def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
-    """Station 8: every output the run registered is the file the run
+    """Station 9: every output the run registered is the file the run
     recorded (`output_record_findings`) — the number's rows and the
     deliverable of an external task, held by path and sha256 from
     outputs.json, on every lane."""
@@ -719,7 +784,7 @@ def check_reference(
     head: protocol_block.Head,
     answering_run: Path,
 ) -> None:
-    """Station 8: the comparison with the stated value the head registers
+    """Station 9: the comparison with the stated value the head registers
     (`[reference]`, a computation's), held to the answering run's
     metrics.json (`reference.comparison_gaps`, each a guaranteed blocker):
     a table that does not read, or one on a kind with a bar
@@ -795,7 +860,7 @@ def check_kept_number(
     head: protocol_block.Head,
     answering_run: Path,
 ) -> None:
-    """Station 8: a computation's kept number — the key the head's `[kept]`
+    """Station 9: a computation's kept number — the key the head's `[kept]`
     names — held as a finite number in the answering run's metrics.json
     (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check
     the agent cannot edit away, where the skeleton's own `kept_number()`
@@ -858,7 +923,7 @@ def runs_metrics(answering_run: Path) -> dict:
 
 
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
-    """Station 8: a criterion's denominator that matches no recorded input
+    """Station 9: a criterion's denominator that matches no recorded input
     count (`run_record_check.criterion_n_input_mismatches`). The run's
     inputs and outputs are read only when metrics.json holds a denominator;
     a record that does not read then blocks — at repeat cost high no other
@@ -909,6 +974,22 @@ def _inputs(
     )
 
 
+def _refuse(
+    findings: Findings,
+    console_output: bool,
+    why: str,
+    fix: str,
+    rule: RuleAssignment,
+) -> None:
+    """Step 0's early end told: on the console (CONSOLE_OUTPUT) a refusal
+    with WHY; in a passed collector a blocker with its way out FIX and
+    RULE, so the caller (report-check) can name it."""
+    if console_output:
+        console.refuse("finalize", why)
+    else:
+        findings.block(why, fix=fix, rule=rule)
+
+
 def finalize_area(
     area: Path,
     protocol: Path | None = None,
@@ -939,8 +1020,8 @@ def finalize_area(
        console the reason is a refusal; in a passed collector it is kept as
        a blocker, so the caller (report-check) can name it.
     1. answering run — choose the run the later steps examine
-       (`answering_run`); none bound is a blocker, and steps 2, 4, 6 and 8
-       then skip.
+       (`answering_run`); none bound is a blocker, and steps 2, 4, 6, 7
+       and 9 then skip.
     2. registration — only with a run: its promise block as the first
        measurement registered it (`registration_changes`), a blocker
        naming every change.
@@ -953,15 +1034,18 @@ def finalize_area(
        placeholders left in the area's README warn; a bound field written
        twice and data counts typed by hand or stale block.
     6. provenance — only for repeat_cost = low, and only with a run.
-    7. area tests — always.
-    8. registered outputs, criterion n, the null lane, the kept number and
+    7. input origins — on every repeat cost, only with a run: an input
+       that is no longer the recorded output of its origin run blocks; at
+       repeat_cost = low changed bytes are step 6's blocker and a note here.
+    8. area tests — always.
+    9. registered outputs, criterion n, the null lane, the kept number and
        the reference comparison — only with a run; an output that is not
        the file the run recorded (gone, or another sha256 than outputs.json)
        blocks, criterion n warns, a null lane that did not move warns, a
        computation's run without its `[kept] key` as a finite number blocks, a
        registered reference the run cannot compare (the key absent or no
        finite number) blocks — a missed one is a result.
-    9. audit findings — always: an `open` BLOCKER in a record of this
+    10. audit findings — always: an `open` BLOCKER in a record of this
        protocol blocks; one on another protocol of the area does not.
 
     A blocker never stops a step: all of them run, then the summary lists
@@ -973,25 +1057,21 @@ def finalize_area(
     try:
         chosen = the_protocol(area, protocol)
     except ProtocolChoiceError as exc:
-        if console_output:
-            console.refuse("finalize", str(exc))
-        else:
-            findings.block(str(exc), fix=PROTOCOL_NAMED, rule=TECHNICAL_RULE)
+        _refuse(findings, console_output, str(exc), PROTOCOL_NAMED, TECHNICAL_RULE)
         return 2
     state, held = _inputs(area, state, held)
     text = state.text_of(chosen)
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
-        if console_output:
-            console.refuse("finalize", f"{chosen.name}: {exc}")
-        else:
-            findings.block(
-                f"{chosen.name}: {exc}",
-                fix=f"repair the head as the sentence says: "
-                f"`{contract_command(chosen)}` shows its fields",
-                rule=head_rule(exc),
-            )
+        _refuse(
+            findings,
+            console_output,
+            f"{chosen.name}: {exc}",
+            f"repair the head as the sentence says: "
+            f"`{contract_command(chosen)}` shows its fields",
+            head_rule(exc),
+        )
         return 2
 
     # 1. answering run — the run every later step examines
@@ -1034,11 +1114,27 @@ def finalize_area(
     else:
         check_provenance(findings, area, answering_run)
 
-    # 7. area tests — always
+    # 7. input origins — on every repeat cost, only with a run
+    findings.header("input origins")
+    if answering_run is None:
+        findings.note(NO_RUN)
+    else:
+        # an input that is no longer its origin's recorded output blocks;
+        # at repeat_cost = low station 6 holds every input's bytes and the
+        # `data=` record, so changed bytes and an unreadable record are
+        # notes here (`check_input_origins`)
+        check_input_origins(
+            findings,
+            area,
+            answering_run,
+            provenance_holds_bytes=lane(head.repeat_cost).provenance,
+        )
+
+    # 8. area tests — always
     findings.header("area tests")
     check_area_tests(findings, area)
 
-    # 8. registered outputs, criterion n, the null lane and the reference
+    # 9. registered outputs, criterion n, the null lane and the reference
     #    comparison — only with a run
     findings.header("registered outputs")
     if answering_run is None:
@@ -1054,7 +1150,7 @@ def finalize_area(
         findings.header("reference comparison")
         check_reference(findings, chosen, text, head, answering_run)
 
-    # 9. audit findings — always; a head without an id has no record
+    # 10. audit findings — always; a head without an id has no record
     findings.header("audit findings")
     check_open_audit_findings(findings, area, state, held, chosen, head.id)
 

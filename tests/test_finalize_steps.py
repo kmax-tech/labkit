@@ -608,7 +608,7 @@ class CriterionNStation(unittest.TestCase):
 
 
 class NullLaneStation(unittest.TestCase):
-    """finalize's null-lane station (station 8) hands on what the kept rows
+    """finalize's null-lane station (station 9) hands on what the kept rows
     show: the warning of an unmoved null lane reaches the findings (the
     condition itself: `tests/test_rules_run_record_check.py`). The reader of
     the run's outputs is given."""

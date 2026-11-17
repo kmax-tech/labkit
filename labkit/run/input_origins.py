@@ -54,6 +54,7 @@ from labkit.formats.runs import (
     UNREADABLE,
     ArtefactError,
     OutputEntry,
+    RunDir,
     RunState,
     UnreadableRun,
     read_outputs,
@@ -223,15 +224,9 @@ def unreadable_warning(decided: Sequence[tuple[str, str, InputOrigin]]) -> str:
     skipped = list(
         dict.fromkeys(u for _, _, o in decided for u in o.origin_unreadable_runs)
     )
-    groups = "; ".join(
-        f"{RECORD_CAUSE_TOLD[cause]}: "
-        + ", ".join(u.run for u in skipped if u.cause == cause)
-        for cause in RECORD_CAUSES
-        if any(u.cause == cause for u in skipped)
-    )
     return (
         f"runlog: WARNING — origins decided without the area's runs whose "
-        f"record does not read ({groups}); whether one of them wrote these "
+        f"record does not read ({grouped_by_cause(skipped)}); whether one of them wrote these "
         f"files cannot be told, and the record says so for each input. "
         f"Decided: {inputs}. To decide without them, name an origin in the "
         f'script (`runlog.RunOutput("<path>", run="<the run>")`)'
@@ -247,6 +242,18 @@ def unreadable_warning(decided: Sequence[tuple[str, str, InputOrigin]]) -> str:
             else ""
         )
         + " (`runlog <area>` gives each one's reason)."
+    )
+
+
+def grouped_by_cause(skipped: Sequence[UnreadableRun]) -> str:
+    """The runs SKIPPED as a sentence names them: grouped by the kind of
+    failure in `runs.RECORD_CAUSES` order, each group told as
+    `runs.RECORD_CAUSE_TOLD` words it — `<cause told>: <id>, <id>; …`."""
+    return "; ".join(
+        f"{RECORD_CAUSE_TOLD[cause]}: "
+        + ", ".join(u.run for u in skipped if u.cause == cause)
+        for cause in RECORD_CAUSES
+        if any(u.cause == cause for u in skipped)
     )
 
 
@@ -289,29 +296,32 @@ def area_runs(area: Path) -> list[AreaRun]:
     only a choice that names it is refused. Its damage is held where the
     run is read for what it is (`answering_run`, finalize), not at every
     start in the area."""
-    out: list[AreaRun] = []
-    for rd in run_dirs(area):
-        if rd.error is not None:
-            out.append(
-                AreaRun(rd.dir.name, UNREADABLE, None, (), rd.error, rd.error_cause)
-            )
-            continue
-        if rd.config is None:
-            continue
-        state = run_state(rd.dir, alive=False)
-        outputs: tuple[OutputEntry, ...] = ()
-        unread, cause = None, None
-        if state == COMPLETED:
-            try:
-                registered = read_outputs(rd.dir) or []
-            except ArtefactError as exc:
-                unread, cause = str(exc), exc.cause
-            else:
-                outputs = tuple(replace(e, path=e.path.resolve()) for e in registered)
-        out.append(
-            AreaRun(rd.dir.name, state, rd.config.repeat_of, outputs, unread, cause)
-        )
-    return out
+    return [r for r in map(read_area_run, run_dirs(area)) if r is not None]
+
+
+def read_area_run(rd: RunDir) -> AreaRun | None:
+    """The run of directory RD as the origin check sees it (`AreaRun`),
+    None for a directory without config.json (no run): its state, the run
+    it repeats, and, completed, its registered outputs with their paths
+    resolved. A config.json or, completed, an outputs.json that does not
+    read is carried with its reason and cause, never raised. The one
+    reading for the lookup at start (`area_runs`) and the check of a
+    recorded origin (`origin_check.origin_now`)."""
+    if rd.error is not None:
+        return AreaRun(rd.dir.name, UNREADABLE, None, (), rd.error, rd.error_cause)
+    if rd.config is None:
+        return None
+    state = run_state(rd.dir, alive=False)
+    outputs: tuple[OutputEntry, ...] = ()
+    unread, cause = None, None
+    if state == COMPLETED:
+        try:
+            registered = read_outputs(rd.dir) or []
+        except ArtefactError as exc:
+            unread, cause = str(exc), exc.cause
+        else:
+            outputs = tuple(replace(e, path=e.path.resolve()) for e in registered)
+    return AreaRun(rd.dir.name, state, rd.config.repeat_of, outputs, unread, cause)
 
 
 def input_origins(area: Path, data: dict, described: dict) -> dict[str, InputOrigin]:

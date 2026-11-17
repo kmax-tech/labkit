@@ -129,7 +129,9 @@ Run-record details: [protocol/run binding](protocol-run-binding.md).
 
 **Command and output:** `finalize AREA` checks the selected answering run,
 registration, code, provenance (at repeat cost low only: each data input
-against the bytes its run recorded), outputs, promises, area tests and
+against the bytes its run recorded), input origins (each input that names
+an origin run is still that run's registered output), outputs, promises,
+area tests and
 audit evidence. It prints findings and writes no result declaration.
 
 **Done / way out:** no blocker remains. This permits the next checks; it

@@ -38,6 +38,7 @@ from labkit.formats import (
     protocol_check,
     runs,
 )
+from labkit.checks.origin_check import origin_piece
 from labkit.formats.area_state import AreaState, gone_run_restore
 from labkit.formats.evidence import AreaEvidence
 from labkit.formats.gate import (
@@ -109,7 +110,8 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     `audited_run` chose it ONCE for both the prompt and the record: `(label,
     text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
     output the run registered, numbered as `<n>: <row>`, its metrics.json,
-    and its declared dependencies (`dependency_pieces`). One `(label, note)`
+    its declared dependencies (`dependency_pieces`) and its input origins
+    with their state now (`origin_check.origin_piece`). One `(label, note)`
     pair says why there is nothing: WHY (no protocol id, no completed bound
     run), or no registered output."""
     repo = layout_root(area)
@@ -134,6 +136,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     if shown_metrics is not None:
         out.append((f"FILE: {rel_run}/metrics.json", shown_metrics))
     out += dependency_pieces(run_dir)
+    out += origin_piece(area, run_dir)
     return out
 
 
