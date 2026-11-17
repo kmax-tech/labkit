@@ -58,7 +58,7 @@ command line.
                                                passes on them; the Summary's Conclusion — the
                                                question's answer in two sentences, within the
                                                Limitations — stays yours
-    protocol-fill PROTOCOL-x.md --builds-on RUN_ID --id STEP --occasion OCCASION --why "…"
+    protocol-fill PROTOCOL-x.md --builds-on RUN_ID --step-id STEP --occasion OCCASION --why "…"
                                                the step the next runs make: `[builds_on]`
                                                naming RUN_ID as its basis and every change
                                                of the registration against RUN_ID's own
@@ -867,14 +867,16 @@ def _check_data_counts_args(
 
 
 def _check_step_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Refuse an incomplete or combined --builds-on, and --id or --occasion
+    """Refuse an incomplete or combined --builds-on, and --step-id or --occasion
     without it, before file access."""
     if args.builds_on is None:
         if args.step_id is not None or args.occasion is not None:
-            ap.error("--id and --occasion go with --builds-on")
+            ap.error("--step-id and --occasion go with --builds-on")
         return
     if not args.step_id or not args.occasion or not args.why:
-        ap.error("--builds-on RUN_ID requires --id STEP, --occasion and --why TEXT")
+        ap.error(
+            "--builds-on RUN_ID requires --step-id STEP, --occasion and --why TEXT"
+        )
     if (
         args.discuss is not None
         or args.from_run is not None
@@ -1047,13 +1049,13 @@ def main(argv: list[str]) -> int:
         "--builds-on",
         default=None,
         metavar="RUN_ID",
-        help="with --id, --occasion and --why: write the step the next runs make — "
+        help="with --step-id, --occasion and --why: write the step the next runs make — "
         "[builds_on] naming RUN_ID as its basis (a completed run of this protocol, "
         "no repeat) and every change of the registration against RUN_ID's own "
         "text, computed, never typed; an earlier step is replaced",
     )
     ap.add_argument(
-        "--id",
+        "--step-id",
         dest="step_id",
         default=None,
         metavar="STEP",

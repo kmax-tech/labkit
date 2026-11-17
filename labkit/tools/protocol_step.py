@@ -1,6 +1,6 @@
 """protocol_step — write the step the next runs make (`[builds_on]`).
 
-    protocol-fill PROTOCOL --builds-on RUN_ID --id STEP --occasion OCCASION --why "…"
+    protocol-fill PROTOCOL --builds-on RUN_ID --step-id STEP --occasion OCCASION --why "…"
 
 The step names its basis run, why it is taken and every change of the
 registration against the basis run's own text — computed here from that

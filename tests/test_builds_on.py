@@ -274,7 +274,7 @@ class InARepository(unittest.TestCase):
         return self.fill(
             "--builds-on",
             basis,
-            "--id",
+            "--step-id",
             "filter",
             "--occasion",
             "observation",
@@ -311,7 +311,7 @@ class InARepository(unittest.TestCase):
         code, told = self.fill(
             "--builds-on",
             self.a,
-            "--id",
+            "--step-id",
             "seed",
             "--occasion",
             "planned",
@@ -355,7 +355,7 @@ class InARepository(unittest.TestCase):
         code, _ = self.fill(
             "--builds-on",
             self.a,
-            "--id",
+            "--step-id",
             "seed",
             "--occasion",
             "planned",

@@ -679,7 +679,7 @@ def require_step_basis(base_dir: Path, pid: str | None, text: str | None) -> Non
             with_way_out(
                 f"runlog: {exc}",
                 "write the step with `protocol-fill <PROTOCOL> --builds-on <run_id> "
-                '--id <step> --occasion <occasion> --why "…"`',
+                '--step-id <step> --occasion <occasion> --why "…"`',
             )
         ) from exc
     if step is None:
