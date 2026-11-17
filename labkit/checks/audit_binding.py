@@ -15,12 +15,14 @@ Reads only; the records themselves are `findings`'.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from collections.abc import Callable, Iterable
 
 from pathlib import Path
 from typing import NamedTuple
 
 from labkit.formats.commands import (
+    measure_anew,
     Command,
     checkout_command,
     handover_command,
@@ -52,7 +54,7 @@ from labkit.formats.gate import (
     with_way_out,
 )
 from labkit.formats.protocol_block import BlockError, find_by_id
-from labkit.formats.protocol_history import as_measured
+from labkit.formats.protocol_history import as_measured, patch_lost
 from labkit.formats.repo import (
     git_root,
     layout_root,
@@ -184,10 +186,11 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     marked as the origin run's then (SOURCE_THEN), never the protocol as it
     reads now and never a newer run's; the text once, a later origin run
     that saw the same text pointing to it. Where it cannot be read back the
-    piece says why (NOT_RECONSTRUCTED) and shows no other text. [] for a run
-    without an input from an origin run, or whose input record does not
-    read (the record checks name that). Reads files and git, writes
-    nothing."""
+    piece says why (NOT_RECONSTRUCTED) and shows no other text — the same
+    diagnosis whether finalize holds the run for it
+    (`source_protocol_finding`) or not. [] for a run without an input from
+    an origin run, or whose input record does not read (the record checks
+    name that). Reads files and git, writes nothing."""
     try:
         entries = runs.read_data(run_dir) or []
     except runs.ArtefactError:
@@ -197,52 +200,103 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     first_with: dict[str, str] = {}  # a text shown → the origin run it was shown for
     out: list[tuple[str, str]] = []
     for run_id in origins:
-        text, where = source_protocol_then(area, run_id, root)
+        then = source_protocol_then(area, run_id, root)
         label = f"{SOURCE_PROTOCOL_LABEL}{run_id}"
-        if text is None:
-            out.append((label, f"{NOT_RECONSTRUCTED} {where} — {NO_TEXT_IN_ITS_PLACE}"))
-        elif text in first_with:
-            shown_as = f"{SOURCE_PROTOCOL_LABEL}{first_with[text]}"
-            out.append((label, f"{where}: the same text as under {shown_as}"))
+        if then.text is None:
+            out.append(
+                (label, f"{NOT_RECONSTRUCTED} {then.where} — {NO_TEXT_IN_ITS_PLACE}")
+            )
+        elif then.text in first_with:
+            shown_as = f"{SOURCE_PROTOCOL_LABEL}{first_with[then.text]}"
+            out.append((label, f"{then.where}: the same text as under {shown_as}"))
         else:
-            first_with[text] = run_id
-            out.append((label, f"{where} — {SOURCE_THEN}\n\n{text}"))
+            first_with[then.text] = run_id
+            out.append((label, f"{then.where} — {SOURCE_THEN}\n\n{then.text}"))
     return out
+
+
+@dataclass(frozen=True)
+class SourceProtocolThen:
+    """The protocol an origin run was measured under, as it saw it when it
+    started (`source_protocol_then`).
+
+    Attributes:
+        run_id: The origin run.
+        bound: True when the run recorded a protocol id, so its question,
+            criteria and method were registered and their text then is
+            owed; False when it recorded none — no protocol was registered
+            for it (a preparation run, say); None when its record does not
+            stand or read, so whether one is owed is unknown (the origin
+            check names that record, `origin_check.origin_gap`).
+        text: The protocol's text then; None when it cannot be read back.
+        where: Where TEXT was read from, or why it cannot be.
+    """
+
+    run_id: str
+    bound: bool | None
+    text: str | None
+    where: str
 
 
 def source_protocol_then(
     area: Path, run_id: str, root: Path | None
-) -> tuple[str | None, str]:
-    """(text, where): the protocol origin run RUN_ID of AREA was bound to,
-    as it saw it when it started (`protocol_history.as_measured`: its
-    recorded commit with its uncommitted.patch, held to the promise block
-    it recorded), found by the run's protocol id — the protocol carrying
-    it now, else the path the run recorded, and at that commit by the id
-    again. TEXT None, WHERE saying why: no directory of that id, a record
-    that does not read or is missing, a run bound to no protocol, AREA in
-    no repository (ROOT None), or `as_measured`'s causes. Never the
-    protocol's text as it stands. Reads files and git. Raises RuntimeError
-    when git fails."""
+) -> SourceProtocolThen:
+    """The protocol origin run RUN_ID of AREA was bound to, as it saw it
+    when it started (`protocol_history.as_measured`: its recorded commit
+    with its uncommitted.patch, held to the promise block it recorded),
+    found by the run's protocol id — the protocol carrying it now, else the
+    path the run recorded, and at that commit by the id again. No text, the
+    reason in WHERE: no directory of that id, a record that does not read or
+    is missing, a run bound to no protocol, AREA in no repository (ROOT
+    None), a run started from a changed tree whose uncommitted.patch is
+    gone (`as_measured` would read the commit alone), or `as_measured`'s
+    causes. Never the protocol's text as it stands. Reads files and git.
+    Raises RuntimeError when git fails."""
     run_dir = runs.runs_path(area) / run_id
     if path_kind(run_dir) != "dir":
-        return None, f"origin run {run_id} is gone (no run of that id under runs/)"
+        return SourceProtocolThen(
+            run_id,
+            None,
+            None,
+            f"origin run {run_id} is gone (no run of that id under runs/)",
+        )
     rd = runs.read_run_dir(run_dir)
     if rd.error is not None:
-        return None, f"origin run {run_id} does not read: {rd.error}"
+        return SourceProtocolThen(
+            run_id, None, None, f"origin run {run_id} does not read: {rd.error}"
+        )
     if rd.config is None:  # the directory stands, its config.json does not
-        return None, (
-            f"origin run {run_id} has no record (no config.json in runs/{run_id}/)"
+        return SourceProtocolThen(
+            run_id,
+            None,
+            None,
+            f"origin run {run_id} has no record (no config.json in runs/{run_id}/)",
         )
     binding = rd.config.protocol
     if binding.id is None:
-        return None, (
+        return SourceProtocolThen(
+            run_id,
+            False,
+            None,
             f"origin run {run_id} was started bound to no protocol: no question, "
-            f"criteria or method was registered for it"
+            f"criteria or method was registered for it",
         )
     if root is None:
-        return None, (
+        return SourceProtocolThen(
+            run_id,
+            True,
+            None,
             f"origin run {run_id}: the area lies in no git repository, so no "
-            f"commit holds what it was measured under"
+            f"commit holds what it was measured under",
+        )
+    if patch_lost(rd):  # `as_measured` would read the commit alone
+        return SourceProtocolThen(
+            run_id,
+            True,
+            None,
+            f"origin run {run_id} started from a tree with changes "
+            f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
+            f"alone is not what it was measured under",
         )
     try:
         protocol = find_by_id(area, binding.id)
@@ -255,7 +309,33 @@ def source_protocol_then(
             if recorded and not Path(recorded).is_absolute()
             else area / f"PROTOCOL-{binding.id}.md"
         )
-    return as_measured(protocol, rd, root, role="origin run")
+    text, where = as_measured(protocol, rd, root, role="origin run")
+    return SourceProtocolThen(run_id, True, text, where)
+
+
+def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding | None:
+    """The blocker when the protocol a bound origin run was measured under
+    cannot be read back (THEN, `source_protocol_then`): the audit of a run
+    of AREA computed from it cannot be shown what the source was measured
+    for, and today's text does not stand in. None when the text reads, and
+    for a run that recorded no protocol (`bound` False) — nothing was
+    registered to read back, so a preparation run owes none; a run whose
+    record does not stand (`bound` None) is held, since whether a text is
+    owed is unknown. The auditor is told either way
+    (`source_protocol_pieces`). The way out restores the evidence or
+    measures anew; a technical contract of the record, a guaranteed
+    blocker."""
+    if then.text is not None or then.bound is False:
+        return None
+    return blocker(
+        f"the protocol origin run {then.run_id} was measured under cannot be "
+        f"read back — {then.where}",
+        fix=f"restore what holds it — the commit (`git fetch`), the run's "
+        f"uncommitted.patch or the protocol's history, from git or a backup — "
+        f"or, with the right sources, {measure_anew(area)}; never show or "
+        f"write today's text in its place",
+        rule=TECHNICAL_RULE,
+    )
 
 
 #: how large a declared dependency may be to be shown whole: a JSON model of

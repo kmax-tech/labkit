@@ -771,6 +771,19 @@ def as_measured(
     )
 
 
+def patch_lost(rd: "RunDir") -> bool:
+    """Whether run RD started from a changed tree and its uncommitted.patch
+    is gone: runlog writes the patch whenever the tree was not clean (its
+    `git` ends in `runs.DIRTY_MARK`), so without the file the commit alone
+    is not what the run saw. `as_measured` reads a missing patch as a clean
+    tree; a reader that must not take the commit alone for the run's text
+    asks this first. RD's config must read."""
+    from labkit.formats.runs import DIRTY_MARK, patch_path
+
+    assert rd.config is not None, "a run whose config reads"
+    return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
+
+
 def _block_sha(text: str) -> str | None:
     """The digest of TEXT's promise block; None without one or unreadable."""
     try:

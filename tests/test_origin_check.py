@@ -19,7 +19,9 @@ from labkit.checks.audit_binding import (
     NO_TEXT_IN_ITS_PLACE,
     NOT_RECONSTRUCTED,
     SOURCE_PROTOCOL_LABEL,
+    SourceProtocolThen,
     run_rows,
+    source_protocol_finding,
     source_protocol_pieces,
 )
 from labkit.checks.origin_check import (
@@ -144,6 +146,34 @@ class Ways(unittest.TestCase):
         self.assertIn(NEVER_REWRITTEN, fix)
 
 
+class SourceProtocolHeld(unittest.TestCase):
+    """`source_protocol_finding` from facts in memory: a bound origin run
+    owes its protocol as it started, a run bound to none owes nothing."""
+
+    def test_a_bound_origin_without_its_text_then_blocks(self) -> None:
+        then = SourceProtocolThen(A, True, None, f"origin run {A} recorded no commit")
+        f = source_protocol_finding(then, Path("/lab/area"))
+        assert f is not None and f.fix is not None
+        self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
+        self.assertIn(f"the protocol origin run {A} was measured under", f.text)
+        self.assertIn("recorded no commit", f.text)
+        self.assertIn("never show or write today's text in its place", f.fix)
+        self.assertIn("measure anew", f.fix)
+
+    def test_the_twin_a_bound_origin_whose_text_reads_passes(self) -> None:
+        then = SourceProtocolThen(A, True, "# protocol", "as origin run … saw it")
+        self.assertIsNone(source_protocol_finding(then, Path("/lab/area")))
+
+    def test_an_origin_whose_record_does_not_stand_is_held(self) -> None:
+        # whether a protocol is owed is unknown: held, never read as unbound
+        then = SourceProtocolThen(A, None, None, f"origin run {A} is gone")
+        self.assertIsNotNone(source_protocol_finding(then, Path("/lab/area")))
+
+    def test_a_run_bound_to_no_protocol_owes_none(self) -> None:
+        then = SourceProtocolThen(A, False, None, f"origin run {A} was started bound")
+        self.assertIsNone(source_protocol_finding(then, Path("/lab/area")))
+
+
 class Notes(unittest.TestCase):
     """`origin_notes`: facts for the auditor, never findings."""
 
@@ -208,6 +238,9 @@ class Station(_Area):
         self.assertEqual(blocked, [])
         self.assertIn(f"the output of {self.writer.run_id} (decided by digest)", told)
         self.assertIn(LOOKED_UP_WITHIN_AREA, told)
+        # the writer is bound to no protocol (a preparation run): none is owed
+        self.assertIn("bound to no protocol", told)
+        self.assertIn("none is owed", told)
 
     def test_a_changed_file_blocks_where_no_other_station_holds_its_bytes(self) -> None:
         self.out.write_text('{"id": 2}\n', encoding="utf-8")

@@ -86,7 +86,15 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
 
     def test_a_gone_origin_holds_every_gate_until_restored(self) -> None:
         lab = self.lab
+        # A starts with a line of its protocol not yet committed: what it was
+        # measured under is its commit with its uncommitted.patch
+        text = self.protocol.read_text(encoding="utf-8")
+        assert RUNS_LINE in text
+        self.protocol.write_text(
+            text.replace(RUNS_LINE, f"{RUNS_LINE}\n{THEN}"), encoding="utf-8"
+        )
         source = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        patch = self.area / "runs" / source / "uncommitted.patch"
         (written,) = runs.read_outputs(self.area / "runs" / source) or []
         lab.commit("run A, its rows")
         _point_script_at(self.measure, written.path)
@@ -102,6 +110,22 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn(f"the output of {source} (decided by digest)", out)
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, compared)
+        # A's patch lost: the protocol A was measured under cannot be read
+        # back, so finalize holds C and the adoption is refused
+        lab.git("rm", "-q", str(patch))
+        unread = (
+            f"the protocol origin run {source} was measured under cannot be read back"
+        )
+        rc, out = lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(unread, out)
+        self.assertIn("its uncommitted.patch is gone", out)
+        rc, out = lab.adopt(self.protocol, compared)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn(unread, out)
+        # restored from git, the adoption passes
+        lab.git("reset", "-q", "HEAD", "--", str(patch))
+        lab.git("checkout", "--", str(patch))
         rc, out = lab.adopt(self.protocol, compared)
         self.assertEqual(rc, 0, out)
         lab.git("add", "-A")
@@ -268,6 +292,31 @@ class TwoProtocolsOfOneArea(CountCommands):
             self.area, _recount, note, run_id=c, protocol=computed
         )
         self.assertEqual((verdict.run_id, verdict.out), (c, None))
+
+        # A0's patch lost: A0's protocol then cannot be read back — C held at
+        # finalize and report-check, its auditor told why, the measurement
+        # protocol not held by it; restored from git, C passes again
+        patch = self.area / "runs" / a0 / "uncommitted.patch"
+        lab.git("rm", "-q", str(patch))
+        unread = f"the protocol origin run {a0} was measured under cannot be read back"
+        rc, told = self.station(computed)
+        self.assertEqual(rc, 1, told)
+        self.assertIn(unread, told)
+        code, out = self.verdict(computed)
+        self.assertEqual(code, 1, out)
+        self.assertIn(unread, out)
+        _, told = self.station(measured)
+        self.assertNotIn(unread, told)
+        pieces = dict(run_rows(self.area, self.area / "runs" / c, ""))
+        told = pieces[f"{SOURCE_PROTOCOL_LABEL}{a0}"]
+        self.assertTrue(told.startswith(NOT_RECONSTRUCTED), told)
+        self.assertIn("its uncommitted.patch is gone", told)
+        self.assertNotIn(NOW, told)
+        lab.git("reset", "-q", "HEAD", "--", str(patch))
+        lab.git("checkout", "--", str(patch))
+        rc, told = self.station(computed)
+        self.assertEqual(rc, 0, told)
+        self.assertIn(f"its protocol then: as origin run {a0} saw it", told)
 
         # A0 gone: C held, naming it; the measurement's result untouched by the station
         lab.git("rm", "-r", "-q", str(self.area / "runs" / a0))

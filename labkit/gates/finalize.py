@@ -46,8 +46,12 @@ each step's condition):
                     bytes registered, the file changed) is a blocker whose
                     way out restores evidence, never rewrites it
                     (`origin_check`); a plain input and the runs the lookup
-                    skipped are notes. At low repeat cost changed bytes are
-                    station 6's blocker, told here as a note
+                    skipped are notes. An origin run bound to a protocol
+                    whose text as it started (commit and patch) cannot be
+                    read back blocks; one bound to none (a preparation
+                    run) owes none and is a note. At low repeat cost
+                    changed bytes are station 6's blocker, told here as a
+                    note
   8. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
                     its resolution check), a missing one no finding here
@@ -142,6 +146,7 @@ from labkit.formats.runs import (
     read_run_config,
 )
 from labkit.formats.repo import (
+    git_root,
     layout_root,
     ProtocolChoiceError,
     shown,
@@ -200,6 +205,8 @@ from labkit.checks.audit_binding import (
     check_audit_findings_decided,
     check_audit_records_read,
     check_audited_runs_kept,
+    source_protocol_finding,
+    source_protocol_then,
 )
 from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
@@ -646,7 +653,13 @@ def check_input_origins(
     hold them (`origin_check.origin_gap`) — the first part that fails is a
     blocker naming the input, the origin and the condition, with the way
     out that restores evidence (`origin_finding`). A plain input and the
-    runs the lookup skipped are notes (`origin_notes`). PROVENANCE_HOLDS_BYTES:
+    runs the lookup skipped are notes (`origin_notes`). Then, for each
+    origin run whose promise holds, the protocol it was measured under as
+    it saw it when it started (`audit_binding.source_protocol_then`): when
+    the run was bound to a protocol and that text cannot be read back, a
+    blocker (`source_protocol_finding`) — the audit of this run cannot be
+    shown what its source was measured for; a run bound to no protocol (a
+    preparation run) owes none and is a note. PROVENANCE_HOLDS_BYTES:
     station 6 ran and holds every input's bytes, so changed bytes and a
     record that does not read are its blockers, told here as a note — one
     cause, one blocker."""
@@ -668,6 +681,7 @@ def check_input_origins(
         findings.note("  n/a — the run recorded no input file")
         return
     findings.note(f"  {LOOKED_UP_WITHIN_AREA}")
+    held: list[str] = []  # origin runs whose promise holds, in the inputs' order
     for entry in entries:
         state = origin_state(area, entry)
         for line in state.notes:
@@ -676,10 +690,35 @@ def check_input_origins(
             continue  # a plain input: a note, never a finding
         if state.gap is None:
             findings.note(f"  {origin_held(entry)}")
+            assert entry.origin_run is not None  # state.now is set
+            held.append(entry.origin_run)  # only a held origin's protocol is read
         elif state.gap.part == BYTES_CHANGED and provenance_holds_bytes:
             findings.note(f"  {state.gap.told} — the provenance station names it")
         else:
             findings.take(origin_finding(state.gap, area))
+    # an origin whose promise fails is named above, once; its protocol is
+    # read back only where the run itself stands
+    check_source_protocols(findings, area, held)
+
+
+def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> None:
+    """Station 7, second part, only for the origin runs of HELD — those
+    whose origin promise holds; one that fails is named by its origin
+    blocker and not read here. For each (repeats allowed), the protocol it was measured
+    under as it started (`audit_binding.source_protocol_then`) — a blocker
+    when the run was bound to one and that text cannot be read back
+    (`source_protocol_finding`), a note when it reads or when the run was
+    bound to none."""
+    root = git_root(area)
+    for run_id in dict.fromkeys(held):
+        then = source_protocol_then(area, run_id, root)
+        finding = source_protocol_finding(then, area)
+        if finding is not None:
+            findings.take(finding)
+        elif then.bound is False:
+            findings.note(f"  {then.where}; none is owed")
+        else:
+            findings.note(f"  its protocol then: {then.where}")
 
 
 def check_area_tests(findings: Findings, area: Path) -> None:
@@ -1035,8 +1074,10 @@ def finalize_area(
        twice and data counts typed by hand or stale block.
     6. provenance — only for repeat_cost = low, and only with a run.
     7. input origins — on every repeat cost, only with a run: an input
-       that is no longer the recorded output of its origin run blocks; at
-       repeat_cost = low changed bytes are step 6's blocker and a note here.
+       that is no longer the recorded output of its origin run blocks, and
+       so does an origin run bound to a protocol whose text as it started
+       cannot be read back; at repeat_cost = low changed bytes are step 6's
+       blocker and a note here.
     8. area tests — always.
     9. registered outputs, criterion n, the null lane, the kept number and
        the reference comparison — only with a run; an output that is not
