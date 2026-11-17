@@ -12,8 +12,9 @@ has its home and which tier the claim belongs to.
 What a row claims — and no more:
 
   recorded            the run recorded this key with this value          guaranteed
-  registered constant the protocol's constant and the recorded value
-                      are equal / differ                                  guaranteed
+  registered constant the constant the run's own promise snapshot
+                      registered and the recorded value are equal /
+                      differ                                              guaranteed
                       the record carries no key of that name: its absence
                       is certain, reading it as a fault is                static evidence
   model               the model that answered these rows, from the
@@ -21,14 +22,18 @@ What a row claims — and no more:
                       a derived run records none, so the walk along
                       `derived_from` names the ancestor (`answering_run.
                       model_provenance_run`); a chain without one says so  guaranteed
-  module constant     an UPPER_CASE constant in scripts/01_measure.py with
-                      no key of its name in the record — whether it moves
-                      the number is not claimed                           static evidence
+  module constant     an UPPER_CASE constant in the script as the run
+                      kept it (its script-source.py) with no key of its
+                      name in the record — whether it moves the number is
+                      not claimed                                         static evidence
 
 Whether the record is COMPLETE is not a claim this view can make: an old
 run and a new one carry the same schema, and only the area's own test (the
 record held to the config object's fields) proves completeness. The model
-is read from the run's record, never resolved against today's models.toml.
+is read from the run's record, never resolved against today's models.toml,
+and so are the registered constants and the script's literals: a named
+older run shows what it ran with, not today's protocol or script. A run
+that kept no script copy says so in each literal's home.
 """
 
 from __future__ import annotations
@@ -39,7 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
-from labkit.formats.runs import run_path, runs_path
+from labkit.formats.runs import run_path, runs_path, script_copy_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.repo import (
     AmbiguousArea,
@@ -125,24 +130,26 @@ def recorded_rows(run_config: dict, run_name: str) -> list[ParamRow]:
 
 
 def constant_rows(
-    block: promises.PromiseTables,
+    registered: list[tuple[str, dict]],
     run_config: dict,
-    protocol_name: str,
+    run_name: str,
     copies: dict[str, tuple[object, int]],
+    script: str,
 ) -> list[ParamRow]:
-    """The protocol's registered constants against the record: equal,
-    different, or missing — the state is certain; a missing one is a fault
-    only as evidence, and the strongest evidence is a literal of the same
-    name in the script, in either case (`copies`: name -> (value, line);
-    `min_f1` is copied as `MIN_F1`)."""
+    """The constants the run's promise snapshot registered (REGISTERED,
+    `promises.snapshot_constants`) against the record: equal, different,
+    or missing — the state is certain; a missing one is a fault only as
+    evidence, and the strongest evidence is a literal of the same name in
+    SCRIPT, the script the literals were read from, in either case
+    (`copies`: name -> (value, line); `min_f1` is copied as `MIN_F1`)."""
     rows = []
-    for rec in promises.constant_records(block, run_config):
+    for rec in promises.constant_records_of(registered, run_config):
         if rec.state == "missing":
             copy_name = next(
                 (n for n in (rec.name, rec.name.upper()) if n in copies), None
             )
             held = (
-                f"; {MEASURE_SCRIPT}:{copies[copy_name][1]} holds "
+                f"; {script}:{copies[copy_name][1]} holds "
                 f"{copy_name} = {copies[copy_name][0]!r}"
                 if copy_name
                 else ""
@@ -158,7 +165,7 @@ def constant_rows(
             ParamRow(
                 name=rec.name,
                 value=_shown(rec.promised),
-                home=f"{protocol_name} [{rec.promise_id}] constants",
+                home=f"{run_name}/config.json: promises [{rec.promise_id}] constants",
                 meaning="registered constant",
                 in_run=in_run,
                 evidence_kind=kind,
@@ -213,13 +220,12 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
     return rows
 
 
-def script_literals(area: Path) -> dict[str, tuple[object, int]]:
-    """Names assigned a literal at module level of scripts/01_measure.py:
-    name -> (value, line). Empty without the script. A registered constant's
-    copy is looked up here under its own name; the evidence rows take the
+def script_literals(script: Path) -> dict[str, tuple[object, int]]:
+    """Names assigned a literal at module level of SCRIPT: name -> (value,
+    line). Empty without the script. A registered constant's copy is
+    looked up here under its own name; the evidence rows take the
     UPPER_CASE ones. Raises SourceError (a ValueError) naming the script
     when it does not parse."""
-    script = area / MEASURE_SCRIPT
     if not script.is_file():
         return {}
     out: dict[str, tuple[object, int]] = {}
@@ -233,7 +239,10 @@ def script_literals(area: Path) -> dict[str, tuple[object, int]]:
 
 
 def script_constant_rows(
-    literals: dict[str, tuple[object, int]], run_config: dict, registered: set[str]
+    literals: dict[str, tuple[object, int]],
+    run_config: dict,
+    registered: set[str],
+    script: str,
 ) -> list[ParamRow]:
     """Module constants with no key of their name (either case) in the record
     and no registered row of their own (either case: `MIN_F1` is the copy of
@@ -243,7 +252,7 @@ def script_constant_rows(
         ParamRow(
             name=name,
             value=_shown(value),
-            home=f"{MEASURE_SCRIPT}:{line}",
+            home=f"{script}:{line}",
             meaning="module constant not in the record — whether it moves the number is not claimed",
             in_run="—",
             evidence_kind=STATIC_EVIDENCE,
@@ -257,21 +266,40 @@ def script_constant_rows(
     ]
 
 
-def params_table(area: Path, protocol: Path, run_dir: Path) -> list[ParamRow]:
-    """Every row of the view for one run, registered constants first.
+def ran_script(area: Path, run_dir: Path) -> tuple[Path, str]:
+    """(file, as shown) of the measuring script RUN_DIR ran: its kept copy
+    (`runs.script_copy_path`), or — a run that kept none — AREA's script
+    as it reads now, the shown name saying so."""
+    copy = script_copy_path(run_dir, ".py")
+    if copy.is_file():
+        return copy, f"{run_dir.name}/{copy.name}"
+    return (
+        area / MEASURE_SCRIPT,
+        f"{MEASURE_SCRIPT} as it reads now (the run kept no copy)",
+    )
+
+
+def params_table(area: Path, run_dir: Path) -> list[ParamRow]:
+    """Every row of the view for one run, registered constants first — each
+    from the run itself: its record, its promise snapshot, its script copy
+    (`ran_script`).
 
     Raises:
-        ValueError: An unreadable run config, or a broken lineage.
+        ValueError: An unreadable run config or promise snapshot, or a
+            broken lineage.
     """
     cfg = read_run_config(run_dir)
     if cfg is None:
         raise ValueError(f"{run_dir}: no config.json")
     run_config = cfg.config  # an object, held where the config is read
-    block = promises.parse_block(protocol.read_text(encoding="utf-8"))
-    literals = script_literals(area)
+    script, script_shown = ran_script(area, run_dir)
+    literals = script_literals(script)
     rows: list[ParamRow] = []
-    if block is not None:
-        rows += constant_rows(block, run_config, protocol.name, literals)
+    if cfg.promises is not None:
+        registered_then = promises.snapshot_constants(cfg.promises)
+        rows += constant_rows(
+            registered_then, run_config, run_dir.name, literals, script_shown
+        )
     # a registered constant's home is the protocol; its recorded value stands
     # in that row, not again as a recorded parameter
     registered = {r.name for r in rows}
@@ -279,7 +307,7 @@ def params_table(area: Path, protocol: Path, run_dir: Path) -> list[ParamRow]:
         {k: v for k, v in run_config.items() if k not in registered}, run_dir.name
     )
     rows += model_rows(run_dir)
-    rows += script_constant_rows(literals, run_config, registered)
+    rows += script_constant_rows(literals, run_config, registered, script_shown)
     return rows
 
 
@@ -358,7 +386,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
         how = f"the run that answers for {pid}" + "".join(f" ({ln})" for ln in lines)
     print(f"params: {area.name} · {protocol.name} · run {run_dir.name} ({how})")
     try:
-        rows = params_table(area, protocol, run_dir)
+        rows = params_table(area, run_dir)
     except ValueError as exc:
         console.refuse("labkit-params", str(exc))
         return 2

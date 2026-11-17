@@ -15,7 +15,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record, PID, head
 
-from labkit.formats import gate
+from labkit.formats import gate, promises
 from labkit.tools import params
 
 C1 = """[[promise]]
@@ -50,6 +50,14 @@ def _run(
 ) -> Path:
     d = area / "runs" / name
     d.mkdir()
+    # as runlog writes them: the promise snapshot of the protocol and a copy
+    # of the script, both as they stand when the run starts
+    text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+    block = promises.parse_block(text)
+    snap = promises.snapshot(block, area) if block is not None else None
+    (d / "script-source.py").write_bytes(
+        (area / "scripts" / "01_measure.py").read_bytes()
+    )
     (d / "config.json").write_text(
         json.dumps(
             run_record(
@@ -62,6 +70,7 @@ def _run(
                     "derived_from": derived_from,
                     "models_resolved": models_resolved or {},
                     "config": config,
+                    "promises": snap,
                 }
             )
         ),
@@ -103,13 +112,14 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7, "model": "m"},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            rows = _by_name(params.params_table(area, run))
             self.assertEqual(
                 {r.evidence_kind for r in rows.values()}, {gate.GUARANTEED}
             )
             self.assertEqual(rows["min_acc"].in_run, "0.7")
             self.assertEqual(
-                rows["min_acc"].home, "PROTOCOL-x.md [criterion-1] constants"
+                rows["min_acc"].home,
+                f"{run.name}/config.json: promises [criterion-1] constants",
             )
             self.assertEqual(rows["model m"].value, "m → A @ http://a")
             self.assertEqual(rows["model m"].in_run, "recorded")
@@ -130,7 +140,7 @@ class Table(unittest.TestCase):
                     "judge": {"alias": "m", "model": "A", "endpoint": "http://a"},
                 },
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            rows = _by_name(params.params_table(area, run))
             self.assertEqual(rows["judge"].evidence_kind, gate.STATIC_EVIDENCE)
             self.assertIn("runlog does not read", rows["judge"].meaning)
             self.assertIn("not recorded in models_resolved", rows["model"].meaning)
@@ -144,11 +154,11 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            rows = _by_name(params.params_table(area, run))
             row = rows["SOME_CONSTANT"]
             self.assertEqual(
                 (row.evidence_kind, row.in_run, row.home),
-                (gate.STATIC_EVIDENCE, "—", "scripts/01_measure.py:7"),
+                (gate.STATIC_EVIDENCE, "—", f"{run.name}/script-source.py:7"),
             )
             self.assertIn("not claimed", row.meaning)
 
@@ -161,10 +171,10 @@ class Table(unittest.TestCase):
                 {"margin": 0.1},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            rows = _by_name(params.params_table(area, run))
             self.assertEqual(
                 rows["min_acc"].in_run,
-                "— (not recorded; scripts/01_measure.py:1 holds min_acc = 0.7)",
+                f"— (not recorded; {run.name}/script-source.py:1 holds min_acc = 0.7)",
             )
             self.assertEqual(rows["min_acc"].evidence_kind, gate.STATIC_EVIDENCE)
 
@@ -179,10 +189,10 @@ class Table(unittest.TestCase):
                 {"margin": 0.1},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            rows = _by_name(params.params_table(area, run))
             self.assertEqual(
                 rows["min_acc"].in_run,
-                "— (not recorded; scripts/01_measure.py:1 holds MIN_ACC = 0.7)",
+                f"— (not recorded; {run.name}/script-source.py:1 holds MIN_ACC = 0.7)",
             )
             self.assertNotIn("MIN_ACC", rows)
 
@@ -195,7 +205,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.5},
                 models_resolved=MODEL_A,
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            rows = _by_name(params.params_table(area, run))
             self.assertEqual(rows["min_acc"].in_run, "0.5  ≠ DIFFERS")
             self.assertEqual(rows["min_acc"].evidence_kind, gate.GUARANTEED)
 
@@ -220,7 +230,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7},
                 derived_from="2026-10-02T10-00-00_bbbb",
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", child))
+            rows = _by_name(params.params_table(area, child))
             self.assertEqual(rows["model m"].in_run, f"inherited from {parent.name}")
             self.assertEqual(
                 rows["model m"].home,
@@ -237,7 +247,7 @@ class Table(unittest.TestCase):
                 {"min_acc": 0.7},
                 derived_from=parent.name,
             )
-            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", child))
+            rows = _by_name(params.params_table(area, child))
             self.assertIn(
                 "not recorded in models_resolved along lineage", rows["model"].meaning
             )
@@ -292,6 +302,40 @@ class CommandLine(unittest.TestCase):
             self.assertEqual(code, 0, out)
             self.assertIn(f"run {old.name} (named with --run)", out.splitlines()[0])
 
+    def test_a_named_older_run_shows_what_it_ran_with(self) -> None:
+        """The protocol's constant and the script changed after run A: `--run
+        A` shows A's registered constant and A's script literal, not today's;
+        the newer run shows today's."""
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d, SCRIPT + "BATCH = 8\n")
+            old = _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7})
+            protocol = area / "PROTOCOL-x.md"
+            protocol.write_text(
+                protocol.read_text(encoding="utf-8").replace("0.7 }", "0.8 }"),
+                encoding="utf-8",
+            )
+            script = area / "scripts" / "01_measure.py"
+            script.write_text(SCRIPT + "BATCH = 16\n", encoding="utf-8")
+            new = _run(area, "2026-10-02T10-00-00_bbbb", {"min_acc": 0.8})
+            then = _by_name(params.params_table(area, old))
+            self.assertEqual(
+                (then["min_acc"].value, then["min_acc"].in_run), ("0.7", "0.7")
+            )
+            self.assertEqual(then["BATCH"].value, "8")
+            now = _by_name(params.params_table(area, new))
+            self.assertEqual((now["min_acc"].value, now["BATCH"].value), ("0.8", "16"))
+
+    def test_a_run_without_its_script_copy_says_whose_literals_it_shows(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d, SCRIPT + "BATCH = 8\n")
+            run = _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7})
+            (run / "script-source.py").unlink()
+            rows = _by_name(params.params_table(area, run))
+            self.assertEqual(
+                rows["BATCH"].home,
+                "scripts/01_measure.py as it reads now (the run kept no copy):7",
+            )
+
     def test_no_bound_run_is_a_refusal(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
@@ -312,7 +356,8 @@ class CommandLine(unittest.TestCase):
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
                 code = params.main([str(area)])
             self.assertEqual(code, 2)
-            self.assertIn("01_measure.py: cannot be read as Python", err.getvalue())
+            # the script as the run kept it is the one read
+            self.assertIn("script-source.py: cannot be read as Python", err.getvalue())
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ from __future__ import annotations
 import ast
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -817,20 +817,50 @@ class ConstantRecord:
 
 
 def constant_records(block: PromiseTables, run_config: dict) -> list[ConstantRecord]:
-    """Every registered constant with its state against `run_config` — the one
-    reading for runlog's refusal (before mkdir), intent-check's blocker and
-    the `labkit-params` view."""
+    """Every registered constant of BLOCK with its state against
+    `run_config` — the reading for runlog's refusal (before mkdir) and
+    intent-check's blocker (`constant_records_of`)."""
+    return constant_records_of(
+        ((p.id, p.constants) for p in block.promises), run_config
+    )
+
+
+def constant_records_of(
+    registered: Iterable[tuple[str, dict]], run_config: dict
+) -> list[ConstantRecord]:
+    """Every constant of REGISTERED, (promise id, constants) pairs — a
+    block's (`constant_records`) or a run's snapshot's
+    (`snapshot_constants`) —, with its state against `run_config`: the one
+    comparison. Pure."""
     out = []
-    for p in block.promises:
-        for name, value in p.constants.items():
+    for pid, constants in registered:
+        for name, value in constants.items():
             if name not in run_config:
-                out.append(ConstantRecord(p.id, name, value, None, "missing"))
+                out.append(ConstantRecord(pid, name, value, None, "missing"))
                 continue
             got = run_config[name]
             same = runs.as_stored(got) == runs.as_stored(value)
             out.append(
-                ConstantRecord(p.id, name, value, got, "equal" if same else "different")
+                ConstantRecord(pid, name, value, got, "equal" if same else "different")
             )
+    return out
+
+
+def snapshot_constants(snap: dict) -> list[tuple[str, dict]]:
+    """(promise id, constants) of the promise snapshot a run recorded
+    (`snapshot`: `ids.<id>.constants`), in id order — the constants the run
+    was registered with, read from the run alone. Raises ValueError naming
+    the field when the snapshot does not have that shape."""
+    ids = snap.get("ids")
+    if not isinstance(ids, dict):
+        raise ValueError("promises.ids must be an object of promise ids")
+    out = []
+    for pid in sorted(ids):
+        entry = ids[pid]
+        constants = entry.get("constants") if isinstance(entry, dict) else None
+        if not isinstance(constants, dict):
+            raise ValueError(f"promises.ids.{pid}.constants must be an object")
+        out.append((pid, constants))
     return out
 
 
