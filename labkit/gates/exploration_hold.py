@@ -37,6 +37,7 @@ from labkit.formats.commands import (
     builds_on_command,
     gate_command,
     register_anew,
+    withdraw_command,
 )
 from labkit.formats.gate import (
     OPEN_RULE,
@@ -50,6 +51,7 @@ from labkit.gates.registration_hold import (
     anew_way,
     awaiting_followup,
     by_cause,
+    declaring_protocol,
     first_measurement,
     quoted_changes,
     scope_now,
@@ -273,9 +275,10 @@ def live_holds(
     read under the text it was measured under, and a changed text no run
     measured would present it under another question. One BLOCKER per
     cause (`by_cause`, `scope_rule`); the ways out: measure the change as a
-    step on RUN, the text back as RUN saw it, or a new registration. A
-    release that cannot be checked holds as such. Raises RuntimeError when
-    git fails."""
+    step on RUN — after withdrawing an adoption that stands, which keeps
+    RUN and its reason in the protocol —, the text back as RUN saw it, or
+    a new registration. A release that cannot be checked holds as such.
+    Raises RuntimeError when git fails."""
     rd = read_run_dir(run)
     try:
         now = scope_now(
@@ -301,15 +304,27 @@ def live_holds(
         return []
     shown = first_measurement(protocol, rd, root)
     refs = waiting_refs(now.kept, waiting)
+    # an adoption that stands keeps RUN the answering run, so a step
+    # measured beside it releases nothing until it is withdrawn; an
+    # adoption's own proposal has nothing to withdraw (`declaring_protocol`)
+    held_by = declaring_protocol(protocol, state.text_of(protocol), run, state)
+    withdrawal = (
+        f"to go on exploring, withdraw the adoption "
+        f"(`{withdraw_command(held_by)}`; {answering.run_id}, its number and the "
+        f"withdrawal's reason stay in the protocol), then "
+        if held_by is not None
+        else ""
+    )
     return [
         blocker(
             f"what the number is about changed after the answering run "
             f"{answering.run_id}: {quoted_changes(cause)} (as the protocol stands "
             f"now; no run measured under it yet) — the result would be read under a "
             f"text no run measured",
-            fix=f"measure the change as a step on {answering.run_id} "
-            f"(`{builds_on_command(protocol, answering.run_id)}`, then the run and "
-            f"its audit); or restore {', '.join(w for w, _, _ in cause)} as "
+            fix=f"{withdrawal}measure the change as a step on {answering.run_id} "
+            f"(`{builds_on_command(protocol, answering.run_id)}`, then the run, "
+            f"its audit and its adoption); or restore "
+            f"{', '.join(w for w, _, _ in cause)} as "
             f"{answering.run_id} saw them{shown.shown}"
             + (
                 f" — or, a description corrected in place, the follow-up analysis "

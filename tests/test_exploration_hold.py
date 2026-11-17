@@ -162,6 +162,73 @@ class NoStepDeclared(_Exploration):
         self.assertEqual(rc, 1, out)
 
 
+class GoingOnAfterAnAdoption(_Exploration):
+    """A audited, adopted and committed; the exploration goes on with step
+    B. The adoption keeps A the answering run, so B prepared is held at
+    the stop and the commit until the adoption is withdrawn
+    (`protocol-fill --withdraw`), which keeps A, its number and the reason
+    in the protocol."""
+
+    WHY = "exploration goes on: step B filters empty documents"
+
+    def setUp(self) -> None:
+        super().setUp()
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 0, out)
+        self.lab.commit(f"adopt {self.run_a}")
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.step_on(self.run_a)
+
+    def held_line(self, out: str) -> str:
+        (line,) = [
+            ln
+            for ln in out.splitlines()
+            if "BLOCKER" in ln and "after the answering run" in ln
+        ]
+        return line
+
+    def test_a_step_prepared_after_the_adoption_names_the_withdrawal_first(self):
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.protocol)
+        line = self.held_line(out)
+        self.assertEqual(rc, 1, out)
+        way = line.split("Next:")[1]
+        self.assertLess(way.index("--withdraw"), way.index("as a step on"), line)
+        self.assertIn(f"{self.run_a}, its number and the withdrawal's reason stay", way)
+
+    def test_b_measured_beside_the_standing_adoption_releases_nothing(self):
+        self.lab.commit("step B prepared on the adopted A")
+        self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertIn(f"after the answering run {self.run_a}", self.held_line(out))
+        self.assertEqual(rc, 1, out)
+
+    def test_withdrawn_a_stays_and_b_is_measured_audited_and_adopted(self):
+        rc, out = self.withdraw(self.WHY)
+        self.assertEqual(rc, 0, out)
+        self.assertIsNone(self.declared())
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.protocol)
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("withdraw A, step B prepared")
+        b = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        rc, out, prompt = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, b)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared(), b)
+        # A is kept: its run, its number, and the reason it was withdrawn,
+        # which B's auditor is shown
+        self.assertTrue((self.area / "runs" / self.run_a / "metrics.json").is_file())
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertRegex(text, rf"- {self.run_a} — .* · withdrawn [-\d]+: {self.WHY}")
+        self.assertIn(self.WHY, prompt)
+
+
 class Confirmation(_Exploration):
     """Case 2: the same declared step in a confirmatory protocol is held by
     the first-measurement lock as before."""
