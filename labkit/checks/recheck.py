@@ -16,6 +16,16 @@ Three mechanics every area's `--check` needs, held here once:
 3. **cited** — the note carries every reported number (decimal comma and
    U+2212 minus normalised first) and the run_id.
 
+A run that computes from other runs' outputs (a comparison over its
+source runs) is held by `holds_from_inputs`: inputs → scopes → block →
+agree → cited. The inputs step comes first and stands apart from the
+recomputation: every input the run recorded is still the bytes it read —
+an input with an origin run still that run's registered output
+(`inputs_pinned`, the same condition as finalize's input-origins
+station) —, and only then does the computing run's own evaluation over
+those inputs have to give the numbers its metrics.json holds (`agree`).
+The source runs are not run again.
+
 Any disagreement is a SystemExit with a sentence — the area's `--check`
 calls this with no main of labkit's around it (the rule by caller stands
 at `console.Refused`); the verdict names what was compared. Rules of the lab standard: LAB-041 Generate numbers, don't retype them, LAB-043 Runs go through `runlog`.
@@ -25,7 +35,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,6 +49,7 @@ from labkit.formats.area_state import state_of
 from labkit.formats.repo import file_text, path_kind
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
+from labkit.checks.origin_check import origin_gap, origin_now
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -52,7 +63,9 @@ class Verdict:
     """What a recheck held: the run, the keys compared, what grew, the numbers the note was held to."""
 
     run_id: str
-    out: Path
+    out: (
+        Path | None
+    )  # the output file pinned; None: no output file compared, the run was recomputed from its inputs (`holds_from_inputs`)
     keys_compared: int
     grown: list[str]  # keys the recomputation has and the run did not
     numbers: list[str]  # what the note was held to
@@ -371,6 +384,21 @@ def holds(
     the note rounds. Raises SystemExit on the first disagreement."""
     run = run_dir(area, protocol or note, run_id)
     metrics, grown = verified(run, area, out, recompute, ignore)
+    return _cited_verdict(run, out, metrics, grown, note, numbers, ignore)
+
+
+def _cited_verdict(
+    run: Path,
+    out: Path | None,
+    metrics: dict,
+    grown: list[str],
+    note: Path,
+    numbers: Callable[[dict], list[str]],
+    ignore: frozenset[str],
+) -> Verdict:
+    """The last step of `holds` and `holds_from_inputs`: NOTE carries every
+    number of RUN's METRICS as NUMBERS formats them, and the run id
+    (`cited`); the Verdict. Raises SystemExit as `cited` does."""
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)
     return Verdict(
@@ -380,3 +408,85 @@ def holds(
         numbers=wanted,
         keys_compared=len(set(metrics) - ignore),
     )
+
+
+def inputs_pinned(run: Path, area: Path) -> dict[str, Path]:
+    """Every input RUN recorded (`data=`), by its key, each held to be the
+    bytes the run read before anything is recomputed from it: an input
+    whose record names an origin run is still that run's registered output
+    with those bytes (`origin_check.origin_gap`, the condition finalize's
+    input-origins station holds), a plain input still has the sha256 the
+    run recorded (`run_record_check.source_drift`). The paths resolved
+    against the area, as the run's start resolved them. Raises SystemExit
+    naming the input and the part that fails, and for a record without
+    inputs or one that does not read."""
+    try:
+        entries = runs.read_data(run)
+    except runs.ArtefactError as exc:
+        raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
+    if not entries:
+        raise SystemExit(
+            f"recheck: run {run.name} recorded no input file — nothing to "
+            f"recompute from; hold its own output with `holds`"
+        )
+    pinned: dict[str, Path] = {}
+    for entry in entries:
+        path = runs.resolve_recorded(entry.recorded, area)
+        if entry.origin_run is not None:
+            gap = origin_gap(origin_now(area, entry))
+            if gap is not None:
+                raise SystemExit(
+                    f"recheck: run {run.name}: {gap.told} — not recomputed "
+                    f"from inputs that are not the ones it read"
+                )
+        else:
+            drift = run_record_check.source_drift(path, entry.sha256)
+            if drift is not None:
+                raise SystemExit(
+                    f"recheck: run {run.name}: data[{entry.key!r}] = "
+                    f"{entry.recorded} is not the input it read: {drift}, the "
+                    f"run recorded sha256 {entry.sha256}"
+                )
+        pinned[entry.key] = path
+    return pinned
+
+
+def verified_from_inputs(
+    run: Path,
+    area: Path,
+    recompute: Callable[[Mapping[str, Path]], dict],
+    ignore: frozenset[str] = LABKIT_KEYS,
+) -> tuple[dict, list[str]]:
+    """inputs → scopes → block → agree for RUN, no note: (its metrics, the
+    keys the recomputation grew). First every recorded input is the bytes
+    the run read (`inputs_pinned`); only then RECOMPUTE — the run's own
+    evaluation, given each input's path by its `data=` key — is compared
+    with metrics.json as `verified` compares it. The source runs are not
+    run again. Raises SystemExit on the first disagreement; a failed input
+    leaves RECOMPUTE uncalled."""
+    pinned = inputs_pinned(run, area)
+    scopes_unchanged(run, area)
+    block_unchanged(run, area)
+    metrics = runs.read_metrics(runs.metrics_path(run))
+    return metrics, agree(
+        metrics, recompute(pinned), ignore, reported=kept_keys(run, area)
+    )
+
+
+def holds_from_inputs(
+    area: Path,
+    recompute: Callable[[Mapping[str, Path]], dict],
+    note: Path,
+    run_id: str | None = None,
+    numbers: Callable[[dict], list[str]] = plain_numbers,
+    ignore: frozenset[str] = LABKIT_KEYS,
+    protocol: Path | None = None,
+) -> Verdict:
+    """`holds` for a run that computes from its recorded inputs — a
+    comparison over source runs' outputs: inputs → scopes → block → agree
+    → cited (`verified_from_inputs`, `_cited_verdict`), for the run that
+    answers the protocol (`chosen_run`; or RUN_ID). Raises SystemExit on
+    the first disagreement."""
+    run = run_dir(area, protocol or note, run_id)
+    metrics, grown = verified_from_inputs(run, area, recompute, ignore)
+    return _cited_verdict(run, None, metrics, grown, note, numbers, ignore)

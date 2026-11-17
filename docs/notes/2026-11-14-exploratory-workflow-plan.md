@@ -498,7 +498,9 @@ Acceptance cases covered: 8; 28 (i) as a start refusal and (ii) as a plain input
 
 Not covered: which part of an origin a re-audit should weigh is the auditor's; no model has read the piece yet.
 
-Not built yet, in the plan's order: `recheck` over sources (next), the source runs' own texts in the auditor's evidence, the step table `[builds_on]`, the separation of obligations, the lock split, the standard version. The registration locks stay as they are until run binding, audit and display handle the new states.
+**`recheck` over sources (2026-11-17), on the same branch.** `recheck.holds_from_inputs` (and `verified_from_inputs`, `inputs_pinned`) holds a run that computes from its recorded inputs in two steps kept apart: the origin check — every input is the bytes the run read, one with an origin run still that run's registered output (`origin_check.origin_gap`, the same condition as station 7), a plain input its recorded sha256 — and the recalculation — the run's own evaluation, given each input's path by its `data=` key, agrees with its metrics.json as `recheck.agree` holds it (intent keys and the `[kept]` key exactly). A failed input leaves the evaluation uncalled; the source runs are not run again and no model is asked. Tests: `tests/test_recheck_inputs.py` (each step's failure and the twin), and the two-protocol scenario rechecks C over A0's rows and the data, refused once A0 is gone. Not built: the stamped analysis skeleton does not call it yet (templates are rollout); a named older run is still recomputed with today's code (plan item 6).
+
+Not built yet, in the plan's order: the source runs' own texts in the auditor's evidence, the step table `[builds_on]`, the separation of obligations, the lock split, the standard version. The registration locks stay as they are until run binding, audit and display handle the new states.
 
 ## Acceptance scenarios and limits
 

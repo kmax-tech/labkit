@@ -14,12 +14,14 @@ import io
 import re
 import time
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
 
 from labkit.formats import runs
 from labkit.formats.runs import RUN_ID_TIME
+from labkit.checks import recheck
 from labkit.gates import report_check
 from labkit.gates.finalize import finalize_area
 from labkit.formats import standard_contract as sc
@@ -132,6 +134,17 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
 
+def _recount(inputs: Mapping[str, Path]) -> dict:
+    """The computation's evaluation over its recorded inputs: the mean
+    line count of the documents under its `source` input."""
+    counts = [
+        len(f.read_text(encoding="utf-8").splitlines())
+        for f in sorted(inputs["source"].iterdir())
+        if not f.name.startswith(".")
+    ]
+    return {"lines_mean": sum(counts) / len(counts)}
+
+
 class TwoProtocolsOfOneArea(CountCommands):
     """The target layout: the measurement protocol (the count, runs A0 and
     A1 by `01_measure.py`) and a computation protocol C in the same area,
@@ -220,8 +233,21 @@ class TwoProtocolsOfOneArea(CountCommands):
         self.assertNotIn(c, prompt_m)
         self.assertNotIn(a1, prompt_c)
 
+        # recheck over C's inputs: pinned, then recomputed — A0 is not run again
+        note = self.area / "notes-compared.md"
+        note.write_text(f"lines_mean 3.0, run {c}\n", encoding="utf-8")
+        verdict = recheck.holds_from_inputs(
+            self.area, _recount, note, run_id=c, protocol=computed
+        )
+        self.assertEqual((verdict.run_id, verdict.out), (c, None))
+
         # A0 gone: C held, naming it; the measurement's result untouched by the station
         lab.git("rm", "-r", "-q", str(self.area / "runs" / a0))
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds_from_inputs(
+                self.area, _recount, note, run_id=c, protocol=computed
+            )
+        self.assertIn(f"its origin run {a0} is gone", str(cm.exception.code))
         gone = f"its origin run {a0} is gone"
         rc, told = self.station(computed)
         self.assertEqual(rc, 1, told)
