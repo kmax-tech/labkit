@@ -12,26 +12,29 @@ from __future__ import annotations
 import contextlib
 import io
 import re
+import time
 import unittest
 from pathlib import Path
 
 import pytest
 
 from labkit.formats import runs
+from labkit.formats.runs import RUN_ID_TIME
 from labkit.gates import report_check
+from labkit.gates.finalize import finalize_area
 from labkit.formats import standard_contract as sc
-from test_end_to_end import Lab, stamp_count
+from labkit.formats import protocol_block
+from test_end_to_end import CountCommands, Lab, stamp_count
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
 pytestmark = pytest.mark.slow
 
 
-def _point_script_at(measure: Path, source_run_out: Path) -> None:
-    """The measure script reads SOURCE_RUN_OUT as its frozen input and
-    writes its own rows beside it under another name, so the source's file
-    stays as its run registered it."""
-    text = measure.read_text(encoding="utf-8")
+def _pointed(text: str, source_run_out: Path) -> str:
+    """The measure script TEXT reading SOURCE_RUN_OUT as its frozen input
+    and writing its own rows beside it under another name, so the source's
+    file stays as its run registered it."""
     text, n_in = re.subn(
         r"^INPUTS = None .*$",
         f'INPUTS = AREA / "output" / "{source_run_out.name}"',
@@ -45,7 +48,13 @@ def _point_script_at(measure: Path, source_run_out: Path) -> None:
         flags=re.M,
     )
     assert (n_in, n_out) == (1, 1), (n_in, n_out)
-    measure.write_text(text, encoding="utf-8")
+    return text
+
+
+def _point_script_at(measure: Path, source_run_out: Path) -> None:
+    """MEASURE rewritten in place as `_pointed` gives it."""
+    text = measure.read_text(encoding="utf-8")
+    measure.write_text(_pointed(text, source_run_out), encoding="utf-8")
 
 
 class OriginHeldThroughTheHooks(unittest.TestCase):
@@ -121,6 +130,115 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 0, out)
+
+
+class TwoProtocolsOfOneArea(CountCommands):
+    """The target layout: the measurement protocol (the count, runs A0 and
+    A1 by `01_measure.py`) and a computation protocol C in the same area,
+    its own stamped id and script (`03_compare.py`), reading A0's rows.
+    The station finds the origin in the other protocol's run, keeps it when
+    the measurement is run again (A1), and holds C when that origin is gone; the measurement protocol's own result gets no
+    finding from it. Existing area or repository checks may hold too —
+    asserted here is only the input-origins station's part of each gate's
+    output."""
+
+    def run_script(self, script: str) -> str:
+        """SCRIPT of the area run in a later second than every run it holds
+        (`CountCommands.measure`); its run id."""
+        held = (self.area / "runs").iterdir() if (self.area / "runs").is_dir() else ()
+        newest = max(
+            (d.name[: len(time.strftime(RUN_ID_TIME))] for d in held), default=""
+        )
+        while time.strftime(RUN_ID_TIME) <= newest:
+            time.sleep(0.02)
+        return self.lab.run_id_of(self.lab.script(self.area, script))
+
+    def station(self, protocol: Path) -> tuple[int, str]:
+        """finalize on PROTOCOL: (exit, the input-origins station's lines)."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = finalize_area(self.area, protocol)
+        text = out.getvalue()
+        start = text.index("── input origins ──")
+        return rc, text[start : text.index("── area tests ──", start)]
+
+    def verdict(self, protocol: Path) -> tuple[int, str]:
+        """report-check on PROTOCOL: (exit, everything it told)."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = report_check.protocol_verdict(self.area, protocol).exit
+        return code, out.getvalue()
+
+    def test_c_is_held_by_its_origin_in_the_other_protocol_and_only_c(self):
+        lab, measured = self.lab, self.protocol
+        text = measured.read_text(encoding="utf-8")
+        pid = protocol_block.head(text).id
+        assert pid is not None
+        computed = self.area / "PROTOCOL-compared.md"
+        computed.write_text(text.replace(pid, "p-0123456789abcdef"), encoding="utf-8")
+        a0 = self.run_script("01_measure.py")
+        (written,) = runs.read_outputs(self.area / "runs" / a0) or []
+        script = (self.area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        bound = f'"{measured.name}"'
+        assert bound in script
+        (self.area / "scripts" / "03_compare.py").write_text(
+            _pointed(script.replace(bound, f'"{computed.name}"'), written.path),
+            encoding="utf-8",
+        )
+        lab.commit("the computation protocol beside the measurement")
+        c = self.run_script("03_compare.py")
+        # A1 writes its rows to a file of its own: a rerun into A0's file
+        # would change the bytes C read (its rows carry their run id), which
+        # station 6 and this station rightly name
+        measure = self.area / "scripts" / "01_measure.py"
+        measure.write_text(
+            script.replace('"lines.jsonl"', '"lines-again.jsonl"'), encoding="utf-8"
+        )
+        lab.commit("C, and the measurement writes anew to its own file")
+        a1 = self.run_script("01_measure.py")
+        lab.commit("A1")
+        (origin,) = [
+            e.origin_run
+            for e in runs.read_data(self.area / "runs" / c) or []
+            if e.key == "inputs"
+        ]
+        self.assertEqual(origin, a0)
+
+        # each protocol answered by its own run; the origin found across protocols
+        rc, told = self.station(computed)
+        self.assertEqual(rc, 0, told)
+        self.assertIn(f"the output of {a0} (decided by digest)", told)
+        rc, told = self.station(measured)
+        self.assertEqual(rc, 0, told)
+        self.assertNotIn(a0, told)  # A1's inputs name no origin
+        # the audit of each protocol is shown its own run's origins
+        _, _, prompt_c = self.analysis(self.clean, computed)
+        _, _, prompt_m = self.analysis(self.clean, measured)
+        self.assertIn(f"the output of {a0}", prompt_c)
+        self.assertIn("INPUT ORIGINS", prompt_m)
+        self.assertNotIn(f"the output of {a0}", prompt_m)
+        self.assertNotIn(c, prompt_m)
+        self.assertNotIn(a1, prompt_c)
+
+        # A0 gone: C held, naming it; the measurement's result untouched by the station
+        lab.git("rm", "-r", "-q", str(self.area / "runs" / a0))
+        gone = f"its origin run {a0} is gone"
+        rc, told = self.station(computed)
+        self.assertEqual(rc, 1, told)
+        self.assertIn(
+            f"BLOCKER: data['inputs'] = {written.path.relative_to(lab.root.resolve()).as_posix()}: {gone}",
+            told,
+        )
+        _, told = self.station(measured)
+        self.assertIn("an input without origin", told)  # the station ran on A1
+        self.assertNotIn("BLOCKER", told)
+        code, out = self.verdict(computed)
+        self.assertEqual(code, 1, out)
+        self.assertIn(gone, out)
+        _, out = self.verdict(measured)
+        self.assertNotIn(
+            gone, out
+        )  # other checks may hold it: the committed run's removal
 
 
 if __name__ == "__main__":
