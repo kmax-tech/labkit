@@ -229,6 +229,70 @@ class GoingOnAfterAnAdoption(_Exploration):
         self.assertIn(self.WHY, prompt)
 
 
+class CorrectionInExploration(e2e.CorrectionCommands):
+    """The correction commands' lab (Data / scope registered with 4
+    documents, run A read 3), exploratory: the twins of
+    `test_end_to_end.CorrectedDescription` and `CorrectionThenNewRun`,
+    which run confirmatory. Adopting A under the corrected text takes the
+    correction route; a later run takes the step."""
+
+    PROTOCOL_TYPE = "exploratory"
+
+    def repair_step(self) -> None:
+        self.lab.fill(
+            self.protocol,
+            "--builds-on",
+            self.run_a,
+            "--step-id",
+            "recount",
+            "--occasion",
+            "repair",
+            "--why",
+            "Data / scope named 4 documents; 3 are there",
+        )
+
+    def test_adopting_a_under_its_corrected_description_takes_the_correction_route(
+        self,
+    ):
+        blocking = self.audited("BLOCKER", "Data / scope")
+        self.describe(self.RIGHT)
+        self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
+        rc, out = self.lab.finalize(self.area)  # not adopted: A under its own text
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"changed after the answering run {self.run_a}", out)
+        rc, out, _ = self.follow_up(blocking, "resolved", "3 documents, as A read")
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared(), self.run_a)
+
+    def test_the_correction_declared_as_a_repair_step_is_measured_and_adopted(self):
+        self.describe(self.RIGHT)
+        self.repair_step()
+        run_b = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, run_b)
+        self.assertEqual(rc, 0, out)
+
+    def test_the_correction_measured_without_a_step_is_held_naming_the_step(self):
+        self.describe(self.RIGHT)
+        self.lab.commit("Data / scope corrected, no step")
+        run_b = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        (line,) = [
+            ln for ln in out.splitlines() if "BLOCKER" in ln and "without a step" in ln
+        ]
+        self.assertIn(f"run {run_b} was measured without a step", line)
+        self.assertIn("Data / scope", line)
+        self.assertIn("declare the step", line)
+        self.assertEqual(rc, 1, out)
+
+
 class Confirmation(_Exploration):
     """Case 2: the same declared step in a confirmatory protocol is held by
     the first-measurement lock as before."""
