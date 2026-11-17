@@ -275,7 +275,19 @@ class ConflictHandedOver(_Chain):
     (`ways_out.HANDOVER`): no [result] table, a report that names the protocol
     and says what stands in the way, no number. The stop and the commit let
     it through; a report that cites the answering run is held, and the
-    adoption of a run as the result is refused."""
+    adoption of a run as the result is refused. Confirmatory: an exploratory
+    first measurement stands by its own text, so there two first texts hold
+    nothing and no handover is owed (`exploration_hold`, option 1)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        text = cls.protocol.read_text(encoding="utf-8")
+        was = next(ln for ln in text.splitlines() if ln.startswith("type = "))
+        cls.protocol.write_text(
+            text.replace(was, 'type = "confirmatory"', 1), encoding="utf-8"
+        )
+        cls.lab.commit("the judge question, confirmatory")
 
     def test_a_handover_passes_a_cited_run_and_an_adoption_do_not(self):
         first, second = self.conflict()
@@ -307,8 +319,8 @@ class ConflictHandedOver(_Chain):
         self.assertEqual(rc, 0, out)
         rc, out = self.lab.adopt(self.protocol, second)
         self.assertEqual(rc, 1, out)
-        # the judge is exploratory: its station names the split by the texts
-        # the first measurements saw (`exploration_hold.unstepped_holds`)
+        # confirmatory: the split hold names the texts the first
+        # measurements saw (`registration_hold.split_hold`)
         self.assertIn("the first measurements", out)
         self.assertIn("cannot be told", out)
         self.assertIn("not adopted", out)
