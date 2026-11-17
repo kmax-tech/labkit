@@ -772,13 +772,43 @@ def blobs_then(
     REPO's own tree. Raises GitError when COMMIT is no commit of REPO or
     the part of PATCH for PATHS does not apply to it."""
     rels = {rel_posix(p, repo): p for p in paths}
+    includes = [f"--include={rel}" for rel in rels]
+    listed = _in_index_then(
+        repo, commit, patch, includes, ["ls-files", "-s", "-z", "--", *rels]
+    )
+    found: dict[Path, str | None] = dict.fromkeys(rels.values())
+    for entry in listed.split("\0"):
+        if entry:
+            meta, _, rel = entry.partition("\t")
+            if rel in rels:
+                found[rels[rel]] = meta.split()[1]
+    return found
+
+
+def tree_then(repo: Path, commit: str, patch: str) -> str:
+    """The tree id of the working tree a run started from: COMMIT's tree
+    with PATCH (the run's `git diff HEAD`, "" when its tree was clean)
+    applied whole, read as `blobs_then` reads it, in a temporary index; the
+    tree lands in the object store, so `git diff` compares two such trees.
+    Files git did not track then are not in it. Raises GitError when COMMIT
+    is no commit of REPO or PATCH does not apply to it."""
+    return _in_index_then(repo, commit, patch, [], ["write-tree"]).strip()
+
+
+def _in_index_then(
+    repo: Path, commit: str, patch: str, includes: list[str], last: list[str]
+) -> str:
+    """The output of git LAST run on a temporary index holding COMMIT's tree
+    with PATCH applied (only the paths INCLUDES names, `git apply
+    --include`; all when empty) — the one reading of a run's tree then,
+    shared by `blobs_then` and `tree_then`. Raises GitError naming the step
+    that failed."""
     with tempfile.TemporaryDirectory() as tmp:
         env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
         steps: list[tuple[list[str], str | None]] = [(["read-tree", commit], None)]
         if patch.strip():
             plain = _COLOR.sub("", patch).rstrip("\n") + "\n"
             strip = "-p1" if _PREFIXED.search(plain) else "-p0"
-            includes = [f"--include={rel}" for rel in rels]
             steps.append(
                 (
                     [
@@ -795,21 +825,35 @@ def blobs_then(
                     plain,
                 )
             )
-        steps.append((["ls-files", "-s", "-z", "--", *rels], None))
-        listed = ""
+        steps.append((last, None))
+        out = ""
         for args, stdin in steps:
             r = git_run(args, repo, env=env, stdin=stdin)
             if r.returncode != 0:
                 step = args[2] if args[0] == "-c" else args[0]
                 raise GitError(f"git {step} at {commit[:12]}: {r.stderr.strip()}")
-            listed = r.stdout
-    found: dict[Path, str | None] = dict.fromkeys(rels.values())
-    for entry in listed.split("\0"):
-        if entry:
-            meta, _, rel = entry.partition("\t")
-            if rel in rels:
-                found[rels[rel]] = meta.split()[1]
-    return found
+            out = r.stdout
+    return out
+
+
+#: the options two trees are compared with: plain text whatever the user's
+#: diff settings say
+TREE_DIFF_ARGS = ("diff", "--no-color", "--no-ext-diff", "--no-textconv")
+
+
+def tree_diff(
+    repo: Path, old: str, new: str, pathspecs: list[str], *, stat: bool = False
+) -> str:
+    """How tree NEW differs from tree OLD within PATHSPECS (git's pathspec
+    magic, `:(exclude)…` included): the unified diff, or with STAT git's
+    per-file summary (`--stat`, every file listed, no width cut). "" when
+    they do not differ there. Raises GitError when git fails."""
+    form = ["--stat=1000,800", "--stat-count=100000"] if stat else []
+    args = [*TREE_DIFF_ARGS, *form, old, new, "--", *pathspecs]
+    r = git_run(args, repo)
+    if r.returncode != 0:
+        raise GitError(f"git diff {old[:12]} {new[:12]}: {r.stderr.strip()}")
+    return r.stdout
 
 
 def blobs_now(repo: Path, paths: list[Path]) -> dict[Path, str]:

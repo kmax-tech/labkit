@@ -174,6 +174,7 @@ runlog [AREA] [--wait | --follow]    # inspect or monitor runs
 runlog start AREA -- COMMAND       # start a detached run; returns once its run directory exists (2: the command failed first, 3: still starting)
 runlog reindex AREA                # recover missing index rows
 labkit-params AREA [--run ID]       # values and provenance of a run
+labkit-run-diff AREA OLD_RUN NEW_RUN # the full code difference of two runs (commit plus uncommitted.patch)
 labkit-hooks install|check [REPO]   # install or check hooks
 claude-hook pre-run|post-change|stop # live Claude Code hook adapter
 codex-hook pre-run|post-change|stop  # live Codex hook adapter

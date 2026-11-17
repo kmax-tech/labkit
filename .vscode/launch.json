@@ -74,6 +74,7 @@
         "labkit.tools.next_command",
         "labkit.checks.notes_check",
         "labkit.tools.params",
+        "labkit.tools.run_diff",
         "labkit.gates.preflight",
         "labkit.checks.protocol_report",
         "labkit.tools.protocol_fill",

@@ -729,7 +729,7 @@ def as_measured(
     blob, or a patch that does not apply (git's own error), a tree without
     the protocol (untracked when the run started), a text whose block is
     not the one the run recorded, a run started from a changed tree whose
-    uncommitted.patch is gone (`patch_lost`: the commit alone is not what
+    uncommitted.patch is gone (`runs.patch_lost`: the commit alone is not what
     it saw). A comparison that needs the text holds on None
     (`unread_measurements`), never reads it as no change. ROLE opens each
     WHERE sentence before RD's id: "its first measurement" (the default),
@@ -739,7 +739,7 @@ def as_measured(
     commit = recorded_commit(rd.config) if rd.config is not None else None
     if commit is None or root is None:
         return None, f"{role} {rd.dir.name} recorded no commit"
-    if rd.config is not None and patch_lost(rd):
+    if rd.config is not None and runs.patch_lost(rd):
         return None, (
             f"{role} {rd.dir.name} started from a tree with changes "
             f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
@@ -781,18 +781,6 @@ def as_measured(
         text,
         f"as {role} {rd.dir.name} saw it ({commit[:12]}{patched})",
     )
-
-
-def patch_lost(rd: "RunDir") -> bool:
-    """Whether run RD started from a changed tree and its uncommitted.patch
-    is gone: runlog writes the patch whenever the tree was not clean (its
-    `git` ends in `runs.DIRTY_MARK`), so without the file the commit alone
-    is not what the run saw, and `as_measured` does not read it back. RD's
-    config must read."""
-    from labkit.formats.runs import DIRTY_MARK, patch_path
-
-    assert rd.config is not None, "a run whose config reads"
-    return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
 
 
 @dataclass(frozen=True)

@@ -274,7 +274,11 @@ class TwoProtocolsOfOneArea(CountCommands):
         self.assertIn("INPUT ORIGINS", prompt_m)
         self.assertNotIn(f"the output of {a0}", prompt_m)
         self.assertNotIn(c, prompt_m)
-        self.assertNotIn(a1, prompt_c)
+        # A1 stands among the source protocol's runs (`protocol_runs`), never
+        # as an origin or a source text of C
+        before_runs = prompt_c.split("===== RUNS OF ", 1)[0]
+        self.assertNotIn(a1, before_runs)
+        self.assertIn(f"- {a1}: completed, measurement", prompt_c)
         # C's auditor is shown the measurement protocol as A0 started under
         # it — commit and patch —, never as it reads now for A1
         source = prompt_c.split(f"===== SOURCE PROTOCOL {a0} =====", 1)[1]

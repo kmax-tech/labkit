@@ -1966,6 +1966,12 @@ class Estimator(unittest.TestCase):
         self.assertEqual(protocol_block.declared_run(text), run_id)
         assert_draws(self, lab, self.area, run_id, "score", "accuracy")
         self._a_repeat_draws_a_derived_seed_and_never_answers(run_id)
+        # the repeat widens what the audit judged (`protocol_runs`): the
+        # earlier record stays and no longer covers the area; a new one does
+        rc, err = lab.stop_hook()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("no analysis audit saw the area as it is now", err)
+        lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")

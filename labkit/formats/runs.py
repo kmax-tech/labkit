@@ -1361,6 +1361,17 @@ def read_run_dir(d: Path) -> RunDir:
         return RunDir(d, None, str(exc), error_cause=exc.cause)
 
 
+def patch_lost(rd: RunDir) -> bool:
+    """Whether run RD started from a changed tree and its uncommitted.patch
+    is gone: runlog writes the patch whenever the tree was not clean (its
+    `git` ends in DIRTY_MARK), so without the file the commit alone is not
+    what the run saw — neither its protocol text
+    (`protocol_history.as_measured`) nor its code (`run_code.code_then`)
+    reads back. RD's config must read."""
+    assert rd.config is not None, "a run whose config reads"
+    return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
+
+
 def run_dir_from_text(d: Path, text: str, *, from_commit: str | None = None) -> RunDir:
     """The `RunDir` of run directory D whose config.json git holds as TEXT:
     in its index (FROM_COMMIT None), or at FROM_COMMIT for a run the file

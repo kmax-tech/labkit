@@ -41,6 +41,7 @@ from labkit.formats import (
     runs,
 )
 from labkit.checks.origin_check import origin_piece
+from labkit.checks.protocol_runs import bound_protocol_file, protocol_runs_pieces
 from labkit.formats.area_state import AreaState, gone_run_restore
 from labkit.formats.evidence import AreaEvidence
 from labkit.formats.gate import (
@@ -53,7 +54,6 @@ from labkit.formats.gate import (
     cited_rule,
     with_way_out,
 )
-from labkit.formats.protocol_block import BlockError, find_by_id
 from labkit.formats.protocol_history import as_measured
 from labkit.formats.repo import (
     git_root,
@@ -153,6 +153,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     out += dependency_pieces(run_dir)
     out += origin_piece(area, run_dir)
     out += source_protocol_pieces(area, run_dir)
+    out += protocol_runs_pieces(area, run_dir)
     return out
 
 
@@ -289,17 +290,7 @@ def source_protocol_then(
             f"origin run {run_id}: the area lies in no git repository, so no "
             f"commit holds what it was measured under",
         )
-    try:
-        protocol = find_by_id(area, binding.id)
-    except BlockError:
-        # none or several carry the id now: the recorded path, and at the
-        # run's commit `as_measured` finds the file by the id again
-        recorded = binding.path or ""
-        protocol = (
-            area / recorded
-            if recorded and not Path(recorded).is_absolute()
-            else area / f"PROTOCOL-{binding.id}.md"
-        )
+    protocol = bound_protocol_file(area, binding.id, binding.path)
     text, where = as_measured(protocol, rd, root, role="origin run")
     return SourceProtocolThen(run_id, True, text, where)
 

@@ -111,7 +111,7 @@ class UnreadFirstMeasurement(ChangedQuestion):
     def test_a_lost_patch_of_a_changed_tree_blocks_and_restored_holds_again(self):
         """Run A started from a changed tree and its uncommitted.patch is
         gone: the commit alone is not what it saw, so the comparison does not
-        run on it (`protocol_history.patch_lost`)."""
+        run on it (`runs.patch_lost`)."""
         cfg_path = self.area / "runs" / self.run_a / "config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         cfg["git"] += "+dirty"
