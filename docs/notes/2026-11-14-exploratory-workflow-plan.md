@@ -514,14 +514,14 @@ The command's flag for the step's name is `--step-id`, not `--id` (author, 2026-
 2. A newly stamped exploratory fit or apply carries `[kept]` active and `criterion-1` commented out, as an offer in two steps (table and code block between markers), like `criterion-2`: a success bar is optional, and an active stamp would make it the default again.
 3. What stays owed: the quality checks, the null condition where the instrument's validity needs it, a null comparison only where the task asks for one (no general duty for every exploration), and the cost-based duties. A confirmatory fit or apply keeps its present requirements.
 
-| Case                            | Reported                                                           |
-|---------------------------------|--------------------------------------------------------------------|
-| Exploration without a criterion | the score and its unit; no success verdict                         |
-| Exploration with a criterion    | the score and the verdict against the registered bar               |
-| A quality check fails           | the measured value stays traceable; its use is limited accordingly |
-| Confirmation                    | the present strict requirements                                    |
+| Case                            | Reported                                                                                                                                         |
+|---------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| Exploration without a criterion | the score and its unit; no success verdict                                                                                                       |
+| Exploration with a criterion    | the score and the verdict against the registered bar                                                                                             |
+| A quality check fails           | the measured value stays visible for traceability; a stored value is no released result, and the existing limit on its judgement and use is kept |
+| Confirmation                    | the present strict requirements                                                                                                                  |
 
-Open before the build, to settle at the code: whether a confirmatory fit or apply also carries `[kept]` for its number (one result path for both types, the criterion owed only for confirmation) — recommended, since two result paths by type are what the decision avoids; and how `[reference]` (a stated value, a computation's today) relates to a kept fit or apply.
+Settled on 2026-11-17 (author): (4) a confirmatory fit or apply carries `[kept]` too — `[kept]` names the reported number and its unit, the criterion judges exactly that number against the registered bar; the criterion is optional in exploration and owed in confirmation, so the result path is one and confirmation is not loosened; the format change is described in full in the planned standard change and its Breaking entry. (5) `[reference]` stays a computation's: a criterion's bar does not become a `[reference]` value, and no extension without a concrete case. The result path is decided; the build follows in a fresh session.
 
 Not built yet, in the plan's order: the separation of obligations, the lock split (with the step's hold), the standard version. The registration locks stay as they are until run binding, audit and display handle the new states.
 
