@@ -348,11 +348,13 @@ def freeze_command(protocol: Path, record: str | None = None) -> Command:
     return Command(FREEZE, shlex.join(words))
 
 
-def stage_command(area: Path) -> Command:
-    """The `git add -- AREA` line that stages the whole area, as the working
-    directory reaches it (`shown`): the pre-commit's way out while the
-    area's tree differs from the index (`report_hold.staged_area_gap`)."""
-    return Command(STAGE, f"git add -- {shlex.quote(shown(area, Path.cwd()))}")
+def stage_command(path: Path) -> Command:
+    """The `git add -- PATH` line that stages PATH — an area as a whole, or
+    one file —, shell-quoted as the working directory reaches it (`shown`):
+    the pre-commit's way out while an area's tree differs from the index
+    (`report_hold.staged_area_gap`), and the way back of an evidence file
+    the index lacks (`attempts.restore_command`)."""
+    return Command(STAGE, f"git add -- {shlex.quote(shown(path, Path.cwd()))}")
 
 
 def handover_command(protocol: Path | None, report: str | None = None) -> Command:

@@ -253,8 +253,10 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(rc, 0, out)
         name = f"audits/{record.path.name}: lost, as a handover recorded — "
         (line,) = [g for g in attempts.evidence_gaps(self.area) if name in g]
+        # the path as the working directory reaches it: the lab lies outside
         self.assertIn(
-            f"restore it (`git checkout HEAD -- audits/{record.path.name}`)", line
+            f"restore it (`git checkout HEAD -- {record.path.resolve().as_posix()}`)",
+            line,
         )
         # the twin: nothing keeps it — said so, no restore offered
         self.lab.commit("the handover")  # HEAD no longer holds the record

@@ -133,11 +133,20 @@ class Journal(unittest.TestCase):
 
 
 class Gaps(unittest.TestCase):
-    """`gaps` is pure: journal, files and HEAD in, sentences out."""
+    """`gaps` is pure: journal, files and HEAD in, sentences out; the area
+    is only the path its restore commands name."""
+
+    AREA = Path("experiments") / "01 x"
 
     def _gaps(self, attempts_, present=(), at_head=(), now="", head=None, alive=None):
         return attempts.gaps(
-            list(attempts_), set(present), set(at_head), now, head, alive or {}
+            list(attempts_),
+            set(present),
+            set(at_head),
+            now,
+            head,
+            alive or {},
+            area=self.AREA,
         )
 
     def test_the_twin_a_journal_and_its_files_agree(self):
@@ -157,20 +166,29 @@ class Gaps(unittest.TestCase):
 
     def test_heads_lost_file_names_the_restore_that_works_there(self):
         """The restore named is one that works there: on disk it is staged,
-        else it is lost — never a restore that cannot work."""
+        else it is lost — never a restore that cannot work. Each command
+        names the file as the working directory reaches it, quoted: the
+        area's path has a space."""
         head = START + "\n" + END_R + "\n"
         (gap,) = self._gaps([], present={"r.toml"}, now=head, head=head).blockers
         self.assertIn(
-            "bring it back and commit it — stage it (`git add audits/r.toml`)", gap
+            "bring it back and commit it — stage it "
+            "(`git add -- 'experiments/01 x/audits/r.toml'`)",
+            gap,
         )
         copy = Path("/copy/r.toml")
         (gap,) = attempts.gaps(
-            [], set(), set(), head, head, {}, kept={"r.toml": copy}
+            [], set(), set(), head, head, {}, area=self.AREA, kept={"r.toml": copy}
         ).blockers
         self.assertIn(
             "bring it back and commit it — restore it as the audit wrote", gap
         )
-        self.assertIn(f"cp {copy} audits/r.toml", gap)
+        self.assertIn(
+            f"`mkdir -p 'experiments/01 x/audits' && cp {copy} "
+            "'experiments/01 x/audits/r.toml'`",
+            gap,
+        )
+        self.assertNotIn("in the area", gap)
         (gap,) = self._gaps([], now=head, head=head).blockers
         self.assertIn(attempts.LOST_WAY, gap)
         self.assertNotIn("git add", gap)
@@ -447,7 +465,8 @@ class EvidenceCopy(unittest.TestCase):
 
     @staticmethod
     def restore(line: str) -> str:
-        """The command the restore names, run where it says: in the area."""
+        """The command the restore names; the area lies outside the working
+        directory here, so it names absolute paths and runs anywhere."""
         return line.split("restore it as the audit wrote it (`")[1].split("`")[0]
 
     def test_the_end_keeps_the_record_and_the_answer(self):
@@ -557,6 +576,48 @@ class EvidenceCopy(unittest.TestCase):
         (gap,) = attempts.area_gaps(area).blockers
         self.assertIn("no commit and no copy keeps it: it is lost", gap)
         self.assertIn("handover", gap)
+
+
+class RestoreRunsFromTheRepoRoot(unittest.TestCase):
+    """The stage and the checkout a gone record names run as printed from
+    the working directory they were printed in — here the repository root,
+    where the hooks and labkit-next run —, as every command builder names
+    its paths. The twin of each: after the command the gap is gone."""
+
+    @staticmethod
+    def committed_record() -> tuple[Path, Path, Path]:
+        """(root, area, record): a record under the area's audits/, committed."""
+        area = area_in_repo()
+        root = area.parent.parent
+        record = area / "audits" / "r.toml"
+        record.write_text("# a record\n", encoding="utf-8")
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "the audit")
+        return root, area, record
+
+    @staticmethod
+    def run_as_printed(gap: str, lead: str, root: Path) -> None:
+        command = gap.split(f"{lead} (`")[1].split("`")[0]
+        subprocess.run(command, shell=True, cwd=root, check=True, capture_output=True)
+
+    def test_the_checkout_of_a_record_gone_from_the_tree(self):
+        root, area, record = self.committed_record()
+        record.unlink()
+        with contextlib.chdir(root):
+            (gap,) = attempts.area_gaps(area).blockers
+        self.assertIn("is committed and gone from the tree", gap)
+        self.run_as_printed(gap, "restore it", root)
+        self.assertTrue(record.is_file())
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_the_stage_of_a_record_gone_from_the_index(self):
+        root, area, record = self.committed_record()
+        git(root, "rm", "-q", "--cached", str(record.relative_to(root)))
+        with contextlib.chdir(root):
+            (gap,) = attempts.area_gaps(area, staged=True).blockers
+        self.assertIn("is committed and gone from the index", gap)
+        self.run_as_printed(gap, "stage it", root)
+        self.assertEqual(attempts.area_gaps(area, staged=True).blockers, [])
 
 
 class Hook(unittest.TestCase):

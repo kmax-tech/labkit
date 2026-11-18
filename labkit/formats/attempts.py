@@ -90,7 +90,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, stage_command
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats import report_reviews
@@ -105,6 +105,7 @@ from labkit.formats.repo import (
     git_root,
     git_run,
     local_dir,
+    shown,
     text_at,
     unreadable_at,
 )
@@ -365,12 +366,14 @@ def gaps(
     alive: dict[str, bool | None],
     state: str = "tree",
     *,
+    area: Path,
     hold_head: bool = True,
     in_tree: frozenset[str] | set[str] = frozenset(),
     kept: Mapping[str, Path] | None = None,
 ) -> Gaps:
-    """What the journal and the files say together. ATTEMPTS: the journal
-    in the STATE checked (`tree`, or `index` at the commit); PRESENT,
+    """What the journal and the files of AREA say together — AREA only
+    names the files in the restore commands, nothing is read from it.
+    ATTEMPTS: the journal in the STATE checked (`tree`, or `index` at the commit); PRESENT,
     AT_HEAD: the paths under `audits/` (relative to it) in that state and
     in HEAD; JOURNAL_NOW, JOURNAL_AT_HEAD: the journal's text in that
     state and in HEAD (None: HEAD holds none); ALIVE: per attempt without
@@ -391,7 +394,7 @@ def gaps(
         f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} {how} "
         f"{DIR}/{rel}, and the file is gone from the {state} — a record of an "
         f"attempt is evidence; "
-        + restore_way(rel, at_head=at_head, in_tree=in_tree, kept=kept)
+        + restore_way(area, rel, at_head=at_head, in_tree=in_tree, kept=kept)
         for a, rel, how in _ended_without(attempts, present)
     ]
     if hold_head and journal_at_head is not None:
@@ -400,7 +403,7 @@ def gaps(
             f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} {how} "
             f"{DIR}/{rel}, and HEAD's journal names it while HEAD lacks the "
             f"file — the delivered state lost its evidence; "
-            + _commit_way(rel, on_disk=present, kept=kept)
+            + _commit_way(area, rel, on_disk=present, kept=kept)
             for a, rel, how in _ended_without(head, at_head)
         ]
     notes = _open_notes(attempts, alive)
@@ -410,7 +413,7 @@ def gaps(
         blockers.append(
             f"{DIR}/{rel} is committed and gone from the {state} — a record of an "
             f"audit is evidence; "
-            + restore_way(rel, at_head=at_head, in_tree=in_tree, kept=kept)
+            + restore_way(area, rel, at_head=at_head, in_tree=in_tree, kept=kept)
         )
     if journal_at_head is not None and not journal_now.startswith(journal_at_head):
         blockers.append(
@@ -422,13 +425,15 @@ def gaps(
     return Gaps(blockers, notes)
 
 
-def _commit_way(rel: str, *, on_disk: set[str], kept: Mapping[str, Path]) -> str:
-    """How `audits/REL`, which HEAD's journal names and HEAD lacks, gets back
+def _commit_way(
+    area: Path, rel: str, *, on_disk: set[str], kept: Mapping[str, Path]
+) -> str:
+    """How AREA's `audits/REL`, which HEAD's journal names and HEAD lacks, gets back
     into a commit: staged when ON_DISK holds it, restored from the evidence
     copy (KEPT); LOST_WAY when nothing keeps it. Reached in the tree state
     only (`gaps` holds HEAD's journal there, not at the commit), so ON_DISK
     is the state's own files, and HEAD by definition cannot restore it."""
-    way = restore_command(rel, at_head=set(), in_tree=on_disk, kept=kept)
+    way = restore_command(area, rel, at_head=set(), in_tree=on_disk, kept=kept)
     return f"bring it back and commit it — {way}" if way else LOST_WAY
 
 
@@ -535,41 +540,48 @@ LOST_WAY = f"{NOTHING_KEEPS} — acknowledge the loss in a handover"
 
 
 def restore_way(
+    area: Path,
     rel: str,
     *,
     at_head: set[str],
     in_tree: frozenset[str] | set[str],
     kept: Mapping[str, Path],
 ) -> str:
-    """How the evidence file `audits/REL` comes back (`restore_command`), or
-    LOST_WAY when nothing restores it."""
-    return restore_command(rel, at_head=at_head, in_tree=in_tree, kept=kept) or LOST_WAY
+    """How AREA's evidence file `audits/REL` comes back (`restore_command`),
+    or LOST_WAY when nothing restores it."""
+    return (
+        restore_command(area, rel, at_head=at_head, in_tree=in_tree, kept=kept)
+        or LOST_WAY
+    )
 
 
 def restore_command(
+    area: Path,
     rel: str,
     *,
     at_head: set[str],
     in_tree: frozenset[str] | set[str],
     kept: Mapping[str, Path],
 ) -> str | None:
-    """How the evidence file `audits/REL` comes back, the one way that works
-    here: staged when it is still on disk (IN_TREE), checked out when HEAD
-    holds it (AT_HEAD), copied from the branch's evidence copy when that
-    keeps it (KEPT, `kept_files`); None when nothing keeps it — never a
-    restore that cannot work: for a record deleted before it was ever
-    staged neither `git checkout` nor `git add` brings it back. Commands
-    run in the area."""
-    path = f"{DIR}/{rel}"
+    """How AREA's evidence file `audits/REL` comes back, the one way that
+    works here: staged when it is still on disk (IN_TREE), checked out when
+    HEAD holds it (AT_HEAD), copied from the branch's evidence copy when
+    that keeps it (KEPT, `kept_files`); None when nothing keeps it — never
+    a restore that cannot work: for a record deleted before it was ever
+    staged neither `git checkout` nor `git add` brings it back. Every
+    command names the file as the working directory reaches it (`shown`),
+    shell-quoted, as the command builders do: it runs where it is printed."""
+    path = area / DIR / rel
+    here = Path.cwd()
     if rel in in_tree:
-        return f"stage it (`git add {shlex.quote(path)}`)"
+        return f"stage it (`{stage_command(path)}`)"
     if rel in at_head:
-        return f"restore it (`{checkout_command(path)}`)"
+        return f"restore it (`{checkout_command(shown(path, here))}`)"
     if rel in kept:
-        folder = shlex.quote(str(Path(path).parent))
+        copy = shlex.join(["cp", str(kept[rel]), shown(path, here)])
         return (
-            f"restore it as the audit wrote it (`mkdir -p {folder} && cp "
-            f"{shlex.quote(str(kept[rel]))} {shlex.quote(path)}`, in the area), then "
+            f"restore it as the audit wrote it (`mkdir -p "
+            f"{shlex.quote(shown(path.parent, here))} && {copy}`), then "
             f"decide its findings again where they were decided — never "
             f"delete a record, an outdated one included"
         )
@@ -746,11 +758,14 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
             copy_ends(copy_text, copy) if copy is not None else [],
             present | in_tree | at_head,
             kept,
+            area=area,
         )
     else:
         # the tree: the stop and the next audit hold the journal to its copy
         lost_here = (
-            copy_gaps(now, copy_text, copy, present, at_head=at_head, kept=kept)
+            copy_gaps(
+                now, copy_text, copy, present, area=area, at_head=at_head, kept=kept
+            )
             if copy is not None and copy_text is not None
             else []
         )
@@ -762,6 +777,7 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         journal_at_head,
         alive_of(area, attempts),
         "index" if staged else "tree",
+        area=area,
         hold_head=not staged,
         in_tree=in_tree,
         kept=kept,
@@ -773,7 +789,7 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
                 f"{way}; until it is back audits and adoption stay refused"
                 if (
                     way := restore_command(
-                        name, at_head=at_head, in_tree=in_tree, kept=kept
+                        area, name, at_head=at_head, in_tree=in_tree, kept=kept
                     )
                 )
                 else f"{NOTHING_KEEPS}, and audits and adoption stay refused"
@@ -856,8 +872,10 @@ def unstaged_losses(
     copied: list[dict],
     held: set[str],
     kept: Mapping[str, Path],
+    *,
+    area: Path,
 ) -> list[str]:
-    """At the commit: every file an ended attempt of the TREE's journal or
+    """At the commit, for AREA: every file an ended attempt of the TREE's journal or
     of the copy's ended events COPIED names, that no ended attempt of the
     STAGED journal names already (`gaps` says those) and that HELD (index,
     tree and HEAD together) lacks — gone before it was staged. Each with
@@ -874,7 +892,7 @@ def unstaged_losses(
         f"attempt {who} ended naming {DIR}/{rel}, and the file is in neither the "
         f"tree nor the index — the commit would deliver the area without it, a "
         f"record of an attempt is evidence; "
-        + restore_way(rel, at_head=set(), in_tree=set(), kept=kept)
+        + restore_way(area, rel, at_head=set(), in_tree=set(), kept=kept)
         for (aid, rel), who in named.items()
         if (aid, rel) not in told and rel not in held
     ]
@@ -1011,10 +1029,11 @@ def copy_gaps(
     copy: Path,
     present: set[str],
     *,
+    area: Path,
     at_head: set[str] | None = None,
     kept: Mapping[str, Path] | None = None,
 ) -> list[str]:
-    """What the tree lost against the journal's COPY (its text COPY_TEXT):
+    """What AREA's tree lost against the journal's COPY (its text COPY_TEXT):
     every attempt with a line the copy keeps and JOURNAL_NOW lacks, and
     every file an end among those lines names that PRESENT (the paths under
     `audits/`) lacks. The journal is held to the copy as a set of lines — a
@@ -1057,7 +1076,11 @@ def copy_gaps(
                     f"is gone from the tree with its journal line — a record of an "
                     f"attempt is evidence; "
                     + restore_way(
-                        rel, at_head=at_head or set(), in_tree=set(), kept=kept or {}
+                        area,
+                        rel,
+                        at_head=at_head or set(),
+                        in_tree=set(),
+                        kept=kept or {},
                     )
                 )
     return out
