@@ -69,6 +69,7 @@ from protocol_fixture import (
 from labkit.formats.runs import RUN_ID_TIME  # noqa: E402
 from repo_fixture import git
 from command_fixture import run_main
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -107,9 +108,7 @@ class Lab:
         self.root = Path(self.tmp.name) / "lab"
         self.root.mkdir()
         scaffold.stamp_lab(self.root, "lab")
-        self.git("init", "-q")
-        self.git("config", "user.email", "t@t")
-        self.git("config", "user.name", "t")
+        init_repo(self.root)
         self.env = {
             **os.environ,
             "CLAUDE_PROJECT_DIR": str(self.root),

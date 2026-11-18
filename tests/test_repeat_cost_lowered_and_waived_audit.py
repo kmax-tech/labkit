@@ -36,6 +36,7 @@ from protocol_fixture import (
     scope_file,
 )  # noqa: E402
 from repo_fixture import git as _git
+from repo_fixture import init_repo
 
 BODY = """
 - **Model / tool:** haiku
@@ -55,9 +56,7 @@ def _repo(cost: str) -> tuple[Path, Path]:
     protocol.write_text(
         head(repeat_cost=cost, promises=DEFAULT_BLOCK) + BODY, encoding="utf-8"
     )
-    _git(root, "init", "-q", ".")
-    _git(root, "config", "user.email", "t@t")
-    _git(root, "config", "user.name", "t")
+    init_repo(root)
     _git(root, "add", "-A")
     _git(root, "commit", "-qm", "register")
     return root, protocol

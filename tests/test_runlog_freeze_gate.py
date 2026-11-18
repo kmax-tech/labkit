@@ -31,6 +31,7 @@ from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 from repo_fixture import git
+from repo_fixture import init_repo
 
 AUDIT = "2026-10-05T10-00-preflight.toml"  # a record name; no such record is written
 FROZEN = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, model="haiku")
@@ -141,9 +142,7 @@ class FreezeGate(unittest.TestCase):
         # a start on a written, uncommitted registration is refused: finalize
         # would be clean and adoption refused for good. The twin: committed,
         # it starts; a second measurement is not held here.
-        git(self.tmp, "init", "-q")
-        git(self.tmp, "config", "user.email", "t@t")
-        git(self.tmp, "config", "user.name", "t")
+        init_repo(self.tmp)
         area = self._area(SECONDS_COMPUTE)
         err = io.StringIO()
         with (

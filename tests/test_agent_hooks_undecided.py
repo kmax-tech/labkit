@@ -29,6 +29,7 @@ from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
 from repo_fixture import git as _git  # noqa: E402
 from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
 from command_fixture import run_main
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -54,9 +55,7 @@ class Undecided(unittest.TestCase):
             (area / "scripts").mkdir(parents=True)
             (area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
             (area / "scripts" / "01_measure.py").write_text("x = 1\n")
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         with _dated(3600):  # the repo predates the session
             _git(self.root, "commit", "-qm", "init")

@@ -62,6 +62,7 @@ from labkit.checks import report_blocks
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from repo_fixture import git as _git
 from command_fixture import run_main
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -109,9 +110,7 @@ class IfReported(unittest.TestCase):
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
         if git:
-            _git(area.parent.parent, "init", "-q", ".")
-            _git(area.parent.parent, "config", "user.email", "t@t")
-            _git(area.parent.parent, "config", "user.name", "t")
+            init_repo(area.parent.parent)
         (area / "scripts" / "02_analyze.py").write_text(
             "print('ok')\n", encoding="utf-8"
         )

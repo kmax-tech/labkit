@@ -36,6 +36,7 @@ from labkit.gates import undecided
 from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
 from repo_fixture import git as _git  # noqa: E402
 from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
+from repo_fixture import init_repo
 
 WARNING = (
     "WARNING",
@@ -135,9 +136,7 @@ class Committed(unittest.TestCase):
         self.answer.write_text("FINDING ...\n", encoding="utf-8")
         self.closed = _run_dir(self.area, CLOSED, closed=True)
         self.open = _run_dir(self.area, OPEN, closed=False)
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "evidence")
 
@@ -257,9 +256,7 @@ class CommittedStartFile(unittest.TestCase):
         (self.area / "scripts").mkdir(parents=True)
         (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
         self.start = run_starts.write_start(self.area, self._start(CLOSED))
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "a start")
         self.rel = f"experiments/01-x/run-starts/{CLOSED}.json"
@@ -320,9 +317,7 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         self.area = self.root / "experiments" / "01-x"
         (self.area / "scripts").mkdir(parents=True)
         (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the area")
         self.run_dir = _run_dir(self.area, CLOSED, closed=True)
@@ -411,9 +406,7 @@ class Session(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
         (self.area / "scripts" / "01_measure.py").write_text("x = 1\n")
         self.record = _record(self.area)
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         with _dated(3600):  # the repo predates the session
             _git(self.root, "commit", "-qm", "init")
@@ -505,9 +498,7 @@ class Told(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
         self.record = _record(self.area)
         self.closed = _run_dir(self.area, CLOSED, closed=True)
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "evidence")
         self.event = {

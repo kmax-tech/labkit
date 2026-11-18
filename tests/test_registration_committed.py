@@ -46,6 +46,7 @@ from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check, report_hold
 from labkit.gates import report_context
 from repo_fixture import git as _git
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -108,9 +109,7 @@ class _Repository(unittest.TestCase):
 
     def setUp(self) -> None:
         root = Path(tempfile.mkdtemp())
-        _git(root, "init", "-q", ".")
-        _git(root, "config", "user.email", "t@t")
-        _git(root, "config", "user.name", "t")
+        init_repo(root)
         self.area = root / "experiments" / "01-x"
         self.area.mkdir(parents=True)
         scope_file(self.area)

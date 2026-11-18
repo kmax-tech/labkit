@@ -12,7 +12,6 @@ from labkit.formats.runs import RunKind
 import contextlib
 import io
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -39,6 +38,7 @@ from protocol_fixture import (  # noqa: E402
     source_entry,
 )
 from command_fixture import run_main
+from repo_fixture import git, init_repo
 
 SAMPLE = """# Experiment protocol: x
 
@@ -814,7 +814,6 @@ class Adopt(unittest.TestCase):
 """
 
     def _area(self, *, run_kind: RunKind = "measurement", audited: bool = True) -> Path:
-        import subprocess
 
         from labkit.formats import findings, promises, scope_sha
         from protocol_fixture import (
@@ -848,14 +847,9 @@ class Adopt(unittest.TestCase):
         src.write_text('{"id": 1}\n', encoding="utf-8")
         # a repository with the registration and the source committed before
         # the run: the low lane's release holds both to git
-        for args in (
-            ("init", "-q", "."),
-            ("config", "user.email", "t@t"),
-            ("config", "user.name", "t"),
-            ("add", "-A"),
-            ("commit", "-qm", "registration"),
-        ):
-            subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+        init_repo(root)
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "registration")
         run = completed_run(
             area, self.RUN, metrics={"criterion_1_pass": True}, run_kind=run_kind
         )
@@ -1360,14 +1354,9 @@ class ReportSetter(unittest.TestCase):
 
         scope_file(area)
         root = area.parents[1]
-        for args in (
-            ("init", "-q"),
-            ("config", "user.email", "t@t"),
-            ("config", "user.name", "t"),
-            ("add", "-A"),
-            ("commit", "-qm", "registration"),
-        ):
-            subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+        init_repo(root)
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "registration")
         run = completed_run(area, name, metrics=metrics)
         config = run / "config.json"
         value = json.loads(config.read_text(encoding="utf-8"))

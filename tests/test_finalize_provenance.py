@@ -25,6 +25,7 @@ from labkit.run import provenance  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
 from repo_fixture import git as _git
 from command_fixture import run_main
+from repo_fixture import init_repo
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -62,9 +63,7 @@ class Provenance(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self._tmp.name)
-        _git(self.repo, "init", "-q", ".")
-        _git(self.repo, "config", "user.email", "t@t")
-        _git(self.repo, "config", "user.name", "t")
+        init_repo(self.repo)
         self.area = self.repo / "experiments" / "01-x"
         self.area.mkdir(parents=True)
         self.src = self.repo / "data" / "raw" / "cases.jsonl"
