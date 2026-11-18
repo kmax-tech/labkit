@@ -7,6 +7,12 @@ a fence regex — come back while memory alone holds them. This test greps
 `labkit/*.py` for the shapes a copy takes; a match outside the home fails,
 naming file and line. A line that must stay says why in a comment on it or
 directly above it that names the home it is not after `home:`.
+
+The tests' own shared helpers are held the same way (`TEST_RULES`): a git
+runner, a main-runner or a repository setup written into a test file beside
+`repo_fixture` or `command_fixture` fails, naming file and function. A
+function that keeps its own form on purpose is exempt by name, with the
+reason beside it.
 """
 
 from __future__ import annotations
@@ -20,6 +26,7 @@ from typing import get_args
 from labkit.formats import runs
 
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
+TESTS = Path(__file__).resolve().parent
 #: labkit's console commands (`[project.scripts]`), longest first, as one
 #: alternation: a command added there is held by the command rules below
 CONSOLE_COMMANDS = "|".join(
@@ -400,6 +407,89 @@ BLOCK_RULES: list[tuple[str, str, set[str]]] = [
 ]
 
 
+#: the shapes a copy of a shared test helper takes — (what, regex over the
+#: file, the fixture module where it belongs, the functions that keep their
+#: own form as `file.py:function`, each with its reason)
+TEST_RULES: list[tuple[str, str, str, set[str]]] = [
+    # a function that takes `*args` and passes them to `["git", …]`:
+    # `repo_fixture.git`
+    (
+        "a git runner beside repo_fixture.git",
+        r"def \w+\([^)]*\*(\w+)[^)]*\)[^:\n]*:\n"
+        r"(?:[^\n]*\n){0,8}?[^\n]*\[\s*\"git\",[^\]]*\*\1\b",
+        "repo_fixture",
+        {
+            # returns the process, and `check=False` lets a test read the
+            # exit of a commit its hook refused
+            "test_install_hooks.py:run_git",
+            # reads labkit's own repository, not a fixture's: no identity,
+            # a timeout, and a failing git (a shallow clone) is not an error
+            "test_release_tags.py:_git",
+        },
+    ),
+    # stdout caught, a `main` called, (exit code, text) returned — with or
+    # without stderr, a working directory or a patched model around it:
+    # `command_fixture.run_main`. A helper that returns the two streams apart
+    # or joins them after the call is not this shape
+    (
+        "a main-runner beside command_fixture.run_main",
+        r"redirect_stdout\((\w+)\)(?:[^\n]*\n){1,6}?\s+(\w+) = [\w.]+\.main\("
+        r"(?:[^\n]*\n){1,14}?\s+return \2, \1\.getvalue\(\)$",
+        "command_fixture",
+        set(),
+    ),
+    # an identity written into a repository's config by hand:
+    # `repo_fixture.init_repo`
+    (
+        "a repository identity set beside repo_fixture.init_repo",
+        r"\"config\",\s*\"user\.(?:email|name)\"",
+        "repo_fixture",
+        {
+            # the three below run git with its exit unchecked, as they did
+            # before the home existed: a setup that failed went on
+            "test_preflight.py:_area",
+            "test_protocol_id.py:_repo",
+            "test_runlog_active.py:_repo",
+            # a script run under a decoy GIT_DIR — where its `git config`
+            # lands is what the test asserts
+            "test_git_env_isolation.py:<module>",
+        },
+    ),
+]
+
+
+def enclosing_function(text: str, start: int, end: int) -> str:
+    """The function the match TEXT[START:END] lies in: the `def` the match
+    opens with, else the nearest `def` above it that is indented less than
+    the match's least indented line; `<module>` outside every function."""
+    opened = re.match(r"def (\w+)\(", text[start:])
+    if opened:
+        return opened.group(1)
+    line_start = text.rfind("\n", 0, start) + 1
+    lines = [ln for ln in text[line_start:end].splitlines() if ln.strip()]
+    indent = min(len(ln) - len(ln.lstrip()) for ln in lines)
+    for above in reversed(text[:line_start].splitlines()):
+        found = re.match(r"([ \t]*)def (\w+)\(", above)
+        if found and len(found.group(1)) < indent:
+            return found.group(2)
+    return "<module>"
+
+
+def helper_copies(shape: str, home: str) -> dict[str, int]:
+    """Where the tests hold SHAPE outside its HOME module and this file (its
+    samples): `file.py:function` to the line of the first match there."""
+    out: dict[str, int] = {}
+    pattern = re.compile(shape, re.MULTILINE)
+    for path in sorted(TESTS.glob("*.py")):
+        if path.stem in {home, Path(__file__).stem}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for m in pattern.finditer(text):
+            name = f"{path.name}:{enclosing_function(text, m.start(), m.end())}"
+            out.setdefault(name, text.count("\n", 0, m.start()) + 1)
+    return out
+
+
 def block_offenders(what: str, shape: str, homes: set[str]) -> list[str]:
     """Like `offenders`, for a shape that spans lines; a copy that must stay
     says why with a `home:` note on the line after the `except`."""
@@ -440,6 +530,63 @@ class OneHome(unittest.TestCase):
         found = [o for rule in RULES for o in offenders(*rule)]
         found += [o for rule in BLOCK_RULES for o in block_offenders(*rule)]
         self.assertEqual(found, [], "\n" + "\n".join(found))
+
+    def test_no_copy_of_a_shared_test_helper(self):
+        """A test file calls the shared helper; a function named as exempt
+        still holds the shape (an exemption that names nothing is drift)."""
+        for what, shape, home, exempt in TEST_RULES:
+            with self.subTest(what=what):
+                found = helper_copies(shape, home)
+                copies = [
+                    f"{name.replace(':', f':{line}:')}: {what}"
+                    for name, line in found.items()
+                    if name not in exempt
+                ]
+                self.assertEqual(copies, [], "\n" + "\n".join(copies))
+                self.assertEqual(exempt - set(found), set(), "exempt, but not found")
+
+    def test_the_test_rules_bite(self):
+        samples = {
+            "a git runner beside repo_fixture.git": (
+                "def _git(cwd: Path, *args: str) -> None:\n"
+                '    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)\n'
+            ),
+            "a main-runner beside command_fixture.run_main": (
+                "    buf = io.StringIO()\n"
+                "    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):\n"
+                "        code = finalize.main(argv)\n"
+                "    return code, buf.getvalue()\n"
+            ),
+            "a repository identity set beside repo_fixture.init_repo": (
+                '    _git(root, "config", "user.email", "t@t")\n'
+            ),
+        }
+        self.assertEqual(set(samples), {what for what, _, _, _ in TEST_RULES})
+        for what, shape, _, _ in TEST_RULES:
+            with self.subTest(what=what):
+                self.assertIsNotNone(
+                    re.compile(shape, re.MULTILINE).search(samples[what]), shape
+                )
+
+    def test_a_copy_is_named_by_its_function(self):
+        text = (
+            "class A:\n"
+            "    def helper(self):\n"
+            "        def fake():\n"
+            "            return 1\n"
+            "        with (\n"
+            "            x,\n"
+            "        ):\n"
+            "            pass\n"
+            "        return 2\n"
+            "def top(*args):\n"
+            "    pass\n"
+        )
+        inner, last = text.index("x,"), text.index("return 2") + len("return 2")
+        self.assertEqual(enclosing_function(text, inner, last), "helper")
+        opened = text.index("def top")
+        self.assertEqual(enclosing_function(text, opened, len(text)), "top")
+        self.assertEqual(enclosing_function(text, 0, len("class A:")), "<module>")
 
     def test_the_run_kinds_are_the_named_constants(self):
         """`RunKind` is a Literal, whose words cannot be built from the
