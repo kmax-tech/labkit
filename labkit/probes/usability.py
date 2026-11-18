@@ -95,6 +95,7 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -677,11 +678,17 @@ def stage(
         f"staged {root}\n  task:   {root / 'TASK.md'}\n  log:    {log}\n"
         f"  probe:  {sidecar(root, 'probe.json')}\n  prompt: {prompt}\n"
         f"next: hand the prompt file's text to a cold agent (fresh context, no "
-        # the probe's own command, the staged directory as the lines above
-        # name it — home: no builder in commands
-        f"history), then `usability score {root} --transcript <its transcript>`"
+        f"history), then `{score_line(root)}`"
     )
     return 0
+
+
+def score_line(root: Path) -> str:
+    """The `usability score ROOT --transcript …` line `stage` prints for
+    the probe staged at ROOT: ROOT as the lines above it name it,
+    shell-quoted, the transcript a placeholder."""
+    # the probe's own command — home: no builder in commands
+    return f"usability score {shlex.quote(str(root))} --transcript <its transcript>"
 
 
 def log_step(log: Path, tag: str, text: str, cmd: list[str]) -> int:

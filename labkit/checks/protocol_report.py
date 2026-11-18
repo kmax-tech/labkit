@@ -20,7 +20,6 @@ Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
 import re
-import shlex
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,10 +37,14 @@ from labkit.formats.repo import (
     protocol_link,
     protocol_links,
     repo_protocols,
-    shown,
     state_text,
 )
-from labkit.formats.commands import adopt_command, fill_command, step_command
+from labkit.formats.commands import (
+    adopt_command,
+    fill_command,
+    protocol_word,
+    step_command,
+)
 from labkit.formats.audit_gaps import RecordGap, audit_record_gap
 from labkit.formats.gate import (
     BLOCKER,
@@ -454,11 +457,7 @@ def print_contract(protocol: Path | None = None) -> None:
         tail = full_form_lines()
     for line in top:
         print(line)
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "PROTOCOL-x.md"
-    )
+    named = protocol_word(protocol) if protocol is not None else "PROTOCOL-x.md"
     print(f'fill a field:     protocol-fill {named} "<Label>=<value>" …')
     print(f"list open fields: protocol-fill {named} --list")
     print(f"write the Prompt: protocol-fill {named} --prompts\n")
