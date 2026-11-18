@@ -63,9 +63,11 @@ from labkit.formats.repo import (
 from labkit.formats.run_index import RunIndexError, indexed_bindings
 from labkit.formats.run_starts import RunStart, read_starts
 from labkit.formats.runs import (
+    COMPLETION_FILE,
     CONFIG_FILE,
     MEASUREMENT,
     RunDir,
+    RunKind,
     run_dir_from_text,
     run_dirs,
     run_path,
@@ -109,9 +111,12 @@ class Measured:
             from git where a commit holds a run the state lacks
             (`RunDir.from_commit`).
         lost: The ids of the runs only the local run index lists: deleted,
-            and never committed — measured to the end, as the index says
-            (`runlog reindex` indexes completed runs only), with nothing
-            left to read back. Never an invented record.
+            and never committed — finished, as the index says (`runlog
+            reindex` indexes completed runs only), with nothing left to
+            read back. Never an invented record. The index names no run
+            kind: a run the start record lists as a probe or a preparation
+            is left out (`AreaState.lost` keeps it), one without a start
+            row counts, as it may have measured.
         first_groups: The first measurements — every run at each first
             position (`answering_run.first_measurement_groups`): a
             measurement among RUNS, no repeat, its record readable.
@@ -125,13 +130,19 @@ class Measured:
             counts for none — named where a check tells it
             (`measurements_without_record`), never read as a measurement
             and never as "no run".
-        started_only: The ids of the runs only the start record names, bound
-            to PID there: a measurement that started, with no directory in
-            the working tree, no commit that holds it and no row in the run
-            index — it broke off or was deleted before it finished.
+        started_only: The ids of the measurements only the start record
+            names, bound to PID there (its row says `run_kind =
+            "measurement"`): started, with no directory in the working
+            tree, no commit that holds it and no row in the run index — it
+            broke off or was deleted before it finished. A probe or a
+            preparation run in that state is not here
+            (`AreaState.started_only` keeps it).
         started: Run id → its start in UTC, for the runs of PID the start
             record lists (RUNS, LOST and STARTED_ONLY): what orders two
             runs, and only where both have one.
+        started_as: Run id → the run kind its start row names, for the
+            same runs: what tells a probe whose record is gone or does not
+            read from a measurement.
         conflicts: One clause per run whose protocol the start record, the
             run index and its own record name differently, PID among the
             ids named (`binding_conflicts`): which protocol it belongs to
@@ -148,6 +159,7 @@ class Measured:
     started_only: tuple[str, ...] = ()
     started: Mapping[str, datetime] = field(default_factory=dict)
     conflicts: tuple[str, ...] = ()
+    started_as: Mapping[str, RunKind] = field(default_factory=dict)
 
     def answering(self, adopted: str | None) -> AnsweringRun:
         """The run every check holds PID to (`answering_run.bound_answering_run`
@@ -187,12 +199,23 @@ class Measured:
         each may have been the first — `firsts` is no answer to it, it
         names only the measurements whose record reads. A record of
         UNASSIGNED does not count: its protocol is unknown, and it is held
-        against none."""
+        against none. Neither does a run the start record lists as a probe
+        or a preparation, whatever became of its record
+        (`may_have_measured`)."""
         return (
             bool(self.lost)
             or bool(self.started_only)
-            or any(is_measurement(rd) for rd in self.runs)
+            or any(self.may_have_measured(rd) for rd in self.runs)
         )
+
+    def may_have_measured(self, rd: RunDir) -> bool:
+        """May the run RD of RUNS have measured PID? Its record's kind where
+        the record reads (`answering_run.is_measurement`); where it does
+        not, the kind its start row names, and yes without a start row —
+        nothing says it was a probe."""
+        if rd.error is None:
+            return is_measurement(rd)
+        return self.started_as.get(rd.dir.name, MEASUREMENT) == MEASUREMENT
 
     @property
     def firsts(self) -> tuple[RunDir, ...]:
@@ -263,11 +286,12 @@ class AreaState:
             start record what binds a run without a record to a protocol
             (`assigned_to`). Its order tells nothing.
         starts: The local start record as read, run id → its row
-            (`run_starts.read_starts`): which measurement started with
-            which protocol and when.
+            (`run_starts.read_starts`): which run started with which
+            protocol, when and as which kind.
         started_only: Run id → protocol id of the runs only the start
-            record names: no directory in the working tree, no commit and
-            no index row holds them.
+            record names, of every kind: no directory in the working tree,
+            no commit and no index row holds them. `Measured.started_only`
+            is the measurements among them.
         conflicts: Run id → the (source, protocol id) pairs of each run
             whose sources name different protocols (`binding_conflicts`).
     """
@@ -375,12 +399,20 @@ def assemble(
             area,
             pid,
             records,
-            tuple(r for r, p in lost.items() if p == pid),
+            tuple(
+                r
+                for r, p in lost.items()
+                if p == pid and _started_as(r, starts) in (None, MEASUREMENT)
+            ),
             repo,
             facts,
             indexed,
             starts,
-            tuple(r for r, p in started_only.items() if p == pid),
+            tuple(
+                r
+                for r, p in started_only.items()
+                if p == pid and _started_as(r, starts) == MEASUREMENT
+            ),
             conflicts,
         )
         for pid in pids
@@ -466,6 +498,11 @@ def binding_conflicts(
     return out
 
 
+def _started_as(run: str, starts: Mapping[str, RunStart]) -> RunKind | None:
+    """The run kind RUN's start row names; None without a row."""
+    return starts[run].run_kind if run in starts else None
+
+
 def _measured(
     area: Path,
     pid: str,
@@ -482,9 +519,9 @@ def _measured(
     the runs bound to PID — by their record, or, where it does not read, by
     the start record or the run index (`assigned_to`) —, the first groups
     among them, FACTS of every present run for the choice, the unreadable
-    records neither file names, the runs only the start record names
-    (STARTED_ONLY), the starts of all of these, and the contradicted
-    bindings that name PID (CONFLICTS)."""
+    records neither file names, the measurements only the start record
+    names (STARTED_ONLY), the starts and the started kinds of all of
+    these, and the contradicted bindings that name PID (CONFLICTS)."""
     ours = tuple(
         rd
         for rd in records
@@ -516,6 +553,7 @@ def _measured(
             for run, sources in conflicts.items()
             if pid in {named for _, named in sources}
         ),
+        {run: starts[run].run_kind for run in of_pid if run in starts},
     )
 
 
@@ -583,6 +621,21 @@ def index_names_gone_runs(area: Path) -> bool:
     of every area before it builds a state for the ones that say yes."""
     try:
         return any(not run_path(area, r).is_dir() for r in indexed_bindings(area))
+    except RunIndexError:
+        return True
+
+
+def starts_name_open_runs(area: Path) -> bool:
+    """Does AREA's local start record list a run whose directory is gone
+    or stands without its completion record, or does the start record not
+    read? The cheap question the post-change hook asks beside
+    `index_names_gone_runs`: a run that broke off, or was deleted before
+    it finished, has no index row to be found by."""
+    try:
+        return any(
+            not (run_path(area, r) / COMPLETION_FILE).is_file()
+            for r in read_starts(area)
+        )
     except RunIndexError:
         return True
 
@@ -716,9 +769,11 @@ def measurements_without_record(
 ) -> WithoutRecord:
     """The runs without a record, as they bear on MEASURED's protocol
     (`WithoutRecord`): each run of LOST_IN_TREE (its directory gone, no
-    commit holding it, the run index listing it), each run only the start
-    record names (`Measured.started_only`) and each run among MEASURED's
-    whose record does not read — all bound to the protocol by the start
+    commit holding it, the run index listing it), each measurement only
+    the start record names (`Measured.started_only`) and each run among
+    MEASURED's whose record does not read and which may have measured
+    (`Measured.may_have_measured`: not one its start row lists as a probe
+    or a preparation) — all bound to the protocol by the start
     record or the run index (`assigned_to`) —, and MEASURED's unassigned
     records. LOST_IN_TREE is the lost runs the working tree lacks too —
     `lost_in_the_tree_too(measured)` for a state of the index,
@@ -761,8 +816,9 @@ def measurements_without_record(
     ] + [
         (
             run,
-            f"run {run} is gone (the start record lists it as started; no "
-            f"directory, no commit and no row of the run index holds it)",
+            f"run {run} is gone (the start record lists it as a measurement "
+            f"that started; no directory, no commit and no row of the run index "
+            f"holds it)",
         )
         for run in measured.started_only
     ]
@@ -770,7 +826,9 @@ def measurements_without_record(
     unread = [
         (rd.dir.name, f"the record of run {rd.dir.name} does not read")
         for rd in measured.runs
-        if rd.error is not None
+        # a record the start row lists as a probe or a preparation measured
+        # nothing: it is `runlog <AREA>`'s to list, not a hold
+        if rd.error is not None and measured.may_have_measured(rd)
     ]
     may_be_first: list[str] = []
     unordered: list[str] = []

@@ -309,7 +309,9 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
     measurement, a run only the start record names, and a run whose record
     does not read and which the start record or the run index binds to
     this protocol (`area_state.assigned_to`; its commit is unknowable), are
-    UNREAD beside readable ones too: each may have been the first. A record
+    UNREAD beside readable ones too: each may have been the first — but
+    for a run the start record lists as a probe or a preparation, which
+    measured nothing (`Measured.may_have_measured`). A record
     that does not read and that neither file names is
     assigned to no protocol (`Measured.unassigned`): no duty is derived
     from it, and `unassigned_record_note` names it where the duty is
@@ -331,7 +333,11 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             "",
             f"what it registered at its first measurement {run} cannot be read — {why}",
         )
-    unreadable = [rd.dir.name for rd in measured.runs if rd.error is not None]
+    unreadable = [
+        rd.dir.name
+        for rd in measured.runs
+        if rd.error is not None and measured.may_have_measured(rd)
+    ]
     if unreadable:
         return ReportDuty(
             None,

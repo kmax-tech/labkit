@@ -885,7 +885,9 @@ class ARunWithoutItsRecord(unittest.TestCase):
         without = self.sorted_out(started_only=(self.GONE,))
         (hold,) = self.held(without)
         self.assertIn(
-            f"run {self.GONE} is gone (the start record lists it as started", hold.text
+            f"run {self.GONE} is gone (the start record lists it as a measurement that "
+            f"started",
+            hold.text,
         )
         self.assertIn("may have been the first", hold.text)
 
@@ -978,6 +980,26 @@ class ARunWithoutItsRecord(unittest.TestCase):
         )
         self.assertEqual(self.held(without), [])
         self.assertEqual(len(without.later), 1)
+
+    def test_the_twin_a_record_the_start_row_lists_as_a_probe_holds_nothing(self):
+        """A start row says what a run started as: a probe or a preparation
+        whose record does not read measured nothing, alone or beside a
+        measurement that reads; without a start row the same record may
+        have measured, and holds."""
+        dead = self.DEAD.dir.name
+        for kind in ("probe", "preparation"):
+            with self.subTest(kind):
+                measured = Measured(
+                    AREA, PID, (self.DEAD,), (), (), (), started_as={dead: kind}
+                )
+                without = pure_call(measurements_without_record, measured, ())
+                self.assertEqual(without, WithoutRecord((), (), (), ()))
+                self.assertFalse(measured.has_measured)
+        unlisted = Measured(AREA, PID, (self.DEAD,), (), (), ())
+        self.assertTrue(unlisted.has_measured)
+        self.assertEqual(
+            len(pure_call(measurements_without_record, unlisted, ()).may_be_first), 1
+        )
 
     def test_a_record_no_protocol_can_be_assigned_holds_none_and_is_warned_of(self):
         """Its protocol cannot be determined: no hold for any protocol, and

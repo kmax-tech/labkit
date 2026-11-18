@@ -570,7 +570,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         dead = runs.RunDir(
             Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
         )
-        start = RunStart(dead.dir.name, PID, self.NOON)
+        start = RunStart(dead.dir.name, PID, self.NOON, "measurement")
         state = assemble(
             Path("area"), None, TREE, [dead], [], {}, starts={dead.dir.name: start}
         )
@@ -589,13 +589,57 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             [],
             [],
             {},
-            starts={gone: RunStart(gone, PID, self.NOON)},
+            starts={gone: RunStart(gone, PID, self.NOON, "measurement")},
             started_only={gone: PID},
         )
         m = state.measured_of(PID)
         self.assertEqual((m.started_only, m.has_measured), ((gone,), True))
         self.assertEqual(m.lost, ())
         self.assertFalse(state.measured_of("p-other").has_measured)
+
+    def test_the_twin_a_probe_the_files_name_is_no_measurement(self):
+        """A start row names its run's kind. A probe or a preparation run
+        whose directory is gone — only the start record names it, or the
+        index lists it too — and one whose record does not read are kept in
+        the area's state and counted as measured for no protocol; the same
+        runs without a start row count, as nothing says what they were."""
+        gone, indexed_too = "2026-10-06T10-00-00_105e", "2026-10-06T10-00-01_105e"
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        for kind in ("probe", "preparation"):
+            with self.subTest(kind):
+                state = assemble(
+                    Path("area"),
+                    None,
+                    TREE,
+                    [dead],
+                    [],
+                    {indexed_too: PID},
+                    indexed={indexed_too: PID},
+                    starts={
+                        r: RunStart(r, PID, self.NOON, kind)
+                        for r in (gone, indexed_too, dead.dir.name)
+                    },
+                    started_only={gone: PID},
+                )
+                m = state.measured_of(PID)
+                self.assertEqual((m.started_only, m.lost), ((), ()))
+                self.assertEqual(m.runs, (dead,))
+                self.assertFalse(m.has_measured)
+                self.assertEqual(state.started_only, {gone: PID})
+                self.assertEqual(state.lost, {indexed_too: PID})
+        unlisted = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [dead],
+            [],
+            {indexed_too: PID},
+            indexed={indexed_too: PID, dead.dir.name: PID},
+        ).measured_of(PID)
+        self.assertEqual(unlisted.lost, (indexed_too,))
+        self.assertTrue(unlisted.has_measured)
 
     def test_sources_that_name_different_protocols_are_a_conflict_not_a_choice(self):
         """The start record against the index for a record that does not
@@ -607,8 +651,8 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         )
         reads = self._record(RUN)
         starts = {
-            dead.dir.name: RunStart(dead.dir.name, PID, self.NOON),
-            RUN: RunStart(RUN, "p-other", self.NOON),
+            dead.dir.name: RunStart(dead.dir.name, PID, self.NOON, "measurement"),
+            RUN: RunStart(RUN, "p-other", self.NOON, "measurement"),
         }
         state = assemble(
             Path("area"),
@@ -652,7 +696,10 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             [],
             {},
             indexed={dead.dir.name: PID, RUN: PID},
-            starts={r: RunStart(r, PID, self.NOON) for r in (dead.dir.name, RUN)},
+            starts={
+                r: RunStart(r, PID, self.NOON, "measurement")
+                for r in (dead.dir.name, RUN)
+            },
         )
         self.assertEqual(agreeing.conflicts, {})
         self.assertEqual(agreeing.measured_of(PID).conflicts, ())

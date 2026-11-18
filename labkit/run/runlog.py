@@ -77,7 +77,6 @@ schema 4 — read with its pinned labkit).
 
 from __future__ import annotations
 
-import contextlib
 from dataclasses import dataclass
 import json
 import os
@@ -477,15 +476,9 @@ class Run:
         )
         # Count a repeat's draw and write its record under the same lock:
         # concurrent starts must not receive the same number, and `self.draw`
-        # is the one number the script names its file by. A measurement's
-        # start record is appended under it too (`run_starts.write_start`).
-        measures = prepared.run_kind == MEASUREMENT
-        guard = (
-            index_lock(base_dir)
-            if repeat_of is not None or measures
-            else contextlib.nullcontext()
-        )
-        with guard:
+        # is the one number the script names its file by. Every run's start
+        # row is appended under it too (`run_starts.write_start`).
+        with index_lock(base_dir):
             self._repeat_of, self.draw, self._config = _repeat_draw(
                 base_dir, repeat_of, reseed, prepared, described, provenance.models
             )
@@ -495,32 +488,34 @@ class Run:
                 # the last step of the start, after every refusal and after
                 # the record: a start that was refused left no row, and a
                 # row names a run whose record was written. Durable before
-                # the script measures; a failed write refuses the start.
-                if measures:
-                    self._write_start_record()
+                # the script's block runs; a failed write refuses the start.
+                # Every kind: a probe can produce numbers too.
+                self._write_start_record(prepared.run_kind)
             except BaseException:
                 shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
                 raise
 
-    def _write_start_record(self) -> None:
+    def _write_start_record(self, run_kind: RunKind) -> None:
         """The run's row in the area's start record (`run_starts`): its id,
-        the protocol id it is bound to ("" unbound) and the time now in
-        UTC, synced to disk. The caller holds the index lock.
+        the protocol id it is bound to ("" unbound), the time now in UTC
+        and RUN_KIND, synced to disk. The caller holds the index lock.
 
         Side effects:
             Appends to <area>/run-starts.tsv.
 
         Raises SystemExit naming the file when the row cannot be written:
-        a measurement whose start is recorded nowhere outside its own
-        directory does not start."""
-        start = RunStart(self.run_id, self._protocol.get("id") or "", utc_now())
+        a run whose start is recorded nowhere outside its own directory
+        does not start."""
+        start = RunStart(
+            self.run_id, self._protocol.get("id") or "", utc_now(), run_kind
+        )
         try:
             write_start(self.base, start)
         except (OSError, RunStartsError) as exc:
             raise SystemExit(
                 with_way_out(
                     f"runlog: the start of {self.run_id} could not be recorded in "
-                    f"{self.base / RUN_STARTS}: {exc} — the measurement did not "
+                    f"{self.base / RUN_STARTS}: {exc} — the run did not "
                     f"start, and no run directory is left",
                     "make the file writable or repair it as the sentence says, "
                     "then start the run again",

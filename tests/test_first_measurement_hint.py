@@ -217,7 +217,9 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
             lost or {},
             indexed=index,
             starts={
-                run: RunStart(run, pid, self.NOON + timedelta(seconds=after))
+                run: RunStart(
+                    run, pid, self.NOON + timedelta(seconds=after), "measurement"
+                )
                 for run, (pid, after) in (starts or {}).items()
             },
         )
