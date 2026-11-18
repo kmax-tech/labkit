@@ -1,18 +1,20 @@
-"""The start record of an area, `run-starts.tsv` (`run_starts`): written
-durably before a measurement executes, read whole or refused, kept by
-`runlog reindex`, and never made up for a run that has none. It answers
-which run started with which protocol and when; which runs reached
-completion stays the run index's (tests/test_runs_index.py).
+"""A run's start file, `run-starts/<run_id>.json` (`run_starts`): written
+whole and durably before the run's block executes, never over a file that
+is there, read strictly or refused, left alone by `runlog reindex`, and
+never made up for a run that has none. It says which run started with
+which protocol, when and as what; which runs reached completion stays the
+run index's (tests/test_runs_index.py). What holds a committed start file
+against change: tests/test_evidence_start_files.py.
 """
 
 from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import shutil
 import tempfile
-import threading
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,14 +22,20 @@ from unittest import mock
 
 from labkit.formats import area_state, run_index, run_starts, runs
 from labkit.formats.area_state import state_of
-from labkit.gates import hook_post_change
 from labkit.formats.run_starts import RunStart, RunStartsError
 from labkit.formats.runs import RunKind
+from labkit.gates import hook_post_change
 from labkit.run import runlog
 from protocol_fixture import PID, head
 
 NOON = datetime(2026, 11, 18, 12, 0, 0, tzinfo=timezone.utc)
 RUN = "2026-11-18T13-00-00_ab12"
+TEXT = (
+    '{\n  "run_id": "2026-11-18T13-00-00_ab12",\n'
+    f'  "protocol_id": "{PID}",\n'
+    '  "started_utc": "2026-11-18T12:00:00+00:00",\n'
+    '  "run_kind": "measurement"\n}\n'
+)
 
 
 class _Area(unittest.TestCase):
@@ -41,7 +49,10 @@ class _Area(unittest.TestCase):
             + "\n- **Question / hypothesis:** how many?\n",
             encoding="utf-8",
         )
-        self.file = self.area / run_starts.RUN_STARTS
+
+    def start_files(self) -> list[str]:
+        """The names of the area's start files, sorted."""
+        return sorted(p.name for p in (self.area / "run-starts").glob("*.json"))
 
     def measure(self, *, fail: bool = False, run_kind: RunKind = "measurement") -> str:
         """One run of RUN_KIND through `runlog.run`; with FAIL it breaks off
@@ -60,96 +71,97 @@ class _Area(unittest.TestCase):
 
 
 class TheFile(_Area):
-    def write(self, start: RunStart) -> None:
-        with run_index.index_lock(self.area):
-            run_starts.write_start(self.area, start)
-
-    def test_a_row_written_is_the_row_read(self):
-        self.write(RunStart(RUN, PID, NOON, "measurement"))
-        self.write(
-            RunStart(
-                "2026-11-18T13-00-01_cd34",
-                "",
-                NOON + timedelta(seconds=1),
-                "measurement",
-            )
+    def test_a_file_written_is_the_file_read(self):
+        path = run_starts.write_start(
+            self.area, RunStart(RUN, PID, NOON, "measurement")
         )
+        self.assertEqual(path, self.area / "run-starts" / f"{RUN}.json")
+        self.assertEqual(path.read_text(encoding="utf-8"), TEXT)
         self.assertEqual(
             run_starts.read_starts(self.area),
-            {
-                RUN: RunStart(RUN, PID, NOON, "measurement"),
-                "2026-11-18T13-00-01_cd34": RunStart(
-                    "2026-11-18T13-00-01_cd34",
-                    "",
-                    NOON + timedelta(seconds=1),
-                    "measurement",
-                ),
-            },
+            {RUN: RunStart(RUN, PID, NOON, "measurement")},
         )
-        self.assertEqual(
-            self.file.read_text(encoding="utf-8").splitlines()[:2],
-            [
-                "run_id\tprotocol_id\tstarted_utc\trun_kind",
-                f"{RUN}\t{PID}\t2026-11-18T12:00:00+00:00\tmeasurement",
-            ],
-        )
+        # whole or not at all: no temporary file is left beside it
+        self.assertEqual([p.name for p in path.parent.iterdir()], [path.name])
 
-    def test_no_file_reads_as_no_start_and_makes_no_lock_file(self):
+    def test_no_file_reads_as_no_start(self):
         self.assertEqual(run_starts.read_starts(self.area), {})
-        self.assertEqual([p.name for p in self.area.iterdir()], ["PROTOCOL-x.md"])
+        (self.area / "run-starts").mkdir()
+        (self.area / "run-starts" / "notes.json").write_text("not a run's")
+        self.assertEqual(run_starts.read_starts(self.area), {})
 
-    def test_a_file_that_does_not_read_is_refused_naming_the_line(self):
-        good = (
-            "run_id\tprotocol_id\tstarted_utc\trun_kind\n"
-            f"{RUN}\t{PID}\t2026-11-18T12:00:00+00:00\tmeasurement\n"
+    def test_an_existing_start_file_is_never_overwritten(self):
+        """The same run id started twice collides, loudly; the first file
+        stands as written."""
+        run_starts.write_start(self.area, RunStart(RUN, PID, NOON, "measurement"))
+        with self.assertRaises(FileExistsError):
+            run_starts.write_start(
+                self.area, RunStart(RUN, "p-other", NOON + timedelta(1), "probe")
+            )
+        self.assertEqual(
+            run_starts.start_path(self.area, RUN).read_text(encoding="utf-8"), TEXT
         )
-        other = "2026-11-18T13-00-01_cd34\tp-1"
+        self.assertEqual(self.start_files(), [f"{RUN}.json"])
+
+    def test_a_file_that_does_not_read_is_refused_naming_it(self):
+        data = json.loads(TEXT)
         for name, text, said in (
-            ("other columns", "run_id\tprotocol_id\n", ":1: columns"),
-            ("a short row", good + other + "\n", ":3: 2 of 4"),
+            ("no JSON", "{not json", "not JSON"),
             (
-                "a row without its kind",
-                good + other + "\t2026-11-18T13:00:01+00:00\n",
-                ":3: 3 of 4",
+                "a key missing",
+                json.dumps({k: data[k] for k in list(data)[:3]}),
+                "exactly the keys",
             ),
+            ("a key too many", json.dumps({**data, "host": "x"}), "exactly the keys"),
             (
-                "a kind that is none",
-                good + other + "\t2026-11-18T13:00:01+00:00\tpilot\n",
-                "run_kind = 'pilot'",
+                "another run's id",
+                json.dumps({**data, "run_id": "2026-11-18T13-00-01_cd34"}),
+                "is not the run its name says",
             ),
             (
                 "a local time",
-                good + other + "\t2026-11-18T13:00:01\tprobe\n",
+                json.dumps({**data, "started_utc": "2026-11-18T13:00:01"}),
                 "is no time in UTC",
             ),
             (
                 "another zone",
-                good + other + "\t2026-11-18T13:00:01+01:00\tprobe\n",
+                json.dumps({**data, "started_utc": "2026-11-18T13:00:01+01:00"}),
                 "is no time in UTC",
             ),
-            ("a run twice", good + good.splitlines()[1] + "\n", "is listed twice"),
+            (
+                "a kind that is none",
+                json.dumps({**data, "run_kind": "pilot"}),
+                "run_kind = 'pilot'",
+            ),
         ):
             with self.subTest(name):
-                self.file.write_text(text, encoding="utf-8")
+                path = run_starts.start_path(self.area, RUN)
+                path.parent.mkdir(exist_ok=True)
+                path.write_text(text, encoding="utf-8")
                 with self.assertRaises(RunStartsError) as cm:
                     run_starts.read_starts(self.area)
                 self.assertIn(said, str(cm.exception))
-                self.assertIn(
-                    "never delete the row of a run that started", str(cm.exception)
-                )
+                self.assertIn(path.name, str(cm.exception))
+                self.assertIn("never write one anew from memory", str(cm.exception))
                 # the area state refuses with it: no reading as "no run started"
                 with self.assertRaises(RunStartsError):
                     state_of(self.area)
 
-    def test_a_run_starts_once(self):
-        self.write(RunStart(RUN, PID, NOON, "measurement"))
-        with self.assertRaises(RunStartsError) as cm:
-            self.write(RunStart(RUN, PID, NOON, "measurement"))
-        self.assertIn("already lists", str(cm.exception))
+    def test_which_paths_are_start_files(self):
+        self.assertTrue(run_starts.is_start_file(f"run-starts/{RUN}.json"))
+        for rel in (
+            f"runs/{RUN}/config.json",
+            "run-starts/notes.json",
+            f"audits/{RUN}.json",
+            f"runs/{RUN}.json",
+            f"run-starts/{RUN}/x.json",
+        ):
+            with self.subTest(rel):
+                self.assertFalse(run_starts.is_start_file(rel))
 
 
 class WrittenAtTheStart(_Area):
-    def test_a_measurement_has_its_row_before_its_block_runs(self):
+    def test_a_run_has_its_start_file_before_its_block_runs(self):
         seen: list[dict[str, RunStart]] = []
         before = run_starts.utc_now()
         with contextlib.redirect_stdout(io.StringIO()):
@@ -163,19 +175,22 @@ class WrittenAtTheStart(_Area):
         )
         self.assertLessEqual(before, start.started)
         self.assertLessEqual(start.started, run_starts.utc_now())
-        # the end adds nothing to it: completion is the index's
+        # outside runs/, which holds the run's directory alone, and the
+        # end adds nothing
+        self.assertEqual(self.start_files(), [f"{run.run_id}.json"])
+        self.assertEqual([p.name for p in (self.area / "runs").iterdir()], [run.run_id])
         self.assertEqual(run_starts.read_starts(self.area), seen[0])
         self.assertIn(run.run_id, run_index.indexed_bindings(self.area))
 
-    def test_a_run_that_breaks_off_keeps_its_row_and_gets_no_index_row(self):
+    def test_a_run_that_breaks_off_keeps_its_start_file_and_gets_no_index_row(self):
         run_id = self.measure(fail=True)
         self.assertEqual(list(run_starts.read_starts(self.area)), [run_id])
         self.assertEqual(run_index.indexed_bindings(self.area), {})
 
-    def test_every_run_kind_gets_its_row_and_a_refused_start_none(self):
-        """A run of any kind can produce numbers, so each start is listed
+    def test_every_run_kind_gets_its_start_file_and_a_refused_start_none(self):
+        """A run of any kind can produce numbers, so each start is recorded
         with what it started as; a start refused before the run directory
-        exists leaves no row."""
+        exists leaves no start file."""
         prepared = self.measure(run_kind="preparation")
         measured = self.measure()
         starts = run_starts.read_starts(self.area)
@@ -183,13 +198,15 @@ class WrittenAtTheStart(_Area):
             {r: s.run_kind for r, s in starts.items()},
             {prepared: "preparation", measured: "measurement"},
         )
-        kept = self.file.read_text(encoding="utf-8")
+        kept = self.start_files()
         (self.area / "PROTOCOL-y.md").write_text(head(repeat_cost="low"))
         with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
             runlog.run("x", {}, self.area, run_kind="measurement")  # two protocols
-        self.assertEqual(self.file.read_text(encoding="utf-8"), kept)
+        self.assertEqual(self.start_files(), kept)
 
-    def test_a_row_that_cannot_be_synced_refuses_the_start_and_leaves_no_run(self):
+    def test_a_start_file_that_cannot_be_synced_refuses_the_start_and_leaves_no_run(
+        self,
+    ):
         with (
             mock.patch.object(os, "fsync", side_effect=OSError("disk full")),
             self.assertRaises(SystemExit) as cm,
@@ -200,45 +217,56 @@ class WrittenAtTheStart(_Area):
         self.assertIn("could not be recorded in", said)
         self.assertIn("disk full", said)
         self.assertIn("the run did not start", said)
-        runs_dir = self.area / "runs"
-        self.assertEqual(list(runs_dir.iterdir()) if runs_dir.is_dir() else [], [])
+        left = [
+            p.name for d in ("runs", "run-starts") for p in (self.area / d).iterdir()
+        ]
+        self.assertEqual(left, [])  # no run directory, no start file, no temp
 
-    def test_concurrent_starts_lose_no_row(self):
-        ids: list[str] = []
+    def test_a_run_id_whose_start_file_stands_refuses_the_start(self):
+        """A run directory deleted, its start file kept, and a new start
+        drawing the same id: the start fails loudly, nothing is overwritten
+        and no run directory is left."""
+        gone = self.measure()
+        shutil.rmtree(self.area / "runs" / gone)
+        kept = run_starts.start_path(self.area, gone).read_text(encoding="utf-8")
+        with (
+            mock.patch.object(
+                runlog,
+                "_make_run_dir",
+                side_effect=lambda base: (gone, self._made(base, gone)),
+            ),
+            self.assertRaises(SystemExit) as cm,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            runlog.run("x", {}, self.area, run_kind="measurement")
+        said = str(cm.exception)
+        self.assertIn(f"a run with the id {gone} started before", said)
+        self.assertIn("never overwritten", said)
+        self.assertFalse((self.area / "runs" / gone).exists())
+        self.assertEqual(
+            run_starts.start_path(self.area, gone).read_text(encoding="utf-8"), kept
+        )
 
-        def start(n: int) -> None:
-            with run_index.index_lock(self.area):
-                run_id = f"2026-11-18T13-00-{n:02d}_ab12"
-                run_starts.write_start(
-                    self.area, RunStart(run_id, PID, NOON, "measurement")
-                )
-                ids.append(run_id)
-
-        threads = [threading.Thread(target=start, args=(n,)) for n in range(12)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-        self.assertEqual(sorted(run_starts.read_starts(self.area)), sorted(ids))
-        self.assertEqual(len(ids), 12)
+    @staticmethod
+    def _made(base: Path, run_id: str) -> Path:
+        d = runs.run_path(base, run_id)
+        d.mkdir(parents=True)
+        return d
 
 
-class ReindexKeepsIt(_Area):
-    def test_reindex_keeps_every_row_and_invents_none(self):
-        """A run whose directory is gone keeps its start row through a
-        reindex, and a run from before the start record — its row removed
-        here — gets none made up from its id or its config.json."""
+class ReindexLeavesThem(_Area):
+    def test_reindex_keeps_every_start_file_and_invents_none(self):
+        """A run whose directory is gone keeps its start file through a
+        reindex, and a run from before start files — its file removed here
+        — gets none made up from its id or its config.json."""
         gone, old = self.measure(), self.measure()
-        rows = self.file.read_text(encoding="utf-8").splitlines()
-        self.file.write_text("\n".join(r for r in rows if old not in r) + "\n")
-        kept = self.file.read_text(encoding="utf-8")
+        run_starts.start_path(self.area, old).unlink()
         shutil.rmtree(self.area / "runs" / gone)
         (self.area / "runs.tsv").unlink()
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(runlog.reindex(self.area), 0)
-        self.assertEqual(self.file.read_text(encoding="utf-8"), kept)
-        self.assertEqual(list(run_starts.read_starts(self.area)), [gone])
-        # the area state: the gone run is one only the start record names
+        self.assertEqual(self.start_files(), [f"{gone}.json"])
+        # the area state: the gone run is one only a start file names
         state = state_of(self.area)
         self.assertEqual(state.started_only, {gone: PID})
         self.assertEqual(state.measured_of(PID).started_only, (gone,))
@@ -246,10 +274,10 @@ class ReindexKeepsIt(_Area):
 
 
 class ThePostChangeHookTellsThem(_Area):
-    """`hook_post_change.index_problems`: a run the start record lists that
-    started and never completed (its directory stands) and one whose
-    record is gone (no directory) are told in words of their own; a run
-    that completed is told nothing."""
+    """`hook_post_change.index_problems`: a run with a start file that
+    started and never completed (its directory stands) and one whose record
+    is gone (no directory) are told in words of their own; a run that
+    completed is told nothing."""
 
     def problems(self) -> list[str]:
         return hook_post_change.index_problems(state_of(self.area))
@@ -268,13 +296,15 @@ class ThePostChangeHookTellsThem(_Area):
         with mock.patch.object(runs, "is_alive", return_value=False):
             (line,) = self.problems()
         self.assertIn(
-            f"run {broke_off}: started as a measurement (run-starts.tsv) and never "
-            f"completed — its directory stands",
+            f"run {broke_off}: started as a measurement (its start file stands) and "
+            f"never completed — its directory stands",
             line,
         )
         self.assertNotIn("is gone", line)
 
     def test_a_run_whose_directory_is_gone_is_a_record_that_is_gone(self):
+        """A probe or a preparation too: it binds no registration, and it
+        stays visible here."""
         for kind in ("measurement", "preparation"):
             with self.subTest(kind):
                 gone = self.measure(fail=True, run_kind=kind)
@@ -282,7 +312,7 @@ class ThePostChangeHookTellsThem(_Area):
                 self.assertTrue(area_state.starts_name_open_runs(self.area))
                 line = next(ln for ln in self.problems() if gone in ln)
                 self.assertIn(
-                    f"run {gone}: its directory is gone — run-starts.tsv lists it "
+                    f"run {gone}: its directory is gone — its start file lists it "
                     f"as a {kind} that started, runs.tsv lists no completion",
                     line,
                 )

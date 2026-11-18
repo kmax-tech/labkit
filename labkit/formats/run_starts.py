@@ -1,49 +1,58 @@
-"""run_starts — the start record of an area, `run-starts.tsv`: one row per
-run that started, of every kind, written before its block executes
-(`RUN_START_COLS`: the run id, the protocol id it is bound to, its start in
-UTC, its run kind). It answers one question the run index cannot — which
-run was started with which protocol, when and as what —, also for a run
-that never finished or whose directory is gone; which runs reached completion stays the run index's
-(`run_index`), and no completion state or result is kept here. Local like
-the index, kept out of the repository by the lab stamp, and never rebuilt:
-nothing but a start writes a row, so a run from before this file, or from
-another machine, has none and its start time is unknown. The one home of
-its name, its columns, its reading and its writing; the lock is the run
-index's (`run_index.index_lock`), one lock for both files of an area. Who
-reads it: the area state (`area_state`). Why two files, and what was
-rejected: docs/notes/2026-11-18-run-start-record.md.
+"""run_starts — the start file of a run, `run-starts/<run_id>.json` in its
+area: written once, before the run's block executes, outside the run's
+directory and outside `runs/` — a listing of `runs/` meets directories
+only, and deleting `runs/` leaves the start files (`START_FIELDS`: the run id, the protocol id it is bound to, its
+start in UTC, its run kind). It answers what the run index cannot — which
+run started with which protocol, when and as what —, also for a run that
+never finished or whose directory is gone; which runs reached completion
+stays the run index's (`run_index`), and no completion state or result is
+kept here. One file per run: a second run never writes into a file another
+wrote, and a file that exists is never overwritten — the same run id
+started twice fails loudly. Tracked, not ignored: a start file nobody
+committed leaves the tree changed, which is what happened, and a clone has
+exactly the start files a commit holds. Never rebuilt: only a start writes
+one, so a run from before this file has none and its start is unknown. The
+one home of its name, its fields, its reading and its writing. Who reads
+it: the area state (`area_state`); what holds a committed one against
+change: `evidence`. Why, and what was rejected:
+docs/notes/2026-11-18-run-start-record.md.
 """
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from labkit.formats.run_index import RunIndexError, index_lock
-from labkit.formats.runs import RunKind, parse_run_kind
+from labkit.formats.run_index import RunIndexError
+from labkit.formats.runs import RUN_ID, RunKind, parse_run_kind
 
-#: the start record of an area, beside the run index; local, never rebuilt
-RUN_STARTS = "run-starts.tsv"
+#: the directory of an area that holds its runs' start files, beside `runs/`
+START_FILES_DIR = "run-starts"
+#: what follows the run id in a start file's name
+START_SUFFIX = ".json"
 
-RUN_START_COLS = ["run_id", "protocol_id", "started_utc", "run_kind"]
+#: the keys of a start file, all of them and no other
+START_FIELDS = ("run_id", "protocol_id", "started_utc", "run_kind")
 
 
 class RunStartsError(RunIndexError):
-    """A start record that does not read as written (`read_starts`): other
-    columns, a row without all of them, a start that is no UTC time, a kind
-    that is none, a run listed twice. WHY names the file, the line and the
-    way out; a command ends on it as runlog's refusal
+    """A start file that does not read as written (`read_starts`): no JSON
+    object, other keys than START_FIELDS, a run id that is not its name's,
+    a start that is no UTC time, a kind that is none. WHY names the file
+    and the way out; a command ends on it as runlog's refusal
     (`console.exit_with`), exit 2. A `RunIndexError`: the area state reads
-    both files in one step (`area_state.state_of`), and every caller that
-    refuses on an index that does not read refuses on this the same way —
-    whether a run was measured or started cannot be told from either."""
+    the index and the start files in one step (`area_state.state_of`), and
+    every caller that refuses on an index that does not read refuses on
+    this the same way — whether a run was measured or started cannot be
+    told from either."""
 
 
 @dataclass(frozen=True)
 class RunStart:
-    """One row of the start record.
+    """What a start file holds.
 
     Attributes:
         run_id: The run that started.
@@ -54,7 +63,7 @@ class RunStart:
         run_kind: What it started as: a measurement, a probe or a
             preparation (`runs.RunKind`). A reader that asks for the
             measurements that started compares it with `runs.MEASUREMENT`;
-            a row alone says "a run started", never "a measurement".
+            a start file alone says "a run started", never "a measurement".
     """
 
     run_id: str
@@ -68,95 +77,94 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
 
 
-def _row(start: RunStart) -> str:
-    return "\t".join(
-        [
-            start.run_id,
-            start.protocol_id,
-            start.started.isoformat(timespec="seconds"),
-            start.run_kind,
-        ]
+def start_path(area: Path, run_id: str) -> Path:
+    """Where the start file of RUN_ID lies in AREA:
+    `run-starts/<run_id>.json` — outside the run's directory, so deleting
+    that directory leaves it."""
+    return area / START_FILES_DIR / f"{run_id}{START_SUFFIX}"
+
+
+def is_start_file(rel: str) -> bool:
+    """Is REL, a path relative to an area, a run's start file?"""
+    parts = rel.split("/")
+    return (
+        len(parts) == 2
+        and parts[0] == START_FILES_DIR
+        and parts[1].endswith(START_SUFFIX)
+        and RUN_ID.fullmatch(parts[1].removesuffix(START_SUFFIX)) is not None
     )
 
 
-def write_start(base_dir: Path, start: RunStart) -> None:
-    """Append START to the start record of the area BASE_DIR and make it
-    durable before returning: the header where the file is new, the row,
-    flushed and synced to disk, the directory synced for a new file.
+def write_start(area: Path, start: RunStart) -> Path:
+    """Write the start file of START's run in AREA, whole and durable before
+    returning, and never over a file that is there: the text goes to a
+    temporary file beside it and is synced, a hard link then creates the
+    start file in one step — failing when the name exists —, and the
+    directory is synced.
 
     Side effects:
-        Creates or appends to BASE_DIR/run-starts.tsv.
+        Creates AREA/run-starts/<run_id>.json, and the directory where it
+        is missing; leaves no temporary file.
 
-    The caller holds the index lock (`run_index.index_lock`): the header
-    check reads the same file, and two starts must not interleave. Raises
-    OSError when the row cannot be written or synced — the caller refuses
-    the start —, RunStartsError when the file there does not read or
-    already lists the run."""
-    path = base_dir / RUN_STARTS
-    known = _parse(path)
-    if start.run_id in known:
-        raise RunStartsError(
-            f"{path} already lists {start.run_id} — a run starts once; repair the "
-            f"file by hand (never delete the row of a run that started)"
-        )
-    new = not path.exists() or path.stat().st_size == 0
-    with path.open("a", encoding="utf-8") as f:
-        if new:
-            f.write("\t".join(RUN_START_COLS) + "\n")
-        f.write(_row(start) + "\n")
-        f.flush()
-        os.fsync(f.fileno())
-    if new:
-        fd = os.open(base_dir, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-
-
-def _parse(path: Path) -> dict[str, RunStart]:
-    """The rows of the start record at PATH by run id, in file order,
-    checked as written; {} without a file or with an empty one. Raises
-    RunStartsError naming the line."""
-    if not path.exists():
-        return {}
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if not lines:
-        return {}
-    way = (
-        "repair the line by hand; never delete the row of a run that started — it "
-        "may be the only trace of a run whose folder is gone"
+    Returns the path. Raises FileExistsError when a start file of that run
+    id exists — a run starts once, and nothing is overwritten —, OSError
+    when the file cannot be written or synced; the caller refuses the
+    start on either."""
+    path = start_path(area, start.run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(
+        {
+            "run_id": start.run_id,
+            "protocol_id": start.protocol_id,
+            "started_utc": start.started.isoformat(timespec="seconds"),
+            "run_kind": start.run_kind,
+        },
+        indent=2,
     )
-    if lines[0].split("\t") != RUN_START_COLS:
-        raise RunStartsError(
-            f"{path}:1: columns {lines[0].split(chr(9))} are not "
-            f"{RUN_START_COLS} — a damaged first line; {way}"
-        )
-    out: dict[str, RunStart] = {}
-    for n, line in enumerate(lines[1:], start=2):
-        if not line:
-            continue
-        start = _start_of(line, f"{path}:{n}", way)
-        if start.run_id in out:
-            raise RunStartsError(f"{path}:{n}: {start.run_id} is listed twice; {way}")
-        out[start.run_id] = start
-    return out
-
-
-def _start_of(line: str, where: str, way: str) -> RunStart:
-    """The row LINE as a `RunStart`. Raises RunStartsError naming WHERE
-    (file and line) and the way out WAY for a row without every column, a
-    start that is no time in UTC, or a kind that is none."""
-    row = line.split("\t")
-    if len(row) != len(RUN_START_COLS):
-        raise RunStartsError(
-            f"{where}: {len(row)} of {len(RUN_START_COLS)} tab-separated "
-            f"columns ({', '.join(RUN_START_COLS)}) — a row cut short or run "
-            f"together; {way}"
-        )
-    run_id, protocol_id, written, kind = row
+    staged = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
-        started = datetime.fromisoformat(written)
+        with staged.open("x", encoding="utf-8") as f:
+            f.write(text + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.link(staged, path)  # atomic, and refuses a name that exists
+    finally:
+        staged.unlink(missing_ok=True)
+    fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    return path
+
+
+def parse_start(text: str, where: str, run_id: str) -> RunStart:
+    """TEXT, the content of the start file of RUN_ID, as a `RunStart`. WHERE
+    names the file in the error. Raises RunStartsError for text that is no
+    JSON object of exactly START_FIELDS, a `run_id` other than RUN_ID, a
+    start that is no time in UTC, or a kind that is none. Pure."""
+    way = (
+        "restore the file from the commit that holds it (`git checkout <commit> -- "
+        "<path>`); never write one anew from memory or delete it — it may be the "
+        "only trace of a run whose folder is gone"
+    )
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RunStartsError(f"{where}: not JSON ({exc}); {way}") from exc
+    if not isinstance(data, dict) or tuple(data) != START_FIELDS:
+        raise RunStartsError(
+            f"{where}: a start file holds exactly the keys {', '.join(START_FIELDS)}, "
+            f"in this order; {way}"
+        )
+    if data["run_id"] != run_id:
+        raise RunStartsError(
+            f"{where}: run_id = {data['run_id']!r} is not the run its name says "
+            f"({run_id}); {way}"
+        )
+    written = data["started_utc"]
+    try:
+        started = datetime.fromisoformat(written) if isinstance(written, str) else None
     except ValueError:
         started = None
     if started is None or started.utcoffset() != timedelta(0):
@@ -164,21 +172,30 @@ def _start_of(line: str, where: str, way: str) -> RunStart:
             f"{where}: started_utc = {written!r} is no time in UTC "
             f"(`2026-11-18T12:03:15+00:00`); {way}"
         )
+    if not isinstance(data["protocol_id"], str):
+        raise RunStartsError(
+            f"{where}: protocol_id = {data['protocol_id']!r} is no text; {way}"
+        )
     try:
-        run_kind = parse_run_kind(kind)
+        run_kind = parse_run_kind(data["run_kind"])
     except ValueError as exc:
         raise RunStartsError(f"{where}: {exc}; {way}") from exc
-    return RunStart(run_id, protocol_id, started, run_kind)
+    return RunStart(run_id, data["protocol_id"], started, run_kind)
 
 
-def read_starts(base_dir: str | Path) -> dict[str, RunStart]:
-    """The start record of the area BASE_DIR by run id, in file order —
-    read under the shared index lock, so a row a starting run appends is
-    read whole or not at all; {} without a file, and then no lock file is
-    made. Raises RunStartsError on a file that does not read: a short row
-    is never read as "no run started"."""
-    path = Path(base_dir) / RUN_STARTS
-    if not path.exists():
+def read_starts(area: str | Path) -> dict[str, RunStart]:
+    """The start files of AREA as the working tree holds them, by run id,
+    oldest first by name; {} without one. A file whose name is no run id's
+    is not a start file and is left alone. Raises RunStartsError on a start
+    file that does not read: a damaged file is never read as "no run
+    started"."""
+    held = Path(area) / START_FILES_DIR
+    if not held.is_dir():
         return {}
-    with index_lock(path.parent, shared=True):
-        return _parse(path)
+    out: dict[str, RunStart] = {}
+    for path in sorted(held.glob(f"*{START_SUFFIX}")):
+        run_id = path.name.removesuffix(START_SUFFIX)
+        if RUN_ID.fullmatch(run_id) is None:
+            continue
+        out[run_id] = parse_start(path.read_text(encoding="utf-8"), str(path), run_id)
+    return out

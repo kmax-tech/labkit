@@ -135,9 +135,6 @@ __pycache__/
 .runs.tsv.lock
 # the run index: a local view, rebuilt from runs/<run_id>/ by `runlog reindex`
 runs.tsv
-# the start record: which measurement started with which protocol and when;
-# local, written at each start, never rebuilt
-run-starts.tsv
 """
 
 REQUIREMENTS = """\
