@@ -955,12 +955,13 @@ def read_evidence(area: Path, staged: bool) -> AreaEvidence:
     )
 
 
-def decision_reviews(area: Path) -> list[reviews.Review]:
-    """AREA's decision reviews as the gates read them (`read_evidence`, the
-    tree's), for a review to be drawn or a rendering to be written. Raises
-    `reviews.ReviewError` when one does not read: a decision judged or a
-    line written past it would read as unreviewed. Raises RuntimeError when
-    git fails."""
+def decision_reviews_in_tree(area: Path) -> list[reviews.Review]:
+    """AREA's decision reviews as the working tree holds them, for a review
+    to be drawn or a rendering to be written. A review has no other file
+    state: a check of the index reads the tree's too (`read_evidence`), so
+    these are the reviews every gate judges by. Raises `reviews.ReviewError`
+    when one does not read: a decision judged or a line written past it
+    would read as unreviewed. Raises RuntimeError when git fails."""
     held = read_evidence(area, staged=False)
     if held.reviews_unread:
         raise reviews.ReviewError(

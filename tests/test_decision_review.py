@@ -14,6 +14,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from collections.abc import Callable
@@ -31,7 +32,7 @@ from protocol_fixture import (
     source_entry,
 )
 
-from labkit.formats import attempts, findings, promises, reviews, scope_sha
+from labkit.formats import attempts, evidence, findings, promises, reviews, scope_sha
 from labkit.gates import audit, decision_review, report_check
 from labkit.run import llm_backends
 from labkit.tools import protocol_fill, protocol_result
@@ -628,7 +629,7 @@ class TheCall(unittest.TestCase):
         """A decision review that does not read stops `--render` with a
         sentence naming it, never a traceback, and writes nothing: a line
         rendered past it would read the decision as unreviewed (final review,
-        2026-11-16: the raise of `evidence.decision_reviews` had no test at
+        2026-11-16: the raise of `evidence.decision_reviews_in_tree` had no test at
         a caller). The twin renders."""
         area, _ = area_with(
             [WARNING], {1: ("limitation", "one seed, said so", "stands")}
@@ -1185,6 +1186,49 @@ class TheFile(unittest.TestCase):
         self.assertTrue(second.name.endswith("-review-2.toml"), second.name)
         self.assertEqual([r.path for r in reviews.area_reviews(area)], [path, second])
         self.assertEqual(findings.area_records(area), [])
+
+
+class ReviewsHaveOneFileState(unittest.TestCase):
+    """A decision review is read from the working tree, also by a check of
+    the index (`evidence.read_evidence`): the reviews a gate judges by and
+    the ones `evidence.decision_reviews_in_tree` gives a rendering are the
+    same files, so a staged check never holds a protocol to two states of
+    them."""
+
+    def test_a_review_outside_the_index_is_read_by_a_staged_check_too(self):
+        root = Path(tempfile.mkdtemp())
+        area = root / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        (area / "README.md").write_text("x\n", encoding="utf-8")
+        for args in (
+            ("init", "-q"),
+            ("add", "-A"),
+            ("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "area"),
+        ):
+            subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+        d = reviews.Decision(1, "d", "upheld", "the claim is in-sample")
+        path = reviews.write_review(
+            area, "opus", "r-analysis.toml", "s", "h", "c", [d], again=False
+        )
+        tracked = subprocess.run(
+            ["git", "ls-files", "--", "experiments"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+        self.assertEqual(tracked, ["experiments/01-x/README.md"])  # no review
+        in_tree = evidence.decision_reviews_in_tree(area)
+        self.assertEqual([r.path for r in in_tree], [path])
+        for staged in (True, False):
+            with self.subTest(staged=staged):
+                held = evidence.read_evidence(area, staged=staged)
+                self.assertEqual(list(held.reviews), in_tree)
+
+    def test_without_a_review_both_states_read_none(self):
+        area, _ = area_with([WARNING], {1: ("limitation", "one seed", "stands")})
+        self.assertEqual(evidence.decision_reviews_in_tree(area), [])
+        self.assertEqual(evidence.read_evidence(area, staged=False).reviews, ())
 
 
 class Journal(unittest.TestCase):

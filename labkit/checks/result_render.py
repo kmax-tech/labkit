@@ -374,7 +374,7 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
                         pred.parent,
                         pred_text,
                         pred_run,
-                        found=evidence.decision_reviews(pred.parent),
+                        found=evidence.decision_reviews_in_tree(pred.parent),
                     ),
                 )
                 verdict = said or f"run {declared}, no promise to judge"

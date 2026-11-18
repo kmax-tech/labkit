@@ -382,7 +382,7 @@ def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str,
     and on a block in REPORT that does not read."""
     run = declared_run_dir(text, area, "a report shows an adopted result only")
     body = report_blocks.block_body(
-        rendering(area, text, run, found=evidence.decision_reviews(area))
+        rendering(area, text, run, found=evidence.decision_reviews_in_tree(area))
     )
     return report_blocks.with_block(report, protocol, run.name, body), run.name
 

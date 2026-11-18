@@ -331,7 +331,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     what the record's auditor saw, else AuditError — the decisions were
     made on that state. AuditError too when the record holds nothing to
     review, or names a run that is gone."""
-    found = evidence.decision_reviews(area)
+    found = evidence.decision_reviews_in_tree(area)
     decided = reviewable(record, found)
     if not decided:
         raise AuditError(
@@ -479,7 +479,7 @@ def contested_gap(
     already said `rejected` or `insufficient` (`reviews.contested`). Its way
     out changes that state (`ways_out.contested_way`), not another call."""
     text = protocol.read_text(encoding="utf-8")
-    found = evidence.decision_reviews(area)
+    found = evidence.decision_reviews_in_tree(area)
     contested = [
         n
         for n, _ in reviewable(record, found)
@@ -594,7 +594,7 @@ def print_contested_ways(
     evidence way after a rejection, or none after an upheld `--again`.
     Side effect: stdout only."""
     text = protocol.read_text(encoding="utf-8")
-    found = evidence.decision_reviews(area)
+    found = evidence.decision_reviews_in_tree(area)
     contested = [n for n in not_upheld if reviews.contested(record, n, found, text)]
     if not contested:
         return
@@ -619,7 +619,7 @@ def render_hint(area: Path, protocol: Path, written: Path) -> str:
     declared = protocol_block.declared_run(text)
     if declared is None:
         return ""
-    found = evidence.decision_reviews(area)
+    found = evidence.decision_reviews_in_tree(area)
     before = [r for r in found if r.path.name != written.name]
     try:
         run = run_path(area, declared)
@@ -698,5 +698,5 @@ def not_upheld_after(
     nothing. BLOCKERs and WARNINGs alike: which of them hold the number is
     `holding_the_number`."""
     text = protocol.read_text(encoding="utf-8")
-    found = evidence.decision_reviews(area)
+    found = evidence.decision_reviews_in_tree(area)
     return [n for n in numbers if not reviews.upholding(record, n, found, text)]
