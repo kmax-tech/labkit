@@ -57,7 +57,8 @@ from labkit.formats import (
     runs,
 )
 from labkit.formats.area_state import state_of
-from labkit.formats.repo import file_text, path_kind
+from labkit.formats.protocol_then import as_measured, bound_protocol_file
+from labkit.formats.repo import file_text, git_root, path_kind
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
 from labkit.checks.origin_check import origin_gap, origin_now
@@ -239,17 +240,47 @@ def require_run_code(run: Path, area: Path) -> None:
         )
 
 
+def protocol_as_run_saw(run: Path, area: Path) -> str | None:
+    """The text of the protocol RUN is bound to as RUN saw it when it
+    started — its commit with its uncommitted.patch, held to the promise
+    block it recorded (`protocol_then.as_measured`) —, not as the
+    protocol reads now; None for an unbound run. This module's reading of
+    `as_measured`, as a refusal. A run that recorded no promise block is
+    read from its commit and patch alone: there is no recorded block to
+    hold that text to. Raises SystemExit, with
+    why and what brings the text back, when it cannot be read back: the
+    protocol as it reads now is never read in its place. Reads files and
+    git."""
+    rd = runs.read_run_dir(run)
+    if rd.error is not None:
+        raise SystemExit(f"recheck: run {run.name}: {rd.error}")
+    if rd.config is None or rd.config.protocol.id is None:
+        return None
+    binding = rd.config.protocol
+    assert binding.id is not None
+    protocol = bound_protocol_file(area, binding.id, binding.path)
+    text, where = as_measured(protocol, rd, git_root(area), role="run")
+    if text is None:
+        raise SystemExit(
+            f"recheck: the protocol run {run.name} was measured under cannot be "
+            f"read back: {where} — what it registered then (its `[kept]` key) is "
+            f"not taken from the protocol as it reads now; restore what the "
+            f"sentence names, or measure anew and hold that run"
+        )
+    return text
+
+
 def kept_keys(run: Path, area: Path) -> frozenset[str]:
-    """The `[kept]` key of the protocol RUN is bound to — the number the
-    protocol reports, compared exactly by `agree` —, empty for an
-    unbound run or a protocol without the table. Raises SystemExit when the
-    protocol's head does not read."""
-    cfg = runs.read_run_config(run)
-    if cfg is None or cfg.protocol.id is None:
+    """The `[kept]` key RUN's protocol named when the run started
+    (`protocol_as_run_saw`, not the protocol as it reads now) — the number
+    it reports, compared exactly by `agree` —, empty for an unbound run or
+    a text without the table. Raises SystemExit when that text cannot be
+    read back or its head does not read."""
+    text = protocol_as_run_saw(run, area)
+    if text is None:
         return frozenset()
     try:
-        protocol = protocol_block.find_by_id(area, cfg.protocol.id)
-        table = protocol_block.kept(state_of(area).text_of(protocol))
+        table = protocol_block.kept(text)
     except protocol_block.BlockError as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     return frozenset({table.key}) if table is not None and table.key else frozenset()
@@ -261,7 +292,9 @@ def block_unchanged(run: Path, area: Path) -> None:
     A lowered threshold can leave the verdict unchanged by chance — the
     recomputation then agrees and the note looks held, against promises
     nobody registered before the number. The bound
-    protocol's block must be the one the run recorded.
+    protocol's block as it reads now must be the one the run recorded.
+    The step of a run the protocol answers with; an older run named for a
+    recheck is held under its own text instead (`holds`).
     """
     cfg = runs.read_run_config(run)
     if cfg is None or cfg.protocol.id is None:
@@ -412,18 +445,24 @@ def verified(
     out: Path,
     recompute: Callable[[list[dict]], dict],
     ignore: frozenset[str] = LABKIT_KEYS,
+    *,
+    hold_block_now: bool = True,
 ) -> tuple[dict, list[str]]:
-    """pin → scopes → code → block → agree for one run, no note: (its metrics, the
+    """pin → scopes → code → block (if HOLD_BLOCK_NOW) → agree for one run, no note: (its metrics, the
     keys the recomputation grew). What `holds` checks before the note, and
     what `02_analyze.py --draws` checks for every draw — a draw shown
     unchecked lets an edited repeat file change the flipped items, an edited
-    metrics.json the range. Raises SystemExit on the
-    first disagreement, `NotVerifiable` where the code step finds no
-    proof."""
+    metrics.json the range. The block step holds the protocol as it reads
+    now to the block the run recorded (`block_unchanged`) unless
+    HOLD_BLOCK_NOW is False — an older run rechecked after the protocol moved on; the
+    kept key is always the one of the run's own text (`kept_keys`). Raises
+    SystemExit on the first disagreement, `NotVerifiable` where the code
+    step finds no proof."""
     pin(run, out)
     scopes_unchanged(run, area)
     require_run_code(run, area)
-    block_unchanged(run, area)
+    if hold_block_now:
+        block_unchanged(run, area)
     metrics = runs.read_metrics(runs.metrics_path(run))
     grown = agree(
         metrics, recompute(rows_of(out)), ignore, reported=kept_keys(run, area)
@@ -444,6 +483,10 @@ def holds(
     """pin → scopes → code → block → agree → cited, for the run that answers the
     protocol (`chosen_run`; or `run_id`). The protocol is `note` unless
     `protocol` names it — a results note under notes/ carries no head.
+    The answering run (no RUN_ID) also holds the protocol as it reads now
+    to the block it recorded; a run named by RUN_ID is rechecked under its
+    own text — the block it recorded and the `[kept]` key of the protocol
+    as it started under it —, whatever the protocol registers now.
     The code step (`require_run_code`) refuses a run whose script or
     imported modules changed since it ran, and raises `NotVerifiable` for
     a run whose code cannot be compared with the code here.
@@ -452,7 +495,10 @@ def holds(
     the note rounds. Raises SystemExit on the first disagreement,
     `NotVerifiable` where the code step finds no proof."""
     run = run_dir(area, protocol or note, run_id)
-    metrics, grown = verified(run, area, out, recompute, ignore)
+    answering = run_id is None  # no run named: the one the protocol answers with
+    metrics, grown = verified(
+        run, area, out, recompute, ignore, hold_block_now=answering
+    )
     return _cited_verdict(run, out, metrics, grown, note, numbers, ignore)
 
 
@@ -538,19 +584,22 @@ def verified_from_inputs(
     area: Path,
     recompute: Callable[[Mapping[str, Path]], dict],
     ignore: frozenset[str] = LABKIT_KEYS,
+    *,
+    hold_block_now: bool = True,
 ) -> tuple[dict, list[str]]:
-    """inputs → scopes → code → block → agree for RUN, no note: (its metrics, the
+    """inputs → scopes → code → block (if HOLD_BLOCK_NOW) → agree for RUN, no note: (its metrics, the
     keys the recomputation grew). First every recorded input is the bytes
     the run read (`inputs_pinned`); only then RECOMPUTE — the run's own
     evaluation, given each input's path by its `data=` key — is compared
-    with metrics.json as `verified` compares it. The source runs are not
+    with metrics.json as `verified` compares it, HOLD_BLOCK_NOW as there. The source runs are not
     run again. Raises SystemExit on the first disagreement, `NotVerifiable`
     where the code step finds no proof; a failed input or code step leaves
     RECOMPUTE uncalled."""
     pinned = inputs_pinned(run, area)
     scopes_unchanged(run, area)
     require_run_code(run, area)
-    block_unchanged(run, area)
+    if hold_block_now:
+        block_unchanged(run, area)
     metrics = runs.read_metrics(runs.metrics_path(run))
     grown = agree(metrics, recompute(pinned), ignore, reported=kept_keys(run, area))
     return metrics, grown
@@ -569,8 +618,12 @@ def holds_from_inputs(
     comparison over source runs' outputs: inputs → scopes → code → block →
     agree → cited (`verified_from_inputs`, `_cited_verdict`), for the run
     that answers the protocol (`chosen_run`; or RUN_ID). The code step is
-    `holds`'s. Raises SystemExit on the first disagreement, `NotVerifiable`
+    `holds`'s, and as there a run named by RUN_ID is rechecked under its
+    own text, not held to the promise block as it reads now. Raises SystemExit on the first disagreement, `NotVerifiable`
     where the code step finds no proof."""
     run = run_dir(area, protocol or note, run_id)
-    metrics, grown = verified_from_inputs(run, area, recompute, ignore)
+    answering = run_id is None  # no run named: the one the protocol answers with
+    metrics, grown = verified_from_inputs(
+        run, area, recompute, ignore, hold_block_now=answering
+    )
     return _cited_verdict(run, None, metrics, grown, note, numbers, ignore)

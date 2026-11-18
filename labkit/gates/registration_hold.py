@@ -44,7 +44,7 @@ from labkit.formats.runs import (
 )
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import AreaState, Measured
-from labkit.formats import protocol_history
+from labkit.formats import protocol_history, protocol_then
 from labkit.formats.reference import LAB_035
 from labkit.formats.repo import (
     rel_posix,
@@ -240,7 +240,7 @@ def workflow(
 ) -> tuple[str | None, list[GateFinding]]:
     """(the workflow, the holds on the type): the type the first
     measurements of PROTOCOL registered, read from their own texts
-    (`protocol_history.as_measured`) — the head as it stands names no
+    (`protocol_then.as_measured`) — the head as it stands names no
     workflow, so relabelling lifts no lock and makes no confirmation. None
     where no type can be read: an undecided one (`type_of`), first
     measurements that registered different types, or no first measurement
@@ -253,7 +253,7 @@ def workflow(
     seen = [
         (rd, text)
         for rd in firsts
-        if (text := protocol_history.as_measured(protocol, rd, root)[0]) is not None
+        if (text := protocol_then.as_measured(protocol, rd, root)[0]) is not None
     ]
     types = list(dict.fromkeys(type_of(text) for _, text in seen))
     if len(types) > 1:
@@ -264,7 +264,7 @@ def workflow(
     first = seen[0][0]
     answering = read_run_dir(run)
     then = (
-        protocol_history.as_measured(protocol, answering, root)[0]
+        protocol_then.as_measured(protocol, answering, root)[0]
         if all(rd.dir.resolve() != run.resolve() for rd, _ in seen)
         else None
     )
@@ -474,7 +474,7 @@ def _scope_held(
         # every difference among them is a corrected field: on to the holds
         # of the answering run's text and the protocol as it stands
     seen, _ = (
-        protocol_history.as_measured(protocol, read_run_dir(run), root)
+        protocol_then.as_measured(protocol, read_run_dir(run), root)
         if others
         else (None, "")
     )
@@ -1124,15 +1124,15 @@ def named_changes(
 ) -> tuple[list[str], list[str]]:
     """(changes, restores): every change of the promise block from the
     first measurement FIRST to the ANSWERING run, and what undoes each. From
-    the protocol texts both runs saw (`protocol_history.as_measured`,
+    the protocol texts both runs saw (`protocol_then.as_measured`,
     `promise_differences`): sentences, keys, constants and scopes together —
     the run records keep sentences only through the block's digest, and a
     restore that names only the constants leaves a changed sentence that
     holds the next run again. Where a text cannot be read back,
     what the records WAS and NOW hold (`promises.snapshot_changes`) and why
     the sentences go unnamed. Raises RuntimeError when git fails."""
-    then, why_then = protocol_history.as_measured(protocol, first, root)
-    current, why_now = protocol_history.as_measured(protocol, answering, root)
+    then, why_then = protocol_then.as_measured(protocol, first, root)
+    current, why_now = protocol_then.as_measured(protocol, answering, root)
     if then is not None and current is not None:
         diffs = protocol_history.promise_differences(then, current)
         if diffs:

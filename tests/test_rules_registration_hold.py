@@ -341,7 +341,9 @@ class TheFollowUpLeadsOnlyForAFieldTheRunSawAsItStands(unittest.TestCase):
         history = registration_hold.protocol_history
         with (
             mock.patch.object(registration_hold, "read_run_dir"),
-            mock.patch.object(history, "as_measured", return_value=(TEXT, "")),
+            mock.patch.object(
+                registration_hold.protocol_then, "as_measured", return_value=(TEXT, "")
+            ),
             mock.patch.object(
                 history, "first_measured_differences", return_value=(None, SCOPE)
             ),

@@ -40,13 +40,14 @@ from labkit.formats.findings import (
     evidence_request,
 )
 from labkit.formats.followup import DiffAsked
-from labkit.formats.protocol_block import BlockError, find_by_id
+from labkit.formats.protocol_block import BlockError
 from labkit.formats.protocol_history import (
     StepThen,
     registration_differences,
     step_then,
 )
 from labkit.formats.promises import PromiseError
+from labkit.formats.protocol_then import bound_protocol_file
 from labkit.formats.repo import GitError, git_root, layout_root, shown, text_at
 from labkit.formats.run_code import (
     CodeDifference,
@@ -120,20 +121,6 @@ def run_diff_command(area: Path, old: str, new: str) -> str:
     path — the piece is bound by its digest, so no spelling of the path
     (on macOS /var is /private/var) may move it."""
     return f"labkit-run-diff {shown(area, layout_root(area))} {old} {new}"
-
-
-def bound_protocol_file(area: Path, pid: str, recorded: str | None) -> Path:
-    """The protocol file of AREA that a run bound to PID was measured
-    under, to read its text then from (`protocol_history.as_measured`):
-    the one carrying PID now, else the path the run RECORDED, else the
-    stamped name — at the run's commit `as_measured` finds the file by the
-    id again. The one finding of a run's protocol by its binding."""
-    try:
-        return find_by_id(area, pid)
-    except BlockError:
-        if recorded and not Path(recorded).is_absolute():
-            return area / recorded
-        return area / f"PROTOCOL-{pid}.md"
 
 
 @dataclass(frozen=True)

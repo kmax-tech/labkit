@@ -1366,7 +1366,7 @@ def patch_lost(rd: RunDir) -> bool:
     is gone: runlog writes the patch whenever the tree was not clean (its
     `git` ends in DIRTY_MARK), so without the file the commit alone is not
     what the run saw — neither its protocol text
-    (`protocol_history.as_measured`) nor its code (`run_code.code_then`)
+    (`protocol_then.as_measured`) nor its code (`run_code.code_then`)
     reads back. RD's config must read."""
     assert rd.config is not None, "a run whose config reads"
     return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()

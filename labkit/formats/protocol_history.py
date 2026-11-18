@@ -21,6 +21,7 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_block import COUNTS
+from labkit.formats.protocol_then import as_measured, protocol_path_at
 from labkit.formats.protocol_check import (
     REGISTERED_FIELDS,
     field_name,
@@ -35,9 +36,6 @@ if TYPE_CHECKING:
 
 from labkit.formats.repo import (
     rel_posix,
-    GitError,
-    blob_text,
-    blobs_then,
     commit_known,
     git_root,
     git_run,
@@ -180,30 +178,6 @@ class CommittedAt:
     text: str | None
     cause: str | None
     detail: str = ""
-
-
-def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
-    """Where the protocol carrying id PID stood in COMMIT of the repository
-    ROOT — the `PROTOCOL-*.md` whose head names PID —, or None when no file
-    there does. The id is the binding and survives a rename or a move
-    (docs/protocol-run-binding.md); the head is read as TOML only, since an
-    older commit holds an older standard `protocol_block.head` refuses.
-    Raises GitError when git cannot run."""
-    listed = git_run(["ls-tree", "-r", "-z", "--name-only", commit], root)
-    if listed.returncode != 0:
-        raise GitError(f"git ls-tree {commit[:12]} in {root}: {listed.stderr.strip()}")
-    names = [n for n in listed.stdout.split("\0") if n]
-    for rel in sorted(n for n in names if Path(n).name.startswith("PROTOCOL-")):
-        text = text_at(root, root / rel, commit)
-        if text is None:
-            continue
-        try:
-            table = protocol_block.parse_toml_block(text).get("protocol", {})
-        except protocol_block.BlockError:
-            continue  # a block that does not parse names no id to bind
-        if isinstance(table, dict) and table.get("id") == pid:
-            return root / rel
-    return None
 
 
 def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
@@ -713,76 +687,6 @@ def differences_among_first_measurements(
     ]
 
 
-def as_measured(
-    protocol: Path,
-    rd: "RunDir",
-    root: Path | None,
-    *,
-    role: str = "its first measurement",
-) -> tuple[str | None, str]:
-    """(text, where): PROTOCOL as run RD saw it — its recorded commit's text
-    with the part of the run's `uncommitted.patch` that touches the protocol
-    applied (`repo.blobs_then`), held to the promise block the run recorded.
-    TEXT None, WHERE then saying why and what brings it back, when that
-    cannot be read: no recorded commit, a commit this clone does not hold
-    (`git fetch` brings it), git unable to read that commit's tree or the
-    blob, or a patch that does not apply (git's own error), a tree without
-    the protocol (untracked when the run started), a text whose block is
-    not the one the run recorded, a run started from a changed tree whose
-    uncommitted.patch is gone (`runs.patch_lost`: the commit alone is not what
-    it saw). A comparison that needs the text holds on None
-    (`unread_measurements`), never reads it as no change. ROLE opens each
-    WHERE sentence before RD's id: "its first measurement" (the default),
-    "run" or "origin run"."""
-    from labkit.formats.runs import patch_path, recorded_commit
-
-    commit = recorded_commit(rd.config) if rd.config is not None else None
-    if commit is None or root is None:
-        return None, f"{role} {rd.dir.name} recorded no commit"
-    if rd.config is not None and runs.patch_lost(rd):
-        return None, (
-            f"{role} {rd.dir.name} started from a tree with changes "
-            f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
-            f"alone is not what it saw"
-        )
-    if not commit_known(root, commit):
-        return None, (
-            f"{role} {rd.dir.name} started at {commit[:12]}, a commit "
-            f"this clone does not hold — `git fetch` brings it"
-        )
-    patch_file = patch_path(rd.dir)
-    patch = patch_file.read_text(encoding="utf-8") if patch_file.is_file() else ""
-    pid = rd.config.protocol.id if rd.config is not None else None
-    try:
-        blob = blobs_then(root, commit, patch, [protocol])[protocol]
-        then = protocol_path_at(root, commit, pid) if blob is None and pid else None
-        if then is not None:  # renamed or moved since: found by its id
-            blob = blobs_then(root, commit, patch, [then])[then]
-    except GitError as exc:
-        return None, f"{role} {rd.dir.name}: {exc}"
-    if blob is None:
-        return None, (
-            f"{role} {rd.dir.name} ran with the protocol untracked: "
-            f"no commit holds what it registered"
-        )
-    try:
-        text = blob_text(root, blob)
-    except RuntimeError as exc:  # `git cat-file` could not read the blob
-        return None, f"{role} {rd.dir.name}: {exc}"
-    patched = " with its uncommitted.patch" if patch.strip() else ""
-    recorded = (rd.config.promises or {}).get("block_sha") if rd.config else None
-    if recorded is not None and _block_sha(text) != recorded:
-        return None, (
-            f"{role} {rd.dir.name} recorded block {recorded}, and "
-            f"{commit[:12]}{patched} gives {_block_sha(text)}: what it registered "
-            f"cannot be read back"
-        )
-    return (
-        text,
-        f"as {role} {rd.dir.name} saw it ({commit[:12]}{patched})",
-    )
-
-
 @dataclass(frozen=True)
 class StepThen:
     """The step a run made, read from its own protocol text (`step_then`).
@@ -865,12 +769,3 @@ def step_change_gaps(
         registration_differences(basis_text, run_text),
         [(c.what, c.from_, c.to) for c in step.changes],
     )
-
-
-def _block_sha(text: str) -> str | None:
-    """The digest of TEXT's promise block; None without one or unreadable."""
-    try:
-        block = promises.parse_block(text)
-    except promises.PromiseError:
-        return None
-    return block.sha if block is not None else None

@@ -20,6 +20,7 @@ from unittest import mock
 
 from labkit.checks import recheck
 from labkit.run import runlog
+from protocol_fixture import recheck_without_git
 
 
 def evaluate(inputs: Mapping[str, Path]) -> dict:
@@ -34,12 +35,7 @@ def evaluate(inputs: Mapping[str, Path]) -> dict:
 class FromInputs(unittest.TestCase):
     def setUp(self) -> None:
         self.require_run_code = recheck.require_run_code
-        # the code step has its own tests against real repositories
-        # (tests/test_run_code.py); a run written here records no script,
-        # so every recheck of it would end there, not verifiable
-        code_step = mock.patch.object(recheck, "require_run_code")
-        code_step.start()
-        self.addCleanup(code_step.stop)
+        recheck_without_git(self)
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.area = Path(tmp.name) / "area"

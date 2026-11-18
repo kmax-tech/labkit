@@ -3,7 +3,7 @@ never read as "nothing changed".
 
 finalize holds the protocol, as the answering run saw it and as it stands,
 to what its first measurement registered, read back through git
-(`protocol_history.as_measured`). When git cannot read that text — a
+(`protocol_then.as_measured`). When git cannot read that text — a
 commit's tree or a blob missing from the object store, a recorded patch
 that does not apply — finalize does not pass over it as if the first
 measurement's registration stood, which would let a changed question

@@ -4,7 +4,7 @@
 
 The step names its basis run, why it is taken and every change of the
 registration against the basis run's own text — computed here from that
-text (`protocol_history.as_measured`) and the protocol as it stands
+text (`protocol_then.as_measured`) and the protocol as it stands
 (`protocol_history.registration_differences`), never typed. A run id is
 written by this command, never by hand. The basis is held as the start
 holds it (`start_check.require_step_basis`): a completed run of this
@@ -20,10 +20,8 @@ from pathlib import Path
 
 from labkit.formats import protocol_block, runs
 from labkit.formats.protocol_block import BuildsOn, StepChange, toml_string
-from labkit.formats.protocol_history import (
-    registration_differences,
-    as_measured,
-)
+from labkit.formats.protocol_history import registration_differences
+from labkit.formats.protocol_then import as_measured
 from labkit.formats.repo import git_root
 from labkit.run.start_check import require_step_basis
 

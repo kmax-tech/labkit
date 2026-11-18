@@ -12,7 +12,9 @@ from labkit.formats.runs import RunKind
 import json
 import re
 import subprocess
+import unittest
 from pathlib import Path
+from unittest import mock
 
 from labkit.formats import promises, runs
 
@@ -379,6 +381,35 @@ def started_at(run: Path, root: Path) -> None:
     data = json.loads(cfg.read_text(encoding="utf-8"))
     data.update(head_commit(root))
     cfg.write_text(json.dumps(data), encoding="utf-8")
+
+
+def recheck_without_git(test: unittest.TestCase) -> None:
+    """Stand in, for the length of TEST, for the two steps of `recheck`
+    that read git, so that runs written into a directory that is no
+    repository reach the steps under test: the code step passes
+    (`recheck.require_run_code`), and the protocol a run saw
+    (`recheck.protocol_as_run_saw`) is the protocol carrying its id as it
+    reads now, None for an unbound run. Both steps have their own tests
+    against real repositories (tests/test_run_code.py,
+    tests/test_recheck_own_text.py); a run as written here records no
+    script and no commit and would end at either."""
+    from labkit.checks import recheck
+    from labkit.formats import protocol_block
+
+    def as_it_reads_now(run: Path, area: Path) -> str | None:
+        cfg = runs.read_run_config(run)
+        if cfg is None or cfg.protocol.id is None:
+            return None
+        found = protocol_block.find_by_id(area, cfg.protocol.id)
+        return found.read_text(encoding="utf-8")
+
+    for step, stand_in in (
+        ("require_run_code", mock.Mock(return_value=None)),
+        ("protocol_as_run_saw", as_it_reads_now),
+    ):
+        patcher = mock.patch.object(recheck, step, stand_in)
+        patcher.start()
+        test.addCleanup(patcher.stop)
 
 
 def decide_words(*words: str) -> list[str]:

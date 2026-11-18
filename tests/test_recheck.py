@@ -13,7 +13,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from protocol_fixture import run_record, PID, head  # noqa: E402
+from protocol_fixture import run_record, PID, head, recheck_without_git  # noqa: E402
 
 from labkit.checks import recheck, result_render  # noqa: E402
 
@@ -27,12 +27,7 @@ def evaluate(rows: list[dict]) -> dict:
 class Area(unittest.TestCase):
     def setUp(self):
         self.require_run_code = recheck.require_run_code
-        # the code step has its own tests against real repositories
-        # (tests/test_run_code.py); a run written here records no script,
-        # so every recheck of it would end there, not verifiable
-        code_step = mock.patch.object(recheck, "require_run_code")
-        code_step.start()
-        self.addCleanup(code_step.stop)
+        recheck_without_git(self)
         self._tmp = tempfile.TemporaryDirectory()
         self.area = Path(self._tmp.name)
         self.out = self.area / "output" / "rows.jsonl"

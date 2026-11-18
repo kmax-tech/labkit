@@ -32,7 +32,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import next_command, report_command
-from labkit.formats import area_state, gate, protocol_history, runs
+from labkit.formats import area_state, gate, protocol_history, protocol_then, runs
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
@@ -209,7 +209,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertIn("does it hold?", then.text or "")
         # what the run saw reads back too, where the comparisons read it
         rd = area_state.state_of(self.area).measured_of(PID).firsts[0]
-        text, where = protocol_history.as_measured(self.proto, rd, self.root)
+        text, where = protocol_then.as_measured(self.proto, rd, self.root)
         self.assertIn("does it hold?", text or "", where)
 
     def test_the_twin_a_rename_finds_nothing_when_no_protocol_carried_the_id(self):
@@ -221,7 +221,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertNotEqual(sha, before)
         self._commit(REGISTRATION)
         self._run(sha)
-        self.assertIsNone(protocol_history.protocol_path_at(self.root, sha, PID))
+        self.assertIsNone(protocol_then.protocol_path_at(self.root, sha, PID))
 
     def test_a_field_written_after_the_first_measurement_blocks(self):
         sha = self._commit("")  # the question not yet written

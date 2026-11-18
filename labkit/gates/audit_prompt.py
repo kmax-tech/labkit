@@ -39,10 +39,10 @@ from labkit.formats import (
 from labkit.formats.runs import ArtefactError, read_data, recorded_models
 from labkit.formats.prompts import prompt_body
 from labkit.formats.protocol_block import repo_protocol_ids
+from labkit.formats.protocol_then import as_measured
 from labkit.formats.protocol_history import (
     ABSENT,
     BoundValidation,
-    as_measured,
     bound_validation,
     registrations_as_first_measured,
 )

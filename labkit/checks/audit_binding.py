@@ -44,7 +44,6 @@ from labkit.checks.origin_check import origin_piece
 from labkit.checks.protocol_runs import (
     NOT_SHOWN,
     label_check,
-    bound_protocol_file,
     protocol_runs_pieces,
 )
 from labkit.formats.area_state import AreaState, gone_run_restore
@@ -59,7 +58,7 @@ from labkit.formats.gate import (
     cited_rule,
     with_way_out,
 )
-from labkit.formats.protocol_history import as_measured
+from labkit.formats.protocol_then import as_measured, bound_protocol_file
 from labkit.formats.repo import (
     git_root,
     layout_root,
@@ -254,7 +253,7 @@ def source_protocol_then(
     area: Path, run_id: str, root: Path | None
 ) -> SourceProtocolThen:
     """The protocol origin run RUN_ID of AREA was bound to, as it saw it
-    when it started (`protocol_history.as_measured`: its recorded commit
+    when it started (`protocol_then.as_measured`: its recorded commit
     with its uncommitted.patch, held to the promise block it recorded),
     found by the run's protocol id — the protocol carrying it now, else the
     path the run recorded, and at that commit by the id again. No text, the
