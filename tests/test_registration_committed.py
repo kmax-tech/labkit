@@ -45,6 +45,7 @@ from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check, report_hold
 from labkit.gates import report_context
+from repo_fixture import git as _git
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -61,12 +62,6 @@ BAR = (
 #: hours behind UTC (its id sorts before a run started a moment earlier
 #: here), one ahead (about this machine's), fourteen ahead (after)
 ZONES = ("Etc/GMT+12", "Etc/GMT-1", "Etc/GMT-14")
-
-
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
-    ).stdout.strip()
 
 
 def _report_check(area: Path) -> tuple[int, str]:

@@ -25,7 +25,6 @@ import io
 import json
 import os
 import signal
-import subprocess
 import sys
 import tempfile
 import time
@@ -53,6 +52,7 @@ from protocol_fixture import (
     script_sha_of,
     shown_sha,
 )  # noqa: E402
+from repo_fixture import git as _git
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -92,10 +92,6 @@ RUN_SCRIPT = (
     'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
     '    metrics = {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n'
 )
-
-
-def _git(cwd, *args):
-    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
 
 
 def _repo(frozen: bool, script: str = RUN_SCRIPT, repeat_cost: str = "high") -> Path:

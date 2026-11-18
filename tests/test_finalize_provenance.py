@@ -25,6 +25,7 @@ from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
 from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
 from labkit.run import provenance  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
+from repo_fixture import git as _git
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -40,10 +41,6 @@ HIGH = (
     + head(repeat_cost="high", frozen=True, promises=None, kept=("mean", "1"))
     + BODY
 )
-
-
-def _git(cwd, *args):
-    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
 
 
 def _recorded(path: Path) -> str:

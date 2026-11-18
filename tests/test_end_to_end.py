@@ -67,6 +67,7 @@ from protocol_fixture import (
     shown_sha,
 )  # noqa: E402
 from labkit.formats.runs import RUN_ID_TIME  # noqa: E402
+from repo_fixture import git
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -118,10 +119,7 @@ class Lab:
         self.tmp.cleanup()
 
     def git(self, *args: str) -> str:
-        r = subprocess.run(
-            ["git", *args], cwd=self.root, capture_output=True, text=True, check=True
-        )
-        return r.stdout
+        return git(self.root, *args)
 
     def commit(self, message: str) -> None:
         self.git("add", "-A")

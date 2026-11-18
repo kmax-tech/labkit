@@ -29,6 +29,7 @@ from labkit.formats import report_reviews
 from labkit.gates import report_check, report_hold, report_review
 from labkit.tools import protocol_fill
 from labkit.tools import protocol_result
+from repo_fixture import git as _git
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -42,7 +43,6 @@ class ReportFiles(unittest.TestCase):
 
     RUN = test_report_check.IfReported.RUN
     _area = test_report_check.IfReported._area
-    _git = staticmethod(test_report_check.IfReported._git)
 
     def _gate(self, root: Path, *paths: Path, staged: bool = False) -> tuple[int, str]:
         buf = io.StringIO()
@@ -554,7 +554,7 @@ class ReportFiles(unittest.TestCase):
         root = area.parent.parent
         report = root / "REPORT.md"
         self._discussed(report, area, "audit failed", "# Report\n\ncriterion-1 PASS\n")
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         honest = report.read_text(encoding="utf-8").replace(
             "criterion-1 PASS", "No result."
         )
@@ -563,11 +563,11 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)  # its record not staged: the area differs
         self.assertIn("the working tree differs from the index", out)
-        self._git(root, "add", str(area / "audits"))
+        _git(root, "add", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)  # the record staged, the report not
         self.assertIn("has no clean report review of this state", out)
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
 
@@ -584,13 +584,13 @@ class ReportFiles(unittest.TestCase):
         report = root / "REPORT.md"
         self._discussed(report, area, "audit failed", "# Report\n\nNo result.\n")
         self._reviewed(report, area)
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
         metrics = area / "runs" / self.RUN / "metrics.json"
         metrics.write_text('{"criterion_1_pass": false}', encoding="utf-8")
         self._reviewed(report, area)  # a review of the unstaged metrics
-        self._git(root, "add", str(area / "audits"))
+        _git(root, "add", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn("the working tree differs from the index", out)
@@ -611,14 +611,14 @@ class ReportFiles(unittest.TestCase):
         report = root / "REPORT.md"
         self._discussed(report, area, "audit failed", "# Report\n\nNo result.\n")
         self._reviewed(report, area)
-        self._git(root, "add", "-A")
-        self._git(root, "commit", "-qm", "report and its review")
+        _git(root, "add", "-A")
+        _git(root, "commit", "-qm", "report and its review")
         protocol = root / P
         protocol.write_text(
             protocol.read_text(encoding="utf-8") + "\nA later remark.\n",
             encoding="utf-8",
         )
-        self._git(root, "add", str(protocol))
+        _git(root, "add", str(protocol))
         code, out = self._gate(root, protocol, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -628,13 +628,13 @@ class ReportFiles(unittest.TestCase):
         self.assertRegex(out, r"changed since: FILE: \S*PROTOCOL-x\.md")
         # the twin: a review of the new state, staged with it, passes
         self._reviewed(report, area)
-        self._git(root, "add", str(area / "audits"))
+        _git(root, "add", str(area / "audits"))
         code, out = self._gate(root, protocol, staged=True)
         self.assertEqual(code, 0, out)
         # the first source: a closed run's metrics edited after its commit
         metrics = area / "runs" / self.RUN / "metrics.json"
         metrics.write_text('{"criterion_1_pass": false}', encoding="utf-8")
-        self._git(root, "add", str(metrics))
+        _git(root, "add", str(metrics))
         code, out = self._gate(root, metrics, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn("the closed run's metrics.json (changed)", out)
@@ -914,7 +914,7 @@ class ReportFiles(unittest.TestCase):
         report.write_text(
             f"criterion_1_pass = True (run {self.RUN})\n", encoding="utf-8"
         )
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
         # step one: the answering run's number without the adoption — held
         # at this commit already
@@ -924,10 +924,10 @@ class ReportFiles(unittest.TestCase):
         self._discussed(report, area, "adoption pending")
         self._reviewed(report, area)
         # the review's record is evidence the commit carries with the report
-        self._git(root, "add", "REPORT.md", str(area / "audits"))
+        _git(root, "add", "REPORT.md", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
-        self._git(root, "commit", "-qm", "report")
+        _git(root, "commit", "-qm", "report")
         # step two: the protocol declares the run; the report is untouched
         proto = area / "PROTOCOL-x.md"
         declaring = protocol_result.fill_result_run(
@@ -936,7 +936,7 @@ class ReportFiles(unittest.TestCase):
         proto.write_text(declaring, encoding="utf-8")
         code, out = self._gate(root, proto)  # the stop hears it first…
         self.assertEqual(code, 1, out)
-        self._git(root, "add", str(proto))
+        _git(root, "add", str(proto))
         code, out = self._gate(root, proto, staged=True)  # …the commit holds
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -962,7 +962,7 @@ class ReportFiles(unittest.TestCase):
             declaring, area, f"criterion_1_pass = True (run {self.RUN})\n", P
         )
         report.write_text(written, encoding="utf-8")
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, proto, report, staged=True)
         self.assertEqual(code, 0, out)
         self.assertEqual(out.count("═══ report-check REPORT.md"), 1)
@@ -987,17 +987,17 @@ class ReportFiles(unittest.TestCase):
         )
         written, _ = protocol_fill.into_report(declaring, area, "# Report\n\n", P)
         (root / "REPORT.md").write_text(written, encoding="utf-8")
-        self._git(root, "add", "REPORT.md")
-        self._git(root, "commit", "-qm", "report with its block")
+        _git(root, "add", "REPORT.md")
+        _git(root, "commit", "-qm", "report with its block")
         proto.write_text(declaring, encoding="utf-8")
-        self._git(root, "add", str(proto))
+        _git(root, "add", str(proto))
         code, out = self._gate(root, proto, staged=True)
         self.assertEqual(code, 0, out)
         self.assertIn("a committed report citing a run PROTOCOL-x.md newly", out)
         self.assertNotIn("without its generated block", out)
-        self._git(root, "commit", "-qm", "declared")
+        _git(root, "commit", "-qm", "declared")
         proto.write_text(declaring + "\nmore prose\n", encoding="utf-8")
-        self._git(root, "add", str(proto))
+        _git(root, "add", str(proto))
         code, out = self._gate(root, proto, staged=True)
         self.assertEqual(code, 0, out)
         self.assertNotIn("REPORT.md", out)  # the declaration is HEAD's: nothing reached
@@ -1037,7 +1037,7 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_staged_link_is_refused_until_the_index_holds_the_copy(self):
         root, report = self._linked(git=True)
-        self._git(root, "add", "REPORT.md", "data/REPORT.md")
+        _git(root, "add", "REPORT.md", "data/REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -1052,7 +1052,7 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn("a symbolic link to data/REPORT.md", out)
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertNotIn("symbolic link", out)
@@ -1066,7 +1066,7 @@ class ReportFiles(unittest.TestCase):
         report.unlink()
         report.symlink_to("B.md")
         (root / "B.md").symlink_to(Path("data") / "REPORT.md")
-        self._git(root, "add", "REPORT.md", "B.md", "data/REPORT.md")
+        _git(root, "add", "REPORT.md", "B.md", "data/REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn("REPORT.md: a symbolic link to B.md", out)
@@ -1085,7 +1085,7 @@ class ReportFiles(unittest.TestCase):
         report.write_text(
             text.replace("criterion-1 met", "criterion-1 missed"), encoding="utf-8"
         )
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         (root / "NOTE.md").write_text("nothing cited\n", encoding="utf-8")
         report.unlink()
         report.symlink_to("NOTE.md")
@@ -1099,7 +1099,7 @@ class ReportFiles(unittest.TestCase):
         root, _ = self._reported(git=True)
         (root / "AGENTS.md").write_text("# Agents\n\nRead TODO.md.\n", encoding="utf-8")
         (root / "CLAUDE.md").symlink_to("AGENTS.md")
-        self._git(root, "add", "AGENTS.md", "CLAUDE.md")
+        _git(root, "add", "AGENTS.md", "CLAUDE.md")
         for staged in (False, True):
             code, out = self._gate(root, root / "CLAUDE.md", staged=staged)
             self.assertEqual((code, out), (0, ""))
@@ -1116,7 +1116,7 @@ class ReportFiles(unittest.TestCase):
             report.read_text(encoding="utf-8"), encoding="utf-8"
         )
         (root / "CLAUDE.md").symlink_to("AGENTS.md")
-        self._git(root, "add", "AGENTS.md", "CLAUDE.md")
+        _git(root, "add", "AGENTS.md", "CLAUDE.md")
         for staged in (False, True):
             code, out = self._gate(root, root / "CLAUDE.md", staged=staged)
             self.assertEqual((code, out), (0, ""))
@@ -1126,7 +1126,7 @@ class ReportFiles(unittest.TestCase):
 
     def test_staged_reads_the_report_as_the_index_holds_it(self):
         root, report = self._reported(git=True)
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
         # only the tree retypes the number: the commit carries the rendered block
@@ -1135,7 +1135,7 @@ class ReportFiles(unittest.TestCase):
             text.replace("criterion-1 met", "criterion-1 missed"), encoding="utf-8"
         )
         self.assertEqual(self._gate(root, report, staged=True)[0], 0)
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn("differs from the protocol's rendering", out)

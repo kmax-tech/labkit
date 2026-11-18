@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -44,6 +43,7 @@ from protocol_fixture import (
     shown_sha,
     started_at,
 )  # noqa: E402
+from repo_fixture import git as _git
 
 A_ID, B_ID = "p-aaaaaaaaaaaaaaaa", "p-bbbbbbbbbbbbbbbb"
 A_RUN, B_RUN = "2026-10-27T09-00-00_aaaa", "2026-10-27T10-00-00_bbbb"
@@ -67,16 +67,6 @@ def replaces(pid: str, *changes: tuple[str, str, str]) -> str:
         for w, f, t in changes
     )
     return f'\n[replaces]\nprotocol = "{pid}"\n{rows}'
-
-
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
 
 
 class Parse(unittest.TestCase):

@@ -26,7 +26,8 @@ from labkit.gates import agent_hooks, claude_hooks  # noqa: E402
 from labkit.gates import undecided
 from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
-from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
+from repo_fixture import git as _git  # noqa: E402
+from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)

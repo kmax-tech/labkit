@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -36,6 +35,7 @@ from protocol_fixture import (
     head,
     scope_file,
 )  # noqa: E402
+from repo_fixture import git as _git
 
 BODY = """
 - **Model / tool:** haiku
@@ -44,13 +44,6 @@ BODY = """
 - **Quality check:** [quality-check-1] every case parsed
 - **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 """
-
-
-def _git(cwd: Path, *args: str) -> str:
-    r = subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
-    )
-    return r.stdout.strip()
 
 
 def _repo(cost: str) -> tuple[Path, Path]:

@@ -21,12 +21,7 @@ from pathlib import Path
 import test_end_to_end as e2e
 from labkit.run import start_check
 from labkit.formats.area_state import state_of
-
-
-def git(root: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, text=True, check=True
-    ).stdout.strip()
+from repo_fixture import git
 
 
 class UnreadHeadAtTheStart(e2e.CountCommands):

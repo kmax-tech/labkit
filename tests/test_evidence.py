@@ -34,7 +34,8 @@ from labkit.formats.area_state import INDEX, state_of  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
 from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
-from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
+from repo_fixture import git as _git  # noqa: E402
+from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
 
 WARNING = (
     "WARNING",

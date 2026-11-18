@@ -14,7 +14,6 @@ import contextlib
 import io
 import os
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
@@ -22,14 +21,9 @@ import test_end_to_end as e2e
 from labkit.tools import report_command
 from labkit.formats import evidence
 from labkit.gates import next_step
+from repo_fixture import git
 
 UNREAD = "cannot be compared with"
-
-
-def git(root: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, text=True, check=True
-    ).stdout.strip()
 
 
 class ChangedRunUnreadable(e2e.CountCommands):

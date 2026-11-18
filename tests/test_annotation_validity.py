@@ -29,6 +29,7 @@ from labkit.formats.gate import BLOCKER, OPEN_RULE, TECHNICAL_RULE  # noqa: E402
 from labkit.probes import usability  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head, run_record  # noqa: E402
+from repo_fixture import git
 
 VALIDATION_ID = "p-1111111111111111"
 RUN = "2026-10-23T10-00-00_ab12"
@@ -561,12 +562,8 @@ class AffectedByEvidence(StaleEvidence):
                     self.assertNotIn(share.resolve(), [a.resolve() for a in touched])
 
     def test_the_staged_gate_reopens_the_computation(self):
-        import subprocess
 
         from labkit.gates import report_check
-
-        def git(root: Path, *args: str) -> None:
-            subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
 
         with tempfile.TemporaryDirectory() as d:
             share, _, val = self._area(d)

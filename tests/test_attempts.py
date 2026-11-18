@@ -26,6 +26,7 @@ from labkit.formats import evidence  # noqa: E402
 from labkit.gates import undecided
 from labkit.formats import failed_attempts
 from labkit.formats.attempts import Attempt  # noqa: E402
+from repo_fixture import git
 
 A = Attempt("a1", "analysis", "opus", "s", "2026-10-26T09:16:02", "here")
 START = json.dumps(
@@ -36,15 +37,6 @@ START2 = START.replace('"a1"', '"a2"')
 END_R = json.dumps(
     {"event": "ended", "id": "a1", "outcome": "record", "file": "r.toml"}
 )
-
-
-def git(cwd: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-    )
 
 
 def area_in_repo() -> Path:

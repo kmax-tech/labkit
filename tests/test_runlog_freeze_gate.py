@@ -30,6 +30,7 @@ from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from repo_fixture import git
 
 AUDIT = "2026-10-05T10-00-preflight.toml"  # a record name; no such record is written
 FROZEN = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, model="haiku")
@@ -140,16 +141,9 @@ class FreezeGate(unittest.TestCase):
         # a start on a written, uncommitted registration is refused: finalize
         # would be clean and adoption refused for good. The twin: committed,
         # it starts; a second measurement is not held here.
-        import subprocess
-
-        def git(*args: str) -> None:
-            subprocess.run(
-                ["git", *args], cwd=self.tmp, check=True, capture_output=True
-            )
-
-        git("init", "-q")
-        git("config", "user.email", "t@t")
-        git("config", "user.name", "t")
+        git(self.tmp, "init", "-q")
+        git(self.tmp, "config", "user.email", "t@t")
+        git(self.tmp, "config", "user.name", "t")
         area = self._area(SECONDS_COMPUTE)
         err = io.StringIO()
         with (
@@ -160,8 +154,8 @@ class FreezeGate(unittest.TestCase):
             runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("is not committed", str(cm.exception) + err.getvalue())
         self.assertFalse((area / "runs").exists())
-        git("add", "-A")
-        git("commit", "-qm", "registration")
+        git(self.tmp, "add", "-A")
+        git(self.tmp, "commit", "-qm", "registration")
         r, out = self._start(SECONDS_COMPUTE, run_kind="measurement")
         self.assertTrue((r.dir / "config.json").is_file(), out)
         (area / "PROTOCOL-x.md").write_text(SECONDS_COMPUTE + "\nmore prose\n")

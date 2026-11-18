@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -26,20 +25,10 @@ from labkit.formats import area_state, run_index, runs
 from labkit.formats.area_state import INDEX, TREE, Measured, assemble, state_of
 from labkit.formats.run_starts import RunStart
 from labkit.gates import hook_post_change, report_check
+from repo_fixture import git as _git
 
 RUN = "2026-10-07T10-00-00_ab12"
 PROBE = "2026-10-07T09-00-00_0000"
-
-
-def _git(cwd: Path, *args: str) -> str:
-    r = subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return r.stdout.strip()
 
 
 class _Repository(unittest.TestCase):

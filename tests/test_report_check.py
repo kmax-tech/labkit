@@ -60,6 +60,7 @@ from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
 from labkit.checks import report_blocks
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+from repo_fixture import git as _git
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -107,9 +108,9 @@ class IfReported(unittest.TestCase):
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
         if git:
-            self._git(area.parent.parent, "init", "-q", ".")
-            self._git(area.parent.parent, "config", "user.email", "t@t")
-            self._git(area.parent.parent, "config", "user.name", "t")
+            _git(area.parent.parent, "init", "-q", ".")
+            _git(area.parent.parent, "config", "user.email", "t@t")
+            _git(area.parent.parent, "config", "user.name", "t")
         (area / "scripts" / "02_analyze.py").write_text(
             "print('ok')\n", encoding="utf-8"
         )
@@ -136,8 +137,8 @@ class IfReported(unittest.TestCase):
         )
         if git:
             # the registration committed before the run, as the lane owes it
-            self._git(area.parent.parent, "add", "-A")
-            self._git(area.parent.parent, "commit", "-qm", "registration")
+            _git(area.parent.parent, "add", "-A")
+            _git(area.parent.parent, "commit", "-qm", "registration")
         run = completed_run(
             area, self.RUN, metrics={"criterion_1_pass": True}, run_kind=run_kind
         )
@@ -165,13 +166,9 @@ class IfReported(unittest.TestCase):
                 protocol_id=protocol_id_of(area),
             )
         if git:
-            self._git(area.parent.parent, "add", "-A")
-            self._git(area.parent.parent, "commit", "-qm", "init")
+            _git(area.parent.parent, "add", "-A")
+            _git(area.parent.parent, "commit", "-qm", "init")
         return area
-
-    @staticmethod
-    def _git(cwd: Path, *args: str) -> None:
-        subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
 
     def _staged_gate(self, root: Path, *paths: Path) -> tuple[int, str]:
         """The pre-commit's form of the gate over PATHS in the repo ROOT."""
@@ -206,7 +203,7 @@ class IfReported(unittest.TestCase):
         )
         # the twin's twin: the index open, the answer only in the tree —
         # the commit declares nothing, the gate is silent
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         proto.write_text(reported, encoding="utf-8")
         code, out = self._staged_gate(root, proto)
         self.assertEqual((code, out), (0, ""))
@@ -269,7 +266,7 @@ class IfReported(unittest.TestCase):
                 "Unit",
             ):
                 f.write(f"- **{label}:** n/a — test\n")
-        self._git(root, "commit", "-qam", "fields")
+        _git(root, "commit", "-qam", "fields")
         (area / "scripts" / "new.py").write_text("x = 1\n", encoding="utf-8")
         with contextlib.chdir(root):
             staged = next_step.next_step(area, proto, file_state=area_state.INDEX)
@@ -282,7 +279,7 @@ class IfReported(unittest.TestCase):
         self.assertIn(staged.where, out)  # the gate's hold is next's finding
         self.assertIn(staged.next, out)
         self.assertNotIn("git add", tree.next)  # the tree is not the commit
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         with contextlib.chdir(root):
             after = next_step.next_step(area, proto, file_state=area_state.INDEX)
         self.assertNotIn("git add", after.next)
@@ -307,9 +304,9 @@ class IfReported(unittest.TestCase):
         root = area.parent.parent
         # the run, its audit and the adoption staged, not yet committed: the
         # registration alone is in HEAD
-        self._git(root, "reset", "-q", "--soft", "HEAD~1")
+        _git(root, "reset", "-q", "--soft", "HEAD~1")
         run = f"experiments/01-x/runs/{self.RUN}"
-        self._git(root, "rm", "-r", "-q", "--cached", run)
+        _git(root, "rm", "-r", "-q", "--cached", run)
 
         def commit_gate() -> tuple[int, str]:
             out = io.StringIO()
@@ -322,16 +319,16 @@ class IfReported(unittest.TestCase):
         self.assertIn("the working tree differs from the index", out)
         self.assertIn(f"{run}/config.json", out)
         (root / ".gitignore").write_text("runs/\n", encoding="utf-8")
-        self._git(root, "add", ".gitignore")
+        _git(root, "add", ".gitignore")
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
         self.assertIn(
             f"runs/{self.RUN}/config.json: git ignores it — evidence labkit wrote",
             out,
         )
-        self._git(root, "rm", "-q", "--cached", ".gitignore")
+        _git(root, "rm", "-q", "--cached", ".gitignore")
         (root / ".gitignore").unlink()
-        self._git(root, "add", run)
+        _git(root, "add", run)
         rc, out = commit_gate()
         self.assertEqual(rc, 0, out)
         self.assertIn("finalized, audited, checked", out)
@@ -348,7 +345,7 @@ class IfReported(unittest.TestCase):
         root = area.parent.parent
         script = area / "scripts" / "02_analyze.py"
         script.write_text("print('changed')\n", encoding="utf-8")
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         (area / "PROTOCOL-x.md").unlink()
         code, out = self._staged_gate(root, script)
         self.assertEqual(code, 1, out)
@@ -372,7 +369,7 @@ class IfReported(unittest.TestCase):
         )
         report = root / "REPORT.md"
         report.write_text(f"# Report\n\nRun ID: {self.RUN}\n", encoding="utf-8")
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         with contextlib.chdir(root):  # where git runs the pre-commit
             code, out = self._staged_gate(root, report)
         self.assertEqual(code, 1, out)
@@ -540,7 +537,6 @@ class RegisteredReport(unittest.TestCase):
     refused citation passes nothing."""
 
     RUN = IfReported.RUN
-    _git = staticmethod(IfReported._git)
     _fixture = IfReported._area  # the low-lane area, as ReportFiles reuses it
     P = "experiments/01-x/PROTOCOL-x.md"
 
@@ -764,8 +760,8 @@ class RegisteredReport(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         text = proto.read_text(encoding="utf-8")
         (root / "REPORT.md").write_text("# Report\n", encoding="utf-8")
-        self._git(root, "add", "REPORT.md")
-        self._git(root, "commit", "-q", "-m", "report")
+        _git(root, "add", "REPORT.md")
+        _git(root, "commit", "-q", "-m", "report")
 
         def gap(*, staged: bool = False):
             found = registered_report.missing_report(
@@ -775,7 +771,7 @@ class RegisteredReport(unittest.TestCase):
             return found
 
         (root / "REPORT.md").unlink()
-        self._git(root, "rm", "-q", "--cached", "REPORT.md")
+        _git(root, "rm", "-q", "--cached", "REPORT.md")
         for staged in (False, True):
             with self.subTest(staged=staged):
                 found = gap(staged=staged)
@@ -783,7 +779,7 @@ class RegisteredReport(unittest.TestCase):
                 self.assertIn(
                     "the report is missing (a commit contains it)", found.text
                 )
-        self._git(root, "commit", "-q", "-m", "report removed")
+        _git(root, "commit", "-q", "-m", "report removed")
         self.assertIn("(a commit contains it)", gap().text)
 
     def test_a_registered_report_never_written_is_an_incomplete_delivery(self):
@@ -916,7 +912,7 @@ class RegisteredReport(unittest.TestCase):
                 code, out = self._gate(root, path)
                 self.assertEqual(code, 0, out)
                 self.assertNotIn(self.OWED, out)
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
         # a block typed by hand names no record that reads: held, saying so
@@ -972,7 +968,7 @@ class RegisteredReport(unittest.TestCase):
         )
         root = area.parent.parent
         report = self._discussed(area, self.RUN)
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
         self.assertNotIn("report review", out.lower().replace("report-check", ""))
@@ -991,7 +987,7 @@ class RegisteredReport(unittest.TestCase):
         other = completed_run(area, "2026-10-01T00-00-00_0000", metrics={"n": 1})
         started_at(other, root)
         report = self._discussed(area, other.name)
-        self._git(root, "add", "-A")
+        _git(root, "add", "-A")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(self.OWED, out)
@@ -1041,7 +1037,7 @@ class RegisteredReport(unittest.TestCase):
         report.write_text("# Report\n\nmean = 0.69 over 12 cases\n", encoding="utf-8")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
-        self._git(root, "add", "REPORT.md")
+        _git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(self.OWED, out)
