@@ -527,21 +527,43 @@ def _start(argv: list[str]) -> int:
     return _await_run(area, before, proc, pid, log, args.max_seconds)
 
 
+def _reindex(argv: list[str]) -> int:
+    """`runlog reindex [AREA]`: append the index rows the completed runs of
+    AREA (default: the working directory) lack (`runlog.reindex`, whose
+    exit this is); 2 as well for an area that is no directory or a name
+    that fits more than one. `--help` prints the usage and exits 0."""
+    ap = argparse.ArgumentParser(
+        prog="runlog reindex",
+        usage="runlog reindex [AREA]",
+        description="Rebuild the run index (runs.tsv) of an experiment area "
+        "from its run directories: append a row for every completed run that "
+        "has none; a row that exists stays untouched. Exit 0 the index is "
+        "whole, 2 a run or the index does not read, or AREA is no area.",
+    )
+    ap.add_argument(
+        "area",
+        nargs="?",
+        default=".",
+        help="experiment area holding a runs/ dir (default: .)",
+    )
+    args = ap.parse_args(argv)
+    try:
+        area = repo.area_path(args.area)
+    except repo.AmbiguousArea as exc:
+        console.refuse("runlog", str(exc))
+        return 2
+    if not area.is_dir():
+        console.refuse("runlog", repo.no_such_area(area))
+        return 2
+    return reindex(area)
+
+
 def main(argv: list[str]) -> int:
-    """Status, wait, follow or start — the run monitor of record."""
+    """Status, wait, follow, start or reindex — the run monitor of record."""
     if argv and argv[0] == "start":
         return _start(argv[1:])
     if argv and argv[0] == "reindex":
-        try:
-            area = repo.area_path(argv[1]) if len(argv) > 1 else Path(".")
-        except repo.AmbiguousArea as exc:
-            console.refuse("runlog", str(exc))
-            return 2
-        if not area.is_dir():
-            console.refuse("runlog", repo.no_such_area(area))
-            return 2
-        return reindex(area)
-    import argparse
+        return _reindex(argv[1:])
 
     ap = argparse.ArgumentParser(
         prog="runlog",
@@ -550,7 +572,7 @@ def main(argv: list[str]) -> int:
         "script and frozen config; then the finished ones — what each is "
         "(a run, or derived from which), whether its code was committed, "
         "and the command that started it. "
-        "'Nachsehen statt nachfragen' — "
+        "Look instead of asking: "
         "check this before starting a run in a shared repo. "
         "`--wait` blocks until the area is idle — no open run and no "
         "command `runlog start` detached still running without one "

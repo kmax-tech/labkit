@@ -79,6 +79,31 @@ class TestCli(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 0)
         self.assertIn("usage: runlog", buf.getvalue())
 
+    def test_reindex_help_prints_usage_instead_of_reading_it_as_an_area(self):
+        """`runlog reindex --help` answers as `runlog start --help` does:
+        the usage, exit 0 — not "no such area: --help". The twins: a missing
+        area is still refused, and an area without runs is reindexed."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit) as ctx:
+                runlog_command.main(["reindex", "--help"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertIn("usage: runlog reindex [AREA]", buf.getvalue())
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._run_main(["reindex", str(Path(d) / "does-not-exist")])
+            self.assertEqual(code, 2)
+            self.assertIn("no such area", out)
+            code, out = self._run_main(["reindex", d])
+            self.assertEqual(code, 0, out)
+
+    def test_the_help_text_is_english(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit):
+                runlog_command.main(["--help"])
+        self.assertNotIn("Nachsehen", buf.getvalue())
+        self.assertIn("Look instead of asking", " ".join(buf.getvalue().split()))
+
     def test_a_finished_run_is_listed_as_finished_not_open(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "20260906-120000-done"
