@@ -948,6 +948,8 @@ class ARunWithoutItsRecord(unittest.TestCase):
         self.assertIn("which protocol it belongs to cannot be determined", warning.text)
         self.assertIn(UNASSIGNED_LEAVES_OPEN, warning.text)
         self.assertIn("nor that none came before", warning.text)
+        self.assertIn("it is counted for no protocol", warning.text)
+        self.assertIn("no hold follows from it", warning.text)
         self.assertIn("written anew from memory settles nothing", warning.fix or "")
 
     def test_the_twins_every_measurement_with_its_record_and_none_pass(self):

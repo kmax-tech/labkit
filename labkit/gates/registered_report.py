@@ -19,7 +19,11 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
-from labkit.formats.area_state import Measured, lost_in_the_tree_too
+from labkit.formats.area_state import (
+    Measured,
+    lost_in_the_tree_too,
+    unassigned_record_warning,
+)
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
@@ -307,8 +311,8 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
     unknowable), are UNREAD beside readable ones too: either may have been
     the first. A record that does not read and that no row names is
     assigned to no protocol (`Measured.unassigned`): no duty is derived
-    from it, and the registration station names it
-    (`registration_hold.lost_record_warnings`). A readable first
+    from it, and `unassigned_record_note` names it where the duty is
+    checked. A readable first
     measurement that registered a report settles the duty whatever else
     does not read. Raises RuntimeError when git fails."""
     if not measured.has_measured:
@@ -346,6 +350,17 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             f"says what stood registered then",
         )
     return None
+
+
+def unassigned_record_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    MEASURED's area holds a record that does not read and that no index
+    row names (`area_state.unassigned_record_warning`, the sentence the
+    registration station prints too); None without one. The duty is read
+    without that record (`report_duty`): whether it was a measurement of
+    this protocol is unresolved, so no duty and no hold follow from it,
+    and the warning says so in place of a silent "no duty". Pure."""
+    return unassigned_record_warning(measured.unassigned)
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:

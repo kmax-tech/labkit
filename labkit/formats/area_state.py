@@ -31,7 +31,13 @@ from pathlib import Path
 from labkit.formats.runs import RUNS_DIR
 from labkit.formats.commands import checkout_command
 from labkit.formats import promises
-from labkit.formats.gate import GateFinding
+from labkit.formats.gate import (
+    GUARANTEED,
+    NOT_EXECUTABLE,
+    TECHNICAL_RULE,
+    WARNING,
+    GateFinding,
+)
 from labkit.formats.answering_run import (
     AnsweringRun,
     adopted_run,
@@ -499,13 +505,44 @@ CLOCKS_ASSUMED = (
 
 
 #: what a record of unknown protocol leaves open for every protocol of
-#: its area — the clause the run's start and the registration station
-#: print with it, so neither reads as "no earlier measurement"
+#: its area — the clause the run's start, the registration station and the
+#: report duty's station print with it, so none reads as "no earlier
+#: measurement"
 UNASSIGNED_LEAVES_OPEN = (
     "whether it measured this protocol, and before the first measurement that "
-    "reads, stays open: it is held against no protocol, and it shows neither "
-    "an earlier measurement nor that none came before"
+    "reads, is unresolved: it is counted for no protocol, no hold follows from "
+    "it, and it shows neither an earlier measurement nor that none came before"
 )
+
+#: the way back every warning about a run without a record names
+RECORD_BACK = (
+    "bring the run's directory with its config.json back from a commit, a clone "
+    "or a copy that holds it (a record written anew from memory settles nothing)"
+)
+
+
+def unassigned_record_warning(unassigned: Sequence[str]) -> GateFinding | None:
+    """The WARNING about the records of UNASSIGNED (`Measured.unassigned`:
+    they do not read, and no row of the run index names them), None
+    without one: which protocol each belongs to and what it means are
+    unresolved, it is counted for no protocol and no hold follows from it
+    (UNASSIGNED_LEAVES_OPEN), with the way back (RECORD_BACK) — a check
+    not executable, never a silent pass. The one sentence every station
+    prints for it: finalize's registration station
+    (`registration_hold.lost_record_warnings`) and report-check's report
+    duty (`registered_report.unassigned_record_note`). Pure."""
+    if not unassigned:
+        return None
+    return GateFinding(
+        WARNING,
+        f"the record of run {', '.join(unassigned)} does not read, and the run "
+        f"index does not list it: which protocol it belongs to cannot be "
+        f"determined — {UNASSIGNED_LEAVES_OPEN}",
+        rule=TECHNICAL_RULE,
+        fix=RECORD_BACK,
+        evidence_kind=GUARANTEED,
+        stated_outcome=NOT_EXECUTABLE,
+    )
 
 
 @dataclass(frozen=True)

@@ -47,10 +47,11 @@ from labkit.formats.area_state import (
     AreaState,
     Measured,
     CLOCKS_ASSUMED,
-    UNASSIGNED_LEAVES_OPEN,
+    RECORD_BACK,
     WithoutRecord,
     lost_in_the_tree_too,
     measurements_without_record,
+    unassigned_record_warning,
 )
 from labkit.formats import protocol_history
 from labkit.formats.reference import LAB_035
@@ -741,13 +742,6 @@ def lost_record_hold(
     ]
 
 
-#: the way back every warning about a run without a record names
-RECORD_BACK = (
-    "bring the run's directory with its config.json back from a commit, a clone "
-    "or a copy that holds it (a record written anew from memory settles nothing)"
-)
-
-
 def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
     """The WARNINGs about runs without a record that hold no number
     (WITHOUT, `area_state.measurements_without_record`), each naming its
@@ -763,8 +757,8 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
     - `unassigned`: records that do not read and that no index row names.
       Which protocol each belongs to cannot be determined, whatever the
       number of protocols in the area, so it holds no protocol — said, with
-      what that leaves open (`area_state.UNASSIGNED_LEAVES_OPEN`), not
-      passed over.
+      what that leaves open, not passed over
+      (`area_state.unassigned_record_warning`, the one sentence).
 
     [] when WITHOUT has neither. Pure."""
     found: list[GateFinding] = []
@@ -783,20 +777,9 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
                 evidence_kind=GUARANTEED,
             )
         )
-    if without.unassigned:
-        runs_named = ", ".join(without.unassigned)
-        found.append(
-            GateFinding(
-                WARNING,
-                f"the record of run {runs_named} does not read, and the run index "
-                f"does not list it: which protocol it belongs to cannot be "
-                f"determined — {UNASSIGNED_LEAVES_OPEN}",
-                rule=TECHNICAL_RULE,
-                fix=RECORD_BACK,
-                evidence_kind=GUARANTEED,
-                stated_outcome=NOT_EXECUTABLE,
-            )
-        )
+    unassigned = unassigned_record_warning(without.unassigned)
+    if unassigned is not None:
+        found.append(unassigned)
     return found
 
 

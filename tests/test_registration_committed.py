@@ -1818,6 +1818,40 @@ class ReportOwedByADeletedProtocol(_Repository):
         self.assertEqual(measured.unassigned, ("2026-10-01T10-00-00_bad0",))
         self.assertIsNone(registered_report.report_duty(measured, self.root))
 
+    def _duty_station(self) -> list[gate.GateFinding]:
+        """report-check's station of the report duty on the area as it is."""
+        return report_check.report_binding_gaps(
+            report_context.checked(self.area, self.proto)
+        )
+
+    def test_report_check_names_a_record_of_unknown_protocol_and_holds_nothing(self):
+        """Where the report duty is checked, the record is a warning of a
+        check not executable — unresolved, counted for no protocol, no hold,
+        the way back — and no blocker."""
+        self._unreadable_run_beside(None, indexed=False)
+        (warning,) = self._duty_station()
+        self.assertEqual(
+            (warning.grade, warning.outcome), (gate.WARNING, gate.NOT_EXECUTABLE)
+        )
+        for said in (
+            "the record of run 2026-10-01T10-00-00_bad0 does not read",
+            "which protocol it belongs to cannot be determined",
+            "is unresolved",
+            "it is counted for no protocol",
+            "no hold follows from it",
+        ):
+            self.assertIn(said, warning.text)
+        self.assertIn("back from a commit, a clone or a copy", warning.fix or "")
+
+    def test_the_twin_an_area_without_such_a_record_gets_no_warning(self):
+        self.proto.write_text(
+            head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        self.assertEqual(self._duty_station(), [])
+
     def test_an_unreadable_run_may_have_been_the_first_measurement(self):
         """Bound to the protocol by its index row, its commit unknowable;
         beside a readable measurement that registered no report, "no duty"
