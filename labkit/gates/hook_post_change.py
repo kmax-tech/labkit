@@ -127,6 +127,7 @@ def index_problems(state: AreaState) -> list[str]:
       names and did not complete, and its record is gone;
     - a run whose start file a commit holds and the tree lacks, with the
       checkout that restores it;
+    - a run whose start file does not read: an incomplete start;
     - a run with a start file whose directory stands without a
       completion (`unfinished_starts`): it started and never completed —
       an abort, its record still here."""
@@ -153,6 +154,13 @@ def index_problems(state: AreaState) -> list[str]:
             f"run still counts as started as that file says"
             for r, at in state.deleted_starts.items()
         ]
+        + [
+            f"run {r}: its start file does not read ({s.unread}) — an incomplete "
+            f"start: nothing is taken from it; restore it from the commit that "
+            f"holds it, and where none does leave it as it is"
+            for r, s in state.starts.items()
+            if s.unread
+        ]
         + unfinished_starts(state)
     )
 
@@ -175,7 +183,7 @@ def unfinished_starts(state: AreaState) -> list[str]:
         if alive is True:
             continue
         out.append(
-            f"run {name}: started as a {state.starts[name].run_kind} "
+            f"run {name}: started as a {state.starts[name].run_kind or 'run'} "
             f"(its start file stands) and never completed — its directory stands, "
             f"{facts.state}"
             + ("; whether it still runs cannot be told" if alive is None else "")

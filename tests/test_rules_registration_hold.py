@@ -58,6 +58,7 @@ from labkit.formats.area_state import (
     Measured,
     WithoutRecord,
     measurements_without_record,
+    unread_start_warning,
 )
 from labkit.formats.runs import RunDir, parse_run_config
 from labkit.gates.ways_out import HANDOVER
@@ -1033,6 +1034,53 @@ class ARunWithoutItsRecord(unittest.TestCase):
                 self.assertEqual(without, WithoutRecord((), (), (), ()))
                 self.assertEqual(self.held(without), [])
                 self.assertEqual(pure_call(lost_record_warnings, without), [])
+
+
+class AStartFileThatDoesNotRead(unittest.TestCase):
+    """`area_state.unread_start_warning` and what an incomplete start leaves
+    open: a warning of a check not executable, no hold of its own; the
+    order it can no longer tell is held where it matters, for the protocol
+    the run belongs to and for no other."""
+
+    FIRST = ARunWithoutItsRecord.FIRST
+    GONE = ARunWithoutItsRecord.GONE
+
+    def test_the_warning_names_each_case_and_no_hand_repair(self):
+        warning = pure_call(unread_start_warning, (self.GONE,), ("r-alone",))
+        assert warning is not None
+        self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
+        self.assertIn(f"the start file of run {self.GONE} does not read", warning.text)
+        self.assertIn("its order against other runs is unknown", warning.text)
+        self.assertIn("the start file of run r-alone does not read", warning.text)
+        self.assertIn("it is held against no protocol", warning.text)
+        self.assertIn("nothing is taken from a start file", warning.text)
+        for way in (
+            "restore the file from the commit that holds it",
+            "no value is written into a start file by hand",
+            "the start stays unknown",
+        ):
+            self.assertIn(way, warning.fix or "")
+
+    def test_the_twin_start_files_that_read_warn_of_nothing(self):
+        self.assertIsNone(pure_call(unread_start_warning, (), ()))
+
+    def test_a_lost_run_beside_a_measurement_with_an_unread_start_is_unordered(self):
+        """The readable measurement's start file does not read: its start is
+        unknown, so a lost run that started after it by its own start file
+        is no longer known to be the later one — held, the missing start
+        named."""
+        first = self.FIRST.dir.name
+        noon = ARunWithoutItsRecord.NOON
+        measured = Measured(
+            AREA, PID, (self.FIRST,), (self.GONE,), (), (), started={self.GONE: noon}
+        )
+        without = pure_call(measurements_without_record, measured, (self.GONE,))
+        (clause,) = without.unordered
+        self.assertIn(f"no start file holds a start for {first}", clause)
+        (hold,) = pure_call(
+            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER
+        )
+        self.assertEqual(hold.outcome, NOT_EXECUTABLE)
 
 
 class ABindingTheFilesContradict(unittest.TestCase):

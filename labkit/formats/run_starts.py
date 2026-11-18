@@ -11,8 +11,11 @@ wrote, and a file that exists is never overwritten — the same run id
 started twice fails loudly. Tracked, not ignored: a start file nobody
 committed leaves the tree changed, which is what happened, and a clone has
 exactly the start files a commit holds. Never rebuilt: only a start writes
-one, so a run from before this file has none and its start is unknown. The
-one home of its name, its fields, its reading and its writing. Who reads
+one, so a run from before this file has none and its start is unknown. A
+start file that does not read is an incomplete start (`RunStart.unread`):
+nothing is taken from it and nothing stands in for it, and it is never
+rewritten — a value comes only from where it is kept. The one home of its
+name, its fields, its reading and its writing. Who reads
 it: the area state (`area_state`); what holds a committed one against
 change: `evidence`. Why, and what was rejected:
 docs/notes/2026-11-18-run-start-record.md.
@@ -39,37 +42,43 @@ START_FIELDS = ("run_id", "protocol_id", "started_utc", "run_kind")
 
 
 class RunStartsError(RunIndexError):
-    """A start file that does not read as written (`read_starts`): no JSON
+    """Text that is no start file as written (`parse_start`): no JSON
     object, other keys than START_FIELDS, a run id that is not its name's,
-    a start that is no UTC time, a kind that is none. WHY names the file
-    and the way out; a command ends on it as runlog's refusal
-    (`console.exit_with`), exit 2. A `RunIndexError`: the area state reads
-    the index and the start files in one step (`area_state.state_of`), and
-    every caller that refuses on an index that does not read refuses on
-    this the same way — whether a run was measured or started cannot be
-    told from either."""
+    a start that is no UTC time, a kind that is none. WHY names the file.
+    The readers of an area's start files do not raise it: such a file is
+    one run's incomplete start (`start_of`), not a state of the area."""
 
 
 @dataclass(frozen=True)
 class RunStart:
-    """What a start file holds.
+    """What a start file holds — or, for one that does not read, that a
+    run of this id started and nothing else (an incomplete start).
 
     Attributes:
-        run_id: The run that started.
+        run_id: The run that started; from the file's name where the file
+            does not read.
         protocol_id: The protocol id it was bound to at its start, "" for a
-            run that started unbound.
+            run that started unbound; None when the file does not say.
         started: When it started, an aware time in UTC, taken from the
-            starting machine's clock — right only if that clock was.
+            starting machine's clock — right only if that clock was; None
+            when the file does not say.
         run_kind: What it started as: a measurement, a probe or a
-            preparation (`runs.RunKind`). A reader that asks for the
-            measurements that started compares it with `runs.MEASUREMENT`;
-            a start file alone says "a run started", never "a measurement".
+            preparation (`runs.RunKind`); None when the file does not say.
+            A reader that asks for the measurements that started compares
+            it with `runs.MEASUREMENT`; a start file alone says "a run
+            started", never "a measurement".
+        unread: Why the file does not read, "" for one that does. With it
+            the three values above are None: unknown, each on its own — no
+            default stands in, and a reader that needs one treats it as
+            missing (the binding from other evidence or unassigned, the
+            order unknown, the kind as without a start file).
     """
 
     run_id: str
-    protocol_id: str
-    started: datetime
-    run_kind: RunKind
+    protocol_id: str | None
+    started: datetime | None
+    run_kind: RunKind | None
+    unread: str = ""
 
 
 def utc_now() -> datetime:
@@ -109,7 +118,10 @@ def write_start(area: Path, start: RunStart) -> Path:
     Returns the path. Raises FileExistsError when a start file of that run
     id exists — a run starts once, and nothing is overwritten —, OSError
     when the file cannot be written or synced; the caller refuses the
-    start on either."""
+    start on either. ValueError for an incomplete START: only a start that
+    names all its values is written."""
+    if start.protocol_id is None or start.started is None or start.run_kind is None:
+        raise ValueError(f"the start of {start.run_id} is incomplete: not written")
     path = start_path(area, start.run_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(
@@ -183,12 +195,27 @@ def parse_start(text: str, where: str, run_id: str) -> RunStart:
     return RunStart(run_id, data["protocol_id"], started, run_kind)
 
 
+def start_of(text: str | None, where: str, run_id: str, why: str = "") -> RunStart:
+    """The start of RUN_ID from TEXT, its start file's content (WHERE names
+    the file): what `parse_start` reads, or — for text that is no start
+    file, and for None with WHY saying why it could not be read — the
+    incomplete start of that run (`RunStart.unread`). The one fallback of
+    every reader of start files (the working tree's, the index's, a
+    commit's), so none refuses an area over one file. Pure."""
+    if text is None:
+        return RunStart(run_id, None, None, None, why or f"{where}: not read")
+    try:
+        return parse_start(text, where, run_id)
+    except RunStartsError as exc:
+        return RunStart(run_id, None, None, None, str(exc))
+
+
 def read_starts(area: str | Path) -> dict[str, RunStart]:
     """The start files of AREA as the working tree holds them, by run id,
     oldest first by name; {} without one. A file whose name is no run id's
-    is not a start file and is left alone. Raises RunStartsError on a start
-    file that does not read: a damaged file is never read as "no run
-    started"."""
+    is not a start file and is left alone. A start file that does not read
+    — damaged, or not readable as text — is that run's incomplete start
+    (`start_of`): never "no run started", and never a refusal."""
     held = Path(area) / START_FILES_DIR
     if not held.is_dir():
         return {}
@@ -197,5 +224,10 @@ def read_starts(area: str | Path) -> dict[str, RunStart]:
         run_id = path.name.removesuffix(START_SUFFIX)
         if RUN_ID.fullmatch(run_id) is None:
             continue
-        out[run_id] = parse_start(path.read_text(encoding="utf-8"), str(path), run_id)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            out[run_id] = start_of(None, str(path), run_id, f"{path}: {exc}")
+        else:
+            out[run_id] = start_of(text, str(path), run_id)
     return out

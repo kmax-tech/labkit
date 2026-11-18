@@ -909,6 +909,24 @@ class FirstMeasurementLost(CountCommands):
         self.lab.git("checkout", held, "--", str(start))
         self.assertEqual(state_of(self.area).deleted_starts, {})
 
+    def test_a_start_file_that_does_not_read_refuses_nothing(self):
+        """A measured and adoptable; then its start file is damaged. The
+        area's checks still run: finalize warns of the incomplete start,
+        names no hand repair, and holds nothing for it."""
+        run_a = self.measure()
+        run_starts.start_path(self.area, run_a).write_text(
+            "{not json", encoding="utf-8"
+        )
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            f"WARNING (check not executable): the start file of run {run_a} does "
+            f"not read",
+            out,
+        )
+        self.assertIn("no value is written into a start file by hand", out)
+        self.assertIn("are the ones the first measurement registered", out)
+
     def test_a_record_of_unknown_protocol_holds_nothing_and_establishes_nothing(
         self,
     ):

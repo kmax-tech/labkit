@@ -641,6 +641,38 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertEqual(unlisted.lost, (indexed_too,))
         self.assertTrue(unlisted.has_measured)
 
+    def test_a_start_file_that_does_not_read_bears_on_its_own_run_alone(self):
+        """An incomplete start gives no protocol, no time and no kind. Its
+        run stays the protocol's its record or its index row names, with
+        no start to order it by; an independent protocol of the area is
+        not touched; and a run nothing else names is unassigned for every
+        protocol — named, counted for none."""
+        reads = self._record(RUN)
+        gone, alone = "2026-10-06T10-00-01_105e", "2026-10-06T10-00-02_105e"
+        unread = {
+            r: RunStart(r, None, None, None, "not JSON") for r in (RUN, gone, alone)
+        }
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [reads],
+            [],
+            {gone: PID},
+            indexed={RUN: PID, gone: PID},
+            starts=unread,
+        )
+        m = state.measured_of(PID)
+        self.assertEqual(m.unread_starts, (RUN, gone))
+        self.assertEqual((m.started, m.started_as), ({}, {}))
+        self.assertEqual(m.lost, (gone,))  # no kind known: it may have measured
+        self.assertEqual(state.conflicts, {})  # an unread file names no protocol
+        other = state.measured_of("p-other")
+        self.assertEqual((other.unread_starts, other.has_measured), ((), False))
+        for measured in (m, other):
+            self.assertEqual(measured.unassigned_starts, (alone,))
+            self.assertEqual(measured.started_only, ())
+
     def test_sources_that_name_different_protocols_are_a_conflict_not_a_choice(self):
         """A start file against the index for a record that does not
         read, and against a record that reads: named for each protocol

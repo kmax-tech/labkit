@@ -103,7 +103,10 @@ class TheFile(_Area):
         )
         self.assertEqual(self.start_files(), [f"{RUN}.json"])
 
-    def test_a_file_that_does_not_read_is_refused_naming_it(self):
+    def test_a_file_that_does_not_read_is_an_incomplete_start_not_a_refusal(self):
+        """The parser refuses it, naming the file; the area's readers take
+        it as that run's incomplete start — every value unknown, none
+        defaulted — and the area's state is built all the same."""
         data = json.loads(TEXT)
         for name, text, said in (
             ("no JSON", "{not json", "not JSON"),
@@ -139,13 +142,25 @@ class TheFile(_Area):
                 path.parent.mkdir(exist_ok=True)
                 path.write_text(text, encoding="utf-8")
                 with self.assertRaises(RunStartsError) as cm:
-                    run_starts.read_starts(self.area)
+                    run_starts.parse_start(text, str(path), RUN)
                 self.assertIn(said, str(cm.exception))
                 self.assertIn(path.name, str(cm.exception))
-                self.assertIn("never write one anew from memory", str(cm.exception))
-                # the area state refuses with it: no reading as "no run started"
-                with self.assertRaises(RunStartsError):
-                    state_of(self.area)
+                (start,) = run_starts.read_starts(self.area).values()
+                self.assertEqual(
+                    (start.run_id, start.protocol_id, start.started, start.run_kind),
+                    (RUN, None, None, None),
+                )
+                self.assertIn(said, start.unread)
+                # never "no run started", and never a refusal of the area
+                state = state_of(self.area)
+                self.assertEqual(state.unassigned_starts, (RUN,))
+                self.assertEqual(state.started_only, {})
+                self.assertFalse(state.measured_of(PID).has_measured)
+
+    def test_only_a_complete_start_is_written(self):
+        with self.assertRaises(ValueError):
+            run_starts.write_start(self.area, RunStart(RUN, PID, None, "measurement"))
+        self.assertEqual(run_starts.read_starts(self.area), {})
 
     def test_which_paths_are_start_files(self):
         self.assertTrue(run_starts.is_start_file(f"run-starts/{RUN}.json"))
@@ -173,6 +188,7 @@ class WrittenAtTheStart(_Area):
             (start.run_id, start.protocol_id, start.run_kind),
             (run.run_id, PID, "measurement"),
         )
+        assert start.started is not None
         self.assertLessEqual(before, start.started)
         self.assertLessEqual(start.started, run_starts.utc_now())
         # outside runs/, which holds the run's directory alone, and the

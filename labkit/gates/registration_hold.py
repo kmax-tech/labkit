@@ -53,6 +53,7 @@ from labkit.formats.area_state import (
     lost_in_the_tree_too,
     measurements_without_record,
     unassigned_record_warning,
+    unread_start_warning,
 )
 from labkit.formats import protocol_history
 from labkit.formats.reference import LAB_035
@@ -1217,7 +1218,8 @@ def check_registration(
     holds, and one per field a correction released (`corrected_in_place`),
     so the release names what changed and why. With a stamped id PID, the
     runs without a record that hold no number are warned of either way
-    (`lost_record_warnings`); while one of them is a record of unknown
+    (`lost_record_warnings`), and so are start files that do not read
+    (`area_state.unread_start_warning`); while one of them is a record of unknown
     protocol, the note names the first measurement as the first that reads
     and says that an earlier one is not excluded — a comparison that ran
     establishes nothing about a run nobody can assign.
@@ -1228,6 +1230,12 @@ def check_registration(
     if pid is not None:
         without = without_record_of(state.measured_of(pid))
         findings.take_all(lost_record_warnings(without))
+        measured = state.measured_of(pid)
+        unread = unread_start_warning(
+            measured.unread_starts, measured.unassigned_starts
+        )
+        if unread is not None:
+            findings.take(unread)
         unassigned = without.unassigned
     if not changes:
         corrected = corrected_in_place(area, protocol, pid, run, state, held)

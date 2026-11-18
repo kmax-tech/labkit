@@ -27,6 +27,7 @@ from labkit.formats.area_state import (
     AreaState,
     measurements_without_record,
     state_of,
+    unread_start_warning,
 )
 from labkit.formats import evidence
 from labkit.formats.commands import checkout_command, contract_command, fill_command
@@ -234,6 +235,8 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
     - a run whose protocol its start file, the run index and its record
       name differently, this protocol among them: finalize will hold the
       number;
+    - a start file that does not read: an incomplete start, named with
+      what it leaves unknown (`area_state.unread_start_warning`);
     - a record that does not read and that neither file names: its
       protocol cannot be determined, in an area of one protocol too, and
       the sentence says what that leaves open
@@ -283,6 +286,9 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
             f"cannot be determined — {UNASSIGNED_LEAVES_OPEN}; restore "
             f"its config.json from a commit or a copy that holds it."
         )
+    unread = unread_start_warning(measured.unread_starts, measured.unassigned_starts)
+    if unread is not None:
+        told.append(f"{unread.text}. {unread.fix}.")
     if not told:
         return None
     return f"runlog: WARNING — {bound.name}: " + " Also: ".join(told)
