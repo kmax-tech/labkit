@@ -35,7 +35,7 @@ from labkit.formats.runs import PROBE, RunKind, parse_run_kind
 from labkit.formats import findings, promises, protocol_block, protocol_check, repo
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
-from labkit.formats.answering_run import REPEAT_SEED_KEY
+from labkit.formats.answering_run import REPEAT_SEED_KEY, is_measurement
 from labkit.formats.gate import BLOCKER, with_rule, with_way_out
 from labkit.formats.standard_contract import (
     PREFLIGHT_AUDIT,
@@ -146,15 +146,17 @@ def _committed_registration(
     """Refuse a first measurement whose report differs from HEAD, on both
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
-    one's binding: once the area measured the protocol
-    (`area_state.Measured.has_measured` — a lost run and a record that does
-    not read count) no run is held to HEAD as the first, and HEAD is not
-    named as what binds; where the earlier measurement left no record,
-    `earlier_measurement_note` says so at the start and the registration
-    station holds the number (`registration_hold.lost_record_hold`). A HEAD
-    git cannot read is refused as such, before either. No commitment check
-    outside Git or for an unbound protocol. Reads HEAD and what the area
-    measured; writes nothing.
+    one's binding: once the area measured the protocol — a measurement of
+    it whose record reads, or a run without a record that the run index
+    binds to it (`area_state.measurements_without_record`) — no run is held
+    to HEAD as the first, and HEAD is not named as what binds; where the
+    earlier run may have been the first, `earlier_measurement_note` says so
+    at the start and the registration station holds the number
+    (`registration_hold.lost_record_hold`). A record that does not read and
+    that no index row names counts for no protocol: the run is held to HEAD
+    as before. A HEAD git cannot read is refused as such, before either. No
+    commitment check outside Git or for an unbound protocol. Reads HEAD,
+    the run index and what the area measured; writes nothing.
     """
     from labkit.formats.protocol_history import registration_in_commit
 
@@ -162,7 +164,11 @@ def _committed_registration(
     root = repo.git_root(base_dir)
     if root is None or head is None or head.id is None or not isinstance(rel, str):
         return []
-    if state.measured_of(head.id).has_measured:
+    measured = state.measured_of(head.id)
+    # STATE is the working tree's, so its lost runs are lost in the tree
+    without = measurements_without_record(measured, measured.lost, state.indexed)
+    reads = any(rd.config is not None and is_measurement(rd) for rd in measured.runs)
+    if reads or without.of_protocol:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")
@@ -207,34 +213,58 @@ def _committed_registration(
 
 
 def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
-    """The warning a measurement starts with when an earlier measurement of
-    its protocol left no record that reads
+    """The warning a measurement starts with about runs without a record
     (`area_state.measurements_without_record` over STATE, the working
-    tree's): the run is not the first, what stood registered at the earlier
-    one cannot be read from here, and the registration station will hold
-    every number of the protocol until the record is back or the protocol
-    is registered anew or handed over. A warning, never a refusal: a
-    started investigation may go on, and only a result that needs the
-    missing record is held (docs/notes/2026-11-18-lost-first-measurement.md).
-    None when every measurement has its record, and for an unbound
-    protocol. Pure."""
+    tree's, and the run index it read, `AreaState.indexed`), one sentence
+    per case:
+
+    - a run of the protocol that may have been its first measurement: this
+      run is not the first, what stood registered then cannot be read from
+      here, and the registration station holds every number of the protocol
+      until the record is back or the protocol is registered anew or handed
+      over;
+    - a run of the protocol that a measurement that reads precedes: named,
+      nothing is held for it;
+    - a record that does not read and that no index row names: its
+      protocol cannot be determined, and it counts for none.
+
+    A warning, never a refusal: a started investigation may go on, and only
+    a result that needs the missing record is held
+    (docs/notes/2026-11-18-lost-first-measurement.md). None when every
+    measurement has its record, and for an unbound protocol. Pure."""
     head = bound.head
     if head is None or head.id is None:
         return None
     measured = state.measured_of(head.id)
     # STATE is the working tree's, so its lost runs are lost in the tree
-    without = measurements_without_record(measured, measured.lost)
-    if not without:
+    without = measurements_without_record(measured, measured.lost, state.indexed)
+    told: list[str] = []
+    if without.may_be_first:
+        told.append(
+            f"not its first measurement, and an earlier one left no record that "
+            f"reads: {'; '.join(without.may_be_first)}. What stood registered "
+            f"then cannot be read from here, and the protocol as committed now "
+            f"does not stand in for it. The run starts; `finalize` and "
+            f"`report-check` hold every number of this protocol until the record "
+            f"is back, or the protocol is registered anew or handed over "
+            f"(finalize names each way)."
+        )
+    if without.later:
+        told.append(
+            f"{'; '.join(without.later)} — after a measurement of this protocol "
+            f"that reads, so nothing is held for it; a result that needs its "
+            f"rows is held where that result is checked."
+        )
+    if without.unassigned:
+        told.append(
+            f"the record of run {', '.join(without.unassigned)} does not read, "
+            f"and the run index does not list it: which protocol it belongs to "
+            f"cannot be determined, so it is held against no protocol; restore "
+            f"its config.json from a commit or a copy that holds it."
+        )
+    if not told:
         return None
-    return (
-        f"runlog: WARNING — {bound.name}: not its first measurement, and an "
-        f"earlier one left no record that reads: {'; '.join(without)}. What "
-        f"stood registered then cannot be read from here, and the protocol as "
-        f"committed now does not stand in for it. The run starts; `finalize` "
-        f"and `report-check` hold every number of this protocol until the "
-        f"record is back, or the protocol is registered anew or handed over "
-        f"(finalize names each way)."
-    )
+    return f"runlog: WARNING — {bound.name}: " + " Also: ".join(told)
 
 
 def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:

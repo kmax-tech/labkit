@@ -780,6 +780,30 @@ class FirstMeasurementLost(CountCommands):
         )
         self.assertIn(f"as the answering run {run_b} saw the protocol", out)
 
+    def test_the_twin_a_later_run_lost_is_named_and_holds_nothing(self):
+        """A stands and reads; a second measurement is deleted before a
+        commit. The run index lists it after A, so what A registered is
+        told: the registration station compares as before and warns of the
+        lost run. What needs the lost run's own evidence is held by its own
+        check: the output file holds the lost run's rows, and the row
+        provenance station (`run_record_check.row_provenance_findings`)
+        blocks A's number over them."""
+        run_a = self.measure()
+        later = self.measure()
+        shutil.rmtree(self.area / "runs" / later)
+        rc, out = self.lab.finalize(self.area)
+        self.assertIn("are the ones the first measurement registered", out)
+        self.assertIn(f"WARNING: run {later} is gone", out)
+        self.assertIn("the comparison with the first measurement runs", out)
+        self.assertNotIn("what the number is about cannot be compared", out)
+        self.assertNotIn(f"run {run_a} is gone", out)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"row(s) from {later} — a run this run neither is, continues nor "
+            f"derives from",
+            out,
+        )
+
     def test_a_later_start_is_not_held_to_head_as_the_first(self):
         """With the protocol out of HEAD a first measurement is refused as
         not committed (`test_start_gate_unread`); after a lost one the start

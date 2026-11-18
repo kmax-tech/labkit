@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit.formats.runs import RUNS_DIR
@@ -56,6 +56,7 @@ from labkit.formats.repo import (
 from labkit.formats.run_index import RunIndexError, indexed_bindings
 from labkit.formats.runs import (
     CONFIG_FILE,
+    MEASUREMENT,
     RunDir,
     run_dir_from_text,
     run_dirs,
@@ -218,6 +219,10 @@ class AreaState:
         measured: Protocol id → what the area measured of it (`Measured`),
             for every id a run or the index names; `measured_of` answers
             for any id.
+        indexed: The local run index as read, run id → protocol id in
+            index order (`run_index.indexed_bindings`), the runs that
+            stand included: what binds a run without a record to a
+            protocol and orders it (`measurements_without_record`).
     """
 
     area: Path
@@ -232,6 +237,7 @@ class AreaState:
     lost: Mapping[str, str]
     run_facts: tuple[RunFacts, ...]
     measured: Mapping[str, Measured]
+    indexed: Mapping[str, str] = field(default_factory=dict)
 
     def text_of(self, protocol: Path) -> str:
         """PROTOCOL's text as the file state holds it. Raises ValueError
@@ -276,6 +282,7 @@ def assemble(
     protocols: Sequence[Path] = (),
     protocol_texts: Mapping[Path, str] | None = None,
     adoption_pending: Collection[Path] = (),
+    indexed: Mapping[str, str] | None = None,
 ) -> AreaState:
     """The `AreaState` of AREA from what its readers found — RUNS the file
     state holds, DELETED the runs git holds back (HISTORY_UNREAD git's words
@@ -322,6 +329,7 @@ def assemble(
         lost=dict(lost),
         run_facts=facts,
         measured=measured,
+        indexed=dict(indexed or {}),
     )
 
 
@@ -375,9 +383,20 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
         except HistoryUnread as exc:
             unread = str(exc)
     gone = held | {rd.dir.name for rd in deleted}
-    lost = {r: p for r, p in indexed_bindings(area).items() if r not in gone}
+    indexed = indexed_bindings(area)
+    lost = {r: p for r, p in indexed.items() if r not in gone}
     return assemble(
-        area, repo, file_state, runs, deleted, lost, unread, protocols, texts, pending
+        area,
+        repo,
+        file_state,
+        runs,
+        deleted,
+        lost,
+        unread,
+        protocols,
+        texts,
+        pending,
+        indexed,
     )
 
 
@@ -422,33 +441,98 @@ def lost_in_the_tree_too(measured: Measured) -> list[str]:
     return [run for run in measured.lost if run in tree]
 
 
+@dataclass(frozen=True)
+class WithoutRecord:
+    """The runs labkit still has evidence of and no record for, sorted by
+    what that means for one protocol (`measurements_without_record`).
+
+    Attributes:
+        may_be_first: One clause per such run the run index binds to the
+            protocol and no measurement of it that reads precedes in the
+            index: it may have been the first measurement, so what stood
+            registered before the number is not told.
+        later: One clause per such run the index binds to the protocol and
+            lists after a measurement of it that reads: the first
+            measurement's registration is told without it.
+        unassigned: The ids of the runs whose record does not read and
+            which no index row names: which protocol each belongs to
+            cannot be determined, so it counts for none.
+    """
+
+    may_be_first: tuple[str, ...]
+    later: tuple[str, ...]
+    unassigned: tuple[str, ...]
+
+    @property
+    def of_protocol(self) -> tuple[str, ...]:
+        """MAY_BE_FIRST and LATER: the clauses of the runs bound to the
+        protocol."""
+        return self.may_be_first + self.later
+
+
 def measurements_without_record(
-    measured: Measured, lost_in_tree: Sequence[str]
-) -> list[str]:
-    """One clause per measurement of MEASURED's protocol that labkit still
-    has evidence of and no record for: each run of LOST_IN_TREE and each
-    run whose record does not read. LOST_IN_TREE is the lost runs the
-    working tree lacks too — `lost_in_the_tree_too(measured)` for a state
-    of the index, `measured.lost` itself for a state of the working tree
-    (the two are the same there). [] when every measurement has its record — a run
-    a commit holds back has (`Measured.deleted`). Such a measurement counts
-    as started (`Measured.has_measured`) and may have been the first: what
-    stood registered at it is not told, and no later run or commit stands
-    in for it — the one condition the run's start names
-    (`start_check.earlier_measurement_note`) and the registration station
-    holds on (`registration_hold.lost_record_hold`). A run removed with its
-    index row leaves no evidence and is not seen. Pure. Why:
+    measured: Measured, lost_in_tree: Sequence[str], indexed: Mapping[str, str]
+) -> WithoutRecord:
+    """The runs without a record, as they bear on MEASURED's protocol
+    (`WithoutRecord`): each run of LOST_IN_TREE (its directory gone, no
+    commit holding it) and each run among MEASURED's whose record does not
+    read. LOST_IN_TREE is the lost runs the working tree lacks too —
+    `lost_in_the_tree_too(measured)` for a state of the index,
+    `measured.lost` itself for a state of the working tree. INDEXED is the
+    area's run index, run id → protocol id in index order
+    (`AreaState.indexed`), the one evidence used for two questions:
+
+    - which protocol a run without a record belongs to: the id its row
+      names. A run whose record does not read counts for that protocol
+      alone; one bound elsewhere or recorded unbound is not this
+      protocol's; one no row names is UNASSIGNED, for every protocol alike.
+    - whether it may have been the first measurement: not when a
+      measurement of the protocol whose record reads (no repeat; a run a
+      commit holds back among them) stands before it in the index. The
+      index is appended at each run's end, and one script measures one run
+      at a time in an area, so that order is the order they ran in.
+
+    Everything empty when every measurement has its record. A run removed
+    with its index row leaves no evidence and is not seen. Pure. Read by
+    the run's start (`start_check.earlier_measurement_note`) and the
+    registration station (`registration_hold.lost_record_hold`,
+    `lost_record_warnings`). Why and the limits of the index's order:
     docs/notes/2026-11-18-lost-first-measurement.md."""
-    return [
-        f"run {run} is gone (the run index lists it as measured, and it was "
-        f"deleted before a commit held it)"
-        for run in lost_in_tree
-    ] + [
-        # the reason is `runlog <AREA>`'s to list: it carries the machine's path
-        f"the record of run {rd.dir.name} does not read"
+    order = {run: n for n, run in enumerate(indexed)}
+    reads_at = [
+        order[rd.dir.name]
         for rd in measured.runs
-        if rd.error is not None
+        if rd.config is not None
+        and rd.config.run_kind == MEASUREMENT
+        and rd.config.repeat_of is None
+        and rd.dir.name in order
     ]
+    first_that_reads = min(reads_at, default=None)
+    gone = [
+        (
+            run,
+            f"run {run} is gone (the run index lists it as measured, and it was "
+            f"deleted before a commit held it)",
+        )
+        for run in lost_in_tree
+    ]
+    unreadable = [rd.dir.name for rd in measured.runs if rd.error is not None]
+    # the reason is `runlog <AREA>`'s to list: it carries the machine's path
+    unread = [
+        (run, f"the record of run {run} does not read")
+        for run in unreadable
+        if indexed.get(run) == measured.pid
+    ]
+    may_be_first: list[str] = []
+    later: list[str] = []
+    for run, clause in gone + unread:
+        after = first_that_reads is not None and order.get(run, -1) > first_that_reads
+        (later if after else may_be_first).append(clause)
+    return WithoutRecord(
+        tuple(may_be_first),
+        tuple(later),
+        tuple(run for run in unreadable if run not in indexed),
+    )
 
 
 def present_run_dirs(

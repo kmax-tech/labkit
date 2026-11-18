@@ -9,16 +9,17 @@ of each hold and its way back. Read-only; finalize tells what it finds.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
+    GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
+    WARNING,
     GateFinding,
     RuleAssignment,
     blocker,
@@ -45,6 +46,7 @@ from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import (
     AreaState,
     Measured,
+    WithoutRecord,
     lost_in_the_tree_too,
     measurements_without_record,
 )
@@ -164,17 +166,17 @@ def registration_changes(
     no run answers a registered question: held too, the ways out a new
     registration that declares its changes against each (K1,
     `report_replacement.replacement_gaps`) or a handover without a declared
-    result. Before either comparison: a measurement of PID that left no
-    record that reads may have been the first, and the one finding is then
-    that hold (`lost_record_hold`) — no comparison with a later run in its
-    place. Empty without an answering run, a stamped id PID, or a block in
-    the records. Raises RuntimeError when git fails."""
+    result. Before either comparison: a run of PID that left no record that
+    reads and may have been the first measurement, and the one finding is
+    then that hold (`lost_record_hold`) — no comparison with a later run in
+    its place. Empty without an answering run, a stamped id PID, or a block
+    in the records. Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
     root = git_root(protocol)
     measured = state.measured_of(pid)
     untold = lost_record_hold(
-        pid, measured, lost_in_the_tree_too(measured), handover(protocol)
+        pid, area, without_record_of(state, measured), handover(protocol)
     )
     if untold:
         # ends here: neither comparison below runs against a later run
@@ -685,44 +687,110 @@ def unread_hold(area: Path, protocol: Path, pid: str, unread: list[str]) -> Gate
     )
 
 
+def without_record_of(state: AreaState, measured: Measured) -> WithoutRecord:
+    """`area_state.measurements_without_record` for MEASURED as a gate's
+    state holds it: its lost runs the working tree lacks too
+    (`lost_in_the_tree_too`, which builds the tree's state when a run is
+    lost) and the run index STATE read (`AreaState.indexed`)."""
+    lost = lost_in_the_tree_too(measured)
+    if not lost and all(rd.error is None for rd in measured.runs):
+        return WithoutRecord((), (), ())
+    return measurements_without_record(measured, lost, state.indexed)
+
+
 def lost_record_hold(
-    pid: str, measured: Measured, lost_in_tree: Sequence[str], handover_way: str
+    pid: str, area: Path, without: WithoutRecord, handover_way: str
 ) -> list[GateFinding]:
-    """The BLOCKER when a measurement of protocol PID left no record that
-    reads (`area_state.measurements_without_record` over MEASURED and
-    LOST_IN_TREE, the lost runs the working tree lacks too): a started measurement keeps
-    counting when its record is missing, and it may have been the first —
-    what stood registered before the number cannot be told, so the
-    comparison did not run (a check not executable), and neither a later
-    run nor the protocol as committed now is compared in its place. Beside
-    a first measurement that reads, too: no record orders the two. The ways
-    out: the record back from where something keeps it, then finalize
-    again; where nothing keeps it, a new registration, or the handover
-    (HANDOVER_WAY, `ways_out.handover`). [] when every measurement has its
-    record — a run a commit holds back is read from there. Pure. The
+    """The BLOCKER when what protocol PID registered at its first
+    measurement can no longer be reconstructed: a run bound to it left no
+    record that reads and may have been the first (WITHOUT's
+    `may_be_first`, `area_state.measurements_without_record`). A started
+    measurement keeps counting when its record is missing; the comparison
+    did not run (a check not executable), and neither a later run nor the
+    protocol as committed now is compared in its place. The ways out: the
+    record back from where something keeps it, then finalize again on
+    AREA; where nothing keeps it, a new registration, or the handover
+    (HANDOVER_WAY, `ways_out.handover`). [] otherwise — also for a run
+    without a record that a measurement that reads precedes, and for one
+    whose protocol cannot be determined: `lost_record_warnings` names
+    those, and the comparison with the first measurement runs. Pure. The
     decision behind it and what it leaves to an exploratory protocol type:
     docs/notes/2026-11-18-lost-first-measurement.md."""
-    without = measurements_without_record(measured, lost_in_tree)
-    if not without:
+    runs = without.may_be_first
+    if not runs:
         return []
     return [
         blocker(
             f"what the number is about cannot be compared with its first "
-            f"measurement: {'; '.join(without)} — "
-            f"{'it' if len(without) == 1 else 'each'} may have been the first "
+            f"measurement: {'; '.join(runs)} — "
+            f"{'it' if len(runs) == 1 else 'each'} may have been the first "
             f"measurement, so what stood registered before the number cannot be "
             f"told; a later run or the protocol as committed now does not stand in "
             f"for it",
             fix=f"bring the record back where something keeps it — the run's "
             f"directory with its config.json, from a commit, a clone or a copy "
             f"that holds it (a record written anew from memory settles nothing) —, "
-            f"then `{gate_command('finalize', measured.area)}`; where nothing keeps "
+            f"then `{gate_command('finalize', area)}`; where nothing keeps "
             f"it, {register_anew(pid)} — the earlier protocol, its runs and their "
             f"verdict stay; or {handover_way}",
             stated_outcome=NOT_EXECUTABLE,
             rule=TECHNICAL_RULE,
         )
     ]
+
+
+#: the way back every warning about a run without a record names
+RECORD_BACK = (
+    "bring the run's directory with its config.json back from a commit, a clone "
+    "or a copy that holds it (a record written anew from memory settles nothing)"
+)
+
+
+def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
+    """The WARNINGs about runs without a record that hold no number
+    (WITHOUT, `area_state.measurements_without_record`), each naming its
+    runs and the way back (RECORD_BACK):
+
+    - `later`: runs of the protocol that a measurement of it that reads
+      precedes in the run index. The first measurement's registration is
+      told, so the comparison runs; a result that needs such a run's own
+      rows is held by that result's check (the answering-run choice, the
+      audit binding, the row lineage).
+    - `unassigned`: records that do not read and that no index row names.
+      Which protocol each belongs to cannot be determined, so it holds no
+      protocol — said, not passed over.
+
+    [] when WITHOUT has neither. Pure."""
+    found: list[GateFinding] = []
+    if without.later:
+        found.append(
+            GateFinding(
+                WARNING,
+                f"{'; '.join(without.later)} — a measurement of this protocol "
+                f"that reads stands before "
+                f"{'it' if len(without.later) == 1 else 'each'} in the run index, "
+                f"so the comparison with the first measurement runs without it; a "
+                f"result that needs its rows is held where that result is checked",
+                rule=TECHNICAL_RULE,
+                fix=RECORD_BACK,
+                evidence_kind=GUARANTEED,
+            )
+        )
+    if without.unassigned:
+        runs_named = ", ".join(without.unassigned)
+        found.append(
+            GateFinding(
+                WARNING,
+                f"the record of run {runs_named} does not read, and the run index "
+                f"does not list it: which protocol it belongs to cannot be "
+                f"determined, so it is held against no protocol",
+                rule=TECHNICAL_RULE,
+                fix=RECORD_BACK,
+                evidence_kind=GUARANTEED,
+                stated_outcome=NOT_EXECUTABLE,
+            )
+        )
+    return found
 
 
 def anew_way(pid: str) -> str:
@@ -1120,10 +1188,16 @@ def check_registration(
     (`registration_changes`: what the number is about, and the promise
     block, read from STATE, the area's state built once); a note when it
     holds, and one per field a correction released (`corrected_in_place`),
-    so the release names what changed and why.
+    so the release names what changed and why. With a stamped id PID, the
+    runs without a record that hold no number are warned of either way
+    (`lost_record_warnings`).
     HELD is the area's audit evidence, read once at the entry."""
     changes = registration_changes(area, protocol, pid, run, state, held)
     findings.take_all(changes)
+    if pid is not None:
+        findings.take_all(
+            lost_record_warnings(without_record_of(state, state.measured_of(pid)))
+        )
     if not changes:
         corrected = corrected_in_place(area, protocol, pid, run, state, held)
         findings.note(

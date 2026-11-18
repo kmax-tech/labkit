@@ -32,6 +32,7 @@ from labkit.formats.gate import (
     NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
+    WARNING,
     GateFinding,
     cited_rule,
 )
@@ -44,12 +45,17 @@ from labkit.gates.registration_hold import (
     DESCRIPTION_ADDED,
     FirstMeasurement,
     description_added,
+    lost_record_warnings,
     now_hold,
     seen_hold,
     split_released,
     waiting_refs,
 )
-from labkit.formats.area_state import Measured
+from labkit.formats.area_state import (
+    Measured,
+    WithoutRecord,
+    measurements_without_record,
+)
 from labkit.formats.runs import RunDir, parse_run_config
 from labkit.gates.ways_out import HANDOVER
 from protocol_fixture import run_record
@@ -798,12 +804,14 @@ class TheRuleAChangedRegistrationRecords(unittest.TestCase):
         self.assertEqual(registration_hold.registration_rule(was, now), self.LAB_003)
 
 
-class AMeasurementWithoutItsRecordLeavesTheRegistrationUntold(unittest.TestCase):
-    """`lost_record_hold`: a measurement labkit still has evidence of and
-    no record for — a run only the run index lists, a record that does not
-    read — may have been the first, so what stood registered then is not
-    told: a BLOCKER of a check not executable, never a pass and never a
-    comparison with a later run in its place."""
+class ARunWithoutItsRecord(unittest.TestCase):
+    """`area_state.measurements_without_record` sorts the runs without a
+    record by what each means for one protocol, and the registration
+    station acts on each sort: `lost_record_hold` blocks where the run may
+    have been the first measurement — what stood registered then is not
+    told —, `lost_record_warnings` names a run a measurement that reads
+    precedes and a record whose protocol cannot be determined. The run
+    index is the evidence for both the protocol and the order."""
 
     LOST = "2026-10-05T10-00-00_lost"
     DEAD = run_dir("2026-10-06T10-00-00_dead", error="config.json: not JSON")
@@ -811,46 +819,97 @@ class AMeasurementWithoutItsRecordLeavesTheRegistrationUntold(unittest.TestCase)
         "2026-10-07T10-00-00_ab12",
         config=parse_run_config(run_record(protocol={"id": PID, "path": "P.md"})),
     )
+    OTHER = "p-fedcba9876543210"
 
-    def held(
+    def sorted_out(
         self,
+        index: dict[str, str],
         runs: tuple[RunDir, ...] = (),
         lost: tuple[str, ...] = (),
-        firsts: tuple[RunDir, ...] = (),
-    ) -> list[GateFinding]:
-        measured = Measured(AREA, PID, runs, lost, tuple((f,) for f in firsts), ())
+    ) -> WithoutRecord:
+        """The sort for PID over RUNS, LOST and the run index INDEX (run id
+        → protocol id, in index order)."""
+        measured = Measured(AREA, PID, runs, lost, (), ())
+        return pure_call(measurements_without_record, measured, lost, index)
+
+    def held(self, without: WithoutRecord) -> list[GateFinding]:
         return pure_call(
-            registration_hold.lost_record_hold, PID, measured, lost, HANDOVER
+            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER
         )
 
-    def test_a_run_only_the_index_lists_holds_with_every_way_out(self):
-        (hold,) = self.held(lost=(self.LOST,))
-        self.assertEqual(
-            (hold.grade, hold.rule, hold.outcome),
-            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
-        )
-        self.assertIn(f"run {self.LOST} is gone", hold.text)
-        self.assertIn("cannot be told", hold.text)
-        self.assertIn("does not stand in for it", hold.text)
-        for way in ("a copy that holds it", "register anew", HANDOVER):
-            self.assertIn(way, hold.fix or "")
-
-    def test_a_record_that_does_not_read_holds_naming_the_run(self):
-        (hold,) = self.held(runs=(self.DEAD,))
-        self.assertEqual(hold.outcome, NOT_EXECUTABLE)
-        self.assertIn(
-            f"the record of run {self.DEAD.dir.name} does not read", hold.text
-        )
-        self.assertIn("written anew from memory settles nothing", hold.fix or "")
-
-    def test_beside_a_first_measurement_that_reads_it_holds_all_the_same(self):
-        for name, runs, lost in (
-            ("lost", (self.FIRST,), (self.LOST,)),
-            ("unreadable", (self.DEAD, self.FIRST), ()),
+    def test_a_lost_run_before_every_measurement_that_reads_holds(self):
+        first = self.FIRST.dir.name
+        for name, index, runs in (
+            ("nothing else measured", {self.LOST: PID}, ()),
+            ("before the one that reads", {self.LOST: PID, first: PID}, (self.FIRST,)),
         ):
             with self.subTest(name):
-                (hold,) = self.held(runs=runs, lost=lost, firsts=(self.FIRST,))
+                without = self.sorted_out(index, runs, (self.LOST,))
+                self.assertEqual((without.later, without.unassigned), ((), ()))
+                (hold,) = self.held(without)
+                self.assertEqual(
+                    (hold.grade, hold.rule, hold.outcome),
+                    (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+                )
+                self.assertIn(f"run {self.LOST} is gone", hold.text)
                 self.assertIn("may have been the first", hold.text)
+                self.assertIn("does not stand in for it", hold.text)
+                for way in ("a copy that holds it", "register anew", HANDOVER):
+                    self.assertIn(way, hold.fix or "")
+                self.assertEqual(pure_call(lost_record_warnings, without), [])
+
+    def test_a_lost_run_after_a_measurement_that_reads_is_named_not_held(self):
+        index = {self.FIRST.dir.name: PID, self.LOST: PID}
+        without = self.sorted_out(index, (self.FIRST,), (self.LOST,))
+        self.assertEqual(without.may_be_first, ())
+        self.assertEqual(self.held(without), [])
+        (warning,) = pure_call(lost_record_warnings, without)
+        self.assertEqual((warning.grade, warning.rule), (WARNING, TECHNICAL_RULE))
+        self.assertIn(f"run {self.LOST} is gone", warning.text)
+        self.assertIn("the comparison with the first measurement runs", warning.text)
+        self.assertIn("a copy that holds it", warning.fix or "")
+
+    def test_a_repeat_or_a_probe_that_reads_does_not_stand_before_it(self):
+        """Only a measurement that registers — no repeat, no probe — tells
+        what stood registered before a later run."""
+        bound = {"protocol": {"id": PID, "path": "P.md"}}
+        for name, fields in (
+            ("a repeat", {"repeat_of": "2026-10-01T10-00-00_0000", "draw": 2}),
+            ("a probe", {"run_kind": "probe"}),
+        ):
+            with self.subTest(name):
+                cfg = parse_run_config(run_record({**bound, **fields}))
+                other = run_dir(self.FIRST.dir.name, config=cfg)
+                index = {other.dir.name: PID, self.LOST: PID}
+                without = self.sorted_out(index, (other,), (self.LOST,))
+                self.assertEqual(len(without.may_be_first), 1)
+
+    def test_an_unreadable_record_holds_only_the_protocol_its_row_names(self):
+        dead = self.DEAD.dir.name
+        ours = self.sorted_out({dead: PID}, (self.DEAD,))
+        (hold,) = self.held(ours)
+        self.assertIn(f"the record of run {dead} does not read", hold.text)
+        self.assertIn("written anew from memory settles nothing", hold.fix or "")
+        for name, bound_to in (("another protocol", self.OTHER), ("unbound", "")):
+            with self.subTest(name):
+                theirs = self.sorted_out({dead: bound_to}, (self.DEAD,))
+                self.assertEqual(theirs, WithoutRecord((), (), ()))
+                self.assertEqual(self.held(theirs), [])
+                self.assertEqual(pure_call(lost_record_warnings, theirs), [])
+
+    def test_an_unreadable_record_no_row_names_holds_none_and_is_warned_of(self):
+        """Its protocol cannot be determined: no hold for any protocol, and
+        a warning of a check not executable that names the run and the way
+        back — never a silent pass."""
+        dead = self.DEAD.dir.name
+        without = self.sorted_out({self.FIRST.dir.name: PID}, (self.DEAD, self.FIRST))
+        self.assertEqual(without, WithoutRecord((), (), (dead,)))
+        self.assertEqual(self.held(without), [])
+        (warning,) = pure_call(lost_record_warnings, without)
+        self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
+        self.assertIn(f"the record of run {dead} does not read", warning.text)
+        self.assertIn("which protocol it belongs to cannot be determined", warning.text)
+        self.assertIn("written anew from memory settles nothing", warning.fix or "")
 
     def test_the_twins_every_measurement_with_its_record_and_none_pass(self):
         from_git = run_dir(
@@ -862,4 +921,7 @@ class AMeasurementWithoutItsRecordLeavesTheRegistrationUntold(unittest.TestCase)
             ("a deleted run a commit holds", (from_git,)),
         ):
             with self.subTest(name):
-                self.assertEqual(self.held(runs=runs, firsts=runs), [])
+                without = self.sorted_out({rd.dir.name: PID for rd in runs}, runs)
+                self.assertEqual(without, WithoutRecord((), (), ()))
+                self.assertEqual(self.held(without), [])
+                self.assertEqual(pure_call(lost_record_warnings, without), [])

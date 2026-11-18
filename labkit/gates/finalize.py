@@ -26,9 +26,11 @@ each step's condition):
                     (sentences, keys, constants, scopes) and the way back;
                     first measurements that recorded different blocks, a
                     blocker (`registration_changes`, LAB-003 No run without
-                    an intent paragraph); a measurement that left no
-                    record that reads, a blocker in place of the
-                    comparison (`registration_hold.lost_record_hold`)
+                    an intent paragraph); a run without a record that
+                    reads which may have been the first measurement, a
+                    blocker in place of the comparison
+                    (`registration_hold.lost_record_hold`), any other
+                    such run a warning (`lost_record_warnings`)
   3. intent-check   every registered promise has a metrics key (and vice
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id
