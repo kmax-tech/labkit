@@ -62,7 +62,7 @@ from labkit.formats.area_state import (
     unread_start_warning,
 )
 from labkit.formats.runs import RunDir, parse_run_config
-from labkit.gates.ways_out import HANDOVER
+from labkit.gates.ways_out import HANDOVER_WAY
 from protocol_fixture import run_record
 from state_fixture import AREA, area_evidence, area_state, audit_record, run_dir
 
@@ -848,7 +848,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
 
     def held(self, without: WithoutRecord) -> list[GateFinding]:
         return pure_call(
-            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER
+            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER_WAY
         )
 
     def test_a_lost_run_no_measurement_that_reads_precedes_holds(self):
@@ -877,7 +877,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
                 self.assertIn("may have been the first", hold.text)
                 self.assertIn("does not stand in for it", hold.text)
                 self.assertNotIn("is unknown", hold.text)
-                for way in ("a copy that holds it", "register anew", HANDOVER):
+                for way in ("a copy that holds it", "register anew", HANDOVER_WAY):
                     self.assertIn(way, hold.fix or "")
                 self.assertEqual(pure_call(lost_record_warnings, without), [])
 
@@ -1079,7 +1079,7 @@ class AStartFileThatDoesNotRead(unittest.TestCase):
         (clause,) = without.unordered
         self.assertIn(f"no start file holds a start for {first}", clause)
         (hold,) = pure_call(
-            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER
+            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER_WAY
         )
         self.assertEqual(hold.outcome, NOT_EXECUTABLE)
 
@@ -1096,7 +1096,7 @@ class AStartFileThatIsNowhere(unittest.TestCase):
 
     def test_a_run_of_the_protocol_holds_with_every_way_out(self):
         (hold,) = pure_call(
-            registration_hold.missing_start_hold, PID, AREA, (self.RUN,), HANDOVER
+            registration_hold.missing_start_hold, PID, AREA, (self.RUN,), HANDOVER_WAY
         )
         self.assertEqual(
             (hold.grade, hold.rule, hold.outcome),
@@ -1110,13 +1110,16 @@ class AStartFileThatIsNowhere(unittest.TestCase):
             "never written anew from memory",
             "no value put in its place",
             "register anew",
-            HANDOVER,
+            HANDOVER_WAY,
         ):
             self.assertIn(way, hold.fix or "")
 
     def test_the_twin_a_start_file_that_is_found_holds_nothing(self):
         self.assertEqual(
-            pure_call(registration_hold.missing_start_hold, PID, AREA, (), HANDOVER), []
+            pure_call(
+                registration_hold.missing_start_hold, PID, AREA, (), HANDOVER_WAY
+            ),
+            [],
         )
         self.assertIsNone(pure_call(missing_start_warning, (), ()))
 
@@ -1149,7 +1152,11 @@ class ABindingTheFilesContradict(unittest.TestCase):
 
     def test_a_contradiction_blocks_with_every_way_out(self):
         (hold,) = pure_call(
-            registration_hold.binding_conflict_hold, PID, AREA, (self.CLAUSE,), HANDOVER
+            registration_hold.binding_conflict_hold,
+            PID,
+            AREA,
+            (self.CLAUSE,),
+            HANDOVER_WAY,
         )
         self.assertEqual(
             (hold.grade, hold.rule, hold.outcome),
@@ -1161,12 +1168,14 @@ class ABindingTheFilesContradict(unittest.TestCase):
             "restored from that commit, never edited",
             "never deleted",
             "register anew",
-            HANDOVER,
+            HANDOVER_WAY,
         ):
             self.assertIn(way, hold.fix or "")
 
     def test_the_twin_files_that_agree_hold_nothing(self):
         self.assertEqual(
-            pure_call(registration_hold.binding_conflict_hold, PID, AREA, (), HANDOVER),
+            pure_call(
+                registration_hold.binding_conflict_hold, PID, AREA, (), HANDOVER_WAY
+            ),
             [],
         )

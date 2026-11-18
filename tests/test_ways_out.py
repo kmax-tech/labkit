@@ -241,7 +241,7 @@ class HandoverIntoTheRegisteredReport(unittest.TestCase):
 
     def test_the_twin_a_head_without_a_report_names_the_default(self):
         self.assertIn("--into REPORT.md`", ways_out.handover(self.protocol(None)))
-        self.assertIn("--into REPORT.md`", ways_out.HANDOVER)
+        self.assertIn("--into REPORT.md`", ways_out.HANDOVER_WAY)
 
 
 if __name__ == "__main__":

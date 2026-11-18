@@ -38,7 +38,7 @@ def handover(protocol: Path | None) -> str:
 
 #: the handover sentence where no protocol is known: the ways-out table and
 #: the agent guide (`handover`)
-HANDOVER = handover(None)
+HANDOVER_WAY = handover(None)
 
 #: the way out when a finding decided `fixed` names a place that begins
 #: several protocol fields or means one written twice
@@ -169,7 +169,7 @@ WAYS_OUT = (
         "measurement is exploratory, and a new run on the same data does not "
         "restore what stood before the number. When the missing choice can be "
         f"made on grounds the new registration states, {register_anew()}; else "
-        f"{HANDOVER}. A pure typo in a prose field is corrected in the protocol "
+        f"{HANDOVER_WAY}. A pure typo in a prose field is corrected in the protocol "
         "itself — in a field that says what the number is about, released by the "
         "follow-up audit's `resolved` on it; the question stays as registered, a "
         "typo included",
@@ -188,7 +188,7 @@ WAYS_OUT = (
         "none of these",
         "a way out above cannot be taken because a prerequisite it names is "
         "missing — name which; a refusal alone is no reason, it names its next "
-        f"step: stop and {HANDOVER} — the open BLOCKERs stay open and the "
+        f"step: stop and {HANDOVER_WAY} — the open BLOCKERs stay open and the "
         "handover records them, with why it stops. Never hand-edit audit or "
         "run evidence; decisions use --decide, generated report blocks use "
         "protocol-fill; never --no-verify",
