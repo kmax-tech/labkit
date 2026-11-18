@@ -109,8 +109,12 @@ Do not edit a completed run's metrics or outputs to repair the experiment.
 
 **Command and output:** run `.venv/bin/python AREA/scripts/01_measure.py`.
 It records the run under `runs/<run_id>/`, its inputs, code and protocol
-binding, outputs and completion, and updates the run index. Commit the
-relevant source, outputs and records using explicit paths.
+binding, outputs and completion, and updates the run index. Before the
+script's block runs it writes the run's start file outside that directory,
+`run-starts/<run_id>.json` (run id, protocol id, UTC start, run kind). Commit
+the relevant source, outputs and records using explicit paths, the start
+file among them: until a commit holds it, it exists on this machine only,
+and git reports the tree as changed.
 
 **Done / way out:** the measurement completed. With a registered report and
 nothing adopted, `labkit-next` names the progress account next, before the
