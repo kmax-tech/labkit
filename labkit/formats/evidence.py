@@ -84,8 +84,8 @@ from labkit.formats.repo import (
     state_text,
     text_at,
 )
-from labkit.formats.commands import audit_command
-from labkit.formats.run_starts import START_FILES_DIR, is_start_file
+from labkit.formats.commands import audit_command, stage_command
+from labkit.formats.run_starts import START_FILES_DIR, is_start_file, start_path
 from labkit.formats.runs import (
     COMPLETION_FILE,
     CONFIG_FILE,
@@ -517,7 +517,9 @@ def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]
     (sentence, way out) — in the working tree, or STAGED in the index (what
     a commit now would carry): a record changed beyond its decision lines,
     another audit file changed, a run HEAD holds closed whose files changed
-    or went. A version back as labkit first committed it is no change
+    or went, a start file changed or deleted; and, STAGED only, a run the
+    index holds whose start file is not staged (`unstaged_start_files`).
+    A version back as labkit first committed it is no change
     (`original`): restoring a record a commit past the pre-commit rewrote
     passes. [] outside git and before the first commit; a deleted audit
     file is `attempts.gaps`'s to name. Git unable to read what the
@@ -559,8 +561,10 @@ def _change_findings(
     entries = _in_area(
         _state_diff(root, "HEAD", _specs(area, root), staged=staged), _base(area, root)
     )
+    # 2. what the commit would lack: only the index is asked
+    unstaged = unstaged_start_files(area, root) if staged else []
     if not entries:
-        return []
+        return unstaged
 
     def texts(rel: str) -> tuple[str | None, str | None]:
         path = area / rel
@@ -573,7 +577,35 @@ def _change_findings(
         _undone_in(root, area, rev=None, staged=staged),
         deletions=False,
     )
-    return told(area, root, audits, runs, where, "HEAD")
+    return told(area, root, audits, runs, where, "HEAD") + unstaged
+
+
+def unstaged_start_files(area: Path, root: Path) -> list[tuple[str, str]]:
+    """(sentence, way out) per run of AREA whose record the index holds
+    (`runs/<run_id>/config.json`: the commit documents the run) while its
+    start file stands in the working tree and is not in the index: the
+    commit would carry the run without the file that says which protocol
+    it started with and when, and a check of that commit must not count a
+    safeguard the commit lacks. The way out stages the file. [] when every
+    such run's start file is staged; a run without a start file anywhere —
+    one from before start files — is none. Raises GitError when git fails."""
+    recorded = sorted(
+        rel.split("/")[0]
+        for rel in files_at(root, area / RUNS_DIR) or set()
+        if rel.count("/") == 1 and rel.endswith(f"/{CONFIG_FILE}")
+    )
+    staged = files_at(root, area / START_FILES_DIR) or set()
+    return [
+        (
+            f"{START_FILES_DIR}/{path.name}: the start file of run {run} stands in "
+            f"the working tree and is not staged, while the index holds the run's "
+            f"record — the commit would document the run without the file that "
+            f"says which protocol it started with and when",
+            f"stage it (`{stage_command(path)}`)",
+        )
+        for run in recorded
+        if (path := start_path(area, run)).name not in staged and path.is_file()
+    ]
 
 
 def commit_changes(area: Path, since: str) -> list[str]:

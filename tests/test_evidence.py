@@ -30,6 +30,7 @@ from labkit.gates import hook_session
 from datetime import datetime, timezone  # noqa: E402
 
 from labkit.formats import evidence, findings, run_starts  # noqa: E402
+from labkit.formats.area_state import INDEX, state_of  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
 from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
@@ -302,6 +303,62 @@ class CommittedStartFile(unittest.TestCase):
         _git(self.root, "add", "-A")
         (line,) = self.found(staged=True)
         self.assertIn("the start file deleted in the index since HEAD", line)
+
+
+class TheCommitCarriesTheStartFile(unittest.TestCase):
+    """The commit's check reads the index: a start file in the working tree
+    that is not staged is no part of the commit. Where the index holds a
+    run's record, its unstaged start file holds the commit; staged, it
+    passes; a run without a start file anywhere is none."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.area = self.root / "experiments" / "01-x"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
+        _git(self.root, "init", "-q", ".")
+        _git(self.root, "config", "user.email", "t@t")
+        _git(self.root, "config", "user.name", "t")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the area")
+        self.run_dir = _run_dir(self.area, CLOSED, closed=True)
+        self.start = run_starts.write_start(
+            self.area,
+            run_starts.RunStart(CLOSED, "p-0123456789abcdef", NOON, "measurement"),
+        )
+
+    def staged(self) -> list[tuple[str, str]]:
+        return evidence.change_findings(self.area, staged=True)
+
+    def test_a_run_staged_without_its_start_file_holds_the_commit(self):
+        _git(self.root, "add", str(self.run_dir))
+        ((why, fix),) = self.staged()
+        self.assertIn(
+            f"run-starts/{CLOSED}.json: the start file of run {CLOSED} stands in "
+            f"the working tree and is not staged",
+            why,
+        )
+        self.assertIn(
+            f"`git add -- experiments/01-x/run-starts/{CLOSED}.json`",
+            fix.replace(str(self.root) + "/", ""),
+        )
+        (hold,) = evidence.change_blockers(self.staged())
+        self.assertEqual(hold.grade, "BLOCKER")
+        # the area state of the commit does not count the file either
+        self.assertEqual(state_of(self.area, file_state=INDEX).starts, {})
+        # the tree's own check is not asked this
+        self.assertEqual(evidence.change_findings(self.area), [])
+
+    def test_the_twin_the_start_file_staged_passes(self):
+        _git(self.root, "add", str(self.run_dir), str(self.start))
+        self.assertEqual(self.staged(), [])
+        self.assertEqual(list(state_of(self.area, file_state=INDEX).starts), [CLOSED])
+
+    def test_the_twins_nothing_staged_and_a_run_without_a_start_file(self):
+        self.assertEqual(self.staged(), [])  # the commit carries no run
+        self.start.unlink()
+        _git(self.root, "add", str(self.run_dir))
+        self.assertEqual(self.staged(), [])  # a run from before start files
 
 
 class Session(unittest.TestCase):

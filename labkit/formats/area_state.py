@@ -292,8 +292,9 @@ class AreaState:
             stand included: which runs reached completion, and with the
             start files what binds a run without a record to a protocol
             (`assigned_to`). Its order tells nothing.
-        starts: The start files as read — the file state's, and those a
-            commit holds and the file state lacks —, run id → what each holds
+        starts: The start files as read — the file state's (the working
+            tree's, or the index's under INDEX), and those a commit holds
+            and the file state lacks —, run id → what each holds
             (`run_starts.read_starts`): which run started with which
             protocol, when and as which kind.
         started_only: Run id → protocol id of the runs only the start
@@ -605,7 +606,11 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
     gone = held | {rd.dir.name for rd in deleted}
     indexed = indexed_bindings(area)
     lost = {r: p for r, p in indexed.items() if r not in gone}
-    starts = read_starts(area)
+    if staged:
+        assert repo is not None  # as above
+        starts = indexed_starts(repo, area)
+    else:
+        starts = read_starts(area)
     deleted_starts: dict[str, str] = {}
     if repo is not None:
         try:
@@ -997,6 +1002,27 @@ def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir
         run_dir_from_text(run_path(area, run_id), text, from_commit=at)
         for run_id, text, at in last_committed(repo, runs_path(area), name, held)
     ]
+
+
+def indexed_starts(repo: Path, area: Path) -> dict[str, RunStart]:
+    """AREA's start files as git's index holds them (`repo.files_at`), by
+    run id — what a commit now would carry: a start file that stands in
+    the working tree and is not staged is not among them. {} when the index
+    holds none. Raises `run_starts.RunStartsError` for one that does not
+    read, GitError when git fails."""
+    folder = area / START_FILES_DIR
+    out: dict[str, RunStart] = {}
+    for name in sorted(files_at(repo, folder, INDEX_REV) or set()):
+        run_id = name.removesuffix(START_SUFFIX)
+        if "/" in name or RUN_ID.fullmatch(run_id) is None:
+            continue
+        text = text_at(repo, folder / name)
+        if text is None:
+            raise RuntimeError(
+                f"{folder / name}: listed by git's index, and not read from it"
+            )
+        out[run_id] = parse_start(text, f"{folder / name} (index)", run_id)
+    return out
 
 
 def committed_starts(
