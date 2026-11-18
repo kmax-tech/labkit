@@ -7,7 +7,8 @@ one filled the hand-checked case from its own run, and two reports were
 never registered (docs/notes/2026-11-15-agent-guidance-replays.md). Read
 from the head in memory; `labkit-next` and runlog print the same sentences
 (their tests: `test_next_step.TheChain`,
-`test_adoption_order.FirstStepBeforeARun`).
+`test_adoption_order.FirstStepBeforeARun`), in the same cases
+(`BothCommandsInTheSameCases`).
 """
 
 from __future__ import annotations
@@ -15,8 +16,12 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from labkit.formats import protocol_block, runs
+from labkit.formats.area_state import TREE, AreaState, assemble
 from labkit.formats.standard_contract import first_measurement_hint
-from protocol_fixture import head  # noqa: E402
+from labkit.gates import next_step
+from labkit.run import start_check
+from protocol_fixture import PID, head, run_record  # noqa: E402
 
 PROTOCOL = Path("experiments/02-hrv/PROTOCOL-hrv.md")
 WITHIN = 'value = 760\ntolerance = 7.6\nrelation = "within"\n'
@@ -93,3 +98,61 @@ class WithoutAnId(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _record(name: str, run_kind: runs.RunKind = "measurement") -> runs.RunDir:
+    cfg = runs.parse_run_config(
+        run_record(protocol={"id": PID, "path": "PROTOCOL-x.md"}, run_kind=run_kind)
+    )
+    return runs.RunDir(Path("runs") / name, cfg, None)
+
+
+class BothCommandsInTheSameCases(unittest.TestCase):
+    """runlog's first step and `labkit-next` add the hint while the area has
+    not measured the protocol (`area_state.Measured.has_measured`), and
+    neither adds it after: a lost run and a run whose record does not read
+    count, as either may have been the first measurement."""
+
+    TEXT = head(repeat_cost="low", kind="compute")
+
+    def hints(self, state: AreaState) -> tuple[bool, bool]:
+        """(runlog's first step carries the hint, labkit-next's does)."""
+        bound = start_check._Bound(  # noqa: SLF001
+            {"id": PID, "path": "PROTOCOL-x.md"},
+            self.TEXT,
+            protocol_block.head(self.TEXT),
+        )
+        runlog = start_check._first_step(Path("area"), bound, state)  # noqa: SLF001
+        after = next_step._before_first_hint(  # noqa: SLF001
+            Path("area") / "PROTOCOL-x.md", self.TEXT, state.measured_of(PID)
+        )
+        return "register it now" in runlog, "register it now" in after
+
+    def state(
+        self, present: list[runs.RunDir], lost: dict[str, str] | None = None
+    ) -> AreaState:
+        return assemble(Path("area"), None, TREE, present, [], lost or {})
+
+    def test_before_a_measurement_both_add_it(self):
+        probe = _record("2026-10-07T09-00-00_0000", run_kind="probe")
+        for name, state in (
+            ("no run", self.state([])),
+            ("a probe only", self.state([probe])),
+        ):
+            with self.subTest(name):
+                self.assertEqual(self.hints(state), (True, True))
+
+    def test_after_a_measurement_neither_adds_it(self):
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        for name, state in (
+            (
+                "a measurement that reads",
+                self.state([_record("2026-10-07T10-00-00_ab12")]),
+            ),
+            ("a lost run", self.state([], {"2026-10-05T10-00-00_lost": PID})),
+            ("a record that does not read", self.state([dead])),
+        ):
+            with self.subTest(name):
+                self.assertEqual(self.hints(state), (False, False))

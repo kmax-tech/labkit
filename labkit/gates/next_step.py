@@ -674,8 +674,9 @@ def _field_step(
 def _before_first_hint(protocol: Path, text: str, measured: Measured) -> str:
     """The sentences a step before the first measurement adds
     (`standard_contract.first_measurement_hint`: the report, a computation's
-    `[reference]` and its hand-checked case); "" after a measurement
-    (MEASURED)."""
+    `[reference]` and its hand-checked case); "" once the area measured
+    the protocol (MEASURED, `area_state.Measured.has_measured` — runlog's
+    first step asks the same, `start_check.measurement_refusal`)."""
     if measured.has_measured:
         return ""
     return first_measurement_hint(protocol, text)

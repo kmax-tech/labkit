@@ -200,10 +200,12 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
     """The next action before a full run: low's registration, or high's
     report commitment when missing, otherwise its freeze. Reads the first
     measurement and HEAD at high cost through the shared commitment check;
-    writes nothing. Before the first measurement each step ends with what
-    only the task can say (`standard_contract.first_measurement_hint`): runlog is the
-    last stop before that run, and an agent that never ran labkit-next sees
-    only this line.
+    writes nothing. While the area has not measured the protocol
+    (`area_state.Measured.has_measured`, the question `labkit-next` asks)
+    each step ends with what only the task can say
+    (`standard_contract.first_measurement_hint`): runlog is the last stop
+    before that run, and an agent that never ran labkit-next sees only this
+    line.
     """
     head = bound.head
     hint = ""
@@ -213,7 +215,7 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
         and head is not None
         and head.id is not None
         and isinstance(rel, str)
-        and not state.measured_of(head.id).firsts
+        and not state.measured_of(head.id).has_measured
     ):
         hint = first_measurement_hint(base_dir / rel, bound.text)
     if bound.text is not None and protocol_check.repeated_fields(bound.text):

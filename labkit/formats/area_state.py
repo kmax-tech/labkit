@@ -150,7 +150,10 @@ class Measured:
         a measurement or whose record does not read
         (`answering_run.is_measurement`), or a lost one? Before a
         measurement a report owes nothing and a report may still be
-        registered; after it the registration stands."""
+        registered; after it the registration stands. The one question
+        behind "before the first measurement": a lost run and an unreadable
+        record count, as either may have been the first — `firsts` is no
+        answer to it, it names only the measurements whose record reads."""
         return bool(self.lost) or any(is_measurement(rd) for rd in self.runs)
 
     @property

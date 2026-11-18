@@ -444,6 +444,23 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertFalse(state.measured_of(PID).has_measured)
         self.assertEqual(state.measured_of(PID).runs[0].dir.name, PROBE)
 
+    def test_measured_without_a_first_that_reads(self):
+        # a lost run and an unreadable record each count as measured, though
+        # neither is among the first measurements whose record reads
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        for name, present, lost in (
+            ("lost", [], {"2026-10-05T10-00-00_lost": PID}),
+            ("unreadable", [dead], {}),
+        ):
+            with self.subTest(name):
+                m = assemble(Path("area"), None, TREE, present, [], lost).measured_of(
+                    PID
+                )
+                self.assertTrue(m.has_measured)
+                self.assertEqual(m.firsts, ())
+
 
 class ARecordGitHolds(unittest.TestCase):
     def test_a_record_read_from_text_carries_its_commit_or_its_error(self):
