@@ -146,6 +146,28 @@ class PromisePreflight(unittest.TestCase):
         )
         self.assertEqual(intent_id_lines(*area_with(script)), [])
 
+    def test_a_key_built_at_run_time_is_not_followed_and_the_warning_says_so(self):
+        """A decision that builds the key (`m[f"quality_check_{n}_…"]`)
+        does withhold the verdict, and the static reader cannot see which
+        keys it reads: the warning stays and names that limit and the
+        literal form it follows."""
+        script = (
+            "def evaluate(rows):\n"
+            "    m = {'quality_check_1_anchor_ok': True, 'criterion_1_pass': True}\n"
+            "    if not all(m[f'quality_check_{n}_anchor_ok'] for n in (1,)):\n"
+            "        m['criterion_1_pass'] = None\n"
+            "    return m\n"
+        )
+        findings = intent_id_lines(*area_with(script))
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn("nothing decides on it under its literal name", findings[0])
+        self.assertIn("a key built at run time", findings[0])
+        self.assertIn(
+            "reading the key by its literal name "
+            '(`if not m["quality_check_1_anchor_ok"]: …`)',
+            findings[0],
+        )
+
     def test_a_print_is_not_a_decision(self):
         script = (
             "def evaluate(rows):\n"
