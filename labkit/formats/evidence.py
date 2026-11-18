@@ -215,7 +215,7 @@ def broken(
     moved aside (`moved_aside`). UNDONE tells a later
     version that is back as labkit first committed it (`original`): a
     restore breaks nothing either. Pure apart from TEXTS and UNDONE."""
-    # a start file lies in runs/ and in no run's folder: the loop below
+    # a start file lies in run-starts/ and in no run's folder: the loop below
     # passes it over, and `start_file_changes` holds it
     audits = start_file_changes(entries, undone)
     runs: dict[str, list[tuple[str, str]]] = {}
