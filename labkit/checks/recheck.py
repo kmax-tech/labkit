@@ -369,11 +369,16 @@ def verified(
     what `02_analyze.py --draws` checks for every draw — a draw shown
     unchecked lets an edited repeat file change the flipped items, an edited
     metrics.json the range. STATE is the area's state the caller built
-    (`holds`); with None the block comparison and the kept key each build
-    it, for a bound run. Raises SystemExit on the
-    first disagreement."""
+    (`holds`); with None it is built here, once for the block comparison
+    and the kept key, and only for a run bound to a protocol — an unbound
+    run holds nothing to its area. Raises SystemExit on the first
+    disagreement."""
     pin(run, out)
     scopes_unchanged(run, area)
+    if state is None:
+        cfg = runs.read_run_config(run)
+        if cfg is not None and cfg.protocol.id is not None:
+            state = state_of(area)
     block_unchanged(run, area, state=state)
     metrics = runs.read_metrics(runs.metrics_path(run))
     return metrics, agree(
