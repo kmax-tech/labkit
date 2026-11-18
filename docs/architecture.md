@@ -347,6 +347,7 @@ experiments/NN-name/
     completion.json             confirmed completion and end state
     script-source.py            snapshot of the script as it ran
     code.json                   the code it imported, per git repository; code/ holds patches and copies
+    start-file                  the start mark: a start file was written for this run (its path) — evidence of the start-file duty
   run-starts/<run_id>.json      the run's start file: run id, protocol id, UTC start, run kind — tracked, written once at the start
   runs.tsv                      derived index of completed runs — git-ignored, `runlog reindex` rebuilds it
 ```
