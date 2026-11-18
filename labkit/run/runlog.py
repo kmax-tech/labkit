@@ -100,6 +100,13 @@ from labkit.formats.run_index import (
     read_index,
     read_index_now,
 )
+from labkit.formats.run_starts import (
+    RUN_STARTS,
+    RunStart,
+    RunStartsError,
+    utc_now,
+    write_start,
+)
 from labkit.formats.runs import (
     NO_INPUTS_DECLARED,
     NO_INPUTS_KEY,
@@ -470,9 +477,13 @@ class Run:
         )
         # Count a repeat's draw and write its record under the same lock:
         # concurrent starts must not receive the same number, and `self.draw`
-        # is the one number the script names its file by.
+        # is the one number the script names its file by. A measurement's
+        # start record is appended under it too (`run_starts.write_start`).
+        measures = prepared.run_kind == MEASUREMENT
         guard = (
-            index_lock(base_dir) if repeat_of is not None else contextlib.nullcontext()
+            index_lock(base_dir)
+            if repeat_of is not None or measures
+            else contextlib.nullcontext()
         )
         with guard:
             self._repeat_of, self.draw, self._config = _repeat_draw(
@@ -481,9 +492,40 @@ class Run:
             self.run_id, self.dir = _make_run_dir(base_dir)
             try:
                 self._write_record(provenance)
+                # the last step of the start, after every refusal and after
+                # the record: a start that was refused left no row, and a
+                # row names a run whose record was written. Durable before
+                # the script measures; a failed write refuses the start.
+                if measures:
+                    self._write_start_record()
             except BaseException:
                 shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
                 raise
+
+    def _write_start_record(self) -> None:
+        """The run's row in the area's start record (`run_starts`): its id,
+        the protocol id it is bound to ("" unbound) and the time now in
+        UTC, synced to disk. The caller holds the index lock.
+
+        Side effects:
+            Appends to <area>/run-starts.tsv.
+
+        Raises SystemExit naming the file when the row cannot be written:
+        a measurement whose start is recorded nowhere outside its own
+        directory does not start."""
+        start = RunStart(self.run_id, self._protocol.get("id") or "", utc_now())
+        try:
+            write_start(self.base, start)
+        except (OSError, RunStartsError) as exc:
+            raise SystemExit(
+                with_way_out(
+                    f"runlog: the start of {self.run_id} could not be recorded in "
+                    f"{self.base / RUN_STARTS}: {exc} — the measurement did not "
+                    f"start, and no run directory is left",
+                    "make the file writable or repair it as the sentence says, "
+                    "then start the run again",
+                )
+            ) from exc
 
     @property
     def config(self) -> dict:
