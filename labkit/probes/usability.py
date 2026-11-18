@@ -677,6 +677,8 @@ def stage(
         f"staged {root}\n  task:   {root / 'TASK.md'}\n  log:    {log}\n"
         f"  probe:  {sidecar(root, 'probe.json')}\n  prompt: {prompt}\n"
         f"next: hand the prompt file's text to a cold agent (fresh context, no "
+        # the probe's own command, the staged directory as the lines above
+        # name it — home: no builder in commands
         f"history), then `usability score {root} --transcript <its transcript>`"
     )
     return 0

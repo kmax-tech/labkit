@@ -12,6 +12,7 @@ directly above it that names the home it is not after `home:`.
 from __future__ import annotations
 
 import re
+import tomllib
 import unittest
 from pathlib import Path
 from typing import get_args
@@ -19,6 +20,18 @@ from typing import get_args
 from labkit.formats import runs
 
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
+#: labkit's console commands (`[project.scripts]`), longest first, as one
+#: alternation: a command added there is held by the command rules below
+CONSOLE_COMMANDS = "|".join(
+    re.escape(name)
+    for name in sorted(
+        tomllib.loads((PACKAGE.parent / "pyproject.toml").read_text(encoding="utf-8"))[
+            "project"
+        ]["scripts"],
+        key=len,
+        reverse=True,
+    )
+)
 #: rules that also hold in the stamped script templates — a stamped area reads
 #: its tier off the contract like labkit does
 IN_TEMPLATES = {
@@ -290,6 +303,42 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"print\(f\"[a-z-]+: .*file=sys\.stderr",
         {"console"},
     ),
+    # a printed command names its path through a builder, which quotes it as
+    # the working directory reaches it: a console command opening a
+    # backticked line with an interpolated first argument, or
+    # `protocol-fill <PROTOCOL>` with an interpolated one after it, is a
+    # line spelled by hand. A sentence with slots only (`<PROTOCOL>`,
+    # `<area>`) names no path and stands, as does the area slot a gate
+    # fills (`gate.AREA_SLOT`)
+    (
+        "a console command spelled by hand",
+        rf"`(?:{CONSOLE_COMMANDS})(?: [a-z-]+)? \{{(?!AREA_SLOT\}})"
+        r"|protocol-fill <PROTOCOL> [^`\n]*\{",
+        {"commands"},
+    ),
+    # a staging is one quoted line after `--`, each path as the working
+    # directory reaches it: `commands.stage_command`
+    (
+        "a staging spelled by hand",
+        r"""git add[^`\n]*(?:\{|["'] \+)""",
+        {"commands"},
+    ),
+    # the measurement script is `runs.MEASURE_SCRIPT`, as a path and in a
+    # printed line (`commands.measure_command`, `measure_slot_command`)
+    (
+        "the measurement script named by hand",
+        r"/ \"01_measure\.py\"|\}/scripts/01_measure\.py",
+        {"runs"},
+    ),
+    # a path relative to the repository root, as git names it, is
+    # `repo.rel_posix`: it resolves the root and says where a path outside
+    # it lies. The shape tells a repository from an area by the name of the
+    # base alone (`root`, `repo`); a base under another name is not held
+    (
+        "a repo-relative path spelled by hand",
+        r"\.relative_to\((?:root|repo)\)\.as_posix\(\)",
+        {"repo"},
+    ),
 ]
 
 
@@ -311,6 +360,22 @@ BLOCK_RULES: list[tuple[str, str, set[str]]] = [
         "a labkit command's line printed by hand (multi-line form)",
         r"print\(\n\s*f\"labkit-[a-z]+: [^\n]*\n(?:[^\n]*\n){0,3}?\s*file=sys\.stderr",
         {"console"},
+    ),
+    # the one-line form is held above; here the command closes one string
+    # piece and its interpolated path opens the next
+    (
+        "a console command spelled by hand (split form)",
+        rf"`(?:{CONSOLE_COMMANDS})(?: [a-z-]+)? \"\n\s*f?\"\{{(?!AREA_SLOT\}})",
+        {"commands"},
+    ),
+    # "the adopted run, None where `[result]` does not read" has one
+    # answer: `answering_run.adopted_run`. A reader that keeps the sentence
+    # (`report_context.declaration`) or refuses with it is not this shape
+    (
+        "an adopted run read by hand",
+        r"try:\n[^\n]*declared_run\([^\n]*\n\s*except [^\n]*BlockError[^\n]*:"
+        r"\n\s*(?:return None|\w+ = None|pass)\n",
+        {"answering_run"},
     ),
 ]
 
@@ -374,6 +439,16 @@ class OneHome(unittest.TestCase):
                 '            f"{args.model} · {len(prompt) // 1000} kB",\n'
                 "            file=sys.stderr,\n"
                 "        )\n"
+            ),
+            "a console command spelled by hand (split form)": (
+                '            fix=f"repair what the sentence names; `intent-check "\n'
+                '            f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",\n'
+            ),
+            "an adopted run read by hand": (
+                "    try:\n"
+                "        tree_run = protocol_block.declared_run(tree)\n"
+                "    except protocol_block.BlockError:\n"
+                "        tree_run = None\n"
             ),
         }
         self.assertEqual(set(samples), {what for what, _, _ in BLOCK_RULES})
@@ -439,6 +514,10 @@ class OneHome(unittest.TestCase):
             "a git restore spelled by hand": 'f"restore it (`git checkout HEAD -- {path}`)"',
             "the release rule of a review's draws spelled by hand": "return any(not cr.again for cr, _ in pairs) and all(",
             "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
+            "a console command spelled by hand": 'fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "',
+            "a staging spelled by hand": 'fix = f"stage it: `git add -- {outside_index[token]}`"',
+            "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
+            "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

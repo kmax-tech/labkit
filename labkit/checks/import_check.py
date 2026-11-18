@@ -127,7 +127,7 @@ def _import_findings(
 
 
 def _path_under_area(expr: ast.expr, area: Path) -> Path | None:
-    """`AREA / "scripts" / "01_measure.py"` read as that path; None for any
+    """`AREA / "<folder>" / "<file>"` read as that path; None for any
     other expression (only literal parts after the area's own name)."""
     if isinstance(expr, ast.Name) and expr.id == "AREA":
         return area

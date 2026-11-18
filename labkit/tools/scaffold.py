@@ -880,6 +880,7 @@ def _name_one(areas: list[Path]) -> str:
     area without a number cannot be named apart from the others."""
     numbered = [p.name for p in areas if split_area_name(p.name)[0] is not None]
     how = (
+        # home: no builder in commands — an area's name, not a path
         [f"name the one you mean by its number (`labkit-init exp {numbered[0]} …`)"]
         if numbered
         else []
@@ -905,6 +906,7 @@ def restampable_area(root: Path, name: str, kind: str) -> Path:
         raise console.Refused(
             "labkit-init",
             f"--change-kind: no area {slug!r} under {experiments} — "
+            # home: no builder in commands — an area's name, not a path
             f"`labkit-init exp {slug} --kind {kind}` stamps a new one",
         )
     protocol = area / f"PROTOCOL-{slug}.md"

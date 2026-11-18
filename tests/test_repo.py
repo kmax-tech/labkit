@@ -839,6 +839,10 @@ class BuildersUnderAPathWithASpace(unittest.TestCase):
             (commands.list_command(self.PROTOCOL), ["protocol-fill", named, "--list"]),
             (commands.wait_command(self.AREA), ["runlog", "my lab/01 x", "--wait"]),
             (
+                commands.reported_check_command(Path("my lab") / "REPORT.md"),
+                ["report-check", "--if-reported", "my lab/REPORT.md"],
+            ),
+            (
                 commands.gate_command("intent-check", self.PROTOCOL),
                 ["intent-check", named],
             ),

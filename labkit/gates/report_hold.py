@@ -75,6 +75,7 @@ from labkit.formats.commands import (
     claim_review_command,
     into_command,
     report_review_command,
+    reported_check_command,
     stage_command,
 )
 from labkit.formats.runs import read_run_config, unreportable
@@ -803,6 +804,8 @@ def link_gap(
     source = shown(linked_file(path, link_target), repo)
     steps = [f"rm {shlex.quote(rel)}", f"cp {shlex.quote(source)} {shlex.quote(rel)}"]
     if staged:
+        # the three steps are one line run at the repository root, each
+        # naming REL as `rm` and `cp` do — home: not commands.stage_command
         steps.append(f"git add {shlex.quote(rel)}")
     return blocker(
         f"{rel}: a symbolic link to {link_target} — a report is held as a file "
@@ -1229,7 +1232,7 @@ def undeclared_findings(
                     f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
                     f"reported, but {named} has adopted it as its result",
                     fix="remove the discussion block — the generated result block "
-                    f"shows the number —, then `report-check --if-reported {rel}`",
+                    f"shows the number —, then `{reported_check_command(path)}`",
                     rule=OPEN_RULE,
                 )
             )

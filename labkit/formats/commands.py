@@ -202,6 +202,17 @@ def gate_command(tool: str, target: Path) -> Command:
     return Command(CHECK, f"{tool} {shlex.quote(shown(target, Path.cwd()))}")
 
 
+def reported_check_command(report: Path) -> Command:
+    """The `report-check --if-reported REPORT` line — the check the stop and
+    the commit run on REPORT —, the report shell-quoted as the working
+    directory reaches it (`shown`): the last step after a report is
+    repaired by hand."""
+    return Command(
+        CHECK,
+        f"report-check --if-reported {shlex.quote(shown(report, Path.cwd()))}",
+    )
+
+
 def contract_command(protocol: Path) -> Command:
     """The `protocol-check … --contract` line that prints the fields PROTOCOL
     owes by occasion, the protocol named as the working directory reaches
