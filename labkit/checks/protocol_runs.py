@@ -11,10 +11,12 @@ plus `uncommitted.patch`, `run_code`): git's file summary in the list,
 the whole diff as a RUN DIFF piece of its own while the audit's DIFF_BUDGET
 lasts; past it the list names the diff not shown in full, with an excerpt
 and the rest unread (`labkit-run-diff` prints it for a person). A finding
-asks for such a diff, or one path's section of it, with a `diff:` check
-(`findings.diff_request`); once it is decided, every later audit shows it
-as a REQUESTED DIFF piece, taken from the budget before any other
-(`requested_pieces`). The pieces are in the digest the audit record binds
+asks for such a diff, one path's section of it or lines of one file's
+side, with a `diff:` check, and for a file as a run started from it with a
+`code:` check (`findings.evidence_request`); once it is decided, every
+later audit shows it as a REQUESTED DIFF or REQUESTED CODE piece, taken
+from the budget before any other, until a follow-up judged it on the text
+shown (`requested_pieces`). The pieces are in the digest the audit record binds
 (`audit_binding.run_shown`), so a new run of such a protocol stales the
 audit. Reads files and git, writes only git objects (`run_code`).
 """
@@ -30,7 +32,13 @@ from pathlib import Path
 from labkit.formats import runs
 from labkit.formats.area_state import Measured, state_of
 from labkit.formats.digests import digest
-from labkit.formats.findings import DIFF_CHECK, DiffRequest, diff_request
+from labkit.formats.findings import (
+    CODE_CHECK,
+    DIFF_CHECK,
+    CodeRequest,
+    DiffRequest,
+    evidence_request,
+)
 from labkit.formats.followup import DiffAsked
 from labkit.formats.protocol_block import BlockError, find_by_id
 from labkit.formats.protocol_history import (
@@ -40,7 +48,13 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats.promises import PromiseError
 from labkit.formats.repo import GitError, git_root, layout_root, shown, text_at
-from labkit.formats.run_code import CodeThen, code_difference, code_scope, code_then
+from labkit.formats.run_code import (
+    CodeDifference,
+    CodeThen,
+    code_difference,
+    code_scope,
+    code_then,
+)
 
 #: how the label of the piece of the audited run's own protocol opens; its
 #: id follows
@@ -58,6 +72,9 @@ DIFF_SHOW_LINES = 80
 #: how a requested diff's piece label opens; "<old> → <new>" and, for a
 #: section, ", <path>" follow (`request_label`)
 REQUEST_LABEL = "REQUESTED DIFF "
+#: how the label of a requested file of a run's code then opens; "<run>,
+#: <path>" and, for a range, ", lines <from>–<to>" follow (`request_label`)
+CODE_LABEL = "REQUESTED CODE "
 #: how a piece that names evidence without showing it opens
 NOT_SHOWN = "not shown:"
 #: how a requested piece opens that a follow-up already judged on the
@@ -89,10 +106,11 @@ READING = (
     "<run>` piece. Where the audit's budget for diffs is spent, a diff is "
     "marked not shown in full: the lines past its excerpt are unread, and a "
     "judgement that needs them stays open — write it as an undetermined "
-    "BLOCKER closed by `· check: {check}` (the whole diff) or `· check: "
-    "{check}:<repository path>` (one file's or folder's section of it): "
-    "decided, the follow-up audit is shown it under `REQUESTED DIFF`, ahead "
-    "of every other diff. Never judge code you were not shown."
+    "BLOCKER closed by `· check: {check}` (the whole diff), `· check: "
+    "{check}:<repository path>` (one file's or folder's section of it) or "
+    "`· check: {check}:<file>:old|new:<from>-<to>` (lines of one side of a "
+    "file): decided, the follow-up audit is shown it under `REQUESTED DIFF`, "
+    "ahead of every other diff. Never judge code you were not shown."
 )
 
 
@@ -190,11 +208,42 @@ def protocol_runs_pieces(
     return out + asked + budget.pieces
 
 
-def request_label(asked: DiffRequest) -> str:
+def request_label(asked: DiffRequest | CodeRequest) -> str:
     """The label of the piece that shows ASKED: REQUEST_LABEL, the runs,
-    and for a section its path."""
+    for a section its path and for a line range its side and lines — or
+    CODE_LABEL, the run, the path and its lines. `label_check` reads it
+    back."""
+    lines = f", lines {asked.lines[0]}–{asked.lines[1]}" if asked.lines else ""
+    if isinstance(asked, CodeRequest):
+        return f"{CODE_LABEL}{asked.run}, {asked.path}{lines}"
     section = f", {asked.path}" if asked.path else ""
-    return f"{REQUEST_LABEL}{asked.old} → {asked.new}{section}"
+    side = f", {asked.side} file" if asked.side else ""
+    return f"{REQUEST_LABEL}{asked.old} → {asked.new}{section}{side}{lines}"
+
+
+#: a label's tail of a line range: ", <old|new> file, lines <from>–<to>"
+#: for a diff, ", lines <from>–<to>" for a file
+_LABEL_LINES = re.compile(
+    r"^(?P<rest>.*?)(?:, (?P<side>old|new) file)?, lines (?P<a>\d+)–(?P<b>\d+)$"
+)
+
+
+def label_check(label: str) -> str | None:
+    """The check whose piece LABEL is (`request_label`, read back), or None
+    for a label of another piece."""
+    if label.startswith(CODE_LABEL):
+        rest = label.removeprefix(CODE_LABEL)
+        m = _LABEL_LINES.match(rest)
+        run, _, path = (m["rest"] if m else rest).partition(", ")
+        return f"{CODE_CHECK}{run}:{path}" + (f":{m['a']}-{m['b']}" if m else "")
+    if not label.startswith(REQUEST_LABEL):
+        return None
+    rest = label.removeprefix(REQUEST_LABEL)
+    m = _LABEL_LINES.match(rest)
+    pair, _, path = (m["rest"] if m else rest).partition(", ")
+    old, _, new = pair.partition(" → ")
+    tail = f":{m['side']}:{m['a']}-{m['b']}" if m else ""
+    return f"{DIFF_CHECK}{old}..{new}" + (f":{path}" if path else "") + tail
 
 
 def requested_pieces(
@@ -204,31 +253,35 @@ def requested_pieces(
     listed: list[Measured],
     budget: DiffBudget,
 ) -> list[tuple[str, str]]:
-    """One `(label, text)` piece per `diff:` check of REQUESTS
-    (`followup.diff_requests`), in their order. Owed whole: the code
-    difference of its new run from its old one, both runs of the protocols
-    LISTED shows, or the section of it whose file paths are its path or
-    lie under it — whole, from BUDGET before any RUN DIFF piece takes from
-    it. NOT_SHOWN and why, with nothing of the diff, when a run is listed
-    nowhere or its code does not read back, the path names nothing that
-    differs, or the text is past what BUDGET has left: a section is the
-    narrower request. A whole difference shown is noted in BUDGET.asked.
-    Judged already: JUDGED_SHOWN, the verdict and the digest of the text,
-    which takes nothing from BUDGET — the verdict stays traceable, the
-    text was judged once. Raises RuntimeError when git fails."""
+    """One `(label, text)` piece per check of REQUESTS
+    (`followup.diff_requests`), in their order. Owed whole: what the check
+    names (`_requested_text`) — a code difference of two runs of the
+    protocols LISTED shows, its section of one path, a line range of one
+    file's side of it, or one file of a run's code then, whole or a line
+    range — from BUDGET before any RUN DIFF piece takes from it. Each text
+    opens with the runs and their code then (commit with its
+    uncommitted.patch) and, for a range, which lines it is and that the
+    rest of the file is not shown. NOT_SHOWN and why, with nothing of it,
+    when a run is listed nowhere or its code does not read back, the path
+    names nothing there, or the text is past what BUDGET has left — with
+    the narrower request to make. A whole difference shown is noted in
+    BUDGET.asked. Judged already: JUDGED_SHOWN, the verdict and the digest
+    of the text, which takes nothing from BUDGET — the verdict stays
+    traceable, the text was judged once. Raises RuntimeError when git
+    fails."""
     by_name = {rd.dir.name: rd for m in listed for rd in m.runs}
     out: list[tuple[str, str]] = []
     for a in requests:
-        asked = diff_request(a.check)
+        asked = evidence_request(a.check)
         label = request_label(asked)
-        why, text, files = _requested_text(area, root, asked, by_name)
+        why, text, narrower = _requested_text(area, root, asked, by_name)
         if a.judged:
             then = (
                 f"its text (digest {digest(text.encode('utf-8'))}) is not shown again"
                 if not why
                 else f"its text does not read back now: {why}"
             )
-            out.append((label, f"{JUDGED_SHOWN} {a.judged} on the diff shown; {then}"))
+            out.append((label, f"{JUDGED_SHOWN} {a.judged} on the text shown; {then}"))
             continue
         if why:
             out.append((label, f"{NOT_SHOWN} {why}"))
@@ -239,47 +292,153 @@ def requested_pieces(
                     label,
                     f"{NOT_SHOWN} {len(text)} characters, past the {budget.left} "
                     f"left of the {DIFF_BUDGET} this audit may be shown of all "
-                    f"diffs — ask for the section of one path, "
-                    f"`{DIFF_CHECK}{asked.old}..{asked.new}:<path>`; the files "
-                    f"that differ: {', '.join(files)}",
+                    f"diffs — {narrower}",
                 )
             )
             continue
         budget.left -= len(text)
-        if asked.path is None:
+        if isinstance(asked, DiffRequest) and asked.path is None:
             budget.asked[(asked.old, asked.new)] = label
         out.append((label, text))
     return out
 
 
+#: what a piece of a line range says of the rest of its file
+RANGE_ONLY = (
+    "only these lines are shown: the rest of the file is not, and nothing "
+    "judged on them is judged of the whole file"
+)
+
+
 def _requested_text(
-    area: Path, root: Path | None, asked: DiffRequest, by_name: dict[str, runs.RunDir]
-) -> tuple[str, str, list[str]]:
-    """(why not, text, files) of what ASKED names: "" and the text — each
-    run's code then, then the diff or its section — with the files that
-    differ, or why it cannot be shown and nothing of it."""
-    missing = [r for r in (asked.old, asked.new) if r not in by_name]
+    area: Path,
+    root: Path | None,
+    asked: DiffRequest | CodeRequest,
+    by_name: dict[str, runs.RunDir],
+) -> tuple[str, str, str]:
+    """(why not, text, narrower) of what ASKED names: "" and the text with
+    the narrower request that takes less of the budget, or why it cannot
+    be shown and nothing of it. Never the code as it stands now: a run
+    whose code then does not read back is a why."""
+    named = [asked.run] if isinstance(asked, CodeRequest) else [asked.old, asked.new]
+    missing = [r for r in named if r not in by_name]
     if missing:
-        return f"run {missing[0]} is no run of the protocols this audit lists", "", []
+        return f"run {missing[0]} is no run of the protocols this audit lists", "", ""
     if root is None:
-        return "the area lies in no git repository", "", []
-    old, new = (code_then(by_name[r], root) for r in (asked.old, asked.new))
-    if old.tree is None or new.tree is None:
-        return (old if old.tree is None else new).where, "", []
+        return "the area lies in no git repository", "", ""
+    then = [code_then(by_name[r], root) for r in named]
+    unread = [c for c in then if c.tree is None]
+    if unread:
+        return unread[0].where, "", ""
+    heads = "".join(f"{c.run_id}: {c.where}\n" for c in then)
+    if isinstance(asked, CodeRequest):
+        return _code_text(root, asked, then[0], heads)
+    old, new = then
+    assert old.tree is not None and new.tree is not None  # unread above
     try:
         diff = code_difference(root, code_scope(area, root), old.tree, new.tree)
     except GitError as exc:
-        return str(exc), "", []
-    text = diff.diff if asked.path is None else diff_section(diff.diff, asked.path)
+        return str(exc), "", ""
+    return _diff_text(asked, diff, heads)
+
+
+def _diff_text(
+    asked: DiffRequest, diff: CodeDifference, heads: str
+) -> tuple[str, str, str]:
+    """`_requested_text` of a `diff:` check: ASKED's part of DIFF, after
+    HEADS (each run with its code then)."""
     files = [ln.split("|")[0].strip() for ln in diff.stat.splitlines() if "|" in ln]
+    pair = f"{DIFF_CHECK}{asked.old}..{asked.new}"
+    if asked.path is None:
+        return (
+            "",
+            heads + diff.diff,
+            (
+                f"ask for the section of one path, `{pair}:<path>`; the files that "
+                f"differ: {', '.join(files)}"
+            ),
+        )
+    text = diff_section(diff.diff, asked.path)
     if not text:
         return (
-            f"no file of the code compared at or under `{asked.path or '.'}` "
-            f"differs; the files that do: {', '.join(files) or 'none'}",
+            f"no file of the code compared at or under `{asked.path}` differs; "
+            f"the files that do: {', '.join(files) or 'none'}",
             "",
-            files,
+            "",
         )
-    return "", f"{asked.old}: {old.where}\n{asked.new}: {new.where}\n{text}", files
+    covered = [
+        f
+        for f in files
+        if f == asked.path or f.startswith(f"{asked.path.rstrip('/')}/")
+    ]
+    if asked.lines is None:
+        narrower = (
+            f"ask for one file's lines, `{pair}:<file>:old|new:<from>-<to>`; the "
+            f"files of this section: {', '.join(covered) or asked.path}"
+        )
+        return "", heads + text, narrower
+    if text.count("\ndiff --git ") or not text.startswith("diff --git "):
+        return (
+            f"a line range names one file; `{asked.path}` covers {', '.join(covered)}",
+            "",
+            "",
+        )
+    assert asked.side is not None  # a range names its side (`diff_request`)
+    a, b = asked.lines
+    cut = diff_lines(text, asked.side, a, b)
+    if not cut:
+        return (
+            f"lines {a}–{b} of the {asked.side} file hold no change of `{asked.path}`",
+            "",
+            "",
+        )
+    run = asked.old if asked.side == "old" else asked.new
+    said = f"`{asked.path}`, lines {a}–{b} of the {asked.side} file (run {run}); {RANGE_ONLY}\n"
+    return "", heads + said + cut, "ask for fewer lines"
+
+
+def _code_text(
+    root: Path, asked: CodeRequest, then: CodeThen, head: str
+) -> tuple[str, str, str]:
+    """`_requested_text` of a `code:` check: ASKED's file in the tree THEN,
+    numbered `<n>: <line>`, whole or its range."""
+    assert then.tree is not None  # unread before
+    try:
+        content = text_at(root, root / asked.path, then.tree)
+    except ValueError as exc:  # not UTF-8: no text to show
+        return (
+            f"`{asked.path}` in run {asked.run}'s code then is no text: {exc}",
+            "",
+            "",
+        )
+    if content is None:
+        return f"run {asked.run}'s code then holds no `{asked.path}`", "", ""
+    lines = content.splitlines()
+    a, b = asked.lines or (1, len(lines))
+    if asked.lines is not None and a > len(lines):
+        return (
+            f"`{asked.path}` has {len(lines)} lines in run {asked.run}'s code then",
+            "",
+            "",
+        )
+    b = min(b, len(lines))
+    said = (
+        f"`{asked.path}` as run {asked.run} started from it, "
+        + (
+            f"lines {a}–{b} of {len(lines)}; {RANGE_ONLY}"
+            if asked.lines
+            else f"whole, {len(lines)} lines"
+        )
+        + "\n"
+    )
+    body = "\n".join(f"{n}: {lines[n - 1]}" for n in range(a, b + 1))
+    narrower = (
+        f"ask for a line range, `{CODE_CHECK}{asked.run}:{asked.path}:<from>-<to>`; "
+        f"the file has {len(lines)} lines"
+        if asked.lines is None
+        else "ask for fewer lines"
+    )
+    return "", head + said + body + "\n", narrower
 
 
 def diff_section(diff: str, path: str) -> str:
@@ -296,6 +455,57 @@ def diff_section(diff: str, path: str) -> str:
             for p in _section_paths(part.split("\n", 1)[0])
         )
     )
+
+
+def diff_lines(section: str, side: str, first: int, last: int) -> str:
+    """The lines of one file's unified diff SECTION whose number on SIDE
+    (`old` or `new`) lies in FIRST–LAST, with the lines the other side
+    has in their place: context and lines of SIDE by their number, a line
+    only the other side has when it stands after a line of the range. Each
+    run of such lines under a hunk header of its own numbers, after the
+    section's file header; "" when no line is in the range."""
+    rows = section.split("\n")
+    at = next((i for i, row in enumerate(rows) if row.startswith("@@")), len(rows))
+    out: list[str] = []
+    group: list[str] = []
+    start, counts = (0, 0), [0, 0]
+    o = n = 0
+
+    def close() -> None:
+        if group:
+            out.append(
+                f"@@ -{start[0]},{counts[0]} +{start[1]},{counts[1]} @@\n"
+                + "".join(f"{row}\n" for row in group)
+            )
+        group.clear()
+
+    for row in rows[at:]:
+        hunk = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", row)
+        if hunk is not None:
+            close()
+            o, n = int(hunk[1]), int(hunk[2])
+            continue
+        if not row:
+            continue
+        kind = row[0]
+        if kind == "\\":  # "no newline at end of file": of the line before
+            if group:
+                group.append(row)
+            continue
+        own = (kind != "-") if side == "new" else (kind != "+")
+        number = (n if side == "new" else o) - (0 if own else 1)
+        if first <= number <= last:
+            if not group:
+                start, counts = (o, n), [0, 0]
+            group.append(row)
+            counts[0] += kind in " -"
+            counts[1] += kind in " +"
+        else:
+            close()
+        o += kind in " -"
+        n += kind in " +"
+    close()
+    return "\n".join(rows[:at]) + "\n" + "".join(out) if out else ""
 
 
 def _section_paths(line: str) -> list[str]:

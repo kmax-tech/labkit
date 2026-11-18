@@ -99,7 +99,8 @@ INLINE_NOTE = (
     "PROTOCOL <id> =====` lines and each run's whole code diff under "
     "`===== RUN DIFF <compared> → <run> =====` lines, a diff an earlier "
     "finding asked for under `===== REQUESTED DIFF <old> → <new>[, <path>] "
-    "=====` lines, and for a computation over a model's annotations the "
+    "=====` lines and a file of a run's code then under `===== REQUESTED "
+    "CODE <run>, <path> =====` lines, and for a computation over a model's annotations the "
     "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
     "(the bound apply protocol and its result as FILE lines), for a "
     "confirmatory protocol that replaces another the predecessor's "
@@ -592,14 +593,14 @@ def required_check_line(f: findings.Finding, metrics: dict | None) -> str:
         return ""
     note = f" ({f.check_note})" if f.check_note else ""
     present = metrics is not None and f.check in metrics
-    if present and f.check.startswith((findings.FILE_CHECK, findings.DIFF_CHECK)):
+    if present and f.check.startswith((findings.FILE_CHECK, *findings.REQUEST_CHECKS)):
         return f"required check `{f.check}`{note}: shown above under `{(metrics or {})[f.check]}`"
     if present:
         value = json.dumps((metrics or {})[f.check], ensure_ascii=False)
         return f"required check `{f.check}`{note} = {value}"
-    if f.check.startswith(findings.DIFF_CHECK):
+    if f.check.startswith(findings.REQUEST_CHECKS):
         return (
-            f"required check `{f.check}`: not shown — its `REQUESTED DIFF` "
+            f"required check `{f.check}`: not shown — its `REQUESTED` "
             f"piece above says why"
         )
     if f.check.startswith(findings.FILE_CHECK):
@@ -836,7 +837,7 @@ def shown_after(
         for v in fixes
         if v.verdict in followup.JUDGING
         and v.check_present
-        and v.check.startswith(findings.DIFF_CHECK)
+        and v.check.startswith(findings.REQUEST_CHECKS)
     ]
     if not judging or bound.state.shown_sha is None:
         return bound.state.shown_sha

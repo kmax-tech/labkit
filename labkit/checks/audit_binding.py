@@ -43,7 +43,7 @@ from labkit.formats import (
 from labkit.checks.origin_check import origin_piece
 from labkit.checks.protocol_runs import (
     NOT_SHOWN,
-    REQUEST_LABEL,
+    label_check,
     bound_protocol_file,
     protocol_runs_pieces,
 )
@@ -354,11 +354,8 @@ def shown_files(pieces: Iterable[tuple[str, str]]) -> dict[str, str]:
         if label.startswith(DEPENDENCY_LABEL):
             recorded = label.removeprefix(DEPENDENCY_LABEL).split(" (", 1)[0]
             out[f"{findings.FILE_CHECK}{recorded}"] = label
-        elif label.startswith(REQUEST_LABEL):
-            runs_part, _, path = label.removeprefix(REQUEST_LABEL).partition(", ")
-            old, _, new = runs_part.partition(" → ")
-            section = f":{path}" if path else ""
-            out[f"{findings.DIFF_CHECK}{old}..{new}{section}"] = label
+        elif (asked := label_check(label)) is not None:
+            out[asked] = label
     return out
 
 

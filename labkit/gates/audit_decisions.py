@@ -788,8 +788,8 @@ def _check_lines(
             f"      check asked: {asked} — no follow-up audit judges a {f.grade}; "
             f"decide it now"
         ]
-    if f.check.startswith(findings.DIFF_CHECK):
-        # settled as a fault, the diff was shown: the repair follows the subject
+    if f.check.startswith(findings.REQUEST_CHECKS):
+        # settled as a fault, the evidence was shown: the repair follows the subject
         if f.subject != findings.UNDETERMINED:
             return []
         return [f"      evidence asked: {asked}; decide `fixed` and run `{follow_up}`"]
@@ -831,7 +831,7 @@ def stands_check_hint(area: Path, record: findings.Record, f: findings.Finding) 
     the run's metrics that cannot be read."""
     if f.effect != findings.EFFECT_STANDS or not f.check:
         return ""
-    if f.check.startswith((findings.FILE_CHECK, findings.DIFF_CHECK)):
+    if f.check.startswith((findings.FILE_CHECK, *findings.REQUEST_CHECKS)):
         return ""
     if record.run_id is None or record.run_id == findings.NO_RUN:
         return ""

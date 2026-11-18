@@ -274,14 +274,14 @@ class RequestedDiff(e2e.CountCommands):
         )
         self.decisive = f"-{DROP_SHORT}"
 
-    def asked(self) -> Path:
-        """The first audit, its BLOCKER asking for the script's section; the
-        record it wrote."""
+    def asked(self, check: str | None = None) -> Path:
+        """The first audit, its BLOCKER asking with CHECK (the script's
+        section when None); the record it wrote."""
         answer = (
             f"BLOCKER · {self.path}:1 · undetermined · B's code differs from "
             f"A's past the excerpt shown; the change that moves lines_mean may "
             f"stand there · lines_mean of B against A · new class · show the "
-            f"omitted lines · check: {self.check} — confirms if a filter on the "
+            f"omitted lines · check: {check or self.check} — confirms if a filter on the "
             f"documents stands there, clears if only the table does\n\n"
             f"{self.clean.replace('verdict: 0 blockers', 'verdict: 1 blockers')}"
         )
@@ -324,9 +324,8 @@ class RequestedDiff(e2e.CountCommands):
         self.assertIn(f"shown above under `{self.label}`", earlier)
         # the follow-up's record covers the state after its own verdict
         self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
-        self.assertNotIn(
-            f"check: {self.check}", out
-        )  # the carried finding asks nothing
+        # the carried finding asks nothing again
+        self.assertNotIn(f"check: {self.check}", out)
         # judged, the section takes no more room: a later audit is shown the
         # verdict and the text's digest, not the text
         _, out, prompt = self.analysis(self.clean)
@@ -349,6 +348,76 @@ class RequestedDiff(e2e.CountCommands):
         self.assertIn(self.decisive, piece(prompt, self.label))
         self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
 
+    def followed(self, first: Path, verdict: str) -> tuple[int, str, str]:
+        """FIRST's request decided `fixed`, then the follow-up audit
+        answering VERDICT on it: (exit, its output, its prompt)."""
+        self.decide(first, 1, "fixed", "the evidence is asked of the follow-up")
+        return self.analysis(f"FIX · {first.name}#1 · {verdict}\n\n{self.clean}")
+
+    def test_a_line_range_serves_a_file_past_the_budget(self):
+        """The script's section does not fit the budget; the lines of B's
+        file around the decisive change do, under a label and a head that
+        name the runs, their code then, the side and the lines."""
+        script = (self.area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        k = script.splitlines().index(DROP_SHORT) + 1
+        check = f"{self.check}:old:{k}-{k}"
+        label = f"{self.label}, old file, lines {k}–{k}"
+        with mock.patch.object(protocol_runs, "DIFF_BUDGET", 1_500):
+            first = self.asked(check)
+            rc, out, prompt = self.followed(
+                first, "unresolved · implementation · the lines show the filter"
+            )
+            self.assertIsNotNone(self.record, out)
+            shown = piece(prompt, label)
+            self.assertIn(self.decisive, shown)
+            self.assertIn(f"+{KEEP_ALL}", shown)  # what A has in its place
+            self.assertNotIn("size class", shown)
+            self.assertIn(f"{self.run_b}: ", shown)
+            self.assertIn(f"lines {k}–{k} of the old file (run {self.run_b})", shown)
+            self.assertIn(protocol_runs.RANGE_ONLY, shown)
+            self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
+
+    def test_a_run_s_file_as_it_started_reaches_the_follow_up(self):
+        """A's script, unchanged by A, as A started from it: numbered, the
+        lines asked only — B's later table is not in it."""
+        check = f"code:{self.run_a}:{self.path}:1-5"
+        label = f"{protocol_runs.CODE_LABEL}{self.run_a}, {self.path}, lines 1–5"
+        first = self.asked(check)
+        rc, out, prompt = self.followed(first, "resolved · A's head holds no filter")
+        self.assertEqual(rc, 0, out)
+        shown = piece(prompt, label)
+        self.assertIn(f"as run {self.run_a} started from it, lines 1–5 of", shown)
+        self.assertIn("\n1: ", shown)
+        self.assertNotIn("\n6: ", shown)
+        self.assertIn(protocol_runs.RANGE_ONLY, shown)
+        self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
+
+    def test_a_run_s_file_whose_version_is_lost_is_never_today_s(self):
+        """Run C started from a changed tree, its uncommitted.patch gone:
+        its file then cannot be read back, and today's is not shown."""
+        script = self.area / "scripts" / "01_measure.py"
+        committed = script.read_text(encoding="utf-8")
+        script.write_text(committed + "# TODAY_ONLY\n", encoding="utf-8")
+        run_c = self.measure()
+        (self.area / "runs" / run_c / "uncommitted.patch").unlink()
+        script.write_text(committed, encoding="utf-8")
+        answer = (
+            f"BLOCKER · {self.path}:1 · undetermined · C's code may differ · "
+            f"lines_mean of C · new class · show the file · check: "
+            f"code:{run_c}:{self.path} — confirms if C's file differs\n\n"
+            f"{self.clean.replace('verdict: 0 blockers', 'verdict: 1 blockers')}"
+        )
+        _, out, _ = self.analysis(answer)
+        self.assertIsNotNone(self.record, out)
+        assert self.record is not None
+        first = self.record
+        _, _, prompt = self.followed(first, "not_assessable · not shown")
+        told = piece(prompt, f"{protocol_runs.CODE_LABEL}{run_c}, {self.path}")
+        self.assertIn("not shown:", told)
+        self.assertIn("uncommitted.patch is gone", told)
+        self.assertNotIn("TODAY_ONLY", told)
+        self.assertNotIn("SOURCE", told)
+
     def test_a_section_past_the_budget_leaves_the_judgement_open(self):
         first = self.asked()
         self.decide(first, 1, "fixed", "the omitted section is asked of the follow-up")
@@ -357,9 +426,11 @@ class RequestedDiff(e2e.CountCommands):
             rc, out, prompt = self.analysis(resolved)
             self.assertNotEqual(rc, 0, out)
             self.assertIsNone(self.record)
-            self.assertTrue(
-                piece(prompt, self.label).split("\n", 1)[1].startswith("not shown:")
-            )
+            told = piece(prompt, self.label).split("\n", 1)[1]
+            self.assertTrue(told.startswith("not shown:"), told)
+            # the narrower request it names: one file's lines
+            self.assertIn(":<file>:old|new:<from>-<to>`; the files of this", told)
+            self.assertIn(self.path, told)
             self.assertIn(f"required check `{self.check}`: not shown", prompt)
             self.assertNotIn(self.decisive, prompt)
             # the same answer but its verdict is recorded: the refusal above

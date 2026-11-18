@@ -38,7 +38,7 @@ from pathlib import Path
 from labkit.formats.gate import BLOCKER
 from labkit.formats.findings import (
     DECIDED,
-    DIFF_CHECK,
+    REQUEST_CHECKS,
     Finding,
     FindingsError,
     FixVerdict,
@@ -236,7 +236,7 @@ def diff_requests(
         f = m.finding
         if (
             f.grade == BLOCKER
-            and f.check.startswith(DIFF_CHECK)
+            and f.check.startswith(REQUEST_CHECKS)
             and (f.status in DECIDED or f.carries)
         ):
             said = judged.get(c.origin[ref], "")
@@ -294,7 +294,7 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
     settled an undetermined finding to or else the member's, the member's
     rule, `carries` = its ref."""
     served = (
-        member.finding.check.startswith(DIFF_CHECK)
+        member.finding.check.startswith(REQUEST_CHECKS)
         and verdict.verdict in JUDGING
         and bool(verdict.check_present)
     )
@@ -410,8 +410,9 @@ def _earlier_hold(
     on_head = [v for v in verdicts if v.ref == m.ref]
     now = decision_digest(f)
     valid = [v for v in on_head if v.decision_sha == now]
-    # a `diff:` check is the follow-up's own to show, nothing a run carries
-    owes_run = bool(f.check) and not f.check.startswith(DIFF_CHECK)
+    # a `diff:` or `code:` check is the follow-up's own to show, nothing a
+    # run carries
+    owes_run = bool(f.check) and not f.check.startswith(REQUEST_CHECKS)
     then = "then a new run, and " if owes_run else "then "
     if not on_head:
         if owes_run and (metrics is None or f.check not in metrics):

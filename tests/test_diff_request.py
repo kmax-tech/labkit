@@ -10,7 +10,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from labkit.checks.protocol_runs import diff_section
+from labkit.checks.protocol_runs import diff_lines, diff_section
 from labkit.formats import findings, followup
 
 OLD = "2026-11-17T10-00-00_aa11"
@@ -63,9 +63,75 @@ class Read(unittest.TestCase):
         """The one wording of the decision list, the decide output and the
         follow-up's holds: `fixed` on a request says the evidence is
         supplied, never that code or claim is confirmed."""
-        said = findings.check_order(f"diff:{OLD}..{NEW}", "")
-        self.assertIn("`fixed` says only: evidence supplied", said)
-        self.assertIn("confirms neither the code nor the claim", said)
+        for check in (f"diff:{OLD}..{NEW}", f"code:{NEW}:lib/w.py:1-9"):
+            with self.subTest(check):
+                said = findings.check_order(check, "")
+                self.assertIn("`fixed` says only: evidence supplied", said)
+                self.assertIn("confirms neither the code nor the claim", said)
+
+    def test_a_line_range_of_one_side_of_a_file(self):
+        self.assertEqual(
+            findings.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:new:120-260"),
+            findings.DiffRequest(OLD, NEW, "lib/w.py", "new", (120, 260)),
+        )
+        self.assertEqual(
+            findings.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:old:7-7").lines, (7, 7)
+        )
+        for bad in ("new:20-10", "mid:1-2", "new:0-3", "new:5"):
+            with self.subTest(bad), self.assertRaises(ValueError):
+                findings.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:{bad}")
+
+    def test_a_run_s_code_as_it_started_whole_or_a_range(self):
+        self.assertEqual(
+            findings.code_request(f"code:{NEW}:area/scripts/01_measure.py"),
+            findings.CodeRequest(NEW, "area/scripts/01_measure.py", None),
+        )
+        self.assertEqual(
+            findings.code_request(f"code:{NEW}:lib/w.py:5-9").lines, (5, 9)
+        )
+        for bad in (
+            "code:latest:lib/w.py",
+            f"code:{NEW}",
+            f"code:{NEW}:",
+            f"code:{NEW}:/etc/passwd",
+            f"code:{NEW}:lib/../../x.py",
+            f"code:{NEW}:lib/w.py:9-5",
+        ):
+            with self.subTest(bad), self.assertRaises(ValueError):
+                findings.code_request(bad)
+        line = (
+            f"BLOCKER · a.py:1 · undetermined · x · y · new class · z · "
+            f"check: code:{NEW}:lib/w.py:5-9 — confirms if the weight is 0"
+        )
+        self.assertEqual(findings.check_of(line)[0], f"code:{NEW}:lib/w.py:5-9")
+        with self.assertRaises(ValueError):
+            findings.check_of(line.replace(":5-9", ":9-5"))
+
+
+#: one file's section: lines 1–6 of the old file, 1–7 of the new
+FILE = (
+    "diff --git a/lib/w.py b/lib/w.py\n--- a/lib/w.py\n+++ b/lib/w.py\n"
+    "@@ -1,6 +1,7 @@\n a\n-b\n+B\n c\n d\n+e2\n f\n g\n"
+)
+
+
+class Lines(unittest.TestCase):
+    """A line range of one side cut from a file's section, each run of
+    lines under a hunk header of its own numbers."""
+
+    def test_the_new_side(self):
+        cut = diff_lines(FILE, "new", 4, 5)
+        self.assertTrue(cut.startswith("diff --git a/lib/w.py b/lib/w.py\n"))
+        self.assertIn("@@ -4,1 +4,2 @@\n d\n+e2\n", cut)
+        self.assertNotIn("B", cut)
+
+    def test_the_old_side_keeps_what_replaced_its_lines(self):
+        cut = diff_lines(FILE, "old", 2, 2)
+        self.assertIn("@@ -2,1 +2,1 @@\n-b\n+B\n", cut)
+        self.assertNotIn("e2", cut)
+
+    def test_a_range_past_the_hunks_takes_nothing(self):
+        self.assertEqual(diff_lines(FILE, "new", 40, 50), "")
 
 
 class Section(unittest.TestCase):
