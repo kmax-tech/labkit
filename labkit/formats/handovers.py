@@ -71,7 +71,6 @@ from labkit.formats.repo import (
     blobs_now,
     git_root,
     indexed_blobs,
-    indexed_protocols,
     own_path,
     protocol_links,
     rel_posix,
@@ -717,18 +716,11 @@ def missing_paths(area: Path, present: set[str], *, staged: bool = False) -> lis
     return sorted(missing)
 
 
-def _protocols(area: Path, root: Path, *, staged: bool) -> list[Path]:
-    """AREA's protocols in the tree or, STAGED, the index."""
-    if staged:
-        return [p for p in indexed_protocols(root) if p.parent == area]
-    return area_protocols(area)
-
-
 def protocols_carrying(area: Path, root: Path, pid: str, *, staged: bool) -> list[Path]:
     """AREA's protocols whose head carries the id PID in the tree or,
     STAGED, the index. A protocol that does not read carries none here."""
     out = []
-    for p in _protocols(area, root, staged=staged):
+    for p in area_protocols(area, staged=staged):
         try:
             text = state_text(root, p, staged=staged)
         except UnicodeError:
@@ -743,7 +735,7 @@ def declared_results(area: Path, root: Path, *, staged: bool = False) -> list[Pa
     a result: none may, while the area is handed over. Raises HandoverError
     on a protocol that does not read or is a symbolic link there
     (`repo.protocol_links`)."""
-    protocols = _protocols(area.resolve(), root, staged=staged)
+    protocols = area_protocols(area.resolve(), staged=staged)
     links = protocol_links(root, protocols, staged=staged)
     if links:
         raise HandoverError(next(iter(links.values())))

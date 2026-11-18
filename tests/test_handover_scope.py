@@ -6,9 +6,13 @@ written through the commands: tests/test_handovers.py."""
 
 from __future__ import annotations
 
+import contextlib
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+from protocol_fixture import PID, head
 
 from labkit.formats import handovers, repo
 
@@ -86,3 +90,34 @@ class ReviewTrace(unittest.TestCase):
         ):
             with self.subTest(rel=rel):
                 self.assertEqual(handovers.review_trace(rel), left_out)
+
+
+class ProtocolsCarrying(unittest.TestCase):
+    """The index's protocols of an area are found however the area is
+    named (`repo.area_protocols`): relative to the working directory as
+    well as resolved. The twin: another area's protocol with the same id is
+    not this area's."""
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        for name in ("01-x", "02-y"):
+            area = self.root / "experiments" / name
+            area.mkdir(parents=True)
+            (area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+
+    def test_a_relative_area_finds_its_staged_protocol(self):
+        named = self.root / "experiments" / "01-x" / "PROTOCOL-x.md"
+        with contextlib.chdir(self.root):
+            carrying = handovers.protocols_carrying(
+                Path("experiments") / "01-x", self.root, PID, staged=True
+            )
+        self.assertEqual(carrying, [named])
+
+    def test_the_twin_a_resolved_area_finds_the_same_one(self):
+        area = self.root / "experiments" / "01-x"
+        self.assertEqual(
+            handovers.protocols_carrying(area, self.root, PID, staged=True),
+            [area / "PROTOCOL-x.md"],
+        )
