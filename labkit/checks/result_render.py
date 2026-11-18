@@ -46,7 +46,7 @@ from labkit.formats import (
     runs,
 )
 from labkit.formats.answering_run import first_registrations
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import cited_rule
 from labkit.formats.gate import GateFinding, blocker
@@ -350,14 +350,17 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
     pred = hits[0]
     where = f"replaces {rep.protocol} ({pred.parent.name}/{pred.name})"
     try:
-        pred_text = state_of(pred.parent).text_of(pred)
+        # one build of the predecessor's area: its text and its first
+        # measurements are read off the same state
+        pred_state = state_of(pred.parent)
+        pred_text = pred_state.text_of(pred)
         declared = protocol_block.declared_run(pred_text)
         earlier = predecessor_verdict(pred.parent, pred_text, {*seen, rep.protocol})
         if declared is None:
             verdict = "no result adopted — unresolved"
         else:
             pred_run = runs.run_path(pred.parent, declared)
-            unregistered = _unregistered(pred, rep.protocol, pred_run)
+            unregistered = _unregistered(pred_state, rep.protocol, pred_run)
             if unregistered:
                 verdict = f"no verdict — {unregistered}"
             else:
@@ -380,15 +383,14 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
     return (f"{earlier} · " if earlier else "") + f"{where}: {verdict}"
 
 
-def _unregistered(protocol: Path, pid: str, run_dir: Path) -> str | None:
-    """Why RUN_DIR, the run PROTOCOL declares, answers no registered question:
-    its first measurements recorded different registrations, or the
+def _unregistered(state: AreaState, pid: str, run_dir: Path) -> str | None:
+    """Why RUN_DIR, the run the protocol stamped PID declares, answers no
+    registered question: its first measurements, as STATE (its area's
+    state) holds them, recorded different registrations, or the
     run recorded a block other than the one they recorded. None when it
     holds theirs, or when no block was recorded (another station names
-    that). Raises RuntimeError when git fails."""
-    registered = first_registrations(
-        state_of(protocol.parent).measured_of(pid).first_groups
-    )
+    that)."""
+    registered = first_registrations(state.measured_of(pid).first_groups)
     if len(registered) > 1:
         return "its first measurements recorded different registrations"
     cfg = runs.read_run_config(run_dir)

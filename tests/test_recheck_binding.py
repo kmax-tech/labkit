@@ -101,6 +101,27 @@ class TwoProtocols(unittest.TestCase):
         v = recheck.holds(self.area, self.out, evaluate, self.a)
         self.assertEqual(v.run_id, RUN_A)
 
+    def test_one_check_builds_the_area_state_once(self):
+        """`holds`, an area's `--check`: the run choice, the block comparison
+        and the kept key read one build of the area's state — two builds in
+        one check can differ when a run finishes between them."""
+        from unittest import mock
+
+        text, _, _ = protocol_result.from_run(
+            self.a.read_text(encoding="utf-8"), self.area
+        )
+        self.a.write_text(text, encoding="utf-8")
+        builds: list[int] = []
+        real = recheck.state_of
+
+        def counting(*args, **kwargs):
+            builds.append(1)
+            return real(*args, **kwargs)
+
+        with mock.patch.object(recheck, "state_of", counting):
+            v = recheck.holds(self.area, self.out, evaluate, self.a)
+        self.assertEqual((v.run_id, len(builds)), (RUN_A, 1))
+
     def test_a_named_run_bound_elsewhere_is_refused(self):
         with self.assertRaises(SystemExit) as cm:
             recheck.run_dir(self.area, self.a, RUN_B)

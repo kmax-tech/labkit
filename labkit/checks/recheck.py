@@ -35,7 +35,7 @@ from labkit.formats import (
     protocol_block,
     runs,
 )
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import file_text, path_kind
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
@@ -58,13 +58,21 @@ class Verdict:
     numbers: list[str]  # what the note was held to
 
 
-def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Path:
+def chosen_run(
+    area: Path,
+    protocol_text: str,
+    run_id: str | None = None,
+    *,
+    state: AreaState | None = None,
+) -> Path:
     """The run a protocol is held to — and the run `--from-run` writes back.
 
     The choice is `answering_run.bound_answering_run` for the protocol's stamped id,
     the same one finalize and intent-check make; RUN_ID names a run instead,
     which must be completed and bound to that id. Never a repeat draw, named
-    or not.
+    or not. STATE is the area's state when the caller built it already
+    (`holds`: one build per check); None builds it here, and only when the
+    choice is asked (no RUN_ID).
     """
     try:
         pid = protocol_block.head(protocol_text).id
@@ -77,7 +85,8 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
         )
     if run_id is not None:
         return _named_run(runs.run_path(area, run_id), pid)
-    choice, blocker, lines = state_of(area).measured_of(pid).told(protocol_text)
+    held = state if state is not None else state_of(area)
+    choice, blocker, lines = held.measured_of(pid).told(protocol_text)
     if blocker or choice.run_dir is None:
         why = blocker.message if blocker else "no run answers"
         raise SystemExit(f"recheck: {why}" + "".join(f"\n  {ln}" for ln in lines))
@@ -109,9 +118,17 @@ def _named_run(d: Path, pid: str) -> Path:
     return d
 
 
-def run_dir(area: Path, protocol: Path, run_id: str | None = None) -> Path:
-    """`chosen_run` for a protocol the area's state holds."""
-    return chosen_run(area, state_of(area).text_of(protocol), run_id)
+def run_dir(
+    area: Path,
+    protocol: Path,
+    run_id: str | None = None,
+    *,
+    state: AreaState | None = None,
+) -> Path:
+    """`chosen_run` for a protocol the area's state holds — STATE, or the
+    state built here once for the protocol's text and the choice."""
+    held = state if state is not None else state_of(area)
+    return chosen_run(area, held.text_of(protocol), run_id, state=held)
 
 
 def pin(run: Path, out: Path) -> None:
@@ -164,29 +181,35 @@ def scopes_unchanged(run: Path, area: Path) -> None:
         )
 
 
-def kept_keys(run: Path, area: Path) -> frozenset[str]:
+def kept_keys(
+    run: Path, area: Path, *, state: AreaState | None = None
+) -> frozenset[str]:
     """The `[kept]` key of the protocol RUN is bound to — the number a
     computation reports, compared exactly by `agree` —, empty for an
-    unbound run or a protocol without the table. Raises SystemExit when the
-    protocol's head does not read."""
+    unbound run or a protocol without the table. The protocol's text is
+    read off STATE, the area's state (built here when None, for a bound run
+    only). Raises SystemExit when the protocol's head does not read."""
     cfg = runs.read_run_config(run)
     if cfg is None or cfg.protocol.id is None:
         return frozenset()
     try:
         protocol = protocol_block.find_by_id(area, cfg.protocol.id)
-        table = protocol_block.kept(state_of(area).text_of(protocol))
+        held = state if state is not None else state_of(area)
+        table = protocol_block.kept(held.text_of(protocol))
     except protocol_block.BlockError as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     return frozenset({table.key}) if table is not None and table.key else frozenset()
 
 
-def block_unchanged(run: Path, area: Path) -> None:
+def block_unchanged(run: Path, area: Path, *, state: AreaState | None = None) -> None:
     """Refuse to hold a note whose promises changed after the run.
 
     A lowered threshold can leave the verdict unchanged by chance — the
     recomputation then agrees and the note looks held, against promises
     nobody registered before the number. The bound
-    protocol's block must be the one the run recorded.
+    protocol's block must be the one the run recorded. The protocol's text
+    is read off STATE, the area's state (built here when None, for a bound
+    run only).
     """
     cfg = runs.read_run_config(run)
     if cfg is None or cfg.protocol.id is None:
@@ -194,7 +217,8 @@ def block_unchanged(run: Path, area: Path) -> None:
     pid = cfg.protocol.id
     try:
         protocol = protocol_block.find_by_id(area, pid)  # by id; the path goes stale
-        block = promises.parse_block(state_of(area).text_of(protocol))
+        held = state if state is not None else state_of(area)
+        block = promises.parse_block(held.text_of(protocol))
     except (protocol_block.BlockError, promises.PromiseError) as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     drift = promises.block_drift(cfg.promises, block)
@@ -337,19 +361,26 @@ def verified(
     out: Path,
     recompute: Callable[[list[dict]], dict],
     ignore: frozenset[str] = LABKIT_KEYS,
+    *,
+    state: AreaState | None = None,
 ) -> tuple[dict, list[str]]:
     """pin → scopes → block → agree for one run, no note: (its metrics, the
     keys the recomputation grew). What `holds` checks before the note, and
     what `02_analyze.py --draws` checks for every draw — a draw shown
     unchecked lets an edited repeat file change the flipped items, an edited
-    metrics.json the range. Raises SystemExit on the
+    metrics.json the range. STATE is the area's state the caller built
+    (`holds`); with None the block comparison and the kept key each build
+    it, for a bound run. Raises SystemExit on the
     first disagreement."""
     pin(run, out)
     scopes_unchanged(run, area)
-    block_unchanged(run, area)
+    block_unchanged(run, area, state=state)
     metrics = runs.read_metrics(runs.metrics_path(run))
     return metrics, agree(
-        metrics, recompute(rows_of(out)), ignore, reported=kept_keys(run, area)
+        metrics,
+        recompute(rows_of(out)),
+        ignore,
+        reported=kept_keys(run, area, state=state),
     )
 
 
@@ -368,9 +399,11 @@ def holds(
     `protocol` names it — a results note under notes/ carries no head.
 
     `numbers(metrics)` formats what the note must carry — pass your own when
-    the note rounds. Raises SystemExit on the first disagreement."""
-    run = run_dir(area, protocol or note, run_id)
-    metrics, grown = verified(run, area, out, recompute, ignore)
+    the note rounds. The area's state is built once, here, and every step
+    reads that build. Raises SystemExit on the first disagreement."""
+    state = state_of(area)
+    run = run_dir(area, protocol or note, run_id, state=state)
+    metrics, grown = verified(run, area, out, recompute, ignore, state=state)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)
     return Verdict(
