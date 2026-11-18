@@ -1,6 +1,8 @@
 # One explainer — gates return data, `labkit-next` explains and does the mechanical steps
 
-2026-11-04. Baseline `35242fc3`. Planned, not ordered: `TODO.md` ("Reihenfolge") puts it after the release gaps of the [maintainability repair plan](2026-11-03-maintainability-repair-plan.md) and before the next usage round. This note owns the work order; the format-and-gate inventory it starts with is the size question's answer, the phases after it are the cut that inventory prepares.
+> Status on 2026-11-18: `TODO.md` ("Reihenfolge") no longer ranks this plan. The usage round it was placed before ran on 2026-11-13 (`TODO.md`, task 7, which cites this note for design and earlier results). Two parts are still open, both under "Notiert, nicht geplant" and neither ordered: the review of formats and gates for duplicate work (Phase 3's inventory rows), deferred without a date, and the one writer of the protocol head (Phase 3, first item), after the usage round and to be checked against the code before it is built.
+
+2026-11-04. Baseline `35242fc3`. As placed on 2026-11-04 — planned, not ordered: `TODO.md` ("Reihenfolge") puts it after the release gaps of the [maintainability repair plan](2026-11-03-maintainability-repair-plan.md) and before the next usage round. This note owns the work order; the format-and-gate inventory it starts with is the size question's answer, the phases after it are the cut that inventory prepares.
 
 ## Architecture boundary review and current decisions (2026-11-06)
 

@@ -1,5 +1,7 @@
 # Plan to simplify the labkit workflow
 
+> Status on 2026-11-18: the prioritized repairs named below as next are closed — steps 1–6 and 9 of the [combined plan](2026-11-03-maintainability-repair-plan.md) are built, steps 7 and 8 wait until the place is touched or the fault is reproduced (`TODO.md`, "Notiert, nicht geplant"). `TODO.md` ("Reihenfolge", task 7) cites this note for design and earlier results only; it orders no work from it.
+
 2026-11-02. Requested by Max. This is the work plan; current rules belong in the standard and [workflow](../workflow.md). Proposals below do not change those rules. Status checked on 2026-11-03: B, A1, the repair-path fixes, both threshold templates and committed-record integrity are integrated in `e754b0c3`. The second-review duty stays; the proposed verdict grounds were not adopted. The bounded interface check and both maintainability reviews are complete; next are the prioritized repairs in the [combined plan](2026-11-03-maintainability-repair-plan.md).
 
 ## Goal and evidence
