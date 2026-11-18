@@ -945,6 +945,27 @@ class TestStartNamesTheArea(unittest.TestCase):
             self.assertEqual(len(list((area / "output").glob("start-*.log"))), 1)
             self.assertFalse((Path(d) / "output").exists())
 
+    def test_the_printed_status_and_wait_lines_run_under_a_path_with_a_space(self):
+        """`runlog start` prints the two lines that follow the run it
+        detached; each reads back (`shlex.split`) as the command it means
+        when the area's path holds a space."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d) / "my lab" / "01 x"
+            area.mkdir(parents=True)
+            cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                code, out = _run_main(
+                    ["start", "my lab/01 x", "--", sys.executable, "-c", "print(1)"]
+                )
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(code, 0)
+        (line,) = [ln for ln in out.splitlines() if ln.startswith("status:")]
+        status, wait = line.removeprefix("status:").split("wait:")
+        self.assertEqual(shlex.split(status), ["runlog", "my lab/01 x"])
+        self.assertEqual(shlex.split(wait), ["runlog", "my lab/01 x", "--wait"])
+
     def test_a_missing_area_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             cwd = os.getcwd()

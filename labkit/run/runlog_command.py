@@ -524,7 +524,10 @@ def _start(argv: list[str]) -> int:
     if pid is None:
         return 2
     print(f"started detached: pid={pid}  log={log}", flush=True)
-    print(f"status:  runlog {area}        wait:  runlog {area} --wait", flush=True)
+    print(
+        f"status:  {gate_command('runlog', area)}        wait:  {wait_command(area)}",
+        flush=True,
+    )
     return _await_run(area, before, proc, pid, log, args.max_seconds)
 
 

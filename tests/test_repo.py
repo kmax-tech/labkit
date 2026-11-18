@@ -838,6 +838,11 @@ class BuildersUnderAPathWithASpace(unittest.TestCase):
         for command, words in (
             (commands.list_command(self.PROTOCOL), ["protocol-fill", named, "--list"]),
             (commands.wait_command(self.AREA), ["runlog", "my lab/01 x", "--wait"]),
+            (commands.gate_command("runlog", self.AREA), ["runlog", "my lab/01 x"]),
+            (
+                commands.detached_start_command(self.AREA, "python x.py"),
+                ["runlog", "start", "my lab/01 x", "--", "python", "x.py"],
+            ),
             (
                 commands.reported_check_command(Path("my lab") / "REPORT.md"),
                 ["report-check", "--if-reported", "my lab/REPORT.md"],
@@ -904,6 +909,9 @@ class BuildersUnderAPathWithASpace(unittest.TestCase):
         self.assertEqual(
             commands.wait_command(protocol.parent).line, "runlog area --wait"
         )
+        start = commands.detached_start_command(protocol.parent)
+        self.assertEqual(start.line, "runlog start area -- <the same command>")
+        self.assertEqual(start.name, commands.MEASURE)
         self.assertEqual(commands.list_command(protocol).name, commands.CHECK)
         self.assertEqual(commands.wait_command(protocol.parent).name, commands.WAIT)
         self.assertEqual(

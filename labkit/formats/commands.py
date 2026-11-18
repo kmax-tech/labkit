@@ -197,7 +197,8 @@ def measure_anew(area: Path) -> str:
 def gate_command(tool: str, target: Path) -> Command:
     """The line that runs labkit's read-only TOOL on TARGET — a check
     (`code-check`, `finalize`, `report-check`, `preflight`, `notes-check`,
-    `protocol-check`) or `labkit-next`, which reads the gates —, TARGET
+    `protocol-check`), `labkit-next`, which reads the gates, or `runlog`,
+    which lists an area's runs —, TARGET
     shell-quoted as the working directory reaches it: the last step of a
     way out whose repair is by hand. Its kind is CHECK: it writes nothing."""
     return Command(CHECK, f"{tool} {shlex.quote(shown(target, Path.cwd()))}")
@@ -250,6 +251,16 @@ def wait_command(area: Path) -> Command:
     """The `runlog AREA --wait` line that waits for AREA's open run, the
     area shell-quoted as the working directory reaches it (`shown`)."""
     return Command(WAIT, f"runlog {shlex.quote(shown(area, Path.cwd()))} --wait")
+
+
+def detached_start_command(area: Path, command: str = "<the same command>") -> Command:
+    """The `runlog start AREA -- COMMAND` line that starts a run of AREA
+    detached, the area shell-quoted as the working directory reaches it
+    (`shown`); COMMAND as given — a placeholder for the measurement's own
+    line, which the reader replaces."""
+    return Command(
+        MEASURE, f"runlog start {shlex.quote(shown(area, Path.cwd()))} -- {command}"
+    )
 
 
 def data_counts_command(protocol: Path, run_id: str) -> Command:

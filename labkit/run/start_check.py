@@ -854,10 +854,8 @@ def require_detached(base_dir: Path, limit: tuple[float, str]) -> None:
             f"runlog: this run declares run_kind='measurement' and sits in a "
             f"foreground shell an agent harness kills after {limit[0]:g} s "
             f"({limit[1]}) — the kill takes the process group mid-run",
-            # the area as `shown_area` names it, the command a slot —
-            # home: no builder in commands
-            f"start it detached: `runlog start {shown_area(base_dir)} -- <the same "
-            f"command>`; or, if the caller already detached it (run_in_background, "
+            f"start it detached: `{commands.detached_start_command(base_dir)}`; "
+            f"or, if the caller already detached it (run_in_background, "
             f"nohup+setsid), acknowledge with LABKIT_DETACHED=1",
         )
     )
@@ -938,9 +936,3 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
         )
     )
     return True, failed.path.name if failed is not None else None
-
-
-def shown_area(area: Path) -> str:
-    """AREA as a person types it from here: relative to the working directory
-    when it lies below it, else absolute."""
-    return repo.shown(area, Path.cwd())

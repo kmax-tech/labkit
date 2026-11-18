@@ -424,6 +424,20 @@ class FreezeGate(unittest.TestCase):
             os.environ.pop(env, None)
             os.environ.pop("CLAUDECODE", None)
 
+    def test_the_detached_start_it_names_runs_under_a_path_with_a_space(self):
+        """The refusal of a foreground measurement names the detached
+        start as a line that runs: the area quoted where its path needs
+        it. The twin: a plain path is printed bare."""
+        with tempfile.TemporaryDirectory() as d, contextlib.chdir(d):
+            for area, word in (("my lab/01 x", "'my lab/01 x'"), ("area", "area")):
+                with self.subTest(area=area):
+                    with self.assertRaises(SystemExit) as cm:
+                        start_check.require_detached(Path(area), (120.0, "X"))
+                    self.assertIn(
+                        f"`runlog start {word} -- <the same command>`",
+                        str(cm.exception),
+                    )
+
     def test_tier_is_recorded_for_pilots_too(self):
         r, _ = self._start(FROZEN, run_kind="probe")
         self.assertEqual(
