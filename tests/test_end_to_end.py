@@ -771,7 +771,7 @@ class FirstMeasurementLost(CountCommands):
         self.assertIn(f"run {run_a} is gone", out)
         # B started seconds after A: two run ids that close order nothing
         self.assertIn(f"whether it started before {run_b}", out)
-        self.assertIn("is not evidenced", out)
+        self.assertIn("cannot be told", out)
         self.assertNotIn("are the ones the first measurement registered", out)
         for way in ("a copy that holds it", "register anew", "--handover"):
             self.assertIn(way, out)
@@ -788,8 +788,8 @@ class FirstMeasurementLost(CountCommands):
 
     def test_the_twin_a_later_run_lost_is_named_and_holds_nothing(self):
         """A stands and reads; a second measurement, started two days
-        later, is deleted before a commit. Its run id evidences that A
-        started first, so what A registered is told: the registration
+        later, is deleted before a commit. Run ids that far apart are taken
+        to order the two starts, so the registration
         station compares as before and warns of the lost run. What needs
         the lost run's own evidence is held by its own check: the output
         file holds the lost run's rows, and the row provenance station
@@ -807,6 +807,7 @@ class FirstMeasurementLost(CountCommands):
         self.assertIn("are the ones the first measurement registered", out)
         self.assertIn(f"WARNING: run {indexed_as} is gone", out)
         self.assertIn("the comparison with the first measurement runs", out)
+        self.assertIn("which labkit does not check", out)
         self.assertNotIn("what the number is about cannot be compared", out)
         self.assertNotIn(f"run {run_a} is gone", out)
         self.assertEqual(rc, 1, out)

@@ -482,10 +482,20 @@ def lost_in_the_tree_too(measured: Measured) -> list[str]:
 
 #: The widest gap between two local clocks, UTC−12 to UTC+14. A run id
 #: carries its start as local time without a zone (`runs.run_started`), so
-#: two ids order two starts only when they lie further apart than this:
-#: whatever zone each machine ran in, and across a daylight-saving shift.
-#: Not tuned on data; it is the range of the zones in use.
+#: two ids are taken to order two starts only when they lie further apart
+#: than this: whatever zone each machine ran in, and across a
+#: daylight-saving shift. A conservative auxiliary rule, not evidence: it
+#: covers the zones, not a clock that was set wrong (CLOCKS_ASSUMED). Not
+#: tuned on data; it is the range of the zones in use.
 ZONE_SPREAD = timedelta(hours=26)
+
+#: the assumption under which run ids more than ZONE_SPREAD apart order two
+#: starts — the clause every message prints that takes a run as the later
+#: one by that rule
+CLOCKS_ASSUMED = (
+    "assuming the clocks of the machines that started the runs were right, "
+    "which labkit does not check"
+)
 
 
 #: what a record of unknown protocol leaves open for every protocol of
@@ -510,14 +520,14 @@ class WithoutRecord:
             that does: it may have been the first measurement, so what
             stood registered before the number is not told.
         unordered: One clause per such run of the protocol whose order
-            against the earliest measurement that reads is not evidenced:
-            their ids lie within ZONE_SPREAD of each other, or the run's id
-            carries no time. It may have been the first as well; the clause
-            says why the order is unknown.
+            against the earliest measurement that reads the run ids do not
+            tell: they lie within ZONE_SPREAD of each other, or the run's
+            id carries no time. It may have been the first as well; the
+            clause says why the order is unknown.
         later: One clause per such run of the protocol whose id lies more
-            than ZONE_SPREAD after the earliest measurement that reads:
-            that one started first, so the first measurement's
-            registration is told without it.
+            than ZONE_SPREAD after that of the earliest measurement that
+            reads: taken as started later under CLOCKS_ASSUMED, so the
+            first measurement's registration is read without it.
         unassigned: The ids of the runs whose record does not read and
             which no index row names (`Measured.unassigned`): which
             protocol each belongs to cannot be determined, so it counts
@@ -554,21 +564,23 @@ def measurements_without_record(
     `measured.lost` itself for a state of the working tree.
 
     Whether such a run may have been the first measurement is decided by
-    evidence that neither `runlog reindex` nor a parallel start changes:
-    the start time in its run id against the start time in the id of the
-    earliest measurement of the protocol whose record reads (no repeat, no
-    probe; a run a commit holds back among them). A run id is local time
-    without a zone, so only a gap wider than ZONE_SPREAD orders two starts:
-    wider and after, the run is LATER; wider and before, or no measurement
-    reads, it MAY_BE_FIRST; anything closer is UNORDERED — not evidenced,
-    said as such, and held like the first. The position of a row in the
-    index orders nothing here.
+    an auxiliary rule over what neither `runlog reindex` nor a parallel
+    start changes: the start time in its run id against the start time in
+    the id of the earliest measurement of the protocol whose record reads
+    (no repeat, no probe; a run a commit holds back among them). A run id
+    is local time without a zone, so only a gap wider than ZONE_SPREAD is
+    taken to order two starts: wider and after, the run is LATER; wider and
+    before, or no measurement reads, it MAY_BE_FIRST; anything closer is
+    UNORDERED — the ids do not tell, said as such, and held like the first.
+    The rule is no proof of the order: it rests on CLOCKS_ASSUMED, which
+    nothing here checks. The position of a row in the index orders nothing
+    here.
 
     Everything empty when every measurement has its record. A run removed
     with its index row leaves no evidence and is not seen. Pure. Read by
     the run's start (`start_check.earlier_measurement_note`) and the
     registration station (`registration_hold.lost_record_hold`,
-    `lost_record_warnings`). Why, and what was rejected as evidence:
+    `lost_record_warnings`). Why, and what else was rejected for the order:
     docs/notes/2026-11-18-lost-first-measurement.md."""
     reads = [
         (started, rd.dir.name)
@@ -608,7 +620,7 @@ def measurements_without_record(
         else:
             unordered.append(
                 f"{clause}; whether it started before {earliest[1]}, the earliest "
-                f"measurement that reads, is not evidenced — "
+                f"measurement that reads, cannot be told — "
                 + (
                     f"their run ids lie within {hours} hours of each other and "
                     f"carry local time without a zone"

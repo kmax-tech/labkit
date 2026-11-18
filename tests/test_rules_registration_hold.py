@@ -52,6 +52,7 @@ from labkit.gates.registration_hold import (
     waiting_refs,
 )
 from labkit.formats.area_state import (
+    CLOCKS_ASSUMED,
     UNASSIGNED_LEAVES_OPEN,
     Measured,
     WithoutRecord,
@@ -810,10 +811,11 @@ class ARunWithoutItsRecord(unittest.TestCase):
     record by what each means for one protocol, and the registration
     station acts on each sort: `lost_record_hold` blocks where the run may
     have been the first measurement — none that reads is shown to precede
-    it, or their order is not evidenced —, `lost_record_warnings` names a
-    run that evidently started after a measurement that reads and a record
-    whose protocol cannot be determined. The order is evidenced by the
-    start times in the run ids, more than ZONE_SPREAD apart; which protocol
+    it, or the run ids do not tell their order —, `lost_record_warnings`
+    names a run whose id lies more than ZONE_SPREAD after that of a
+    measurement that reads and a record whose protocol cannot be
+    determined. Run ids that far apart are taken to order two starts, an
+    auxiliary rule under a stated assumption, no proof; which protocol
     a run belongs to is `Measured`'s (tests/test_area_state.py)."""
 
     FIRST = run_dir(
@@ -863,15 +865,16 @@ class ARunWithoutItsRecord(unittest.TestCase):
                 self.assertIn(f"run {self.LONG_BEFORE} is gone", hold.text)
                 self.assertIn("may have been the first", hold.text)
                 self.assertIn("does not stand in for it", hold.text)
-                self.assertNotIn("not evidenced", hold.text)
+                self.assertNotIn("cannot be told —", hold.text)
                 for way in ("a copy that holds it", "register anew", HANDOVER):
                     self.assertIn(way, hold.fix or "")
                 self.assertEqual(pure_call(lost_record_warnings, without), [])
 
-    def test_an_order_the_run_ids_do_not_evidence_holds_and_says_so(self):
+    def test_an_order_the_run_ids_do_not_tell_holds_and_says_so(self):
         """Within ZONE_SPREAD two ids order nothing, whichever is the
         larger: the run may have been the first, and the hold names the
-        order as not evidenced — its own case, on neither side silently."""
+        order as one that cannot be told — its own case, on neither side
+        silently."""
         for name, run, why in (
             ("ten hours after", self.SHORTLY_AFTER, "within 26 hours of each other"),
             ("ten hours before", self.SHORTLY_BEFORE, "within 26 hours of each other"),
@@ -885,7 +888,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
                 self.assertIn(f"run {run} is gone", hold.text)
                 self.assertIn(
                     f"whether it started before {self.FIRST.dir.name}, the earliest "
-                    f"measurement that reads, is not evidenced",
+                    f"measurement that reads, cannot be told",
                     hold.text,
                 )
                 self.assertIn(why, hold.text)
@@ -899,6 +902,10 @@ class ARunWithoutItsRecord(unittest.TestCase):
         self.assertEqual((warning.grade, warning.rule), (WARNING, TECHNICAL_RULE))
         self.assertIn(f"run {self.LONG_AFTER} is gone", warning.text)
         self.assertIn("the comparison with the first measurement runs", warning.text)
+        # the rule is named for what it is, with its assumption: no proof
+        self.assertIn("more than 26 hours after", warning.text)
+        self.assertIn(CLOCKS_ASSUMED, warning.text)
+        self.assertIn("which labkit does not check", warning.text)
         self.assertIn("a copy that holds it", warning.fix or "")
 
     def test_a_repeat_or_a_probe_that_reads_orders_nothing(self):
@@ -917,7 +924,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
 
     def test_a_record_that_does_not_read_is_sorted_like_a_lost_run(self):
         """Among the protocol's runs by its index row (`Measured.runs`): it
-        holds or is named by the same evidence."""
+        holds or is named by the same rule."""
         dead = self.DEAD.dir.name
         (hold,) = self.held(self.sorted_out((self.DEAD, self.FIRST)))
         self.assertIn(f"the record of run {dead} does not read", hold.text)

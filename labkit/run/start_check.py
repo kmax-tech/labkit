@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 
 from labkit.formats.area_state import (
+    CLOCKS_ASSUMED,
     UNASSIGNED_LEAVES_OPEN,
     AreaState,
     measurements_without_record,
@@ -219,14 +220,16 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
     tree's), one sentence per case:
 
     - a run of the protocol that may have been its first measurement —
-      also where its order against a measurement that reads is not
-      evidenced, which its clause says: this run is not held to HEAD as
+      also where the run ids do not tell its order against a measurement
+      that reads, which its clause says: this run is not held to HEAD as
       the first, what stood registered then cannot be read from
       here, and the registration station holds every number of the protocol
       until the record is back or the protocol is registered anew or handed
       over;
-    - a run of the protocol that started evidently after a measurement
-      that reads: named, nothing is held for it;
+    - a run of the protocol whose id lies more than 26 hours after that
+      of a measurement that reads: named, with the assumption that takes
+      it as the later one (`area_state.CLOCKS_ASSUMED`); nothing is held
+      for it;
     - a record that does not read and that no index row names: its
       protocol cannot be determined, in an area of one protocol too, and
       the sentence says what that leaves open
@@ -256,8 +259,9 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
         )
     if without.later:
         told.append(
-            f"{'; '.join(without.later)} — more than a day after a measurement "
-            f"of this protocol that reads started, so nothing is held for it; a "
+            f"{'; '.join(without.later)} — by the run ids more than 26 hours "
+            f"after a measurement of this protocol that reads started, and taken "
+            f"as the later one, {CLOCKS_ASSUMED}; so nothing is held for it; a "
             f"result that needs its "
             f"rows is held where that result is checked."
         )

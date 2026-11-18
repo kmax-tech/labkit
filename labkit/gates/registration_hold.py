@@ -46,6 +46,7 @@ from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import (
     AreaState,
     Measured,
+    CLOCKS_ASSUMED,
     UNASSIGNED_LEAVES_OPEN,
     WithoutRecord,
     lost_in_the_tree_too,
@@ -703,7 +704,7 @@ def lost_record_hold(
     measurement can no longer be reconstructed: a run bound to it left no
     record that reads and may have been the first (WITHOUT's `held`,
     `area_state.measurements_without_record`: no measurement that reads is
-    shown to precede it, or their order is not evidenced — that clause says
+    taken to precede it, or their run ids do not tell the order — that clause says
     so itself). A started
     measurement keeps counting when its record is missing; the comparison
     did not run (a check not executable), and neither a later run nor the
@@ -711,7 +712,8 @@ def lost_record_hold(
     record back from where something keeps it, then finalize again on
     AREA; where nothing keeps it, a new registration, or the handover
     (HANDOVER_WAY, `ways_out.handover`). [] otherwise — also for a run
-    without a record that a measurement that reads evidently precedes, and for one
+    without a record whose id lies more than 26 hours after that of a
+    measurement that reads (`area_state.ZONE_SPREAD`), and for one
     whose protocol cannot be determined: `lost_record_warnings` names
     those, and the comparison with the first measurement runs. Pure. The
     decision behind it and what it leaves to an exploratory protocol type:
@@ -751,9 +753,11 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
     (WITHOUT, `area_state.measurements_without_record`), each naming its
     runs and the way back (RECORD_BACK):
 
-    - `later`: runs of the protocol that started evidently after a
-      measurement of it that reads. The first measurement's registration is
-      told, so the comparison runs; a result that needs such a run's own
+    - `later`: runs of the protocol whose ids lie more than 26 hours after
+      that of a measurement of it that reads — taken as started later, an
+      auxiliary rule whose assumption the warning states
+      (`area_state.CLOCKS_ASSUMED`). The comparison with the first
+      measurement runs; a result that needs such a run's own
       rows is held by that result's check (the answering-run choice, the
       audit binding, the row lineage).
     - `unassigned`: records that do not read and that no index row names.
@@ -768,9 +772,10 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
         found.append(
             GateFinding(
                 WARNING,
-                f"{'; '.join(without.later)} — a measurement of this protocol "
-                f"that reads started more than a day before "
-                f"{'it' if len(without.later) == 1 else 'each'}, "
+                f"{'; '.join(without.later)} — the start time in "
+                f"{'its run id lies' if len(without.later) == 1 else 'each run id lies'} "
+                f"more than 26 hours after that of a measurement of this protocol "
+                f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "
                 f"so the comparison with the first measurement runs without it; a "
                 f"result that needs its rows is held where that result is checked",
                 rule=TECHNICAL_RULE,

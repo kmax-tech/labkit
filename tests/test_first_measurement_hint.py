@@ -179,8 +179,9 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
     (`start_check.earlier_measurement_note`), one sentence per case: one
     that may have been the first measurement (HEAD does not stand in for
     what was registered then, finalize will hold the number) — also where
-    its order against a measurement that reads is not evidenced —, one
-    that evidently started after a measurement that reads (nothing held),
+    the run ids do not tell its order against a measurement that reads —,
+    one whose id lies more than 26 hours after that of a measurement that
+    reads (nothing held, the assumption behind that stated),
     one whose protocol cannot be determined (held against none) — a
     warning each, the run starts."""
 
@@ -242,16 +243,18 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
                 self.assertIn("may have been the first", note)
                 self.assertIn("does not stand in for it", note)
                 self.assertIn("The run starts", note)
-                self.assertNotIn("not evidenced", note)
+                self.assertNotIn("cannot be told —", note)
 
-    def test_an_order_not_evidenced_is_said_and_held_like_the_first(self):
+    def test_an_order_the_run_ids_do_not_tell_is_said_and_held_like_the_first(
+        self,
+    ):
         note = self.note(
             {self.READS: PID, self.NEAR: PID}, [_record(self.READS)], {self.NEAR: PID}
         )
         assert note is not None
         self.assertIn(f"run {self.NEAR} is gone", note)
         self.assertIn(f"whether it started before {self.READS}", note)
-        self.assertIn("is not evidenced", note)
+        self.assertIn("cannot be told", note)
         self.assertIn("hold every number of this protocol", note)
 
     def test_a_lost_run_long_after_a_measurement_that_reads_holds_nothing(self):
@@ -261,6 +264,7 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
         assert note is not None
         self.assertIn(f"run {self.LATER} is gone", note)
         self.assertIn("nothing is held for it", note)
+        self.assertIn("which labkit does not check", note)
         self.assertNotIn("not held to HEAD", note)
 
     def test_a_record_no_index_row_names_is_held_against_no_protocol(self):
