@@ -21,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.checks import recheck  # noqa: E402
 from labkit.checks.run_record_check import code_since_run  # noqa: E402
 from labkit.formats import gate, repo, runs  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
@@ -432,6 +433,36 @@ class CodeSinceRun(unittest.TestCase):
         blockers, warnings = code_since_run(self.area, run)
         self.assertEqual(blockers, [])
         self.assertEqual(len(warnings), 2, warnings)
+
+    # --- the recalculation's code step (`recheck.refuse_changed_code`) ---------------
+
+    def test_a_recalculation_with_the_runs_code_is_established(self) -> None:
+        self.assertEqual(recheck.refuse_changed_code(self.run_now(), self.area), "")
+
+    def test_a_recalculation_is_refused_once_the_code_changed_and_back_with_it(
+        self,
+    ) -> None:
+        """Equal numbers from other code would read as a recalculation of
+        the run: the script fixed after the run refuses; restored, it is
+        the run's code again."""
+        run = self.run_now()
+        self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            recheck.refuse_changed_code(run, self.area)
+        told = str(cm.exception)
+        self.assertIn("the code that computed run 2026-10-27T10-00-00_ab12", told)
+        self.assertIn("01_measure.py changed since", told)
+        self.assertIn("no recalculation of that run", told)
+        self.script.write_text(SCRIPT, encoding="utf-8")
+        self.assertEqual(recheck.refuse_changed_code(run, self.area), "")
+
+    def test_code_that_cannot_be_compared_is_said_not_refused(self) -> None:
+        """No script recorded: nothing shows a difference, and nothing
+        shows the same code — the reason comes back as a sentence."""
+        run = self.run_now()
+        cfg = json.loads((run / "config.json").read_text())
+        (run / "config.json").write_text(json.dumps({**cfg, "script_sha": "no-script"}))
+        self.assertIn("recorded no script", recheck.refuse_changed_code(run, self.area))
 
 
 class FinalizeStation(unittest.TestCase):

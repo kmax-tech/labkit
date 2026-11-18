@@ -16,9 +16,15 @@ Three mechanics every area's `--check` needs, held here once:
 3. **cited** — the note carries every reported number (decimal comma and
    U+2212 minus normalised first) and the run_id.
 
+Before the numbers are compared, the code is: a run whose script or
+imported modules changed since it ran is refused (`refuse_changed_code`) — equal
+numbers from other code would not be a recalculation of that run —, and
+where the code cannot be compared the verdict says so
+(`Verdict.code_uncompared`).
+
 A run that computes from other runs' outputs (a comparison over its
-source runs) is held by `holds_from_inputs`: inputs → scopes → block →
-agree → cited. The inputs step comes first and stands apart from the
+source runs) is held by `holds_from_inputs`: inputs → scopes → code →
+block → agree → cited. The inputs step comes first and stands apart from the
 recomputation: every input the run recorded is still the bytes it read —
 an input with an origin run still that run's registered output
 (`inputs_pinned`, the same condition as finalize's input-origins
@@ -69,6 +75,24 @@ class Verdict:
     keys_compared: int
     grown: list[str]  # keys the recomputation has and the run did not
     numbers: list[str]  # what the note was held to
+    # "" = the code was compared and is the code the run ran
+    # (`refuse_changed_code`); a sentence = why it could not be compared — then
+    # the agreement is one with today's code, not a recalculation of the run
+    # with its own
+    code_uncompared: str = ""
+
+    @property
+    def code_note(self) -> str:
+        """What a check's line appends where the code step could not
+        compare: "" when the code is the run's, else the clause that the
+        agreement is with the code here now and why that is not
+        established to be the run's."""
+        if not self.code_uncompared:
+            return ""
+        return (
+            f"; compared with the code here now, not established to be the "
+            f"code the run ran ({self.code_uncompared})"
+        )
 
 
 def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Path:
@@ -175,6 +199,32 @@ def scopes_unchanged(run: Path, area: Path) -> None:
             + "; ".join(d.told for d in drift)
             + " — rerun, or recheck from that run's commit"
         )
+
+
+def refuse_changed_code(run: Path, area: Path) -> str:
+    """Refuse a recalculation of RUN with other code than it ran; return
+    why the code could not be compared, or "" when it was compared and is
+    the same. The code is the run's script and the modules it imports, for
+    the run and each run it derives from (`run_record_check.code_since_run`,
+    the comparison finalize makes). Where that found a difference, SystemExit: a
+    recomputation with other code can agree by chance and would be read as
+    a recalculation of that run. Where it could not compare — no script or
+    commit recorded, a helper uncommitted then, a module in another
+    repository — the reason as a sentence: the caller recomputes with the
+    code here and says that this is not established to be the run's
+    (`Verdict.code_uncompared`). Declared scopes are
+    `scopes_unchanged`'s, before this. Reads files and git."""
+    blockers, warnings = run_record_check.code_since_run(area, run)
+    changed = [b.text for b in blockers if b.changed_since is not None]
+    if changed:
+        raise SystemExit(
+            f"recheck: the code that computed run {run.name} is not the code "
+            f"here now: {'; '.join(changed)} — recomputing with today's code is "
+            f"no recalculation of that run; recheck from that run's commit, or "
+            f"compute anew as a run of its own and hold that one"
+        )
+    unknown = [b.text for b in blockers] + warnings
+    return "; ".join(unknown)
 
 
 def kept_keys(run: Path, area: Path) -> frozenset[str]:
@@ -351,19 +401,35 @@ def verified(
     recompute: Callable[[list[dict]], dict],
     ignore: frozenset[str] = LABKIT_KEYS,
 ) -> tuple[dict, list[str]]:
-    """pin → scopes → block → agree for one run, no note: (its metrics, the
+    """pin → scopes → code → block → agree for one run, no note: (its metrics, the
     keys the recomputation grew). What `holds` checks before the note, and
     what `02_analyze.py --draws` checks for every draw — a draw shown
     unchecked lets an edited repeat file change the flipped items, an edited
     metrics.json the range. Raises SystemExit on the
     first disagreement."""
+    metrics, grown, _ = _verified(run, area, out, recompute, ignore)
+    return metrics, grown
+
+
+def _verified(
+    run: Path,
+    area: Path,
+    out: Path,
+    recompute: Callable[[list[dict]], dict],
+    ignore: frozenset[str],
+) -> tuple[dict, list[str], str]:
+    """`verified` with the code step's answer: (metrics, grown keys, why the
+    code here is not established to be the run's or "") — pin → scopes →
+    code (`refuse_changed_code`) → block → agree."""
     pin(run, out)
     scopes_unchanged(run, area)
+    code_uncompared = refuse_changed_code(run, area)
     block_unchanged(run, area)
     metrics = runs.read_metrics(runs.metrics_path(run))
-    return metrics, agree(
+    grown = agree(
         metrics, recompute(rows_of(out)), ignore, reported=kept_keys(run, area)
     )
+    return metrics, grown, code_uncompared
 
 
 def holds(
@@ -376,15 +442,20 @@ def holds(
     ignore: frozenset[str] = LABKIT_KEYS,
     protocol: Path | None = None,
 ) -> Verdict:
-    """pin → scopes → block → agree → cited, for the run that answers the
+    """pin → scopes → code → block → agree → cited, for the run that answers the
     protocol (`chosen_run`; or `run_id`). The protocol is `note` unless
     `protocol` names it — a results note under notes/ carries no head.
+    The code step refuses a run whose script or imported modules changed
+    since it ran (`refuse_changed_code`); where that cannot be compared the
+    verdict says so (`Verdict.code_uncompared`).
 
     `numbers(metrics)` formats what the note must carry — pass your own when
     the note rounds. Raises SystemExit on the first disagreement."""
     run = run_dir(area, protocol or note, run_id)
-    metrics, grown = verified(run, area, out, recompute, ignore)
-    return _cited_verdict(run, out, metrics, grown, note, numbers, ignore)
+    metrics, grown, code_uncompared = _verified(run, area, out, recompute, ignore)
+    return _cited_verdict(
+        run, out, metrics, grown, note, numbers, ignore, code_uncompared
+    )
 
 
 def _cited_verdict(
@@ -395,10 +466,12 @@ def _cited_verdict(
     note: Path,
     numbers: Callable[[dict], list[str]],
     ignore: frozenset[str],
+    code_uncompared: str,
 ) -> Verdict:
     """The last step of `holds` and `holds_from_inputs`: NOTE carries every
     number of RUN's METRICS as NUMBERS formats them, and the run id
-    (`cited`); the Verdict. Raises SystemExit as `cited` does."""
+    (`cited`); the Verdict, with the code step's answer
+    CODE_NOT_ESTABLISHED. Raises SystemExit as `cited` does."""
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)
     return Verdict(
@@ -407,7 +480,21 @@ def _cited_verdict(
         grown=grown,
         numbers=wanted,
         keys_compared=len(set(metrics) - ignore),
+        code_uncompared=code_uncompared,
     )
+
+
+def reads_another_run(run: Path) -> bool:
+    """Does RUN compute from another run's output — does an input it
+    recorded name an origin run? Such a run's number is owed the
+    recalculation from its inputs (`verified_from_inputs`); a run over
+    plain inputs is held by its own rows (`holds`). Raises SystemExit when
+    the input record does not read."""
+    try:
+        entries = runs.read_data(run) or []
+    except runs.ArtefactError as exc:
+        raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
+    return any(e.origin_run is not None for e in entries)
 
 
 def inputs_pinned(run: Path, area: Path) -> dict[str, Path]:
@@ -457,20 +544,32 @@ def verified_from_inputs(
     recompute: Callable[[Mapping[str, Path]], dict],
     ignore: frozenset[str] = LABKIT_KEYS,
 ) -> tuple[dict, list[str]]:
-    """inputs → scopes → block → agree for RUN, no note: (its metrics, the
+    """inputs → scopes → code → block → agree for RUN, no note: (its metrics, the
     keys the recomputation grew). First every recorded input is the bytes
     the run read (`inputs_pinned`); only then RECOMPUTE — the run's own
     evaluation, given each input's path by its `data=` key — is compared
     with metrics.json as `verified` compares it. The source runs are not
     run again. Raises SystemExit on the first disagreement; a failed input
     leaves RECOMPUTE uncalled."""
+    metrics, grown, _ = _verified_from_inputs(run, area, recompute, ignore)
+    return metrics, grown
+
+
+def _verified_from_inputs(
+    run: Path,
+    area: Path,
+    recompute: Callable[[Mapping[str, Path]], dict],
+    ignore: frozenset[str],
+) -> tuple[dict, list[str], str]:
+    """`verified_from_inputs` with the code step's answer, as `_verified`
+    gives it: inputs → scopes → code → block → agree."""
     pinned = inputs_pinned(run, area)
     scopes_unchanged(run, area)
+    code_uncompared = refuse_changed_code(run, area)
     block_unchanged(run, area)
     metrics = runs.read_metrics(runs.metrics_path(run))
-    return metrics, agree(
-        metrics, recompute(pinned), ignore, reported=kept_keys(run, area)
-    )
+    grown = agree(metrics, recompute(pinned), ignore, reported=kept_keys(run, area))
+    return metrics, grown, code_uncompared
 
 
 def holds_from_inputs(
@@ -483,10 +582,14 @@ def holds_from_inputs(
     protocol: Path | None = None,
 ) -> Verdict:
     """`holds` for a run that computes from its recorded inputs — a
-    comparison over source runs' outputs: inputs → scopes → block → agree
-    → cited (`verified_from_inputs`, `_cited_verdict`), for the run that
-    answers the protocol (`chosen_run`; or RUN_ID). Raises SystemExit on
-    the first disagreement."""
+    comparison over source runs' outputs: inputs → scopes → code → block →
+    agree → cited (`verified_from_inputs`, `_cited_verdict`), for the run
+    that answers the protocol (`chosen_run`; or RUN_ID). The code step is
+    `holds`'s. Raises SystemExit on the first disagreement."""
     run = run_dir(area, protocol or note, run_id)
-    metrics, grown = verified_from_inputs(run, area, recompute, ignore)
-    return _cited_verdict(run, None, metrics, grown, note, numbers, ignore)
+    metrics, grown, code_uncompared = _verified_from_inputs(
+        run, area, recompute, ignore
+    )
+    return _cited_verdict(
+        run, None, metrics, grown, note, numbers, ignore, code_uncompared
+    )

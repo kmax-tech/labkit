@@ -82,7 +82,7 @@ def main() -> None:
         # write-back (cold Sonnet, 2026-10-14)
         v = recheck.holds(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows, note=NOTE)
         print(f"check: run {v.run_id} — {v.keys_compared} keys identical, {NOTE.name} carries "
-              f"the numbers and the run_id" + (f"; grown: {v.grown}" if v.grown else ""))
+              f"the numbers and the run_id" + (f"; grown: {v.grown}" if v.grown else "") + v.code_note)
         return
     print(json.dumps(measure.evaluate_rows(measure.read_jsonl(measure.OUT)), indent=1))
 
