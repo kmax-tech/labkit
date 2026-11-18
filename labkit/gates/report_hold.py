@@ -74,6 +74,7 @@ from labkit.formats.commands import (
     claim_decide_command,
     claim_review_command,
     into_command,
+    path_word,
     report_review_command,
     reported_check_command,
     stage_command,
@@ -1285,6 +1286,10 @@ def undeclared_findings(
                 )
             )
             continue
+        # both files as the working directory reaches them: REL, the
+        # report from the repo root, heads the sentence and runs nowhere else
+        here = Path.cwd()
+        discuss = discuss_command(shown(protocol, here), run_id, shown(path, here))
         out.append(
             blocker(
                 f"{rel}: cites {run_id}, the answering run of {named}, which has adopted "
@@ -1292,9 +1297,9 @@ def undeclared_findings(
                 step=adopt_command(protocol, run_id),
                 fix=f"a full run's number leaves the area through "
                 f"`{adopt_command(protocol, run_id)}` (it names what the "
-                f"adoption still owes), then `--into {rel}` writes its block; a run "
-                f"this report looks at without reporting it stands in a discussion "
-                f"block: `{report_blocks.discuss_command(shown(protocol, Path.cwd()), run_id, rel)}`",
+                f"adoption still owes), then `--into {path_word(shown(path, here))}` "
+                f"writes its block; a run this report looks at without reporting "
+                f"it stands in a discussion block: `{discuss}`",
                 rule=LAB_104,
             )
         )

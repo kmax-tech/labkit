@@ -411,10 +411,44 @@ class ReportFiles(unittest.TestCase):
         self.assertIn(f" {self.RUN}` (it names what the", out)
         self.assertIn(
             f'PROTOCOL-x.md --discuss {self.RUN} --why "<what refused the adoption, '
-            f'what you found>" --into notes/REPORT.md`',
+            f'what you found>" --into {report.resolve().as_posix()}`',
             out,
         )
         self.assertNotIn("which no protocol has adopted as its result", out)
+
+    def test_the_discussion_line_names_the_report_as_the_working_directory_reaches_it(
+        self,
+    ):
+        """The way out of an unadopted citation is printed for the directory
+        it is read in: from `experiments/` the report is not
+        `notes/REPORT.md`, and the line names both files as that directory
+        reaches them. The twin, from the repository root: both relative."""
+        area = self._area(
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
+        )
+        root = area.parent.parent.resolve()
+        report = root / "notes" / "REPORT.md"
+        report.parent.mkdir()
+        report.write_text(
+            f"# Report\n\ncriterion-1 passed: criterion_1_pass = True (run {self.RUN})\n",
+            encoding="utf-8",
+        )
+        why = '"<what refused the adoption, what you found>"'
+        with contextlib.chdir(root / "experiments"):
+            _, out = self._gate(root, report)
+        self.assertIn(
+            f"`protocol-fill 01-x/PROTOCOL-x.md --discuss {self.RUN} --why {why} "
+            f"--into {report.as_posix()}`",
+            out,
+        )
+        with contextlib.chdir(root):
+            _, out = self._gate(root, report)
+        self.assertIn(
+            f"`protocol-fill experiments/01-x/PROTOCOL-x.md --discuss {self.RUN} "
+            f"--why {why} --into notes/REPORT.md`",
+            out,
+        )
 
     def test_the_prose_marker_is_not_read(self):
         """The prose marker is no form the gate reads, backticks around the

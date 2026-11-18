@@ -323,6 +323,9 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"""git add[^`\n]*(?:\{|["'] \+)""",
         {"commands"},
     ),
+    # a discussion block's line quotes its paths in one place:
+    # `report_blocks.discuss_command`
+    ("a discuss command spelled by hand", r"--discuss \{", {"report_blocks"}),
     # the measurement script is `runs.MEASURE_SCRIPT`, as a path and in a
     # printed line (`commands.measure_command`, `measure_slot_command`)
     (
@@ -516,6 +519,7 @@ class OneHome(unittest.TestCase):
             "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
             "a console command spelled by hand": 'fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "',
             "a staging spelled by hand": 'fix = f"stage it: `git add -- {outside_index[token]}`"',
+            "a discuss command spelled by hand": 'f"`protocol-fill {name} --discuss {run_id} --why …`"',
             "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
         }

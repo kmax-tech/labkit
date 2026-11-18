@@ -92,6 +92,7 @@ from labkit.formats.commands import (
     adopt_command,
     fill_command,
     into_command,
+    path_word,
     stage_command,
 )
 
@@ -510,11 +511,15 @@ def discuss_command(
     protocol: str, run_id: str, report: str, why: str = WHY_LOOKED_AT
 ) -> Command:
     """The `protocol-fill … --discuss` line that writes the block
-    discussing RUN_ID of PROTOCOL into REPORT, each path as the caller
-    names it, WHY the placeholder of its reason."""
+    discussing RUN_ID of PROTOCOL into REPORT: each path as the caller
+    names it — as the working directory reaches it, or a placeholder
+    (`<PROTOCOL>`, `<FILE>`) —, shell-quoted unless it is a placeholder
+    (`commands.path_word`); RUN_ID a run's id or a placeholder, as given;
+    WHY the placeholder of its reason."""
     return Command(
         DISCUSS,
-        f'protocol-fill {protocol} --discuss {run_id} --why "{why}" --into {report}',
+        f"protocol-fill {path_word(protocol)} --discuss {run_id} "
+        f'--why "{why}" --into {path_word(report)}',
     )
 
 

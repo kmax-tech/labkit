@@ -6,6 +6,7 @@ and the commit, in a repository: tests/test_report_blocks.py."""
 
 from __future__ import annotations
 
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
@@ -192,6 +193,36 @@ class Blocks(unittest.TestCase):
 
 
 class Discussions(unittest.TestCase):
+    def test_the_discussion_line_reads_back_under_a_path_with_a_space(self):
+        """`discuss_command` quotes the protocol and the report like every
+        builder of `commands`: under a path with a space the line reads
+        back as its words. The twins: a plain path is printed bare, and a
+        placeholder (`<PROTOCOL>`, `<FILE>`) stays as written."""
+        line = report_blocks.discuss_command(
+            "my lab/01 x/PROTOCOL-x.md", RUN, "my lab/REPORT.md", "<why>"
+        ).line
+        self.assertEqual(
+            shlex.split(line),
+            [
+                "protocol-fill",
+                "my lab/01 x/PROTOCOL-x.md",
+                "--discuss",
+                RUN,
+                "--why",
+                "<why>",
+                "--into",
+                "my lab/REPORT.md",
+            ],
+        )
+        self.assertEqual(
+            report_blocks.discuss_command(P, RUN, "REPORT.md", "<why>").line,
+            f'protocol-fill {P} --discuss {RUN} --why "<why>" --into REPORT.md',
+        )
+        self.assertEqual(
+            report_blocks.discuss_command("<PROTOCOL>", "<run>", "<FILE>", "…").line,
+            'protocol-fill <PROTOCOL> --discuss <run> --why "…" --into <FILE>',
+        )
+
     """The discussion block: TOML head, the line written from it."""
 
     def test_write_appends_then_replaces_and_keeps_other_discussions(self):
