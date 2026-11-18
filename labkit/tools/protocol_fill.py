@@ -31,6 +31,12 @@ command line.
                                                reporting it, as a discussion block
                                                (head: protocol, run, why; its line
                                                written from them)
+    protocol-fill PROTOCOL-x.md --reported-through RUN_ID --into REPORT.md
+                                               a measurement protocol whose runs are
+                                               inputs of the analysis run RUN_ID another
+                                               protocol of the area adopted: the block
+                                               saying so, no number and no verdict
+                                               (`report_blocks.with_through`)
     protocol-fill PROTOCOL-x.md --handover --why "…" --tried "…" --into REPORT.md
                                                the protocol's end without a result:
                                                `[result]` withdrawn, a handover record
@@ -113,7 +119,7 @@ from labkit.formats import (
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT
 from labkit.checks.result_render import rendering
 from labkit.formats.gate import with_way_out
-from labkit.formats.repo import GitError, git_root, shown, state_text
+from labkit.formats.repo import GitError, git_root, layout_root, shown, state_text
 from labkit.formats.commands import (
     adopt_command,
     audit_command,
@@ -470,6 +476,41 @@ def _discuss_file(
     return 0
 
 
+def _through_file(protocol: Path, report: Path, run_id: str) -> int:
+    """`--reported-through RUN_ID --into` on PROTOCOL: write REPORT's
+    reported-through block when it differs, say so. The statement is read
+    from the working tree by the gate's own reader
+    (`report_hold.stated_through`; the commit reads the protocols from the
+    index, so an unstaged adoption makes the block stale there);
+    refused with exit 2, the report untouched, when it cannot be made — the
+    analysis run is not adopted by another protocol of the area, none of
+    its inputs comes from a run of PROTOCOL, PROTOCOL has adopted a result
+    of its own — or a block in REPORT does not read."""
+    protocol = protocol.resolve()
+    before = report.read_text(encoding="utf-8") if report.is_file() else ""
+    try:
+        stated = report_hold.stated_through(
+            protocol,
+            report,
+            run_id,
+            report_hold.Sources.blank(layout_root(protocol.parent), staged=False),
+        )
+        new = report_blocks.with_through(before, stated)
+    except (ValueError, GitError) as exc:
+        console.refuse("protocol-fill", f"no reported-through block written — {exc}")
+        return 2
+    if new != before:
+        files.write_atomic(report, new)
+    print(
+        f"{report}: the block saying {', '.join(stated.sources)} of "
+        f"{protocol.name} are reported through run {run_id} "
+        + ("written" if new != before else "unchanged")
+        + " — it shows no number; the analysis's result block carries them, "
+        "and the report's review stays owed"
+    )
+    return 0
+
+
 def _render_file(protocol: Path, text: str) -> int:
     """`--render` on PROTOCOL: write the rendering when it differs, say what changed."""
     try:
@@ -555,8 +596,8 @@ def _evidence_mode(args: argparse.Namespace, text: str) -> int | None:
 
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the mode ARGS name (--withdraw, --data-counts,
-    --handover, --list, --prompts, --render, --discuss, --into, --from-run,
-    --builds-on), or None when they name none: a field fill."""
+    --handover, --list, --prompts, --render, --discuss, --reported-through,
+    --into, --from-run, --builds-on), or None when they name none: a field fill."""
     evidence = _evidence_mode(args, text)
     if evidence is not None:
         return evidence
@@ -568,6 +609,8 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
         return _render_file(args.protocol, text)
     if args.discuss is not None:
         return _discuss_file(args.protocol, text, args.into, args.discuss, args.why)
+    if args.reported_through is not None:
+        return _through_file(args.protocol, args.into, args.reported_through)
     if args.into is not None:
         return _into_file(args.protocol, text, args.into)
     if args.from_run is not None:
@@ -892,6 +935,31 @@ def _check_step_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> N
         ap.error("--builds-on cannot be combined with another operation")
 
 
+def _check_through_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Refuse --reported-through without --into or beside another
+    operation, before file access."""
+    if args.reported_through is None:
+        return
+    if args.into is None:
+        ap.error("--reported-through RUN_ID goes with --into REPORT")
+    if (
+        args.discuss is not None
+        or args.why is not None
+        or args.from_run is not None
+        or args.data_counts is not None
+        or args.builds_on is not None
+        or args.freeze is not None
+        or args.withdraw
+        or args.handover
+        or args.force
+        or args.list
+        or args.prompts
+        or args.render
+        or args.field is not None
+    ):
+        ap.error("--reported-through goes with --into REPORT only")
+
+
 def _check_report_mode_args(
     ap: argparse.ArgumentParser, args: argparse.Namespace
 ) -> None:
@@ -978,7 +1046,8 @@ def main(argv: list[str]) -> int:
         help="the report a block is written into (a report outside the protocol): "
         "alone, the adopted result as a generated block — Recorded results and "
         "Limitation lines as rendered; the protocol's block is replaced (also after a "
-        "new run), else one is appended; with --discuss or --handover, that block",
+        "new run), else one is appended; with --discuss, --reported-through or "
+        "--handover, that block",
     )
     ap.add_argument(
         "--discuss",
@@ -988,6 +1057,17 @@ def main(argv: list[str]) -> int:
         "a run the report looks at without reporting it; the block's head holds the "
         "protocol, the run and the why, its line is written from them (replaced in "
         "place for the same protocol and run, else appended)",
+    )
+    ap.add_argument(
+        "--reported-through",
+        dest="reported_through",
+        default=None,
+        metavar="RUN_ID",
+        help="with --into: write into REPORT the block saying this protocol's runs "
+        "are inputs of the analysis run RUN_ID, which another protocol of the area "
+        "has adopted — for a measurement protocol that reports no result of its "
+        "own; the block shows no number or verdict, decides no finding, and the "
+        "report's review stays owed (replaced in place, else appended)",
     )
     ap.add_argument(
         "--why",
@@ -1084,6 +1164,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     _check_data_counts_args(ap, args)
     _check_step_args(ap, args)
+    _check_through_args(ap, args)
     _check_report_mode_args(ap, args)
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")

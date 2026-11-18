@@ -32,6 +32,7 @@ from labkit.gates import report_check
 from labkit.gates.finalize import finalize_area
 from labkit.formats import standard_contract as sc
 from labkit.formats import protocol_block
+from labkit.tools import protocol_fill
 from test_end_to_end import CountCommands, Lab, stamp_count
 
 # an end-to-end scenario file: the full suite before a push runs it, the
@@ -394,6 +395,111 @@ class TwoProtocolsOfOneArea(CountCommands):
         self.assertTrue(told.startswith(NOT_RECONSTRUCTED), told)
         self.assertNotIn(THEN, told)
         self.assertNotIn(NOW, told)
+
+    def held(self, *paths: Path) -> tuple[int, str]:
+        """`report-check --if-reported PATHS`, the stop's hold on the tree."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = report_check.hold_reported(
+                list(paths), self.lab.root, staged=False
+            ).exit
+        return code, out.getvalue()
+
+    def test_the_measurement_protocols_report_is_released_by_its_final_form(self):
+        """The measurement protocol registered REPORT.md and reports no
+        result of its own: its run A0 is an input of C, which the
+        computation protocol adopts. Without the reported-through block the
+        report hold names it with its command; written by that command, the
+        block releases the report, A0's citation in it is no promotion, and
+        the report's review stays owed.
+
+        Not shown, and not reachable with real commands today: the whole
+        area passing in that state. `scripts/02_analyze.py --check` belongs
+        to the area's first protocol and report-check runs it for every
+        protocol (tests/test_adopt_per_protocol.py), so C is adopted only
+        while the measurement protocol has an answer. Here the measurement
+        adopts A0 first and withdraws it after C's adoption; asserted is
+        the registered report's hold alone."""
+        lab, measured = self.lab, self.protocol
+        text = measured.read_text(encoding="utf-8")
+        pid = protocol_block.head(text).id
+        assert pid is not None
+        computed = self.area / "PROTOCOL-compared.md"
+        computed.write_text(text.replace(pid, "p-0123456789abcdef"), encoding="utf-8")
+        lab.fill(measured, "report=REPORT.md")
+        lab.commit("the measurement registers its report")
+        a0 = self.run_script("01_measure.py")
+        (written,) = runs.read_outputs(self.area / "runs" / a0) or []
+        script = (self.area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        bound = f'"{measured.name}"'
+        (self.area / "scripts" / "03_compare.py").write_text(
+            _pointed(script.replace(bound, f'"{computed.name}"'), written.path),
+            encoding="utf-8",
+        )
+        lab.commit("A0, and the computation protocol beside the measurement")
+        rc, out, _ = self.analysis(self.clean, measured)
+        self.assertEqual(rc, 0, out)
+        rc, out = lab.adopt(measured, a0)
+        self.assertEqual(rc, 0, out)
+        lab.commit("the measurement adopts A0")
+        c = self.run_script("03_compare.py")
+        rc, out, _ = self.analysis(self.clean, computed)
+        self.assertEqual(rc, 0, out)
+        rc, out = lab.adopt(computed, c)
+        self.assertEqual(rc, 0, out)
+        lab.commit("C adopted")
+        rc, out = self.withdraw("reported through the comparison instead")
+        self.assertEqual(rc, 0, out)
+        report = lab.root / "REPORT.md"
+        report.write_text("# Report\n\nThe comparison is below.\n", encoding="utf-8")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = protocol_fill.main([str(computed), "--into", str(report)])
+        self.assertEqual(rc, 0, out.getvalue())
+
+        # without the block: the registered report is held, the way named
+        code, told = self.held(report, measured)
+        self.assertEqual(code, 1, told)
+        self.assertIn(
+            "nor the block saying its runs are reported through the adopted "
+            f"analysis run {c}",
+            told,
+        )
+        self.assertIn(f"--reported-through {c} --into", told)
+
+        # the final form, written by the command the hold named
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = protocol_fill.main(
+                [str(measured), "--reported-through", c, "--into", str(report)]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+        body = report.read_text(encoding="utf-8")
+        self.assertIn(
+            f"Reported through p-0123456789abcdef, run {c}, adopted there: run "
+            f"{a0} of {pid} is an input of that analysis; {pid} reports no result "
+            "of its own.",
+            body,
+        )
+        code, told = self.held(report, measured)
+        self.assertNotIn("carries neither", told)
+        self.assertNotIn("reported-through block", told)
+        self.assertNotIn(f"cites {a0}", told)  # stated as an input, not promoted
+        # the block replaces no review: the registered report owes its own
+        self.assertEqual(code, 1, told)
+        self.assertIn(f"{measured.name} registers and has no clean report review", told)
+
+        # C's adoption withdrawn: the block says something false and holds
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = protocol_fill.main(
+                [str(computed), "--withdraw", "--why", "x", "--into", str(report)]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+        code, told = self.held(report, measured)
+        self.assertEqual(code, 1, told)
+        self.assertIn(f"no protocol of {self.area.name} has adopted run {c}", told)
+        self.assertIn("carries neither", told)
 
 
 if __name__ == "__main__":

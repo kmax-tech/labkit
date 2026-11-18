@@ -6,7 +6,8 @@ Which Markdown files are reports and how the gate's state reads them
 `committed_reports`, `reached_reports`, `discussing_reports`,
 `reports_citing`, `registering_protocols`), what the repo holds for them
 to cite (`repo_sources`), and what holds one (`hold_report`: result blocks
-owed and current, discussions, promotions, a report review owed). What
+owed and current, discussions, runs reported through an adopted analysis
+(`stated_through`, `through_gaps`), promotions, a report review owed). What
 the report a protocol's head registers owes stands in `registered_report`.
 `report_check` is the entry: `hold_reported` decides the order and the
 conditions — the protocols first, then every report — and calls into here.
@@ -69,6 +70,7 @@ from labkit.formats.repo import (
     state_link,
 )
 from labkit.formats.commands import (
+    ADOPT_TOOL,
     adopt_command,
     audit_command,
     claim_decide_command,
@@ -579,6 +581,187 @@ def drawn_citations(
     return out
 
 
+class ThroughRefused(ValueError):
+    """Why a protocol's runs are not reported through an analysis run; the
+    message is the clause a refusal and a blocker carry."""
+
+
+def stated_through(
+    protocol: Path, report: Path, run_id: str, sources: Sources
+) -> report_blocks.Through:
+    """What the reported-through block of PROTOCOL in REPORT states of the
+    analysis run RUN_ID now, read from SOURCES' file state: the protocol
+    of PROTOCOL's area that has adopted RUN_ID, and the runs bound to
+    PROTOCOL's id among the origin runs of RUN_ID's inputs
+    (`runs.read_data`, the record in the working tree), in the inputs'
+    order. The protocols are read in SOURCES' file state (the index at
+    the commit); the run records always from the working tree, as every
+    reader of a run's inputs here does (`drawn_citations`). Exact, no
+    reading of what either protocol says. Raises
+    ThroughRefused, in this order, when PROTOCOL is no protocol of the
+    state or its head or id does not read; it has adopted a result of its
+    own (its result block reports that); no protocol of its area, or more
+    than one, has adopted RUN_ID; that protocol's id does not read;
+    RUN_ID's record does not read; none of its inputs is the output of a
+    run of PROTOCOL. Raises RuntimeError when git fails."""
+    protocol = protocol.resolve()
+    area = protocol.parent
+    texts = area_texts(area, sources)
+    if protocol not in texts:
+        raise ThroughRefused(f"there is no protocol {shown(protocol, sources.repo)}")
+    try:
+        own_id = protocol_block.head(texts[protocol]).id
+        own_result = protocol_block.declared_run(texts[protocol])
+        adopted_by = [
+            p
+            for p, text in texts.items()
+            if p != protocol and protocol_block.declared_run_shown(text) == run_id
+        ]
+    except protocol_block.BlockError as exc:
+        raise ThroughRefused(f"{protocol.name}: its head does not read: {exc}") from exc
+    if own_id is None:
+        raise ThroughRefused(f"{protocol.name} has no id")
+    if own_result is not None:
+        raise ThroughRefused(
+            f"{protocol.name} has adopted run {own_result} as its own result — "
+            f"its result block reports that (`--into`)"
+        )
+    if len(adopted_by) != 1:
+        raise ThroughRefused(
+            f"no protocol of {area.name} has adopted run {run_id} — an analysis "
+            f"is adopted first (`{ADOPT_TOOL} <area> {run_id}`)"
+            if not adopted_by
+            else f"{', '.join(p.name for p in adopted_by)} have each adopted run "
+            f"{run_id}"
+        )
+    (adopting,) = adopted_by
+    through_id = protocol_block.id_of(texts[adopting])
+    if through_id is None:
+        raise ThroughRefused(f"{adopting.name}: its head does not read, or has no id")
+    mine = origin_runs_of(area, run_id, own_id)
+    if not mine:
+        raise ThroughRefused(
+            f"no input of run {run_id} is the output of a run of {own_id} "
+            f"({protocol.name})"
+        )
+    return report_blocks.Through(
+        report_blocks.path_from_report(protocol, report),
+        own_id,
+        report_blocks.path_from_report(adopting, report),
+        through_id,
+        run_id,
+        mine,
+    )
+
+
+def area_texts(area: Path, sources: Sources) -> dict[Path, str]:
+    """The text of every protocol of AREA in SOURCES' file state, by
+    resolved path — the cache's where it holds one, else read
+    (`repo.state_text`); {} when AREA is no directory. Raises RuntimeError
+    when git fails."""
+    if path_kind(area) != "dir":
+        return {}
+    texts: dict[Path, str] = {}
+    for p in sources.held_state(area).protocols:
+        text = sources.texts.get(p.resolve()) or state_text(
+            sources.repo, p, staged=sources.staged
+        )
+        if text is not None:
+            texts[p.resolve()] = text
+    return texts
+
+
+def origin_runs_of(area: Path, run_id: str, pid: str) -> tuple[str, ...]:
+    """The origin runs of the inputs of AREA's run RUN_ID
+    (`runs.read_data`) that are bound to the protocol id PID, in the
+    inputs' order, each once. Raises ThroughRefused when RUN_ID has no
+    record or a record read on the way does not read."""
+    try:
+        entries = runs.read_data(run_path(area, run_id))
+        if entries is None:
+            raise ThroughRefused(f"run {run_id} has no record in {area.name}")
+        origins = dict.fromkeys(e.origin_run for e in entries)
+        return tuple(
+            r
+            for r in origins
+            if r is not None
+            and (cfg := read_run_config(run_path(area, r))) is not None
+            and cfg.protocol.id == pid
+        )
+    except (runs.ArtefactError, runs.RunConfigError) as exc:
+        raise ThroughRefused(f"a run record does not read: {exc}") from exc
+
+
+def through_gap(
+    block: report_blocks.ThroughBlock, report: Path, sources: Sources
+) -> GateFinding | None:
+    """Why BLOCK, a reported-through block found in REPORT, does not say
+    what its sources say now — one blocker with its way out — or None when
+    it stands: the statement cannot be made (`stated_through`: the
+    analysis run is not adopted, none of its inputs comes from a run of
+    the protocol, …), or its lines differ from the ones written from the
+    statement (`report_blocks.through_lines`) — the analysis read other
+    runs since, a protocol moved, or the block was edited by hand. Exact;
+    the block shows no number, so nothing of a number is judged here."""
+    at = (
+        f"line {block.first}: the reported-through block of {block.protocol} "
+        f"(run {block.run_id})"
+    )
+    protocol = (report.parent / block.protocol).resolve()
+    here = Path.cwd()
+    again = report_blocks.through_command(
+        shown(protocol, here), block.run_id, shown(report, here)
+    )
+    try:
+        wanted = report_blocks.through_lines(
+            stated_through(protocol, report, block.run_id, sources)
+        )
+    except (ThroughRefused, ValueError) as exc:
+        return blocker(
+            f"{at}: {exc}",
+            fix="remove the block, or repair what the sentence names and write "
+            f"it again: `{again}`",
+            rule=LAB_104,
+        )
+    if block.lines != wanted:
+        return blocker(
+            f"{at} differs from what the analysis run's record and adoption "
+            f"say now — a stale rendering or an edit by hand",
+            fix=f"`{again}` writes it again",
+            step=again,
+            # equality with the rendering, as for a stale result block
+            rule=TECHNICAL_RULE,
+        )
+    return None
+
+
+def through_gaps(
+    report: Path, found: list[report_blocks.ThroughBlock], sources: Sources
+) -> list[GateFinding]:
+    """The blockers of the reported-through blocks FOUND in REPORT: each
+    block that does not stand (`through_gap`), and a second block of one
+    protocol — one statement per protocol."""
+    gaps: list[GateFinding] = []
+    seen: dict[str, int] = {}
+    for b in found:
+        if b.protocol in seen:
+            gaps.append(
+                blocker(
+                    f"line {b.first}: the reported-through block of {b.protocol} "
+                    f"repeats the block at line {seen[b.protocol]} — one block "
+                    f"per protocol",
+                    fix=f"remove one, then {report_blocks.REPORT_CHECK_AGAIN}",
+                    rule=TECHNICAL_RULE,
+                )
+            )
+            continue
+        seen[b.protocol] = b.first
+        gap = through_gap(b, report, sources)
+        if gap is not None:
+            gaps.append(gap)
+    return gaps
+
+
 def owed_blocks(
     report: Path, text: str, found: list[report_blocks.Block], sources: Sources
 ) -> list[GateFinding]:
@@ -677,7 +860,9 @@ def hold_report(
     every cited run id a run of the repo, every cited declared result shown
     in its protocol's block, every discussion block says why, says it on
     its line as its head holds it, once per protocol and run, and names a
-    run of its protocol's area (`discussion_sources`), and the answering
+    run of its protocol's area (`discussion_sources`), every
+    reported-through block says what its analysis run's record and adoption
+    say now (`through_gaps`), and the answering
     run of a protocol that declares no result is not cited undiscussed
     (`promotions` — the number of a full run presented without the
     adoption; blockers); any other cited run no protocol declares a
@@ -703,11 +888,14 @@ def hold_report(
     try:
         found = report_blocks.blocks(text)
         discussed = report_blocks.discussions(text)
+        through_found = report_blocks.through_blocks(text)
     except report_blocks.ReportBlockError as exc:
         out.block(
             f"{rel}: {exc}",
             fix="restore the block's comment lines as `protocol-fill` wrote them "
-            "(`--into` for a result, `--discuss` for a discussion writes them again)",
+            "(`--into` for a result, `--discuss` for a discussion, "
+            "`--reported-through` for runs reported through an analysis writes "
+            "them again)",
             rule=report_blocks.unread_rule(exc),
         )
         return out.report("report-check", "reporting")
@@ -721,7 +909,7 @@ def hold_report(
         )
     )
     cited = report_blocks.cited_run_ids(text)
-    structured = report_blocks.structured_lines(found, discussed)
+    structured = report_blocks.structured_lines(found, discussed, through_found)
     out.take_all(
         at_report(
             report_blocks.cited_gaps(
@@ -732,12 +920,21 @@ def hold_report(
     out.take_all(at_report(owed_blocks(path, text, found, sources)))
     out.take_all(at_report(report_blocks.discussion_gaps(discussed)))
     out.take_all(at_report(discussion_sources(path, discussed, sources)))
+    out.take_all(at_report(through_gaps(path, through_found, sources)))
     out.take_all(report_review_owed(path, rel, text, discussed, sources))
     report_hints(out, rel, text, discussed)
     for line in replacement_hints(path, rel, text, repo, sources):
         out.warn(line, evidence_kind=STATIC_EVIDENCE, rule=LAB_003)
     drawn = drawn_citations(path, text, found)
-    claimed = [c for c in cited if c not in drawn]
+    # a run named in a reported-through block is stated as an analysis's
+    # input or as that analysis, never claimed as a result (`through_gaps`
+    # holds the statement)
+    through_block_lines = report_blocks.structured_lines([], [], through_found)
+    claimed = [
+        (line, run_id)
+        for line, run_id in cited
+        if (line, run_id) not in drawn and line not in through_block_lines
+    ]
     out.take_all(undeclared_findings(path, rel, claimed, discussed, sources))
     return out.report("report-check", "reporting")
 

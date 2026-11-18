@@ -1,6 +1,6 @@
 """registered_report — what the report a protocol's head registers
-(`[protocol] report`) owes: its result block or the protocol's handover
-block once delivered (`report_owed`), the account of a measured run before
+(`[protocol] report`) owes: its result block, the protocol's handover
+block or its reported-through block once delivered (`report_owed`), the account of a measured run before
 any adoption (`progress_account`), the duty to report that the first
 measurement's commit started — the report registered before the result
 was known, hung on the protocol's id, free to move to another file, not
@@ -18,10 +18,17 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import checkout_command
-from labkit.gates.report_hold import Sources, review_gap
+from labkit.gates.report_hold import (
+    Sources,
+    ThroughRefused,
+    area_texts,
+    review_gap,
+    stated_through,
+    through_gap,
+)
 from labkit.formats.area_state import Measured, state_of
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
-from labkit.formats.gate import GateFinding, blocker
+from labkit.formats.gate import GateFinding, RuleAssignment, blocker
 from labkit.formats import (
     handovers,
     protocol_block,
@@ -80,15 +87,22 @@ def report_owed(
     showing DECLARED, the run the head declares (written by `protocol-fill
     --into`; where the report is among the paths its body is held to the
     rendering as well, `report_blocks.block_gaps`) OR the protocol's
-    handover block as its record renders it (`handovers.block_mismatch`).
+    handover block as its record renders it (`handovers.block_mismatch`)
+    OR, while the head declares no result, the protocol's reported-through
+    block as its sources say it now (`report_hold.through_gap`): its runs
+    are inputs of an analysis another protocol of the area adopted, and
+    that protocol's result block carries the numbers. The block is no
+    verdict and decides no finding; what holds the protocol at the stop
+    and the commit holds it as before.
     Everything else is held: a number with no run id, a run id typed in
     without the block (the id itself is held by `report_blocks.cited_gaps`
     where the report is among the paths), a discussion block — `--discuss`
     says a run was looked at and closes nothing —, blocks that do not
     read, a report that is not UTF-8. The ways out name the run the gates
     hold the protocol to (`audit_binding.audited_run`: the newest kept one;
-    DECLARED when declared) for the adoption and the discussion, and the
-    handover. Why everything else is held: deleting the run id a refusal
+    DECLARED when declared) for the adoption and the discussion, the
+    handover, and — where an adopted run of the area reads this protocol's
+    runs (`reported_through_runs`) — the reported-through block. Why everything else is held: deleting the run id a refusal
     named must not release the report. Once released, and REVIEW,
     the report owes a clean report review of this state (`review_gap`):
     its prose may still present another run as the result — the block
@@ -110,8 +124,6 @@ def report_owed(
     state = sources.held_state(protocol.parent)
     root = repo.resolve()
     report = report_file(root, head.report)
-    here = Path.cwd()
-    name_p, name_r = shown(protocol, here), shown(report, here)
     why: list[str] = []
     # a report or blocks that do not read: what the report owes could not be
     # looked for, the technical contract; else the duty itself, which no
@@ -129,8 +141,9 @@ def report_owed(
     try:
         blocks = report_blocks.blocks(written)
         handed = handovers.handover_blocks(written)
+        through_found = report_blocks.through_blocks(written)
     except (report_blocks.ReportBlockError, handovers.HandoverError) as exc:
-        blocks, handed = [], []
+        blocks, handed, through_found = [], [], []
         why.append(f"its blocks do not read: {exc}")
         rule = TECHNICAL_RULE
 
@@ -142,23 +155,24 @@ def report_owed(
             if review
             else None
         )
-    # by the id its record names, so a protocol renamed since the handover
-    # is still the one handed over (`handovers.owns_block`)
-    own_handovers = (
-        h
-        for h in handed
+    # each: None when a block of that kind stands, else why its blocks do not
+    handover_why = (
+        standing_handover(handed, block_owner, head.id, report, root, staged=staged)
         if head.id is not None
-        and handovers.owns_block(h, block_owner, head.id, report, root, staged=staged)
+        else []
     )
-    for h in own_handovers:
-        gap = handovers.block_mismatch(h, report, root, staged=staged)
-        if gap is None:
-            return (
-                registered_review(report, written, protocol, text, sources)
-                if review
-                else None
-            )
-        why.append(f"its handover block at line {h.first} {gap}")
+    through_why = (
+        standing_through(through_found, block_owner, report, sources)
+        if declared is None  # an adopted result is reported by its result block
+        else []
+    )
+    if handover_why is None or through_why is None:
+        return (
+            registered_review(report, written, protocol, text, sources)
+            if review
+            else None
+        )
+    why += handover_why + through_why
     run, _ = audited_run(state, protocol, text)
     if (
         declared is None
@@ -171,7 +185,84 @@ def report_owed(
     pending = None if declared is not None or run is None or why else run.name
     if pending is not None and progress_account(written, block_owner, pending):
         return None  # an honest interim state: saved, releasing nothing
-    newest = declared or (run.name if run is not None else "<run_id>")
+    return result_owed(
+        protocol,
+        report,
+        declared,
+        run.name if run is not None else None,
+        why,
+        rule,
+        sources,
+    )
+
+
+def standing_handover(
+    found: list[handovers.HandoverBlock],
+    owner: str,
+    pid: str,
+    report: Path,
+    root: Path,
+    *,
+    staged: bool,
+) -> list[str] | None:
+    """None when a handover block of FOUND (the blocks of REPORT) that
+    belongs to the protocol with id PID, standing at OWNER (its path
+    relative to the report), is the one its record renders
+    (`handovers.block_mismatch`); else why each of its blocks is not, one
+    clause each — [] when it has none. A block belongs by the id its
+    record names, so a protocol renamed since the handover is still the
+    one handed over (`handovers.owns_block`)."""
+    why: list[str] = []
+    for h in found:
+        if not handovers.owns_block(h, owner, pid, report, root, staged=staged):
+            continue
+        gap = handovers.block_mismatch(h, report, root, staged=staged)
+        if gap is None:
+            return None
+        why.append(f"its handover block at line {h.first} {gap}")
+    return why
+
+
+def standing_through(
+    found: list[report_blocks.ThroughBlock], owner: str, report: Path, sources: Sources
+) -> list[str] | None:
+    """None when a reported-through block of FOUND (the blocks of REPORT)
+    that belongs to the protocol OWNER (its path relative to the report)
+    stands as its sources say it now (`report_hold.through_gap`); else why
+    each of its blocks does not, one clause each — [] when it has none. One
+    standing block releases even beside a second block of OWNER: the
+    report's own hold names the repeat (`report_hold.through_gaps`)."""
+    gaps = [through_gap(t, report, sources) for t in found if t.protocol == owner]
+    if any(gap is None for gap in gaps):
+        return None
+    return [
+        f"its reported-through block does not stand ({gap.text})"
+        for gap in gaps
+        if gap is not None
+    ]
+
+
+def result_owed(
+    protocol: Path,
+    report: Path,
+    declared: str | None,
+    held_run: str | None,
+    why: list[str],
+    rule: RuleAssignment,
+    sources: Sources,
+) -> GateFinding:
+    """The blocker of PROTOCOL's registered REPORT that carries none of
+    the blocks releasing it (`report_owed` decided that), with every way
+    out: the result block — of DECLARED, the run the head adopted, else
+    through the adoption of HELD_RUN, the run the gates hold the protocol
+    to (None: a placeholder) —, the progress account, the handover, and,
+    while nothing is adopted, the reported-through block for each adopted
+    run of the area that reads this protocol's runs
+    (`reported_through_runs`). WHY: what does not read or stand, each a
+    clause; RULE: the finding's rule assignment."""
+    here = Path.cwd()
+    name_p, name_r = shown(protocol, here), shown(report, here)
+    newest = declared or (held_run if held_run is not None else "<run_id>")
     what = (
         f"the result block of run {declared}, its adopted result"
         if declared is not None
@@ -187,12 +278,21 @@ def report_owed(
         f"`{write_cmd}` writes the result block"
         if declared is not None
         else f"`{write_cmd}` adopts the run"
-        + (" (the newest kept one)" if run is not None else "")
+        + (" (the newest kept one)" if held_run is not None else "")
         + " and writes its result block"
+    )
+    analyses = (
+        reported_through_runs(protocol, report, sources) if declared is None else []
     )
     return blocker(
         f"{name_p} registers {name_r} as its report, and {name_r} carries "
         f"neither {what} nor the protocol's handover block"
+        + (
+            f", nor the block saying its runs are reported through the adopted "
+            f"analysis run {', '.join(analyses)}"
+            if analyses
+            else ""
+        )
         + "".join(f"; {w}" for w in why)
         + " — a registered report owes the result or an explicit end without "
         "one; a number with its run id removed, or a run id typed in, releases "
@@ -201,10 +301,40 @@ def report_owed(
         f"`{report_blocks.discuss_command(name_p, newest, name_r, report_blocks.WHY_PROGRESS)}` writes the "
         f"progress account of the run the gates hold it to — the commit takes it, "
         f"it releases nothing and the result or the handover stays owed; "
-        f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
+        f"`{handover_command(protocol, name_r)}` ends the protocol without a result"
+        + "".join(
+            f"; `{report_blocks.through_command(name_p, c, name_r)}` says its "
+            f"runs are reported through that analysis, whose result block "
+            f"carries the numbers"
+            for c in analyses
+        ),
         step=write_cmd,
         rule=rule,
     )
+
+
+def reported_through_runs(protocol: Path, report: Path, sources: Sources) -> list[str]:
+    """The adopted runs of PROTOCOL's area that read a run of PROTOCOL as
+    an input — the analyses its registered REPORT can name in a
+    reported-through block (`report_hold.stated_through` states each) —,
+    sorted; [] when there is none or the area's protocols do not read.
+    Raises RuntimeError when git fails."""
+    area = protocol.resolve().parent
+    out: list[str] = []
+    area_texts_of = area_texts(area, sources)
+    for p in sources.held_state(area).protocols:
+        if p.resolve() == protocol.resolve():
+            continue
+        text = area_texts_of.get(p.resolve())
+        run_id = protocol_block.declared_run_shown(text) if text is not None else None
+        if run_id is None:
+            continue
+        try:
+            stated_through(protocol, report, run_id, sources)
+        except ThroughRefused:
+            continue
+        out.append(run_id)
+    return sorted(out)
 
 
 def progress_account(written: str, owner: str, run_id: str) -> bool:

@@ -23,6 +23,7 @@ from labkit.checks.report_blocks import (
     blocks,
     cited_run_ids,
     discuss_command,
+    through_blocks,
 )
 from labkit.formats import protocol_block
 from labkit.formats import findings
@@ -97,7 +98,9 @@ def review_pieces(
     """The (label, text) the reviewer reads of REPORT (its TEXT) under
     PROTOCOL (its PROTOCOL_TEXT) in AREA, in order: the report numbered,
     the run the protocol has adopted (or none), its DISCUSSED blocks (or
-    none), the protocol, the `metrics.json` of every run of AREA the
+    none), where the report shows them the other protocols' result blocks,
+    this protocol's reported-through block and the adopted run's sources,
+    the protocol, the `metrics.json` of every run of AREA the
     review concerns — the adopted one, each discussed one, each one the
     report cites — labelled with what it is (STATE, the area's state as
     the caller built it once), every run of AREA in one line
@@ -131,6 +134,11 @@ def review_pieces(
     others = other_results_text(report, text, protocol)
     if others is not None:
         pieces.append(("OTHER PROTOCOLS' RESULTS", others))
+    # likewise only for a report saying this protocol's runs are reported
+    # through another protocol's analysis
+    through = reported_through_text(report, text, protocol)
+    if through is not None:
+        pieces.append(("REPORTED THROUGH", through))
     # likewise only for an adopted run that computes from other runs
     drawn = sources_text(area, adopted) if adopted is not None else None
     if drawn is not None:
@@ -202,6 +210,31 @@ def other_results_text(report: Path, text: str, protocol: Path) -> str | None:
         "file; not a result of the protocol under review"
         for b in blocks(text)
         if block_protocol(report, b) != own
+    ]
+    return "\n".join(lines) or None
+
+
+def reported_through_text(report: Path, text: str, protocol: Path) -> str | None:
+    """The reported-through blocks of REPORT (its TEXT) that belong to
+    PROTOCOL (the block's path resolved against the report's directory),
+    one line each — where it stands, the runs it names as inputs, the
+    analysis run and the protocol that adopted it, and what that means for
+    the review: the protocol under review reports no result of its own —,
+    or None when there is none. Whether the block is true is not checked
+    here; report-check holds it to the analysis run's record and adoption
+    (`report_hold.through_gaps`). None keeps the inputs, and so the
+    fingerprint, of a report without such a block. Raises
+    `report_blocks.ReportBlockError` on a block that does not read."""
+    own = protocol.resolve()
+    lines = [
+        f"lines {b.first}–{b.last}: {', '.join(b.sources)} of the protocol under "
+        f"review — inputs of run {b.run_id}, which {b.through} adopted as its "
+        "result; report-check holds that statement. The protocol under review "
+        "reports no result of its own: the block shows no number, and a line "
+        "that presents one of these runs' numbers or a verdict on its criterion "
+        "as what the experiment found is a result"
+        for b in through_blocks(text)
+        if (report.parent / b.protocol).resolve() == own
     ]
     return "\n".join(lines) or None
 

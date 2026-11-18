@@ -45,6 +45,7 @@ ADOPT, INTO, WITHDRAW, WAIT, RENDER, CHECK = (
     "check",
 )
 DISCUSS, HANDOVER = "discuss", "handover"
+REPORTED_THROUGH = "reported-through"
 MEASURE, AUDIT, DECIDE, REVIEW = "measure", "audit", "decide", "review"
 RESTORE, INIT = "restore", "init"
 STAGE = "stage"
@@ -59,6 +60,7 @@ COMMAND_KIND = {
     CHECK: MECHANICAL,
     DISCUSS: CONTENT,
     HANDOVER: CONTENT,
+    REPORTED_THROUGH: MECHANICAL,
     MEASURE: RESEARCH,
     AUDIT: RESEARCH,
     DECIDE: RESEARCH,

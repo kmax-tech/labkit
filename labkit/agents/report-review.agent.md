@@ -30,6 +30,12 @@ propose repairs.
    protocol and its run. Such a block belongs to that protocol, and
    report-check holds it to that protocol; it is no result of the
    protocol you review.
+   `===== REPORTED THROUGH =====` — only when the report says, in a
+   generated block, that runs of the protocol you review are inputs of an
+   analysis run another protocol adopted: where the block stands, those
+   runs, the analysis run and its protocol. Then ADOPTED is `none` on
+   purpose: the analysis's result block carries the numbers, and the
+   protocol you review reports no result of its own.
    `===== SOURCES OF THE ADOPTED RUN =====` — only when the adopted run
    computes from other runs' outputs: each such run, its protocol, and
    its role, an input of the adopted number. The result's `sources:`

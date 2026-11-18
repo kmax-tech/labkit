@@ -47,6 +47,14 @@ here states, and no more:
   by `protocol-fill <PROTOCOL> --handover`; its format and its check live
   in `handovers` (the stop and the commit read it), here its lines count
   as generated (`generated_lines`).
+- `through_blocks`, `through_lines` (guaranteed): a measurement protocol
+  whose runs are inputs of an analysis another protocol of its area
+  adopted says so in a reported-through block, written by `protocol-fill
+  <PROTOCOL> --reported-through RUN --into <FILE>` — its head holds the
+  protocol, the computation protocol, the analysis run and the source
+  runs as TOML, its line is written from them. It shows no number and no
+  verdict. The gate (`report_hold.through_gaps`) holds the block to what
+  the analysis run's record and adoption say now.
 - `numbers_beside_discussed` (static evidence, never blocks): the numbers
   in the paragraphs around a discussion block — a discussed run's number
   in a report is a reported number unless the sentence says what it is.
@@ -67,7 +75,7 @@ from __future__ import annotations
 import os
 import re
 import tomllib
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -89,6 +97,7 @@ from labkit.formats.protocol_block import toml_string
 from labkit.formats.commands import (
     Command,
     DISCUSS,
+    REPORTED_THROUGH,
     adopt_command,
     fill_command,
     into_command,
@@ -412,10 +421,17 @@ def cited_run_ids(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def structured_lines(found: list[Block], discussed: list["Discussion"]) -> set[int]:
-    """The lines (1-based) inside a generated result or discussion block —
-    where a run id is a structured citation, not prose."""
-    return {n for b in [*found, *discussed] for n in range(b.first, b.last + 1)}
+def structured_lines(
+    found: list[Block],
+    discussed: list["Discussion"],
+    through: Sequence["ThroughBlock"] = (),
+) -> set[int]:
+    """The lines (1-based) inside a generated result, discussion or
+    reported-through block (THROUGH) — where a run id is a structured
+    citation, not prose."""
+    return {
+        n for b in [*found, *discussed, *through] for n in range(b.first, b.last + 1)
+    }
 
 
 def cited_gaps(
@@ -690,6 +706,181 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
     return gaps
 
 
+#: a measurement protocol whose runs are reported through an analysis: a
+#: generated block whose head is TOML inside the opening comment — the
+#: protocol, the computation protocol that adopted the analysis run
+#: (THROUGH_KEY), that run and the protocol's runs it reads (SOURCES_KEY) —
+#: and whose body is the one line the reader sees (`through_body`):
+#:
+#:     <!-- labkit reported-through
+#:     protocol = "experiments/01-x/PROTOCOL-x.md"
+#:     through = "experiments/01-x/PROTOCOL-compared.md"
+#:     run = "2026-11-18T10-00-00_c0c0"
+#:     sources = ["2026-11-18T09-00-00_a0a0", "2026-11-18T09-30-00_b1b1"]
+#:     -->
+#:     Reported through p-…, run 2026-11-18T10-00-00_c0c0, adopted there: runs 2026-11-18T09-00-00_a0a0, 2026-11-18T09-30-00_b1b1 of p-… are inputs of that analysis; p-… reports no result of its own.
+#:     <!-- /labkit reported-through -->
+#:
+#: The block shows no number and no verdict: the analysis's result block
+#: carries the numbers. It decides no finding and replaces no review.
+THROUGH_KIND = "reported-through"
+THROUGH_OPEN = opener(THROUGH_KIND)
+THROUGH_CLOSE = closer(THROUGH_KIND)
+THROUGH_KEY, SOURCES_KEY = "through", "sources"
+THROUGH_KEYS = ("protocol", THROUGH_KEY, "run", SOURCES_KEY)
+
+
+def through_command(protocol: str, run_id: str, report: str) -> Command:
+    """The `protocol-fill … --reported-through` line that writes into
+    REPORT the block saying PROTOCOL's runs are reported through the
+    adopted analysis run RUN_ID, each path as the caller names it."""
+    return Command(
+        REPORTED_THROUGH,
+        f"protocol-fill {protocol} --reported-through {run_id} --into {report}",
+    )
+
+
+@dataclass(frozen=True)
+class Through:
+    """What a reported-through block states.
+
+    Attributes:
+        protocol: The measurement protocol, its path relative to the report.
+        protocol_id: Its head's id.
+        through: The computation protocol that adopted the analysis run,
+            its path relative to the report.
+        through_id: That protocol's id.
+        run_id: The adopted analysis run.
+        sources: The runs of the measurement protocol the analysis run
+            reads as inputs, in its inputs' order; at least one.
+    """
+
+    protocol: str
+    protocol_id: str
+    through: str
+    through_id: str
+    run_id: str
+    sources: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ThroughBlock:
+    """One reported-through block as it stands in a report: the PROTOCOL
+    and the computation protocol THROUGH (paths relative to the report, as
+    written), the analysis RUN_ID, the SOURCES its head names, where it
+    stands (FIRST the opening line, LAST the closing one, 1-based) and its
+    LINES from opening to closing."""
+
+    protocol: str
+    through: str
+    run_id: str
+    sources: tuple[str, ...]
+    first: int
+    last: int
+    lines: list[str]
+
+
+def through_body(stated: Through) -> str:
+    """The line a reported-through block shows for STATED."""
+    one = len(stated.sources) == 1
+    return (
+        f"Reported through {stated.through_id}, run {stated.run_id}, adopted "
+        f"there: {'run' if one else 'runs'} {', '.join(stated.sources)} of "
+        f"{stated.protocol_id} {'is an input' if one else 'are inputs'} of that "
+        f"analysis; {stated.protocol_id} reports no result of its own."
+    )
+
+
+def through_lines(stated: Through) -> list[str]:
+    """The reported-through block of STATED, line by line; the head's
+    strings written by `protocol_block.toml_string`. Raises ValueError
+    naming the field on a string no TOML string holds, and on STATED
+    without a source run."""
+    if not stated.sources:
+        raise ValueError(
+            "a reported-through block names at least one source run of its protocol"
+        )
+    try:
+        head = [
+            f"protocol = {toml_string(stated.protocol)}",
+            f"{THROUGH_KEY} = {toml_string(stated.through)}",
+            f"run = {toml_string(stated.run_id)}",
+            f"{SOURCES_KEY} = [{', '.join(toml_string(r) for r in stated.sources)}]",
+        ]
+    except ValueError as exc:
+        raise ValueError(f"the reported-through block's head: {exc}") from exc
+    return [THROUGH_OPEN, *head, HEAD_END, through_body(stated), THROUGH_CLOSE]
+
+
+def _through_head(head: list[str], at: int) -> tuple[str, str, str, tuple[str, ...]]:
+    """(protocol, through, run, sources) of the TOML HEAD of the block
+    opened at line AT. Raises ReportBlockError on TOML that does not read,
+    on other keys than the four, on a protocol, through or run that is not
+    a string, and on sources that are not a list of strings."""
+    try:
+        data = tomllib.loads("\n".join(head))
+    except tomllib.TOMLDecodeError as exc:
+        raise ReportBlockError(
+            f"line {at}: the reported-through block's head is not TOML: {exc}"
+        ) from exc
+    sources = data.get(SOURCES_KEY)
+    if (
+        sorted(data) != sorted(THROUGH_KEYS)
+        or not all(isinstance(data[k], str) for k in ("protocol", THROUGH_KEY, "run"))
+        or not isinstance(sources, list)
+        or not all(isinstance(r, str) for r in sources)
+    ):
+        raise ReportBlockError(
+            f"line {at}: the reported-through block's head holds protocol, "
+            f"{THROUGH_KEY} and run, each a string, and {SOURCES_KEY}, a list of "
+            f"strings"
+        )
+    return data["protocol"], data[THROUGH_KEY], data["run"], tuple(sources)
+
+
+def through_blocks(text: str) -> list[ThroughBlock]:
+    """Every reported-through block of TEXT in order (`comment_blocks`).
+    Raises ReportBlockError naming the line on a block that does not read:
+    never closed, closed without opening, nested, or a head that is not
+    the four keys."""
+    try:
+        found = comment_blocks(
+            text, THROUGH_KIND, "reported-through block", check_head=_through_head
+        )
+    except CommentBlockError as exc:
+        raise ReportBlockError(str(exc)) from exc
+    return [
+        ThroughBlock(*_through_head(b.head, b.first), b.first, b.last, b.lines)
+        for b in found
+    ]
+
+
+def with_through(text: str, stated: Through) -> str:
+    """TEXT with the reported-through block of STATED: the one block of
+    its protocol (the path as written) replaced in place, whichever
+    analysis run it named, or one appended at the end; everything else
+    stays (`with_comment_block`). Raises ReportBlockError on a block that
+    does not read or on two blocks of that protocol, ValueError on a head
+    string the block cannot hold (`through_lines`)."""
+    new = through_lines(stated)
+    matching = {b.first for b in through_blocks(text) if b.protocol == stated.protocol}
+    try:
+        return with_comment_block(
+            text,
+            new,
+            comment_blocks(text, THROUGH_KIND, "reported-through block"),
+            lambda b: b.first in matching,
+            lambda same: (
+                f"{stated.protocol} is reported through an analysis in "
+                f"{len(same)} blocks (lines "
+                f"{', '.join(str(b.first) for b in same)}) — remove all but one, "
+                f"then write it again"
+            ),
+        )
+    except CommentBlockError as exc:
+        raise ReportBlockError(str(exc)) from exc
+
+
 def numbers_beside_discussed(
     text: str, found: list[Discussion]
 ) -> list[tuple[int, list[str]]]:
@@ -724,11 +915,13 @@ def numbers_beside_discussed(
 
 
 def generated_lines(text: str) -> set[int]:
-    """The line numbers of TEXT inside a result block, a discussion block or
-    a handover block (`handovers.handover_blocks`), the opening and closing lines
-    included. Raises ReportBlockError on a block that does not read."""
+    """The line numbers of TEXT inside a result block, a discussion block,
+    a reported-through block or a handover block
+    (`handovers.handover_blocks`), the opening and closing lines included.
+    Raises ReportBlockError on a block that does not read."""
     spans = [(b.first, b.last) for b in blocks(text)]
     spans += [(d.first, d.last) for d in discussions(text)]
+    spans += [(t.first, t.last) for t in through_blocks(text)]
     try:
         spans += [(h.first, h.last) for h in handovers.handover_blocks(text)]
     except handovers.HandoverError as exc:

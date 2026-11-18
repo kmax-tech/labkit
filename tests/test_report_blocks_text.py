@@ -330,6 +330,104 @@ class Discussions(unittest.TestCase):
         self.assertNotIn(9, [n for n, _ in report_blocks.unsourced_numbers(text)])
 
 
+class ReportedThrough(unittest.TestCase):
+    """The block of a measurement protocol whose runs an adopted analysis
+    reads: written from its statement, read back, one per protocol."""
+
+    A, B, C = "2026-10-07T09-00-00_a0a0", "2026-10-07T09-30-00_b1b1", RUN
+    THROUGH = "experiments/01-x/PROTOCOL-compared.md"
+
+    def stated(self, *sources: str, run: str = RUN) -> report_blocks.Through:
+        return report_blocks.Through(
+            P, "p-measured", self.THROUGH, "p-compared", run, sources or (self.A,)
+        )
+
+    def test_the_line_names_both_protocols_the_analysis_and_every_source(self):
+        self.assertEqual(
+            report_blocks.through_lines(self.stated(self.A, self.B)),
+            [
+                "<!-- labkit reported-through",
+                f'protocol = "{P}"',
+                f'through = "{self.THROUGH}"',
+                f'run = "{RUN}"',
+                f'sources = ["{self.A}", "{self.B}"]',
+                "-->",
+                f"Reported through p-compared, run {RUN}, adopted there: runs "
+                f"{self.A}, {self.B} of p-measured are inputs of that analysis; "
+                "p-measured reports no result of its own.",
+                "<!-- /labkit reported-through -->",
+            ],
+        )
+        self.assertIn(
+            f"run {self.A} of p-measured is an input of that analysis",
+            report_blocks.through_body(self.stated(self.A)),
+        )
+
+    def test_a_statement_without_a_source_is_refused(self):
+        stated = report_blocks.Through(P, "p-m", self.THROUGH, "p-c", RUN, ())
+        with self.assertRaisesRegex(ValueError, "at least one source run"):
+            report_blocks.through_lines(stated)
+
+    def test_write_appends_then_replaces_the_protocols_block_whatever_run_it_named(
+        self,
+    ):
+        text = report_blocks.with_through("# Report\n\nProse.\n", self.stated(self.A))
+        (found,) = report_blocks.through_blocks(text)
+        self.assertEqual(
+            (found.protocol, found.through, found.run_id, found.sources),
+            (P, self.THROUGH, RUN, (self.A,)),
+        )
+        self.assertEqual((found.first, found.last), (5, 12))
+        self.assertEqual(found.lines, report_blocks.through_lines(self.stated(self.A)))
+        later = "2026-10-08T10-00-00_cd34"
+        again = report_blocks.with_through(
+            text + "\nMore prose.\n", self.stated(self.A, self.B, run=later)
+        )
+        (found,) = report_blocks.through_blocks(again)
+        self.assertEqual((found.run_id, found.sources), (later, (self.A, self.B)))
+        self.assertTrue(again.startswith("# Report\n\nProse.\n"), again)
+        self.assertTrue(again.endswith("\nMore prose.\n"), again)
+
+    def test_two_blocks_of_one_protocol_refuse_a_write(self):
+        text = report_blocks.with_through("", self.stated())
+        with self.assertRaisesRegex(
+            report_blocks.ReportBlockError, "in 2 blocks .lines 2, 11."
+        ):
+            report_blocks.with_through(text + text, self.stated())
+
+    def test_a_head_that_is_not_the_four_keys_does_not_read(self):
+        lines = report_blocks.through_lines(self.stated())
+        for bad in (
+            [ln for ln in lines if not ln.startswith("sources")],
+            [ln.replace("sources = [", "sources = [1, ") for ln in lines],
+            [ln.replace('run = "', 'runs = "') for ln in lines],
+            [ln.replace("sources = [", "sources = [[") for ln in lines],
+        ):
+            with self.subTest(head=bad[1:5]):
+                with self.assertRaisesRegex(
+                    report_blocks.ReportBlockError,
+                    "line 1: the reported-through block's head",
+                ):
+                    report_blocks.through_blocks("\n".join(bad))
+        with self.assertRaisesRegex(report_blocks.ReportBlockError, "never closed"):
+            report_blocks.through_blocks("\n".join(lines[:-1]))
+
+    def test_its_lines_are_generated_and_its_run_ids_structured(self):
+        """The ids in the block are no number without a source, and an id
+        there that names no run blocks like one in a result block."""
+        text = report_blocks.with_through("# Report\n", self.stated(self.A))
+        found = report_blocks.through_blocks(text)
+        self.assertEqual(report_blocks.generated_lines(text), set(range(3, 11)))
+        self.assertEqual(report_blocks.unsourced_numbers(text), [])
+        structured = report_blocks.structured_lines([], [], found)
+        self.assertEqual(structured, set(range(3, 11)))
+        gaps = report_blocks.cited_gaps(
+            report_blocks.cited_run_ids(text), {RUN}, structured
+        )
+        self.assertTrue(gaps and all(g.grade == "BLOCKER" for g in gaps), gaps)
+        self.assertTrue(all(self.A in g.text for g in gaps), gaps)
+
+
 class AdoptionReplacesTheAccount(unittest.TestCase):
     """`with_block` after a progress account: the result
     block takes the place of the discussion of the same protocol and run;
