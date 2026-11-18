@@ -132,7 +132,7 @@ CLAIM_KINDS = ("result", "contradiction")
 RESULT, CONTRADICTION = CLAIM_KINDS
 #: the statuses a claim takes, of `findings.STATUSES`: undecided, or the
 #: reader misread — every other status is refused (`claim_refusal`)
-OPEN, FALSE_POSITIVE = "open", "false-positive"
+OPEN, FALSE_POSITIVE = findings.OPEN, findings.FALSE_POSITIVE
 CLAIM_STATUSES = (OPEN, FALSE_POSITIVE)
 #: the line that opens a claim's table, for the decision lines' rewrite
 CLAIM_HEADER = findings.array_header("claim")
@@ -181,14 +181,14 @@ def claim_refusal(kind: str, status: str) -> str | None:
     no longer covers the state and a review of the new state judges it.
     As `findings.subject_refusal` refuses a limitation on an
     implementation finding. Pure."""
-    if status == "fixed":
+    if status == findings.FIXED:
         return (
             "a claim is not decided `fixed`: a repair changes the report or a "
             "source the reader read, so this record no longer covers the state "
             "— review the repaired state (`labkit-audit <AREA> --report-review "
             "<REPORT>`), which judges the repair"
         )
-    if status != "limitation":
+    if status != findings.LIMITATION:
         return None
     if kind == RESULT:
         return (

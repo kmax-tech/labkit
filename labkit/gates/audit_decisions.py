@@ -119,7 +119,7 @@ def decision_lines(
                 if len(f.one_line) <= DECISION_TEXT_WIDTH
                 else f.one_line[: DECISION_TEXT_WIDTH - 1] + "…"
             )
-            mark = "" if f.status == "open" else f"[decided {f.status}] "
+            mark = "" if f.status == findings.OPEN else f"[decided {f.status}] "
             out.append(f"  {n} · {mark}{text}")
             out.append(
                 "      "
@@ -183,7 +183,7 @@ def limitation_line(
     registers no promise; where F's subject refuses `limitation`, the
     decisions it allows and the refusal's ways out in its place (so the
     list never offers what `--decide` refuses); "" for a NOTE."""
-    refused = findings.subject_refusal(f, "limitation")
+    refused = findings.subject_refusal(f, findings.LIMITATION)
     if refused is not None and f.grade in EFFECT_GRADES:
         allowed = " / ".join(findings.allowed_decisions(f))
         return f"      {f.subject}: decide {allowed} — {refused}"
@@ -748,11 +748,11 @@ def decide(
         if not n_text.isdigit():
             raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
         record = _newest_record(area) if record is None else record_path(area, record)
-        if not_assessable and status != "limitation":
+        if not_assessable and status != findings.LIMITATION:
             raise findings.FindingsError(
                 f"--not-assessable goes with limit, not with {status}"
             )
-        if status == "limitation":
+        if status == findings.LIMITATION:
             rec_before = findings.read(record)
             n = int(n_text)
             grade = (
@@ -797,9 +797,9 @@ def decision_lines_after(
     run does not carry (`stands_check_hint`)."""
     decided = rec.findings[n - 1]
     out = [findings.decision_entails(decided, area, record, protocol)]
-    if decided.status == "fixed":
+    if decided.status == findings.FIXED:
         out.append(repair_hint(area, record, protocol, decided))
-    if decided.status == "limitation":
+    if decided.status == findings.LIMITATION:
         out += [h for h in [stands_check_hint(area, rec, decided)] if h]
     return out
 

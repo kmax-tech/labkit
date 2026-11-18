@@ -227,6 +227,18 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"fixed / limitation / false-positive|\(\"fixed\", \"false-positive\"\)",
         {"findings"},
     ),
+    # a decision status is a constant, never compared as a word — a mistyped
+    # word compares false without an error: `findings.OPEN`, `FIXED`,
+    # `LIMITATION`, `FALSE_POSITIVE`. The shape is the quoted word beside
+    # `==`, `!=` or `in`, so the word in a sentence does not match
+    (
+        "a decision status compared as a word",
+        r"(?:[=!]=\s*|\bin\s*[(\[{][^)\]}\n]*)"
+        r"[\"'](?:open|fixed|limitation|false-positive)[\"']"
+        r"|[\"'](?:open|fixed|limitation|false-positive)[\"']\s*"
+        r"(?:[=!]=|(?:not\s+)?in\b)",
+        {"findings"},
+    ),
     # a bare area name is read neither by a glob, whose `*` runs over
     # dashes, nor by a slug comparison taking the first match:
     # `repo.areas_named` reads it by the name grammar
@@ -396,6 +408,7 @@ class OneHome(unittest.TestCase):
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
             "the decided statuses spelled by hand": 'if f.status in ("fixed", "false-positive"):',
+            "a decision status compared as a word": 'if decided.status == "limitation":',
             "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',

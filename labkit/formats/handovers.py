@@ -93,7 +93,7 @@ OPEN = opener(KIND)
 CLOSE = closer(KIND)
 HEAD_KEYS = ("protocol", "record")
 #: the decisions a handover lists as left over: nothing settled them
-UNSETTLED = ("open",)
+UNSETTLED = (findings.OPEN,)
 
 
 #: where the protocol stands when it is handed over, as labkit finds it

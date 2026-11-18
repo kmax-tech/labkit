@@ -38,6 +38,8 @@ from pathlib import Path
 from labkit.formats.gate import BLOCKER
 from labkit.formats.findings import (
     DECIDED,
+    FIXED,
+    OPEN,
     Finding,
     FindingsError,
     FixVerdict,
@@ -222,7 +224,7 @@ def undecided_earlier(
         m
         for m in chain(records).heads()
         if m.finding.grade == BLOCKER
-        and m.finding.status == "open"
+        and m.finding.status == OPEN
         and not current(m.record)
     ]
 
@@ -239,7 +241,7 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
         BLOCKER,
         f"carried from {member.ref} ({verdict.verdict}"
         f"{f' as {verdict.subject}' if verdict.subject else ''}): {origin.text}",
-        "open",
+        OPEN,
         "",
         "",
         member.finding.check,
@@ -301,7 +303,7 @@ def release_holds(
         if m.record.path.name in in_cover:
             # a repaired Conclusion is no follow-up's to see: the decision
             # review judges the claim (`report_decisions.review_findings`)
-            if f.status == "fixed" and not fixed_claim(f):
+            if f.status == FIXED and not fixed_claim(f):
                 out.append(
                     Hold(
                         m.ref,

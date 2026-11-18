@@ -242,7 +242,7 @@ def rejected_way(finding: findings.Finding, promised: bool) -> str:
             "owed —, fix the fault and measure again, or supply counter-evidence "
             "for `false-positive`"
         )
-    elif "limitation" not in findings.allowed_decisions(finding):
+    elif findings.LIMITATION not in findings.allowed_decisions(finding):
         routes = (
             "complete the repair or required check the finding names, supply "
             "counter-evidence for `false-positive`, or hand the protocol over "
