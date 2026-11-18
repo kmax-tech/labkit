@@ -317,6 +317,33 @@ class TheFileStateNamedIsTheOneRead(_Repository):
         self.assertNotIn(RUN, report_hold.repo_sources(self.root, staged=False).known)
 
 
+class AnAdoptionOnlyTheTreeHolds(_Repository):
+    """The commit's step asks whether the tree's head declares a result the
+    index's does not (`report_hold.result_outside_index`), read from the
+    real tree and index. A `[result]` typed by hand into the tree's head
+    does not read: it declares none and raises nothing — the index, which
+    the commit judges, reads. The rule over both texts:
+    `test_report_hold_stations.AnAdoptionOutsideTheIndex`."""
+
+    def outside(self, result: str) -> bool:
+        from labkit.gates import report_hold
+
+        self.proto.write_text(
+            head(repeat_cost="low", result=result)
+            + "\n- **Question / hypothesis:** how many?\n",
+            encoding="utf-8",
+        )
+        return report_hold.result_outside_index(self.root, self.area, self.proto)
+
+    def test_a_result_that_does_not_read_in_the_tree_declares_none(self):
+        self.assertFalse(self.outside("typed"))
+
+    def test_the_twin_an_adoption_in_the_tree_is_outside_the_index(self):
+        self.assertTrue(self.outside(RUN))
+        _git(self.root, "add", "-A")
+        self.assertFalse(self.outside(RUN))
+
+
 class OneRuleForAReportsPlace(unittest.TestCase):
     """Where a report may stand is one rule (`repo.report_place_problem`):
     the head's `report` field, the gates' held places and the former

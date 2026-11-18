@@ -31,6 +31,7 @@ from labkit.formats import (
     protocol_block,
     report_reviews,
 )
+from labkit.formats.answering_run import adopted_run
 from labkit.gates.ways_out import report_way_while_lost
 from labkit.checks.audit_binding import (
     AuditError,
@@ -168,19 +169,47 @@ def runs_outside_index(repo: Path, area: Path) -> dict[str, str]:
     return out
 
 
+def adoption_outside_index(repo: Path, protocol: Path) -> str | None:
+    """The run PROTOCOL's head in the working tree has adopted while its
+    head in the index has adopted none — the adoption a commit of the index
+    would not carry —, or None: the tree holds no such file, its head has
+    adopted nothing, or the index's head has adopted a run as well. The one
+    reading of "adopted in the tree only", for the commit's step
+    (`result_outside_index`) and for a report block's source
+    (`_undeclared_source`).
+
+    A `[result]` that does not read counts as no adoption in either state
+    (`answering_run.adopted_run`) and raises nothing here: report-check
+    blocks on that table in the state it judges (`repo_sources`), and what
+    the index lacks is not told from a head that does not read.
+
+    Raises:
+        UnicodeDecodeError: the protocol's bytes in the tree or the index
+            are not UTF-8 (`repo.state_text`).
+    """
+    tree_text = state_text(repo, protocol, staged=False)
+    if tree_text is None:
+        return None
+    tree_run = adopted_run(tree_text)
+    if tree_run is None:
+        return None
+    index_text = state_text(repo, protocol, staged=True)
+    if index_text is not None and adopted_run(index_text) is not None:
+        return None
+    return tree_run
+
+
 def result_outside_index(repo: Path, area: Path, protocol: Path) -> bool:
     """Whether AREA's working tree holds a result the index lacks: a
     completed run only the tree holds (`runs_outside_index`), or
     PROTOCOL's head in the tree declaring a result that the index's head
-    does not declare. Then the commit's step is to stage the area, not the
-    step the index alone would give."""
-    if runs_outside_index(repo, area):
-        return True
-    tree_text = file_text(protocol)
-    if tree_text is None or protocol_block.declared_run(tree_text) is None:
-        return False
-    index_text = state_text(repo, protocol, staged=True)
-    return index_text is None or protocol_block.declared_run(index_text) is None
+    does not declare (`adoption_outside_index`, where a `[result]` that
+    does not read declares none). Then the commit's step is to stage the
+    area, not the step the index alone would give."""
+    return (
+        bool(runs_outside_index(repo, area))
+        or adoption_outside_index(repo, protocol) is not None
+    )
 
 
 def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
@@ -307,17 +336,11 @@ def newly_declared(
         text = state_text(repo, p, staged=staged)
         if text is None:
             continue
-        try:
-            now = protocol_block.declared_run(text)
-        except protocol_block.BlockError:
-            continue
+        now = adopted_run(text)
         if now is None:
             continue
         before = text_at(repo, p, "HEAD")
-        try:
-            was = None if before is None else protocol_block.declared_run(before)
-        except protocol_block.BlockError:
-            was = None
+        was = None if before is None else adopted_run(before)
         if now != was:
             out.setdefault(now, []).append(p)
     return out
@@ -529,15 +552,9 @@ def block_sources(
 def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
     """The block source of protocol P whose head in SOURCES' file state
     declares no result: in the index while the working tree's head has
-    adopted a run, its staging is the way out, not a new adoption."""
-    tree_run = None
-    if sources.staged:
-        tree = state_text(sources.repo, p, staged=False)
-        if tree is not None:
-            try:
-                tree_run = protocol_block.declared_run(tree)
-            except protocol_block.BlockError:
-                tree_run = None  # the tree's own check names its head
+    adopted a run (`adoption_outside_index`), its staging is the way out,
+    not a new adoption."""
+    tree_run = adoption_outside_index(sources.repo, p) if sources.staged else None
     if tree_run is None:
         return report_blocks.BlockSource(
             None, None, "it has adopted no result", LAB_104

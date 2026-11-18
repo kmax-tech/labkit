@@ -17,6 +17,7 @@ from labkit.checks.report_review_inputs import review_keys
 from labkit.formats import report_reviews
 from labkit.formats.gate import BLOCKER, TECHNICAL_RULE
 from labkit.gates import report_hold
+from protocol_fixture import head
 from state_fixture import area_evidence, area_state
 
 
@@ -200,6 +201,70 @@ class AReportHold(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+RUN = "2026-10-07T10-00-00_ab12"
+
+
+class AnAdoptionOutsideTheIndex(unittest.TestCase):
+    """The run the working tree's head has adopted and the index's has not
+    (`report_hold.adoption_outside_index`), read from the two texts: the
+    commit's step (`result_outside_index`) and a report block's source
+    (`_undeclared_source`) ask it alike. A `[result]` that does not read
+    adopts nothing in either state and raises at neither site."""
+
+    PLAIN = head(repeat_cost="low")
+    ADOPTED = head(repeat_cost="low", result=RUN)
+    TYPED = head(repeat_cost="low", result="typed")  # no run id runlog writes
+
+    def setUp(self) -> None:
+        self.repo = Path("/repo")
+        self.area = self.repo / "experiments" / "01-x"
+        self.protocol = self.area / "PROTOCOL-x.md"
+
+    def both(self, tree: str | None, index: str | None) -> tuple[bool, str | None]:
+        """(the commit's step sees a result outside the index, the run a
+        block's source names as adopted in the tree) for the protocol's text
+        in the TREE and in the INDEX, no run outside the index."""
+
+        def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
+            self.assertEqual((repo, path), (self.repo, self.protocol))
+            return index if staged else tree
+
+        sources = report_hold.Sources(self.repo, set(), {}, {}, {}, staged=True)
+        with (
+            mock.patch.object(report_hold, "state_text", state_text),
+            mock.patch.object(report_hold, "runs_outside_index", return_value={}),
+        ):
+            outside = report_hold.result_outside_index(
+                self.repo, self.area, self.protocol
+            )
+            source = report_hold._undeclared_source(self.protocol, sources)  # noqa: SLF001
+            self.assertEqual(
+                report_hold.adoption_outside_index(self.repo, self.protocol),
+                source.tree_run,
+            )
+        return outside, source.tree_run
+
+    def test_adopted_in_the_tree_only(self):
+        self.assertEqual(self.both(self.ADOPTED, self.PLAIN), (True, RUN))
+        # the index does not hold the protocol: its adoption is outside too
+        self.assertEqual(self.both(self.ADOPTED, None), (True, RUN))
+
+    def test_a_result_that_does_not_read_in_the_tree_adopts_nothing(self):
+        self.assertEqual(self.both(self.TYPED, self.PLAIN), (False, None))
+
+    def test_a_result_that_does_not_read_in_the_index_is_none_adopted_there(self):
+        self.assertEqual(self.both(self.ADOPTED, self.TYPED), (True, RUN))
+
+    def test_the_twins_nothing_outside(self):
+        for name, tree, index in (
+            ("adopted in both", self.ADOPTED, self.ADOPTED),
+            ("adopted in neither", self.PLAIN, self.PLAIN),
+            ("no file in the tree", None, self.PLAIN),
+        ):
+            with self.subTest(name):
+                self.assertEqual(self.both(tree, index), (False, None))
 
 
 class TheRuleAReviewHoldRecords(unittest.TestCase):

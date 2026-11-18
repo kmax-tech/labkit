@@ -45,6 +45,7 @@ from labkit.formats.runs import (
     run_dirs,
     run_path,
 )
+from labkit.formats.answering_run import adopted_run
 from labkit.formats import console, protocol_block
 from pathlib import Path
 
@@ -691,8 +692,8 @@ def _bound_files(bound: Path) -> list[Path]:
 
     out = [bound]
     try:
-        run = protocol_block.declared_run(bound.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, protocol_block.BlockError):
+        run = adopted_run(bound.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
         run = None
     if run is not None:
         run_dir = run_path(bound.parent, run)
