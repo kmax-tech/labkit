@@ -120,7 +120,12 @@ class Blocks(unittest.TestCase):
 
         def fix(tree_run: str) -> str:
             source = report_blocks.BlockSource(
-                None, None, "only the tree", TECHNICAL_RULE, stage=P, tree_run=tree_run
+                None,
+                None,
+                "only the tree",
+                TECHNICAL_RULE,
+                stage=Path(P),
+                tree_run=tree_run,
             )
             (gap,) = report_blocks.block_gaps(found, {P: source}, report)
             return gap.line
@@ -161,7 +166,7 @@ class Blocks(unittest.TestCase):
         twin: a run neither holds keeps the sentence of a lost run."""
         lost = "2026-10-07T10-00-00_ffff"
         cited = report_blocks.cited_run_ids(f"see {RUN}\nand {lost}\n")
-        outside_index = {RUN: f"experiments/01-x/runs/{RUN}"}
+        outside_index = {RUN: Path(f"experiments/01-x/runs/{RUN}")}
         gaps = report_blocks.cited_gaps(
             cited, set(), structured={1, 2}, outside_index=outside_index
         )

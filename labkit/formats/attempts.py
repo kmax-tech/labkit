@@ -419,7 +419,7 @@ def gaps(
         blockers.append(
             f"{DIR}/{JOURNAL} no longer starts with the lines HEAD holds — the "
             f"journal is appended to, never cut; restore it "
-            f"(`{checkout_command(f'{DIR}/{JOURNAL}')}` in the area: HEAD holds "
+            f"(`{checkout_command(shown(journal_path(area), Path.cwd()))}`: HEAD holds "
             f"the lines; the index may hold the cut)"
         )
     return Gaps(blockers, notes)
@@ -1060,11 +1060,17 @@ def copy_gaps(
     if not lost:
         return []
     ids = list(dict.fromkeys(str(e.get("id", "?")) for e in events))
+    # the journal and its folder as the working directory reaches them
+    # (`shown`), shell-quoted, as `restore_command` names a file: the line
+    # runs where it is printed
+    here = Path.cwd()
+    folder = shlex.quote(shown(area / DIR, here))
+    journal = shlex.quote(shown(journal_path(area), here))
     out = [
         f"{DIR}/{JOURNAL} lost {len(lost)} line(s) of attempt(s) {', '.join(ids)} that "
         f"this branch's copy keeps ({copy}) — the journal is appended to, never "
-        f"cut; restore them: `mkdir -p {DIR} && touch {DIR}/{JOURNAL} && grep -vxFf "
-        f"{DIR}/{JOURNAL} {copy} >> {DIR}/{JOURNAL}` (in the area)"
+        f"cut; restore them: `mkdir -p {folder} && touch {journal} && grep -vxFf "
+        f"{journal} {shlex.quote(str(copy))} >> {journal}`"
     ]
     for e in events:
         if e.get("event") != "ended":

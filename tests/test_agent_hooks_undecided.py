@@ -377,7 +377,7 @@ class Undecided(unittest.TestCase):
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
         self.assertIn("in the tree, not in the index", out)
-        self.assertIn(f"git add experiments/01-x/audits/{path.name}", out)
+        self.assertIn(f"git add -- experiments/01-x/audits/{path.name}", out)
         self.assertIn("a record a later change made outdated is staged too", out)
         findings.write_decision(path, 1, "limitation", "measured in area 02", "stands")
         _git(self.root, "add", str(path))

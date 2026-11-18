@@ -251,7 +251,7 @@ class Provenance(unittest.TestCase):
         self._run(SHORT, self._frozen(), commit=False)
         line = self._blocker_line()
         self.assertIn("Next: if it is small and may legally be shared", line)
-        self.assertIn(f"`git add {self.src}`", line)
+        self.assertIn(f"`git add -- {self.src.resolve()}`", line)
         self.assertIn("large or protected data stay out of git on purpose", line)
         self.assertIn("an ignore rule for it", line)
         self.assertIn("route and version in the protocol's Data / scope", line)
@@ -353,7 +353,7 @@ class Provenance(unittest.TestCase):
         (self.repo / ".gitignore").write_text("data/raw/*\n!data/raw/cases.jsonl\n")
         self._run(SHORT, self._frozen(), commit=False)
         line = self._blocker_line()
-        self.assertIn(f"commit it (`git add {self.src}`)", line)
+        self.assertIn(f"commit it (`git add -- {self.src.resolve()}`)", line)
 
     def test_a_manifest_beside_an_untracked_source_pins_nothing(self):
         """`MANIFEST.sha256` is no route; it is not read."""

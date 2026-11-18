@@ -151,21 +151,21 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
 
 
-def runs_outside_index(repo: Path, area: Path) -> dict[str, str]:
+def runs_outside_index(repo: Path, area: Path) -> dict[str, Path]:
     """The completed runs of AREA that only the working tree holds — a
     `runs/<id>/` whose completion record git does not track (`??` in
-    `git status`) — as run id → its directory relative to REPO. A run the
+    `git status`) — as run id → its directory. A run the
     index holds in another version is not among them. What the commit's
     gates cannot see while they judge the index: a step read from there
     would ask for the measurement again."""
     prefix = f"{rel_posix(area, repo)}/{RUNS_DIR}/"
-    out: dict[str, str] = {}
+    out: dict[str, Path] = {}
     for xy, path in status_entries(repo, (rel_posix(area, repo),)):
         if xy != "??" or not path.startswith(prefix):
             continue
         run_id, _, name = path[len(prefix) :].partition("/")
         if name == COMPLETION_FILE:
-            out[run_id] = f"{prefix}{run_id}"
+            out[run_id] = run_path(area, run_id)
     return out
 
 
@@ -465,7 +465,7 @@ class Sources:
     # STAGED only: the completed runs only the tree holds, run id →
     # directory (`runs_outside_index`), so a citation of one is named with
     # its staging, not as gone
-    outside_index: dict[str, str] = field(default_factory=dict)
+    outside_index: dict[str, Path] = field(default_factory=dict)
     # per protocol `repo_sources` read (the keys of TEXTS there): the report
     # its head registers; a protocol that is no key was not read for it
     registered: dict[Path, str | None] = field(default_factory=dict)
@@ -627,7 +627,7 @@ def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
         f"its head in the index has adopted no result; the working tree's has "
         f"adopted {tree_run}",
         LAB_104,
-        stage=p.relative_to(sources.repo).as_posix(),
+        stage=p,
         tree_run=tree_run,
     )
 
@@ -1261,7 +1261,7 @@ def undeclared_findings(
                     f"{rel}: cites {run_id}, the answering run of {named}, which "
                     f"adopts it in the working tree but not in the index — the "
                     f"adoption (`labkit-adopt`) wrote is not staged",
-                    fix=f"`git add {named}` stages the protocol with its "
+                    fix=f"`{stage_command(protocol)}` stages the protocol with its "
                     f"adoption; commit the report and the protocol together",
                     rule=TECHNICAL_RULE,
                 )

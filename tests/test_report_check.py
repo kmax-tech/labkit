@@ -373,12 +373,15 @@ class IfReported(unittest.TestCase):
         report = root / "REPORT.md"
         report.write_text(f"# Report\n\nRun ID: {self.RUN}\n", encoding="utf-8")
         self._git(root, "add", "REPORT.md")
-        code, out = self._staged_gate(root, report)
+        with contextlib.chdir(root):  # where git runs the pre-commit
+            code, out = self._staged_gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn("adopts it in the working tree but not in the index", out)
-        self.assertIn("`git add experiments/01-x/PROTOCOL-x.md`", out)
+        self.assertIn("`git add -- experiments/01-x/PROTOCOL-x.md`", out)
         self.assertNotIn("which has adopted no result", out)
-        self._git(root, "add", "experiments/01-x/PROTOCOL-x.md")
+        # the line runs as printed, from the directory it was printed in
+        command = out.split("`git add", 1)[1].split("`", 1)[0]
+        subprocess.run(f"git add{command}", shell=True, cwd=root, check=True)
         code, out = self._staged_gate(root, report)
         self.assertNotIn("not in the index", out)
         self.assertNotIn("which has adopted no result", out)

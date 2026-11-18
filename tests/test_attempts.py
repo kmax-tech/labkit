@@ -9,6 +9,7 @@ import contextlib
 import io
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -618,6 +619,54 @@ class RestoreRunsFromTheRepoRoot(unittest.TestCase):
         self.assertIn("is committed and gone from the index", gap)
         self.run_as_printed(gap, "stage it", root)
         self.assertEqual(attempts.area_gaps(area, staged=True).blockers, [])
+
+    @staticmethod
+    def journaled_attempt(area: Path) -> None:
+        """One ended attempt in AREA's journal, its record on disk."""
+        running = attempts.begin(
+            area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"
+        )
+        (area / "audits" / "r.toml").write_text("x", encoding="utf-8")
+        running.end("record", file="r.toml")
+
+    def test_the_checkout_of_a_journal_cut_against_head(self):
+        area = area_in_repo()
+        root = area.parent.parent
+        self.journaled_attempt(area)
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "audited")
+        journal = attempts.journal_path(area)
+        journal.write_text("", encoding="utf-8")  # cut in the tree
+        with contextlib.chdir(root):
+            cut = [
+                g
+                for g in attempts.area_gaps(area).blockers
+                if "no longer starts with the lines HEAD holds" in g
+            ]
+        (gap,) = cut
+        command = gap.split("restore it (`")[1].split("`")[0]
+        self.assertEqual(
+            shlex.split(command),
+            ["git", "checkout", "HEAD", "--", "experiments/01-x/audits/attempts.jsonl"],
+        )
+        self.run_as_printed(gap, "restore it", root)
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_the_lines_the_copy_keeps_come_back(self):
+        area = area_in_repo()
+        root = area.parent.parent
+        self.journaled_attempt(area)
+        shutil.rmtree(area / "audits")  # before any commit: only the copy keeps it
+        with contextlib.chdir(root):
+            lost = [g for g in attempts.area_gaps(area).blockers if "lost 2 line" in g]
+        (gap,) = lost
+        command = gap.split("restore them: `")[1].split("`")[0]
+        self.assertIn("mkdir -p experiments/01-x/audits && touch ", command)
+        subprocess.run(command, shell=True, cwd=root, check=True, capture_output=True)
+        self.assertNotIn(
+            "lost 2 line", "\n".join(attempts.area_gaps(area).blockers)
+        )  # the record itself stays gone: the twin's own blocker
+        self.assertEqual(len(attempts.journal_path(area).read_text().splitlines()), 2)
 
 
 class Hook(unittest.TestCase):

@@ -87,7 +87,6 @@ from __future__ import annotations
 
 import functools
 import re
-import shlex
 import time
 import tomllib
 from collections.abc import Iterable, Mapping, Sequence
@@ -103,7 +102,7 @@ from labkit.formats.gate import (
     WARNING,
     RuleAssignment,
 )
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, stage_command
 from labkit.formats import promises, protocol_block
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_history import correctable
@@ -2066,7 +2065,7 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
             errors.append(
                 f"{', '.join(shown(p, Path.cwd()) for p in left)}: in the tree, not in the "
                 f"index — the commit would leave the audit record behind; stage it "
-                f"(`git add {' '.join(shlex.quote(shown(p, Path.cwd())) for p in left)}`)"
+                f"(`{stage_command(*left)}`)"
                 f" — a record a later change made outdated is staged too, its "
                 f"BLOCKERs decided (`fixed`, naming the change, where it repaired "
                 f"them), never deleted"

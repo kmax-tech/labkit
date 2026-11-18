@@ -878,6 +878,19 @@ class BuildersUnderAPathWithASpace(unittest.TestCase):
             [".venv/bin/python", "my lab/01 x/scripts/01_measure.py"],
         )
 
+    def test_a_stage_line_names_every_path_after_the_dashes(self):
+        line = commands.stage_command(self.AREA / "a b.txt", self.AREA / "c.txt").line
+        self.assertEqual(
+            shlex.split(line),
+            ["git", "add", "--", "my lab/01 x/a b.txt", "my lab/01 x/c.txt"],
+        )
+        self.assertEqual(
+            commands.stage_command(Path("area") / "c.txt").line,
+            "git add -- area/c.txt",
+        )
+        with self.assertRaises(ValueError):
+            commands.stage_command()
+
     def test_the_twin_a_plain_path_is_printed_bare(self):
         protocol = Path("area") / "PROTOCOL-x.md"
         self.assertEqual(

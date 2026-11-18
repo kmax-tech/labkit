@@ -367,13 +367,17 @@ def freeze_command(protocol: Path | None, record: str | None = None) -> Command:
     return Command(FREEZE, line)
 
 
-def stage_command(path: Path) -> Command:
-    """The `git add -- PATH` line that stages PATH — an area as a whole, or
-    one file —, shell-quoted as the working directory reaches it (`shown`):
-    the pre-commit's way out while an area's tree differs from the index
-    (`report_hold.staged_area_gap`), and the way back of an evidence file
-    the index lacks (`attempts.restore_command`)."""
-    return Command(STAGE, f"git add -- {shlex.quote(shown(path, Path.cwd()))}")
+def stage_command(*paths: Path) -> Command:
+    """The `git add -- PATH …` line that stages PATHS — an area as a whole,
+    or files —, each shell-quoted as the working directory reaches it
+    (`shown`): the one spelling of every staging a way out names. Raises
+    ValueError without a path: `git add --` alone stages nothing."""
+    if not paths:
+        raise ValueError("a stage command names at least one path")
+    here = Path.cwd()
+    return Command(
+        STAGE, shlex.join(["git", "add", "--", *(shown(p, here) for p in paths)])
+    )
 
 
 def handover_command(protocol: Path | None, report: str | None = None) -> Command:
