@@ -1,7 +1,8 @@
 """evidence — what an area's committed evidence may become, and the changes
 against a commit that break it.
 
-An area's evidence is what labkit wrote under `audits/` and `runs/`. Once a
+An area's evidence is what labkit wrote under `audits/`, `runs/` and
+`run-starts/`. Once a
 commit holds it, it stays as written:
 
     audits/<record>.toml   only its findings' decision lines change —
@@ -21,6 +22,10 @@ commit holds it, it stays as written:
     runs/<run_id>/         never changes or goes once the commit holds the
                            run closed — `completion.json` or `failure.json`
                            in it; a run still open there is runlog's to write
+    run-starts/<run_id>.json
+                           never changes or goes once a commit holds it: the
+                           run's start file, written once at its start
+                           (`run_starts`)
 
 Three witnesses, each git's own and exact for what it saw:
 
@@ -80,6 +85,7 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.commands import audit_command
+from labkit.formats.run_starts import START_FILES_DIR, is_start_file
 from labkit.formats.runs import (
     COMPLETION_FILE,
     CONFIG_FILE,
@@ -105,6 +111,8 @@ RUN_RECORD_FILES = (
     patch_path(Path()).name,
 )
 _SCRIPT_COPY = script_copy_path(Path(), "").stem
+#: how `broken` names a run's start file among its findings
+START_FILE = "start file"
 #: the suffixes of the files labkit writes under `audits/` (records,
 #: reviews, failed attempts, the journal, kept answers, handover records)
 AUDIT_SUFFIXES = (".toml", ".jsonl", ".txt", ".json")
@@ -197,7 +205,9 @@ def broken(
     """Which of ENTRIES — (git's letter, path relative to the area) between
     an earlier and a later state — break their rule: the audit paths as
     (rel, what it is), the journal left out, a deletion only with DELETIONS
-    (`attempts.gaps` names one against HEAD); and per run CLOSED in the
+    (`attempts.gaps` names one against HEAD); a run's start file changed or
+    deleted, among them as (rel, "start file changed" or "start file
+    deleted"); and per run CLOSED in the
     earlier state its paths changed or deleted, each as (path in the run's
     folder, how). TEXTS reads a record's two versions (earlier, later): one
     whose decisions alone changed breaks nothing, nor does a report review
@@ -205,7 +215,9 @@ def broken(
     moved aside (`moved_aside`). UNDONE tells a later
     version that is back as labkit first committed it (`original`): a
     restore breaks nothing either. Pure apart from TEXTS and UNDONE."""
-    audits: list[tuple[str, str]] = []
+    # a start file lies in runs/ and in no run's folder: the loop below
+    # passes it over, and `start_file_changes` holds it
+    audits = start_file_changes(entries, undone)
     runs: dict[str, list[tuple[str, str]]] = {}
     added = {rel for letter, rel in entries if letter == "A"}
     for letter, rel in entries:
@@ -227,6 +239,24 @@ def broken(
         if what is not None and not undone(rel):
             audits.append((rel, what))
     return audits, runs
+
+
+def start_file_changes(
+    entries: list[tuple[str, str]], undone: Callable[[str], bool]
+) -> list[tuple[str, str]]:
+    """The start files among ENTRIES (git's letter, path relative to the
+    area) that were changed or deleted, each as (rel, "start file changed"
+    or "start file deleted"): written once at the run's start, a start
+    file never changes or goes once a commit holds it. A deletion is told
+    against every state — no other witness names it —, a change unless the
+    file is back as first committed (UNDONE). Pure apart from UNDONE."""
+    return [
+        (rel, f"{START_FILE} {how}")
+        for letter, rel in entries
+        if is_start_file(rel)
+        and (how := _HOW.get(letter)) is not None
+        and (how == "deleted" or not undone(rel))
+    ]
 
 
 def _changed_audit_file(
@@ -287,6 +317,16 @@ def told(
                     f'false-positive --why "<why>" --record {Path(rel).name}`',
                 )
             )
+        elif what.startswith(START_FILE):
+            out.append(
+                (
+                    f"{rel}: the {what} {where} — a start file stays as the "
+                    "run's start wrote it: it says which protocol the run was "
+                    "bound to and when it started, also when the run's directory "
+                    "is gone",
+                    f"restore it ({checkout(rel)})",
+                )
+            )
         else:
             out.append(
                 (
@@ -322,9 +362,14 @@ def _base(area: Path, root: Path) -> str:
 
 
 def _specs(area: Path, root: Path) -> list[str]:
-    """The pathspecs of AREA's evidence: its `audits/` and its `runs/`."""
+    """The pathspecs of AREA's evidence: its `audits/`, its `runs/` and
+    its runs' start files (`run_starts.START_FILES_DIR`)."""
     base = _base(area, root)
-    return [f"{base}/{findings.DIR}", f"{base}/{RUNS_DIR}"]
+    return [
+        f"{base}/{findings.DIR}",
+        f"{base}/{RUNS_DIR}",
+        f"{base}/{START_FILES_DIR}",
+    ]
 
 
 def _name_status(text: str) -> list[tuple[str, str]]:
