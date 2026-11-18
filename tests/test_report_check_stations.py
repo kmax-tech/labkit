@@ -6,18 +6,26 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
 from labkit.checks.audit_binding import AuditError
+from labkit.formats import runs
 from labkit.formats.gate import (
     BLOCKER,
+    GUARANTEED,
     NOT_EXECUTABLE,
+    OPEN_RULE,
     VIOLATED,
+    WARNING,
     TECHNICAL_RULE,
+    GateFinding,
+    blocker,
     cited_rule,
 )
-from labkit.gates import report_check
+from labkit.gates import finalize, report_check
+from labkit.gates.report_context import Checked
 from protocol_fixture import head
 from state_fixture import AREA, checked
 
@@ -135,6 +143,102 @@ class AnAnsweringRunWithoutItsRecord(unittest.TestCase):
             report_check.unreportable_gaps(checked(TEXT, run=None), freeze_owed=False),
             [],
         )
+
+
+def as_finalize_tells(found: list[GateFinding], words: str) -> list[GateFinding]:
+    """FOUND as report-check's finalize station passes it on (the prefix
+    `report_check.FINALIZE`), its sentence replaced by WORDS."""
+    return [replace(f, text=report_check.FINALIZE + words) for f in found]
+
+
+class FinalizeFindingsTheChainHoldsItself(unittest.TestCase):
+    """`without_unreportable_warnings`, `without_declaration_blocker`: what
+    the chain holds at a station of its own is left out of finalize's
+    findings by the finding's name (`GateFinding.known_as`), whatever its sentence says; a finding
+    known as nothing stays, and so does the finding where the chain's
+    own station does not hold it."""
+
+    RUN = AREA / "runs" / "r1"
+    OTHER = GateFinding(
+        WARNING,
+        report_check.FINALIZE + "one draw only",
+        rule=OPEN_RULE,
+        evidence_kind=GUARANTEED,
+    )
+    TYPED = TEXT.replace(
+        'preflight_audit = ""\n',
+        'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',
+    )
+
+    def _unreportable(self) -> list[GateFinding]:
+        marks = [runs.Unreportable(runs.UNFROZEN_ACK, "acknowledged while unfrozen")]
+        with (
+            mock.patch.object(finalize, "read_run_config", return_value=object()),
+            mock.patch.object(finalize, "unreportable", return_value=marks),
+        ):
+            return finalize.unreportable_warnings(self.RUN)
+
+    def _without_unreportable(
+        self, finalized: list[GateFinding], run: Path | None
+    ) -> list[GateFinding]:
+        # the run's marks read as when finalize told them: a filter that
+        # spells the sentence again spells the unchanged one
+        marks = [runs.Unreportable(runs.UNFROZEN_ACK, "acknowledged while unfrozen")]
+        with (
+            mock.patch.object(finalize, "read_run_config", return_value=object()),
+            mock.patch.object(finalize, "unreportable", return_value=marks),
+        ):
+            return report_check.without_unreportable_warnings(finalized, run)
+
+    def test_an_unreportable_warning_in_other_words_is_left_out(self):
+        (told,) = as_finalize_tells(self._unreportable(), "the mark in other words")
+        self.assertEqual(told.grade, WARNING)
+        self.assertEqual(
+            self._without_unreportable([told, self.OTHER], self.RUN), [self.OTHER]
+        )
+
+    def test_a_warning_with_its_words_and_no_name_stays(self):
+        (told,) = as_finalize_tells(self._unreportable(), "the mark in other words")
+        same_words = replace(self.OTHER, text=told.text)
+        self.assertEqual(
+            self._without_unreportable([same_words], self.RUN), [same_words]
+        )
+
+    def test_without_an_answering_run_the_warning_stays(self):
+        # no full-run station runs then: finalize's warning is the one telling
+        found = as_finalize_tells(self._unreportable(), "the mark in other words")
+        self.assertEqual(self._without_unreportable(found, None), found)
+
+    def _unread_table(self) -> tuple[Checked, list[GateFinding]]:
+        (why,) = finalize.declared_run_gaps(self.TYPED, AREA / "PROTOCOL-x.md")
+        ctx = replace(
+            checked(TEXT, run=None), text=self.TYPED, declaration_gap=why.text
+        )
+        return ctx, [why]
+
+    def test_a_result_table_blocker_in_other_words_is_left_out(self):
+        ctx, found = self._unread_table()
+        (told,) = as_finalize_tells(found, "the table in other words")
+        self.assertEqual(told.grade, BLOCKER)
+        self.assertEqual(
+            report_check.without_declaration_blocker([told, self.OTHER], ctx),
+            [self.OTHER],
+        )
+
+    def test_a_blocker_known_as_nothing_stays(self):
+        ctx, found = self._unread_table()
+        (told,) = as_finalize_tells(found, "the table in other words")
+        other = blocker(told.text, fix="`x`", rule=TECHNICAL_RULE)
+        self.assertEqual(
+            report_check.without_declaration_blocker([other], ctx), [other]
+        )
+
+    def test_where_the_table_reads_here_the_blocker_stays(self):
+        # the declaration station holds nothing then
+        _, found = self._unread_table()
+        told = as_finalize_tells(found, "the table in other words")
+        reads = checked(TEXT, run=None)
+        self.assertEqual(report_check.without_declaration_blocker(told, reads), told)
 
 
 class AReportedNumberOwesTheFreeze(unittest.TestCase):

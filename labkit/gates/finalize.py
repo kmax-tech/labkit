@@ -334,10 +334,20 @@ UNREPORTABLE_RULES = {
 }
 
 
+#: the names of the two findings of finalize whose cause report-check's
+#: chain holds at a station of its own (`GateFinding.known_as`): the chain
+#: leaves finalize's finding out by this name
+#: (`report_check.without_unreportable_warnings`,
+#: `report_check.without_declaration_blocker`)
+UNREPORTABLE_NUMBER = "unreportable number"
+UNREADABLE_RESULT_TABLE = "unreadable result table"
+
+
 def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
     """Why the answering run's number cannot be reported (`runs.unreportable`),
-    each a warning here with the rule of its cause: finalize holds the run,
-    report-check refuses the report."""
+    each a warning here with the rule of its cause, known as
+    UNREPORTABLE_NUMBER: finalize holds the run, report-check refuses the
+    report."""
     cfg = read_run_config(answering_run)
     if cfg is None:
         return []
@@ -348,6 +358,7 @@ def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
             f"cannot be reported (report-check refuses it)",
             rule=UNREPORTABLE_RULES[mark.cause],
             evidence_kind=GUARANTEED,
+            known_as=UNREPORTABLE_NUMBER,
         )
         for mark in unreportable(cfg)
     ]
@@ -1069,7 +1080,8 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
     id, a stray key: `protocol_block.declared_run`'s sentence). An adopted
     run that is no completed run of the protocol — no `runs/<id>/` among
     them — is the run choice's blocker (`choose_answering_run`). Empty
-    without a declaration or with one that reads."""
+    without a declaration or with one that reads. The blocker is known as
+    UNREADABLE_RESULT_TABLE."""
     written = (
         f"`{withdraw_command(protocol)}` removes it; audit the run that answers, "
         f"then `{adopt_command(protocol, '<run_id>')}` writes the table for it"
@@ -1083,6 +1095,7 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
                 fix=written,
                 step=withdraw_command(protocol),
                 rule=TECHNICAL_RULE,
+                known_as=UNREADABLE_RESULT_TABLE,
             )
         ]
     return []

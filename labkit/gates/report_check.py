@@ -145,8 +145,8 @@ from labkit.checks.audit_binding import (
 from labkit.gates.finalize import (
     UNREPORTABLE_RULES,
     finalize_area,
-    declared_run_gaps,
-    unreportable_warnings,
+    UNREADABLE_RESULT_TABLE,
+    UNREPORTABLE_NUMBER,
 )
 from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
@@ -661,27 +661,43 @@ def without_unreportable_warnings(
     finalized: list[GateFinding], run: Path | None
 ) -> list[GateFinding]:
     """FINALIZED, finalize's findings (`finalize_findings`), without the
-    warnings it tells for RUN's marks that make its number unreportable
-    (`finalize.unreportable_warnings`, the one spelling) — the full-run
-    station holds the same marks as blockers. FINALIZED as it is without a
-    run."""
-    if run is None:
+    warnings it tells for the marks that make its answering run's number
+    unreportable — picked out by their name (`finalize.UNREPORTABLE_NUMBER`),
+    whatever their sentence says. The full-run station holds the same marks
+    as blockers on RUN, the chain's answering run. Every such warning goes,
+    not only RUN's: finalize's answering run is RUN wherever the chain has
+    one, since both read the one choice off the one state and text
+    (`area_state.Measured.told`). FINALIZED as it is without a run, where
+    that station holds nothing."""
+    if run is None:  # no full-run station: finalize's warning is the one telling
         return finalized
-    told = {FINALIZE + w.text for w in unreportable_warnings(run)}
-    return [f for f in finalized if not (f.grade == WARNING and f.text in told)]
+    return [
+        f
+        for f in finalized
+        if not (f.grade == WARNING and f.known_as == UNREPORTABLE_NUMBER)
+    ]
 
 
 def without_declaration_blocker(
     finalized: list[GateFinding], ctx: Checked
 ) -> list[GateFinding]:
     """FINALIZED, finalize's findings (`finalize_findings`), without the
-    blocker it tells for a `[result]` table that does not read
-    (`finalize.declared_run_gaps`, the one spelling) — the declaration
-    station holds the same table as its blocker (`declaration_gaps`). Only
-    for a text finalize read too: CTX's text is the one given to
-    `declared_run_gaps`."""
-    told = {FINALIZE + g.text for g in declared_run_gaps(ctx.text, ctx.protocol)}
-    return [f for f in finalized if not (f.grade == BLOCKER and f.text in told)]
+    blocker it tells for a `[result]` table that does not read — picked out
+    by its name (`finalize.UNREADABLE_RESULT_TABLE`), whatever its
+    sentence says. The declaration station holds the same table as its
+    blocker (`declaration_gaps`); FINALIZED as it is where CTX's table
+    reads and that station holds nothing. Only for a text finalize read
+    too."""
+    # finalize's blocker goes only where the declaration station tells the
+    # table: on one text the two agree, and the guard keeps a blocker of
+    # finalize's alone from vanishing should they ever read two texts
+    if not ctx.declaration_gap:
+        return finalized
+    return [
+        f
+        for f in finalized
+        if not (f.grade == BLOCKER and f.known_as == UNREADABLE_RESULT_TABLE)
+    ]
 
 
 def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:

@@ -474,7 +474,7 @@ class ReportCheck(unittest.TestCase):
 
     def test_a_reworded_unreportable_mark_is_still_one_blocker(self):
         """The counter-test of the one above: finalize's warning is left
-        out by its sentence (`without_unreportable_warnings`), and both
+        out by its name (`without_unreportable_warnings`), and both
         sentences come from the one mark — other words leave one blocker."""
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
