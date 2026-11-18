@@ -673,6 +673,28 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             self.assertEqual(measured.unassigned_starts, (alone,))
             self.assertEqual(measured.started_only, ())
 
+    def test_a_missing_start_file_bears_on_its_own_protocol_alone(self):
+        """A run whose record carries the start mark and for which no start
+        file is found is its own protocol's loss: an independent protocol
+        of the area has nothing missing and nothing measured, so neither
+        its release nor its start is touched."""
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [self._record(RUN)],
+            [],
+            {},
+            indexed={RUN: PID},
+            missing_starts=[RUN],
+        )
+        self.assertEqual(state.measured_of(PID).missing_starts, (RUN,))
+        other = state.measured_of("p-other")
+        self.assertEqual(
+            (other.missing_starts, other.unassigned_missing_starts, other.has_measured),
+            ((), (), False),
+        )
+
     def test_sources_that_name_different_protocols_are_a_conflict_not_a_choice(self):
         """A start file against the index for a record that does not
         read, and against a record that reads: named for each protocol

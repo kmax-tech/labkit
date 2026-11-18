@@ -132,7 +132,13 @@ def index_problems(state: AreaState) -> list[str]:
       none is found: evidence that is lost;
     - a run with a start file whose directory stands without a
       completion (`unfinished_starts`): it started and never completed —
-      an abort, its record still here."""
+      an abort, its record still here.
+
+    A known limit, open: a start file that is present and names another
+    protocol than the run's record gets no line here, and this hook does
+    not prevent the commit. The release is held by finalize's registration
+    station and by report-check (`registration_hold.binding_conflict_hold`),
+    and the run's start names it."""
     return (
         ([state.history_unread] if state.history_unread else [])
         + [

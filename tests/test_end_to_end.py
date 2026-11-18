@@ -1058,7 +1058,10 @@ class LosingTheStartFile(CountCommands):
     every trace is the detection limit: with the run directory and the
     only start file gone before a commit held either, labkit has no
     evidence and sees nothing; only the commit secures a start file
-    (docs/notes/2026-11-18-run-start-record.md)."""
+    (docs/notes/2026-11-18-run-start-record.md).
+
+    For the start, "holds" means that its warning names the run: the start
+    refuses nothing, and a new run starts while the number waits."""
 
     def checks(self, run: str) -> dict[str, bool]:
         """Per check: does it hold the protocol's number, or name RUN, now?"""
@@ -1131,6 +1134,16 @@ class LosingTheStartFile(CountCommands):
         release is held."""
         run_a = self.measure()
         self.assertEqual(self.with_and_without(run_a), (self.NONE, self.ALL))
+
+    def test_the_start_refuses_nothing_while_the_release_is_held(self):
+        """A's start file is lost and the release is held. A new run of the
+        same protocol still starts and completes: only the number waits."""
+        run_a = self.measure()
+        run_starts.start_path(self.area, run_a).unlink()
+        run_b = self.measure()
+        self.assertNotEqual(run_b, run_a)
+        self.assertTrue((self.area / "runs" / run_b / "completion.json").is_file())
+        self.assertTrue(self.checks(run_a)["registration station"])
 
     def test_evidenced_a_contradicting_start_file_deleted_still_holds(self):
         """A stands; its start file names another protocol, which holds the
