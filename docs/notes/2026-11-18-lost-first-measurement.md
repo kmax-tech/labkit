@@ -28,7 +28,7 @@ Refinements, decided by the author the same day in four rounds on what was built
 
 ## What labkit reads
 
-A run without a record is a run only the local run index `runs.tsv` lists (it finished; `AreaState.lost`), a run only the local start record `run-starts.tsv` lists (it started, and broke off or was deleted before it finished; `AreaState.started_only`), or a run whose `config.json` does not read. The start record is described in [its own note](2026-11-18-run-start-record.md). Assignment comes first, order second.
+A run without a record is a run only the local run index `runs.tsv` lists (it finished; `AreaState.lost`), a run only the local start record `run-starts.tsv` lists (it started, and broke off or was deleted before it finished; `AreaState.started_only`, of which the measurements count: `Measured.started_only`), or a run whose `config.json` does not read. The start record is described in [its own note](2026-11-18-run-start-record.md). Assignment comes first, order second.
 
 **Which protocol.** The `protocol_id` of the run's row in the start record or in the run index, and nothing else (`area_state.assigned_to`, read once when the area state is assembled). A record that does not read is among the runs of that protocol alone (`Measured.runs`); a row that names no protocol assigns it to none. A record neither file names is unassigned (`Measured.unassigned`): it is among no protocol's runs, `has_measured` and the report duty do not count it, and the run's start, `finalize` and report-check's report duty name it with what it leaves open (`area_state.unassigned_record_warning`). Where the two files, or one of them and a record that reads, name different protocols, that is a finding of its own and no file wins (`area_state.binding_conflicts`). A time never assigns, and neither does the number of protocols in the area.
 
@@ -82,5 +82,5 @@ Every protocol is held as confirmatory today; the exploratory workflow is planne
 
 - The run index and the start record are local files git ignores. A clone, or a machine other than the one that measured, sees a run deleted before a commit as never measured, and a record that does not read as unassigned.
 - A run from before the start record has no start. Deleted beside a measurement that reads, it holds the protocol although it may have run after it; the hold's ways out apply.
-- The run index lists finished runs of every kind and has no column for the kind. A lost probe counts like a lost measurement, as it does for `has_measured`. The start record lists measurements only.
+- The run index lists finished runs of every kind and has no column for the kind. A lost run without a start row counts like a lost measurement, as it does for `has_measured`. The start record names each run's kind: a run it lists as a probe or a preparation counts as a measurement for no check, whatever became of its record (`Measured.may_have_measured`).
 - The audit stamp's basis (`scope_sha._run_records`) still takes every record that does not read into every protocol's digest: it answers which files an audit covered, not which protocol a run belongs to.
