@@ -18,7 +18,7 @@ the package. The lab standard is not
 copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
-(the full form with its † fields; `--repeat-cost low` stamps the low cut
+(the full form with its † fields; `--repeat-cost low` stamps the low form
 instead, `--report` the full form there too or appends the † fields to an
 existing area when the run graduates; `--report-file
 PATH` registers the report file, repo-relative, that owes the protocol's
@@ -665,7 +665,7 @@ def stamp_area(
         return found, "\n".join(promote(root, found))
     kind = asked_kind(kind)
     refuse_kept_with_bar(kind, kept)
-    quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
+    low_cut = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     stamped = protocol_stamp(
         root,
@@ -719,7 +719,7 @@ def stamp_area(
     # area's state, and AGENTS.md's loop starts there (printed steps would
     # be a second copy of the route, read once and then stale)
     return area, (
-        f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
+        f"{'Measurement' if low_cut else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + f"\nnext: `{step_command(area)}` names the one next step, with its command; "
         f"`labkit-next --guide` the whole route"
@@ -748,7 +748,7 @@ def protocol_stamp(
     nothing. The cut and the skeleton are the contract's answers, not read
     off the tier here (a tier compared by hand outside the contract is a
     copy)."""
-    quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
+    low_cut = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     tmpl = stamped_head(
         template(PROTOCOL_TEMPLATE.name),
@@ -766,11 +766,15 @@ def protocol_stamp(
     # should ones and the adoption the result ones, and a frozen protocol
     # without them holds its agent; the low cut never owes them (REPORT
     # appends them to an existing area, `promote`).
-    whole = report or not quick
-    form = form_cut(promise_tables_for(tmpl, kind), kind, bool(model), low=not whole)
+    full_form = report or not low_cut
+    form = form_cut(
+        promise_tables_for(tmpl, kind), kind, bool(model), low=not full_form
+    )
     if skeleton is standard_contract.ESTIMATOR:
-        form = estimator_placeholders(form, kind=kind, model=bool(model), low=not whole)
-    elif skeleton is standard_contract.COMPUTE and not whole:
+        form = estimator_placeholders(
+            form, kind=kind, model=bool(model), low=not full_form
+        )
+    elif skeleton is standard_contract.COMPUTE and not full_form:
         form = count_placeholders(form)
     stamped = blank_before_headings(short_placeholders(form))
     stamped = name_promise_ids(stamped, kind)
