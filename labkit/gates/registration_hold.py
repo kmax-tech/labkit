@@ -51,7 +51,9 @@ from labkit.formats.area_state import (
     RECORD_BACK,
     WithoutRecord,
     lost_in_the_tree_too,
+    START_FILE_BACK,
     measurements_without_record,
+    missing_start_sentence,
     missing_start_warning,
     unassigned_record_warning,
     unread_start_warning,
@@ -174,7 +176,9 @@ def registration_changes(
     `report_replacement.replacement_gaps`) or a handover without a declared
     result. Before either comparison: a run whose protocol the start
     record, the run index and its record name differently, PID among them
-    (`binding_conflict_hold`), else a run of PID that left no record that
+    (`binding_conflict_hold`), else a run of PID whose record says a start
+    file was written and for which none is found (`missing_start_hold`),
+    else a run of PID that left no record that
     reads and may have been the first measurement (`lost_record_hold`) —
     the one finding is then that hold, and no comparison runs in its
     place. Empty without an answering run, a stamped id PID, or a block
@@ -183,9 +187,11 @@ def registration_changes(
         return []
     root = git_root(protocol)
     measured = state.measured_of(pid)
-    untold = binding_conflict_hold(
-        pid, area, measured.conflicts, handover(protocol)
-    ) or lost_record_hold(pid, area, without_record_of(measured), handover(protocol))
+    untold = (
+        binding_conflict_hold(pid, area, measured.conflicts, handover(protocol))
+        or missing_start_hold(pid, area, measured.missing_starts, handover(protocol))
+        or lost_record_hold(pid, area, without_record_of(measured), handover(protocol))
+    )
     if untold:
         # ends here: neither comparison below runs against a later run
         return untold
@@ -736,6 +742,39 @@ def binding_conflict_hold(
     ]
 
 
+def missing_start_hold(
+    pid: str, area: Path, missing: Sequence[str], handover_way: str
+) -> list[GateFinding]:
+    """The BLOCKER when a run of protocol PID has a start-file duty
+    evidenced by its own record and no start file is found for it
+    (MISSING, `Measured.missing_starts`; the sentence is
+    `area_state.missing_start_sentence`): evidence of how the run started
+    is lost, so what depends on it — its binding at the start, its order
+    against the protocol's other runs — cannot be checked, a check not
+    executable, and the release is held. For PID alone: a run nothing
+    assigns is warned of and held against none
+    (`area_state.missing_start_warning`), and another protocol of the area
+    is not touched. The ways out: the start file back from where it is
+    kept (`area_state.START_FILE_BACK`), then finalize again on AREA;
+    where nothing keeps it, a new registration, or the handover
+    (HANDOVER_WAY) — as for a record that is lost (`lost_record_hold`). []
+    when every such run's start file is found. Pure."""
+    if not missing:
+        return []
+    return [
+        blocker(
+            f"{missing_start_sentence(missing)} — which protocol it was bound to "
+            f"at its start and when it started cannot be checked, so no number of "
+            f"this protocol is released over it",
+            fix=f"{START_FILE_BACK}, then `{gate_command('finalize', area)}`; where "
+            f"nothing keeps it, {register_anew(pid)} — the earlier protocol, its "
+            f"runs and their verdict stay; or {handover_way}",
+            stated_outcome=NOT_EXECUTABLE,
+            rule=TECHNICAL_RULE,
+        )
+    ]
+
+
 def lost_record_hold(
     pid: str, area: Path, without: WithoutRecord, handover_way: str
 ) -> list[GateFinding]:
@@ -1236,7 +1275,9 @@ def check_registration(
         unread = unread_start_warning(
             measured.unread_starts, measured.unassigned_starts
         )
-        missing = missing_start_warning(measured.missing_starts)
+        # of the protocol's own runs it is the hold above; here the ones
+        # nothing assigns
+        missing = missing_start_warning((), measured.unassigned_missing_starts)
         for warning in (unread, missing):
             if warning is not None:
                 findings.take(warning)

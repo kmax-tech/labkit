@@ -385,8 +385,12 @@ def missing_start_note(measured: Measured) -> GateFinding | None:
     """The WARNING report-check tells where it checks the report duty when
     a run's record says a start file was written and none is found
     (`area_state.missing_start_warning`, the sentence the registration
-    station prints too); None without one. It holds nothing. Pure."""
-    return missing_start_warning(measured.missing_starts)
+    station holds on for a run of the protocol and warns of for one
+    nothing assigns); None without one. It holds nothing here: the
+    release is held where it is checked. Pure."""
+    return missing_start_warning(
+        measured.missing_starts, measured.unassigned_missing_starts
+    )
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:

@@ -1085,23 +1085,56 @@ class AStartFileThatDoesNotRead(unittest.TestCase):
 
 
 class AStartFileThatIsNowhere(unittest.TestCase):
-    """`area_state.missing_start_warning`: the record says a start file was
-    written and none is found — a loss of evidence, a warning of a check
-    not executable, no hold; the twin, nothing missing, is no warning."""
+    """A run's record says a start file was written and none is found: a
+    loss of evidence. For a run of the protocol it holds the release
+    (`missing_start_hold`, a BLOCKER of a check not executable); for a run
+    nothing assigns it is a warning, held against none
+    (`area_state.missing_start_warning`). The twin, nothing missing,
+    is neither."""
 
-    def test_the_loss_is_said_as_a_loss_with_no_hand_repair(self):
-        warning = pure_call(missing_start_warning, ("2026-10-07T10-00-00_ab12",))
+    RUN = "2026-10-07T10-00-00_ab12"
+
+    def test_a_run_of_the_protocol_holds_with_every_way_out(self):
+        (hold,) = pure_call(
+            registration_hold.missing_start_hold, PID, AREA, (self.RUN,), HANDOVER
+        )
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+        )
+        self.assertIn(f"a start file was written for run {self.RUN}", hold.text)
+        self.assertIn("none is found", hold.text)
+        self.assertIn("lost, not merely unknown", hold.text)
+        for way in (
+            "back from a commit, a clone or a copy that holds it",
+            "never written anew from memory",
+            "no value put in its place",
+            "register anew",
+            HANDOVER,
+        ):
+            self.assertIn(way, hold.fix or "")
+
+    def test_the_twin_a_start_file_that_is_found_holds_nothing(self):
+        self.assertEqual(
+            pure_call(registration_hold.missing_start_hold, PID, AREA, (), HANDOVER), []
+        )
+        self.assertIsNone(pure_call(missing_start_warning, (), ()))
+
+    def test_a_run_nothing_assigns_is_warned_of_and_held_against_none(self):
+        warning = pure_call(missing_start_warning, (), (self.RUN,))
         assert warning is not None
         self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
-        self.assertIn(
-            "a start file was written for run 2026-10-07T10-00-00_ab12", warning.text
-        )
-        self.assertIn("none is found", warning.text)
-        self.assertIn("lost, not merely unknown", warning.text)
-        self.assertIn("none is written by hand", warning.fix or "")
+        self.assertIn(f"a start file was written for run {self.RUN}", warning.text)
+        self.assertIn("held against none", warning.text)
+        self.assertNotIn("holds every number", warning.text)
 
-    def test_the_twin_nothing_missing_warns_of_nothing(self):
-        self.assertIsNone(pure_call(missing_start_warning, ()))
+    def test_the_warning_for_a_run_of_the_protocol_names_the_hold(self):
+        """Where a station does not hold — the run's start, the report
+        duty — it says where the release is held."""
+        warning = pure_call(missing_start_warning, (self.RUN,), ())
+        assert warning is not None
+        self.assertIn("`finalize` holds every number of this protocol", warning.text)
+        self.assertIn("never written anew from memory", warning.fix or "")
 
 
 class ABindingTheFilesContradict(unittest.TestCase):

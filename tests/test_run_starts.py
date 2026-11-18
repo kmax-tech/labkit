@@ -308,6 +308,8 @@ class AStartFileTheRecordNamesAndNobodyFinds(_Area):
         self.assertEqual(state.missing_starts, (run,))
         self.assertEqual(state.measured_of(PID).missing_starts, (run,))
         self.assertEqual(state.measured_of("p-other").missing_starts, ())
+        # the run reads and is PID's: nothing here is unassigned
+        self.assertEqual(state.measured_of(PID).unassigned_missing_starts, ())
         (line,) = hook_post_change.index_problems(state)
         self.assertIn(f"run {run}: a start file was written for it", line)
         self.assertIn("evidence of its start is lost", line)

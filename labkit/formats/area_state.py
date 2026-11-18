@@ -160,11 +160,15 @@ class Measured:
             read is the only trace of: no record that reads and no index
             row assigns them, so which protocol each started with is
             unknown. The same for every PID; held against none.
-        missing_starts: The ids of the runs of PID, and of the unassigned
-            records, whose own record says a start file was written
+        missing_starts: The ids of the runs of PID — by their record or
+            the index — whose own record says a start file was written
             (`run_starts.START_MARK`) and for which none is found — not in
             the file state, not in a commit: evidence of the start that is
-            lost, not merely a start that is unknown.
+            lost, not merely a start that is unknown. It holds PID's
+            release (`registration_hold.missing_start_hold`).
+        unassigned_missing_starts: The same for the runs of UNASSIGNED,
+            which nothing assigns to a protocol: warned of, held
+            against none. The same for every PID.
         conflicts: One clause per run whose protocol its start file, the
             run index and its own record name differently, PID among the
             ids named (`binding_conflicts`): which protocol it belongs to
@@ -185,6 +189,7 @@ class Measured:
     unread_starts: tuple[str, ...] = ()
     unassigned_starts: tuple[str, ...] = ()
     missing_starts: tuple[str, ...] = ()
+    unassigned_missing_starts: tuple[str, ...] = ()
 
     def answering(self, adopted: str | None) -> AnsweringRun:
         """The run every check holds PID to (`answering_run.bound_answering_run`
@@ -588,7 +593,7 @@ def _measured(
     of PID whose start file does not read, and UNASSIGNED_STARTS, the
     runs a start file that does not read is the only trace of, and of
     MISSING_STARTS (the area's marked runs without a start file) those of
-    PID and of the unassigned records."""
+    PID, and apart those of the unassigned records."""
     ours = tuple(
         rd
         for rd in records
@@ -631,8 +636,8 @@ def _measured(
         },
         tuple(run for run in of_pid if run in starts and starts[run].unread),
         unassigned_starts,
-        # of PID's runs, and of the records nothing assigns
-        tuple(run for run in missing_starts if run in {*of_pid, *unassigned}),
+        tuple(run for run in missing_starts if run in of_pid),
+        tuple(run for run in missing_starts if run in unassigned),
     )
 
 
@@ -863,28 +868,60 @@ def unread_start_warning(
     )
 
 
-def missing_start_warning(missing: Sequence[str]) -> GateFinding | None:
-    """The WARNING about the runs of MISSING (`Measured.missing_starts`),
-    None without one: the run's own record says a start file was written
-    for it, and none is found — not in the working tree, not in the index,
-    not in a commit. That is a loss of evidence, said as one: more than a
-    start that is unknown, as for a run with no start-file duty evidenced.
-    What depends on the start stays open — the run's order against others
-    is unknown and is held where it matters
-    (`measurements_without_record`). It holds nothing itself: a check not
-    executable. The way back is the file from a copy or a clone that holds
-    it; nothing rebuilds it and none is written by hand. Pure."""
-    if not missing:
+def missing_start_sentence(runs: Sequence[str]) -> str:
+    """The one sentence for runs whose own record says a start file was
+    written and for which none is found — in the working tree, the index
+    or a commit: a loss of evidence, more than a start that is unknown.
+    Printed by the hold (`registration_hold.missing_start_hold`) and by
+    the warning (`missing_start_warning`). Pure."""
+    return (
+        f"a start file was written for run {', '.join(runs)} — its record says "
+        f"so — and none is found, in the working tree, the index or a commit: "
+        f"the evidence of its start is lost, not merely unknown"
+    )
+
+
+#: the way back every finding about a start file that is found nowhere
+#: names first: the file itself from where it is kept, and nothing in its
+#: place
+START_FILE_BACK = (
+    "bring `run-starts/<run_id>.json` back from a commit, a clone or a copy "
+    "that holds it — never written anew from memory, and no value put in its "
+    "place"
+)
+
+
+def missing_start_warning(
+    of_protocol: Sequence[str], unassigned: Sequence[str]
+) -> GateFinding | None:
+    """The WARNING about start files a run's record names and nobody finds
+    (`missing_start_sentence`), None without one: the runs OF_PROTOCOL
+    (`Measured.missing_starts`: this protocol's by their record or the
+    index) and the UNASSIGNED ones (`Measured.unassigned_missing_starts`:
+    their record does not read and nothing else assigns them). For a run
+    of the protocol the release is held where it is checked
+    (`registration_hold.missing_start_hold`), and the warning says so at
+    the stations that do not hold; an unassigned one is held against no
+    protocol. A check not executable; this warning holds nothing. Pure."""
+    if not of_protocol and not unassigned:
         return None
+    told = missing_start_sentence([*of_protocol, *unassigned])
+    if of_protocol:
+        told += (
+            f" — `finalize` holds every number of this protocol for "
+            f"{', '.join(of_protocol)} until the file is back, or the protocol "
+            f"is registered anew or handed over"
+        )
+    if unassigned:
+        told += (
+            f" — nothing assigns {', '.join(unassigned)} to a protocol: held "
+            f"against none"
+        )
     return GateFinding(
         WARNING,
-        f"a start file was written for run {', '.join(missing)} — its record "
-        f"says so — and none is found, in the working tree, the index or a "
-        f"commit: the evidence of its start is lost, not merely unknown",
+        told,
         rule=TECHNICAL_RULE,
-        fix="bring `run-starts/<run_id>.json` back from a copy or a clone that "
-        "holds it; nothing rebuilds a start file, and none is written by hand — "
-        "the run's order against other runs stays unknown until then",
+        fix=START_FILE_BACK,
         evidence_kind=GUARANTEED,
         stated_outcome=NOT_EXECUTABLE,
     )

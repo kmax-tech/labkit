@@ -291,7 +291,9 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
             f"its config.json from a commit or a copy that holds it."
         )
     unread = unread_start_warning(measured.unread_starts, measured.unassigned_starts)
-    missing = missing_start_warning(measured.missing_starts)
+    missing = missing_start_warning(
+        measured.missing_starts, measured.unassigned_missing_starts
+    )
     for warning in (unread, missing):
         if warning is not None:
             told.append(f"{warning.text}. {warning.fix}.")
