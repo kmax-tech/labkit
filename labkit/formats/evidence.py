@@ -85,7 +85,12 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.commands import audit_command, stage_command
-from labkit.formats.run_starts import START_FILES_DIR, is_start_file, start_path
+from labkit.formats.run_starts import (
+    START_FILES_DIR,
+    START_MARK,
+    is_start_file,
+    start_path,
+)
 from labkit.formats.runs import (
     COMPLETION_FILE,
     CONFIG_FILE,
@@ -109,6 +114,7 @@ RUN_RECORD_FILES = (
     COMPLETION_FILE,
     FAILURE_FILE,
     patch_path(Path()).name,
+    START_MARK,
 )
 _SCRIPT_COPY = script_copy_path(Path(), "").stem
 #: how `broken` names a run's start file among its findings
@@ -581,29 +587,36 @@ def _change_findings(
 
 
 def unstaged_start_files(area: Path, root: Path) -> list[tuple[str, str]]:
-    """(sentence, way out) per run of AREA whose record the index holds
-    (`runs/<run_id>/config.json`: the commit documents the run) while its
-    start file stands in the working tree and is not in the index: the
-    commit would carry the run without the file that says which protocol
-    it started with and when, and a check of that commit must not count a
-    safeguard the commit lacks. The way out stages the file. [] when every
-    such run's start file is staged; a run without a start file anywhere —
-    one from before start files — is none. Raises GitError when git fails."""
-    recorded = sorted(
+    """(sentence, way out) per run of AREA whose record in the index says a
+    start file was written for it (`run_starts.START_MARK` in the run's
+    directory — staged now, or committed earlier) while the index does not
+    hold that start file and the working tree does: the commit's state
+    would document the run without the file that says which protocol it
+    started with and when, and a check of that state — a report or an
+    adoption that names the run among them — must not count a safeguard
+    it lacks. The way out stages the file. [] when every such run's start
+    file is in the index. A run whose record carries no mark was started
+    before start files and owes none: told by its own record, never by a
+    guess. A marked run whose start file stands nowhere is not held here:
+    nothing could be staged, a deletion a commit made is
+    `start_file_changes`'s, and its start is unknown to every check that
+    asks. Raises GitError when git fails."""
+    marked = sorted(
         rel.split("/")[0]
         for rel in files_at(root, area / RUNS_DIR) or set()
-        if rel.count("/") == 1 and rel.endswith(f"/{CONFIG_FILE}")
+        if rel.count("/") == 1 and rel.endswith(f"/{START_MARK}")
     )
     staged = files_at(root, area / START_FILES_DIR) or set()
     return [
         (
             f"{START_FILES_DIR}/{path.name}: the start file of run {run} stands in "
-            f"the working tree and is not staged, while the index holds the run's "
-            f"record — the commit would document the run without the file that "
-            f"says which protocol it started with and when",
+            f"the working tree and is neither staged nor committed, while the "
+            f"index holds the run's record — the commit's state would document "
+            f"the run without the file that says which protocol it started with "
+            f"and when",
             f"stage it (`{stage_command(path)}`)",
         )
-        for run in recorded
+        for run in marked
         if (path := start_path(area, run)).name not in staged and path.is_file()
     ]
 

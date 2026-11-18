@@ -191,6 +191,11 @@ class WrittenAtTheStart(_Area):
         assert start.started is not None
         self.assertLessEqual(before, start.started)
         self.assertLessEqual(start.started, run_starts.utc_now())
+        # the run's own record says a start file was written for it
+        mark = self.area / "runs" / run.run_id / run_starts.START_MARK
+        self.assertEqual(
+            mark.read_text(encoding="utf-8"), f"run-starts/{run.run_id}.json\n"
+        )
         # outside runs/, which holds the run's directory alone, and the
         # end adds nothing
         self.assertEqual(self.start_files(), [f"{run.run_id}.json"])

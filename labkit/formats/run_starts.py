@@ -37,6 +37,10 @@ START_FILES_DIR = "run-starts"
 #: what follows the run id in a start file's name
 START_SUFFIX = ".json"
 
+#: the file in a run's own directory that says a start file was written
+#: for it (`write_start_mark`): what tells a run that owes a start file
+#: from one started before start files, by the run's own record
+START_MARK = "start-file"
 #: the keys of a start file, all of them and no other
 START_FIELDS = ("run_id", "protocol_id", "started_utc", "run_kind")
 
@@ -148,6 +152,25 @@ def write_start(area: Path, start: RunStart) -> Path:
     finally:
         os.close(fd)
     return path
+
+
+def write_start_mark(run_dir: Path) -> None:
+    """Write the mark into the run directory RUN_DIR that a start file is
+    written for this run: the file START_MARK, holding the start file's
+    path from the area. Written before the start file itself, so a run
+    whose record carries the mark is one whose start file was to exist,
+    and a failed start leaves neither (the run directory is removed).
+
+    Side effects:
+        Creates RUN_DIR/start-file.
+
+    The mark is the evidence, in the run's own record, that the run is
+    one of the format with start files: a run without it — every run
+    started before them — owes no start file, and nothing is guessed from
+    a version or a date. Raises OSError when it cannot be written."""
+    (run_dir / START_MARK).write_text(
+        f"{START_FILES_DIR}/{run_dir.name}{START_SUFFIX}\n", encoding="utf-8"
+    )
 
 
 def parse_start(text: str, where: str, run_id: str) -> RunStart:

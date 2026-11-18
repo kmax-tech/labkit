@@ -307,9 +307,11 @@ class CommittedStartFile(unittest.TestCase):
 
 class TheCommitCarriesTheStartFile(unittest.TestCase):
     """The commit's check reads the index: a start file in the working tree
-    that is not staged is no part of the commit. Where the index holds a
-    run's record, its unstaged start file holds the commit; staged, it
-    passes; a run without a start file anywhere is none."""
+    that is not staged is no part of the commit. A run whose record says a
+    start file was written for it (`run_starts.START_MARK`) needs that
+    file staged or committed — also when the run's record was committed
+    earlier; a run without the mark, one from before start files, owes
+    none."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp()).resolve()
@@ -322,6 +324,7 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the area")
         self.run_dir = _run_dir(self.area, CLOSED, closed=True)
+        run_starts.write_start_mark(self.run_dir)
         self.start = run_starts.write_start(
             self.area,
             run_starts.RunStart(CLOSED, "p-0123456789abcdef", NOON, "measurement"),
@@ -335,7 +338,7 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         ((why, fix),) = self.staged()
         self.assertIn(
             f"run-starts/{CLOSED}.json: the start file of run {CLOSED} stands in "
-            f"the working tree and is not staged",
+            f"the working tree and is neither staged nor committed",
             why,
         )
         self.assertIn(
@@ -354,11 +357,32 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         self.assertEqual(self.staged(), [])
         self.assertEqual(list(state_of(self.area, file_state=INDEX).starts), [CLOSED])
 
-    def test_the_twins_nothing_staged_and_a_run_without_a_start_file(self):
-        self.assertEqual(self.staged(), [])  # the commit carries no run
-        self.start.unlink()
+    def test_a_run_committed_earlier_without_its_start_file_holds(self):
+        """The bypass: the record was committed before, the start file never
+        was. Nothing of the run is staged now, and the commit's state still
+        lacks the file — held, whatever the commit carries."""
         _git(self.root, "add", str(self.run_dir))
-        self.assertEqual(self.staged(), [])  # a run from before start files
+        _git(self.root, "commit", "-qm", "the run, without its start file")
+        ((why, fix),) = self.staged()
+        self.assertIn("is neither staged nor committed", why)
+        self.assertIn("git add -- ", fix)
+        self.assertIn(f"run-starts/{CLOSED}.json", fix)
+        # the twin: the start file committed, and it passes
+        _git(self.root, "add", str(self.start))
+        _git(self.root, "commit", "-qm", "its start file")
+        self.assertEqual(self.staged(), [])
+
+    def test_the_twin_a_run_from_before_start_files_owes_none(self):
+        """Its record carries no mark: an existing lab's runs pass, staged
+        now or committed long ago, with no start file anywhere."""
+        old = _run_dir(self.area, OPEN, closed=True)
+        _git(self.root, "add", str(old))
+        self.assertEqual(self.staged(), [])
+        _git(self.root, "commit", "-qm", "an old run")
+        self.assertEqual(self.staged(), [])
+
+    def test_the_twin_nothing_of_the_run_in_the_index_is_not_asked(self):
+        self.assertEqual(self.staged(), [])  # the commit's state holds no run
 
 
 class Session(unittest.TestCase):

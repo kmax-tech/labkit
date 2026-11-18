@@ -100,7 +100,13 @@ from labkit.formats.run_index import (
     read_index,
     read_index_now,
 )
-from labkit.formats.run_starts import RunStart, start_path, utc_now, write_start
+from labkit.formats.run_starts import (
+    RunStart,
+    start_path,
+    utc_now,
+    write_start,
+    write_start_mark,
+)
 from labkit.formats.runs import (
     NO_INPUTS_DECLARED,
     NO_INPUTS_KEY,
@@ -482,6 +488,9 @@ class Run:
             self.run_id, self.dir = _make_run_dir(base_dir)
             try:
                 self._write_record(provenance)
+                # the record says a start file is written for this run,
+                # then it is: a failure of either leaves no run directory
+                write_start_mark(self.dir)
                 # the last step of the start, after every refusal and after
                 # the record: a start that was refused left no start file,
                 # and a start file names a run whose record was written.
