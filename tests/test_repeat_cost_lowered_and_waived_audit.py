@@ -82,6 +82,18 @@ class RepeatCostLowered(unittest.TestCase):
         self.assertIn(f"{first[:7]}: high -> low", warning)
         self.assertIn("LAB-017", warning)
 
+    def test_the_warning_names_a_suspicion_not_a_breach_of_a_rule(self):
+        """No rule forbids lowering the tier: the sentence says what may
+        follow (fewer audits owed) and that the change itself is allowed."""
+        _, protocol = _repo("high")
+        warning = protocol_history.repeat_cost_lowered(
+            protocol, _set_cost(protocol, "low")
+        )
+        assert warning is not None
+        self.assertIn("a suspicion, not a shown fault", warning)
+        self.assertIn("may reduce the audits this protocol owes", warning)
+        self.assertIn("no rule forbids lowering it", warning)
+
     def test_a_later_commit_does_not_launder_the_tier(self):
         """The first commit is the registration; a committed lowering still warns."""
         root, protocol = _repo("high")

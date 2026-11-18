@@ -243,7 +243,10 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     is refused — the same move as rewriting the promises until no check is
     due. Exact over git: the head as it
     was first committed against the head now; a legitimate correction says
-    why in the protocol. Static evidence, never a blocker."""
+    why in the protocol. Static evidence, never a blocker: the sentence
+    names a suspicion (the lower tier may reduce the audits owed) and
+    cites the rule for what each tier owes — no rule forbids the change,
+    so the sentence must not read as a breach of one."""
     was = first_repeat_cost(path)
     if was is None or head.repeat_cost is None:
         return None
@@ -259,9 +262,11 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     )
     return (
         f"{path}: WARNING: repeat cost lowered since {since} "
-        f"({commit[:7]}: {first} -> {head.repeat_cost}) — a lower tier owes less "
-        f"(LAB-017 The number of audits follows the cost tier); say why in the "
-        f"protocol, or restore it"
+        f"({commit[:7]}: {first} -> {head.repeat_cost}) — a suspicion, not a "
+        f"shown fault: the lower tier may reduce the audits this protocol owes "
+        f"(what each tier owes: "
+        f"LAB-017 The number of audits follows the cost tier; "
+        f"no rule forbids lowering it); say why in the protocol, or restore it"
     )
 
 
