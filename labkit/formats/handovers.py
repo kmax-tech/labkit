@@ -470,7 +470,7 @@ def report_destination(root: Path, path: Path) -> Path:
         raise HandoverError(
             "handover report must be a regular Markdown file inside the repository"
         )
-    problem = report_place_problem(PurePosixPath(report.relative_to(root).as_posix()))
+    problem = report_place_problem(PurePosixPath(rel_posix(report, root)))
     if problem is not None:
         raise HandoverError(f"handover report: {problem}")
     return report

@@ -684,10 +684,7 @@ def orphaned_runs(root: Path, since: datetime) -> list[str]:
             if folder in lost or not closed:
                 continue
             present = [root / p for p in files if (root / p).is_file()]
-            now = {
-                p.relative_to(root).as_posix(): b
-                for p, b in blobs_now(root, present).items()
-            }
+            now = {rel_posix(p, root): b for p, b in blobs_now(root, present).items()}
             gone = [p for p, b in files.items() if now.get(p) != b]
             if gone:
                 lost[folder] = (commit, gone)

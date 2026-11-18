@@ -176,7 +176,7 @@ def measure_command(area: Path) -> Command:
     """The line that measures AREA: its stamped `scripts/01_measure.py` (every
     skeleton has one) with the repo's interpreter, the script as the working
     directory reaches it; the script opens its run through runlog."""
-    script = shown(area / "scripts" / "01_measure.py", Path.cwd())
+    script = shown(area / MEASURE_SCRIPT, Path.cwd())
     return Command(MEASURE, f".venv/bin/python {shlex.quote(script)}")
 
 

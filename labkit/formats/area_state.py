@@ -45,7 +45,6 @@ from labkit.formats.repo import (
     rel_posix,
     INDEX_REV,
     area_protocols,
-    indexed_protocols,
     pending_adoption,
     commit_of,
     files_at,
@@ -359,9 +358,7 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
     runs = present_run_dirs(area, repo=repo, file_state=file_state)
     if staged:
         assert repo is not None  # present_run_dirs refused the index without one
-        protocols = sorted(
-            p for p in indexed_protocols(repo) if p.parent == area.resolve()
-        )
+        protocols = area_protocols(area, staged=True)
         texts = {
             p.resolve(): t for p in protocols if (t := text_at(repo, p)) is not None
         }

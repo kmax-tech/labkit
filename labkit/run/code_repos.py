@@ -143,7 +143,7 @@ def read_code(modules: Iterable[object]) -> CodeScan:
 def _repo_code(root: Path, files: list[Path]) -> RepoCode | None:
     """ROOT's state and the part of FILES it holds; None when git ignores
     every one of them (a build directory inside the checkout)."""
-    rel = {f.relative_to(root).as_posix() for f in files}
+    rel = {repo.rel_posix(f, root) for f in files}
     tracked, others = _ls_files(root)
     tracked, untracked = rel & tracked, rel & others
     if not tracked and not untracked:

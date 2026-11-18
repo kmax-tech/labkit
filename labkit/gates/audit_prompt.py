@@ -53,7 +53,7 @@ from labkit.formats.repo import (
     shown,
     the_protocol,
 )
-from labkit.formats.runs import metrics_path, run_path
+from labkit.formats.runs import MEASURE_SCRIPT, metrics_path, run_path
 from labkit.formats.scope_sha import (
     area_files,
     area_snapshot,
@@ -232,7 +232,7 @@ def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]
     reading scope and nothing else: no lib modules, no standard."""
     chosen = gather(area, protocol).protocol
     readme = area / "README.md"
-    script = area / "scripts" / "01_measure.py"
+    script = area / MEASURE_SCRIPT
     missing = [p.name for p in (readme, script) if not p.is_file()]
     if missing:
         raise AuditError(
