@@ -1179,3 +1179,23 @@ class ABindingTheFilesContradict(unittest.TestCase):
             ),
             [],
         )
+
+
+class ARunOnlyACommitHoldsIsNamedByItsIdAlone(unittest.TestCase):
+    """`stopped_note` on a run whose files are not here to read
+    (`runs.number_written`: "cannot tell"): no note, whatever the run did —
+    apart from a run the file state holds without a number."""
+
+    CONFIG = ARunWithoutItsRecord.FIRST.config
+    NAME = ARunWithoutItsRecord.FIRST.dir.name
+
+    def test_a_run_a_commit_holds_gets_no_note(self):
+        from_git = run_dir(self.NAME, config=self.CONFIG, from_commit="c0ffee")
+        self.assertEqual(registration_hold.stopped_note(from_git), "")
+
+    def test_the_twin_a_run_the_state_holds_without_a_number_is_named(self):
+        here = run_dir(self.NAME, config=self.CONFIG)
+        self.assertEqual(
+            registration_hold.stopped_note(here),
+            " (no number yet; whether it still runs cannot be told)",
+        )

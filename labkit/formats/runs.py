@@ -260,14 +260,43 @@ def write_failure(
     return path
 
 
-def stopped_without_number(rd: RunDir) -> str | None:
-    """Why run RD, as the file state holds it, wrote no metrics.json — its
-    failure (`read_failure`), or "" when it left none —; None when it wrote
-    one or when only a commit holds RD (`RunDir.from_commit`): its files
-    are not here to read. RunConfigError when failure.json cannot be read."""
-    if rd.from_commit is not None or metrics_path(rd.dir).is_file():
-        return None
-    return read_failure(rd.dir) or ""
+@dataclass(frozen=True)
+class NumberWritten:
+    """Whether a run wrote its number (metrics.json), as far as the file
+    state shows it (`number_written`). The four states:
+
+    - `answer` "yes": the run directory holds a metrics.json.
+    - `answer` "cannot tell": only a commit holds the run
+      (`RunDir.from_commit`), so its files are not here to read.
+    - `answer` "no", `failure` None: no metrics.json and no failure.json —
+      the run stopped without a failure record, or it still runs.
+    - `answer` "no", `failure` set: no metrics.json, and failure.json says
+      why (`<Type>: <message>`, `read_failure`).
+
+    Raises ValueError for a failure beside another answer than "no"."""
+
+    answer: Literal["yes", "no", "cannot tell"]
+    failure: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.failure is not None and self.answer != "no":
+            raise ValueError(
+                f"NumberWritten: failure = {self.failure!r} beside answer = "
+                f"{self.answer!r}; a failure says why no number was written"
+            )
+
+
+def number_written(rd: RunDir) -> NumberWritten:
+    """Did run RD write its number (metrics.json), as the file state holds
+    it — and when not, the failure it recorded (`read_failure`)? "cannot
+    tell" when only a commit holds RD (`RunDir.from_commit`): its files are
+    not here to read. Reads RD's directory. RunConfigError when failure.json
+    cannot be read."""
+    if rd.from_commit is not None:
+        return NumberWritten("cannot tell")
+    if metrics_path(rd.dir).is_file():
+        return NumberWritten("yes")
+    return NumberWritten("no", read_failure(rd.dir))
 
 
 def read_failure(run_dir: Path) -> str | None:

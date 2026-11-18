@@ -37,8 +37,8 @@ from labkit.formats.runs import (
     RunConfigError,
     RunDir,
     is_alive,
+    number_written,
     patch_text,
-    stopped_without_number,
     read_run_dir,
     recorded_commit,
     read_run_config,
@@ -548,7 +548,7 @@ def split_hold(
     out are a new registration declaring its changes against each, or a
     handover, as for first measurements that recorded different promise
     blocks (`registration_changes`). A first measurement that stopped
-    without a number is named so (`runs.stopped_without_number`): it counts
+    without a number is named so (`runs.number_written`): it counts
     all the same (`answering_run.first_measurement_groups`: finished or
     not); one only a commit holds is named by its id alone, its files not
     being here to read. Reads each run's directory through `runs`."""
@@ -574,7 +574,7 @@ def split_hold(
 
 def stopped_note(rd: RunDir) -> str:
     """` (stopped without a number[: <failure>])` for a run RD that wrote
-    no metrics.json (`runs.stopped_without_number`), its failure cut to
+    no metrics.json (`runs.number_written`), its failure cut to
     SCOPE_QUOTE characters — a failure.json that does not read named as
     such, inside the hold that blocks —; for one that left no failure
     record and whose process still runs its script (`runs.is_alive`),
@@ -582,22 +582,26 @@ def stopped_note(rd: RunDir) -> str:
     ` (no number yet; whether it still runs cannot be told)`; "" otherwise.
     Either way it is a first measurement the hold counts."""
     try:
-        why = stopped_without_number(rd)
+        wrote = number_written(rd)
     except RunConfigError as exc:
         return f" (stopped without a number; its failure record does not read: {_quoted(str(exc))})"
-    if why is None:
+    if wrote.answer == "cannot tell":  # only a commit holds it: its id alone
         return ""
-    if not why:  # no failure record: stopped, or still going
-        try:
-            cfg = read_run_config(rd.dir)
-        except RunConfigError:
-            cfg = None  # the config's own check names it; liveness unknown
-        alive = is_alive(cfg.pid, cfg.script) if cfg is not None else None
-        if alive is True:
-            return " (still running, no number yet)"
-        if alive is None:
-            return " (no number yet; whether it still runs cannot be told)"
-    return f" (stopped without a number{f': {_quoted(why)}' if why else ''})"
+    if wrote.answer == "yes":
+        return ""
+    if wrote.failure is not None:
+        return f" (stopped without a number: {_quoted(wrote.failure)})"
+    # no failure record: stopped, or still going
+    try:
+        cfg = read_run_config(rd.dir)
+    except RunConfigError:
+        cfg = None  # the config's own check names it; liveness unknown
+    alive = is_alive(cfg.pid, cfg.script) if cfg is not None else None
+    if alive is True:
+        return " (still running, no number yet)"
+    if alive is None:
+        return " (no number yet; whether it still runs cannot be told)"
+    return " (stopped without a number)"
 
 
 def now_hold(
