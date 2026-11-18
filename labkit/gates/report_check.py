@@ -142,6 +142,7 @@ from labkit.checks.audit_binding import (
     analysis_now,
     covering_analysis,
 )
+from labkit.checks.recheck import NOT_VERIFIABLE
 from labkit.gates.finalize import (
     UNREPORTABLE_RULES,
     finalize_area,
@@ -798,8 +799,10 @@ def analysis_findings(
 
 def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
     """Run the analysis script's check and return its failure as a blocker;
-    a check that did not end (`CheckUnfinished`) as a check not executed —
-    nothing was found, and the release waits all the same."""
+    a check that did not end (`CheckUnfinished`) and one that ended "not
+    verifiable" (`recheck.NOT_VERIFIABLE`: nothing shows that the code here
+    is the code the run ran) as a check not executed — no number was
+    compared, and the release waits all the same."""
     check = f"`.venv/bin/python {shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}`"
     try:
         failed = check_analysis_script(area, repo)
@@ -813,18 +816,33 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
                 rule=TECHNICAL_RULE,
             )
         ]
-    return (
-        [
+    if failed is None:
+        return []
+    # a substring of the script's last lines: recheck alone writes the clause
+    if NOT_VERIFIABLE in failed:
+        # a missing proof, not a failed comparison: nothing in the protocol
+        # is wrong to fix, and today's code agreeing would not supply it.
+        # NOT_EXECUTABLE is the gate's outcome for a comparison that could
+        # not be made — the script ran and ended, the recalculation did not
+        return [
             blocker(
                 failed,
-                fix=f"fix what the check names until {check} exits 0; a number "
-                f"in the protocol comes from `protocol-fill`, never typed",
+                fix=f"restore the code and its record as the check names them, "
+                f"or measure anew, audit and adopt that run; then "
+                f"`{gate_command('report-check', area)}` — the recalculation "
+                f"is owed for the adopted result, another run is not held by it",
+                stated_outcome=NOT_EXECUTABLE,
                 rule=LAB_041,
             )
         ]
-        if failed
-        else []
-    )
+    return [
+        blocker(
+            failed,
+            fix=f"fix what the check names until {check} exits 0; a number "
+            f"in the protocol comes from `protocol-fill`, never typed",
+            rule=LAB_041,
+        )
+    ]
 
 
 @dataclass(frozen=True)

@@ -16,6 +16,7 @@ import tempfile
 import unittest
 from collections.abc import Mapping
 from pathlib import Path
+from unittest import mock
 
 from labkit.checks import recheck
 from labkit.run import runlog
@@ -32,6 +33,13 @@ def evaluate(inputs: Mapping[str, Path]) -> dict:
 
 class FromInputs(unittest.TestCase):
     def setUp(self) -> None:
+        self.require_run_code = recheck.require_run_code
+        # the code step has its own tests against real repositories
+        # (tests/test_run_code.py); a run written here records no script,
+        # so every recheck of it would end there, not verifiable
+        code_step = mock.patch.object(recheck, "require_run_code")
+        code_step.start()
+        self.addCleanup(code_step.stop)
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.area = Path(tmp.name) / "area"
@@ -114,6 +122,18 @@ class FromInputs(unittest.TestCase):
             self.verified()
         self.assertIn("recomputation differs from metrics.json", str(cm.exception.code))
         self.assertEqual(self.calls, 1)  # the inputs held; the evaluation ran
+
+    def test_intact_inputs_with_code_not_recorded_are_not_verifiable(self) -> None:
+        """C was written by this process and records no script: its inputs
+        hold, and its evaluation is still not called — agreeing with the
+        code here would be no recalculation of C."""
+        with (
+            mock.patch.object(recheck, "require_run_code", self.require_run_code),
+            self.assertRaises(recheck.NotVerifiable) as cm,
+        ):
+            self.verified()
+        self.assertIn(f"run {self.c.name} is not verifiable", str(cm.exception.code))
+        self.assertEqual(self.calls, 0)
 
     def test_another_evaluation_over_the_same_inputs_fails(self) -> None:
         def unscaled(inputs: Mapping[str, Path]) -> dict:

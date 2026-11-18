@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -25,6 +26,13 @@ def evaluate(rows: list[dict]) -> dict:
 
 class Area(unittest.TestCase):
     def setUp(self):
+        self.require_run_code = recheck.require_run_code
+        # the code step has its own tests against real repositories
+        # (tests/test_run_code.py); a run written here records no script,
+        # so every recheck of it would end there, not verifiable
+        code_step = mock.patch.object(recheck, "require_run_code")
+        code_step.start()
+        self.addCleanup(code_step.stop)
         self._tmp = tempfile.TemporaryDirectory()
         self.area = Path(self._tmp.name)
         self.out = self.area / "output" / "rows.jsonl"
@@ -73,6 +81,28 @@ class Area(unittest.TestCase):
         (self.run_dir / "outputs.json").write_text(
             json.dumps([{"path": str(self.out), "sha256": sha}])
         )
+
+    def test_a_run_whose_code_is_not_recorded_is_not_verifiable(self):
+        """No script recorded: the numbers agree with today's code, and the
+        note cites them — the recalculation still does not hold, and
+        nothing is recomputed in its place."""
+        calls: list[int] = []
+
+        def counted(rows: list[dict]) -> dict:
+            calls.append(1)
+            return evaluate(rows)
+
+        with (
+            mock.patch.object(recheck, "require_run_code", self.require_run_code),
+            self.assertRaises(recheck.NotVerifiable) as cm,
+        ):
+            recheck.holds(self.area, self.out, counted, self.note)
+        told = str(cm.exception.code)
+        self.assertIn("is not verifiable", told)
+        self.assertIn("recorded no script", told)
+        self.assertIn("not a failed comparison", told)
+        self.assertIn("or measure anew", told)
+        self.assertEqual(calls, [])
 
     def test_holds(self):
         v = recheck.holds(self.area, self.out, evaluate, self.note)

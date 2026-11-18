@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import re
 import time
 import unittest
@@ -19,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from labkit.formats import runs
+from labkit.formats import gate, runs
 from labkit.formats.runs import RUN_ID_TIME
 from labkit.checks import recheck
 from labkit.checks.audit_binding import (
@@ -138,7 +139,6 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         # recomputing with other code, and restored it holds again
         told = lab.script(self.area, "02_analyze.py", "--check")
         self.assertIn("recomputed from its recorded inputs, the same numbers", told)
-        self.assertNotIn("not established", told)
         as_it_ran = self.measure.read_text(encoding="utf-8")
         self.measure.write_text(as_it_ran + "# changed after C ran\n", encoding="utf-8")
         with self.assertRaises(AssertionError) as cm:
@@ -147,6 +147,30 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         self.assertIn("no recalculation of that run", str(cm.exception))
         self.measure.write_text(as_it_ran, encoding="utf-8")
         lab.script(self.area, "02_analyze.py", "--check")
+
+        # C's record no longer says which script it ran: nothing shows the
+        # code here is C's, so the check ends not verifiable — no number
+        # compared — and report-check holds the adopted result as a check
+        # not executed; the record restored from git, both pass again
+        record = self.area / "runs" / compared / "config.json"
+        cfg = json.loads(record.read_text(encoding="utf-8"))
+        record.write_text(
+            json.dumps({**cfg, "script_sha": "no-script"}), encoding="utf-8"
+        )
+        with self.assertRaises(AssertionError) as cm:
+            lab.script(self.area, "02_analyze.py", "--check")
+        self.assertIn(f"run {compared} is not verifiable", str(cm.exception))
+        self.assertNotIn("keys identical", str(cm.exception))
+        rc, out = self.report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"--check exits 1: recheck: run {compared} is not verifiable", out
+        )
+        self.assertIn(gate.NOT_EXECUTABLE_MARK, out)
+        self.assertIn("or measure anew, audit and adopt that run", out)
+        lab.git("checkout", "--", str(record))
+        lab.script(self.area, "02_analyze.py", "--check")
+        self.assertEqual(self.report_check()[0], 0)
 
         # A's run directory removed and the removal staged
         lab.git("rm", "-r", "-q", str(self.area / "runs" / source))
@@ -309,8 +333,8 @@ class TwoProtocolsOfOneArea(CountCommands):
         verdict = recheck.holds_from_inputs(
             self.area, _recount, note, run_id=c, protocol=computed
         )
+        # held at all: C's script and modules are shown to be as it ran them
         self.assertEqual((verdict.run_id, verdict.out), (c, None))
-        self.assertEqual(verdict.code_uncompared, "")  # C's script as it ran
 
         # A0's patch lost: A0's protocol then cannot be read back — C held at
         # finalize and report-check, its auditor told why, the measurement

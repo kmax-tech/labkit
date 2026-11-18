@@ -553,6 +553,28 @@ class ReportCheck(unittest.TestCase):
             self.assertIn(needle, out)
         self.assertIn("4 blocker(s)", out)
 
+    def test_a_check_ending_not_verifiable_holds_as_a_check_not_executed(self):
+        """The recalculation's proof is missing: the release waits, told as
+        a check that could not be made with the two ways out — not as a
+        number to fix. The twin: any other failure of the check keeps its
+        own way out."""
+        area = self._area()
+        self._audited(area)
+        unproven = (
+            "scripts/02_analyze.py --check exits 1: recheck: run r is not "
+            "verifiable — nothing shows that the code here now is the code it ran"
+        )
+        code, out = self._run(area, check=unproven)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 blocker(s)", out)
+        self.assertIn(gate.NOT_EXECUTABLE_MARK, out)
+        self.assertIn("or measure anew, audit and adopt that run", out)
+        self.assertNotIn("never typed", out)
+        code, out = self._run(area, check="scripts/02_analyze.py --check exits 1: x")
+        self.assertEqual(code, 1, out)
+        self.assertNotIn(gate.NOT_EXECUTABLE_MARK, out)
+        self.assertIn("never typed", out)
+
     def test_no_analysis_record_of_the_answering_run_blocks(self):
         area = self._area()
         self._answered(area)

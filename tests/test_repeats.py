@@ -293,6 +293,8 @@ class Repeats(unittest.TestCase):
         """--draws reads no draw's file unchecked, or an edited repeat file
         would change the flipped items. recheck.verified pins
         a draw's output to its recorded digest before anything is shown."""
+        from unittest import mock
+
         from labkit.run import batch
         from labkit.checks import recheck
 
@@ -318,6 +320,11 @@ class Repeats(unittest.TestCase):
             encoding="utf-8",
         )
         (run / "metrics.json").write_text(json.dumps({"n": 1}), encoding="utf-8")
+        # the code step has its own tests (tests/test_run_code.py); these
+        # runs record no script and would end there, not verifiable
+        code_step = mock.patch.object(recheck, "require_run_code")
+        code_step.start()
+        self.addCleanup(code_step.stop)
         metrics, _ = recheck.verified(run, self.area, out, recompute)
         self.assertEqual(metrics["n"], 1)
         out.write_text('{"id": "a", "answer": "No"}\n', encoding="utf-8")

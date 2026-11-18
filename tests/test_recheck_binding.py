@@ -14,6 +14,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from protocol_fixture import run_record, head
 
@@ -38,6 +39,12 @@ def evaluate(rows: list[dict]) -> dict:
 
 class TwoProtocols(unittest.TestCase):
     def setUp(self) -> None:
+        # the code step has its own tests against real repositories
+        # (tests/test_run_code.py); a run written here records no script,
+        # so every recheck of it would end there, not verifiable
+        code_step = mock.patch.object(recheck, "require_run_code")
+        code_step.start()
+        self.addCleanup(code_step.stop)
         self.area = Path(tempfile.mkdtemp())
         (self.area / "runs").mkdir()
         self.a = self.area / "PROTOCOL-a.md"

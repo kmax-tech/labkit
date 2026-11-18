@@ -434,10 +434,10 @@ class CodeSinceRun(unittest.TestCase):
         self.assertEqual(blockers, [])
         self.assertEqual(len(warnings), 2, warnings)
 
-    # --- the recalculation's code step (`recheck.refuse_changed_code`) ---------------
+    # --- the recalculation's code step (`recheck.require_run_code`) ---------------
 
     def test_a_recalculation_with_the_runs_code_is_established(self) -> None:
-        self.assertEqual(recheck.refuse_changed_code(self.run_now(), self.area), "")
+        recheck.require_run_code(self.run_now(), self.area)  # raises nothing
 
     def test_a_recalculation_is_refused_once_the_code_changed_and_back_with_it(
         self,
@@ -448,21 +448,50 @@ class CodeSinceRun(unittest.TestCase):
         run = self.run_now()
         self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
         with self.assertRaises(SystemExit) as cm:
-            recheck.refuse_changed_code(run, self.area)
+            recheck.require_run_code(run, self.area)
+        # a difference found is a refusal of its own, not a missing proof
+        self.assertNotIsInstance(cm.exception, recheck.NotVerifiable)
         told = str(cm.exception)
         self.assertIn("the code that computed run 2026-10-27T10-00-00_ab12", told)
         self.assertIn("01_measure.py changed since", told)
         self.assertIn("no recalculation of that run", told)
         self.script.write_text(SCRIPT, encoding="utf-8")
-        self.assertEqual(recheck.refuse_changed_code(run, self.area), "")
+        recheck.require_run_code(run, self.area)
 
-    def test_code_that_cannot_be_compared_is_said_not_refused(self) -> None:
+    def test_code_that_cannot_be_compared_is_not_verifiable(self) -> None:
         """No script recorded: nothing shows a difference, and nothing
-        shows the same code — the reason comes back as a sentence."""
+        shows the same code — the proof is missing, named with both ways
+        out; the record back, the recalculation holds again."""
         run = self.run_now()
-        cfg = json.loads((run / "config.json").read_text())
+        recorded = (run / "config.json").read_text()
+        cfg = json.loads(recorded)
         (run / "config.json").write_text(json.dumps({**cfg, "script_sha": "no-script"}))
-        self.assertIn("recorded no script", recheck.refuse_changed_code(run, self.area))
+        with self.assertRaises(recheck.NotVerifiable) as cm:
+            recheck.require_run_code(run, self.area)
+        told = str(cm.exception)
+        self.assertIn("run 2026-10-27T10-00-00_ab12 is not verifiable", told)
+        self.assertIn("recorded no script", told)
+        self.assertIn("A missing proof, not a failed comparison", told)
+        self.assertIn("Restore the code as the run ran it", told)
+        self.assertIn("or measure anew", told)
+        (run / "config.json").write_text(recorded)
+        recheck.require_run_code(run, self.area)
+
+    def test_a_module_in_another_repository_is_not_verifiable(self) -> None:
+        """finalize warns of a module it cannot compare; a recalculation
+        cannot claim the run's code over it."""
+        outside = Path(self._tmp.name).parent / f"{Path(self._tmp.name).name}-shared"
+        outside.mkdir()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", str(outside)], check=True))
+        for f in ("__init__.py", "counting.py"):
+            (outside / f).write_bytes((self.repo / "lib" / f).read_bytes())
+        _git(self.repo, "rm", "-rq", "lib")
+        (self.repo / "lib").symlink_to(outside, target_is_directory=True)
+        _git(self.repo, "add", "lib")
+        _git(self.repo, "commit", "-qm", "lib is shared")
+        with self.assertRaises(recheck.NotVerifiable) as cm:
+            recheck.require_run_code(self.run_now(), self.area)
+        self.assertIn("lies in another repository", str(cm.exception))
 
 
 class FinalizeStation(unittest.TestCase):

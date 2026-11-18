@@ -226,16 +226,22 @@ class EachProtocolAdoptsItsOwn(CountCommands):
 
     def test_a_change_of_the_shared_code_is_held_for_each_by_its_own_coverage(self):
         """Both protocols audited without a finding, the first adopted; then
-        the first's measuring script changes — code the area's stamp covers
-        for both. Each protocol is held by its own analysis coverage; a new
-        audit of the first covers nothing of the second, the second's own
-        audit does."""
+        the analysis script changes — code the area's stamp covers for both,
+        and code neither run measured with (a changed measuring script
+        would end the area's one check for both: no recalculation of the
+        first's run with other code). Each protocol is held by its own
+        analysis coverage; a new audit of the first covers nothing of the
+        second, the second's own audit does."""
         for protocol in (self.first, self.second):
             rc, out, _ = self.analysis(self.clean, protocol)
             self.assertEqual(rc, 0, out)
         rc, out = self.labkit_adopt(self.first, self.run_first)
         self.assertEqual(rc, 0, out)
-        self.change_code()
+        analyze = self.area / "scripts" / "02_analyze.py"
+        analyze.write_text(
+            analyze.read_text(encoding="utf-8") + "# changed after both audits\n",
+            encoding="utf-8",
+        )
         uncovered = "no analysis audit saw the area as it is now"
 
         rc, out = self.labkit_adopt(self.first, self.run_first)

@@ -10,8 +10,9 @@ pins the output file to the run's recorded sha, recomputes `metrics.json`
 from the kept rows and holds the protocol to every number and the run_id.
 A run that reads another run's output is recomputed from its recorded
 inputs as well (`recheck.verified_from_inputs`, `01_measure.metrics_from_inputs`);
-a run whose code changed since it ran is refused, not recomputed; where the
-code cannot be compared it is recomputed and the line says so.
+a run whose code changed since it ran is refused, not recomputed; where
+nothing shows that the code here is the code the run ran, the check ends
+"not verifiable" — a missing proof, and report-check holds the release on it.
 The formula is `01_measure.evaluate_rows`, imported by path under a unique
 name — a second copy here would be a second truth of the number; the
 metrics recomputed are `01_measure.metrics_of`'s, the formula and, where
@@ -49,8 +50,8 @@ def main() -> None:
         # a run that computes from another run's output (an input with an
         # origin run) is recomputed from those inputs too: its rows alone
         # would hold the number to a file this run wrote itself. The code
-        # step ran inside holds() above (changed code: refused there; code
-        # that cannot be compared: v.code_note says so) and runs again here
+        # step ran inside holds() above (changed code and code that cannot
+        # be compared end the check there) and runs again here
         run = recheck.run_dir(AREA, measure.PROTOCOL)
         from_inputs = recheck.reads_another_run(run)
         if from_inputs:
@@ -58,7 +59,7 @@ def main() -> None:
         print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
               f"{measure.PROTOCOL.name} carries them and the run_id"
               + ("; recomputed from its recorded inputs, the same numbers" if from_inputs else "")
-              + (f"; grown since the run: {v.grown}" if v.grown else "") + v.code_note)
+              + (f"; grown since the run: {v.grown}" if v.grown else ""))
         return
     print(json.dumps(measure.metrics_of(recheck.rows_of(measure.OUT), ids), indent=1))
 
