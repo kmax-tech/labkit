@@ -40,6 +40,8 @@ from labkit.tools import protocol_fill, scaffold
 from labkit.run import runlog, start_check
 from labkit.formats import (
     answering_run,
+    run_index,
+    run_starts,
     findings,
     promises,
     protocol_block,
@@ -844,14 +846,14 @@ class FirstMeasurementLost(CountCommands):
             out,
         )
         self.assertIn(
-            f"run {broke_off} is gone (the start record lists it as started", out
+            f"run {broke_off} is gone (the start record lists it as a measurement "
+            f"that started",
+            out,
         )
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
         self.assertIn("BLOCKER (check not executable): what the number is about", out)
-        self.assertIn(
-            f"run {broke_off} is gone (the start record lists it as started", out
-        )
+        self.assertIn(f"run {broke_off} is gone (the start record lists it", out)
         self.assertIn("may have been the first", out)
         self.assertNotIn("are the ones the first measurement registered", out)
 
@@ -897,6 +899,79 @@ class FirstMeasurementLost(CountCommands):
             start_check._freeze_findings(self.area, bound, state),  # noqa: SLF001
             [],
         )
+
+
+#: what one process of `ParallelStarts` runs: wait for the common signal,
+#: then start and finish its runs in the area, printing each run id
+_STARTER = """
+import contextlib, io, sys, time
+from pathlib import Path
+from labkit.run import runlog
+
+area, go, runs_each = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
+while not go.exists():
+    time.sleep(0.001)
+for n in range(runs_each):
+    with contextlib.redirect_stdout(io.StringIO()):
+        with runlog.run("x", {"n": n}, area, run_kind="preparation") as run:
+            run.metrics(n=n)
+    print(run.run_id)
+"""
+
+
+class ParallelStarts(unittest.TestCase):
+    """Processes of their own, not threads on one handle, start runs in one
+    area at the same moment: every start has its row in the start record,
+    whole, none is lost and none runs into another — the lock is the
+    kernel's `flock` on the area's lock file, one per open file
+    description (`run_index.index_lock`)."""
+
+    PROCESSES = 8
+    RUNS_EACH = 5
+    REPETITIONS = 3
+
+    def one_round(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        area, go = tmp / "area", tmp / "go"
+        area.mkdir()
+        started = [
+            subprocess.Popen(
+                [
+                    sys.executable,
+                    "-c",
+                    _STARTER,
+                    str(area),
+                    str(go),
+                    str(self.RUNS_EACH),
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            for _ in range(self.PROCESSES)
+        ]
+        go.touch()
+        ids: list[str] = []
+        for proc in started:
+            out, err = proc.communicate(timeout=120)
+            self.assertEqual(proc.returncode, 0, err)
+            ids += out.split()
+        total = self.PROCESSES * self.RUNS_EACH
+        self.assertEqual(len(set(ids)), total)
+        # every row whole: the file reads (a torn or interleaved line would
+        # not), holds one row per start and nothing else
+        starts = run_starts.read_starts(area)
+        self.assertEqual(sorted(starts), sorted(ids))
+        lines = (area / run_starts.RUN_STARTS).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), total + 1)
+        self.assertEqual({s.run_kind for s in starts.values()}, {"preparation"})
+        self.assertEqual(sorted(run_index.indexed_bindings(area)), sorted(ids))
+
+    def test_no_start_row_is_lost_or_torn(self):
+        for n in range(self.REPETITIONS):
+            with self.subTest(round=n):
+                self.one_round()
 
 
 class Withdraw(CountCommands):
