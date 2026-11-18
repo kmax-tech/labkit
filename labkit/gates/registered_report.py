@@ -383,7 +383,7 @@ def unread_start_note(measured: Measured) -> GateFinding | None:
 
 def missing_start_note(measured: Measured) -> GateFinding | None:
     """The WARNING report-check tells where it checks the report duty when
-    a run's record says a start file was written and none is found
+    a run's mark says a start file was written and none is found
     (`area_state.missing_start_warning`, the sentence the registration
     station holds on for a run of the protocol and warns of for one
     nothing assigns); None without one. It holds nothing here: the

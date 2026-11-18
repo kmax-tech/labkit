@@ -191,7 +191,7 @@ class WrittenAtTheStart(_Area):
         assert start.started is not None
         self.assertLessEqual(before, start.started)
         self.assertLessEqual(start.started, run_starts.utc_now())
-        # the run's own record says a start file was written for it
+        # the mark in the run's directory says a start file was written for it
         mark = self.area / "runs" / run.run_id / run_starts.START_MARK
         self.assertEqual(
             mark.read_text(encoding="utf-8"), f"run-starts/{run.run_id}.json\n"
@@ -295,7 +295,7 @@ class ReindexLeavesThem(_Area):
 
 
 class AStartFileTheRecordNamesAndNobodyFinds(_Area):
-    """A run's record carries the mark that a start file was written. Where
+    """A run's directory contains the mark that a start file was written. Where
     none is found, that is told as evidence lost — at the hook, and in the
     state every station reads — and not as a start that is merely unknown;
     a marked run with its start file, and a run without a mark, are told

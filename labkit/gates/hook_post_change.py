@@ -128,7 +128,7 @@ def index_problems(state: AreaState) -> list[str]:
     - a run whose start file a commit holds and the tree lacks, with the
       checkout that restores it;
     - a run whose start file does not read: an incomplete start;
-    - a run whose record says a start file was written and for which
+    - a run whose mark says a start file was written and for which
       none is found: evidence that is lost;
     - a run with a start file whose directory stands without a
       completion (`unfinished_starts`): it started and never completed —
@@ -170,8 +170,8 @@ def index_problems(state: AreaState) -> list[str]:
             if s.unread
         ]
         + [
-            f"run {r}: a start file was written for it — its record says so — "
-            f"and none is found, in the working tree, the index or a commit: "
+            f"run {r}: a start file was written for it — the mark in its directory "
+            f"says so — and none is found, in the working tree, the index or a commit: "
             f"evidence of its start is lost; bring it back from a copy or a "
             f"clone that holds it"
             for r in state.missing_starts

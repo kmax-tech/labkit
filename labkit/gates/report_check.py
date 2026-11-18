@@ -731,7 +731,7 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     protocol cannot be determined (`registered_report.unassigned_record_note`):
     the duty was read without it; one for a start file that does not
     read (`registered_report.unread_start_note`), and one for a start file a
-    run's record names and nobody finds (`registered_report.missing_start_note`)."""
+    run's mark names and nobody finds (`registered_report.missing_start_note`)."""
     state = ctx.area_state
     measured = state.measured_of(ctx.head.id)
     gap = report_binding_gap(ctx.protocol, ctx.text, measured=measured)

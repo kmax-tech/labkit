@@ -307,7 +307,7 @@ class CommittedStartFile(unittest.TestCase):
 
 class TheCommitCarriesTheStartFile(unittest.TestCase):
     """The commit's check reads the index: a start file in the working tree
-    that is not staged is no part of the commit. A run whose record says a
+    that is not staged is no part of the commit. A run whose mark says a
     start file was written for it (`run_starts.START_MARK`) needs that
     file staged or committed — also when the run's record was committed
     earlier, and also when the committed mark was deleted since; for a
@@ -386,7 +386,7 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         )
 
     def test_the_twin_a_run_with_no_duty_evidenced_is_not_asked(self):
-        """Its record carries no mark, as every run from before start files:
+        """Its directory contains no mark, as every run from before start files:
         an existing lab's runs pass, staged now or committed long ago, with
         no start file anywhere."""
         old = _run_dir(self.area, OPEN, closed=True)

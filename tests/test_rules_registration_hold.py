@@ -1085,7 +1085,7 @@ class AStartFileThatDoesNotRead(unittest.TestCase):
 
 
 class AStartFileThatIsNowhere(unittest.TestCase):
-    """A run's record says a start file was written and none is found: a
+    """A run's mark says a start file was written and none is found: a
     loss of evidence. For a run of the protocol it holds the release
     (`missing_start_hold`, a BLOCKER of a check not executable); for a run
     nothing assigns it is a warning, held against none

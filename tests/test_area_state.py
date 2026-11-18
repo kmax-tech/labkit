@@ -674,7 +674,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             self.assertEqual(measured.started_only, ())
 
     def test_a_missing_start_file_bears_on_its_own_protocol_alone(self):
-        """A run whose record carries the start mark and for which no start
+        """A run whose directory contains the start mark and for which no start
         file is found is its own protocol's loss: an independent protocol
         of the area has nothing missing and nothing measured, so neither
         its release nor its start is touched."""

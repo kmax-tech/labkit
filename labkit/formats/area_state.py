@@ -161,7 +161,7 @@ class Measured:
             row assigns them, so which protocol each started with is
             unknown. The same for every PID; held against none.
         missing_starts: The ids of the runs of PID — by their record or
-            the index — whose own record says a start file was written
+            the index — whose mark says a start file was written
             (`run_starts.START_MARK`) and for which none is found — not in
             the file state, not in a commit: evidence of the start that is
             lost, not merely a start that is unknown. It holds PID's
@@ -328,7 +328,7 @@ class AreaState:
             whose sources name different protocols (`binding_conflicts`).
         unassigned_starts: The ids of the runs a start file that does not
             read is the only trace of (`Measured.unassigned_starts`).
-        missing_starts: The ids of the runs whose record carries the mark
+        missing_starts: The ids of the runs whose directory contains the mark
             that a start file was written (`marked_runs`: in the file
             state, or held by a commit) and whose start file is found
             nowhere — not among STARTS.
@@ -869,14 +869,15 @@ def unread_start_warning(
 
 
 def missing_start_sentence(runs: Sequence[str]) -> str:
-    """The one sentence for runs whose own record says a start file was
+    """The one sentence for runs whose mark says a start file was
     written and for which none is found — in the working tree, the index
     or a commit: a loss of evidence, more than a start that is unknown.
     Printed by the hold (`registration_hold.missing_start_hold`) and by
     the warning (`missing_start_warning`). Pure."""
     return (
-        f"a start file was written for run {', '.join(runs)} — its record says "
-        f"so — and none is found, in the working tree, the index or a commit: "
+        f"a start file was written for run {', '.join(runs)} — the mark in its "
+        f"directory says so — and none is found, in the working tree, the index or "
+        f"a commit: "
         f"the evidence of its start is lost, not merely unknown"
     )
 
@@ -894,7 +895,7 @@ START_FILE_BACK = (
 def missing_start_warning(
     of_protocol: Sequence[str], unassigned: Sequence[str]
 ) -> GateFinding | None:
-    """The WARNING about start files a run's record names and nobody finds
+    """The WARNING about start files a run's mark names and nobody finds
     (`missing_start_sentence`), None without one: the runs OF_PROTOCOL
     (`Measured.missing_starts`: this protocol's by their record or the
     index) and the UNASSIGNED ones (`Measured.unassigned_missing_starts`:
@@ -1206,7 +1207,7 @@ def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir
 
 
 def marked_runs(area: Path, repo: Path | None, *, staged: bool) -> frozenset[str]:
-    """The runs of AREA whose own record says a start file was written for
+    """The runs of AREA whose mark says a start file was written for
     them (`run_starts.START_MARK` in the run's directory): as the file
     state holds the mark — the index's when STAGED, else the working
     tree's — and, in a repository, as a commit holds it where the file

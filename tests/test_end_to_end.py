@@ -1129,7 +1129,7 @@ class LosingTheStartFile(CountCommands):
         self.assertEqual(self.with_and_without(run_a), (self.ALL, self.ALL))
 
     def test_evidenced_a_run_whose_record_names_the_start_file_holds(self):
-        """A stands, and its record carries the start mark. With its start
+        """A stands, and its directory contains the start mark. With its start
         file nothing holds; without it the loss is evidenced, and the
         release is held."""
         run_a = self.measure()

@@ -238,7 +238,7 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
       number;
     - a start file that does not read: an incomplete start, named with
       what it leaves unknown (`area_state.unread_start_warning`);
-    - a run whose record says a start file was written and for which
+    - a run whose mark says a start file was written and for which
       none is found: evidence that is lost
       (`area_state.missing_start_warning`);
     - a record that does not read and that neither file names: its

@@ -1874,7 +1874,7 @@ class ReportOwedByADeletedProtocol(_Repository):
         )
 
     def test_report_check_names_a_start_file_nobody_finds_and_holds_nothing(self):
-        """The run's record says a start file was written; none is found.
+        """The run's mark says a start file was written; none is found.
         The loss stands at the report duty's station too, as a warning."""
         self.proto.write_text(
             head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"

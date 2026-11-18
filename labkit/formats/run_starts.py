@@ -38,7 +38,7 @@ START_FILES_DIR = "run-starts"
 START_SUFFIX = ".json"
 
 #: the file in a run's own directory that says a start file was written
-#: for it (`write_start_mark`): the evidence, in the run's own record, of a
+#: for it (`write_start_mark`): the evidence, in the run's own directory, of a
 #: start-file duty. Without the mark no such duty is evidenced for the run
 #: — which does not prove that none was written: a mark can be lost too
 START_MARK = "start-file"
@@ -159,13 +159,13 @@ def write_start_mark(run_dir: Path) -> None:
     """Write the mark into the run directory RUN_DIR that a start file is
     written for this run: the file START_MARK, holding the start file's
     path from the area. Written before the start file itself, so a run
-    whose record carries the mark is one whose start file was to exist,
+    whose directory contains the mark is one whose start file was to exist,
     and a failed start leaves neither (the run directory is removed).
 
     Side effects:
         Creates RUN_DIR/start-file.
 
-    The mark is the evidence, in the run's own record, that a start file
+    The mark is the evidence, in the run's own directory, that a start file
     was written for the run. For a run without it no start-file duty is
     evidenced — every run started before start files among them —, and
     nothing is guessed from a version or a date; that the run never had a
