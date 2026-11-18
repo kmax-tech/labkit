@@ -122,9 +122,14 @@ class ReferenceOnTheChain(unittest.TestCase):
         rc, out = lab.adopt(protocol, run_id)
         self.assertEqual(rc, 0, out)
         self.assertIn("finalized, audited, checked", out)
-        lab.script(
-            area, "02_analyze.py", "--check"
-        )  # exits 0: the verdict recomputed and cited
+        # exits 0: the verdict recomputed and cited
+        told = lab.script(area, "02_analyze.py", "--check")
+        # a run over plain inputs is held by its rows only, and its line
+        # does not say more: "recomputed from its recorded inputs" stands
+        # where that was done, for a run that reads another run's output
+        # (tests/test_origin_scenario.py)
+        self.assertIn("keys identical", told)
+        self.assertNotIn("recomputed from its recorded inputs", told)
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")
