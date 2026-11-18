@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import Sources, review_gap
-from labkit.formats.area_state import Measured, state_of
+from labkit.formats.area_state import Measured, lost_in_the_tree_too
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
@@ -333,7 +333,7 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             f"told (restore its config.json from a commit or a copy that holds "
             f"it; a record written anew from memory settles nothing)",
         )
-    lost = _lost_in_the_tree_too(measured)
+    lost = lost_in_the_tree_too(measured)
     if lost:
         return ReportDuty(
             None,
@@ -343,16 +343,6 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             f"says what stood registered then",
         )
     return None
-
-
-def _lost_in_the_tree_too(measured: Measured) -> list[str]:
-    """MEASURED's lost runs that the working tree lacks as well. A state of
-    the index calls a run lost that stands in the tree and is not staged;
-    such a run is not gone, and the tree's own state reads it."""
-    if not measured.lost:
-        return []
-    tree = state_of(measured.area).measured_of(measured.pid).lost
-    return [run for run in measured.lost if run in tree]
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:

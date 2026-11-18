@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from labkit.checks import report_blocks
+from labkit.formats import area_state
 from labkit.formats.area_state import Measured
 from labkit.formats.gate import BLOCKER, NOT_EXECUTABLE, TECHNICAL_RULE
 from labkit.gates import registered_report
@@ -34,7 +35,7 @@ class AReportBinding(unittest.TestCase):
         # the working tree's state lists the same runs as lost: the duty
         # asks it, since a state of the index calls an unstaged run lost
         tree = SimpleNamespace(measured_of=lambda pid: measured)
-        with mock.patch.object(registered_report, "state_of", return_value=tree):
+        with mock.patch.object(area_state, "state_of", return_value=tree):
             return registered_report.report_binding_gap(
                 self.protocol, text, measured=measured
             )

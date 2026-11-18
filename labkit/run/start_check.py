@@ -21,7 +21,11 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
-from labkit.formats.area_state import AreaState, state_of
+from labkit.formats.area_state import (
+    AreaState,
+    measurements_without_record,
+    state_of,
+)
 from labkit.formats import evidence
 from labkit.formats.commands import checkout_command, contract_command, fill_command
 from labkit.formats import commands
@@ -142,9 +146,15 @@ def _committed_registration(
     """Refuse a first measurement whose report differs from HEAD, on both
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
-    one's binding. A HEAD git cannot read is refused as such, before
-    either. No commitment check outside Git or for an unbound protocol.
-    Reads HEAD and the first measurements; writes nothing.
+    one's binding: once the area measured the protocol
+    (`area_state.Measured.has_measured` — a lost run and a record that does
+    not read count) no run is held to HEAD as the first, and HEAD is not
+    named as what binds; where the earlier measurement left no record,
+    `earlier_measurement_note` says so at the start and the registration
+    station holds the number (`registration_hold.lost_record_hold`). A HEAD
+    git cannot read is refused as such, before either. No commitment check
+    outside Git or for an unbound protocol. Reads HEAD and what the area
+    measured; writes nothing.
     """
     from labkit.formats.protocol_history import registration_in_commit
 
@@ -152,7 +162,7 @@ def _committed_registration(
     root = repo.git_root(base_dir)
     if root is None or head is None or head.id is None or not isinstance(rel, str):
         return []
-    if state.measured_of(head.id).firsts:
+    if state.measured_of(head.id).has_measured:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")
@@ -194,6 +204,37 @@ def _committed_registration(
             f"the run"
         ]
     return []
+
+
+def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
+    """The warning a measurement starts with when an earlier measurement of
+    its protocol left no record that reads
+    (`area_state.measurements_without_record` over STATE, the working
+    tree's): the run is not the first, what stood registered at the earlier
+    one cannot be read from here, and the registration station will hold
+    every number of the protocol until the record is back or the protocol
+    is registered anew or handed over. A warning, never a refusal: a
+    started investigation may go on, and only a result that needs the
+    missing record is held (docs/notes/2026-11-18-lost-first-measurement.md).
+    None when every measurement has its record, and for an unbound
+    protocol. Pure."""
+    head = bound.head
+    if head is None or head.id is None:
+        return None
+    measured = state.measured_of(head.id)
+    # STATE is the working tree's, so its lost runs are lost in the tree
+    without = measurements_without_record(measured, measured.lost)
+    if not without:
+        return None
+    return (
+        f"runlog: WARNING — {bound.name}: not its first measurement, and an "
+        f"earlier one left no record that reads: {'; '.join(without)}. What "
+        f"stood registered then cannot be read from here, and the protocol as "
+        f"committed now does not stand in for it. The run starts; `finalize` "
+        f"and `report-check` hold every number of this protocol until the "
+        f"record is back, or the protocol is registered anew or handed over "
+        f"(finalize names each way)."
+    )
 
 
 def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
@@ -765,7 +806,9 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
 
     In order: an undecided BLOCKER of a preflight audit refuses, with or
     without the acknowledgement — a finding nobody read is not an unfrozen
-    protocol. Then the gaps (`_freeze_findings`: the freeze at
+    protocol. Then the warning for an earlier measurement without a record
+    that reads (`earlier_measurement_note`; it refuses nothing). Then the
+    gaps (`_freeze_findings`: the freeze at
     high repeat cost, the registration at low repeat cost): none, and the run starts
     plain; gaps and `LABKIT_UNFROZEN=1`, and the run starts acknowledged —
     at high repeat cost only over an audit that could NOT run
@@ -791,6 +834,10 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             )
         )
     gaps = _freeze_findings(base_dir, prepared.bound, state)
+    # told whether the run starts or not: it holds for the next start too
+    note = earlier_measurement_note(prepared.bound, state)
+    if note is not None:
+        print(note)
     if not gaps:
         return False, None
     if os.environ.get("LABKIT_UNFROZEN") != "1":  # "0" is no acknowledgement

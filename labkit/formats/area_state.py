@@ -411,6 +411,46 @@ def gone_run_restore(rd: RunDir) -> str:
 LOST_RUN_SENTENCE = "its rows are lost; only git, where it holds the run, restores them"
 
 
+def lost_in_the_tree_too(measured: Measured) -> list[str]:
+    """MEASURED's lost runs that the working tree lacks as well. A state of
+    the index calls a run lost that stands in the tree and is not staged;
+    such a run is not gone, and the tree's own state reads it. Builds the
+    tree's state (`state_of`) when MEASURED names a lost run."""
+    if not measured.lost:
+        return []
+    tree = state_of(measured.area).measured_of(measured.pid).lost
+    return [run for run in measured.lost if run in tree]
+
+
+def measurements_without_record(
+    measured: Measured, lost_in_tree: Sequence[str]
+) -> list[str]:
+    """One clause per measurement of MEASURED's protocol that labkit still
+    has evidence of and no record for: each run of LOST_IN_TREE and each
+    run whose record does not read. LOST_IN_TREE is the lost runs the
+    working tree lacks too — `lost_in_the_tree_too(measured)` for a state
+    of the index, `measured.lost` itself for a state of the working tree
+    (the two are the same there). [] when every measurement has its record — a run
+    a commit holds back has (`Measured.deleted`). Such a measurement counts
+    as started (`Measured.has_measured`) and may have been the first: what
+    stood registered at it is not told, and no later run or commit stands
+    in for it — the one condition the run's start names
+    (`start_check.earlier_measurement_note`) and the registration station
+    holds on (`registration_hold.lost_record_hold`). A run removed with its
+    index row leaves no evidence and is not seen. Pure. Why:
+    docs/notes/2026-11-18-lost-first-measurement.md."""
+    return [
+        f"run {run} is gone (the run index lists it as measured, and it was "
+        f"deleted before a commit held it)"
+        for run in lost_in_tree
+    ] + [
+        # the reason is `runlog <AREA>`'s to list: it carries the machine's path
+        f"the record of run {rd.dir.name} does not read"
+        for rd in measured.runs
+        if rd.error is not None
+    ]
+
+
 def present_run_dirs(
     area: Path, *, repo: Path | None, file_state: FileState
 ) -> list[RunDir]:

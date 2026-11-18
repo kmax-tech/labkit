@@ -156,3 +156,64 @@ class BothCommandsInTheSameCases(unittest.TestCase):
         ):
             with self.subTest(name):
                 self.assertEqual(self.hints(state), (False, False))
+
+
+class AnEarlierMeasurementWithoutItsRecord(unittest.TestCase):
+    """runlog's start names an earlier measurement that left no record that
+    reads (`start_check.earlier_measurement_note`): the run is not the
+    first, HEAD does not stand in for what was registered then, and finalize
+    will hold the number — a warning, the run starts."""
+
+    TEXT = BothCommandsInTheSameCases.TEXT
+
+    def state(
+        self, present: list[runs.RunDir], lost: dict[str, str] | None = None
+    ) -> AreaState:
+        return assemble(Path("area"), None, TREE, present, [], lost or {})
+
+    def note(self, state: AreaState) -> str | None:
+        bound = start_check._Bound(  # noqa: SLF001
+            {"id": PID, "path": "PROTOCOL-x.md"},
+            self.TEXT,
+            protocol_block.head(self.TEXT),
+        )
+        return start_check.earlier_measurement_note(bound, state)
+
+    def test_a_lost_run_and_an_unreadable_record_are_named(self):
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        for name, state, run in (
+            (
+                "a lost run",
+                self.state([], {"2026-10-05T10-00-00_lost": PID}),
+                "run 2026-10-05T10-00-00_lost is gone",
+            ),
+            (
+                "a record that does not read",
+                self.state([dead]),
+                "the record of run 2026-10-06T10-00-00_dead does not read",
+            ),
+        ):
+            with self.subTest(name):
+                note = self.note(state)
+                assert note is not None
+                self.assertIn(run, note)
+                self.assertIn("PROTOCOL-x.md: not its first measurement", note)
+                self.assertIn("does not stand in for it", note)
+                self.assertIn("The run starts", note)
+
+    def test_the_twins_no_measurement_and_one_that_reads_say_nothing(self):
+        for name, state in (
+            ("no run", self.state([])),
+            (
+                "a measurement that reads",
+                self.state([_record("2026-10-07T10-00-00_ab12")]),
+            ),
+            (
+                "a run lost to another protocol",
+                self.state([], {"2026-10-05T10-00-00_lost": "p-0000000000000000"}),
+            ),
+        ):
+            with self.subTest(name):
+                self.assertIsNone(self.note(state))
