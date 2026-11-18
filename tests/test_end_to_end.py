@@ -41,7 +41,9 @@ from labkit.gates import (
     finalize,
     hook_post_change,
     preflight,
+    registration_hold,
     report_check,
+    report_context,
 )
 from labkit.tools import protocol_fill, scaffold
 from labkit.run import runlog, start_check
@@ -1042,6 +1044,119 @@ class ParallelStarts(unittest.TestCase):
         for n in range(self.REPETITIONS):
             with self.subTest(round=n):
                 self.one_round()
+
+
+class LosingTheStartFile(CountCommands):
+    """Does losing a start file ease a release? The same scenario twice —
+    with the start file, and after deleting it while no commit holds it —
+    through every check that reads the start: finalize's registration
+    station, report-check, the run's start check and the post-change hook.
+
+    Two cases, kept apart. An evidenced loss holds: something else still
+    names the run — its index row, its record with the start mark —, and
+    no check that held with the file passes without it. A complete loss of
+    every trace is the detection limit: with the run directory and the
+    only start file gone before a commit held either, labkit has no
+    evidence and sees nothing; only the commit secures a start file
+    (docs/notes/2026-11-18-run-start-record.md)."""
+
+    def checks(self, run: str) -> dict[str, bool]:
+        """Per check: does it hold the protocol's number, or name RUN, now?"""
+        ctx = report_context.checked(self.area, self.protocol)
+        held = registration_hold.registration_changes(
+            ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
+        )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            report_command.main([str(self.area)])
+        state = state_of(self.area)
+        bound = start_check.protocol_binding(self.area, self.protocol.name)
+        note = start_check.earlier_measurement_note(bound, state) or ""
+        return {
+            "registration station": any(f.grade == "BLOCKER" for f in held),
+            "report-check": "BLOCKER (check not executable): finalize: "
+            in out.getvalue(),
+            "start check": run in note,
+            "post-change hook": any(
+                run in line for line in hook_post_change.index_problems(state)
+            ),
+        }
+
+    def with_and_without(self, run: str) -> tuple[dict[str, bool], dict[str, bool]]:
+        """(the checks with RUN's start file, the checks after deleting it)."""
+        before = self.checks(run)
+        run_starts.start_path(self.area, run).unlink()
+        return before, self.checks(run)
+
+    ALL = {
+        "registration station": True,
+        "report-check": True,
+        "start check": True,
+        "post-change hook": True,
+    }
+    NONE = dict.fromkeys(ALL, False)
+
+    def break_off(self) -> str:
+        """A measurement that starts and breaks off; its id."""
+        measure = self.area / "scripts" / "01_measure.py"
+        ok = '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}'
+        _replace(measure, [(ok, '    raise RuntimeError("broke off")')])
+        subprocess.run(
+            [sys.executable, str(measure)],
+            cwd=self.lab.root,
+            capture_output=True,
+            text=True,
+            env=self.lab.env,
+        )
+        self.lab.git("checkout", "--", str(measure))
+        (run,) = [d.name for d in (self.area / "runs").iterdir()]
+        return run
+
+    def test_the_counter_case_an_intact_start_file_holds_nothing(self):
+        run = self.measure()
+        self.assertEqual(self.checks(run), self.NONE)
+
+    def test_evidenced_a_finished_run_deleted_keeps_holding(self):
+        """A finished — the index lists it — and its directory was deleted;
+        B measured. The index row keeps A whatever becomes of its start
+        file."""
+        run_a = self.measure()
+        shutil.rmtree(self.area / "runs" / run_a)
+        self.measure()
+        self.assertEqual(self.with_and_without(run_a), (self.ALL, self.ALL))
+
+    def test_evidenced_a_run_whose_record_names_the_start_file_holds(self):
+        """A stands, and its record carries the start mark. With its start
+        file nothing holds; without it the loss is evidenced, and the
+        release is held."""
+        run_a = self.measure()
+        self.assertEqual(self.with_and_without(run_a), (self.NONE, self.ALL))
+
+    def test_evidenced_a_contradicting_start_file_deleted_still_holds(self):
+        """A stands; its start file names another protocol, which holds the
+        release. Deleting the file does not lift the hold: the record still
+        names a start file, and none is found."""
+        run_a = self.measure()
+        path = run_starts.start_path(self.area, run_a)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["protocol_id"] = "p-0000000000000000"
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        before, after = self.with_and_without(run_a)
+        self.assertEqual(before, {**self.ALL, "post-change hook": False})
+        self.assertEqual(after, self.ALL)
+
+    def test_the_limit_a_run_gone_with_its_only_start_file_is_not_seen(self):
+        """A LIMIT, NOT A GUARANTEE. A broke off — no index row — and its
+        directory was deleted, the start mark with it; its start file is
+        its only trace, and no commit holds it. With the file every check
+        holds or names A; with the file deleted too, labkit has no evidence
+        of A and sees nothing. This asserts what is, so that a change is
+        seen: it does not say the state is acceptable. Only a commit
+        secures a start file."""
+        run_a = self.break_off()
+        shutil.rmtree(self.area / "runs" / run_a)
+        self.measure()
+        self.assertEqual(self.with_and_without(run_a), (self.ALL, self.NONE))
 
 
 class Withdraw(CountCommands):
