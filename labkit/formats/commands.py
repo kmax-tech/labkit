@@ -216,6 +216,19 @@ def fill_command(protocol: Path | None, assignment: str) -> Command:
     return Command(FILL, f'protocol-fill {named} "{assignment}"')
 
 
+def data_counts_command(protocol: Path, run_id: str) -> Command:
+    """The `protocol-fill PROTOCOL --data-counts RUN_ID` line that writes
+    the counts preparation run RUN_ID recorded as the end of PROTOCOL's
+    Data / scope, the protocol as the working directory reaches it
+    (`shown`), every word shell-quoted."""
+    return Command(
+        FILL,
+        shlex.join(
+            ["protocol-fill", shown(protocol, Path.cwd()), "--data-counts", run_id]
+        ),
+    )
+
+
 def step_command(area: Path) -> Command:
     """The `labkit-next …` line that names AREA's one next step, the area
     named as the working directory reaches it (`shown`)."""

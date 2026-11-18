@@ -140,6 +140,7 @@ from labkit.formats.repo import (
 from labkit.formats.commands import (
     adopt_command,
     contract_command,
+    data_counts_command,
     fill_command,
     measure_command,
     withdraw_command,
@@ -554,7 +555,7 @@ def check_open_fields(
     for twice in repeated:
         findings.block(
             f"{protocol.name}: {twice}",
-            fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
+            fix=f"{REPEATED_WAY_OUT}; then `{gate_command('finalize', protocol.parent)}`",
             rule=TECHNICAL_RULE,
         )
     stale = readme_placeholders(protocol.parent)
@@ -592,8 +593,8 @@ def check_data_counts(
         return True
     findings.block(
         gap.why,
-        fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {gap.run_id}` "
-        f"writes them from the run — never typed",
+        fix=f"`{data_counts_command(protocol, gap.run_id)}` writes them from the run "
+        "— never typed",
         rule=gap.rule,
     )
     return False
