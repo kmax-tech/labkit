@@ -138,9 +138,10 @@ class MeasureConfig:
     one and expects the verdict to move). The thresholds have NO default:
     they come from the protocol's [[promise]] tables under the SAME name
     (`constants = { margin = 0.25 }` ↔ `margin`) through
-    `promises.all_constants()`; runlog refuses a run whose config lacks a
-    registered constant or carries another value, and a constant this class
-    does not know fails at import (TypeError: unexpected keyword).
+    `promises.constants_into()`; runlog refuses a run whose config lacks a
+    registered constant or carries another value, and at import a constant
+    this class does not know fails (TypeError: unexpected keyword), as does
+    one of another type than its field (PromiseError: `max_empty = "5"`).
     [criterion-1] registers exactly one of `at_least` and `margin`; both or
     neither raise ValueError here, before any row is read.
     """
@@ -164,7 +165,7 @@ class MeasureConfig:
 
 # The registered execution: thresholds from the protocol, nothing copied;
 # `--model` replaces one field.
-CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
+CONFIG = promises.constants_into(MeasureConfig, promises.load(PROTOCOL))
 #: the metrics key of the criterion's value — 02_analyze.py reads this name
 CRITERION_VALUE_KEY = "criterion_1_accuracy"
 

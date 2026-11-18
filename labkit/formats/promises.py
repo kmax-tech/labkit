@@ -54,9 +54,12 @@ from __future__ import annotations
 import ast
 import json
 import re
+import types
+import typing
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Union
 
 from labkit.formats import digests
 from labkit.formats import files, protocol_block, runs
@@ -680,12 +683,82 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
 
 def all_constants(block: PromiseTables) -> dict[str, int | float | str | bool]:
     """Every constant the block declares, as one dict — collision-free by the
-    parser's guarantee (a name stands in one promise). What a script passes
-    to its config object: `MeasureConfig(model=MODEL, **all_constants(load(PROTOCOL)))`."""
+    parser's guarantee (a name stands in one promise). What a script puts
+    into a plain config dict and a test compares against; a config object
+    is built with `constants_into`, which checks each value's type."""
     out: dict[str, int | float | str | bool] = {}
     for p in block.promises:
         out.update(p.constants)
     return out
+
+
+def constants_into[ConfigT](
+    config_class: type[ConfigT], block: PromiseTables, **set_here: object
+) -> ConfigT:
+    """The block's constants as a CONFIG_CLASS object, each checked against
+    the type its field declares — what a measuring script builds its config
+    with: `CONFIG = constants_into(MeasureConfig, load(PROTOCOL))`. Unlike
+    `all_constants`, which hands the same values over as an unchecked dict.
+
+    A constant fits a field declared `float` as a TOML integer or float,
+    `int` as an integer, `bool` as a boolean, `str` as a string, and a
+    union (`float | None`) when it fits one member; a boolean is never a
+    number. A field declared anything else (a container, a `Literal`)
+    takes no constant: a constant is a scalar, and such a field is set in
+    the script. SET_HERE are those further fields, passed on unchecked.
+
+    Raises PromiseError for a constant of another type than its field
+    (`max_null_coverage = "0.1"` for a `float`), naming constant, promise
+    and field. The constructor's TypeError stays for the names: a constant
+    CONFIG_CLASS does not know, a field without a default that no constant
+    fills, and a field given both as a constant and in SET_HERE.
+    """
+    declared = typing.get_type_hints(config_class)
+    for promise in block.promises:
+        for name, value in promise.constants.items():
+            # a name the class does not know is the constructor's TypeError below
+            if name in declared and not _constant_fits(value, declared[name]):
+                raise PromiseError(
+                    f"[[promise]] {promise.id}: constant {name} = {value!r} is "
+                    f"{_TOML_TYPE_NAMES[type(value)]}, but {config_class.__name__}."
+                    f"{name} is declared `{_type_text(declared[name])}` — write "
+                    f"the value in that type in the protocol's `constants`",
+                    rule=TECHNICAL_RULE,
+                )
+    return config_class(**all_constants(block), **set_here)
+
+
+#: a constant's type as the protocol's author wrote it, for the refusal
+_TOML_TYPE_NAMES: dict[type, str] = {
+    bool: "a boolean",
+    int: "an integer",
+    float: "a float",
+    str: "a string",
+}
+
+
+def _constant_fits(value: int | float | str | bool, declared: object) -> bool:
+    """Does a registered constant have the type DECLARED of its config field
+    (one type or a union of them)? `float` takes an integer too, as the
+    type checker reads it; a boolean fits `bool` alone."""
+    if isinstance(declared, types.UnionType) or typing.get_origin(declared) is Union:
+        return any(
+            _constant_fits(value, member) for member in typing.get_args(declared)
+        )
+    if declared is bool:
+        return isinstance(value, bool)
+    if isinstance(value, bool):
+        return False
+    if declared is float:
+        return isinstance(value, int | float)
+    if declared is int or declared is str:
+        return isinstance(value, declared)
+    return False  # None, a container: nothing a constant can be
+
+
+def _type_text(declared: object) -> str:
+    """A field's declared type as the script spells it: `float | None`."""
+    return declared.__name__ if isinstance(declared, type) else str(declared)
 
 
 def with_constant(text: str, name: str, value: float) -> str:
