@@ -137,6 +137,13 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"\"criterion_1_(?:score|accuracy)\"",
         {"standard_contract"},
     ),
+    # what a second reviewer's draws release is one rule for a finding's
+    # decision and a report claim's; `reviews.released_by`
+    (
+        "the release rule of a review's draws spelled by hand",
+        r"any\(\s*not \w+\.again\b",
+        {"reviews"},
+    ),
     # audit modes, the experiments folder and a file:// URL have one
     # spelling each
     (
@@ -397,6 +404,7 @@ class OneHome(unittest.TestCase):
             "an area's test file named by hand": 'stem = f"test_{nn}_" + name',
             "a stamp placeholder tested by hand": 'if v.startswith("<") and v.endswith(">"):',
             "a git restore spelled by hand": 'f"restore it (`git checkout HEAD -- {path}`)"',
+            "the release rule of a review's draws spelled by hand": "return any(not cr.again for cr, _ in pairs) and all(",
             "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
         }
         for what, shape, _ in RULES:
