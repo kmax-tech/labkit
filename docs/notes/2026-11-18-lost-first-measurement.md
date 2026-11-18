@@ -81,6 +81,7 @@ Every protocol is held as confirmatory today; the exploratory workflow is planne
 ## Limits
 
 - The run index is a local file git ignores, and a start file travels only from the commit that first holds it. A clone, or a machine other than the one that measured, sees a run deleted before a commit as never measured, and a record that does not read as unassigned, unless a committed start file names it.
+- A start file that does not read gives no start either: its run's order is unknown, as for a run from before start files ([its note](2026-11-18-run-start-record.md)).
 - A run from before start files has no start. Deleted beside a measurement that reads, it holds the protocol although it may have run after it; the hold's ways out apply.
 - The run index lists finished runs of every kind and has no column for the kind. A lost run without a start file counts like a lost measurement, as it does for `has_measured`. A start file names its run's kind: a run it lists as a probe or a preparation counts as a measurement for no check, whatever became of its record (`Measured.may_have_measured`).
 - The audit stamp's basis (`scope_sha._run_records`) still takes every record that does not read into every protocol's digest: it answers which files an audit covered, not which protocol a run belongs to.
