@@ -182,6 +182,49 @@ class RunsText(unittest.TestCase):
         area = self._area()
         self.assertNotIn("OTHER PROTOCOLS' RESULTS", self._pieces(area, "# Report\n"))
 
+    def _computed_from(self, area: Path, source: str) -> Path:
+        """Run c of the protocol, adopted, whose one input SOURCE wrote."""
+        c = completed_run(area, "2026-01-01T00-00-05_cc")
+        cfg_file = c / "config.json"
+        cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+        cfg["data"] = {
+            "items": {
+                "path": "out.jsonl",
+                "sha256": "ab" * 8,
+                "rows": 1,
+                "origin_run": source,
+                "origin_chosen": False,
+                "origin_unreadable_runs": [],
+            }
+        }
+        cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
+        (area / "PROTOCOL-x.md").write_text(
+            head(repeat_cost="low", promises=C1_BLOCK, result=c.name) + C1_PROSE,
+            encoding="utf-8",
+        )
+        return c
+
+    def test_a_source_of_the_adopted_run_is_named_as_its_input(self):
+        """The adopted run computes from another run's output: the reviewer
+        is told that run is an input of the adopted number, not a result,
+        so a conclusion the report draws about it on its own is a claim."""
+        area = self._area()
+        a0 = completed_run(area, "2026-01-01T00-00-01_aa", pid="p-other")
+        c = self._computed_from(area, a0.name)
+        sources = self._pieces(area, "# Report\n")["SOURCES OF THE ADOPTED RUN"]
+        self.assertIn(f"run {a0.name} (protocol p-other)", sources)
+        self.assertIn(f"an input of adopted run {c.name}", sources)
+        self.assertIn("not a result", sources)
+
+    def test_the_twin_an_adopted_run_without_sources_reads_as_before(self):
+        area = self._area()
+        c = completed_run(area, "2026-01-01T00-00-05_cc")
+        (area / "PROTOCOL-x.md").write_text(
+            head(repeat_cost="low", promises=C1_BLOCK, result=c.name) + C1_PROSE,
+            encoding="utf-8",
+        )
+        self.assertNotIn("SOURCES OF THE ADOPTED RUN", self._pieces(area, "# Report\n"))
+
 
 if __name__ == "__main__":
     unittest.main()

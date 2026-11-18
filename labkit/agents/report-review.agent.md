@@ -30,6 +30,10 @@ propose repairs.
    protocol and its run. Such a block belongs to that protocol, and
    report-check holds it to that protocol; it is no result of the
    protocol you review.
+   `===== SOURCES OF THE ADOPTED RUN =====` — only when the adopted run
+   computes from other runs' outputs: each such run, its protocol, and
+   its role, an input of the adopted number. The result's `sources:`
+   part shows its values as that run recorded them.
 5. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, promises) and what the protocol itself reports: its
    Conclusion and Recorded results, or none.
@@ -61,6 +65,11 @@ A **claim** is a line that does one of these:
   0.78 on the test set". A word beside the number alone ("preliminary",
   "see below") does not change what the line tells a reader; what marks
   a line as no result is the list under "Not a claim", and nothing else.
+  A run listed under SOURCES OF THE ADOPTED RUN is such a run: a line
+  that draws a conclusion of its own about it — its quality, a verdict,
+  a finding beyond its use as the adopted number's input — is a result,
+  unless the line stands inside that source protocol's own result block,
+  which its own review checks.
 - **contradiction** — states something the audits or the adopted result
   contradict: a verdict the adopted run's recorded values do not hold
   (its `criterion_1_pass` is false, the report says "met"), a verdict on a
@@ -79,7 +88,9 @@ A **claim** is a line that does one of these:
 Not a claim:
 
 - The adopted run's numbers and verdicts as it recorded them, in the
-  generated block or in prose. The block's `Question:` line is the
+  generated block or in prose. The values of a source under SOURCES OF
+  THE ADOPTED RUN, where the line presents them as the input the
+  adopted number was computed from. The block's `Question:` line is the
   registration's question; its `Answer:` line is no recorded verdict and
   can be a contradiction (above).
 - A number or verdict of a run that is not adopted, where the report

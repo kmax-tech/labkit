@@ -30,11 +30,14 @@ from labkit.formats import failed_attempts
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.runs import (
     MEASUREMENT,
+    ArtefactError,
     MetricsError,
     RunConfig,
     as_stored,
     metrics_path,
+    read_data,
     read_metrics,
+    read_run_config,
     run_path,
     run_state,
 )
@@ -128,6 +131,10 @@ def review_pieces(
     others = other_results_text(report, text, protocol)
     if others is not None:
         pieces.append(("OTHER PROTOCOLS' RESULTS", others))
+    # likewise only for an adopted run that computes from other runs
+    drawn = sources_text(area, adopted) if adopted is not None else None
+    if drawn is not None:
+        pieces.append(("SOURCES OF THE ADOPTED RUN", drawn))
     pieces.append((f"FILE: {shown(protocol, repo)}", protocol_text))
     present = {rd.dir.name for rd in state.runs}
     for d in discussed:
@@ -196,6 +203,40 @@ def other_results_text(report: Path, text: str, protocol: Path) -> str | None:
         for b in blocks(text)
         if block_protocol(report, b) != own
     ]
+    return "\n".join(lines) or None
+
+
+def sources_text(area: Path, adopted: str) -> str | None:
+    """The origin runs of ADOPTED's inputs (`runs.read_data`), one line
+    each — the run, the protocol it was bound to, and its role: an input
+    of the adopted number, as the result's source line shows it
+    (`result_render.source_phrases`), not a result of the protocol under
+    review and none of its own here —, or None when the run draws on no
+    other run, its directory is gone, or its input record does not read
+    (the record checks name that). None keeps the inputs, and so the
+    fingerprint, of a report on a run without sources."""
+    run_dir = run_path(area, adopted)
+    try:
+        entries = read_data(run_dir) or []
+    except ArtefactError:
+        return None
+    origins = dict.fromkeys(e.origin_run for e in entries if e.origin_run is not None)
+    lines: list[str] = []
+    for run_id in origins:
+        cfg = read_run_config(run_path(area, run_id))
+        bound = (
+            f"protocol {cfg.protocol.id}"
+            if cfg is not None and cfg.protocol.id is not None
+            else "no protocol"
+            if cfg is not None
+            else "its record does not read"
+        )
+        lines.append(
+            f"run {run_id} ({bound}) — an input of adopted run {adopted}, as "
+            f"its result's source line shows it; not a result of the protocol "
+            f"under review, and no result of its own here: only its own "
+            f"protocol's result block in the report presents one"
+        )
     return "\n".join(lines) or None
 
 
