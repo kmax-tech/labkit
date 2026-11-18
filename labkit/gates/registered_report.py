@@ -498,7 +498,7 @@ def formerly_registering(paths: list[Path], repo: Path, sources: Sources) -> lis
     out: list[Path] = []
     for p in protocols:
         try:
-            text = state_text(repo, p, staged=staged)
+            text = sources.text_of(p)  # the hold's one read of it
             head = protocol_block.head(text) if text is not None else None
         except (OSError, UnicodeError, protocol_block.BlockError):
             continue

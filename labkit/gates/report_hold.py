@@ -287,16 +287,31 @@ def report_files(
     return out
 
 
-def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
+def registering_protocols(
+    paths: list[Path],
+    repo: Path,
+    *,
+    staged: bool,
+    sources: Sources | None = None,
+) -> list[Path]:
     """The protocols of REPO whose head registers a file among PATHS as
     their report (`protocol_block.Head.report`), in the repo's order — the
     protocols a change of the report reaches though no path lies in their
     area: REPORT.md at the repository root is the usual case. Reads every
     protocol's head as the state holds it (the index when STAGED,
     `repo.state_text`) only when PATHS hold a candidate, a Markdown file
-    that is not a protocol. A protocol the state does not hold, a link, or
+    that is not a protocol; a protocol SOURCES read already
+    (`Sources.registered`, from `repo_sources`) is not read again. A
+    protocol the state does not hold, a link, or
     a head that does not read registers nothing here: its own hold names
-    the error where it is among the paths (`report_check.hold_declared`)."""
+    the error where it is among the paths (`report_check.hold_declared`).
+    Raises ValueError when SOURCES were read from the other file state."""
+    if sources is not None and sources.staged != staged:
+        raise ValueError(
+            f"registering_protocols: staged={staged}, and the sources were "
+            f"read with staged={sources.staged}"
+        )
+    read = sources.registered if sources is not None else {}
     root = repo.resolve()
     candidates = {
         own_path(p if p.is_absolute() else root / p)
@@ -308,32 +323,62 @@ def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> lis
     protocols = protocols_in(repo, staged=staged)
     out: list[Path] = []
     for p in protocols:
-        try:
-            text = state_text(repo, p, staged=staged)
-            registered = protocol_block.head(text).report if text is not None else None
-        except (OSError, UnicodeError, protocol_block.BlockError):
-            continue  # registers nothing; held as a protocol where it is touched
+        if p in read:
+            registered = read[p]
+        else:
+            try:
+                text = state_text(repo, p, staged=staged)
+            except (OSError, UnicodeError):
+                continue  # registers nothing; held as a protocol where it is touched
+            registered = None if text is None else head_report(text)
         if registered is not None and own_path(root / registered) in candidates:
             out.append(p)
     return out
 
 
+def head_report(text: str) -> str | None:
+    """The report the head of the protocol TEXT registers
+    (`protocol_block.Head.report`), None for none — and for a head that
+    does not read: it registers nothing, and the protocol's own hold names
+    the error (`report_check.hold_declared`)."""
+    try:
+        return protocol_block.head(text).report
+    except protocol_block.BlockError:
+        return None
+
+
 def newly_declared(
-    protocols: list[Path], repo: Path, *, staged: bool
+    protocols: list[Path],
+    repo: Path,
+    *,
+    staged: bool,
+    sources: Sources | None = None,
 ) -> dict[str, list[Path]]:
     """The runs PROTOCOLS declare as their result in the gate's state that
     HEAD's version of the same protocol did not — run id → the protocols
     newly declaring it. A protocol HEAD does not hold declares everything
     newly; one whose head does not read in either state names nothing
     here (`hold_declared` holds it). Empty outside a repository or before
-    the first commit: no committed state to differ from."""
+    the first commit: no committed state to differ from. The gate's side is
+    the text SOURCES hold where they read the protocol already
+    (`Sources.text_of`); HEAD's side is always read from git. Raises
+    ValueError when SOURCES were read from the other file state."""
+    if sources is not None and sources.staged != staged:
+        raise ValueError(
+            f"newly_declared: staged={staged}, and the sources were read "
+            f"with staged={sources.staged}"
+        )
     out: dict[str, list[Path]] = {}
     if git_root(repo) is None:
         return out
     for p in protocols:
         if not under_root(repo, p):
             continue  # outside the repo: no HEAD to differ from
-        text = state_text(repo, p, staged=staged)
+        text = (
+            sources.text_of(p)
+            if sources is not None
+            else state_text(repo, p, staged=staged)
+        )
         if text is None:
             continue
         now = adopted_run(text)
@@ -396,18 +441,20 @@ class Sources:
     """What the repo holds for a report to cite, as one file state holds it
     (STAGED: the index, what the commit carries; else the tree), and the
     cache of one check run: the repo's root (REPO, resolved), every run
-    directory's id (KNOWN), per protocol its text (TEXTS) and the run its
+    directory's id (KNOWN), per protocol its text (TEXTS), the run its
     head declares (DECLARED: None for none; a head that does not read is in
-    UNREADABLE with the reason instead); `held_state` and `held_evidence`
+    UNREADABLE with the reason instead) and the report its head registers
+    (REGISTERED: None for none and for a head that does not read,
+    `head_report`); `held_state` and `held_evidence`
     build each area's state and audit evidence once, in STAGED's file state.
 
     Two forms, named by their constructors: `repo_sources` reads every
     protocol of the repo (KNOWN through `area_state.present_run_dirs`, the
     reader `held_state`'s runs come from too, so the two agree); `blank`
     carries the file state, the texts given and the cache alone — KNOWN,
-    DECLARED and UNREADABLE empty — for a hold that checks no report's
-    citations. The file state a hold judges is STAGED here, never a second
-    flag beside it."""
+    DECLARED, UNREADABLE and REGISTERED empty — for a hold that checks no
+    report's citations. The file state a hold judges is STAGED here, never
+    a second flag beside it."""
 
     repo: Path
     known: set[str]
@@ -419,6 +466,9 @@ class Sources:
     # directory (`runs_outside_index`), so a citation of one is named with
     # its staging, not as gone
     outside_index: dict[str, str] = field(default_factory=dict)
+    # per protocol `repo_sources` read (the keys of TEXTS there): the report
+    # its head registers; a protocol that is no key was not read for it
+    registered: dict[Path, str | None] = field(default_factory=dict)
     _states: dict[Path, AreaState] = field(
         default_factory=dict, repr=False, compare=False
     )
@@ -429,6 +479,17 @@ class Sources:
     def declaring(self, run_id: str) -> list[Path]:
         """The protocols declaring RUN_ID as their result."""
         return [p for p, r in self.declared.items() if r == run_id]
+
+    def text_of(self, protocol: Path) -> str | None:
+        """PROTOCOL's text as the sources' file state holds it: the text
+        read already (TEXTS), else read now (`repo.state_text`: None when
+        the state does not hold the file, a link's stored target for a
+        link) — `repo_sources` leaves a link and a file that does not read
+        out of TEXTS, so those are read, and fail, as without the cache.
+        Raises OSError or UnicodeDecodeError when that read does."""
+        if protocol in self.texts:
+            return self.texts[protocol]
+        return state_text(self.repo, protocol, staged=self.staged)
 
     @classmethod
     def blank(
@@ -497,6 +558,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
         if text is None:
             continue
         out.texts[p] = text
+        out.registered[p] = head_report(text)
         try:
             out.declared[p] = protocol_block.declared_run(text)
         except protocol_block.BlockError as exc:
@@ -890,7 +952,9 @@ def report_review_owed(
     by_protocol: dict[Path, list[report_blocks.Discussion]] = {}
     for d in discussed:
         by_protocol.setdefault((path.parent / d.protocol).resolve(), []).append(d)
-    registering = set(registering_protocols([path], sources.repo, staged=staged))
+    registering = set(
+        registering_protocols([path], sources.repo, staged=staged, sources=sources)
+    )
     for protocol, mine in by_protocol.items():
         protocol_text = sources.texts.get(protocol)
         if protocol in registering or protocol_text is None:
@@ -1404,12 +1468,14 @@ def reached_reports(
     repo: Path,
     *,
     staged: bool,
+    sources: Sources | None = None,
 ) -> list[tuple[Path, str, str]]:
     """(path, text, why held) of every committed report not among REPORTS
     that cites a run one of PROTOCOLS newly declares in the gate's state
     (`newly_declared`, `committed_reports`); the third element is the
-    heading `hold_report` prints, naming the declaring protocol(s)."""
-    declared = newly_declared(protocols, repo, staged=staged)
+    heading `hold_report` prints, naming the declaring protocol(s).
+    SOURCES: the texts the check run read already (`newly_declared`)."""
+    declared = newly_declared(protocols, repo, staged=staged, sources=sources)
     held = {p for p, _ in reports}
     out: list[tuple[Path, str, str]] = []
     for path, text in committed_reports(set(declared), repo, staged=staged):

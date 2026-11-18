@@ -265,6 +265,78 @@ class OneStateBuildPerCheckRun(_Repository):
             )
         self.assertEqual((builds, len(reads)), (1, 1), "\n".join(lines))
 
+    def test_the_report_path_reads_each_protocols_text_once(self):
+        """`hold_reported` over a repository with two protocols and one
+        report: the hold reads each protocol's text from the file state once
+        (`report_hold.repo_sources`), and the registered report, the newly
+        adopted run, the former registrations and the protocol's own hold
+        read that text (`Sources.registered`, `Sources.text_of`). Counted
+        at `repo.state_text` as the modules of the hold that read protocols
+        call it (`report_hold`, `registered_report`); the area state's own
+        texts are another reader, one per build."""
+        from collections import Counter
+        from unittest import mock
+
+        from labkit.checks import report_blocks
+        from labkit.gates import registered_report, report_hold
+
+        self._run(RUN)
+        other = self.root / "experiments" / "02-y"
+        other.mkdir()
+        scope_file(other)
+        registering = other / "PROTOCOL-y.md"
+        registering.write_text(
+            head(id="p-bbbbbbbbbbbbbbbb", repeat_cost="low", report="REPORT.md")
+            + "\n- **Question / hypothesis:** how many?\n",
+            encoding="utf-8",
+        )
+        report = self.root / "REPORT.md"
+        report.write_text(
+            report_blocks.with_discussion(
+                "# Report\n",
+                f"experiments/01-x/{self.proto.name}",
+                RUN,
+                "a probe of the setup, not the answer",
+            ),
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "a second protocol and the report")
+        self.assertEqual(
+            report_hold.registering_protocols([report], self.root, staged=False),
+            [registering.resolve()],
+        )
+        read = report_hold.repo_sources(self.root, staged=False)
+        self.assertEqual(
+            report_hold.registering_protocols(
+                [report], self.root, staged=False, sources=read
+            ),
+            [registering.resolve()],
+        )
+        with self.assertRaises(ValueError):  # sources of the other file state
+            report_hold.registering_protocols(
+                [report], self.root, staged=True, sources=read
+            )
+        reads: Counter[str] = Counter()
+        real = report_hold.state_text
+
+        def counting(repo: Path, path: Path, *, staged: bool) -> str | None:
+            if path.name.startswith("PROTOCOL-"):
+                reads[path.name] += 1
+            return real(repo, path, staged=staged)
+
+        lines: list[str] = []
+        with (
+            mock.patch.object(report_hold, "state_text", counting),
+            mock.patch.object(registered_report, "state_text", counting),
+        ):
+            report_check.hold_reported(
+                [report], self.root, staged=False, tell=lines.append
+            )
+        self.assertEqual(
+            dict(reads), {self.proto.name: 1, registering.name: 1}, "\n".join(lines)
+        )
+
     def test_the_commits_gate_builds_the_state_once_per_protocol(self):
         """`hold_reported` at the commit (STAGED): the one protocol the paths
         touch, one build of its area's state."""

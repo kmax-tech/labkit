@@ -177,7 +177,6 @@ from labkit.formats.repo import (
     protocol_links,
     protocols_in,
     shown,
-    state_text,
 )
 from labkit.formats.commands import (
     ADOPT,
@@ -1181,7 +1180,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
         else Sources.blank(repo, staged=staged)
     )
     for p in [
-        *registering_protocols(paths, repo, staged=staged),
+        *registering_protocols(paths, repo, staged=staged, sources=sources),
         *formerly_registering(paths, repo, sources),
     ]:
         if p not in protocols:
@@ -1234,7 +1233,9 @@ def hold_reported(
     (`HoldVerdict`)."""
     touched = reached_by(paths, repo, staged=staged)
     protocols, reports = touched.protocols, touched.reports
-    reached = reached_reports(protocols, reports, repo, staged=staged)
+    reached = reached_reports(
+        protocols, reports, repo, staged=staged, sources=touched.sources
+    )
     held = {p for p, _ in reports} | {p for p, _, _ in reached}
     reached += discussing_reports(paths, held, repo, staged=staged)
     # touched.sources is blank when no report is among PATHS (`reached_by`);
@@ -1301,7 +1302,7 @@ def hold_declared(
         console.refuse("report-check", link[protocol])
         return ProtocolVerdict(2, None)
     try:
-        text = state_text(repo, protocol, staged=staged)
+        text = sources.text_of(protocol)  # the hold's one read of it
     except (OSError, UnicodeError) as exc:  # a refusal, never a traceback
         console.refuse("report-check", f"{protocol}: {exc}")
         return ProtocolVerdict(2, None)
