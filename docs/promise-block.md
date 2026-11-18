@@ -84,7 +84,7 @@ The head and the tables:
 
 ```toml
 [protocol]
-standard = "0.31"
+standard = "0.32"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
 repeat_cost = "high"

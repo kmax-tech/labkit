@@ -8,7 +8,7 @@ A protocol carries its own id in the `[protocol]` table of its ```toml block (th
 
 ```toml
 [protocol]
-standard = "0.31"
+standard = "0.32"
 id = "p-9e2341c0390948dc"
 ```
 

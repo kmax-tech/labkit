@@ -29,7 +29,7 @@ class Head(unittest.TestCase):
                 h.preflight_audit,
             ),
             (
-                "0.31",
+                "0.32",
                 PID,
                 "exploratory",
                 "low",
@@ -121,28 +121,38 @@ class Head(unittest.TestCase):
 
     def test_other_standard_names_the_way_out(self):
         self.assertRejects(
-            head().replace('"0.31"', '"0.18"'), "reproduced with the labkit release"
+            head().replace('"0.32"', '"0.18"'), "reproduced with the labkit release"
         )
         # a protocol with runs is never offered the conversion
         self.assertRejects(
-            head().replace('"0.31"', '"0.18"'),
+            head().replace('"0.32"', '"0.18"'),
             "only a protocol not yet run may be updated",
         )
 
     def test_a_previous_standard_is_told_what_the_new_one_owes(self):
-        """A 0.30 protocol is refused with the one-line migration — the
-        version — and what 0.31 changes: a limitation voids only the promises
-        it names (LAB-015 Preflight audit before freezing); a 0.29 one is
-        told to rename the field label as well."""
+        """A 0.31 protocol is refused with the one-line migration — the
+        version — and what 0.32 changes: a run's start is kept in a start
+        file (LAB-043 Runs go through `runlog`) and a started measurement
+        keeps counting (LAB-003 No run without an intent paragraph); a 0.30
+        one is told what 0.31 changed as well, a 0.29 one to rename the
+        field label."""
+        new = head().replace('"0.32"', '"0.31"')
+        self.assertRejects(new, 'from 0.30 or 0.31: set standard = "0.32"; from 0.24')
         self.assertRejects(
-            head().replace('"0.31"', '"0.30"'),
-            'from 0.30: set standard = "0.31"; from 0.24',
+            new, "0.32 keeps every run's start in a start file outside its directory"
         )
         self.assertRejects(
-            head().replace('"0.31"', '"0.30"'),
+            new, "keeps a measurement that started counting when its record is missing"
+        )
+        self.assertRejects(
+            head().replace('"0.32"', '"0.30"'),
+            'from 0.30 or 0.31: set standard = "0.32"; from 0.24',
+        )
+        self.assertRejects(
+            head().replace('"0.32"', '"0.30"'),
             "0.31 leaves not assessable only the promises a limitation names",
         )
-        old = head().replace('"0.31"', '"0.29"')
+        old = head().replace('"0.32"', '"0.29"')
         self.assertRejects(
             old,
             "from 0.24, 0.25, 0.26, 0.27, 0.28 or 0.29: set it and "
@@ -151,7 +161,7 @@ class Head(unittest.TestCase):
         )
         self.assertRejects(old, "0.30 names that field after the noise floor")
         self.assertRejects(
-            head().replace('"0.31"', '"0.28"'),
+            head().replace('"0.32"', '"0.28"'),
             "0.29 owes the second auditor for a limitation that leaves a promise "
             "not assessable",
         )
