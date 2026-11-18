@@ -1302,8 +1302,8 @@ def undeclared_findings(
                 WARNING,
                 f"{rel}: cites {', '.join(looked_at)}, which no protocol has adopted as "
                 f"its result — a reported number is adopted by `labkit-adopt "
-                f"<area> <run_id>`, and its block written by `protocol-fill "
-                f"<PROTOCOL> --into {rel}`; an exploration's run is cited, not "
+                f"<area> <run_id>`, and its block written by "
+                f"`{into_command(None, path)}`; an exploration's run is cited, not "
                 f"reported",
                 evidence_kind=GUARANTEED,
                 rule=LAB_104,

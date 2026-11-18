@@ -22,6 +22,7 @@ from pathlib import Path
 
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, repo
+from labkit.formats.commands import gate_command, wait_command
 from labkit.formats.runs import (
     COMPLETED,
     FAILED_STATES,
@@ -418,7 +419,7 @@ def _await_run(
         if time.monotonic() - t0 >= max_seconds:
             print(
                 f"no run in {area} after {int(max_seconds)}s; pid {pid} is still "
-                f"starting — `runlog {area} --wait` waits for it"
+                f"starting — `{wait_command(area)}` waits for it"
             )
             return 3
         time.sleep(interval)
@@ -647,7 +648,7 @@ def main(argv: list[str]) -> int:
         raise console.Refused(
             "runlog",
             f"{exc} — whether that run is still open cannot be told; repair the "
-            f"file or move the run aside, then `runlog {area}` again",
+            f"file or move the run aside, then `{gate_command('runlog', area)}` again",
         ) from exc
 
 

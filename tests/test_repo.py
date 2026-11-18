@@ -825,6 +825,76 @@ class EveryBuilderIsACommand(unittest.TestCase):
         )
 
 
+class BuildersUnderAPathWithASpace(unittest.TestCase):
+    """A builder's line reads back (`shlex.split`) as the words it means
+    under a path with a space, and a `<PROTOCOL>` placeholder or an area
+    slot stays bare. The twin: a plain path is printed bare."""
+
+    AREA = Path("my lab") / "01 x"
+    PROTOCOL = AREA / "PROTOCOL-x.md"
+
+    def test_each_line_reads_back_as_its_words(self):
+        named = "my lab/01 x/PROTOCOL-x.md"
+        for command, words in (
+            (commands.list_command(self.PROTOCOL), ["protocol-fill", named, "--list"]),
+            (commands.wait_command(self.AREA), ["runlog", "my lab/01 x", "--wait"]),
+            (
+                commands.gate_command("intent-check", self.PROTOCOL),
+                ["intent-check", named],
+            ),
+            (
+                commands.freeze_command(
+                    self.PROTOCOL, "2026-01-01T10-00-preflight.toml"
+                ),
+                ["protocol-fill", named, "--freeze", "2026-01-01T10-00-preflight.toml"],
+            ),
+            (
+                commands.into_command(self.PROTOCOL, Path("my lab") / "REPORT.md"),
+                ["protocol-fill", named, "--into", "my lab/REPORT.md"],
+            ),
+            (
+                commands.fill_command(None, "report=my report.md"),
+                ["protocol-fill", "<PROTOCOL>", "report=my report.md"],
+            ),
+        ):
+            with self.subTest(line=command.line):
+                self.assertEqual(shlex.split(command.line), words)
+
+    def test_a_placeholder_and_a_slot_stay_bare(self):
+        self.assertEqual(
+            commands.freeze_command(None, "r.toml").line,
+            "protocol-fill <PROTOCOL> --freeze r.toml",
+        )
+        self.assertEqual(
+            commands.into_command(None, Path("my lab") / "REPORT.md").line,
+            "protocol-fill <PROTOCOL> --into 'my lab/REPORT.md'",
+        )
+        slot = commands.measure_slot_command("<area>")
+        self.assertEqual(slot.line, ".venv/bin/python <area>/scripts/01_measure.py")
+        self.assertEqual(slot.name, commands.MEASURE)
+        # filled as a gate fills it (`gate.Findings.take`), the line runs
+        self.assertEqual(
+            shlex.split(slot.line.replace("<area>", shlex.quote("my lab/01 x"))),
+            [".venv/bin/python", "my lab/01 x/scripts/01_measure.py"],
+        )
+
+    def test_the_twin_a_plain_path_is_printed_bare(self):
+        protocol = Path("area") / "PROTOCOL-x.md"
+        self.assertEqual(
+            commands.list_command(protocol).line,
+            "protocol-fill area/PROTOCOL-x.md --list",
+        )
+        self.assertEqual(
+            commands.wait_command(protocol.parent).line, "runlog area --wait"
+        )
+        self.assertEqual(commands.list_command(protocol).name, commands.CHECK)
+        self.assertEqual(commands.wait_command(protocol.parent).name, commands.WAIT)
+        self.assertEqual(
+            commands.freeze_command(protocol).line,
+            "protocol-fill area/PROTOCOL-x.md --freeze",
+        )
+
+
 class OnlyProtocol(unittest.TestCase):
     """`repo.only_protocol` is the one answer to "the area's one protocol,
     else none" (the audit of 2026-11-08, H8: three hand copies)."""

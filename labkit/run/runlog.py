@@ -89,7 +89,7 @@ import uuid
 from pathlib import Path
 from types import TracebackType
 
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, wait_command
 from labkit.formats.run_index import (
     RUN_INDEX,
     RunIndexError,
@@ -899,7 +899,7 @@ def _require_no_open_twin(base_dir: str | Path) -> None:
             with_way_out(
                 f"runlog: {script} is still measuring in {base_dir}: {named} — a "
                 f"second measurement beside it would read and write the same files",
-                f"wait for it (`runlog {base_dir} --wait`), then read its result",
+                f"wait for it (`{wait_command(Path(base_dir))}`), then read its result",
             )
         )
 

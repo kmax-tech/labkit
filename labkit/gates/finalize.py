@@ -85,7 +85,6 @@ read-only gate that reports findings.
 
 from __future__ import annotations
 
-import shlex
 from functools import partial
 from dataclasses import replace
 from pathlib import Path
@@ -134,7 +133,6 @@ from labkit.formats.runs import (
 from labkit.formats.repo import (
     layout_root,
     ProtocolChoiceError,
-    shown,
     the_protocol,
 )
 from labkit.formats.commands import (
@@ -430,8 +428,8 @@ def check_intent_keys_in_metrics(
     except console.Refused as exc:  # nothing to hold: a blocker, as its exit 2
         findings.block(
             f"intent-check: {exc.why}",
-            fix=f"repair what the sentence names; `intent-check "
-            f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",
+            fix=f"repair what the sentence names; "
+            f"`{gate_command('intent-check', protocol)}` holds it alone",
             rule=TECHNICAL_RULE,
         )
         return

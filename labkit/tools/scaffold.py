@@ -71,10 +71,9 @@ from dataclasses import dataclass
 import importlib.metadata
 import os
 import re
-import shlex
 
 from labkit.formats import markdown
-from labkit.formats.commands import report_fields_command, step_command
+from labkit.formats.commands import fill_command, report_fields_command, step_command
 from labkit.formats import runs
 from labkit.formats import console
 from pathlib import Path
@@ -660,8 +659,8 @@ def stamp_area(
             raise console.Refused(
                 "labkit-init",
                 f"--report-file names the report at the area's stamp; {found} "
-                f"is stamped — before its first measurement `protocol-fill "
-                f"<PROTOCOL> report={shlex.quote(report_file)}` registers it",
+                f"is stamped — before its first measurement "
+                f"`{fill_command(None, f'report={report_file}')}` registers it",
             )
         return found, "\n".join(promote(root, found))
     kind = asked_kind(kind)

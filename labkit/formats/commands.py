@@ -18,6 +18,7 @@ from labkit.formats.repo import (
     own_path,
     shown,
 )
+from labkit.formats.runs import MEASURE_SCRIPT
 
 
 #: the command that adopts a run — what every printed adoption line starts with
@@ -179,6 +180,13 @@ def measure_command(area: Path) -> Command:
     return Command(MEASURE, f".venv/bin/python {shlex.quote(script)}")
 
 
+def measure_slot_command(slot: str) -> Command:
+    """`measure_command` for a check that does not know the working
+    directory: SLOT (`gate.AREA_SLOT`) stands for the area, unquoted — the
+    gate that knows the area fills it shell-quoted (`gate.Findings.take`)."""
+    return Command(MEASURE, f".venv/bin/python {slot}/{MEASURE_SCRIPT.as_posix()}")
+
+
 def measure_anew(area: Path) -> str:
     """The way out where a run cannot be held to its code, rows or record:
     a new run of AREA (`measure_command`), then its analysis audit."""
@@ -203,17 +211,33 @@ def contract_command(protocol: Path) -> Command:
     )
 
 
+def protocol_word(protocol: Path | None) -> str:
+    """PROTOCOL as a printed command names it: shell-quoted as the working
+    directory reaches it (`shown`); None: the `<PROTOCOL>` placeholder, for
+    a sentence that knows no path."""
+    if protocol is None:
+        return "<PROTOCOL>"
+    return shlex.quote(shown(protocol, Path.cwd()))
+
+
 def fill_command(protocol: Path | None, assignment: str) -> Command:
     """The `protocol-fill … "<label>=<value>"` line that writes one field
-    of PROTOCOL (named as the working directory reaches it, `shown`; None:
-    the `<PROTOCOL>` placeholder, for a sentence that knows no path), with
-    ASSIGNMENT as written, quoted once here."""
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "<PROTOCOL>"
-    )
-    return Command(FILL, f'protocol-fill {named} "{assignment}"')
+    of PROTOCOL (`protocol_word`), with ASSIGNMENT as written, quoted once
+    here."""
+    return Command(FILL, f'protocol-fill {protocol_word(protocol)} "{assignment}"')
+
+
+def list_command(protocol: Path) -> Command:
+    """The `protocol-fill PROTOCOL --list` line that names every open field
+    of PROTOCOL with its values, the protocol shell-quoted as the working
+    directory reaches it (`shown`). Its kind is CHECK: it writes nothing."""
+    return Command(CHECK, f"protocol-fill {protocol_word(protocol)} --list")
+
+
+def wait_command(area: Path) -> Command:
+    """The `runlog AREA --wait` line that waits for AREA's open run, the
+    area shell-quoted as the working directory reaches it (`shown`)."""
+    return Command(WAIT, f"runlog {shlex.quote(shown(area, Path.cwd()))} --wait")
 
 
 def data_counts_command(protocol: Path, run_id: str) -> Command:
@@ -242,12 +266,7 @@ def render_command(protocol: Path | None = None, *, from_run: bool = False) -> C
     the working directory reaches it, or the `<PROTOCOL>` placeholder where
     the check knows no path (`result_render`)."""
     flag = "--from-run" if from_run else "--render"
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "<PROTOCOL>"
-    )
-    return Command(RENDER, f"protocol-fill {named} {flag}")
+    return Command(RENDER, f"protocol-fill {protocol_word(protocol)} {flag}")
 
 
 def report_fields_step(protocol: Path) -> str:
@@ -311,17 +330,16 @@ def claim_review_command(area: Path, record: str, protocol: Path) -> Command:
     return Command(REVIEW, line)
 
 
-def into_command(protocol: Path, report: Path) -> Command:
+def into_command(protocol: Path | None, report: Path) -> Command:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them
     (`shown`), shell-quoted: a protocol named relative to the report and a
-    report relative to the repo runs from neither."""
-    here = Path.cwd()
+    report relative to the repo runs from neither. PROTOCOL None: the
+    `<PROTOCOL>` placeholder (`protocol_word`)."""
     return Command(
         INTO,
-        shlex.join(
-            ["protocol-fill", shown(protocol, here), "--into", shown(report, here)]
-        ),
+        f"protocol-fill {protocol_word(protocol)} --into "
+        f"{shlex.quote(shown(report, Path.cwd()))}",
     )
 
 
@@ -335,17 +353,18 @@ def report_fields_command(area: Path) -> Command:
     )
 
 
-def freeze_command(protocol: Path, record: str | None = None) -> Command:
+def freeze_command(protocol: Path | None, record: str | None = None) -> Command:
     """The `protocol-fill PROTOCOL --freeze [RECORD]` line that freezes
     PROTOCOL — `frozen = true`, `preflight_audit` naming the decided
     preflight RECORD (without one, the area's newest) — as the working
-    directory reaches it (`shown`): the one writer of the freeze, which
-    refuses what the freeze gate would hold and leaves the file as it was
+    directory reaches it (`shown`; None: the `<PROTOCOL>` placeholder,
+    `protocol_word`): the one writer of the freeze, which refuses what the
+    freeze gate would hold and leaves the file as it was
     (`protocol_fill._freeze_file`)."""
-    words = ["protocol-fill", shown(protocol, Path.cwd()), "--freeze"]
+    line = f"protocol-fill {protocol_word(protocol)} --freeze"
     if record:
-        words.append(record)
-    return Command(FREEZE, shlex.join(words))
+        line += f" {shlex.quote(record)}"
+    return Command(FREEZE, line)
 
 
 def stage_command(path: Path) -> Command:
@@ -363,11 +382,7 @@ def handover_command(protocol: Path | None, report: str | None = None) -> Comman
     REPORT — when not given, the report PROTOCOL's head registers
     (`registered_report_shown`), else `REPORT.md` —, its why and tried as
     placeholders; it runs no model."""
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "<PROTOCOL>"
-    )
+    named = protocol_word(protocol)
     if report is None:
         registered = registered_report_shown(protocol) if protocol is not None else None
         report = registered if registered is not None else "REPORT.md"

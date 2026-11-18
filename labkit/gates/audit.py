@@ -92,7 +92,7 @@ from labkit.formats.gate import (
     with_way_out,
 )
 from labkit.formats.repo import area_path, no_such_area, shown
-from labkit.formats.commands import audit_command, decide_command
+from labkit.formats.commands import audit_command, decide_command, freeze_command
 from labkit.formats.runs import completed_runs
 from labkit.formats.scope_sha import (
     area_stamp,
@@ -628,8 +628,8 @@ def _stamp_report(
     print(f"\nstamp: {stamp_facts(stamp, grades, verdict[2])}", file=sys.stderr)
     if mode == PREFLIGHT_AUDIT:
         print(
-            f"freeze: once every finding is decided, `protocol-fill <PROTOCOL> "
-            f"--freeze {recorded.name}` names this record in the head and sets "
+            f"freeze: once every finding is decided, "
+            f"`{freeze_command(None, recorded.name)}` names this record in the head and sets "
             f"frozen = true (LAB-015 Preflight audit before freezing)",
             file=sys.stderr,
         )
