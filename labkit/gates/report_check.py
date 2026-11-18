@@ -991,16 +991,24 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     if not measured:
         # measured and deleted since: git or the index keeps them, so a
         # handover never says "no run of it was measured" over deleted runs
-        gone = {
-            rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
-            f"{gone_run_restore(rd)}"
-            for rd in held.deleted
-            if is_measurement(rd)
-        } | {
-            r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
-            f"{LOST_RUN_SENTENCE}"
-            for r in held.lost
-        }
+        gone = (
+            {
+                rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
+                f"{gone_run_restore(rd)}"
+                for rd in held.deleted
+                if is_measurement(rd)
+            }
+            | {
+                r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
+                f"{LOST_RUN_SENTENCE}"
+                for r in held.lost
+            }
+            | {
+                r: f"{r}: started (run-starts.tsv lists it), and runs/{r}/ is gone — "
+                f"{LOST_RUN_SENTENCE}"
+                for r in held.started_only
+            }
+        )
         if gone:
             return handovers.RunAccount(
                 max(gone), handovers.UNUSABLE, tuple(gone[r] for r in sorted(gone))

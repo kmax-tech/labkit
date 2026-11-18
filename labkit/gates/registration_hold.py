@@ -9,6 +9,7 @@ of each hold and its way back. Read-only; finalize tells what it finds.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -169,18 +170,20 @@ def registration_changes(
     no run answers a registered question: held too, the ways out a new
     registration that declares its changes against each (K1,
     `report_replacement.replacement_gaps`) or a handover without a declared
-    result. Before either comparison: a run of PID that left no record that
-    reads and may have been the first measurement, and the one finding is
-    then that hold (`lost_record_hold`) — no comparison with a later run in
-    its place. Empty without an answering run, a stamped id PID, or a block
+    result. Before either comparison: a run whose protocol the start
+    record, the run index and its record name differently, PID among them
+    (`binding_conflict_hold`), else a run of PID that left no record that
+    reads and may have been the first measurement (`lost_record_hold`) —
+    the one finding is then that hold, and no comparison runs in its
+    place. Empty without an answering run, a stamped id PID, or a block
     in the records. Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
     root = git_root(protocol)
     measured = state.measured_of(pid)
-    untold = lost_record_hold(
-        pid, area, without_record_of(measured), handover(protocol)
-    )
+    untold = binding_conflict_hold(
+        pid, area, measured.conflicts, handover(protocol)
+    ) or lost_record_hold(pid, area, without_record_of(measured), handover(protocol))
     if untold:
         # ends here: neither comparison below runs against a later run
         return untold
@@ -698,6 +701,39 @@ def without_record_of(measured: Measured) -> WithoutRecord:
     return measurements_without_record(measured, lost_in_the_tree_too(measured))
 
 
+def binding_conflict_hold(
+    pid: str, area: Path, conflicts: Sequence[str], handover_way: str
+) -> list[GateFinding]:
+    """The BLOCKER when the files that bind a run to a protocol contradict
+    each other and protocol PID is among the ids they name (CONFLICTS, one
+    clause per run: `Measured.conflicts`, `area_state.binding_conflicts`):
+    which runs PID measured cannot be told, so neither what it registered
+    at its first measurement nor a comparison with it — a check not
+    executable, and it blocks: no file is taken over another, and a
+    warning would let a number through on a binding nobody can name. The
+    ways out: the files made to agree with what happened, then finalize
+    again on AREA; where that cannot be settled, a new registration, or
+    the handover (HANDOVER_WAY). [] without a conflict. Pure."""
+    if not conflicts:
+        return []
+    return [
+        blocker(
+            f"which protocol a run belongs to is contradicted: "
+            f"{'; '.join(conflicts)} — no file is taken over another, so which "
+            f"runs measured this protocol, and what stood registered at its first "
+            f"measurement, cannot be told",
+            fix=f"make the files agree with what happened: the run's own record "
+            f"back from a commit, a clone or a copy that holds it, and the row "
+            f"that is wrong corrected by hand (run-starts.tsv, runs.tsv; never "
+            f"delete a row), then `{gate_command('finalize', area)}`; where that "
+            f"cannot be settled, {register_anew(pid)} — the earlier protocol, its "
+            f"runs and their verdict stay; or {handover_way}",
+            stated_outcome=NOT_EXECUTABLE,
+            rule=TECHNICAL_RULE,
+        )
+    ]
+
+
 def lost_record_hold(
     pid: str, area: Path, without: WithoutRecord, handover_way: str
 ) -> list[GateFinding]:
@@ -705,17 +741,17 @@ def lost_record_hold(
     measurement can no longer be reconstructed: a run bound to it left no
     record that reads and may have been the first (WITHOUT's `held`,
     `area_state.measurements_without_record`: no measurement that reads is
-    taken to precede it, or their run ids do not tell the order — that clause says
-    so itself). A started
+    known to precede it, or the start record does not tell their order —
+    that clause says so itself). A started
     measurement keeps counting when its record is missing; the comparison
     did not run (a check not executable), and neither a later run nor the
     protocol as committed now is compared in its place. The ways out: the
     record back from where something keeps it, then finalize again on
     AREA; where nothing keeps it, a new registration, or the handover
     (HANDOVER_WAY, `ways_out.handover`). [] otherwise — also for a run
-    without a record whose id lies more than 26 hours after that of a
-    measurement that reads (`area_state.ZONE_SPREAD`), and for one
-    whose protocol cannot be determined: `lost_record_warnings` names
+    without a record that the start record puts after a measurement that
+    reads, and for one whose protocol cannot be determined:
+    `lost_record_warnings` names
     those, and the comparison with the first measurement runs. Pure. The
     decision behind it and what it leaves to an exploratory protocol type:
     docs/notes/2026-11-18-lost-first-measurement.md."""
@@ -747,14 +783,15 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
     (WITHOUT, `area_state.measurements_without_record`), each naming its
     runs and the way back (RECORD_BACK):
 
-    - `later`: runs of the protocol whose ids lie more than 26 hours after
-      that of a measurement of it that reads — taken as started later, an
-      auxiliary rule whose assumption the warning states
-      (`area_state.CLOCKS_ASSUMED`). The comparison with the first
+    - `later`: runs of the protocol that the start record puts after a
+      measurement of it that reads — taken as started later, under an
+      assumption the warning states (`area_state.CLOCKS_ASSUMED`). The
+      comparison with the first
       measurement runs; a result that needs such a run's own
       rows is held by that result's check (the answering-run choice, the
       audit binding, the row lineage).
-    - `unassigned`: records that do not read and that no index row names.
+    - `unassigned`: records that do not read and that neither the start
+      record nor the run index names.
       Which protocol each belongs to cannot be determined, whatever the
       number of protocols in the area, so it holds no protocol — said, with
       what that leaves open, not passed over
@@ -766,9 +803,9 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
         found.append(
             GateFinding(
                 WARNING,
-                f"{'; '.join(without.later)} — the start time in "
-                f"{'its run id lies' if len(without.later) == 1 else 'each run id lies'} "
-                f"more than 26 hours after that of a measurement of this protocol "
+                f"{'; '.join(without.later)} — the start record puts "
+                f"{'its start' if len(without.later) == 1 else 'each start'} "
+                f"after that of a measurement of this protocol "
                 f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "
                 f"so the comparison with the first measurement runs without it; a "
                 f"result that needs its rows is held where that result is checked",

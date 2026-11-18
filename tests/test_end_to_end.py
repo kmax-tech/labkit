@@ -21,7 +21,7 @@ import contextlib
 import importlib.util
 import io
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import os
 import re
 import shutil
@@ -37,7 +37,7 @@ from labkit.tools import report_command
 from labkit.formats.area_state import state_of
 from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
 from labkit.tools import protocol_fill, scaffold
-from labkit.run import start_check
+from labkit.run import runlog, start_check
 from labkit.formats import (
     answering_run,
     findings,
@@ -769,9 +769,8 @@ class FirstMeasurementLost(CountCommands):
         self.assertEqual(rc, 1, out)
         self.assertIn("BLOCKER (check not executable): what the number is about", out)
         self.assertIn(f"run {run_a} is gone", out)
-        # B started seconds after A: two run ids that close order nothing
-        self.assertIn(f"whether it started before {run_b}", out)
-        self.assertIn("cannot be told", out)
+        # the start record holds both starts, A's first: nothing is unknown
+        self.assertNotIn("is unknown", out)
         self.assertNotIn("are the ones the first measurement registered", out)
         for way in ("a copy that holds it", "register anew", "--handover"):
             self.assertIn(way, out)
@@ -787,25 +786,19 @@ class FirstMeasurementLost(CountCommands):
         self.assertIn(f"as the answering run {run_b} saw the protocol", out)
 
     def test_the_twin_a_later_run_lost_is_named_and_holds_nothing(self):
-        """A stands and reads; a second measurement, started two days
-        later, is deleted before a commit. Run ids that far apart are taken
-        to order the two starts, so the registration
-        station compares as before and warns of the lost run. What needs
-        the lost run's own evidence is held by its own check: the output
-        file holds the lost run's rows, and the row provenance station
-        (`run_record_check.row_provenance_findings`) blocks A's number
-        over them. The two days are written into the index row — the one
-        trace of the lost run —, since a test cannot wait them out."""
+        """A stands and reads; a second measurement is deleted before a
+        commit. The start record puts its start after A's, so the
+        registration station compares as before and warns of the lost run.
+        What needs the lost run's own evidence is held by its own check:
+        the output file holds the lost run's rows, and the row provenance
+        station (`run_record_check.row_provenance_findings`) blocks A's
+        number over them."""
         run_a = self.measure()
         later = self.measure()
         shutil.rmtree(self.area / "runs" / later)
-        started = datetime.strptime(later[: len(_SECOND)], RUN_ID_TIME)
-        days_on = (started + timedelta(days=2)).strftime(RUN_ID_TIME)
-        indexed_as = days_on + later[len(_SECOND) :]
-        _replace(self.area / "runs.tsv", [(f"\n{later}\t", f"\n{indexed_as}\t")])
         rc, out = self.lab.finalize(self.area)
         self.assertIn("are the ones the first measurement registered", out)
-        self.assertIn(f"WARNING: run {indexed_as} is gone", out)
+        self.assertIn(f"WARNING: run {later} is gone", out)
         self.assertIn("the comparison with the first measurement runs", out)
         self.assertIn("which labkit does not check", out)
         self.assertNotIn("what the number is about cannot be compared", out)
@@ -816,6 +809,51 @@ class FirstMeasurementLost(CountCommands):
             f"derives from",
             out,
         )
+
+    def test_a_measurement_that_broke_off_and_was_deleted_keeps_counting(self):
+        """A starts and breaks off: no index row, and its directory is
+        deleted. Its row in the start record is all that is left — through
+        a reindex too. The next start says so and starts; finalize holds
+        the number of the run that followed."""
+        measure = self.area / "scripts" / "01_measure.py"
+        ok = '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}'
+        _replace(measure, [(ok, '    raise RuntimeError("broke off")')])
+        r = subprocess.run(
+            [sys.executable, str(measure)],
+            cwd=self.lab.root,
+            capture_output=True,
+            text=True,
+            env=self.lab.env,
+        )
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.lab.git("checkout", "--", str(measure))
+        (broke_off,) = [d.name for d in (self.area / "runs").iterdir()]
+        starts = self.area / "run-starts.tsv"
+        self.assertIn(f"{broke_off}\t", starts.read_text(encoding="utf-8"))
+        index = self.area / "runs.tsv"
+        indexed = index.read_text(encoding="utf-8") if index.is_file() else ""
+        self.assertNotIn(broke_off, indexed)
+        shutil.rmtree(self.area / "runs" / broke_off)
+        kept = starts.read_text(encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            runlog.reindex(self.area)
+        self.assertEqual(starts.read_text(encoding="utf-8"), kept)
+        _, out = self.start_b(broke_off)
+        self.assertIn(
+            "PROTOCOL-lines.md: this run is not held to HEAD as its first measurement",
+            out,
+        )
+        self.assertIn(
+            f"run {broke_off} is gone (the start record lists it as started", out
+        )
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("BLOCKER (check not executable): what the number is about", out)
+        self.assertIn(
+            f"run {broke_off} is gone (the start record lists it as started", out
+        )
+        self.assertIn("may have been the first", out)
+        self.assertNotIn("are the ones the first measurement registered", out)
 
     def test_a_record_of_unknown_protocol_holds_nothing_and_establishes_nothing(
         self,

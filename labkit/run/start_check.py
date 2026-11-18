@@ -149,16 +149,17 @@ def _committed_registration(
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
     one's binding: once the area measured the protocol — a measurement of
-    it whose record reads, or a run without a record that the run index
-    binds to it (`area_state.measurements_without_record`) — no run is held
+    it whose record reads, or a run without a record that the start record
+    or the run index binds to it (`area_state.measurements_without_record`)
+    — no run is held
     to HEAD as the first, and HEAD is not named as what binds; where the
     earlier run may have been the first, `earlier_measurement_note` says so
     at the start and the registration station holds the number
     (`registration_hold.lost_record_hold`). A record that does not read and
-    that no index row names counts for no protocol: the run is held to HEAD
+    that neither file names counts for no protocol: the run is held to HEAD
     as before. A HEAD git cannot read is refused as such, before either. No
     commitment check outside Git or for an unbound protocol. Reads HEAD,
-    the run index and what the area measured; writes nothing.
+    and what the area measured (STATE); writes nothing.
     """
     from labkit.formats.protocol_history import registration_in_commit
 
@@ -220,17 +221,20 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
     tree's), one sentence per case:
 
     - a run of the protocol that may have been its first measurement —
-      also where the run ids do not tell its order against a measurement
-      that reads, which its clause says: this run is not held to HEAD as
+      also where the start record does not tell its order against a
+      measurement that reads, which its clause says: this run is not held
+      to HEAD as
       the first, what stood registered then cannot be read from
       here, and the registration station holds every number of the protocol
       until the record is back or the protocol is registered anew or handed
       over;
-    - a run of the protocol whose id lies more than 26 hours after that
-      of a measurement that reads: named, with the assumption that takes
-      it as the later one (`area_state.CLOCKS_ASSUMED`); nothing is held
-      for it;
-    - a record that does not read and that no index row names: its
+    - a run of the protocol that the start record puts after a
+      measurement that reads: named, with the assumption that takes it as
+      the later one (`area_state.CLOCKS_ASSUMED`); nothing is held for it;
+    - a run whose protocol the start record, the run index and its record
+      name differently, this protocol among them: finalize will hold the
+      number;
+    - a record that does not read and that neither file names: its
       protocol cannot be determined, in an area of one protocol too, and
       the sentence says what that leaves open
       (`area_state.UNASSIGNED_LEAVES_OPEN`).
@@ -259,16 +263,23 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
         )
     if without.later:
         told.append(
-            f"{'; '.join(without.later)} — by the run ids more than 26 hours "
-            f"after a measurement of this protocol that reads started, and taken "
+            f"{'; '.join(without.later)} — by the start record after a "
+            f"measurement of this protocol that reads started, and taken "
             f"as the later one, {CLOCKS_ASSUMED}; so nothing is held for it; a "
             f"result that needs its "
             f"rows is held where that result is checked."
         )
+    if measured.conflicts:
+        told.append(
+            f"which protocol a run belongs to is contradicted: "
+            f"{'; '.join(measured.conflicts)}. The run starts; `finalize` holds "
+            f"every number of this protocol until the files agree."
+        )
     if without.unassigned:
         told.append(
             f"the record of run {', '.join(without.unassigned)} does not read, "
-            f"and the run index does not list it: which protocol it belongs to "
+            f"and neither the start record nor the run index lists it: which "
+            f"protocol it belongs to "
             f"cannot be determined — {UNASSIGNED_LEAVES_OPEN}; restore "
             f"its config.json from a commit or a copy that holds it."
         )

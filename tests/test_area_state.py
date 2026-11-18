@@ -17,12 +17,14 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from protocol_fixture import PID, completed_run, head, run_record, scope_file
 
 from labkit.formats import area_state, run_index, runs
 from labkit.formats.area_state import INDEX, TREE, Measured, assemble, state_of
+from labkit.formats.run_starts import RunStart
 from labkit.gates import hook_post_change, report_check
 
 RUN = "2026-10-07T10-00-00_ab12"
@@ -559,6 +561,102 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         )
         m = unbound.measured_of(PID)
         self.assertEqual((m.runs, m.unassigned, m.has_measured), ((), (), False))
+
+    NOON = datetime(2026, 10, 6, 12, 0, 0, tzinfo=timezone.utc)
+
+    def test_the_start_record_assigns_a_record_that_does_not_read(self):
+        """A measurement that broke off has no index row; its start row
+        binds its damaged record to the protocol, and to that one alone."""
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        start = RunStart(dead.dir.name, PID, self.NOON)
+        state = assemble(
+            Path("area"), None, TREE, [dead], [], {}, starts={dead.dir.name: start}
+        )
+        m = state.measured_of(PID)
+        self.assertEqual((m.runs, m.unassigned, m.has_measured), ((dead,), (), True))
+        self.assertEqual(m.started, {dead.dir.name: self.NOON})
+        other = state.measured_of("p-other")
+        self.assertEqual((other.runs, other.has_measured), ((), False))
+
+    def test_a_run_only_the_start_record_names_counts_as_measured(self):
+        gone = "2026-10-06T10-00-00_105e"
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [],
+            [],
+            {},
+            starts={gone: RunStart(gone, PID, self.NOON)},
+            started_only={gone: PID},
+        )
+        m = state.measured_of(PID)
+        self.assertEqual((m.started_only, m.has_measured), ((gone,), True))
+        self.assertEqual(m.lost, ())
+        self.assertFalse(state.measured_of("p-other").has_measured)
+
+    def test_sources_that_name_different_protocols_are_a_conflict_not_a_choice(self):
+        """The start record against the index for a record that does not
+        read, and against a record that reads: named for each protocol
+        involved, the unreadable one assigned to neither; the twin, sources
+        that agree, is none."""
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        reads = self._record(RUN)
+        starts = {
+            dead.dir.name: RunStart(dead.dir.name, PID, self.NOON),
+            RUN: RunStart(RUN, "p-other", self.NOON),
+        }
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [reads, dead],
+            [],
+            {},
+            indexed={dead.dir.name: "p-other", RUN: PID},
+            starts=starts,
+        )
+        self.assertEqual(
+            state.conflicts,
+            {
+                dead.dir.name: (
+                    ("the start record", PID),
+                    ("the run index", "p-other"),
+                ),
+                RUN: (
+                    ("its record", PID),
+                    ("the start record", "p-other"),
+                    ("the run index", PID),
+                ),
+            },
+        )
+        for pid in (PID, "p-other"):
+            with self.subTest(pid):
+                m = state.measured_of(pid)
+                self.assertEqual(len(m.conflicts), 2)
+                self.assertNotIn(dead, m.runs)
+                self.assertEqual(m.unassigned, ())
+        self.assertIn(
+            f"run {RUN}: its record names {PID}, the start record names p-other",
+            state.measured_of(PID).conflicts[1],
+        )
+        agreeing = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [reads, dead],
+            [],
+            {},
+            indexed={dead.dir.name: PID, RUN: PID},
+            starts={r: RunStart(r, PID, self.NOON) for r in (dead.dir.name, RUN)},
+        )
+        self.assertEqual(agreeing.conflicts, {})
+        self.assertEqual(agreeing.measured_of(PID).conflicts, ())
+        self.assertIn(dead, agreeing.measured_of(PID).runs)
 
     def test_nothing_measured(self):
         state = assemble(
