@@ -85,12 +85,14 @@ class FirstStepBeforeARun(unittest.TestCase):
 
     def test_low_names_what_only_the_task_can_say(self):
         # runlog is the last stop before the first measurement: an agent that
-        # never ran labkit-next reads the report and [reference] here
+        # never ran labkit-next reads the report, [reference] and the cold
+        # reader here
         step = self.first_step("low")
         self.assertIn('"report=REPORT.md"', step)
         self.assertIn("`[reference]`", step)
         self.assertEqual(step.count("`[reference]`"), 1, step)
-        self.assertTrue(step.endswith("repeats itself."), step)
+        self.assertIn("repeats itself;", step)
+        self.assertTrue(step.endswith("can skip it."), step)
 
     def test_high_names_the_freeze(self):
         self.assertIn("Freeze first", self.first_step("high"))

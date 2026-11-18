@@ -60,6 +60,27 @@ class ForAKindWithABar(unittest.TestCase):
                 self.assertNotIn("hand-checked", hint)
 
 
+class TheColdReader(unittest.TestCase):
+    """LAB-102 Cold reader before freezing: preflight names the reader where
+    the freeze is owed; at low nothing freezes and preflight never runs, so
+    the step before the first measurement names it (argmining27, 2026-11-17:
+    an unclear `evaluate_rows` surfaced only to another session after the
+    run)."""
+
+    def test_named_at_low_for_every_kind(self):
+        for kind in ("compute", "fit", "apply"):
+            with self.subTest(kind=kind):
+                hint = first_measurement_hint(
+                    PROTOCOL, head(repeat_cost="low", kind=kind)
+                )
+                self.assertIn("`labkit-audit experiments/02-hrv --mode clarity`", hint)
+                self.assertIn("blocks nothing", hint)
+
+    def test_not_at_high_where_preflight_names_it(self):
+        hint = first_measurement_hint(PROTOCOL, head(repeat_cost="high", kind="apply"))
+        self.assertNotIn("--mode clarity", hint)
+
+
 class WithoutAnId(unittest.TestCase):
     def test_nothing(self):
         self.assertEqual(

@@ -396,12 +396,15 @@ def first_measurement_hint(protocol: Path, text: str) -> str:
     a lasting duty; a later one is allowed and creates none); for a
     computation, how to register a value the task states as the head's
     `[reference]` when none is, and that the area test's hand-checked case
-    is filled now, its expected values found apart from the run. The first
-    two are conditional, as not every task asks for them; the third is not,
-    as finalize runs the area test of every computation.
+    is filled now, its expected values found apart from the run; at a
+    repeat cost that freezes nothing (`Lane.freeze`), the cold reader
+    (LAB-102 Cold reader before freezing), which preflight names only where
+    the freeze is owed. The first two are conditional, as not every task
+    asks for them; the third is not, as finalize runs the area test of every
+    computation.
     "" without a stamped id. The caller says whether a first measurement
-    exists; after one, none of this is to be added. Reads TEXT, writes
-    nothing."""
+    exists; after one, none of this is to be added. Reads TEXT and lists
+    the area's protocols (`commands.audit_command`), writes nothing."""
     head = head_of(text)
     if not head.id:
         return ""
@@ -426,5 +429,16 @@ def first_measurement_hint(protocol: Path, text: str) -> str:
             f"before you measure, its expected values found apart from the run — "
             f"by hand from its rows or from an independent source; a value "
             f"copied from a run's output tests only that the code repeats itself"
+        )
+    if not lane(head.repeat_cost).freeze:
+        # high hears it from preflight before the freeze; low runs no preflight
+        clarity = commands.audit_command(
+            protocol.parent, "--mode", "clarity", protocol=protocol
+        )
+        hint += (
+            f"; let a cold reader read the area while its prose can still change: "
+            f"`{clarity.line}` (LAB-102 Cold reader before freezing) — static "
+            f"evidence, blocks nothing; a plain count without analysis logic of "
+            f"its own can skip it"
         )
     return hint
