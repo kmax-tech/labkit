@@ -811,7 +811,9 @@ class Change:
 @dataclass(frozen=True)
 class Replaces:
     """`[replaces]`: the protocol this one replaces and every change of the
-    registration against it (K1, docs/notes/2026-10-27-new-registration-contracts.md)."""
+    registration against it (the contract that a new registration names
+    its predecessor and declares its changes:
+    docs/notes/2026-10-27-new-registration-contracts.md, section K1)."""
 
     protocol: str
     changes: tuple[Change, ...]

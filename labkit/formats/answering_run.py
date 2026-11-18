@@ -467,8 +467,10 @@ def first_registrations(
     run at each first position (`area_state.Measured.first_groups`): its
     digest → (the first run by name that recorded it, its snapshot). One
     entry is the registration that stood before the number; several are a
-    registration that cannot be told (K3, docs/notes/2026-10-27-new-
-    registration-contracts.md). A run that recorded no block is left out."""
+    registration that cannot be told (the contract that a registration
+    stands as it stood at its first measurement:
+    docs/notes/2026-10-27-new-registration-contracts.md, section K3).
+    A run that recorded no block is left out."""
     out: dict[str, tuple[RunDir, JsonObject]] = {}
     for rd in (rd for group in groups for rd in group):
         snap = rd.config.promises if rd.config is not None else None

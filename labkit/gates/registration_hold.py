@@ -140,7 +140,7 @@ def registration_changes(
     held: evidence.AreaEvidence,
 ) -> list[GateFinding]:
     """The answering RUN holds the registration its protocol's first
-    measurement recorded (K3, docs/notes/2026-10-27-new-registration-contracts.md):
+    measurement recorded (the contract of docs/notes/2026-10-27-new-registration-contracts.md, section K3):
     the promise block in each run's record (`promises.snapshot`: ids, keys,
     sentences through the block's digest, scopes, constants — not the code
     the scopes name, so a repair measured again under the same promises

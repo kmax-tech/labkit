@@ -28,7 +28,8 @@ class Checked:
     """The context of one check, built once (`checked`) and read by every
     station: one protocol text, one head, one answering run, one named file
     state. This gate's checks use the same declaration and run choice.
-    The nested finalize gate and analysis script read their own inputs.
+    The nested finalize gate is handed the same area state and evidence;
+    the analysis script, a process of its own, reads its own inputs.
 
     Attributes:
         area: The area, resolved.

@@ -628,9 +628,13 @@ def insert_line(lines: list[str], at: int, new: str) -> None:
 def fields(text: str) -> list[FieldLine]:
     """Every bold field label in the prose, outside code fences. A label may
     wrap onto the next line (`- **Resolution check (ZERO calls, …\n
-    extremes):** <…>`); it is read whole. Parsed once per text: the checker
-    asks for a protocol's fields from seven places (owed fields, holes,
-    the model, the measure runs, the leftovers, the references)."""
+    extremes):** <…>`); it is read whole. Parsed once per text: one check
+    of a protocol asks for its fields many times — thirteen functions of
+    this module read them (`field_values`, `repeated_fields`, `field_at`,
+    `named_field`, `promise_names`, `placeholder_fields`, `open_holes`,
+    `check_fields`, `low_registration_missing`, `written_before_run`,
+    `reported_claim`, `recorded_results_field`, `prompt_blocks`), and the
+    gates and tools ask again."""
     return list(_parsed_fields(text))
 
 

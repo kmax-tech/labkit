@@ -782,7 +782,7 @@ def _untracked_files(repo: Path, source: Path) -> list[Path]:
     pass the untracked data files beside it). An empty or all-hidden
     directory passes — the run read no file of it. A symbolic link under it
     counts as tracked when git holds the link, not its target's content.
-    The directory is resolved first and lies in REPO (`_source_finding`
+    The directory is resolved first and lies in REPO (`source_finding`
     passes one outside it over). Raises GitError when git fails."""
     if path_kind(source) != "dir":
         return [] if tracked(repo, source) else [source]
