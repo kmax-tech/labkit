@@ -747,7 +747,7 @@ def require_detached(base_dir: Path, limit: tuple[float, str]) -> None:
         with_way_out(
             f"runlog: this run declares run_kind='measurement' and sits in a "
             f"foreground shell an agent harness kills after {limit[0]:g} s "
-            f"({limit[1]}) — the kill takes the process group mid-run (2026-08-13)",
+            f"({limit[1]}) — the kill takes the process group mid-run",
             f"start it detached: `runlog start {shown_area(base_dir)} -- <the same "
             f"command>`; or, if the caller already detached it (run_in_background, "
             f"nohup+setsid), acknowledge with LABKIT_DETACHED=1",
