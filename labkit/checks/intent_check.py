@@ -45,14 +45,16 @@ run is named with --metrics.
 from __future__ import annotations
 
 import ast
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.gate import AREA_SLOT, cited_rule
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
+from labkit.formats.commands import measure_anew
 from labkit.formats.gate import (
     EXIT_CONTRACT,
+    TECHNICAL_RULE,
     GateFinding,
     blocker,
     with_way_out,
@@ -167,12 +169,14 @@ def _metrics_file(
 
 
 def _key_mismatch(
-    protocol: Path, mpath: Path, reg: set[str], metrics: dict
+    registered_in: Path | str, mpath: Path, reg: set[str], metrics: dict
 ) -> list[str]:
-    """Registered ids without a key, keys without a registered id."""
+    """Registered ids without a key, keys without a registered id;
+    REGISTERED_IN is how the sentences name the text that registers them
+    (the protocol's path, or words for a text read back from git)."""
     led = reported_intent_ids(metrics)
     return [
-        f"{protocol}: [{i}] registered, but {mpath.name} has no "
+        f"{registered_in}: [{i}] registered, but {mpath.name} has no "
         f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key — the promise has no implementation "
         f"evidence in the metrics."
         for i in sorted(reg - led)
@@ -372,6 +376,55 @@ def unregistered_outcomes(
             )
         )
     return out
+
+
+def origin_intent_findings(
+    run_dir: Path, text_then: str, area: Path
+) -> list[GateFinding]:
+    """An origin run held to its own registration: the comparisons
+    intent-check makes for an answering run (`_key_mismatch`,
+    `check_block_against_run`, `unregistered_outcomes`), made for origin
+    run RUN_DIR against TEXT_THEN, the protocol as that run saw it when it
+    started (`audit_binding.source_protocol_then`) — never the protocol as
+    it reads now, whose later ids the run was not measured for. A blocker
+    each, for the run of AREA computed from it: a number computed from a
+    run that does not report what it was registered for rests on no
+    answer of that registration. The way out measures the origin anew
+    and computes from that run; the origin run's files stay as they are.
+    In this order: a promise block of TEXT_THEN that does not read is a
+    blocker, whatever the text registers; a text that registers no id
+    owes nothing ([]); then the comparisons, and a metrics.json or a run
+    record that does not read is a blocker too. [] when the run reports
+    every promise of its text. Reads the run's files, writes nothing."""
+    name = run_dir.name
+    told_as = f"origin run {name}, held to the protocol as it saw it"
+    fix = (
+        f"measure the origin anew under its protocol and compute from that "
+        f"run ({measure_anew(area)}); the files of origin run {name} and the "
+        f"text it was measured under stay as they are"
+    )
+    try:
+        block = promises.parse_block(text_then)
+    except promises.PromiseError as exc:
+        return [blocker(f"{told_as}: promise block: {exc}", fix=fix, rule=exc.rule)]
+    registered = ids_in_prose(text_then)
+    if not registered:
+        return []
+    mpath = metrics_path(run_dir)
+    try:
+        metrics = read_metrics(mpath)
+        found = [
+            blocker(m, fix=fix, rule=LAB_004)
+            for m in _key_mismatch("its protocol then", mpath, registered, metrics)
+        ]
+        if block is not None:
+            found += check_block_against_run(block, mpath, metrics)
+            found += unregistered_outcomes(block, metrics, name)
+    except ValueError as exc:  # MetricsError, RunConfigError
+        return [blocker(f"{told_as}: {exc}", fix=fix, rule=TECHNICAL_RULE)]
+    # the comparisons word their way out for an answering run (fix the code,
+    # measure again); for an origin run the way out is a new origin
+    return [replace(f, text=f"{told_as}: {f.text}", fix=fix, step=None) for f in found]
 
 
 def promised_constant_mismatches(

@@ -123,7 +123,13 @@ from labkit.formats.gate import (
     with_rule,
     withdrawn_first,
 )
-from labkit.formats.runs import metrics_path, metrics_text, read_data, read_metrics
+from labkit.formats.runs import (
+    metrics_path,
+    metrics_text,
+    read_data,
+    read_metrics,
+    runs_path,
+)
 from labkit.formats import (
     console,
     findings as audit_findings,
@@ -164,6 +170,7 @@ from labkit.gates.registration_station import check_registration
 from labkit.gates.ways_out import PROTOCOL_NAMED
 from labkit.formats.commands import register_anew
 from labkit.checks.intent_check import NoRunChosen
+from labkit.checks.intent_check import origin_intent_findings
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
@@ -706,7 +713,10 @@ def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> N
     under as it started (`audit_binding.source_protocol_then`) — a blocker
     when the run was bound to one and that text cannot be read back
     (`source_protocol_finding`), a note when it reads or when the run was
-    bound to none."""
+    bound to none. A text that reads is the one the origin run is held to:
+    it reports every promise that text registered, as intent-check holds
+    an answering run (`intent_check.origin_intent_findings`) — a blocker
+    each where its metrics and that text disagree; the protocol as it reads now is not asked."""
     root = git_root(area)
     for run_id in dict.fromkeys(held):
         then = source_protocol_then(area, run_id, root)
@@ -716,7 +726,15 @@ def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> N
         elif then.bound is False:
             findings.note(f"  {then.where}; none is owed")
         else:
+            # no finding and bound: `source_protocol_finding` left only a text that reads
+            assert then.text is not None
             findings.note(f"  its protocol then: {then.where}")
+            origin_blockers = origin_intent_findings(
+                runs_path(area) / run_id, then.text, area
+            )
+            findings.take_all(origin_blockers)
+            if not origin_blockers:
+                findings.note(f"  {run_id}, held to that text: no mismatch")
 
 
 def check_area_tests(findings: Findings, area: Path) -> None:

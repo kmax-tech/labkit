@@ -12,6 +12,7 @@ import json
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from labkit.checks import origin_check
@@ -50,6 +51,7 @@ from labkit.formats.runs import (
     OutputEntry,
     UnreadableRun,
 )
+from labkit.gates import finalize
 from labkit.gates.finalize import check_input_origins
 from labkit.run import runlog
 from labkit.run.input_origins import AreaRun
@@ -298,6 +300,41 @@ class Station(_Area):
         blocked, told = self.station(provenance_holds_bytes=True)
         self.assertEqual(blocked, [])
         self.assertIn("the provenance station names the record", told)
+
+
+class SourceHeldAtTheStation(_Area):
+    """What the station adds to `intent_check.origin_intent_findings` (tested from
+    data in tests/test_intent_check.py): an origin run whose protocol then
+    reads is held to that text, a blocker of the reading run's finalize;
+    one that reports what the text registered is a note."""
+
+    def told_under(self, text: str) -> tuple[list[str], str]:
+        """(blockers, told) of the source-protocol part with the writer's
+        protocol then read back as TEXT."""
+        then = SourceProtocolThen(
+            self.writer.run_id, True, text, f"as origin run {self.writer.run_id} saw it"
+        )
+        told: list[str] = []
+        findings = Findings(told.append)
+        with mock.patch.object(finalize, "source_protocol_then", return_value=then):
+            finalize.check_source_protocols(findings, self.area, [self.writer.run_id])
+        return findings.blocked, "\n".join(told)
+
+    def test_a_source_that_does_not_report_its_texts_promise_blocks(self) -> None:
+        blocked, told = self.told_under(
+            "- **Criterion:** [criterion-1] n is at least 1\n"
+        )
+        self.assertEqual(len(blocked), 1, told)
+        self.assertIn(
+            f"origin run {self.writer.run_id}, held to the protocol as it saw it: "
+            f"its protocol then: [criterion-1] registered",
+            told,
+        )
+
+    def test_a_source_under_a_text_without_ids_is_a_note(self) -> None:
+        blocked, told = self.told_under("- **Question:** how many rows\n")
+        self.assertEqual(blocked, [], told)
+        self.assertIn(f"{self.writer.run_id}, held to that text: no mismatch", told)
 
 
 class Piece(_Area):

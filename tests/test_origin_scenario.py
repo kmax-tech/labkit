@@ -321,6 +321,8 @@ class TwoProtocolsOfOneArea(CountCommands):
         rc, told = self.station(computed)
         self.assertEqual(rc, 0, told)
         self.assertIn(f"its protocol then: as origin run {a0} saw it", told)
+        # A0 is held to that text, not to the protocol as it reads for A1
+        self.assertIn(f"{a0}, held to that text: no mismatch", told)
 
         # A0 gone: C held, naming it; the measurement's result untouched by the station
         lab.git("rm", "-r", "-q", str(self.area / "runs" / a0))

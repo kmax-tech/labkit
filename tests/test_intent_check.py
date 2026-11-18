@@ -31,7 +31,9 @@ PROTOCOL = (
 )
 
 
-class TestIntentCheck(unittest.TestCase):
+class _AreaWithRun(unittest.TestCase):
+    """An empty area and the writer of a completed run bound to PID."""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.area = Path(self.tmp.name)
@@ -72,6 +74,8 @@ class TestIntentCheck(unittest.TestCase):
         )
         return d / "metrics.json"
 
+
+class TestIntentCheck(_AreaWithRun):
     def _run(self, argv):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
@@ -243,6 +247,60 @@ class TestIntentCheck(unittest.TestCase):
         rc, out = self._run(["--help"])
         self.assertEqual(rc, 0)
         self.assertIn("usage: intent-check", out)
+
+
+class SourceHeldToItsOwnText(_AreaWithRun):
+    """`origin_intent_findings`: an origin run held to the protocol as it saw it,
+    not to the protocol as it reads now."""
+
+    FULL = {
+        "criterion_1_pass": True,
+        "criterion_2_pass": True,
+        "criterion_3_pass": True,
+        "quality_check_1_pass": True,
+        "quality_check_2_pass": True,
+        "branch_1_outcome": "mixed",
+    }
+
+    def held(self, metrics: dict, text: str = PROTOCOL) -> list[str]:
+        mpath = self._metrics(metrics)
+        return [
+            f.line
+            for f in intent_check.origin_intent_findings(mpath.parent, text, self.area)
+        ]
+
+    def test_a_source_reporting_every_promise_of_its_text_is_clean(self):
+        self.assertEqual(self.held(self.FULL), [])
+
+    def test_a_promise_of_its_text_the_source_does_not_report_blocks(self):
+        without = {k: v for k, v in self.FULL.items() if k != "criterion_3_pass"}
+        (line,) = self.held(without)
+        self.assertIn(
+            "origin run 2026-09-09T10-00-00_ab12, held to the protocol as it saw "
+            "it: its protocol then: [criterion-3] registered",
+            line,
+        )
+        self.assertIn("measure the origin anew under its protocol", line)
+        self.assertNotIn("fix the code and measure again", line)
+
+    def test_an_id_the_protocol_registered_later_is_not_asked_of_the_source(self):
+        """The twin: the same metrics against the text as it reads now, one
+        id further, block; against the run's own text they do not."""
+        now = PROTOCOL + "- **Later:** [criterion-4] added for the next run\n"
+        self.assertEqual(len(self.held(self.FULL, now)), 1)
+        self.assertEqual(self.held(self.FULL, PROTOCOL), [])
+
+    def test_a_text_that_registers_no_id_owes_nothing(self):
+        self.assertEqual(self.held({"n": 3}, head() + "# 66 — a count\n"), [])
+
+    def test_a_source_whose_metrics_do_not_read_blocks(self):
+        mpath = self._metrics(self.FULL)
+        mpath.write_text("[", encoding="utf-8")
+        (found,) = intent_check.origin_intent_findings(
+            mpath.parent, PROTOCOL, self.area
+        )
+        self.assertIn("held to the protocol as it saw it", found.text)
+        self.assertEqual(found.grade, "BLOCKER")
 
 
 class KeysInImportedCode(unittest.TestCase):
