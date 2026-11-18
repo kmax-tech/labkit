@@ -22,6 +22,7 @@ from labkit.gates.report_hold import Sources, review_gap
 from labkit.formats.area_state import (
     Measured,
     lost_in_the_tree_too,
+    missing_start_warning,
     unassigned_record_warning,
     unread_start_warning,
 )
@@ -378,6 +379,14 @@ def unread_start_note(measured: Measured) -> GateFinding | None:
     registration station prints too); None without one. It holds nothing:
     the duty is read from the runs' own records. Pure."""
     return unread_start_warning(measured.unread_starts, measured.unassigned_starts)
+
+
+def missing_start_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    a run's record says a start file was written and none is found
+    (`area_state.missing_start_warning`, the sentence the registration
+    station prints too); None without one. It holds nothing. Pure."""
+    return missing_start_warning(measured.missing_starts)
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:

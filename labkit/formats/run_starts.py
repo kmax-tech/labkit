@@ -38,8 +38,9 @@ START_FILES_DIR = "run-starts"
 START_SUFFIX = ".json"
 
 #: the file in a run's own directory that says a start file was written
-#: for it (`write_start_mark`): what tells a run that owes a start file
-#: from one started before start files, by the run's own record
+#: for it (`write_start_mark`): the evidence, in the run's own record, of a
+#: start-file duty. Without the mark no such duty is evidenced for the run
+#: — which does not prove that none was written: a mark can be lost too
 START_MARK = "start-file"
 #: the keys of a start file, all of them and no other
 START_FIELDS = ("run_id", "protocol_id", "started_utc", "run_kind")
@@ -164,10 +165,14 @@ def write_start_mark(run_dir: Path) -> None:
     Side effects:
         Creates RUN_DIR/start-file.
 
-    The mark is the evidence, in the run's own record, that the run is
-    one of the format with start files: a run without it — every run
-    started before them — owes no start file, and nothing is guessed from
-    a version or a date. Raises OSError when it cannot be written."""
+    The mark is the evidence, in the run's own record, that a start file
+    was written for the run. For a run without it no start-file duty is
+    evidenced — every run started before start files among them —, and
+    nothing is guessed from a version or a date; that the run never had a
+    start file is not proven by it, since a mark can be lost. A mark a
+    commit holds counts where the file state lacks it
+    (`area_state.marked_runs`). Raises OSError when it cannot be
+    written."""
     (run_dir / START_MARK).write_text(
         f"{START_FILES_DIR}/{run_dir.name}{START_SUFFIX}\n", encoding="utf-8"
     )

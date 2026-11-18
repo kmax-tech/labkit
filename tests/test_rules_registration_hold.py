@@ -58,6 +58,7 @@ from labkit.formats.area_state import (
     Measured,
     WithoutRecord,
     measurements_without_record,
+    missing_start_warning,
     unread_start_warning,
 )
 from labkit.formats.runs import RunDir, parse_run_config
@@ -1081,6 +1082,26 @@ class AStartFileThatDoesNotRead(unittest.TestCase):
             registration_hold.lost_record_hold, PID, AREA, without, HANDOVER
         )
         self.assertEqual(hold.outcome, NOT_EXECUTABLE)
+
+
+class AStartFileThatIsNowhere(unittest.TestCase):
+    """`area_state.missing_start_warning`: the record says a start file was
+    written and none is found — a loss of evidence, a warning of a check
+    not executable, no hold; the twin, nothing missing, is no warning."""
+
+    def test_the_loss_is_said_as_a_loss_with_no_hand_repair(self):
+        warning = pure_call(missing_start_warning, ("2026-10-07T10-00-00_ab12",))
+        assert warning is not None
+        self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
+        self.assertIn(
+            "a start file was written for run 2026-10-07T10-00-00_ab12", warning.text
+        )
+        self.assertIn("none is found", warning.text)
+        self.assertIn("lost, not merely unknown", warning.text)
+        self.assertIn("none is written by hand", warning.fix or "")
+
+    def test_the_twin_nothing_missing_warns_of_nothing(self):
+        self.assertIsNone(pure_call(missing_start_warning, ()))
 
 
 class ABindingTheFilesContradict(unittest.TestCase):

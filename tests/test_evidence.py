@@ -310,8 +310,9 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
     that is not staged is no part of the commit. A run whose record says a
     start file was written for it (`run_starts.START_MARK`) needs that
     file staged or committed — also when the run's record was committed
-    earlier; a run without the mark, one from before start files, owes
-    none."""
+    earlier, and also when the committed mark was deleted since; for a
+    run without a mark no start-file duty is evidenced, and none is
+    asked."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp()).resolve()
@@ -372,9 +373,22 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         _git(self.root, "commit", "-qm", "its start file")
         self.assertEqual(self.staged(), [])
 
-    def test_the_twin_a_run_from_before_start_files_owes_none(self):
-        """Its record carries no mark: an existing lab's runs pass, staged
-        now or committed long ago, with no start file anywhere."""
+    def test_deleting_a_committed_mark_does_not_lift_the_duty(self):
+        """The mark a commit holds counts where the tree and the index lack
+        it: the start file is still asked for."""
+        _git(self.root, "add", str(self.run_dir))
+        _git(self.root, "commit", "-qm", "the run, marked, without its start file")
+        (self.run_dir / run_starts.START_MARK).unlink()
+        _git(self.root, "add", "-A", str(self.run_dir))
+        whys = [why for why, _ in self.staged()]
+        self.assertTrue(
+            any("is neither staged nor committed" in why for why in whys), whys
+        )
+
+    def test_the_twin_a_run_with_no_duty_evidenced_is_not_asked(self):
+        """Its record carries no mark, as every run from before start files:
+        an existing lab's runs pass, staged now or committed long ago, with
+        no start file anywhere."""
         old = _run_dir(self.area, OPEN, closed=True)
         _git(self.root, "add", str(old))
         self.assertEqual(self.staged(), [])

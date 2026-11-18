@@ -26,6 +26,7 @@ from labkit.formats.area_state import (
     UNASSIGNED_LEAVES_OPEN,
     AreaState,
     measurements_without_record,
+    missing_start_warning,
     state_of,
     unread_start_warning,
 )
@@ -237,6 +238,9 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
       number;
     - a start file that does not read: an incomplete start, named with
       what it leaves unknown (`area_state.unread_start_warning`);
+    - a run whose record says a start file was written and for which
+      none is found: evidence that is lost
+      (`area_state.missing_start_warning`);
     - a record that does not read and that neither file names: its
       protocol cannot be determined, in an area of one protocol too, and
       the sentence says what that leaves open
@@ -287,8 +291,10 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
             f"its config.json from a commit or a copy that holds it."
         )
     unread = unread_start_warning(measured.unread_starts, measured.unassigned_starts)
-    if unread is not None:
-        told.append(f"{unread.text}. {unread.fix}.")
+    missing = missing_start_warning(measured.missing_starts)
+    for warning in (unread, missing):
+        if warning is not None:
+            told.append(f"{warning.text}. {warning.fix}.")
     if not told:
         return None
     return f"runlog: WARNING — {bound.name}: " + " Also: ".join(told)

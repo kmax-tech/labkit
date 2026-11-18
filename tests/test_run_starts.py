@@ -294,6 +294,34 @@ class ReindexLeavesThem(_Area):
         self.assertNotIn(old, state.measured_of(PID).started)
 
 
+class AStartFileTheRecordNamesAndNobodyFinds(_Area):
+    """A run's record carries the mark that a start file was written. Where
+    none is found, that is told as evidence lost — at the hook, and in the
+    state every station reads — and not as a start that is merely unknown;
+    a marked run with its start file, and a run without a mark, are told
+    nothing."""
+
+    def test_a_marked_run_without_its_start_file_is_a_loss_told(self):
+        run = self.measure()
+        run_starts.start_path(self.area, run).unlink()
+        state = state_of(self.area)
+        self.assertEqual(state.missing_starts, (run,))
+        self.assertEqual(state.measured_of(PID).missing_starts, (run,))
+        self.assertEqual(state.measured_of("p-other").missing_starts, ())
+        (line,) = hook_post_change.index_problems(state)
+        self.assertIn(f"run {run}: a start file was written for it", line)
+        self.assertIn("evidence of its start is lost", line)
+
+    def test_the_twins_a_start_file_that_stands_and_a_run_without_a_mark(self):
+        marked, unmarked = self.measure(), self.measure()
+        run_starts.start_path(self.area, unmarked).unlink()
+        (self.area / "runs" / unmarked / run_starts.START_MARK).unlink()
+        state = state_of(self.area)
+        self.assertEqual(state.missing_starts, ())
+        self.assertIn(marked, state.starts)
+        self.assertEqual(hook_post_change.index_problems(state), [])
+
+
 class ThePostChangeHookTellsThem(_Area):
     """`hook_post_change.index_problems`: a run with a start file that
     started and never completed (its directory stands) and one whose record

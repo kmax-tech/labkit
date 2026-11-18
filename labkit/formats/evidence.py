@@ -84,6 +84,7 @@ from labkit.formats.repo import (
     state_text,
     text_at,
 )
+from labkit.formats.area_state import HistoryUnread, marked_runs
 from labkit.formats.commands import audit_command, stage_command
 from labkit.formats.run_starts import (
     START_FILES_DIR,
@@ -595,17 +596,24 @@ def unstaged_start_files(area: Path, root: Path) -> list[tuple[str, str]]:
     started with and when, and a check of that state — a report or an
     adoption that names the run among them — must not count a safeguard
     it lacks. The way out stages the file. [] when every such run's start
-    file is in the index. A run whose record carries no mark was started
-    before start files and owes none: told by its own record, never by a
-    guess. A marked run whose start file stands nowhere is not held here:
-    nothing could be staged, a deletion a commit made is
-    `start_file_changes`'s, and its start is unknown to every check that
-    asks. Raises GitError when git fails."""
-    marked = sorted(
-        rel.split("/")[0]
-        for rel in files_at(root, area / RUNS_DIR) or set()
-        if rel.count("/") == 1 and rel.endswith(f"/{START_MARK}")
-    )
+    file is in the index. The mark counts as the index holds it or as a
+    commit holds it (`area_state.marked_runs`): deleting a committed mark
+    does not lift the duty. For a run without a mark no start-file duty is
+    evidenced, and none is asked — its own record decides, never a guess.
+    A marked run whose start file stands nowhere is not held here: nothing
+    could be staged, a deletion a commit made is `start_file_changes`'s,
+    and the loss is told (`area_state.missing_start_warning`). Raises
+    GitError when git fails."""
+    try:
+        marked = sorted(marked_runs(area, root, staged=True))
+    except HistoryUnread:
+        # the history's marks cannot be read: the index's are asked, and
+        # the area state tells the unread history
+        marked = sorted(
+            rel.split("/")[0]
+            for rel in files_at(root, area / RUNS_DIR) or set()
+            if rel.count("/") == 1 and rel.endswith(f"/{START_MARK}")
+        )
     staged = files_at(root, area / START_FILES_DIR) or set()
     return [
         (

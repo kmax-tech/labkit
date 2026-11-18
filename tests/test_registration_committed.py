@@ -1873,6 +1873,23 @@ class ReportOwedByADeletedProtocol(_Repository):
             "no value is written into a start file by hand", warning.fix or ""
         )
 
+    def test_report_check_names_a_start_file_nobody_finds_and_holds_nothing(self):
+        """The run's record says a start file was written; none is found.
+        The loss stands at the report duty's station too, as a warning."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        run = self._run(_git(self.root, "rev-parse", "HEAD"))
+        run_starts.write_start_mark(run)
+        (warning,) = self._duty_station()
+        self.assertEqual(
+            (warning.grade, warning.outcome), (gate.WARNING, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn(f"a start file was written for run {run.name}", warning.text)
+        self.assertIn("lost, not merely unknown", warning.text)
+
     def test_the_twin_an_area_without_such_a_record_gets_no_warning(self):
         self.proto.write_text(
             head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
