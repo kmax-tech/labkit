@@ -122,6 +122,7 @@ from labkit.gates.audit_prompt import (
     gather,
     gather_clarity,
     render,
+    shown_after,
 )
 from labkit.gates.audit_reply import parse, parse_clarity, parse_fixes, scope_mismatch
 from labkit.gates.ways_out import (
@@ -532,7 +533,7 @@ def _record(
             registration=bound.state.registration,
             protocol_id=bound.protocol_id,
             run_id=bound.state.run_id,
-            shown_sha=bound.state.shown_sha,
+            shown_sha=shown_after(args.area, bound, fixes),
             fix_verdicts=fixes,
             carried=carried_of(bound.earlier_repairs, fixes),
             followup_size=followup_size(bound.earlier_repairs)

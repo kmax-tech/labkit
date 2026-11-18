@@ -109,27 +109,85 @@ ASKING = findings.Finding(
 )
 
 
+DECIDED = replace(ASKING, status="fixed", reason="asked of the follow-up")
+
+
+def _verdict(
+    word: str, *, present: bool = True, of: findings.Finding = DECIDED
+) -> findings.FixVerdict:
+    """A follow-up's verdict on a.toml#1 as OF was decided."""
+    return findings.FixVerdict(
+        "a.toml",
+        1,
+        findings.decision_digest(of),
+        word,
+        "the requested diff shows it",
+        check=ASKING.check,
+        check_present=present,
+        subject=findings.IMPLEMENTATION if word == "unresolved" else "",
+    )
+
+
+def _followed(*verdicts: findings.FixVerdict, carried=()) -> list[findings.Record]:
+    """a.toml with the decided request, b.toml the follow-up with VERDICTS."""
+    follow = replace(_record("b.toml", *carried), fix_verdicts=verdicts)
+    return [_record("a.toml", DECIDED), follow]
+
+
+def _asked(records, also=()) -> list[tuple[str, str]]:
+    return [(a.check, a.judged) for a in followup.diff_requests(records, also)]
+
+
 class Served(unittest.TestCase):
-    """A request counts from its decision on and while its chain's head keeps it."""
+    """A request counts from its decision on, until a follow-up judged it
+    on the diff it was shown."""
 
     def test_undecided_it_asks_nothing(self):
-        self.assertEqual(followup.diff_requests([_record("a.toml", ASKING)]), [])
+        self.assertEqual(_asked([_record("a.toml", ASKING)]), [])
 
     def test_decided_it_is_served(self):
-        decided = replace(ASKING, status="fixed", reason="asked of the follow-up")
-        self.assertEqual(
-            followup.diff_requests([_record("a.toml", decided)]), [ASKING.check]
-        )
+        self.assertEqual(_asked([_record("a.toml", DECIDED)]), [(ASKING.check, "")])
 
     def test_carried_open_it_is_still_served(self):
-        decided = replace(ASKING, status="fixed", reason="asked of the follow-up")
-        carried = replace(ASKING, carries="a.toml#1", subject=findings.IMPLEMENTATION)
-        records = [_record("a.toml", decided), _record("b.toml", carried)]
-        self.assertEqual(followup.diff_requests(records), [ASKING.check])
+        """Judged not assessable, the carried finding keeps the request."""
+        carried = replace(ASKING, carries="a.toml#1")
+        records = _followed(_verdict("not_assessable"), carried=(carried,))
+        self.assertEqual(_asked(records), [(ASKING.check, "")])
 
     def test_a_warning_asks_nothing(self):
         warning = replace(ASKING, grade="WARNING", status="fixed", reason="r")
-        self.assertEqual(followup.diff_requests([_record("a.toml", warning)]), [])
+        self.assertEqual(_asked([_record("a.toml", warning)]), [])
+
+    def test_judged_on_the_diff_shown_it_is_served_no_more(self):
+        for word in ("resolved", "unresolved"):
+            with self.subTest(word):
+                (asked,) = _asked(_followed(_verdict(word)))
+                self.assertEqual(asked[0], ASKING.check)
+                self.assertEqual(asked[1], f"a.toml#1 found `{word}`")
+
+    def test_the_twins_a_verdict_without_the_diff_or_on_another_decision(self):
+        unseen = _followed(_verdict("resolved", present=False))
+        self.assertEqual(_asked(unseen), [(ASKING.check, "")])
+        earlier = replace(DECIDED, reason="an earlier why")
+        moved = _followed(_verdict("resolved", of=earlier))
+        self.assertEqual(_asked(moved), [(ASKING.check, "")])
+
+    def test_a_verdict_not_yet_recorded_counts_as_one(self):
+        """The record about to be written binds the state after its own
+        verdicts: the same answer as once it stands."""
+        self.assertEqual(
+            _asked([_record("a.toml", DECIDED)], (_verdict("resolved"),)),
+            _asked(_followed(_verdict("resolved"))),
+        )
+
+    def test_the_carried_finding_of_a_judged_request_asks_nothing_again(self):
+        member = followup.Member(_record("a.toml", DECIDED), 1, DECIDED)
+        carried = followup.carried_finding(member, _verdict("unresolved"), DECIDED)
+        self.assertEqual(carried.check, "")
+        records = _followed(_verdict("unresolved"), carried=(carried,))
+        self.assertEqual(
+            _asked(records), [(ASKING.check, "a.toml#1 found `unresolved`")]
+        )
 
 
 if __name__ == "__main__":

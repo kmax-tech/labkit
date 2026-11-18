@@ -29,7 +29,9 @@ from pathlib import Path
 
 from labkit.formats import runs
 from labkit.formats.area_state import Measured, state_of
+from labkit.formats.digests import digest
 from labkit.formats.findings import DIFF_CHECK, DiffRequest, diff_request
+from labkit.formats.followup import DiffAsked
 from labkit.formats.protocol_block import BlockError, find_by_id
 from labkit.formats.protocol_history import (
     StepThen,
@@ -58,6 +60,9 @@ DIFF_SHOW_LINES = 80
 REQUEST_LABEL = "REQUESTED DIFF "
 #: how a piece that names evidence without showing it opens
 NOT_SHOWN = "not shown:"
+#: how a requested piece opens that a follow-up already judged on the
+#: text shown (`followup.diff_requests`): served, it takes no more room
+JUDGED_SHOWN = "judged:"
 #: the characters of a run's metrics.json shown inline
 RESULT_SHOW_CHARS = 600
 
@@ -144,7 +149,7 @@ class DiffBudget:
 
 
 def protocol_runs_pieces(
-    area: Path, run_dir: Path, requests: Iterable[str] = ()
+    area: Path, run_dir: Path, requests: Iterable[DiffAsked] = ()
 ) -> list[tuple[str, str]]:
     """The pieces MODE analysis is shown of the runs around RUN_DIR, the
     run audited: one for its own protocol, compared with RUN_DIR, then one
@@ -195,59 +200,38 @@ def request_label(asked: DiffRequest) -> str:
 def requested_pieces(
     area: Path,
     root: Path | None,
-    requests: Iterable[str],
+    requests: Iterable[DiffAsked],
     listed: list[Measured],
     budget: DiffBudget,
 ) -> list[tuple[str, str]]:
     """One `(label, text)` piece per `diff:` check of REQUESTS
-    (`findings.diff_request`), in their order: the code difference of its
-    new run from its old one, both runs of the protocols LISTED shows, or
-    the section of it whose file paths are its path or lie under it —
-    whole, from BUDGET before any RUN DIFF piece takes from it. NOT_SHOWN
-    and why, with nothing of the diff, when a run is listed nowhere or its
-    code does not read back, the path names nothing that differs, or the
-    text is past what BUDGET has left: a section is the narrower request.
-    A whole difference shown is noted in BUDGET.asked. Raises
-    RuntimeError when git fails."""
+    (`followup.diff_requests`), in their order. Owed whole: the code
+    difference of its new run from its old one, both runs of the protocols
+    LISTED shows, or the section of it whose file paths are its path or
+    lie under it — whole, from BUDGET before any RUN DIFF piece takes from
+    it. NOT_SHOWN and why, with nothing of the diff, when a run is listed
+    nowhere or its code does not read back, the path names nothing that
+    differs, or the text is past what BUDGET has left: a section is the
+    narrower request. A whole difference shown is noted in BUDGET.asked.
+    Judged already: JUDGED_SHOWN, the verdict and the digest of the text,
+    which takes nothing from BUDGET — the verdict stays traceable, the
+    text was judged once. Raises RuntimeError when git fails."""
     by_name = {rd.dir.name: rd for m in listed for rd in m.runs}
     out: list[tuple[str, str]] = []
-    for check in requests:
-        asked = diff_request(check)
+    for a in requests:
+        asked = diff_request(a.check)
         label = request_label(asked)
-        missing = [r for r in (asked.old, asked.new) if r not in by_name]
-        if missing:
-            out.append(
-                (
-                    label,
-                    f"{NOT_SHOWN} run {missing[0]} is no run of the protocols this "
-                    f"audit lists",
-                )
+        why, text, files = _requested_text(area, root, asked, by_name)
+        if a.judged:
+            then = (
+                f"its text (digest {digest(text.encode('utf-8'))}) is not shown again"
+                if not why
+                else f"its text does not read back now: {why}"
             )
+            out.append((label, f"{JUDGED_SHOWN} {a.judged} on the diff shown; {then}"))
             continue
-        if root is None:
-            out.append((label, f"{NOT_SHOWN} the area lies in no git repository"))
-            continue
-        old, new = (code_then(by_name[r], root) for r in (asked.old, asked.new))
-        if old.tree is None or new.tree is None:
-            unread = old if old.tree is None else new
-            out.append((label, f"{NOT_SHOWN} {unread.where}"))
-            continue
-        try:
-            diff = code_difference(root, code_scope(area, root), old.tree, new.tree)
-        except GitError as exc:
-            out.append((label, f"{NOT_SHOWN} {exc}"))
-            continue
-        text = diff.diff if asked.path is None else diff_section(diff.diff, asked.path)
-        files = [ln.split("|")[0].strip() for ln in diff.stat.splitlines() if "|" in ln]
-        if not text:
-            out.append(
-                (
-                    label,
-                    f"{NOT_SHOWN} no file of the code compared at or under "
-                    f"`{asked.path or '.'}` differs; the files that do: "
-                    f"{', '.join(files) or 'none'}",
-                )
-            )
+        if why:
+            out.append((label, f"{NOT_SHOWN} {why}"))
             continue
         if len(text) > budget.left:
             out.append(
@@ -264,9 +248,38 @@ def requested_pieces(
         budget.left -= len(text)
         if asked.path is None:
             budget.asked[(asked.old, asked.new)] = label
-        head = f"{asked.old}: {old.where}\n{asked.new}: {new.where}\n"
-        out.append((label, head + text))
+        out.append((label, text))
     return out
+
+
+def _requested_text(
+    area: Path, root: Path | None, asked: DiffRequest, by_name: dict[str, runs.RunDir]
+) -> tuple[str, str, list[str]]:
+    """(why not, text, files) of what ASKED names: "" and the text — each
+    run's code then, then the diff or its section — with the files that
+    differ, or why it cannot be shown and nothing of it."""
+    missing = [r for r in (asked.old, asked.new) if r not in by_name]
+    if missing:
+        return f"run {missing[0]} is no run of the protocols this audit lists", "", []
+    if root is None:
+        return "the area lies in no git repository", "", []
+    old, new = (code_then(by_name[r], root) for r in (asked.old, asked.new))
+    if old.tree is None or new.tree is None:
+        return (old if old.tree is None else new).where, "", []
+    try:
+        diff = code_difference(root, code_scope(area, root), old.tree, new.tree)
+    except GitError as exc:
+        return str(exc), "", []
+    text = diff.diff if asked.path is None else diff_section(diff.diff, asked.path)
+    files = [ln.split("|")[0].strip() for ln in diff.stat.splitlines() if "|" in ln]
+    if not text:
+        return (
+            f"no file of the code compared at or under `{asked.path or '.'}` "
+            f"differs; the files that do: {', '.join(files) or 'none'}",
+            "",
+            files,
+        )
+    return "", f"{asked.old}: {old.where}\n{asked.new}: {new.where}\n{text}", files
 
 
 def diff_section(diff: str, path: str) -> str:

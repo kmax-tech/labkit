@@ -189,23 +189,60 @@ def earlier_blockers(
     ]
 
 
-def diff_requests(records: list[Record]) -> list[str]:
-    """The `diff:` checks (`findings.diff_request`) of the heads of
-    RECORDS' chain that are BLOCKERs decided or carried, once each, in
-    record order — the code differences an analysis audit of their
-    protocol is shown whole (`protocol_runs.requested_pieces`). A request
+#: the verdicts that judge a request on the diff shown: whatever they
+#: found, the evidence asked for served its purpose
+JUDGING = ("resolved", "unresolved")
+
+
+@dataclass(frozen=True)
+class DiffAsked:
+    """A `diff:` check (`findings.diff_request`) an analysis audit is shown
+    for: CHECK, and JUDGED — "" while it is owed whole, else
+    `<ref> found `<verdict>`` naming the verdict that judged it."""
+
+    check: str
+    judged: str
+
+
+def diff_requests(
+    records: list[Record], also: Iterable[FixVerdict] = ()
+) -> list[DiffAsked]:
+    """The `diff:` checks of RECORDS' findings that are BLOCKERs decided or
+    carried, once each, in record order — what an analysis audit of their
+    protocol is shown of them (`protocol_runs.requested_pieces`). A request
     counts from its decision on, not from the record alone, so the audit
-    that asked still covers its state until the person decides; a carried
-    head keeps it, so the follow-up's own record covers the state it was
-    shown. Raises what `chain` raises."""
-    asked = [
-        m.finding.check
-        for m in chain(records).heads()
-        if m.finding.grade == BLOCKER
-        and m.finding.check.startswith(DIFF_CHECK)
-        and (m.finding.status in DECIDED or m.finding.carries)
-    ]
-    return list(dict.fromkeys(asked))
+    that asked still covers its state until the person decides. It is owed
+    whole until a verdict of RECORDS or ALSO (the verdicts of a record not
+    yet written) judges a finding of its chain `resolved` or `unresolved`,
+    on that finding's decision as it stands and with the diff shown
+    (`check_present`); judged, it takes no room in a later audit. ALSO
+    makes the record that judges bind the state after its own verdicts, so
+    it still covers that state once written. Raises what `chain` raises."""
+    c = chain(records)
+    verdicts = [v for r in records for v in r.fix_verdicts] + list(also)
+    judged: dict[str, str] = {}  # origin → how a verdict judged its request
+    for v in verdicts:
+        m = c.members.get(v.ref)
+        if (
+            m is not None
+            and v.verdict in JUDGING
+            and v.check_present
+            and v.check == m.finding.check
+            and v.decision_sha == decision_digest(m.finding)
+        ):
+            judged.setdefault(c.origin[m.ref], f"{v.ref} found `{v.verdict}`")
+    asked: dict[str, str] = {}
+    for ref, m in c.members.items():
+        f = m.finding
+        if (
+            f.grade == BLOCKER
+            and f.check.startswith(DIFF_CHECK)
+            and (f.status in DECIDED or f.carries)
+        ):
+            said = judged.get(c.origin[ref], "")
+            # judged anywhere in its chain, it is judged for every audit on
+            asked[f.check] = asked.get(f.check) or said
+    return [DiffAsked(check, said) for check, said in asked.items()]
 
 
 def earlier_corrections(
@@ -252,9 +289,15 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
     find it resolved: the ORIGIN's text under one prefix naming what it
     continues, why and, for an undetermined finding settled, as what (so
     the text does not grow over a chain), the
-    member's check and note, the subject VERDICT settled an undetermined
-    finding to or else the member's, the member's rule, `carries` = its
-    ref."""
+    member's check and note — no `diff:` check VERDICT judged on the diff
+    shown: that evidence served (`diff_requests`) —, the subject VERDICT
+    settled an undetermined finding to or else the member's, the member's
+    rule, `carries` = its ref."""
+    served = (
+        member.finding.check.startswith(DIFF_CHECK)
+        and verdict.verdict in JUDGING
+        and bool(verdict.check_present)
+    )
     return Finding(
         BLOCKER,
         f"carried from {member.ref} ({verdict.verdict}"
@@ -262,8 +305,8 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
         "open",
         "",
         "",
-        member.finding.check,
-        member.finding.check_note,
+        "" if served else member.finding.check,
+        "" if served else member.finding.check_note,
         member.ref,
         verdict.subject or member.finding.subject,
         member.finding.rule,

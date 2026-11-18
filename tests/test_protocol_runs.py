@@ -322,8 +322,31 @@ class RequestedDiff(e2e.CountCommands):
         )[-1]
         self.assertIn(f"required check `{self.check}`", earlier)
         self.assertIn(f"shown above under `{self.label}`", earlier)
-        # the follow-up's record covers the state it was shown, the carried
-        # finding keeping the request in it
+        # the follow-up's record covers the state after its own verdict
+        self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
+        self.assertNotIn(
+            f"check: {self.check}", out
+        )  # the carried finding asks nothing
+        # judged, the section takes no more room: a later audit is shown the
+        # verdict and the text's digest, not the text
+        _, out, prompt = self.analysis(self.clean)
+        judged = piece(prompt, self.label).split("\n", 1)[1]
+        self.assertTrue(
+            judged.startswith(f"judged: {first.name}#1 found `unresolved`"), judged
+        )
+        self.assertIn("is not shown again", judged)
+        self.assertNotIn(self.decisive, judged)
+
+    def test_a_section_judged_resolved_leaves_the_follow_up_covering(self):
+        first = self.asked()
+        self.decide(first, 1, "fixed", "the omitted section is asked of the follow-up")
+        resolved = (
+            f"FIX · {first.name}#1 · resolved · the section shows the filter is "
+            f"the declared one\n\n{self.clean}"
+        )
+        rc, out, prompt = self.analysis(resolved)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(self.decisive, piece(prompt, self.label))
         self.assertEqual(stale_lines(_verdict(self.area, self.protocol)[1]), [])
 
     def test_a_section_past_the_budget_leaves_the_judgement_open(self):

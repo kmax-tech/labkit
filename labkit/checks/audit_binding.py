@@ -122,7 +122,10 @@ def audited_run(state: AreaState, protocol: Path, text: str) -> tuple[Path | Non
 
 
 def run_rows(
-    area: Path, run_dir: Path | None, why: str, requests: Iterable[str] = ()
+    area: Path,
+    run_dir: Path | None,
+    why: str,
+    requests: Iterable[followup.DiffAsked] = (),
 ) -> list[tuple[str, str]]:
     """What MODE analysis is told to read of RUN_DIR, the answering run as
     `audited_run` chose it ONCE for both the prompt and the record: `(label,
@@ -486,7 +489,13 @@ def declared_piece(run_dir: Path | None, declared: str | None) -> list[tuple[str
     ]
 
 
-def run_shown(area: Path, run_dir: Path | None, why: str, text: str) -> RunShown:
+def run_shown(
+    area: Path,
+    run_dir: Path | None,
+    why: str,
+    text: str,
+    also: Iterable[findings.FixVerdict] = (),
+) -> RunShown:
     """`run_rows` of RUN_DIR and the declared run of the protocol TEXT
     (`declared_piece`) as one snapshot, its digest taken over those pieces
     and the protocol's audited prose (`protocol_check.audited_texts`). The
@@ -495,11 +504,13 @@ def run_shown(area: Path, run_dir: Path | None, why: str, text: str) -> RunShown
     next audit follows earlier findings up in; the fields written after the
     audit are not in it. The diffs the protocol's decided findings ask for
     (`followup.diff_requests`) are among the pieces, so deciding one makes
-    the state the follow-up shows them in. Raises AuditError when the
+    the state the follow-up shows them in; ALSO are the verdicts of a
+    record about to be written, which binds the state after them (a
+    request it judged no longer shown whole). Raises AuditError when the
     area's records do not read."""
     pid = protocol_block.id_of(text)  # None asks for nothing
     try:
-        requests = followup.diff_requests(followup.protocol_records(area, pid))
+        requests = followup.diff_requests(followup.protocol_records(area, pid), also)
     except findings.FindingsError as exc:
         raise AuditError(str(exc), fix=findings.record_way(area)) from exc
     pieces = tuple(

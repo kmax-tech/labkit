@@ -16,7 +16,7 @@ import ast
 import json
 import os
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -806,8 +806,10 @@ class BoundPrompt:
     the STATE the record binds (`findings.AuditedState`: code, promises,
     registration and, in MODE analysis, the run shown and the digest of
     what is shown of it); the INDEXED files (stamped, not read in full);
-    SHOWN_NOW, the earlier repairs shown (`Followup`); and PROTOCOL_ID, the
-    stamped id of the protocol read, which the record names."""
+    SHOWN_NOW, the earlier repairs shown (`Followup`); PROTOCOL_ID, the
+    stamped id of the protocol read, which the record names; in MODE
+    analysis the RUN_DIR shown (None: none) and the protocol TEXT read,
+    from which `shown_after` takes the state again."""
 
     prompt: str
     stamp: Stamp
@@ -815,6 +817,33 @@ class BoundPrompt:
     indexed: list[Path]
     earlier_repairs: Followup
     protocol_id: str
+    run_dir: Path | None = None
+    text: str = ""
+
+
+def shown_after(
+    area: Path, bound: BoundPrompt, fixes: Sequence[findings.FixVerdict]
+) -> str | None:
+    """The `shown_sha` the record of BOUND writes, given its verdicts FIXES:
+    BOUND's own, unless FIXES judge a requested diff (`followup.JUDGING`)
+    — then the digest of the state after them (`run_shown` with ALSO), in
+    which that request is no longer shown whole, so the record still
+    covers the state once it stands. Only when the state is still the one
+    the prompt showed: had the area moved while the auditor read, the
+    record binds what it was shown and covers nothing newer."""
+    judging = [
+        v
+        for v in fixes
+        if v.verdict in followup.JUDGING
+        and v.check_present
+        and v.check.startswith(findings.DIFF_CHECK)
+    ]
+    if not judging or bound.state.shown_sha is None:
+        return bound.state.shown_sha
+    run_dir = bound.run_dir
+    if run_shown(area, run_dir, "", bound.text).sha != bound.state.shown_sha:
+        return bound.state.shown_sha
+    return run_shown(area, run_dir, "", bound.text, judging).sha
 
 
 def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
@@ -908,5 +937,12 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     ):
         raise AuditError(f"{area}: {changed}", fix=AUDIT_AGAIN)
     return BoundPrompt(
-        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, earlier_repairs, pid
+        prompt,
+        Stamp(snap.sha, list(snap.files)),
+        state,
+        indexed,
+        earlier_repairs,
+        pid,
+        run_dir,
+        text,
     )
