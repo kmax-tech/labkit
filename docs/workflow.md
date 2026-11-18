@@ -114,7 +114,9 @@ script's block runs it writes the run's start file outside that directory,
 `run-starts/<run_id>.json` (run id, protocol id, UTC start, run kind). Commit
 the relevant source, outputs and records using explicit paths, the start
 file among them: until a commit holds it, it exists on this machine only,
-and git reports the tree as changed.
+and git reports the tree as changed. Only the commit secures it: a run
+whose directory and start file both vanish before a commit holds either
+leaves labkit no evidence, and nothing is seen.
 
 **Done / way out:** the measurement completed. With a registered report and
 nothing adopted, `labkit-next` names the progress account next, before the
