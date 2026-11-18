@@ -47,7 +47,9 @@ def is_alive(pid: object, script: object) -> bool | None:
     can belong to another process days later. So the command line is
     checked for the recorded script name as well. If that cannot be
     decided (no `ps`, no script name), the answer is **None**, not `True`:
-    an "unknown" is usable, a false "running" is not.
+    an "unknown" is usable, a false "running" is not. A PID that is no
+    integer, or one the system cannot hold as a process id, is undecidable
+    too: the record does not say which process it meant.
     """
     if not isinstance(pid, int):
         return None
@@ -55,6 +57,8 @@ def is_alive(pid: object, script: object) -> bool | None:
         os.kill(pid, 0)  # signal 0: existence check only
     except ProcessLookupError:
         return False
+    except OverflowError:
+        return None  # larger than any process id: not a PID the record can mean
     except PermissionError:
         pass  # exists, belongs to someone else
     cmd = _command_of(pid)
