@@ -397,7 +397,8 @@ def main(argv: list[str]) -> int:
         "a verdict other than upheld, or a claim, holds the state like any review's "
         "— and it releases nothing: it lifts no hold an earlier review placed, and "
         "its upheld or clean verdict alone releases no decision and no report; "
-        "exit: the state's, with or without --again",
+        "exit: the state's, with or without --again — 1 while a BLOCKER's "
+        "decision is not upheld and holds the number, else 0",
     )
     ap.add_argument(
         "--record",

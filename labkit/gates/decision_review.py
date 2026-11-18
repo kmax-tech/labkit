@@ -52,8 +52,10 @@ The gate: report-check blocks on an
 `limitation` BLOCKER's `stands` no review upholds, and on a closed contested
 BLOCKER, and warns on a WARNING's (`report_decisions.review_findings`).
 
-Exit codes: 0 every decision upheld, 1 at least one not upheld (whether
-that holds the number is the finding's grade's), 2 no
+Exit codes: 0 no decision reviewed holds the number — every one is
+released, or the not-upheld ones are all a WARNING's, which report-check
+only warns of —, 1 a BLOCKER's decision is not upheld and holds the
+number, 2 no
 review — no record, nothing to review in it (no `stands`, no closed
 contested finding, no carried finding closed), the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
@@ -478,19 +480,20 @@ def contested_gap(
     out changes that state (`ways_out.contested_way`), not another call."""
     text = protocol.read_text(encoding="utf-8")
     found = evidence.decision_reviews(area)
-    held = [
+    contested = [
         n
         for n, _ in reviewable(record, found)
         if reviews.contested(record, n, found, text)
     ]
-    if not held:
+    if not contested:
         return None
     promised = audit_decisions.may_leave_unassessed(area, protocol)
     decide_again = "; ".join(
-        f"finding #{n}: {_way(record, n, found, text, promised)}" for n in held
+        f"finding #{n}: {_way(record, n, found, text, promised)}" for n in contested
     )
     return AuditError(
-        f"{record.path.name}: finding(s) {', '.join(map(str, held))} were reviewed as "
+        f"{record.path.name}: finding(s) {', '.join(map(str, contested))} were "
+        f"reviewed as "
         f"decided and claimed now and not upheld — another draw settles nothing",
         fix=f"{decide_again}; `--again` draws once more: its verdicts count, and it "
         "never releases this state",
@@ -508,31 +511,39 @@ def review(
     again: bool = False,
 ) -> int:
     """The command: gather, one call, parse, write the review, print the
-    draw's verdicts and, apart, the state they leave (`held_after`). The
-    exit says the state, not the draw: 0 every decision reviewed is
-    released (`reviews.upholding`), 1 not every one — a verdict of this or
-    an earlier draw holds it, or only `--again` draws said upheld —, 2 no
-    review; among the refusals a contested state (`contested_gap`) unless
-    AGAIN, whose draw counts and releases nothing."""
+    draw's verdicts and, apart, the state they leave (`not_upheld_after`).
+    The exit says the state, not the draw, and what report-check does with
+    it: 1 a BLOCKER's decision is not released (`reviews.upholding`) and
+    holds the number (`holding_the_number`) — a verdict of this or an
+    earlier draw holds it, or only `--again` draws said upheld —, 0 none
+    is: every decision reviewed is released, or the ones not released are
+    all a WARNING's, printed as warned —, 2 no review; among the refusals
+    a contested state (`contested_gap`) unless AGAIN, whose draw counts and
+    releases nothing."""
     try:
         chosen = the_protocol(area, protocol)
         rec = _record(area, record)
         if not again:
-            held = contested_gap(area, chosen, rec)
-            if held:
-                raise held
-        evidence = gather_review(area, chosen, rec)
+            refusal = contested_gap(area, chosen, rec)
+            if refusal:
+                raise refusal
+        shown_to_reviewer = gather_review(area, chosen, rec)
         console.progress(
             "labkit-audit",
-            f"review · {rec.path.name} · {len(evidence.numbers)} "
-            f"decision(s) · {model} · {len(evidence.prompt) // 1000} kB",
+            f"review · {rec.path.name} · {len(shown_to_reviewer.numbers)} "
+            f"decision(s) · {model} · {len(shown_to_reviewer.prompt) // 1000} kB",
         )
         # journaled like an audit: a review deleted before the commit is
         # noticed by the attempt that names it
         with audit_call.journaled_answer(
-            area, REVIEW, model, evidence.scope_sha, evidence.prompt, timeout
+            area,
+            REVIEW,
+            model,
+            shown_to_reviewer.scope_sha,
+            shown_to_reviewer.prompt,
+            timeout,
         ) as (running, report):
-            lines = parse_review(report, evidence.numbers)
+            lines = parse_review(report, shown_to_reviewer.numbers)
             print(report)
             if out:
                 out.write_text(report, encoding="utf-8")
@@ -546,9 +557,9 @@ def review(
                 area,
                 model,
                 rec.path.name,
-                evidence.scope_sha,
-                evidence.shown_sha,
-                evidence.claim_sha,
+                shown_to_reviewer.scope_sha,
+                shown_to_reviewer.shown_sha,
+                shown_to_reviewer.claim_sha,
                 decisions,
                 again=again,
             )
@@ -557,25 +568,26 @@ def review(
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     u, r, i = reviews.counts_of(decisions)
-    held = held_after(area, chosen, rec, [d.finding for d in decisions])
+    not_upheld = not_upheld_after(area, chosen, rec, [d.finding for d in decisions])
     print()
     print(
         f"review: this draw{' (--again, it releases nothing)' if again else ''} "
         f"— {u} upheld, {r} rejected, {i} insufficient, recorded in "
         f"{shown(written, Path.cwd())}"
     )
-    print_review_state(rec, held)
+    print_review_state(rec, not_upheld)
     hint = render_hint(area, chosen, written)
     if hint:
         print(f"  {hint}")
-    print_contested_ways(area, chosen, rec, held)
-    return 1 if held else 0
+    print_contested_ways(area, chosen, rec, not_upheld)
+    # 1 only when a not-upheld BLOCKER holds the number; WARNINGs alone: 0
+    return 1 if holding_the_number(rec, not_upheld) else 0
 
 
 def print_contested_ways(
     area: Path, protocol: Path, record: findings.Record, not_upheld: list[int]
 ) -> None:
-    """Print the way out of each finding among NOT_UPHELD (`held_after`)
+    """Print the way out of each finding among NOT_UPHELD (`not_upheld_after`)
     whose state a review of AREA contests (`reviews.contested`, under the
     claim PROTOCOL makes): the way the gate and the refusal name (`_way`),
     chosen by every draw on the state — this draw's verdict alone named the
@@ -646,17 +658,26 @@ def render_hint(area: Path, protocol: Path, written: Path) -> str:
     )
 
 
+def holding_the_number(record: findings.Record, not_upheld: list[int]) -> list[int]:
+    """The findings among NOT_UPHELD (`not_upheld_after`) whose decision
+    holds RECORD's number at report-check: the BLOCKERs. A WARNING's
+    decision no review upholds is only warned
+    (`report_decisions.check_limits_upheld`)."""
+    return [n for n in not_upheld if record.findings[n - 1].grade == BLOCKER]
+
+
 def print_review_state(record: findings.Record, not_upheld: list[int]) -> None:
     """Print the review state of RECORD after a draw: the findings among
-    NOT_UPHELD (`held_after`) by what report-check does with them — a
-    BLOCKER's decision holds the number, a WARNING's is only warned
-    (`report_decisions.check_limits_upheld`) —, or that every decision
-    reviewed is released. Side effect: stdout only."""
-    held = [n for n in not_upheld if record.findings[n - 1].grade == BLOCKER]
-    warned = [n for n in not_upheld if n not in held]
-    if held:
+    NOT_UPHELD (`not_upheld_after`) by what report-check does with them — a
+    BLOCKER's decision holds the number (`holding_the_number`), a
+    WARNING's is only warned —, or that every decision reviewed is
+    released. Side effect: stdout only."""
+    holding = holding_the_number(record, not_upheld)
+    warned = [n for n in not_upheld if n not in holding]
+    if holding:
         print(
-            f"review state: held — finding(s) {', '.join(map(str, held))} not released"
+            f"review state: held — finding(s) {', '.join(map(str, holding))} "
+            "not released"
         )
     if warned:
         print(
@@ -668,13 +689,14 @@ def print_review_state(record: findings.Record, not_upheld: list[int]) -> None:
         print("review state: every decision reviewed is released")
 
 
-def held_after(
+def not_upheld_after(
     area: Path, protocol: Path, record: findings.Record, numbers: list[int]
 ) -> list[int]:
     """The findings among NUMBERS of RECORD the area's reviews, read back,
     do not release (`reviews.upholding`, under the claim PROTOCOL makes
     now) — every draw on the state counted, an `--again` draw releasing
-    nothing."""
+    nothing. BLOCKERs and WARNINGs alike: which of them hold the number is
+    `holding_the_number`."""
     text = protocol.read_text(encoding="utf-8")
     found = evidence.decision_reviews(area)
     return [n for n in numbers if not reviews.upholding(record, n, found, text)]

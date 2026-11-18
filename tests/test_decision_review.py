@@ -465,12 +465,14 @@ class TheCall(unittest.TestCase):
         and the gate say the same — not released, nothing held, decide the
         finding again — not "held" beside a commit that passes, and not the
         review already made as the way out (usage round 24, replay case 2).
-        The twin, a BLOCKER, stays held: the test above."""
+        The exit agrees with the line: 0, since no BLOCKER's decision holds
+        the number. The twin, a BLOCKER, stays held and exits 1: the test
+        above."""
         area, _ = area_with(
             [WARNING], {1: ("limitation", "one seed, said so", "stands")}
         )
         rc, out, _, _ = run_review(area, REJECTED)
-        self.assertEqual(rc, 1, out)  # not upheld: the exit code says so
+        self.assertEqual(rc, 0, out)  # nothing is held: the exit says so too
         self.assertNotIn("review state: held", out)
         self.assertIn(
             "review state: finding(s) 1 (grade WARNING) not released — nothing is held",
