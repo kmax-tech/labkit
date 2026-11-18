@@ -135,7 +135,7 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
     # every area's runs through the one walk (`runs.run_dirs`); the areas
     # are where the protocols are (`repo_protocols` skips .venv and data)
     session_runs = sorted(
-        str(rd.dir.relative_to(repo))
+        rel_posix(rd.dir, repo)
         for area in {p.parent for p in repo_protocols(repo)}
         for rd in runs.run_dirs(area)
         if (started := runs.run_started(rd.dir.name)) is not None

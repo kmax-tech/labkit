@@ -353,6 +353,12 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"\.relative_to\((?:root|repo)\)\.as_posix\(\)",
         {"repo"},
     ),
+    # the same path taken with `str()`, as a record or a stamp writes it
+    (
+        "a repo-relative path spelled by hand (str form)",
+        r"str\([^()\n]*\.relative_to\((?:root|repo)\)\)",
+        {"repo"},
+    ),
 ]
 
 
@@ -535,6 +541,7 @@ class OneHome(unittest.TestCase):
             "a discuss command spelled by hand": 'f"`protocol-fill {name} --discuss {run_id} --why …`"',
             "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
+            "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

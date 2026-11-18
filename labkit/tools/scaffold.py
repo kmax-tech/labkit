@@ -102,6 +102,7 @@ from labkit.formats.repo import (
     git_root,
     lab_root,
     area_test_stem,
+    rel_posix,
     split_area_name,
     text_at,
 )
@@ -601,7 +602,7 @@ def script_stamps(
         out[area / "scripts" / dest] = text
     out[root / "tests" / tname] = (
         template(skeleton.test)
-        .replace("<area>", str(area.relative_to(root)))
+        .replace("<area>", rel_posix(area, root))
         .replace("<NN>_<name>", tname[len("test_") : -3])
         .replace("<name>", slug)
     )
@@ -837,7 +838,7 @@ def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
         )
     log = write_kind_change(area, plan)
     # the area as `stamp_area`'s closing line names it, from the repo root
-    step = next_step(area, plan.protocol).render(str(area.relative_to(root)))
+    step = next_step(area, plan.protocol).render(rel_posix(area, root))
     return area, (
         f"Kind {plan.old_kind} -> {kind} in {area}\n" + "\n".join(log) + "\n" + step
     )
