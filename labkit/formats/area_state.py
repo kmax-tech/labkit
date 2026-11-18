@@ -105,8 +105,8 @@ class Measured:
         area: The area, as the caller spelled it.
         pid: The protocol's stamped id.
         runs: Every run bound to PID — of any kind, a repeat too, finished
-            or not — and every run whose record does not read and which the
-            start record or the run index binds to PID (`assigned_to`),
+            or not — and every run whose record does not read and which its
+            start file or the run index binds to PID (`assigned_to`),
             oldest first by name; as the file state holds them, or read back
             from git where a commit holds a run the state lacks
             (`RunDir.from_commit`).
@@ -114,7 +114,7 @@ class Measured:
             and never committed — finished, as the index says (`runlog
             reindex` indexes completed runs only), with nothing left to
             read back. Never an invented record. The index names no run
-            kind: a run the start record lists as a probe or a preparation
+            kind: a run its start file lists as a probe or a preparation
             is left out (`AreaState.lost` keeps it), one without a start
             row counts, as it may have measured.
         first_groups: The first measurements — every run at each first
@@ -124,13 +124,13 @@ class Measured:
             alone: the choice names the runs bound elsewhere among its
             exclusions (`AreaState.run_facts`).
         unassigned: The ids of the area's runs whose record does not read
-            and which neither the start record nor the run index names:
+            and which neither a start file nor the run index names:
             which protocol each belongs to cannot be determined. The same
             for every PID; such a run is among no protocol's RUNS and
             counts for none — named where a check tells it
             (`measurements_without_record`), never read as a measurement
             and never as "no run".
-        started_only: The ids of the measurements only the start record
+        started_only: The ids of the measurements only a start file
             names, bound to PID there (its row says `run_kind =
             "measurement"`): started, with no directory in the working
             tree, no commit that holds it and no row in the run index — it
@@ -140,10 +140,10 @@ class Measured:
         started: Run id → its start in UTC, for the runs of PID the start
             record lists (RUNS, LOST and STARTED_ONLY): what orders two
             runs, and only where both have one.
-        started_as: Run id → the run kind its start row names, for the
+        started_as: Run id → the run kind its start file names, for the
             same runs: what tells a probe whose record is gone or does not
             read from a measurement.
-        conflicts: One clause per run whose protocol the start record, the
+        conflicts: One clause per run whose protocol its start file, the
             run index and its own record name differently, PID among the
             ids named (`binding_conflicts`): which protocol it belongs to
             is contradicted, and no source is taken over another.
@@ -194,12 +194,12 @@ class Measured:
         (`answering_run.is_measurement`), or a lost one? Before a
         measurement a report owes nothing and a report may still be
         registered; after it the registration stands. The one question
-        behind "before the first measurement": a lost run, a run only the
-        start record names and an unreadable record bound to PID count, as
+        behind "before the first measurement": a lost run, a run only a
+        start file names and an unreadable record bound to PID count, as
         each may have been the first — `firsts` is no answer to it, it
         names only the measurements whose record reads. A record of
         UNASSIGNED does not count: its protocol is unknown, and it is held
-        against none. Neither does a run the start record lists as a probe
+        against none. Neither does a run its start file lists as a probe
         or a preparation, whatever became of its record
         (`may_have_measured`)."""
         return (
@@ -211,7 +211,7 @@ class Measured:
     def may_have_measured(self, rd: RunDir) -> bool:
         """May the run RD of RUNS have measured PID? Its record's kind where
         the record reads (`answering_run.is_measurement`); where it does
-        not, the kind its start row names, and yes without a start row —
+        not, the kind its start file names, and yes without a start file —
         nothing says it was a probe."""
         if rd.error is None:
             return is_measurement(rd)
@@ -283,9 +283,9 @@ class AreaState:
         indexed: The local run index as read, run id → protocol id in
             index order (`run_index.indexed_bindings`), the runs that
             stand included: which runs reached completion, and with the
-            start record what binds a run without a record to a protocol
+            start files what binds a run without a record to a protocol
             (`assigned_to`). Its order tells nothing.
-        starts: The local start record as read, run id → its row
+        starts: The start files as read, run id → what each holds
             (`run_starts.read_starts`): which run started with which
             protocol, when and as which kind.
         started_only: Run id → protocol id of the runs only the start
@@ -370,7 +370,7 @@ def assemble(
     protocol ids, PROTOCOLS the area's protocol files with PROTOCOL_TEXTS
     (resolved path → text) and ADOPTION_PENDING, INDEXED the run index as
     read (run id → protocol id, the runs that stand included), STARTS the
-    start record as read and STARTED_ONLY the runs only it names with their
+    start files as read and STARTED_ONLY the runs only they name with their
     protocol ids —, every derived field computed here once:
     the one assembly for `state_of` and for a test that builds a state
     without files. Pure but for git's ancestry questions in the first
@@ -441,7 +441,7 @@ def assigned_to(
     rd: RunDir, indexed: Mapping[str, str], starts: Mapping[str, RunStart]
 ) -> str | None:
     """The protocol id a run RD whose record does not read is assigned to:
-    the one its row in the start record STARTS or in the run index INDEXED
+    the one its start file (STARTS) or its row in the run index INDEXED
     names ("" for a run that started or was recorded unbound) — the
     evidence of a binding the record no longer gives. None for a record
     that reads (its own binding holds), for one neither file names
@@ -461,10 +461,10 @@ def _named(
     run: str, indexed: Mapping[str, str], starts: Mapping[str, RunStart]
 ) -> dict[str, str]:
     """Source → protocol id for RUN, of the two files that name a binding
-    outside the run's own record: the start record, the run index."""
+    outside the run's own record: its start file, the run index."""
     named: dict[str, str] = {}
     if run in starts:
-        named["the start record"] = starts[run].protocol_id
+        named["its start file"] = starts[run].protocol_id
     if run in indexed:
         named["the run index"] = indexed[run]
     return named
@@ -477,7 +477,7 @@ def binding_conflicts(
 ) -> dict[str, tuple[tuple[str, str], ...]]:
     """Run id → ((source, protocol id), …) for every run whose sources name
     different protocols: its own record where it reads among RECORDS, its
-    row in the start record STARTS, its row in the run index INDEXED ("" is
+    start file (STARTS), its row in the run index INDEXED ("" is
     unbound, and differs from an id). {} when every run's sources agree; a
     run one source names is no conflict. A contradiction is its own
     finding (`registration_hold.binding_conflict_hold`): which protocol the
@@ -499,7 +499,7 @@ def binding_conflicts(
 
 
 def _started_as(run: str, starts: Mapping[str, RunStart]) -> RunKind | None:
-    """The run kind RUN's start row names; None without a row."""
+    """The run kind RUN's start file names; None without one."""
     return starts[run].run_kind if run in starts else None
 
 
@@ -517,9 +517,9 @@ def _measured(
 ) -> Measured:
     """`Measured` of PID over RECORDS (present and deleted runs together):
     the runs bound to PID — by their record, or, where it does not read, by
-    the start record or the run index (`assigned_to`) —, the first groups
+    its start file or the run index (`assigned_to`) —, the first groups
     among them, FACTS of every present run for the choice, the unreadable
-    records neither file names, the measurements only the start record
+    records neither file names, the measurements only a start file
     names (STARTED_ONLY), the starts and the started kinds of all of
     these, and the contradicted bindings that name PID (CONFLICTS)."""
     ours = tuple(
@@ -561,8 +561,8 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
     """The state of AREA as FILE_STATE holds it (`AreaState`): the runs of
     the working tree (TREE, PROPOSED) or of git's index (INDEX), the runs a
     commit holds and that state lacks, the index-only ones, the ones only
-    the start record names. Raises `run_index.RunIndexError` on a run index
-    that does not read and `run_starts.RunStartsError` on a start record
+    a start file names. Raises `run_index.RunIndexError` on a run index
+    that does not read and `run_starts.RunStartsError` on a start file
     that does not — whether a deleted run was measured or started cannot
     be told then —, GitError or RuntimeError when git fails."""
     repo = git_root(area)
@@ -626,8 +626,8 @@ def index_names_gone_runs(area: Path) -> bool:
 
 
 def starts_name_open_runs(area: Path) -> bool:
-    """Does AREA's local start record list a run whose directory is gone
-    or stands without its completion record, or does the start record not
+    """Does a start file of AREA name a run whose directory is gone
+    or stands without its completion record, or does a start file not
     read? The cheap question the post-change hook asks beside
     `index_names_gone_runs`: a run that broke off, or was deleted before
     it finished, has no index row to be found by."""
@@ -636,7 +636,7 @@ def starts_name_open_runs(area: Path) -> bool:
             not (run_path(area, r) / COMPLETION_FILE).is_file()
             for r in read_starts(area)
         )
-    except RunIndexError:
+    except RunIndexError:  # a start file that does not read
         return True
 
 
@@ -671,7 +671,7 @@ def lost_in_the_tree_too(measured: Measured) -> list[str]:
     return [run for run in measured.lost if run in tree]
 
 
-#: the assumption under which two starts in the start record order two
+#: the assumption under which the starts of two start files order two
 #: runs — the clause every message prints that takes a run as the later
 #: one. A UTC time removes the zone from the question, not the clock.
 CLOCKS_ASSUMED = (
@@ -698,7 +698,7 @@ RECORD_BACK = (
 
 def unassigned_record_warning(unassigned: Sequence[str]) -> GateFinding | None:
     """The WARNING about the records of UNASSIGNED (`Measured.unassigned`:
-    they do not read, and neither the start record nor the run index
+    they do not read, and neither a start file nor the run index
     names them), None
     without one: which protocol each belongs to and what it means are
     unresolved, it is counted for no protocol and no hold follows from it
@@ -712,7 +712,7 @@ def unassigned_record_warning(unassigned: Sequence[str]) -> GateFinding | None:
     return GateFinding(
         WARNING,
         f"the record of run {', '.join(unassigned)} does not read, and neither "
-        f"the start record nor the run index lists it: which protocol it belongs "
+        f"a start file nor the run index names it: which protocol it belongs "
         f"to cannot be determined — {UNASSIGNED_LEAVES_OPEN}",
         rule=TECHNICAL_RULE,
         fix=RECORD_BACK,
@@ -729,7 +729,7 @@ class WithoutRecord:
     Attributes:
         may_be_first: One clause per such run of the protocol that no
             measurement of it that reads is known to precede — none reads,
-            or the start record puts the run's start before every one that
+            or the start files put the run's start before every one that
             does: it may have been the first measurement, so what stood
             registered before the number is not told.
         unordered: One clause per such run of the protocol whose order
@@ -742,7 +742,7 @@ class WithoutRecord:
             started later under CLOCKS_ASSUMED, so the first measurement's
             registration is read without it.
         unassigned: The ids of the runs whose record does not read and
-            which neither the start record nor the run index names
+            which neither a start file nor the run index names
             (`Measured.unassigned`): which protocol each belongs to cannot
             be determined, so it counts for none.
     """
@@ -770,9 +770,9 @@ def measurements_without_record(
     """The runs without a record, as they bear on MEASURED's protocol
     (`WithoutRecord`): each run of LOST_IN_TREE (its directory gone, no
     commit holding it, the run index listing it), each measurement only
-    the start record names (`Measured.started_only`) and each run among
+    a start file names (`Measured.started_only`) and each run among
     MEASURED's whose record does not read and which may have measured
-    (`Measured.may_have_measured`: not one its start row lists as a probe
+    (`Measured.may_have_measured`: not one its start file lists as a probe
     or a preparation) — all bound to the protocol by the start
     record or the run index (`assigned_to`) —, and MEASURED's unassigned
     records. LOST_IN_TREE is the lost runs the working tree lacks too —
@@ -781,14 +781,14 @@ def measurements_without_record(
 
     Assignment first, order second: a file names the protocol, and only
     then a time says whether the run may have been its first measurement.
-    The order of two runs is told only where the start record holds a UTC
+    The order of two runs is told only where start files hold a UTC
     start for both (`Measured.started`), against the measurements of the
     protocol whose record reads (no repeat, no probe; a run a commit holds
     back among them): after one of them, the run is LATER; before every
     one of them, or with none that reads, it MAY_BE_FIRST; with a start
     missing or shared to the second it is UNORDERED — unknown, said as
     such with what is missing, and held like the first. A run from before
-    the start record has no start there and is never ordered by its id, by
+    start files were written has none and is never ordered by its id, by
     its row's place in the index or by a commit. LATER rests on
     CLOCKS_ASSUMED, which nothing here checks.
 
@@ -816,7 +816,7 @@ def measurements_without_record(
     ] + [
         (
             run,
-            f"run {run} is gone (the start record lists it as a measurement "
+            f"run {run} is gone (its start file lists it as a measurement "
             f"that started; no directory, no commit and no row of the run index "
             f"holds it)",
         )
@@ -826,7 +826,7 @@ def measurements_without_record(
     unread = [
         (rd.dir.name, f"the record of run {rd.dir.name} does not read")
         for rd in measured.runs
-        # a record the start row lists as a probe or a preparation measured
+        # a record its start file lists as a probe or a preparation measured
         # nothing: it is `runlog <AREA>`'s to list, not a hold
         if rd.error is not None and measured.may_have_measured(rd)
     ]
@@ -848,9 +848,9 @@ def measurements_without_record(
                 f"{clause}; whether it started before the measurements that read "
                 f"is unknown — "
                 + (
-                    f"the start record holds no start for {', '.join(without)}"
+                    f"no start file holds a start for {', '.join(without)}"
                     if without
-                    else "the start record gives it the same second as one of them"
+                    else "the start files give it the same second as one of them"
                 )
             )
     return WithoutRecord(

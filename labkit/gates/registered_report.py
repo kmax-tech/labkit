@@ -306,11 +306,11 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
     Where no first measurement's registration reads — its commit not
     recorded, not held by the repository or not holding the protocol, or
     the measurement lost — that is UNREAD, never "no duty". A lost
-    measurement, a run only the start record names, and a run whose record
-    does not read and which the start record or the run index binds to
+    measurement, a run only a start file names, and a run whose record
+    does not read and which its start file or the run index binds to
     this protocol (`area_state.assigned_to`; its commit is unknowable), are
     UNREAD beside readable ones too: each may have been the first — but
-    for a run the start record lists as a probe or a preparation, which
+    for a run its start file lists as a probe or a preparation, which
     measured nothing (`Measured.may_have_measured`). A record
     that does not read and that neither file names is
     assigned to no protocol (`Measured.unassigned`): no duty is derived
@@ -353,7 +353,7 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             None,
             "",
             f"a measurement of it is lost ({', '.join(lost)}: deleted without a "
-            f"commit, only the run index or the start record lists it), and with "
+            f"commit, only the run index or its start file lists it), and with "
             f"it the commit that says what stood registered then",
         )
     return None

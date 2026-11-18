@@ -149,7 +149,7 @@ def _committed_registration(
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
     one's binding: once the area measured the protocol — a measurement of
-    it whose record reads, or a run without a record that the start record
+    it whose record reads, or a run without a record that its start file
     or the run index binds to it (`area_state.measurements_without_record`)
     — no run is held
     to HEAD as the first, and HEAD is not named as what binds; where the
@@ -221,17 +221,17 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
     tree's), one sentence per case:
 
     - a run of the protocol that may have been its first measurement —
-      also where the start record does not tell its order against a
+      also where the start files do not tell its order against a
       measurement that reads, which its clause says: this run is not held
       to HEAD as
       the first, what stood registered then cannot be read from
       here, and the registration station holds every number of the protocol
       until the record is back or the protocol is registered anew or handed
       over;
-    - a run of the protocol that the start record puts after a
+    - a run of the protocol that the start files put after a
       measurement that reads: named, with the assumption that takes it as
       the later one (`area_state.CLOCKS_ASSUMED`); nothing is held for it;
-    - a run whose protocol the start record, the run index and its record
+    - a run whose protocol its start file, the run index and its record
       name differently, this protocol among them: finalize will hold the
       number;
     - a record that does not read and that neither file names: its
@@ -263,7 +263,7 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
         )
     if without.later:
         told.append(
-            f"{'; '.join(without.later)} — by the start record after a "
+            f"{'; '.join(without.later)} — by the start files after a "
             f"measurement of this protocol that reads started, and taken "
             f"as the later one, {CLOCKS_ASSUMED}; so nothing is held for it; a "
             f"result that needs its "
@@ -278,7 +278,7 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
     if without.unassigned:
         told.append(
             f"the record of run {', '.join(without.unassigned)} does not read, "
-            f"and neither the start record nor the run index lists it: which "
+            f"and neither a start file nor the run index lists it: which "
             f"protocol it belongs to "
             f"cannot be determined — {UNASSIGNED_LEAVES_OPEN}; restore "
             f"its config.json from a commit or a copy that holds it."

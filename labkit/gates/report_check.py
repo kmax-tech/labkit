@@ -1004,7 +1004,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
                 for r in held.lost
             }
             | {
-                r: f"{r}: started (run-starts.tsv lists it), and runs/{r}/ is gone — "
+                r: f"{r}: started (its start file stands), and runs/{r}/ is gone — "
                 f"{LOST_RUN_SENTENCE}"
                 for r in held.started_only
             }

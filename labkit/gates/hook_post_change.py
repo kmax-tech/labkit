@@ -56,6 +56,7 @@ from labkit.formats.area_state import (
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.run_index import RunIndexError
+from labkit.formats.run_starts import START_FILES_DIR
 from labkit.formats.repo import (
     rel_posix,
     EXPERIMENTS,
@@ -75,9 +76,15 @@ def _git_changed(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
     return [repo / path for xy, path in entries if "D" not in xy]
 
 
+#: the directories of an area that hold its evidence: the audit files, the
+#: runs and the runs' start files
+EVIDENCE_DIRS = (findings.DIR, runs.RUNS_DIR, START_FILES_DIR)
+
+
 def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
     """The areas whose evidence ENTRIES (`repo.status_entries` of REPO) name
-    — a path in an area's `audits/` or `runs/`, deleted, changed or new —,
+    — a path in an area's `audits/`, `runs/` or `run-starts/`, deleted,
+    changed or new —,
     each once, in order."""
     out: list[Path] = []
     for _, rel in entries:
@@ -86,14 +93,14 @@ def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
         if area is None:
             continue
         inside = path.resolve().relative_to(area.resolve()).parts
-        if inside and inside[0] in (findings.DIR, runs.RUNS_DIR) and area not in out:
+        if inside and inside[0] in EVIDENCE_DIRS and area not in out:
             out.append(area)
     return out
 
 
 def gone_run_areas(repo: Path) -> list[Path]:
     """The areas of REPO's `experiments/` whose run index lists a run whose
-    directory is gone, or whose start record lists one that is gone or
+    directory is gone, or with a start file of a run that is gone or
     stands without a completion. Deleting an untracked run leaves nothing
     for git status to name, so `evidence_areas` does not see it."""
     base = repo / EXPERIMENTS
@@ -116,9 +123,9 @@ def index_problems(state: AreaState) -> list[str]:
       restores it;
     - a run only the local run index lists: it finished, its record is
       gone;
-    - a run only the start record lists: it started as the kind the row
+    - a run only a start file names: it started as the kind the file
       names and did not complete, and its record is gone;
-    - a run the start record lists whose directory stands without a
+    - a run with a start file whose directory stands without a
       completion (`unfinished_starts`): it started and never completed —
       an abort, its record still here."""
     return (
@@ -133,7 +140,7 @@ def index_problems(state: AreaState) -> list[str]:
             for r in state.lost
         ]
         + [
-            f"run {r}: its directory is gone — run-starts.tsv lists it as a "
+            f"run {r}: its directory is gone — its start file lists it as a "
             f"{state.starts[r].run_kind} that started, runs.tsv lists no completion "
             f"of it, and {LOST_RUN_SENTENCE}"
             for r in state.started_only
@@ -143,7 +150,7 @@ def index_problems(state: AreaState) -> list[str]:
 
 
 def unfinished_starts(state: AreaState) -> list[str]:
-    """One line per run the start record of STATE's area lists whose
+    """One line per run a start file of STATE's area names whose
     directory stands and which did not complete: it started as the kind
     its row names and never completed — its record is here, unlike a run
     whose directory is gone (`index_problems`). A run whose process still
@@ -161,7 +168,7 @@ def unfinished_starts(state: AreaState) -> list[str]:
             continue
         out.append(
             f"run {name}: started as a {state.starts[name].run_kind} "
-            f"(run-starts.tsv) and never completed — its directory stands, "
+            f"(its start file stands) and never completed — its directory stands, "
             f"{facts.state}"
             + ("; whether it still runs cannot be told" if alive is None else "")
             + f" (`{gate_command('runlog', state.area)}` lists why); its number, "

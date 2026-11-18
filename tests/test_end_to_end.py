@@ -771,7 +771,7 @@ class FirstMeasurementLost(CountCommands):
         self.assertEqual(rc, 1, out)
         self.assertIn("BLOCKER (check not executable): what the number is about", out)
         self.assertIn(f"run {run_a} is gone", out)
-        # the start record holds both starts, A's first: nothing is unknown
+        # the start files hold both starts, A's first: nothing is unknown
         self.assertNotIn("is unknown", out)
         self.assertNotIn("are the ones the first measurement registered", out)
         for way in ("a copy that holds it", "register anew", "--handover"):
@@ -789,7 +789,7 @@ class FirstMeasurementLost(CountCommands):
 
     def test_the_twin_a_later_run_lost_is_named_and_holds_nothing(self):
         """A stands and reads; a second measurement is deleted before a
-        commit. The start record puts its start after A's, so the
+        commit. The start files put its start after A's, so the
         registration station compares as before and warns of the lost run.
         What needs the lost run's own evidence is held by its own check:
         the output file holds the lost run's rows, and the row provenance
@@ -814,8 +814,8 @@ class FirstMeasurementLost(CountCommands):
 
     def test_a_measurement_that_broke_off_and_was_deleted_keeps_counting(self):
         """A starts and breaks off: no index row, and its directory is
-        deleted. Its row in the start record is all that is left — through
-        a reindex too. The next start says so and starts; finalize holds
+        deleted. Its start file is all that is left — through a reindex
+        too. The next start says so and starts; finalize holds
         the number of the run that followed."""
         measure = self.area / "scripts" / "01_measure.py"
         ok = '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}'
@@ -830,8 +830,8 @@ class FirstMeasurementLost(CountCommands):
         self.assertNotEqual(r.returncode, 0, r.stdout)
         self.lab.git("checkout", "--", str(measure))
         (broke_off,) = [d.name for d in (self.area / "runs").iterdir()]
-        starts = self.area / "run-starts.tsv"
-        self.assertIn(f"{broke_off}\t", starts.read_text(encoding="utf-8"))
+        starts = run_starts.start_path(self.area, broke_off)
+        self.assertIn(f'"run_id": "{broke_off}"', starts.read_text(encoding="utf-8"))
         index = self.area / "runs.tsv"
         indexed = index.read_text(encoding="utf-8") if index.is_file() else ""
         self.assertNotIn(broke_off, indexed)
@@ -846,14 +846,14 @@ class FirstMeasurementLost(CountCommands):
             out,
         )
         self.assertIn(
-            f"run {broke_off} is gone (the start record lists it as a measurement "
+            f"run {broke_off} is gone (its start file lists it as a measurement "
             f"that started",
             out,
         )
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
         self.assertIn("BLOCKER (check not executable): what the number is about", out)
-        self.assertIn(f"run {broke_off} is gone (the start record lists it", out)
+        self.assertIn(f"run {broke_off} is gone (its start file lists it", out)
         self.assertIn("may have been the first", out)
         self.assertNotIn("are the ones the first measurement registered", out)
 
@@ -921,10 +921,10 @@ for n in range(runs_each):
 
 class ParallelStarts(unittest.TestCase):
     """Processes of their own, not threads on one handle, start runs in one
-    area at the same moment: every start has its row in the start record,
-    whole, none is lost and none runs into another — the lock is the
-    kernel's `flock` on the area's lock file, one per open file
-    description (`run_index.index_lock`)."""
+    area at the same moment: every run gets an id of its own and one
+    start file, whole — each created in one step and never written into by
+    another start (`run_starts.write_start`) —, and the run index, appended
+    under its lock, lists the same runs."""
 
     PROCESSES = 8
     RUNS_EACH = 5
@@ -959,16 +959,16 @@ class ParallelStarts(unittest.TestCase):
             ids += out.split()
         total = self.PROCESSES * self.RUNS_EACH
         self.assertEqual(len(set(ids)), total)
-        # every row whole: the file reads (a torn or interleaved line would
-        # not), holds one row per start and nothing else
+        # one start file per run, each whole (a torn one would not read),
+        # and nothing else in their directory: no temporary file
         starts = run_starts.read_starts(area)
         self.assertEqual(sorted(starts), sorted(ids))
-        lines = (area / run_starts.RUN_STARTS).read_text(encoding="utf-8").splitlines()
-        self.assertEqual(len(lines), total + 1)
+        files = sorted(p.name for p in (area / run_starts.START_FILES_DIR).iterdir())
+        self.assertEqual(files, sorted(f"{r}.json" for r in ids))
         self.assertEqual({s.run_kind for s in starts.values()}, {"preparation"})
         self.assertEqual(sorted(run_index.indexed_bindings(area)), sorted(ids))
 
-    def test_no_start_row_is_lost_or_torn(self):
+    def test_every_start_has_its_own_id_and_one_whole_start_file(self):
         for n in range(self.REPETITIONS):
             with self.subTest(round=n):
                 self.one_round()

@@ -723,9 +723,9 @@ def binding_conflict_hold(
             f"runs measured this protocol, and what stood registered at its first "
             f"measurement, cannot be told",
             fix=f"make the files agree with what happened: the run's own record "
-            f"back from a commit, a clone or a copy that holds it, and the row "
-            f"that is wrong corrected by hand (run-starts.tsv, runs.tsv; never "
-            f"delete a row), then `{gate_command('finalize', area)}`; where that "
+            f"back from a commit, a clone or a copy that holds it; a start file "
+            f"a commit holds restored from that commit, never edited; a wrong row "
+            f"of runs.tsv corrected by hand, never deleted; then `{gate_command('finalize', area)}`; where that "
             f"cannot be settled, {register_anew(pid)} — the earlier protocol, its "
             f"runs and their verdict stay; or {handover_way}",
             stated_outcome=NOT_EXECUTABLE,
@@ -741,7 +741,7 @@ def lost_record_hold(
     measurement can no longer be reconstructed: a run bound to it left no
     record that reads and may have been the first (WITHOUT's `held`,
     `area_state.measurements_without_record`: no measurement that reads is
-    known to precede it, or the start record does not tell their order —
+    known to precede it, or the start files do not tell their order —
     that clause says so itself). A started
     measurement keeps counting when its record is missing; the comparison
     did not run (a check not executable), and neither a later run nor the
@@ -749,7 +749,7 @@ def lost_record_hold(
     record back from where something keeps it, then finalize again on
     AREA; where nothing keeps it, a new registration, or the handover
     (HANDOVER_WAY, `ways_out.handover`). [] otherwise — also for a run
-    without a record that the start record puts after a measurement that
+    without a record that the start files put after a measurement that
     reads, and for one whose protocol cannot be determined:
     `lost_record_warnings` names
     those, and the comparison with the first measurement runs. Pure. The
@@ -783,7 +783,7 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
     (WITHOUT, `area_state.measurements_without_record`), each naming its
     runs and the way back (RECORD_BACK):
 
-    - `later`: runs of the protocol that the start record puts after a
+    - `later`: runs of the protocol that the start files put after a
       measurement of it that reads — taken as started later, under an
       assumption the warning states (`area_state.CLOCKS_ASSUMED`). The
       comparison with the first
@@ -803,7 +803,7 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
         found.append(
             GateFinding(
                 WARNING,
-                f"{'; '.join(without.later)} — the start record puts "
+                f"{'; '.join(without.later)} — the start files put "
                 f"{'its start' if len(without.later) == 1 else 'each start'} "
                 f"after that of a measurement of this protocol "
                 f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "

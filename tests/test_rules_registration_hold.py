@@ -812,10 +812,10 @@ class ARunWithoutItsRecord(unittest.TestCase):
     record by what each means for one protocol, and the registration
     station acts on each sort: `lost_record_hold` blocks where the run may
     have been the first measurement — none that reads is known to precede
-    it, or the start record does not tell their order —,
-    `lost_record_warnings` names a run the start record puts after a
+    it, or the start files do not tell their order —,
+    `lost_record_warnings` names a run the start files put after a
     measurement that reads and a record whose protocol cannot be
-    determined. Two runs are ordered only where the start record holds a
+    determined. Two runs are ordered only where start files hold a
     UTC start for both; which protocol a run belongs to is `Measured`'s
     (tests/test_area_state.py)."""
 
@@ -836,9 +836,9 @@ class ARunWithoutItsRecord(unittest.TestCase):
         started_only: tuple[str, ...] = (),
         started: dict[str, datetime] | None = None,
     ) -> WithoutRecord:
-        """The sort for PID over its RUNS, its LOST runs, the runs only the
-        start record names, the area's UNASSIGNED records and the starts
-        the start record holds (run id → UTC)."""
+        """The sort for PID over its RUNS, its LOST runs, the runs only a
+        start file names, the area's UNASSIGNED records and the starts
+        the start files hold (run id → UTC)."""
         measured = Measured(
             AREA, PID, runs, lost, (), (), unassigned, started_only, started or {}
         )
@@ -885,7 +885,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
         without = self.sorted_out(started_only=(self.GONE,))
         (hold,) = self.held(without)
         self.assertIn(
-            f"run {self.GONE} is gone (the start record lists it as a measurement that "
+            f"run {self.GONE} is gone (its start file lists it as a measurement that "
             f"started",
             hold.text,
         )
@@ -901,22 +901,22 @@ class ARunWithoutItsRecord(unittest.TestCase):
             (
                 "no start for the lost run",
                 {first: self.NOON},
-                f"the start record holds no start for {self.GONE}",
+                f"no start file holds a start for {self.GONE}",
             ),
             (
                 "no start for the one that reads",
                 {self.GONE: self.AFTER},
-                f"the start record holds no start for {first}",
+                f"no start file holds a start for {first}",
             ),
             (
                 "no start for either",
                 {},
-                f"the start record holds no start for {self.GONE}, {first}",
+                f"no start file holds a start for {self.GONE}, {first}",
             ),
             (
                 "the same second",
                 {self.GONE: self.NOON, first: self.NOON},
-                "the start record gives it the same second as one of them",
+                "the start files give it the same second as one of them",
             ),
         ):
             with self.subTest(name):
@@ -944,7 +944,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
         self.assertIn(f"run {self.GONE} is gone", warning.text)
         self.assertIn("the comparison with the first measurement runs", warning.text)
         # a UTC start removes the zone, not the clock: the assumption is said
-        self.assertIn("the start record puts its start after", warning.text)
+        self.assertIn("the start files put its start after", warning.text)
         self.assertIn(CLOCKS_ASSUMED, warning.text)
         self.assertIn("which labkit does not check", warning.text)
         self.assertIn("a copy that holds it", warning.fix or "")
@@ -965,7 +965,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
                 self.assertEqual(len(without.may_be_first), 1)
 
     def test_a_record_that_does_not_read_is_sorted_like_a_lost_run(self):
-        """Among the protocol's runs by the start record or the index
+        """Among the protocol's runs by its start file or the index
         (`Measured.runs`): it holds or is named by the same rule."""
         first, dead = self.FIRST.dir.name, self.DEAD.dir.name
         (hold,) = self.held(
@@ -982,9 +982,9 @@ class ARunWithoutItsRecord(unittest.TestCase):
         self.assertEqual(len(without.later), 1)
 
     def test_the_twin_a_record_the_start_row_lists_as_a_probe_holds_nothing(self):
-        """A start row says what a run started as: a probe or a preparation
+        """A start file says what a run started as: a probe or a preparation
         whose record does not read measured nothing, alone or beside a
-        measurement that reads; without a start row the same record may
+        measurement that reads; without a start file the same record may
         have measured, and holds."""
         dead = self.DEAD.dir.name
         for kind in ("probe", "preparation"):
@@ -1036,12 +1036,12 @@ class ARunWithoutItsRecord(unittest.TestCase):
 
 
 class ABindingTheFilesContradict(unittest.TestCase):
-    """`binding_conflict_hold`: the start record, the run index and a run's
+    """`binding_conflict_hold`: its start file, the run index and a run's
     own record name different protocols — which runs the protocol measured
     cannot be told, a BLOCKER of a check not executable; no file wins."""
 
     CLAUSE = (
-        "run 2026-10-07T10-00-00_ab12: the start record names p-0123456789abcdef, "
+        "run 2026-10-07T10-00-00_ab12: its start file names p-0123456789abcdef, "
         "the run index names p-fedcba9876543210"
     )
 
@@ -1055,7 +1055,12 @@ class ABindingTheFilesContradict(unittest.TestCase):
         )
         self.assertIn(self.CLAUSE, hold.text)
         self.assertIn("no file is taken over another", hold.text)
-        for way in ("never delete a row", "register anew", HANDOVER):
+        for way in (
+            "restored from that commit, never edited",
+            "never deleted",
+            "register anew",
+            HANDOVER,
+        ):
             self.assertIn(way, hold.fix or "")
 
     def test_the_twin_files_that_agree_hold_nothing(self):

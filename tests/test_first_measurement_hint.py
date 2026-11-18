@@ -181,8 +181,8 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
     (`start_check.earlier_measurement_note`), one sentence per case: one
     that may have been the first measurement (HEAD does not stand in for
     what was registered then, finalize will hold the number) — also where
-    the start record does not tell its order against a measurement that
-    reads —, one the start record puts after a measurement that reads
+    the start files do not tell its order against a measurement that
+    reads —, one the start files put after a measurement that reads
     (nothing held, the assumption behind that stated), one whose binding
     the files contradict, one whose protocol cannot be determined (held
     against none) — a warning each, the run starts."""
@@ -201,7 +201,7 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
         starts: dict[str, tuple[str, int]] | None = None,
     ) -> str | None:
         """The note over the runs PRESENT, the LOST ones, the run index
-        INDEX (run id → protocol id) and the start record STARTS (run id →
+        INDEX (run id → protocol id) and the start files STARTS (run id →
         its protocol id and its start, in seconds after NOON)."""
         bound = start_check._Bound(  # noqa: SLF001
             {"id": PID, "path": "PROTOCOL-x.md"},
@@ -247,7 +247,7 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
                 f"the record of run {self.DEAD} does not read",
             ),
             (
-                "a record that does not read, bound by the start record",
+                "a record that does not read, bound by its start file",
                 {},
                 [self.dead()],
                 None,
@@ -283,7 +283,7 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
         assert note is not None
         self.assertIn(f"run {self.LOST} is gone", note)
         self.assertIn("whether it started before the measurements that read", note)
-        self.assertIn(f"the start record holds no start for {self.LOST}", note)
+        self.assertIn(f"no start file holds a start for {self.LOST}", note)
         self.assertIn("hold every number of this protocol", note)
 
     def test_a_lost_run_started_after_a_measurement_that_reads_holds_nothing(self):
@@ -304,7 +304,7 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
         note = self.note({self.DEAD: other}, [self.dead()], None, {self.DEAD: (PID, 0)})
         assert note is not None
         self.assertIn("which protocol a run belongs to is contradicted", note)
-        self.assertIn(f"the start record names {PID}", note)
+        self.assertIn(f"its start file names {PID}", note)
         self.assertIn(f"the run index names {other}", note)
 
     def test_a_record_no_file_names_is_held_against_no_protocol(self):

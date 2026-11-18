@@ -565,7 +565,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
     NOON = datetime(2026, 10, 6, 12, 0, 0, tzinfo=timezone.utc)
 
     def test_the_start_record_assigns_a_record_that_does_not_read(self):
-        """A measurement that broke off has no index row; its start row
+        """A measurement that broke off has no index row; its start file
         binds its damaged record to the protocol, and to that one alone."""
         dead = runs.RunDir(
             Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
@@ -598,11 +598,11 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertFalse(state.measured_of("p-other").has_measured)
 
     def test_the_twin_a_probe_the_files_name_is_no_measurement(self):
-        """A start row names its run's kind. A probe or a preparation run
-        whose directory is gone — only the start record names it, or the
+        """A start file names its run's kind. A probe or a preparation run
+        whose directory is gone — only a start file names it, or the
         index lists it too — and one whose record does not read are kept in
         the area's state and counted as measured for no protocol; the same
-        runs without a start row count, as nothing says what they were."""
+        runs without a start file count, as nothing says what they were."""
         gone, indexed_too = "2026-10-06T10-00-00_105e", "2026-10-06T10-00-01_105e"
         dead = runs.RunDir(
             Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
@@ -642,7 +642,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertTrue(unlisted.has_measured)
 
     def test_sources_that_name_different_protocols_are_a_conflict_not_a_choice(self):
-        """The start record against the index for a record that does not
+        """A start file against the index for a record that does not
         read, and against a record that reads: named for each protocol
         involved, the unreadable one assigned to neither; the twin, sources
         that agree, is none."""
@@ -668,12 +668,12 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             state.conflicts,
             {
                 dead.dir.name: (
-                    ("the start record", PID),
+                    ("its start file", PID),
                     ("the run index", "p-other"),
                 ),
                 RUN: (
                     ("its record", PID),
-                    ("the start record", "p-other"),
+                    ("its start file", "p-other"),
                     ("the run index", PID),
                 ),
             },
@@ -685,7 +685,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                 self.assertNotIn(dead, m.runs)
                 self.assertEqual(m.unassigned, ())
         self.assertIn(
-            f"run {RUN}: its record names {PID}, the start record names p-other",
+            f"run {RUN}: its record names {PID}, its start file names p-other",
             state.measured_of(PID).conflicts[1],
         )
         agreeing = assemble(
