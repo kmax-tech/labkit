@@ -61,6 +61,7 @@ from labkit.gates import report_context
 from labkit.checks import report_blocks
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from repo_fixture import git as _git
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -309,10 +310,8 @@ class IfReported(unittest.TestCase):
         _git(root, "rm", "-r", "-q", "--cached", run)
 
         def commit_gate() -> tuple[int, str]:
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.chdir(root):
-                rc = claude_hooks.main(["pre-commit"])
-            return rc, out.getvalue()
+            with contextlib.chdir(root):
+                return run_main(claude_hooks.main, ["pre-commit"], capture_stderr=False)
 
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
@@ -427,11 +426,12 @@ class IfReported(unittest.TestCase):
 
     def _gate(self, area: Path, *paths: Path) -> tuple[int, str]:
         """The gate over PATHS — the protocol itself when none are named."""
-        buf = io.StringIO()
         paths = paths or (area / "PROTOCOL-x.md",)
-        with contextlib.redirect_stdout(buf):
-            code = report_command.main(["--if-reported", *map(str, paths)])
-        return code, buf.getvalue()
+        return run_main(
+            report_command.main,
+            ["--if-reported", *map(str, paths)],
+            capture_stderr=False,
+        )
 
     def test_a_changed_script_reopens_the_areas_reported_number(self):
         """The protocol untouched, a script under it edited: the analysis

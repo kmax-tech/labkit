@@ -35,6 +35,7 @@ from labkit.formats import findings, protocol_block  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
 from test_end_to_end import CountCommands  # noqa: E402
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -106,14 +107,10 @@ class EachProtocolAdoptsItsOwn(CountCommands):
         )
 
     def labkit_adopt(self, protocol: Path, run_id: str) -> tuple[int, str]:
-        out = io.StringIO()
-        with (
-            contextlib.chdir(self.lab.root),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
-        ):
-            rc = adopt.main([str(self.area), run_id, "--protocol", str(protocol)])
-        return rc, out.getvalue()
+        with contextlib.chdir(self.lab.root):
+            return run_main(
+                adopt.main, [str(self.area), run_id, "--protocol", str(protocol)]
+            )
 
     def declared_run(self, protocol: Path) -> str | None:
         return protocol_block.declared_run(protocol.read_text(encoding="utf-8"))

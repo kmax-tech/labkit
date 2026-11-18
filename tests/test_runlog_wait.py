@@ -29,13 +29,11 @@ from labkit.formats import findings, promises, protocol_check, runs, scope_sha  
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import console  # noqa: E402
 from protocol_fixture import protocol_id_of, run_record, head, scope_file  # noqa: E402
+from command_fixture import run_main
 
 
 def _run_main(argv):
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        code = runlog_command.main(argv)
-    return code, buf.getvalue()
+    return run_main(runlog_command.main, argv, capture_stderr=False)
 
 
 class TestWait(unittest.TestCase):

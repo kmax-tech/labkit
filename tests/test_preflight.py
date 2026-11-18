@@ -21,6 +21,7 @@ from labkit.formats import findings, handovers, promises  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from labkit.formats.gate import Findings  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
+from command_fixture import run_main
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -86,10 +87,7 @@ def _run_preflight(area, protocol=None):
     argv = [str(area)]
     if protocol:
         argv += ["--protocol", str(protocol)]
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        code = preflight.main(argv)
-    return code, buf.getvalue()
+    return run_main(preflight.main, argv)
 
 
 class TestAreaTests(unittest.TestCase):

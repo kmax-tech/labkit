@@ -13,7 +13,6 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-import os
 import subprocess
 import tempfile
 import unittest
@@ -36,6 +35,7 @@ from labkit.formats import attempts, evidence, findings, promises, reviews, scop
 from labkit.gates import audit, decision_review, report_check
 from labkit.run import llm_backends
 from labkit.tools import protocol_fill, protocol_result
+from command_fixture import run_main
 
 RUN = "2026-10-07T10-00-00_ab12"
 BLOCKER = (
@@ -1362,17 +1362,11 @@ class RequiredCheckBesideTheDecision(unittest.TestCase):
 
 def decide_cmd(area: Path, record: Path, *words: str) -> tuple[int, str]:
     """`labkit-audit AREA --decide 1 …` run from the repo root, as an agent runs it."""
-    out = io.StringIO()
-    old = Path.cwd()
-    os.chdir(area.parents[1])
-    try:
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = audit.main(
-                ["experiments/01-x", "--decide", "1", *words, "--record", str(record)]
-            )
-    finally:
-        os.chdir(old)
-    return rc, out.getvalue()
+    with contextlib.chdir(area.parents[1]):
+        return run_main(
+            audit.main,
+            ["experiments/01-x", "--decide", "1", *words, "--record", str(record)],
+        )
 
 
 class StandsCheckHint(unittest.TestCase):

@@ -68,6 +68,7 @@ from protocol_fixture import (
 )  # noqa: E402
 from labkit.formats.runs import RUN_ID_TIME  # noqa: E402
 from repo_fixture import git
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -132,11 +133,11 @@ class Lab:
 
     def fill(self, protocol: Path, *pairs: str) -> None:
         """`protocol-fill PROTOCOL "label=value" …`, must succeed."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = protocol_fill.main([str(protocol), *pairs])
+        rc, out = run_main(
+            protocol_fill.main, [str(protocol), *pairs], capture_stderr=False
+        )
         if rc != 0:
-            raise AssertionError(f"protocol-fill: {out.getvalue()}")
+            raise AssertionError(f"protocol-fill: {out}")
 
     def conclude(
         self, protocol: Path, answer: str = "The documents hold about two lines each."
@@ -213,30 +214,27 @@ class Lab:
         return sha
 
     def finalize(self, area: Path) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = finalize.main([str(area)])
-        return rc, out.getvalue()
+        return run_main(finalize.main, [str(area)], capture_stderr=False)
 
     def adopt(self, protocol: Path, run_id: str) -> tuple[int, str]:
         """`protocol-fill PROTOCOL --from-run RUN_ID`, the Conclusion written
         first where it is open (`concluded`), as the author does: the
         adoption owes it. Its refusal without one: tests/test_adopt.py."""
         self.concluded(protocol)
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = protocol_fill.main([str(protocol), "--from-run", run_id])
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main,
+            [str(protocol), "--from-run", run_id],
+            capture_stderr=False,
+        )
 
     def adopt_forced(self, protocol: Path, run_id: str) -> tuple[int, str]:
         """`protocol-fill PROTOCOL --from-run RUN_ID --force`: (exit, what it
         printed, a refusal included), the Conclusion written first where it
         is open (`concluded`)."""
         self.concluded(protocol)
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = protocol_fill.main([str(protocol), "--from-run", run_id, "--force"])
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main, [str(protocol), "--from-run", run_id, "--force"]
+        )
 
     def stop_hook(self) -> tuple[int, str]:
         """`claude-hook stop` over everything git sees as changed."""
@@ -674,21 +672,21 @@ class CountCommands(unittest.TestCase):
         """`labkit-audit AREA --decide N`: its output, the decision's line.
         PROTOCOL is named with `--protocol`, as the decide line is printed
         in an area of several protocols."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = audit.main(
-                [
-                    str(self.area),
-                    "--decide",
-                    str(n),
-                    *decide_words(status, reason),
-                    "--record",
-                    str(record),
-                    *(["--protocol", str(protocol)] if protocol else []),
-                ]
-            )
-        self.assertEqual(rc, 0, out.getvalue())
-        return out.getvalue()
+        rc, out = run_main(
+            audit.main,
+            [
+                str(self.area),
+                "--decide",
+                str(n),
+                *decide_words(status, reason),
+                "--record",
+                str(record),
+                *(["--protocol", str(protocol)] if protocol else []),
+            ],
+            capture_stderr=False,
+        )
+        self.assertEqual(rc, 0, out)
+        return out
 
     def withdraw(self, why: str, *more: str) -> tuple[int, str]:
         out, err = io.StringIO(), io.StringIO()
@@ -1362,15 +1360,13 @@ class Withdraw(CountCommands):
             f"verdict: {int(verdict == 'upheld')} upheld, "
             f"{int(verdict == 'rejected')} rejected, 0 insufficient\n"
         )
-        out = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
         ):
-            rc = audit.main([str(self.area), "--review", "--record", str(record)])
-        return rc, out.getvalue()
+            return run_main(
+                audit.main, [str(self.area), "--review", "--record", str(record)]
+            )
 
     def test_a_false_positive_blocker_is_held_until_a_second_auditor_upholds_it(self):
         """The deciding agent's own `dismissed` does not release a blocking
@@ -1707,10 +1703,9 @@ class DataCounts(unittest.TestCase):
         return next(f.value for f in fields(text) if f.name == "data / scope")
 
     def counts(self, *args: str) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = protocol_fill.main([str(self.protocol), "--data-counts", *args])
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main, [str(self.protocol), "--data-counts", *args]
+        )
 
     def finalized(self) -> tuple[int, str]:
         return self.lab.finalize(self.area)
@@ -1909,25 +1904,20 @@ class Judge(unittest.TestCase):
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area), protocol_id=protocol_id_of(self.area),)  # fmt: skip
 
     def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = audit.main(
-                [
-                    str(self.area),
-                    "--decide",
-                    "1",
-                    *decide_words(*argv),
-                    "--record",
-                    str(record),
-                ]
-            )
-        return rc, out.getvalue()
+        return run_main(
+            audit.main,
+            [
+                str(self.area),
+                "--decide",
+                "1",
+                *decide_words(*argv),
+                "--record",
+                str(record),
+            ],
+        )
 
     def _report_check(self) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_command.main([str(self.area)])
-        return rc, out.getvalue()
+        return run_main(report_command.main, [str(self.area)])
 
     def _review(self, record: Path, verdict: str = "upheld") -> tuple[int, str]:
         """The decision review, its model faked to VERDICT the one decision."""
@@ -1937,15 +1927,13 @@ class Judge(unittest.TestCase):
             f"{int(verdict == 'rejected')} rejected, "
             f"{int(verdict == 'insufficient')} insufficient\n"
         )
-        out = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
         ):
-            rc = audit.main([str(self.area), "--review", "--record", str(record)])
-        return rc, out.getvalue()
+            return run_main(
+                audit.main, [str(self.area), "--review", "--record", str(record)]
+            )
 
     def test_04_an_accepted_blocker_reaches_the_protocol_as_its_limit(self):
         """An accepted BLOCKER may carry a

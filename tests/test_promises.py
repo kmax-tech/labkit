@@ -32,6 +32,7 @@ from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE  # noqa: E402
 from protocol_fixture import head  # noqa: E402
+from command_fixture import run_main
 
 MEASURE = """\
 def filter_items(rows):
@@ -324,10 +325,7 @@ class Chain(unittest.TestCase):
         return run.dir
 
     def check(self) -> tuple[int, str]:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = intent_check.main([str(self.protocol)])
-        return rc, buf.getvalue()
+        return run_main(intent_check.main, [str(self.protocol)], capture_stderr=False)
 
     GOOD = {"criterion_1_pass": True, "quality_check_1_anchor_ok": True}
 

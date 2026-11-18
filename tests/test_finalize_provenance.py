@@ -5,8 +5,6 @@ Elsewhere the station is n/a."""
 
 from __future__ import annotations
 
-import contextlib
-import io
 import json
 import subprocess
 import sys
@@ -26,6 +24,7 @@ from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
 from labkit.run import provenance  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
 from repo_fixture import git as _git
+from command_fixture import run_main
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -131,10 +130,7 @@ class Provenance(unittest.TestCase):
         return d
 
     def _finalize(self) -> tuple[int, str]:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = finalize.main([str(self.area)])
-        return rc, buf.getvalue()
+        return run_main(finalize.main, [str(self.area)], capture_stderr=False)
 
     def _frozen(self) -> dict:
         """The run's `data=` record of the source as it is now, as runlog

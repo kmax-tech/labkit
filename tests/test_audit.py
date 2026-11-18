@@ -55,6 +55,7 @@ from labkit.formats import (
     runs,
     scope_sha,
 )  # noqa: E402
+from command_fixture import run_main
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [criterion-1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
@@ -2271,14 +2272,8 @@ def findings_listing(area: Path) -> tuple[int, str]:
     def no_call(alias, prompt, **kw):
         raise AssertionError("--findings called the model")
 
-    out = io.StringIO()
-    with (
-        mock.patch.object(audit.llm, "complete", no_call),
-        contextlib.redirect_stdout(out),
-        contextlib.redirect_stderr(out),
-    ):
-        rc = audit.main([str(area), "--findings"])
-    return rc, out.getvalue()
+    with mock.patch.object(audit.llm, "complete", no_call):
+        return run_main(audit.main, [str(area), "--findings"])
 
 
 class UnrecordedCall(unittest.TestCase):

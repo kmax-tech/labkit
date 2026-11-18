@@ -17,6 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 
 from labkit.checks import code_check, gate_label_scan, import_check  # noqa: E402
+from command_fixture import run_main  # noqa: E402
 
 rules = code_check.rules  # the module the bundle quotes from
 
@@ -39,10 +40,7 @@ class AreaFixture:
                 )
 
     def run(self):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = code_check.main([str(self.path)])
-        return rc, buf.getvalue()
+        return run_main(code_check.main, [str(self.path)], capture_stderr=False)
 
     def __enter__(self):
         return self
@@ -344,10 +342,8 @@ class TestProtocolChoice(unittest.TestCase):
         return area / name
 
     def _main(self, argv):
-        buf = io.StringIO()  # findings and refusals alike (a refusal is on stderr)
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = code_check.main([str(a) for a in argv])
-        return rc, buf.getvalue()
+        # findings and refusals alike (a refusal is on stderr)
+        return run_main(code_check.main, [str(a) for a in argv])
 
     def test_several_protocols_refuse_instead_of_picking(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:

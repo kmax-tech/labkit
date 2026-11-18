@@ -18,14 +18,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from protocol_fixture import run_record  # noqa: E402
 from labkit.run import runlog_command  # noqa: E402
+from command_fixture import run_main
 
 
 class TestCli(unittest.TestCase):
     def _run_main(self, argv):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            code = runlog_command.main(argv)
-        return code, buf.getvalue()
+        return run_main(runlog_command.main, argv)
 
     def test_empty_area_says_so_instead_of_staying_silent(self):
         with tempfile.TemporaryDirectory() as d:

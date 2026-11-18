@@ -19,6 +19,7 @@ from labkit.gates import finalize  # noqa: E402
 from labkit.formats import gate  # noqa: E402
 from protocol_fixture import PID, completed_run, head  # noqa: E402
 from labkit.formats.area_state import state_of  # noqa: E402
+from command_fixture import run_main
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -56,10 +57,7 @@ def _run_finalize(area, protocol=None):
     argv = [str(area)]
     if protocol:
         argv += ["--protocol", str(protocol)]
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        code = finalize.main(argv)
-    return code, buf.getvalue()
+    return run_main(finalize.main, argv)
 
 
 class TestIntentStationReadsTheBlock(unittest.TestCase):

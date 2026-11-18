@@ -40,6 +40,7 @@ from labkit.gates import next_step  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
 from test_next_step_before_the_chain import run_next  # noqa: E402
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -293,15 +294,8 @@ class ADetachedStartBeforeItsRecord(unittest.TestCase):
         rel = str(area.relative_to(lab.root))
 
         def runlog(*argv: str) -> tuple[int, str]:
-            out = io.StringIO()
-            old = Path.cwd()
-            os.chdir(lab.root)
-            try:
-                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-                    rc = runlog_command.main(list(argv))
-            finally:
-                os.chdir(old)
-            return rc, out.getvalue()
+            with contextlib.chdir(lab.root):
+                return run_main(runlog_command.main, list(argv))
 
         def step() -> next_step.Step:
             old = Path.cwd()

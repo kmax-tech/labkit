@@ -16,6 +16,7 @@ from pathlib import Path
 from labkit.formats import digests
 from labkit.gates import audit_prompt, audit_reply
 from labkit.formats import scope_sha
+from command_fixture import run_main
 
 
 class Digests(unittest.TestCase):
@@ -71,10 +72,7 @@ class TestScopeSha(unittest.TestCase):
 
     def _run(self, argv):
         """(exit code, stdout and stderr together)."""
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = scope_sha.main(argv)
-        return rc, buf.getvalue()
+        return run_main(scope_sha.main, argv)
 
     def _sha(self, argv):
         rc, out = self._run(argv)

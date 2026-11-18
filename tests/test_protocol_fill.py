@@ -38,6 +38,7 @@ from protocol_fixture import (  # noqa: E402
     shown_sha,
     source_entry,
 )
+from command_fixture import run_main
 
 SAMPLE = """# Experiment protocol: x
 
@@ -881,10 +882,10 @@ class Adopt(unittest.TestCase):
 
     def _adopt(self, area: Path) -> tuple[int, str, str]:
         proto = area / "PROTOCOL-x.md"
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = protocol_fill.main([str(proto), "--from-run"])
-        return rc, buf.getvalue(), proto.read_text(encoding="utf-8")
+        rc, out = run_main(
+            protocol_fill.main, [str(proto), "--from-run"], capture_stderr=False
+        )
+        return rc, out, proto.read_text(encoding="utf-8")
 
     def test_a_checked_full_run_is_adopted(self):
         rc, out, text = self._adopt(self._area())
@@ -1374,10 +1375,7 @@ class ReportSetter(unittest.TestCase):
         config.write_text(json.dumps(value), encoding="utf-8")
 
     def _fill(self, proto: Path, *args: str) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            code = protocol_fill.main([str(proto), *args])
-        return code, out.getvalue()
+        return run_main(protocol_fill.main, [str(proto), *args])
 
     def test_before_the_first_measurement_one_head_line_is_added(self):
         _, proto = self._area()

@@ -17,6 +17,7 @@ from protocol_fixture import run_record, PID, head
 
 from labkit.formats import gate
 from labkit.tools import params
+from command_fixture import run_main
 
 C1 = """[[promise]]
 id = "criterion-1"
@@ -249,10 +250,7 @@ class Table(unittest.TestCase):
 
 
 def _main(argv: list[str]) -> tuple[int, str]:
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        code = params.main(argv)
-    return code, buf.getvalue()
+    return run_main(params.main, argv, capture_stderr=False)
 
 
 class CommandLine(unittest.TestCase):

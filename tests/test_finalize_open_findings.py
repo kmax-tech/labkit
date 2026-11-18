@@ -32,6 +32,7 @@ from protocol_fixture import (
     head,
     run_record,
 )  # noqa: E402
+from command_fixture import run_main
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -62,10 +63,7 @@ WARNING = (
 
 
 def _finalize(area: Path) -> tuple[int, str]:
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        code = finalize.main([str(area)])
-    return code, buf.getvalue()
+    return run_main(finalize.main, [str(area)])
 
 
 def _report_check(area: Path) -> tuple[int, str]:

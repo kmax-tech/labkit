@@ -25,6 +25,7 @@ from labkit.gates import audit
 from labkit.gates import undecided
 from labkit.tools import protocol_fill
 from labkit.tools import protocol_result
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -66,22 +67,20 @@ class HandoverRecovery(cases._Chain):
 
     def handover(self, *extra: str) -> tuple[int, str]:
         """Run the actual handover CLI on this protocol, capturing its output."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = protocol_fill.main(
-                [
-                    str(self.protocol),
-                    "--handover",
-                    "--why",
-                    "audit evidence is incomplete",
-                    "--tried",
-                    "checked the retained files and committed history",
-                    "--into",
-                    str(self.report),
-                    *extra,
-                ]
-            )
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main,
+            [
+                str(self.protocol),
+                "--handover",
+                "--why",
+                "audit evidence is incomplete",
+                "--tried",
+                "checked the retained files and committed history",
+                "--into",
+                str(self.report),
+                *extra,
+            ],
+        )
 
     def staged_release(self) -> None:
         """Both pre-commit checks, including undecided evidence, must pass."""
@@ -99,17 +98,11 @@ class HandoverRecovery(cases._Chain):
 
     def findings_listing(self) -> tuple[int, str]:
         """`labkit-audit AREA --findings`, its output captured."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = audit.main([str(self.area), "--findings"])
-        return rc, out.getvalue()
+        return run_main(audit.main, [str(self.area), "--findings"])
 
     def report_check(self) -> tuple[int, str]:
         """`report-check AREA`, its output captured."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_command.main([str(self.area)])
-        return rc, out.getvalue()
+        return run_main(report_command.main, [str(self.area)])
 
     @staticmethod
     def analysis_blocker(out: str) -> str:

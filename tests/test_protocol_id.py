@@ -10,8 +10,6 @@ value has one shape, an id occurs once per repository, and an edit against HEAD 
 warning — never a proof, because after the commit the new id IS the state.
 """
 
-import contextlib
-import io
 import subprocess
 import sys
 import tempfile
@@ -27,6 +25,7 @@ from labkit.formats import (  # noqa: E402
 )
 from labkit.checks import protocol_report  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
+from command_fixture import run_main
 
 # Every must field of a pilot filled, so the id alone decides the verdict.
 PILOT = """# Experiment protocol: x
@@ -59,10 +58,7 @@ def _protocol(dirpath, pid: str = PID, name="PROTOCOL-x.md", extra: str = ""):
 
 
 def _check(paths):
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        code = protocol_report.main([str(p) for p in paths])
-    return code, buf.getvalue()
+    return run_main(protocol_report.main, [str(p) for p in paths], capture_stderr=False)
 
 
 class TestFieldIsDue(unittest.TestCase):

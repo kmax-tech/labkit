@@ -11,8 +11,6 @@ recency — such a test would pass while the mechanism is broken. Only the
 binding tells them apart.
 """
 
-import contextlib
-import io
 import json
 import sys
 import tempfile
@@ -25,6 +23,7 @@ from labkit.checks import intent_check  # noqa: E402
 from labkit.formats.area_state import state_of
 from labkit.formats import runs  # noqa: E402
 from protocol_fixture import run_record, head  # noqa: E402
+from command_fixture import run_main
 
 A_ID = "p-aaaaaaaaaaaaaaaa"
 B_ID = "p-bbbbbbbbbbbbbbbb"
@@ -93,10 +92,7 @@ def _run(
 
 
 def _check(argv):
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        code = intent_check.main([str(a) for a in argv])
-    return code, buf.getvalue()
+    return run_main(intent_check.main, [str(a) for a in argv])
 
 
 class TestTwoProtocolsSameIntentIds(unittest.TestCase):

@@ -28,6 +28,7 @@ from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
 from repo_fixture import git as _git  # noqa: E402
 from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -345,10 +346,8 @@ class Undecided(unittest.TestCase):
         _git(self.root, "add", str(script))
 
         def commit_gate() -> tuple[int, str]:
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
-                rc = claude_hooks.main(["pre-commit"])
-            return rc, out.getvalue()
+            with contextlib.chdir(self.root):
+                return run_main(claude_hooks.main, ["pre-commit"], capture_stderr=False)
 
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
@@ -370,10 +369,8 @@ class Undecided(unittest.TestCase):
         _git(self.root, "add", str(script))
 
         def commit_gate() -> tuple[int, str]:
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
-                rc = claude_hooks.main(["pre-commit"])
-            return rc, out.getvalue()
+            with contextlib.chdir(self.root):
+                return run_main(claude_hooks.main, ["pre-commit"], capture_stderr=False)
 
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
