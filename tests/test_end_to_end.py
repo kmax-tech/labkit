@@ -35,7 +35,14 @@ from unittest import mock
 
 from labkit.tools import report_command
 from labkit.formats.area_state import state_of
-from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
+from labkit.gates import (
+    audit,
+    agent_hooks,
+    finalize,
+    hook_post_change,
+    preflight,
+    report_check,
+)
 from labkit.tools import protocol_fill, scaffold
 from labkit.run import runlog, start_check
 from labkit.formats import (
@@ -812,11 +819,9 @@ class FirstMeasurementLost(CountCommands):
             out,
         )
 
-    def test_a_measurement_that_broke_off_and_was_deleted_keeps_counting(self):
-        """A starts and breaks off: no index row, and its directory is
-        deleted. Its start file is all that is left — through a reindex
-        too. The next start says so and starts; finalize holds
-        the number of the run that followed."""
+    def break_off(self) -> str:
+        """A measurement that starts and breaks off in the measuring
+        script; the script as committed again afterwards. Its id."""
         measure = self.area / "scripts" / "01_measure.py"
         ok = '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}'
         _replace(measure, [(ok, '    raise RuntimeError("broke off")')])
@@ -830,6 +835,14 @@ class FirstMeasurementLost(CountCommands):
         self.assertNotEqual(r.returncode, 0, r.stdout)
         self.lab.git("checkout", "--", str(measure))
         (broke_off,) = [d.name for d in (self.area / "runs").iterdir()]
+        return broke_off
+
+    def test_a_measurement_that_broke_off_and_was_deleted_keeps_counting(self):
+        """A starts and breaks off: no index row, and its directory is
+        deleted. Its start file is all that is left — through a reindex
+        too. The next start says so and starts; finalize holds
+        the number of the run that followed."""
+        broke_off = self.break_off()
         starts = run_starts.start_path(self.area, broke_off)
         self.assertIn(f'"run_id": "{broke_off}"', starts.read_text(encoding="utf-8"))
         index = self.area / "runs.tsv"
@@ -856,6 +869,45 @@ class FirstMeasurementLost(CountCommands):
         self.assertIn(f"run {broke_off} is gone (its start file lists it", out)
         self.assertIn("may have been the first", out)
         self.assertNotIn("are the ones the first measurement registered", out)
+
+    def test_a_committed_deletion_of_the_start_file_leaves_the_run_known(self):
+        """A breaks off; its start file is committed, its directory never
+        is. Then the directory and the start file are deleted and the
+        deletion is committed. The run is still known from the commit that
+        held its start file: the next start warns, finalize holds B's
+        number, and the hook names the checkout that restores the file."""
+        broke_off = self.break_off()
+        start = run_starts.start_path(self.area, broke_off)
+        self.lab.git("add", str(start))
+        self.lab.git("commit", "-qm", "the start of a run that broke off")
+        held = self.lab.git("rev-parse", "HEAD").strip()
+        shutil.rmtree(self.area / "runs" / broke_off)
+        start.unlink()
+        self.lab.git("add", "-A")
+        self.lab.git("commit", "-qm", "the start file, deleted")
+        state = state_of(self.area)
+        self.assertEqual(state.deleted_starts, {broke_off: held})
+        self.assertEqual(state.started_only, {broke_off: protocol_id_of(self.area)})
+        (line,) = [
+            ln
+            for ln in hook_post_change.index_problems(state)
+            if "start file is gone" in ln
+        ]
+        self.assertIn(f"git checkout {held} -- ", line)
+        self.assertIn(f"{broke_off}.json", line)
+        _, out = self.start_b(broke_off)
+        self.assertIn(
+            f"run {broke_off} is gone (its start file lists it as a measurement "
+            f"that started",
+            out,
+        )
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("BLOCKER (check not executable): what the number is about", out)
+        self.assertIn("may have been the first", out)
+        # the twin: the file back from that commit, and nothing is told as deleted
+        self.lab.git("checkout", held, "--", str(start))
+        self.assertEqual(state_of(self.area).deleted_starts, {})
 
     def test_a_record_of_unknown_protocol_holds_nothing_and_establishes_nothing(
         self,

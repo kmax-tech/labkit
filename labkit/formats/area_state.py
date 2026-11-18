@@ -61,11 +61,18 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.run_index import RunIndexError, indexed_bindings
-from labkit.formats.run_starts import RunStart, read_starts
+from labkit.formats.run_starts import (
+    START_FILES_DIR,
+    START_SUFFIX,
+    RunStart,
+    parse_start,
+    read_starts,
+)
 from labkit.formats.runs import (
     COMPLETION_FILE,
     CONFIG_FILE,
     MEASUREMENT,
+    RUN_ID,
     RunDir,
     RunKind,
     run_dir_from_text,
@@ -285,7 +292,8 @@ class AreaState:
             stand included: which runs reached completion, and with the
             start files what binds a run without a record to a protocol
             (`assigned_to`). Its order tells nothing.
-        starts: The start files as read, run id → what each holds
+        starts: The start files as read — the file state's, and those a
+            commit holds and the file state lacks —, run id → what each holds
             (`run_starts.read_starts`): which run started with which
             protocol, when and as which kind.
         started_only: Run id → protocol id of the runs only the start
@@ -294,6 +302,10 @@ class AreaState:
             is the measurements among them.
         conflicts: Run id → the (source, protocol id) pairs of each run
             whose sources name different protocols (`binding_conflicts`).
+        deleted_starts: Run id → the commit a checkout restores its start
+            file from, for the start files a commit holds and the file
+            state lacks (`committed_starts`). Such a run's start is among
+            STARTS all the same, read back from that commit.
     """
 
     area: Path
@@ -312,6 +324,7 @@ class AreaState:
     starts: Mapping[str, RunStart] = field(default_factory=dict)
     started_only: Mapping[str, str] = field(default_factory=dict)
     conflicts: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
+    deleted_starts: Mapping[str, str] = field(default_factory=dict)
 
     def text_of(self, protocol: Path) -> str:
         """PROTOCOL's text as the file state holds it. Raises ValueError
@@ -363,6 +376,7 @@ def assemble(
     indexed: Mapping[str, str] | None = None,
     starts: Mapping[str, RunStart] | None = None,
     started_only: Mapping[str, str] | None = None,
+    deleted_starts: Mapping[str, str] | None = None,
 ) -> AreaState:
     """The `AreaState` of AREA from what its readers found — RUNS the file
     state holds, DELETED the runs git holds back (HISTORY_UNREAD git's words
@@ -370,7 +384,8 @@ def assemble(
     protocol ids, PROTOCOLS the area's protocol files with PROTOCOL_TEXTS
     (resolved path → text) and ADOPTION_PENDING, INDEXED the run index as
     read (run id → protocol id, the runs that stand included), STARTS the
-    start files as read and STARTED_ONLY the runs only they name with their
+    start files as read, DELETED_STARTS those among them read back from a
+    commit with that commit, and STARTED_ONLY the runs only they name with their
     protocol ids —, every derived field computed here once:
     the one assembly for `state_of` and for a test that builds a state
     without files. Pure but for git's ancestry questions in the first
@@ -434,6 +449,7 @@ def assemble(
         starts=starts,
         started_only=started_only,
         conflicts=conflicts,
+        deleted_starts=dict(deleted_starts or {}),
     )
 
 
@@ -590,6 +606,15 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
     indexed = indexed_bindings(area)
     lost = {r: p for r, p in indexed.items() if r not in gone}
     starts = read_starts(area)
+    deleted_starts: dict[str, str] = {}
+    if repo is not None:
+        try:
+            back = committed_starts(repo, area, set(starts))
+        except HistoryUnread as exc:
+            unread = "; ".join(s for s in (unread, str(exc)) if s)
+        else:
+            deleted_starts = {run: at for run, (_, at) in back.items()}
+            starts = {**{run: start for run, (start, _) in back.items()}, **starts}
     # against the working tree whatever the file state: a run that stands
     # in the tree and is not staged is not gone
     standing = gone if not staged else gone | {rd.dir.name for rd in run_dirs(area)}
@@ -612,6 +637,7 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
         indexed,
         starts,
         started_only,
+        deleted_starts,
     )
 
 
@@ -894,23 +920,26 @@ def indexed_run_dirs(repo: Path, area: Path) -> list[RunDir]:
     return out
 
 
-def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir]:
-    """The runs of AREA a commit under REPO once held whose ids are not in
-    HELD (the run directories the file state holds), each read back from
-    the last commit that held its record: HEAD when HEAD still holds it
-    (deleted in the tree, the deletion not committed), else the deletion's
-    parent — `RunDir.from_commit`, the commit a checkout restores it from.
-    One `git log` over the area's `runs/` (the records' additions and
-    deletions, newest first), one `git show` per run read back; [] before
-    the first commit. The source of what a deleted measurement registered:
-    the local run index knows only that it ran, and only on the machine it
-    ran on. Raises HistoryUnread (a RuntimeError) with git's words when
-    git cannot read the history — an object the repository lacks —, or
-    when a record the history names cannot be read from the commit it
-    says holds it; GitError when git cannot run."""
+def last_committed(
+    repo: Path, folder: Path, name: str, held: Collection[str]
+) -> list[tuple[str, str, str]]:
+    """(key, text, commit) for each file a commit under REPO once held in
+    FOLDER whose path below it matches the pattern NAME (a regular
+    expression with one group, the key) and whose key is not in HELD:
+    its text as the last commit that held it has it — HEAD when HEAD still
+    holds it (deleted in the file state, the deletion not committed), else
+    the deletion's parent, the commit a checkout restores it from —,
+    sorted by key. One `git log` over FOLDER (additions and deletions,
+    newest first), one `git show` per file read back; [] before the first
+    commit. The one reading of what a commit held and the file state
+    lacks: a deleted run's record (`committed_runs`), a deleted start file
+    (`committed_starts`). Raises HistoryUnread (a RuntimeError) with git's
+    words when git cannot read the history — an object the repository
+    lacks —, or when a file the history names cannot be read from the
+    commit it says holds it; GitError when git cannot run."""
     if not head_sha(repo):
         return []
-    rel = rel_posix(runs_path(area), repo)
+    rel = rel_posix(folder, repo)
     args = [
         "log",
         "--format=%x00%H",
@@ -923,11 +952,12 @@ def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir
     r = git_run(args, repo)
     if r.returncode != 0:
         raise HistoryUnread(
-            f"the runs git holds under {rel}/ cannot be listed: "
+            f"what git holds under {rel}/ cannot be listed: "
             f"{' '.join(r.stderr.split())} (`git fsck` names the damaged object)"
         )
-    record = re.compile(re.escape(rel) + r"/([^/]+)/" + re.escape(CONFIG_FILE))
-    newest: dict[str, tuple[str, str]] = {}  # run id → (A or D, commit), newest event
+    wanted = re.compile(re.escape(rel) + "/" + name)
+    # key → (A or D, commit, path), the newest event of each
+    newest: dict[str, tuple[str, str, str]] = {}
     for chunk in r.stdout.split("\0"):
         lines = [ln for ln in chunk.splitlines() if ln]
         if not lines:
@@ -935,21 +965,56 @@ def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir
         commit, *statuses = lines
         for status in statuses:
             fields = status.split("\t")
-            m = record.fullmatch(fields[-1]) if len(fields) == 2 else None
+            m = wanted.fullmatch(fields[-1]) if len(fields) == 2 else None
             if m is not None and m.group(1) not in newest:
-                newest[m.group(1)] = (fields[0][:1], commit)
-    out: list[RunDir] = []
-    for run_id, (status, commit) in sorted(newest.items()):
-        if run_id in held:
+                newest[m.group(1)] = (fields[0][:1], commit, fields[-1])
+    out: list[tuple[str, str, str]] = []
+    for key, (status, commit, path) in sorted(newest.items()):
+        if key in held:
             continue
         rev = "HEAD" if status == "A" else f"{commit}^"
         at = commit_of(repo, rev)
-        d = run_path(area, run_id)
-        text = text_at(repo, d / CONFIG_FILE, rev) if at is not None else None
+        text = text_at(repo, repo / path, rev) if at is not None else None
         if at is None or text is None:
             raise HistoryUnread(
-                f"{d / CONFIG_FILE}: git's history says {rev} holds it, and it "
+                f"{repo / path}: git's history says {rev} holds it, and it "
                 f"cannot be read from there (`git fsck` names the damaged object)"
             )
-        out.append(run_dir_from_text(d, text, from_commit=at))
+        out.append((key, text, at))
     return out
+
+
+def committed_runs(repo: Path, area: Path, held: Collection[str]) -> list[RunDir]:
+    """The runs of AREA a commit under REPO once held whose ids are not in
+    HELD (the run directories the file state holds), each read back from
+    the last commit that held its record (`last_committed`) —
+    `RunDir.from_commit`, the commit a checkout restores it from. The
+    source of what a deleted measurement registered: the local run index
+    knows only that it ran, and only on the machine it ran on. Raises
+    HistoryUnread and GitError as `last_committed` does."""
+    name = r"([^/]+)/" + re.escape(CONFIG_FILE)
+    return [
+        run_dir_from_text(run_path(area, run_id), text, from_commit=at)
+        for run_id, text, at in last_committed(repo, runs_path(area), name, held)
+    ]
+
+
+def committed_starts(
+    repo: Path, area: Path, held: Collection[str]
+) -> dict[str, tuple[RunStart, str]]:
+    """Run id → (its start, the commit a checkout restores the file from)
+    for the start files of AREA a commit under REPO once held whose runs
+    are not in HELD (the runs whose start file the file state holds), each
+    read back from the last commit that held it (`last_committed`). A
+    start file deleted — in the tree, or by a commit — does not take the
+    run's documented start with it: the run stays started, assigned and
+    ordered as that file says; that it was deleted is told apart
+    (`AreaState.deleted_starts`, `evidence.start_file_changes`). Raises
+    HistoryUnread and GitError as `last_committed` does, and
+    `run_starts.RunStartsError` for a committed start file that does not
+    read."""
+    name = "(" + RUN_ID.pattern.replace(r"\b", "") + ")" + re.escape(START_SUFFIX)
+    return {
+        run_id: (parse_start(text, f"{run_id}{START_SUFFIX} at {at[:12]}", run_id), at)
+        for run_id, text, at in last_committed(repo, area / START_FILES_DIR, name, held)
+    }

@@ -54,9 +54,9 @@ from labkit.formats.area_state import (
     state_of,
 )
 from labkit.formats import evidence
-from labkit.formats.commands import gate_command
+from labkit.formats.commands import checkout_command, gate_command
 from labkit.formats.run_index import RunIndexError
-from labkit.formats.run_starts import START_FILES_DIR
+from labkit.formats.run_starts import START_FILES_DIR, start_path
 from labkit.formats.repo import (
     rel_posix,
     EXPERIMENTS,
@@ -125,6 +125,8 @@ def index_problems(state: AreaState) -> list[str]:
       gone;
     - a run only a start file names: it started as the kind the file
       names and did not complete, and its record is gone;
+    - a run whose start file a commit holds and the tree lacks, with the
+      checkout that restores it;
     - a run with a start file whose directory stands without a
       completion (`unfinished_starts`): it started and never completed —
       an abort, its record still here."""
@@ -144,6 +146,12 @@ def index_problems(state: AreaState) -> list[str]:
             f"{state.starts[r].run_kind} that started, runs.tsv lists no completion "
             f"of it, and {LOST_RUN_SENTENCE}"
             for r in state.started_only
+        ]
+        + [
+            f"run {r}: its start file is gone, and a commit holds it — "
+            f"`{checkout_command(start_path(state.area, r), at)}` restores it; the "
+            f"run still counts as started as that file says"
+            for r, at in state.deleted_starts.items()
         ]
         + unfinished_starts(state)
     )
