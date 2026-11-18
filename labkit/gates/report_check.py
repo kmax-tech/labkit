@@ -169,6 +169,7 @@ from labkit.gates.registered_report import (
     report_binding_gap,
     report_owed,
     unassigned_record_note,
+    unread_start_note,
 )
 from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
@@ -727,14 +728,15 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     (`registered_report.orphaned_report_duties`). Nothing outside a
     repository. With them, a WARNING for a record of the area whose
     protocol cannot be determined (`registered_report.unassigned_record_note`):
-    the duty was read without it."""
+    the duty was read without it; and one for a start file that does not
+    read (`registered_report.unread_start_note`)."""
     state = ctx.area_state
     measured = state.measured_of(ctx.head.id)
     gap = report_binding_gap(ctx.protocol, ctx.text, measured=measured)
-    unassigned = unassigned_record_note(measured)
+    warnings = [unassigned_record_note(measured), unread_start_note(measured)]
     return (
         ([] if gap is None else [gap])
-        + ([] if unassigned is None else [unassigned])
+        + [w for w in warnings if w is not None]
         + orphaned_duty_gaps(state)
     )
 

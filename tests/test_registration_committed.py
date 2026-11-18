@@ -32,7 +32,14 @@ from protocol_fixture import PID, completed_run, head, scope_file
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import next_command, report_command
-from labkit.formats import area_state, gate, protocol_history, run_index, runs
+from labkit.formats import (
+    area_state,
+    gate,
+    protocol_history,
+    run_index,
+    run_starts,
+    runs,
+)
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
@@ -1842,6 +1849,29 @@ class ReportOwedByADeletedProtocol(_Repository):
         ):
             self.assertIn(said, warning.text)
         self.assertIn("back from a commit, a clone or a copy", warning.fix or "")
+
+    def test_report_check_names_a_start_file_that_does_not_read_and_holds_nothing(
+        self,
+    ):
+        """The incomplete-start warning stands at the report duty's station
+        too, in the registration station's words; a warning, no blocker."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        run = self._run(_git(self.root, "rev-parse", "HEAD"))
+        start = run_starts.start_path(self.area, run.name)
+        start.parent.mkdir()
+        start.write_text("{not json", encoding="utf-8")
+        (warning,) = self._duty_station()
+        self.assertEqual(
+            (warning.grade, warning.outcome), (gate.WARNING, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn(f"the start file of run {run.name} does not read", warning.text)
+        self.assertIn(
+            "no value is written into a start file by hand", warning.fix or ""
+        )
 
     def test_the_twin_an_area_without_such_a_record_gets_no_warning(self):
         self.proto.write_text(

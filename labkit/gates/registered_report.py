@@ -23,6 +23,7 @@ from labkit.formats.area_state import (
     Measured,
     lost_in_the_tree_too,
     unassigned_record_warning,
+    unread_start_warning,
 )
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GateFinding, blocker
@@ -368,6 +369,15 @@ def unassigned_record_note(measured: Measured) -> GateFinding | None:
     this protocol is unresolved, so no duty and no hold follow from it,
     and the warning says so in place of a silent "no duty". Pure."""
     return unassigned_record_warning(measured.unassigned)
+
+
+def unread_start_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    a start file of MEASURED's protocol, or one nothing else assigns, does
+    not read (`area_state.unread_start_warning`, the sentence the
+    registration station prints too); None without one. It holds nothing:
+    the duty is read from the runs' own records. Pure."""
+    return unread_start_warning(measured.unread_starts, measured.unassigned_starts)
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:
