@@ -10,9 +10,9 @@ read within the limit (`findings.EFFECT_STANDS`). The reviewer gets, in one
 call: every such decision of the record (the finding, the person's
 reason), the protocol as it is now (the registration and the reported
 claim — Conclusion, Recorded results, Limitation lines), the files the findings
-name as the record's auditor read them (the area snapshot, held to the
+name as the record's auditor read them (the area snapshot, checked against the
 record's `scope_sha`), and what the auditor was shown of the run (the
-rows' excerpts and metrics.json, held to the record's `shown_sha`). The
+rows' excerpts and metrics.json, checked against the record's `shown_sha`). The
 finding and the reason alone would only test whether the reason sounds
 plausible; the claim and the evidence are what it is tested against.
 A limitation whose effect is `<ID> not assessable` releases the finding
@@ -413,7 +413,7 @@ def parse_review(
     report: str, numbers: list[int], *, subject: str = "finding"
 ) -> list[tuple[int, str, str]]:
     """(number, verdict, why) per decision line before the LAST closing
-    line, held to NUMBERS: every number once, no other, and the closing
+    line, checked against NUMBERS: every number once, no other, and the closing
     counts equal to the lines. Raises AuditError otherwise — nothing is
     recorded from a report that disagrees with itself. SUBJECT names what
     is decided on in the refusal: a record's `finding`, or a report
