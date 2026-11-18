@@ -9,12 +9,14 @@ of each hold and its way back. Read-only; finalize tells what it finds.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
+    NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
     GateFinding,
@@ -40,7 +42,12 @@ from labkit.formats.runs import (
     read_run_config,
 )
 from labkit.formats.answering_run import first_registrations
-from labkit.formats.area_state import AreaState, Measured
+from labkit.formats.area_state import (
+    AreaState,
+    Measured,
+    lost_in_the_tree_too,
+    measurements_without_record,
+)
 from labkit.formats import protocol_history
 from labkit.formats.reference import LAB_035
 from labkit.formats.repo import (
@@ -157,12 +164,21 @@ def registration_changes(
     no run answers a registered question: held too, the ways out a new
     registration that declares its changes against each (K1,
     `report_replacement.replacement_gaps`) or a handover without a declared
-    result. Empty without an answering run, a stamped id PID, or a block in
+    result. Before either comparison: a measurement of PID that left no
+    record that reads may have been the first, and the one finding is then
+    that hold (`lost_record_hold`) — no comparison with a later run in its
+    place. Empty without an answering run, a stamped id PID, or a block in
     the records. Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
     root = git_root(protocol)
     measured = state.measured_of(pid)
+    untold = lost_record_hold(
+        pid, measured, lost_in_the_tree_too(measured), handover(protocol)
+    )
+    if untold:
+        # ends here: neither comparison below runs against a later run
+        return untold
     scope = scope_changes(area, protocol, pid, run, root, measured, state, held)
     cfg = read_run_config(run)
     now = cfg.promises if cfg is not None else None
@@ -667,6 +683,46 @@ def unread_hold(area: Path, protocol: Path, pid: str, unread: list[str]) -> Gate
         f"{anew_way(pid)}; or {handover(protocol)}",
         rule=TECHNICAL_RULE,
     )
+
+
+def lost_record_hold(
+    pid: str, measured: Measured, lost_in_tree: Sequence[str], handover_way: str
+) -> list[GateFinding]:
+    """The BLOCKER when a measurement of protocol PID left no record that
+    reads (`area_state.measurements_without_record` over MEASURED and
+    LOST_IN_TREE, the lost runs the working tree lacks too): a started measurement keeps
+    counting when its record is missing, and it may have been the first —
+    what stood registered before the number cannot be told, so the
+    comparison did not run (a check not executable), and neither a later
+    run nor the protocol as committed now is compared in its place. Beside
+    a first measurement that reads, too: no record orders the two. The ways
+    out: the record back from where something keeps it, then finalize
+    again; where nothing keeps it, a new registration, or the handover
+    (HANDOVER_WAY, `ways_out.handover`). [] when every measurement has its
+    record — a run a commit holds back is read from there. Pure. The
+    decision behind it and what it leaves to an exploratory protocol type:
+    docs/notes/2026-11-18-lost-first-measurement.md."""
+    without = measurements_without_record(measured, lost_in_tree)
+    if not without:
+        return []
+    return [
+        blocker(
+            f"what the number is about cannot be compared with its first "
+            f"measurement: {'; '.join(without)} — "
+            f"{'it' if len(without) == 1 else 'each'} may have been the first "
+            f"measurement, so what stood registered before the number cannot be "
+            f"told; a later run or the protocol as committed now does not stand in "
+            f"for it",
+            fix=f"bring the record back where something keeps it — the run's "
+            f"directory with its config.json, from a commit, a clone or a copy "
+            f"that holds it (a record written anew from memory settles nothing) —, "
+            f"then `{gate_command('finalize', measured.area)}`; where nothing keeps "
+            f"it, {register_anew(pid)} — the earlier protocol, its runs and their "
+            f"verdict stay; or {handover_way}",
+            stated_outcome=NOT_EXECUTABLE,
+            rule=TECHNICAL_RULE,
+        )
+    ]
 
 
 def anew_way(pid: str) -> str:

@@ -27,7 +27,14 @@ from labkit.formats.followup import (
     chain,
     released_corrections,
 )
-from labkit.formats.gate import BLOCKER, OPEN_RULE, cited_rule
+from labkit.formats.gate import (
+    BLOCKER,
+    NOT_EXECUTABLE,
+    OPEN_RULE,
+    TECHNICAL_RULE,
+    GateFinding,
+    cited_rule,
+)
 from labkit.formats.protocol_history import STANDS_AS_REGISTERED, scope_differences
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import registration_hold
@@ -43,7 +50,10 @@ from labkit.gates.registration_hold import (
     waiting_refs,
 )
 from labkit.formats.area_state import Measured
-from state_fixture import AREA, area_evidence, area_state, audit_record
+from labkit.formats.runs import RunDir, parse_run_config
+from labkit.gates.ways_out import HANDOVER
+from protocol_fixture import run_record
+from state_fixture import AREA, area_evidence, area_state, audit_record, run_dir
 
 pytestmark = pytest.mark.rule
 
@@ -786,3 +796,70 @@ class TheRuleAChangedRegistrationRecords(unittest.TestCase):
         was = self.snap("s1", **{"criterion-1": two})
         now = self.snap("s2", **{"criterion-1": {**two, "scope": ["b.py", "a.py"]}})
         self.assertEqual(registration_hold.registration_rule(was, now), self.LAB_003)
+
+
+class AMeasurementWithoutItsRecordLeavesTheRegistrationUntold(unittest.TestCase):
+    """`lost_record_hold`: a measurement labkit still has evidence of and
+    no record for — a run only the run index lists, a record that does not
+    read — may have been the first, so what stood registered then is not
+    told: a BLOCKER of a check not executable, never a pass and never a
+    comparison with a later run in its place."""
+
+    LOST = "2026-10-05T10-00-00_lost"
+    DEAD = run_dir("2026-10-06T10-00-00_dead", error="config.json: not JSON")
+    FIRST = run_dir(
+        "2026-10-07T10-00-00_ab12",
+        config=parse_run_config(run_record(protocol={"id": PID, "path": "P.md"})),
+    )
+
+    def held(
+        self,
+        runs: tuple[RunDir, ...] = (),
+        lost: tuple[str, ...] = (),
+        firsts: tuple[RunDir, ...] = (),
+    ) -> list[GateFinding]:
+        measured = Measured(AREA, PID, runs, lost, tuple((f,) for f in firsts), ())
+        return pure_call(
+            registration_hold.lost_record_hold, PID, measured, lost, HANDOVER
+        )
+
+    def test_a_run_only_the_index_lists_holds_with_every_way_out(self):
+        (hold,) = self.held(lost=(self.LOST,))
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+        )
+        self.assertIn(f"run {self.LOST} is gone", hold.text)
+        self.assertIn("cannot be told", hold.text)
+        self.assertIn("does not stand in for it", hold.text)
+        for way in ("a copy that holds it", "register anew", HANDOVER):
+            self.assertIn(way, hold.fix or "")
+
+    def test_a_record_that_does_not_read_holds_naming_the_run(self):
+        (hold,) = self.held(runs=(self.DEAD,))
+        self.assertEqual(hold.outcome, NOT_EXECUTABLE)
+        self.assertIn(
+            f"the record of run {self.DEAD.dir.name} does not read", hold.text
+        )
+        self.assertIn("written anew from memory settles nothing", hold.fix or "")
+
+    def test_beside_a_first_measurement_that_reads_it_holds_all_the_same(self):
+        for name, runs, lost in (
+            ("lost", (self.FIRST,), (self.LOST,)),
+            ("unreadable", (self.DEAD, self.FIRST), ()),
+        ):
+            with self.subTest(name):
+                (hold,) = self.held(runs=runs, lost=lost, firsts=(self.FIRST,))
+                self.assertIn("may have been the first", hold.text)
+
+    def test_the_twins_every_measurement_with_its_record_and_none_pass(self):
+        from_git = run_dir(
+            self.FIRST.dir.name, config=self.FIRST.config, from_commit="c0ffee"
+        )
+        for name, runs in (
+            ("never measured", ()),
+            ("a measurement that reads", (self.FIRST,)),
+            ("a deleted run a commit holds", (from_git,)),
+        ):
+            with self.subTest(name):
+                self.assertEqual(self.held(runs=runs, firsts=runs), [])

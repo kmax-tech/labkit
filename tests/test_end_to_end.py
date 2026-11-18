@@ -24,6 +24,7 @@ import json
 from datetime import datetime, timezone
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,7 @@ from labkit.tools import report_command
 from labkit.formats.area_state import state_of
 from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
 from labkit.tools import protocol_fill, scaffold
+from labkit.run import start_check
 from labkit.formats import (
     answering_run,
     findings,
@@ -724,6 +726,74 @@ class MeasuredRunsKeepTheirSecond(CountCommands):
         hooks."""
         a, b = self.measure(), self.measure()
         self.assertNotEqual(a[: len(_SECOND)], b[: len(_SECOND)])
+
+
+class FirstMeasurementLost(CountCommands):
+    """A measured, never committed, its directory deleted: only the run
+    index names it. The next start is not held to HEAD as a first
+    measurement and says what is missing; finalize holds the number as a
+    check not executable, and with the record back from a copy the
+    comparison with A runs again
+    (docs/notes/2026-11-18-lost-first-measurement.md)."""
+
+    OLD = "How many lines does a document of data/raw/docs hold on average?"
+    NEW = "How many lines does the longest document of data/raw/docs hold?"
+
+    def lose_a(self) -> tuple[str, Path]:
+        """Measure A and delete its directory: (its id, a copy kept
+        outside the lab)."""
+        run_a = self.measure()
+        kept = Path(tempfile.mkdtemp()) / run_a
+        self.addCleanup(shutil.rmtree, kept.parent)
+        shutil.move(str(self.area / "runs" / run_a), str(kept))
+        return run_a, kept
+
+    def start_b(self, run_a: str) -> tuple[str, str]:
+        """Start B in a later second than A: (its id, what the start printed)."""
+        while time.strftime(RUN_ID_TIME) <= run_a[: len(_SECOND)]:
+            time.sleep(0.02)
+        out = self.lab.script(self.area, "01_measure.py")
+        return self.lab.run_id_of(out), out
+
+    def test_the_start_warns_and_finalize_holds_until_the_record_is_back(self):
+        run_a, kept = self.lose_a()
+        _replace(self.protocol, [(self.OLD, self.NEW)])
+        self.lab.commit("the question, rewritten after A")
+        run_b, out = self.start_b(run_a)
+        self.assertIn("PROTOCOL-lines.md: not its first measurement", out)
+        self.assertIn(f"run {run_a} is gone", out)
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("BLOCKER (check not executable): what the number is about", out)
+        self.assertIn(f"run {run_a} is gone", out)
+        self.assertNotIn("are the ones the first measurement registered", out)
+        for way in ("a copy that holds it", "register anew", "--handover"):
+            self.assertIn(way, out)
+        # the twin: A back from the copy, and the comparison with it runs
+        shutil.move(str(kept), str(self.area / "runs" / run_a))
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertNotIn("check not executable", out)
+        self.assertIn(
+            f"what the number is about changed after the first measurement {run_a}",
+            out,
+        )
+        self.assertIn(f"as the answering run {run_b} saw the protocol", out)
+
+    def test_a_later_start_is_not_held_to_head_as_the_first(self):
+        """With the protocol out of HEAD a first measurement is refused as
+        not committed (`test_start_gate_unread`); after a lost one the start
+        check names no gap, as after one whose record reads."""
+        self.lose_a()
+        rel = self.protocol.relative_to(self.lab.root).as_posix()
+        self.lab.git("rm", "-q", "--cached", rel)
+        self.lab.git("commit", "-qm", "the protocol out of the index")
+        bound = start_check.protocol_binding(self.area, self.protocol.name)
+        state = state_of(self.area)
+        self.assertEqual(
+            start_check._freeze_findings(self.area, bound, state),  # noqa: SLF001
+            [],
+        )
 
 
 class Withdraw(CountCommands):
