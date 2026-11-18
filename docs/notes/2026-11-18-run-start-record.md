@@ -126,3 +126,28 @@ Decided by the author on 2026-11-18: an evidenced loss holds, and a complete los
 1. Whether numbers seen in a probe should bind a registration is a contract question of its own. Nothing was changed for it: a probe binds none.
 2. A start file that does not read and that no commit holds stays an incomplete start for good: nothing evidences its start time. The file is left as it is.
 3. A run whose record carries the mark and whose start file stands nowhere — never committed, and deleted — is not held by the commit's unstaged check, since nothing could be staged; the registration station holds it (`missing_start_hold`).
+
+## Proposed text for the lab standard, version 0.32
+
+A proposal of 2026-11-18, second draft, not yet released by the author and not in `labkit/docs/standard.md`. The author decided the homes (two paragraphs in two rules) and the version: the new duty and the new release rule are a change of the contract, so this is standard 0.32, not a dated change. The first draft was returned for three reasons, which this draft takes up: the three duties of the start file stay apart; a run of unknown assignment "cannot be assigned to a protocol", which states missing knowledge and not a property found; and the text does not decide anew which run kinds count as a measurement that binds a registration.
+
+**In LAB-043 Runs go through `runlog`, a new paragraph:**
+
+> **A run's start is kept outside its directory.** Three things hold, each on its own.
+>
+> *Before the measurement.* Every run, of every kind, writes a start file beside the run directories before it measures (`run-starts/<run_id>.json`: run id, protocol id, start in UTC, run kind) and a mark in its own directory saying that it did. A run that cannot write it does not start.
+>
+> *In the commit.* The start file is tracked. A commit that takes a run in holds that run's start file, and once a commit holds it, it is neither changed nor deleted. Before that commit nothing secures it.
+>
+> *When it is lost.* Where a run's record carries the mark and no start file is found, evidence is lost: no number of the protocol the run is assigned to is released until the file is back from a copy that holds it, or the protocol is registered anew or handed over. The same holds where the files that name a run's protocol contradict each other; none is taken over the others. New runs may still start.
+>
+> For a run without the mark no start-file duty is evidenced. A start file says that a run started and as which kind; which run kinds count as a measurement that binds a registration is not decided here and stays as it was.
+
+**In LAB-003 No run without an intent paragraph, a new paragraph:**
+
+> **A measurement that started keeps counting.** A measurement that demonstrably started keeps counting when its record is missing. Its protocol is read from what still names the run (its start file, its row in the run index), never from a time and never from the number of protocols in the area; a run nothing names cannot be assigned to a protocol, which is said, and it holds none. Where an assigned run may have been the protocol's first measurement, no later run and no later commit stands in for what was registered then: the number is not released until the record is back, or the protocol is registered anew or handed over. It may have been the first unless the start files show that a measurement whose record reads started before it; an order they do not tell is unknown and treated the same. The order rests on the clocks of the machines that started the runs, which nothing checks. Which run kinds count as a measurement is unchanged: a probe binds no registration, whether its record is lost or not.
+
+**What the version step takes, for the session that builds it.** The author's release of the wording comes first. Then: the two paragraphs and the head line of `labkit/docs/standard.md` (0.32, with its one-sentence summary), the version every protocol head names and the check that reads it, the stamps and their comparison files, and the `CHANGELOG.md` entry under "Breaking" naming the last release that reads 0.31. That release is found from the actual release state (the newest tag and the `CHANGELOG.md` heads), not from this note. A protocol not yet run takes the migration the refusal names; one with runs is reproduced with the labkit release it was written for. Release, tag and push stay with the author.
+
+**Left for a decision of its own.** Whether numbers seen in a probe should bind a later confirmation — which results someone may already have seen before a confirmation is registered — is not part of this text.
+
