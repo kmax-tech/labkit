@@ -111,7 +111,8 @@ class BothCommandsInTheSameCases(unittest.TestCase):
     """runlog's first step and `labkit-next` add the hint while the area has
     not measured the protocol (`area_state.Measured.has_measured`), and
     neither adds it after: a lost run and a run whose record does not read
-    count, as either may have been the first measurement."""
+    and whose index row names the protocol count, as either may have been
+    the first measurement; a record no row names counts for no protocol."""
 
     TEXT = head(repeat_cost="low", kind="compute")
 
@@ -128,31 +129,46 @@ class BothCommandsInTheSameCases(unittest.TestCase):
         )
         return "register it now" in runlog, "register it now" in after
 
+    DEAD = "2026-10-06T10-00-00_dead"
+
     def state(
-        self, present: list[runs.RunDir], lost: dict[str, str] | None = None
+        self,
+        present: list[runs.RunDir],
+        lost: dict[str, str] | None = None,
+        index: dict[str, str] | None = None,
     ) -> AreaState:
-        return assemble(Path("area"), None, TREE, present, [], lost or {})
+        return assemble(
+            Path("area"), None, TREE, present, [], lost or {}, indexed=index
+        )
+
+    def dead(self) -> runs.RunDir:
+        return runs.RunDir(Path("runs") / self.DEAD, None, "unreadable")
 
     def test_before_a_measurement_both_add_it(self):
         probe = _record("2026-10-07T09-00-00_0000", run_kind="probe")
         for name, state in (
             ("no run", self.state([])),
             ("a probe only", self.state([probe])),
+            ("a record no index row names", self.state([self.dead()])),
+            (
+                "a record bound to another protocol",
+                self.state([self.dead()], index={self.DEAD: "p-0000000000000000"}),
+            ),
         ):
             with self.subTest(name):
                 self.assertEqual(self.hints(state), (True, True))
 
     def test_after_a_measurement_neither_adds_it(self):
-        dead = runs.RunDir(
-            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
-        )
         for name, state in (
             (
                 "a measurement that reads",
                 self.state([_record("2026-10-07T10-00-00_ab12")]),
             ),
             ("a lost run", self.state([], {"2026-10-05T10-00-00_lost": PID})),
-            ("a record that does not read", self.state([dead])),
+            (
+                "a record that does not read, bound by its index row",
+                self.state([self.dead()], index={self.DEAD: PID}),
+            ),
         ):
             with self.subTest(name):
                 self.assertEqual(self.hints(state), (False, False))
@@ -162,14 +178,19 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
     """runlog's start names the runs without a record
     (`start_check.earlier_measurement_note`), one sentence per case: one
     that may have been the first measurement (HEAD does not stand in for
-    what was registered then, finalize will hold the number), one after a
-    measurement that reads (nothing held), one whose protocol cannot be
-    determined (held against none) — a warning each, the run starts."""
+    what was registered then, finalize will hold the number) — also where
+    its order against a measurement that reads is not evidenced —, one
+    that evidently started after a measurement that reads (nothing held),
+    one whose protocol cannot be determined (held against none) — a
+    warning each, the run starts."""
 
     TEXT = BothCommandsInTheSameCases.TEXT
-    LOST = "2026-10-05T10-00-00_lost"
-    DEAD = "2026-10-06T10-00-00_dead"
     READS = "2026-10-07T10-00-00_ab12"
+    # against READS' start: two days before, ten hours after, two days after
+    LOST = "2026-10-05T10-00-00_105e"
+    NEAR = "2026-10-07T20-00-00_105e"
+    LATER = "2026-10-09T10-00-00_105e"
+    DEAD = "2026-10-06T10-00-00_dead"
 
     def note(
         self,
@@ -178,7 +199,7 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
         lost: dict[str, str] | None = None,
     ) -> str | None:
         """The note over the runs PRESENT, the LOST ones and the run index
-        INDEX (run id → protocol id, in index order)."""
+        INDEX (run id → protocol id)."""
         bound = start_check._Bound(  # noqa: SLF001
             {"id": PID, "path": "PROTOCOL-x.md"},
             self.TEXT,
@@ -213,26 +234,43 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
                 note = self.note(index, present, lost)
                 assert note is not None
                 self.assertIn(run, note)
-                self.assertIn("PROTOCOL-x.md: not its first measurement", note)
+                self.assertIn(
+                    "PROTOCOL-x.md: this run is not held to HEAD as its first "
+                    "measurement",
+                    note,
+                )
+                self.assertIn("may have been the first", note)
                 self.assertIn("does not stand in for it", note)
                 self.assertIn("The run starts", note)
+                self.assertNotIn("not evidenced", note)
 
-    def test_a_lost_run_after_a_measurement_that_reads_holds_nothing(self):
+    def test_an_order_not_evidenced_is_said_and_held_like_the_first(self):
         note = self.note(
-            {self.READS: PID, self.LOST: PID}, [_record(self.READS)], {self.LOST: PID}
+            {self.READS: PID, self.NEAR: PID}, [_record(self.READS)], {self.NEAR: PID}
         )
         assert note is not None
-        self.assertIn(f"run {self.LOST} is gone", note)
+        self.assertIn(f"run {self.NEAR} is gone", note)
+        self.assertIn(f"whether it started before {self.READS}", note)
+        self.assertIn("is not evidenced", note)
+        self.assertIn("hold every number of this protocol", note)
+
+    def test_a_lost_run_long_after_a_measurement_that_reads_holds_nothing(self):
+        note = self.note(
+            {self.READS: PID, self.LATER: PID}, [_record(self.READS)], {self.LATER: PID}
+        )
+        assert note is not None
+        self.assertIn(f"run {self.LATER} is gone", note)
         self.assertIn("nothing is held for it", note)
-        self.assertNotIn("not its first measurement", note)
+        self.assertNotIn("not held to HEAD", note)
 
     def test_a_record_no_index_row_names_is_held_against_no_protocol(self):
         note = self.note({}, [self.dead()])
         assert note is not None
         self.assertIn(f"the record of run {self.DEAD} does not read", note)
         self.assertIn("which protocol it belongs to cannot be determined", note)
+        self.assertIn("nor that none came before", note)
         self.assertIn("restore its config.json", note)
-        self.assertNotIn("not its first measurement", note)
+        self.assertNotIn("not held to HEAD", note)
 
     def test_the_twins_say_nothing(self):
         other = "p-0000000000000000"

@@ -21,7 +21,7 @@ import contextlib
 import importlib.util
 import io
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 import re
 import shutil
@@ -760,12 +760,18 @@ class FirstMeasurementLost(CountCommands):
         _replace(self.protocol, [(self.OLD, self.NEW)])
         self.lab.commit("the question, rewritten after A")
         run_b, out = self.start_b(run_a)
-        self.assertIn("PROTOCOL-lines.md: not its first measurement", out)
+        self.assertIn(
+            "PROTOCOL-lines.md: this run is not held to HEAD as its first measurement",
+            out,
+        )
         self.assertIn(f"run {run_a} is gone", out)
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
         self.assertIn("BLOCKER (check not executable): what the number is about", out)
         self.assertIn(f"run {run_a} is gone", out)
+        # B started seconds after A: two run ids that close order nothing
+        self.assertIn(f"whether it started before {run_b}", out)
+        self.assertIn("is not evidenced", out)
         self.assertNotIn("are the ones the first measurement registered", out)
         for way in ("a copy that holds it", "register anew", "--handover"):
             self.assertIn(way, out)
@@ -781,19 +787,25 @@ class FirstMeasurementLost(CountCommands):
         self.assertIn(f"as the answering run {run_b} saw the protocol", out)
 
     def test_the_twin_a_later_run_lost_is_named_and_holds_nothing(self):
-        """A stands and reads; a second measurement is deleted before a
-        commit. The run index lists it after A, so what A registered is
-        told: the registration station compares as before and warns of the
-        lost run. What needs the lost run's own evidence is held by its own
-        check: the output file holds the lost run's rows, and the row
-        provenance station (`run_record_check.row_provenance_findings`)
-        blocks A's number over them."""
+        """A stands and reads; a second measurement, started two days
+        later, is deleted before a commit. Its run id evidences that A
+        started first, so what A registered is told: the registration
+        station compares as before and warns of the lost run. What needs
+        the lost run's own evidence is held by its own check: the output
+        file holds the lost run's rows, and the row provenance station
+        (`run_record_check.row_provenance_findings`) blocks A's number
+        over them. The two days are written into the index row — the one
+        trace of the lost run —, since a test cannot wait them out."""
         run_a = self.measure()
         later = self.measure()
         shutil.rmtree(self.area / "runs" / later)
+        started = datetime.strptime(later[: len(_SECOND)], RUN_ID_TIME)
+        days_on = (started + timedelta(days=2)).strftime(RUN_ID_TIME)
+        indexed_as = days_on + later[len(_SECOND) :]
+        _replace(self.area / "runs.tsv", [(f"\n{later}\t", f"\n{indexed_as}\t")])
         rc, out = self.lab.finalize(self.area)
         self.assertIn("are the ones the first measurement registered", out)
-        self.assertIn(f"WARNING: run {later} is gone", out)
+        self.assertIn(f"WARNING: run {indexed_as} is gone", out)
         self.assertIn("the comparison with the first measurement runs", out)
         self.assertNotIn("what the number is about cannot be compared", out)
         self.assertNotIn(f"run {run_a} is gone", out)
@@ -803,6 +815,34 @@ class FirstMeasurementLost(CountCommands):
             f"derives from",
             out,
         )
+
+    def test_a_record_of_unknown_protocol_holds_nothing_and_establishes_nothing(
+        self,
+    ):
+        """One protocol in the area, and a record that does not read and
+        that no index row names: the protocol count assigns it to nobody.
+        finalize holds nothing for it, warns that its binding is unknown,
+        and does not say the first measurement's registration is
+        established."""
+        self.measure()
+        unknown = self.area / "runs" / "2026-01-01T10-00-00_0bad"
+        unknown.mkdir()
+        (unknown / "config.json").write_text("{not json", encoding="utf-8")
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            f"WARNING (check not executable): the record of run {unknown.name} "
+            f"does not read",
+            out,
+        )
+        self.assertIn("which protocol it belongs to cannot be determined", out)
+        self.assertIn("nor that none came before", out)
+        self.assertIn(
+            "are the ones the first measurement that reads registered — an earlier "
+            "measurement is not excluded",
+            out,
+        )
+        self.assertNotIn("the ones the first measurement registered", out)
 
     def test_a_later_start_is_not_held_to_head_as_the_first(self):
         """With the protocol out of HEAD a first measurement is refused as

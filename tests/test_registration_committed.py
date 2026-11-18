@@ -32,7 +32,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import next_command, report_command
-from labkit.formats import area_state, gate, protocol_history, runs
+from labkit.formats import area_state, gate, protocol_history, run_index, runs
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
@@ -1785,9 +1785,12 @@ class ReportOwedByADeletedProtocol(_Repository):
                 _, out = self._hold([self.proto, renamed], staged=staged)
                 self.assertNotIn("no protocol of the area carries", out)
 
-    def _unreadable_run_beside(self, report: str | None) -> None:
+    def _unreadable_run_beside(
+        self, report: str | None, *, indexed: bool = True
+    ) -> None:
         """The protocol registering REPORT, a readable measurement at that
-        commit, and an older run of the area whose record does not read."""
+        commit, and an older run of the area whose record does not read —
+        bound to the protocol by a row of the run index when INDEXED."""
         self.proto.write_text(
             head(repeat_cost="low", report=report) + REGISTRATION, encoding="utf-8"
         )
@@ -1797,13 +1800,28 @@ class ReportOwedByADeletedProtocol(_Repository):
         broken = self.area / "runs" / "2026-10-01T10-00-00_bad0"
         broken.mkdir(parents=True)
         (broken / "config.json").write_text("{not json", encoding="utf-8")
+        if indexed:
+            row = run_index.index_row(broken.name, "g", "s", {}, {}, {}, "", PID)
+            (self.area / run_index.RUN_INDEX).write_text(
+                "\t".join(run_index.RUN_INDEX_COLS) + "\n" + "\t".join(row) + "\n",
+                encoding="utf-8",
+            )
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the runs", "--no-verify")
 
+    def test_the_twin_an_unreadable_run_no_index_row_names_starts_no_duty(self):
+        """Its protocol cannot be determined, so it is held against none:
+        the readable measurement registered no report, and none is owed."""
+        self._unreadable_run_beside(None, indexed=False)
+        text = self.proto.read_text(encoding="utf-8")
+        measured = _measured(self.proto, text)
+        self.assertEqual(measured.unassigned, ("2026-10-01T10-00-00_bad0",))
+        self.assertIsNone(registered_report.report_duty(measured, self.root))
+
     def test_an_unreadable_run_may_have_been_the_first_measurement(self):
-        """Its binding and its commit are unknowable; beside a readable
-        measurement that registered no report, "no duty" is not told — at
-        report-check, at the stop and at the commit."""
+        """Bound to the protocol by its index row, its commit unknowable;
+        beside a readable measurement that registered no report, "no duty"
+        is not told — at report-check, at the stop and at the commit."""
         self._unreadable_run_beside(None)
         for staged in (True, False):
             with self.subTest(staged=staged):

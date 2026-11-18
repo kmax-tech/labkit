@@ -302,12 +302,15 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
     Where no first measurement's registration reads — its commit not
     recorded, not held by the repository or not holding the protocol, or
     the measurement lost — that is UNREAD, never "no duty". A lost
-    measurement, and a run of the area whose record does not read (its
-    binding and its commit are unknowable), are UNREAD beside readable
-    ones too: either may have been the first, and no other station holds
-    an unreadable run for a protocol that has adopted nothing. A readable
-    first measurement that registered a report settles the duty whatever
-    else does not read. Raises RuntimeError when git fails."""
+    measurement, and a run whose record does not read and whose row in the
+    run index names this protocol (`area_state.assigned_to`; its commit is
+    unknowable), are UNREAD beside readable ones too: either may have been
+    the first. A record that does not read and that no row names is
+    assigned to no protocol (`Measured.unassigned`): no duty is derived
+    from it, and the registration station names it
+    (`registration_hold.lost_record_warnings`). A readable first
+    measurement that registered a report settles the duty whatever else
+    does not read. Raises RuntimeError when git fails."""
     if not measured.has_measured:
         return None
     # no path of today: at a path the commit does not hold, `committed_at`

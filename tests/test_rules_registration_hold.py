@@ -52,6 +52,7 @@ from labkit.gates.registration_hold import (
     waiting_refs,
 )
 from labkit.formats.area_state import (
+    UNASSIGNED_LEAVES_OPEN,
     Measured,
     WithoutRecord,
     measurements_without_record,
@@ -808,68 +809,99 @@ class ARunWithoutItsRecord(unittest.TestCase):
     """`area_state.measurements_without_record` sorts the runs without a
     record by what each means for one protocol, and the registration
     station acts on each sort: `lost_record_hold` blocks where the run may
-    have been the first measurement — what stood registered then is not
-    told —, `lost_record_warnings` names a run a measurement that reads
-    precedes and a record whose protocol cannot be determined. The run
-    index is the evidence for both the protocol and the order."""
+    have been the first measurement — none that reads is shown to precede
+    it, or their order is not evidenced —, `lost_record_warnings` names a
+    run that evidently started after a measurement that reads and a record
+    whose protocol cannot be determined. The order is evidenced by the
+    start times in the run ids, more than ZONE_SPREAD apart; which protocol
+    a run belongs to is `Measured`'s (tests/test_area_state.py)."""
 
-    LOST = "2026-10-05T10-00-00_lost"
-    DEAD = run_dir("2026-10-06T10-00-00_dead", error="config.json: not JSON")
     FIRST = run_dir(
         "2026-10-07T10-00-00_ab12",
         config=parse_run_config(run_record(protocol={"id": PID, "path": "P.md"})),
     )
-    OTHER = "p-fedcba9876543210"
+    # against FIRST's start: two days before, ten hours either side, two days after
+    LONG_BEFORE = "2026-10-05T10-00-00_105e"
+    SHORTLY_BEFORE = "2026-10-07T00-00-00_105e"
+    SHORTLY_AFTER = "2026-10-07T20-00-00_105e"
+    LONG_AFTER = "2026-10-09T10-00-00_105e"
+    DEAD = run_dir(LONG_BEFORE, error="config.json: not JSON")
 
     def sorted_out(
         self,
-        index: dict[str, str],
         runs: tuple[RunDir, ...] = (),
         lost: tuple[str, ...] = (),
+        unassigned: tuple[str, ...] = (),
     ) -> WithoutRecord:
-        """The sort for PID over RUNS, LOST and the run index INDEX (run id
-        → protocol id, in index order)."""
-        measured = Measured(AREA, PID, runs, lost, (), ())
-        return pure_call(measurements_without_record, measured, lost, index)
+        """The sort for PID over its RUNS, its LOST runs and the area's
+        UNASSIGNED records."""
+        measured = Measured(AREA, PID, runs, lost, (), (), unassigned)
+        return pure_call(measurements_without_record, measured, lost)
 
     def held(self, without: WithoutRecord) -> list[GateFinding]:
         return pure_call(
             registration_hold.lost_record_hold, PID, AREA, without, HANDOVER
         )
 
-    def test_a_lost_run_before_every_measurement_that_reads_holds(self):
-        first = self.FIRST.dir.name
-        for name, index, runs in (
-            ("nothing else measured", {self.LOST: PID}, ()),
-            ("before the one that reads", {self.LOST: PID, first: PID}, (self.FIRST,)),
+    def test_a_lost_run_no_measurement_that_reads_precedes_holds(self):
+        for name, runs in (
+            ("nothing else measured", ()),
+            ("long before the one that reads", (self.FIRST,)),
         ):
             with self.subTest(name):
-                without = self.sorted_out(index, runs, (self.LOST,))
-                self.assertEqual((without.later, without.unassigned), ((), ()))
+                without = self.sorted_out(runs, (self.LONG_BEFORE,))
+                self.assertEqual(len(without.may_be_first), 1)
+                self.assertEqual(
+                    (without.unordered, without.later, without.unassigned),
+                    ((), (), ()),
+                )
                 (hold,) = self.held(without)
                 self.assertEqual(
                     (hold.grade, hold.rule, hold.outcome),
                     (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
                 )
-                self.assertIn(f"run {self.LOST} is gone", hold.text)
+                self.assertIn(f"run {self.LONG_BEFORE} is gone", hold.text)
                 self.assertIn("may have been the first", hold.text)
                 self.assertIn("does not stand in for it", hold.text)
+                self.assertNotIn("not evidenced", hold.text)
                 for way in ("a copy that holds it", "register anew", HANDOVER):
                     self.assertIn(way, hold.fix or "")
                 self.assertEqual(pure_call(lost_record_warnings, without), [])
 
-    def test_a_lost_run_after_a_measurement_that_reads_is_named_not_held(self):
-        index = {self.FIRST.dir.name: PID, self.LOST: PID}
-        without = self.sorted_out(index, (self.FIRST,), (self.LOST,))
-        self.assertEqual(without.may_be_first, ())
+    def test_an_order_the_run_ids_do_not_evidence_holds_and_says_so(self):
+        """Within ZONE_SPREAD two ids order nothing, whichever is the
+        larger: the run may have been the first, and the hold names the
+        order as not evidenced — its own case, on neither side silently."""
+        for name, run, why in (
+            ("ten hours after", self.SHORTLY_AFTER, "within 26 hours of each other"),
+            ("ten hours before", self.SHORTLY_BEFORE, "within 26 hours of each other"),
+            ("an id without a time", "r0", "its run id carries no start time"),
+        ):
+            with self.subTest(name):
+                without = self.sorted_out((self.FIRST,), (run,))
+                self.assertEqual((without.may_be_first, without.later), ((), ()))
+                (hold,) = self.held(without)
+                self.assertEqual(hold.outcome, NOT_EXECUTABLE)
+                self.assertIn(f"run {run} is gone", hold.text)
+                self.assertIn(
+                    f"whether it started before {self.FIRST.dir.name}, the earliest "
+                    f"measurement that reads, is not evidenced",
+                    hold.text,
+                )
+                self.assertIn(why, hold.text)
+                self.assertEqual(pure_call(lost_record_warnings, without), [])
+
+    def test_a_lost_run_long_after_a_measurement_that_reads_is_named_not_held(self):
+        without = self.sorted_out((self.FIRST,), (self.LONG_AFTER,))
+        self.assertEqual(without.held, ())
         self.assertEqual(self.held(without), [])
         (warning,) = pure_call(lost_record_warnings, without)
         self.assertEqual((warning.grade, warning.rule), (WARNING, TECHNICAL_RULE))
-        self.assertIn(f"run {self.LOST} is gone", warning.text)
+        self.assertIn(f"run {self.LONG_AFTER} is gone", warning.text)
         self.assertIn("the comparison with the first measurement runs", warning.text)
         self.assertIn("a copy that holds it", warning.fix or "")
 
-    def test_a_repeat_or_a_probe_that_reads_does_not_stand_before_it(self):
+    def test_a_repeat_or_a_probe_that_reads_orders_nothing(self):
         """Only a measurement that registers — no repeat, no probe — tells
         what stood registered before a later run."""
         bound = {"protocol": {"id": PID, "path": "P.md"}}
@@ -880,35 +912,35 @@ class ARunWithoutItsRecord(unittest.TestCase):
             with self.subTest(name):
                 cfg = parse_run_config(run_record({**bound, **fields}))
                 other = run_dir(self.FIRST.dir.name, config=cfg)
-                index = {other.dir.name: PID, self.LOST: PID}
-                without = self.sorted_out(index, (other,), (self.LOST,))
+                without = self.sorted_out((other,), (self.LONG_AFTER,))
                 self.assertEqual(len(without.may_be_first), 1)
 
-    def test_an_unreadable_record_holds_only_the_protocol_its_row_names(self):
+    def test_a_record_that_does_not_read_is_sorted_like_a_lost_run(self):
+        """Among the protocol's runs by its index row (`Measured.runs`): it
+        holds or is named by the same evidence."""
         dead = self.DEAD.dir.name
-        ours = self.sorted_out({dead: PID}, (self.DEAD,))
-        (hold,) = self.held(ours)
+        (hold,) = self.held(self.sorted_out((self.DEAD, self.FIRST)))
         self.assertIn(f"the record of run {dead} does not read", hold.text)
         self.assertIn("written anew from memory settles nothing", hold.fix or "")
-        for name, bound_to in (("another protocol", self.OTHER), ("unbound", "")):
-            with self.subTest(name):
-                theirs = self.sorted_out({dead: bound_to}, (self.DEAD,))
-                self.assertEqual(theirs, WithoutRecord((), (), ()))
-                self.assertEqual(self.held(theirs), [])
-                self.assertEqual(pure_call(lost_record_warnings, theirs), [])
+        after = run_dir(self.LONG_AFTER, error="config.json: not JSON")
+        without = self.sorted_out((self.FIRST, after))
+        self.assertEqual(self.held(without), [])
+        self.assertEqual(len(without.later), 1)
 
-    def test_an_unreadable_record_no_row_names_holds_none_and_is_warned_of(self):
+    def test_a_record_no_protocol_can_be_assigned_holds_none_and_is_warned_of(self):
         """Its protocol cannot be determined: no hold for any protocol, and
         a warning of a check not executable that names the run and the way
         back — never a silent pass."""
         dead = self.DEAD.dir.name
-        without = self.sorted_out({self.FIRST.dir.name: PID}, (self.DEAD, self.FIRST))
-        self.assertEqual(without, WithoutRecord((), (), (dead,)))
+        without = self.sorted_out((self.FIRST,), unassigned=(dead,))
+        self.assertEqual(without, WithoutRecord((), (), (), (dead,)))
         self.assertEqual(self.held(without), [])
         (warning,) = pure_call(lost_record_warnings, without)
         self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
         self.assertIn(f"the record of run {dead} does not read", warning.text)
         self.assertIn("which protocol it belongs to cannot be determined", warning.text)
+        self.assertIn(UNASSIGNED_LEAVES_OPEN, warning.text)
+        self.assertIn("nor that none came before", warning.text)
         self.assertIn("written anew from memory settles nothing", warning.fix or "")
 
     def test_the_twins_every_measurement_with_its_record_and_none_pass(self):
@@ -921,7 +953,7 @@ class ARunWithoutItsRecord(unittest.TestCase):
             ("a deleted run a commit holds", (from_git,)),
         ):
             with self.subTest(name):
-                without = self.sorted_out({rd.dir.name: PID for rd in runs}, runs)
-                self.assertEqual(without, WithoutRecord((), (), ()))
+                without = self.sorted_out(runs)
+                self.assertEqual(without, WithoutRecord((), (), (), ()))
                 self.assertEqual(self.held(without), [])
                 self.assertEqual(pure_call(lost_record_warnings, without), [])

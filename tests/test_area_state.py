@@ -522,19 +522,43 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                 )
             ],
             {"2026-10-05T10-00-00_lost": PID},
+            indexed={"2026-10-06T10-00-00_dead": "p-other"},
         )
         m = state.measured_of(PID)
         self.assertIsInstance(m, Measured)
         self.assertTrue(m.has_measured)
         self.assertEqual([rd.dir.name for rd in m.firsts], [RUN])
         self.assertEqual(m.lost, ("2026-10-05T10-00-00_lost",))
-        # the unreadable record counts for every protocol: it may be one
+        self.assertNotIn("2026-10-06T10-00-00_dead", [rd.dir.name for rd in m.runs])
+        # the unreadable record counts for the protocol its index row names
         other = state.measured_of("p-other")
         self.assertTrue(other.has_measured)
         self.assertEqual(other.firsts, ())
         self.assertEqual(
             [rd.dir.name for rd in other.deleted], ["2026-10-06T10-00-00_dead"]
         )
+        self.assertEqual((m.unassigned, other.unassigned), ((), ()))
+
+    def test_an_unreadable_record_no_row_names_counts_for_no_protocol(self):
+        """Its protocol cannot be determined: among no protocol's runs,
+        measured for none, and named as unassigned for each — the twin of
+        the record an index row binds; a row that records the run unbound
+        assigns it to no protocol either, and leaves nothing unknown."""
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
+        )
+        state = assemble(Path("area"), None, TREE, [self._record(RUN), dead], [], {})
+        for pid in (PID, "p-other"):
+            with self.subTest(pid):
+                m = state.measured_of(pid)
+                self.assertEqual(m.unassigned, ("2026-10-06T10-00-00_dead",))
+                self.assertNotIn(dead, m.runs)
+        self.assertFalse(state.measured_of("p-other").has_measured)
+        unbound = assemble(
+            Path("area"), None, TREE, [dead], [], {}, indexed={dead.dir.name: ""}
+        )
+        m = unbound.measured_of(PID)
+        self.assertEqual((m.runs, m.unassigned, m.has_measured), ((), (), False))
 
     def test_nothing_measured(self):
         state = assemble(
@@ -544,19 +568,20 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertEqual(state.measured_of(PID).runs[0].dir.name, PROBE)
 
     def test_measured_without_a_first_that_reads(self):
-        # a lost run and an unreadable record each count as measured, though
-        # neither is among the first measurements whose record reads
+        # a lost run and an unreadable record the index binds each count as
+        # measured, though neither is among the first measurements whose
+        # record reads
         dead = runs.RunDir(
             Path("runs") / "2026-10-06T10-00-00_dead", None, "unreadable"
         )
-        for name, present, lost in (
-            ("lost", [], {"2026-10-05T10-00-00_lost": PID}),
-            ("unreadable", [dead], {}),
+        for name, present, lost, index in (
+            ("lost", [], {"2026-10-05T10-00-00_lost": PID}, {}),
+            ("unreadable", [dead], {}, {dead.dir.name: PID}),
         ):
             with self.subTest(name):
-                m = assemble(Path("area"), None, TREE, present, [], lost).measured_of(
-                    PID
-                )
+                m = assemble(
+                    Path("area"), None, TREE, present, [], lost, indexed=index
+                ).measured_of(PID)
                 self.assertTrue(m.has_measured)
                 self.assertEqual(m.firsts, ())
 

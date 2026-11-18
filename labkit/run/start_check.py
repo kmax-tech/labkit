@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 
 from labkit.formats.area_state import (
+    UNASSIGNED_LEAVES_OPEN,
     AreaState,
     measurements_without_record,
     state_of,
@@ -166,7 +167,7 @@ def _committed_registration(
         return []
     measured = state.measured_of(head.id)
     # STATE is the working tree's, so its lost runs are lost in the tree
-    without = measurements_without_record(measured, measured.lost, state.indexed)
+    without = measurements_without_record(measured, measured.lost)
     reads = any(rd.config is not None and is_measurement(rd) for rd in measured.runs)
     if reads or without.of_protocol:
         return []
@@ -215,18 +216,21 @@ def _committed_registration(
 def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
     """The warning a measurement starts with about runs without a record
     (`area_state.measurements_without_record` over STATE, the working
-    tree's, and the run index it read, `AreaState.indexed`), one sentence
-    per case:
+    tree's), one sentence per case:
 
-    - a run of the protocol that may have been its first measurement: this
-      run is not the first, what stood registered then cannot be read from
+    - a run of the protocol that may have been its first measurement —
+      also where its order against a measurement that reads is not
+      evidenced, which its clause says: this run is not held to HEAD as
+      the first, what stood registered then cannot be read from
       here, and the registration station holds every number of the protocol
       until the record is back or the protocol is registered anew or handed
       over;
-    - a run of the protocol that a measurement that reads precedes: named,
-      nothing is held for it;
+    - a run of the protocol that started evidently after a measurement
+      that reads: named, nothing is held for it;
     - a record that does not read and that no index row names: its
-      protocol cannot be determined, and it counts for none.
+      protocol cannot be determined, in an area of one protocol too, and
+      the sentence says what that leaves open
+      (`area_state.UNASSIGNED_LEAVES_OPEN`).
 
     A warning, never a refusal: a started investigation may go on, and only
     a result that needs the missing record is held
@@ -237,12 +241,13 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
         return None
     measured = state.measured_of(head.id)
     # STATE is the working tree's, so its lost runs are lost in the tree
-    without = measurements_without_record(measured, measured.lost, state.indexed)
+    without = measurements_without_record(measured, measured.lost)
     told: list[str] = []
-    if without.may_be_first:
+    if without.held:
         told.append(
-            f"not its first measurement, and an earlier one left no record that "
-            f"reads: {'; '.join(without.may_be_first)}. What stood registered "
+            f"this run is not held to HEAD as its first measurement — a run that "
+            f"may have been the first left no record that reads: "
+            f"{'; '.join(without.held)}. What stood registered "
             f"then cannot be read from here, and the protocol as committed now "
             f"does not stand in for it. The run starts; `finalize` and "
             f"`report-check` hold every number of this protocol until the record "
@@ -251,15 +256,16 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
         )
     if without.later:
         told.append(
-            f"{'; '.join(without.later)} — after a measurement of this protocol "
-            f"that reads, so nothing is held for it; a result that needs its "
+            f"{'; '.join(without.later)} — more than a day after a measurement "
+            f"of this protocol that reads started, so nothing is held for it; a "
+            f"result that needs its "
             f"rows is held where that result is checked."
         )
     if without.unassigned:
         told.append(
             f"the record of run {', '.join(without.unassigned)} does not read, "
             f"and the run index does not list it: which protocol it belongs to "
-            f"cannot be determined, so it is held against no protocol; restore "
+            f"cannot be determined — {UNASSIGNED_LEAVES_OPEN}; restore "
             f"its config.json from a commit or a copy that holds it."
         )
     if not told:
