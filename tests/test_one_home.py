@@ -14,6 +14,9 @@ from __future__ import annotations
 import re
 import unittest
 from pathlib import Path
+from typing import get_args
+
+from labkit.formats import runs
 
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
 #: rules that also hold in the stamped script templates — a stamped area reads
@@ -239,6 +242,15 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"(?:[=!]=|(?:not\s+)?in\b)",
         {"findings"},
     ),
+    # the same for a run's kind: `runs.PREPARATION`, `PROBE`, `MEASUREMENT`
+    (
+        "a run kind compared as a word",
+        r"(?:[=!]=\s*|\bin\s*[(\[{][^)\]}\n]*)"
+        r"[\"'](?:preparation|probe|measurement)[\"']"
+        r"|[\"'](?:preparation|probe|measurement)[\"']\s*"
+        r"(?:[=!]=|(?:not\s+)?in\b)",
+        {"runs"},
+    ),
     # a bare area name is read neither by a glob, whose `*` runs over
     # dashes, nor by a slug comparison taking the first match:
     # `repo.areas_named` reads it by the name grammar
@@ -344,6 +356,13 @@ class OneHome(unittest.TestCase):
         found += [o for rule in BLOCK_RULES for o in block_offenders(*rule)]
         self.assertEqual(found, [], "\n" + "\n".join(found))
 
+    def test_the_run_kinds_are_the_named_constants(self):
+        """`RunKind` is a Literal, whose words cannot be built from the
+        constants: the two spellings are held equal here."""
+        self.assertEqual(
+            get_args(runs.RunKind), (runs.PREPARATION, runs.PROBE, runs.MEASUREMENT)
+        )
+
     def test_the_block_rules_bite(self):
         samples = {
             "a path shown relative by hand (try/except form)": (
@@ -409,6 +428,7 @@ class OneHome(unittest.TestCase):
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
             "the decided statuses spelled by hand": 'if f.status in ("fixed", "false-positive"):',
             "a decision status compared as a word": 'if decided.status == "limitation":',
+            "a run kind compared as a word": 'and cfg.run_kind == "preparation"',
             "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',

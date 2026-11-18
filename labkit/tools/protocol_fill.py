@@ -575,7 +575,7 @@ def newest_preparation(area: Path) -> Path:
         r
         for r in runs.completed_runs(area, with_repeats=False)
         if (cfg := runs.read_run_config(r)) is not None
-        and cfg.run_kind == "preparation"
+        and cfg.run_kind == runs.PREPARATION
     ]
     if not prepared:
         raise ValueError(

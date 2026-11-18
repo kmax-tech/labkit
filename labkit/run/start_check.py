@@ -26,7 +26,7 @@ from labkit.formats import evidence
 from labkit.formats.commands import checkout_command, contract_command, fill_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
-from labkit.formats.runs import RunKind, parse_run_kind
+from labkit.formats.runs import PROBE, RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, protocol_check, repo
 from labkit.formats import audit_gaps
@@ -716,7 +716,7 @@ def prepare(
     repeat_cost = bound.head.repeat_cost if bound.head is not None else None
     # Seconds uses the complete measurement as its instrument check.
     # Rationale: docs/notes/2026-10-20-run-kinds.md.
-    if run_kind == "probe" and not lane(repeat_cost).probe_allowed:
+    if run_kind == PROBE and not lane(repeat_cost).probe_allowed:
         raise SystemExit(
             with_way_out(
                 "runlog: run_kind='probe' is not allowed at repeat_cost='low' — "

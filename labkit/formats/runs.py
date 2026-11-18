@@ -84,6 +84,10 @@ RunKind = Literal["preparation", "probe", "measurement"]
 #: the run kind that measures the registered question — the one spelling
 #: every reader compares a readable record's `run_kind` with
 MEASUREMENT: RunKind = "measurement"
+#: the two kinds that answer no registered question: a run that builds the
+#: data, and a small run that tries the instrument
+PREPARATION: RunKind = "preparation"
+PROBE: RunKind = "probe"
 #: the measurement script every skeleton stamps (`standard_contract`): the
 #: one script that opens the full run and carries the `DELIVERABLES`
 #: constant the stamp fills; `params` reads its constants
@@ -92,10 +96,10 @@ MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 
 def parse_run_kind(value: object) -> RunKind:
     """Validate the declared purpose of a run, naming the field on failure."""
-    if value == "preparation":
-        return "preparation"
-    if value == "probe":
-        return "probe"
+    if value == PREPARATION:
+        return PREPARATION
+    if value == PROBE:
+        return PROBE
     if value == MEASUREMENT:
         return MEASUREMENT
     raise ValueError(
