@@ -265,6 +265,44 @@ class Gate(_Areas):
         self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         self.assertEqual(self.gaps(), [])
 
+    def _builds(self) -> tuple[list[str], list[Path]]:
+        """(the gaps, the areas whose state the replacement check built)."""
+        from unittest import mock
+
+        ctx = report_context.checked(self.b, self.b / "PROTOCOL-x.md")
+        built: list[Path] = []
+        real = report_replacement.state_of
+
+        def counting(area: Path, **kwargs):
+            built.append(area.resolve())
+            return real(area, **kwargs)
+
+        with mock.patch.object(report_replacement, "state_of", counting):
+            gaps = [g.line for g in report_replacement.replacement_gaps(ctx)]
+        return gaps, built
+
+    def test_one_check_builds_the_predecessors_area_state_once(self):
+        """The circle walk and the comparison of the registrations read one
+        build of the predecessor's area: two builds in one check can differ
+        when a run finishes between them."""
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
+        self.assertEqual(self._builds(), ([], [self.a.resolve()]))
+
+    def test_the_circle_walk_reads_its_own_area_off_the_checks_state(self):
+        """A names B, B names A: the walk comes back to the area under
+        check, whose state the check holds already — it builds the
+        predecessor's alone, and the circle is still named."""
+        a = self.a / "PROTOCOL-x.md"
+        text = a.read_text(encoding="utf-8")
+        a.write_text(
+            text.replace("[[promise]]", replaces(B_ID).strip() + "\n\n[[promise]]", 1),
+            encoding="utf-8",
+        )
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
+        gaps, built = self._builds()
+        self.assertTrue(any("in a circle" in g for g in gaps), gaps)
+        self.assertEqual(built, [self.a.resolve()])
+
     def test_a_declared_change_that_is_none_is_held(self):
         self._b(
             replaces(

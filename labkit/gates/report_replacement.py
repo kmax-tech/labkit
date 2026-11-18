@@ -10,8 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats.commands import gate_command
-from labkit.formats.area_state import state_of
-from labkit.formats.area_state import FileState
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats import evidence
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import (
@@ -80,12 +79,15 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
         ]
     if rep is None or ctx.head.id is None:
         return []
-    pred = _predecessor(ctx, rep.protocol)
+    # one build per area the check reads: the circle walk and the
+    # comparison of the registrations share the predecessor's
+    built: dict[Path, AreaState] = {}
+    pred = _predecessor(ctx, rep.protocol, built)
     if isinstance(pred, GateFinding):
         return [replace(pred, text=f"{name}: {pred.text}")]
     out = [
         replace(f, text=f"{name}: {f.text}")
-        for f in _undeclared_changes(ctx, rep, pred)
+        for f in _undeclared_changes(ctx, rep, pred, built)
     ]
     if pred.parent.resolve() != ctx.area.resolve():
         theirs = f"{name}: the predecessor's area {pred.parent.name}"
@@ -99,10 +101,27 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     return out
 
 
-def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
+def _area_state(ctx: Checked, area: Path, built: dict[Path, AreaState]) -> AreaState:
+    """AREA's state as CTX's file state holds it, built at most once per
+    replacement check: CTX's own (`Checked.area_state`) for the area under
+    check, else the one BUILT holds, built and kept there on first use.
+    Raises as `area_state.state_of` does; a build that raised is not kept."""
+    key = area.resolve()
+    if key == ctx.area:
+        return ctx.area_state
+    if key not in built:
+        built[key] = state_of(area, file_state=ctx.file_state)
+    return built[key]
+
+
+def _predecessor(
+    ctx: Checked, pid: str, built: dict[Path, AreaState] | None = None
+) -> Path | GateFinding:
     """The predecessor's protocol for `[replaces] protocol = PID`, or why it
     is none, as a blocker with its way out: its own id, no or several
-    protocols of the repo carrying PID, or a circle of replacements."""
+    protocols of the repo carrying PID, or a circle of replacements. BUILT
+    holds the area states the check has built (`_area_state`); None starts
+    an empty one."""
     if pid == ctx.head.id:
         return blocker(
             "[replaces] protocol is its own id",
@@ -123,7 +142,7 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
             f"is, then `{gate_command('report-check', ctx.area)}`",
             rule=LAB_003 if not hits else TECHNICAL_RULE,
         )
-    circle = _replacement_circle(str(ctx.head.id), hits[0], ctx.file_state)
+    circle = _replacement_circle(ctx, hits[0], {} if built is None else built)
     if circle:
         return blocker(
             f"the replacements run in a circle ({circle})",
@@ -135,18 +154,18 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
 
 
 def _undeclared_changes(
-    ctx: Checked, rep: protocol_block.Replaces, pred: Path
+    ctx: Checked,
+    rep: protocol_block.Replaces,
+    pred: Path,
+    built: dict[Path, AreaState],
 ) -> list[GateFinding]:
     """Every difference of the registration against PRED's that REP does not
     declare, and every declared change that is none — PRED's registration
     as each of its first measurements saw it (several: the changes are owed
     against each), this protocol's as its first measurement saw it, or as
-    it stands before one; or why they cannot be compared."""
-    theirs = (
-        state_of(pred.parent, file_state=ctx.file_state)
-        .measured_of(rep.protocol)
-        .first_groups
-    )
+    it stands before one; or why they cannot be compared. PRED's area is
+    read off BUILT (`_area_state`)."""
+    theirs = _area_state(ctx, pred.parent, built).measured_of(rep.protocol).first_groups
     olds, missing = registrations_as_first_measured(pred, theirs, git_root(pred))
     news, own_missing = registrations_as_first_measured(
         ctx.protocol,
@@ -248,15 +267,16 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     return out
 
 
-def _replacement_circle(start: str, pred: Path, file_state: FileState) -> str:
+def _replacement_circle(ctx: Checked, pred: Path, built: dict[Path, AreaState]) -> str:
     """The chain of `[replaces]` from PRED back, as ids joined by ` → `,
-    when it returns to START or to an id it already passed; "" when it
-    ends. Each predecessor is read as FILE_STATE holds it (`area_state`)."""
-    seen = [start]
+    when it returns to CTX's protocol id or to an id it already passed; ""
+    when it ends. Each predecessor is read as CTX's file state holds it,
+    off its area's one state (`_area_state`, kept in BUILT)."""
+    seen = [str(ctx.head.id)]
     current: Path | None = pred
     while current is not None:
         try:
-            text = state_of(current.parent, file_state=file_state).text_of(current)
+            text = _area_state(ctx, current.parent, built).text_of(current)
             pid = protocol_block.head(text).id
             nxt = protocol_block.replaces(text)
         except (OSError, ValueError, protocol_block.BlockError):
