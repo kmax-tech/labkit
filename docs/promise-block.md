@@ -122,7 +122,7 @@ A registered constant is named like the config key it is recorded under (`min_f1
 
 It does **not** state that the region is all the code the number depends on, nor that the code implements the promise correctly.
 
-The counterexample that fixes this: `compute_score()` writes `criterion_1_accuracy` and calls `filter_items()`. An edit to `filter_items` (now dropping empty answers instead of counting them wrong) moves the number.
+The counterexample that fixes this: `compute_score()` writes the promise's key, `criterion_1_pass`, and calls `filter_items()`. An edit to `filter_items` (now dropping empty answers instead of counting them wrong) moves the number.
 
 | Version                                     | Sees the edit?                             | Why                                                                                      |
 |---------------------------------------------|--------------------------------------------|------------------------------------------------------------------------------------------|

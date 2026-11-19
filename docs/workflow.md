@@ -21,7 +21,7 @@ The [executable count walkthrough](examples/count-walkthrough.sh) takes a small 
 | 8. Report          | Complete the text and its required review.     | `protocol-fill --into`, `labkit-audit --report-review` |
 | 9. Stop and commit | Check the delivered state.                     | Hooks; `report-check`                                  |
 
-Code and registration may be developed together before measurement. Later changes use the [repair path](#repair-and-recovery); they do not rewrite the evidence of earlier work. The steps below describe repeat cost `low`, with additional `high` requirements where relevant.
+Code and registration may be developed together before measurement. What may change afterwards depends on the protocol's `type`, which is part of the registration: no measurement starts while it is a placeholder. A `confirmatory` protocol is held to the registration of its first measurement. An `exploratory` protocol may change its registration between runs when each change is declared as a step before the next run ([step 2](#2-the-registration)). The type itself stays as the first measurement registered it. All other later changes use the [repair path](#repair-and-recovery); they do not rewrite the evidence of earlier work. The steps below describe repeat cost `low`, with additional `high` requirements where relevant.
 
 ## 0. The area
 
@@ -47,13 +47,15 @@ Code and registration may be developed together before measurement. Later change
 
 **When:** before the first measurement; scientific choices remain open.
 
-**Allowed changes:** fill the fields required for this kind. Use `protocol-check PROTOCOL --contract` for the applicable list and `protocol-fill PROTOCOL --list` for missing values. Choose the kind correctly before measuring; `labkit-init exp NAME --kind KIND --change-kind` restamps an eligible unmeasured area.
+**Allowed changes:** fill the fields required for this kind, the `type` among them (`exploratory` or `confirmatory`). Use `protocol-check PROTOCOL --contract` for the applicable list and `protocol-fill PROTOCOL --list` for missing values. Choose the kind correctly before measuring; `labkit-init exp NAME --kind KIND --change-kind` restamps an eligible unmeasured area.
 
-**Command and output:** `protocol-fill PROTOCOL "Question / hypothesis=…"` fills the named field; `protocol-check PROTOCOL` validates registration. Commit the protocol and relevant implementation, naming only your paths in `git add` and `git commit -- <paths>` so other staged work stays out.
+**Command and output:** `protocol-fill PROTOCOL "Question / hypothesis=…"` fills the named field and `protocol-fill PROTOCOL type=exploratory` the type; `protocol-check PROTOCOL` validates registration. Commit the protocol and relevant implementation, naming only your paths in `git add` and `git commit -- <paths>` so other staged work stays out.
 
 **Done / way out:** at `low`, the required registration stands in the commit of the first measurement. Register a required report with `protocol-fill PROTOCOL report=REPORT.md` and commit the entry before measuring. At both repeat costs, a report registered in the first measurement's commit creates a lasting delivery duty tied to the protocol id. The target can move: `protocol-fill PROTOCOL report=OTHER.md --force` changes the file that owes the delivery. Removing the entry or deleting the protocol does not end that duty; restore a target or hand over. A report first registered after the measurement may be removed again. While registered it is checked, and removing it does not release an adopted result, an existing report or audit evidence from their checks. The setter previews the same binding check as the gates.
 
 A valid report draft can be committed before measurement; it owes no result block yet. After measurement, save its progress account. At `high`, additionally pass preflight, decide its audit, set the matching freeze evidence and freeze the protocol. Freeze does not establish the report duty.
+
+**Between the runs of an exploratory protocol:** the question, the data, a filter, the analysis or a criterion may change. Declare the change before the next run: `protocol-fill PROTOCOL --builds-on RUN_ID --step-id STEP --occasion observation --why "REASON"` (the occasion is `observation`, `planned` or `repair`). `RUN_ID` is the basis, a completed run of this protocol that is no repeat; the command writes `[builds_on]` and computes the changed parts from the basis run's own text and the protocol as it stands. `finalize` holds a run measured under a change no step declares; the way on is the step and a new run. Once the protocol adopts a run, it stands as that run's text; withdraw the adoption to go on exploring. A confirmatory protocol that tests what an exploration of this repository found names it before its first measurement: `protocol-fill PROTOCOL --explored-in EXPLORATION_PROTOCOL`. Details: [agent guide](../labkit/docs/agent-guide.md#choose-the-experiment-three-separate-decisions).
 
 See [the promise format](promise-block.md#the-block) for technical fields and [the chain](architecture.md#the-chain) for registration binding. A missed registered criterion is a valid result; it does not justify changing the bar.
 
@@ -149,7 +151,7 @@ The block guarantees exact rendering of bound values, not the meaning of prose b
      by the decision review of the claim as it stands (`labkit-audit AREA
      --review --record FILE`), not by a follow-up audit, which is not
      shown a rewritten claim.
-4. A changed registered scientific choice needs an explicit new registration with the departure and earlier results retained. An accidental edit needs restoration from the named source, not a changed scientific explanation. Do not clear holds by deleting evidence or resetting the repository.
+4. In a confirmatory protocol, a changed registered scientific choice needs an explicit new registration with the departure and earlier results retained. In an exploratory protocol it needs a declared step and a new run ([step 2](#2-the-registration)). A changed `type` is held in either direction: put it back, or register a protocol of the other type. An accidental edit needs restoration from the named source, not a changed scientific explanation. Do not clear holds by deleting evidence or resetting the repository.
 
 To end without a result, use `protocol-fill PROTOCOL --handover --why "REASON" --tried "WHAT WAS TRIED" --into REPORT.md`. It records the remaining state and writes its handover block. Stage the related protocol, report and evidence together. A handover does not approve a result or let new audits ignore lost evidence. Other citations may still need correction.
 
