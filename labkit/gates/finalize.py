@@ -168,7 +168,7 @@ from labkit.formats.commands import (
     measure_command,
     withdraw_command,
 )
-from labkit.gates.registration_hold import declaring_protocol
+from labkit.gates.registration_hold import standing_adoption
 from labkit.gates.registration_station import check_registration
 from labkit.gates.ways_out import PROTOCOL_NAMED
 from labkit.formats.commands import register_anew
@@ -1170,7 +1170,7 @@ def finalize_area(
         findings.note(NO_RUN)
     else:
         # the protocol that declares this very run: its holds withdraw first
-        held_by = declaring_protocol(chosen, text, answering_run, state)
+        held_by = standing_adoption(chosen, text, answering_run, state)
         check_run_code(findings, area, answering_run, held_by)
         check_declared_scopes(findings, area, answering_run, text, held_by)
 

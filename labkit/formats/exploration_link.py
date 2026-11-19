@@ -29,13 +29,12 @@ from typing import NamedTuple
 from labkit.formats import protocol_block, protocol_history, runs
 from labkit.formats.area_state import TREE, FileState, state_of
 from labkit.formats.gate import TECHNICAL_RULE, RuleAssignment, cited_rule
-from labkit.formats.protocol_block import ExploredIn
+from labkit.formats.protocol_block import CONFIRMATORY, ExploredIn
+from labkit.formats.protocol_history import Workflow
 from labkit.formats.repo import git_root
 from labkit.formats.runs import RunDir
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-#: the two types, by name (`protocol_block.TYPES` is their home)
-EXPLORATORY, CONFIRMATORY = protocol_block.TYPES
 
 
 class LinkedExploration(NamedTuple):
@@ -161,8 +160,9 @@ def linked_exploration(
             f"be read — {unread[0]}; no exploration is assumed",
             LAB_003,
         )
-    types = sorted({protocol_history.type_of(then) or "not stated" for _, then in seen})
-    if types != [EXPLORATORY]:
+    first_types = [protocol_history.type_of(then) for _, then in seen]
+    if protocol_history.workflow_registered(first_types) is not Workflow.EXPLORATORY:
+        types = sorted({t or "not stated" for t in first_types})
         return NotLinked(
             f"{protocol.name} registered type {' and '.join(types)} at its first "
             f"measurement — [explored_in] names an exploratory protocol",

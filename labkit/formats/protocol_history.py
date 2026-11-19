@@ -10,7 +10,8 @@ apply protocol an annotation validity names (`bound_validation`).
 Read-only; git is asked through `repo.git_run`.
 """
 
-from collections.abc import Callable, Sequence
+import enum
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
@@ -20,7 +21,7 @@ from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
-from labkit.formats.protocol_block import COUNTS
+from labkit.formats.protocol_block import CONFIRMATORY, COUNTS, EXPLORATORY
 from labkit.formats.protocol_then import as_measured, protocol_path_at
 from labkit.formats.protocol_check import (
     REGISTERED_FIELDS,
@@ -700,12 +701,54 @@ def differences_among_first_measurements(
 def type_of(text: str) -> str | None:
     """The `type` TEXT's head declares, None while it holds the stamp's
     placeholder — or when the head does not read: either way no workflow
-    can be read from it, and the strict one applies
-    (`registration_hold.workflow`). Pure."""
+    can be read from it (`workflow_registered`). Pure."""
     try:
         return protocol_block.head(text).type
     except protocol_block.BlockError:
         return None
+
+
+class Workflow(enum.Enum):
+    """Which holds bind a protocol's runs: what its first measurements
+    registered as their type (labkit/docs/standard.md, "The type decides
+    the workflow"), never the head as it stands. The one decision is
+    `workflow_registered`; `registration_hold.workflow` reads it for a
+    protocol.
+
+    EXPLORATORY: each run is held to its own text and the step it declares
+    (`exploration_hold`). CONFIRMATORY: every run is held to what the
+    first measurement registered (`registration_hold.registration_changes`).
+    UNDECIDED: no workflow can be told, and no reader takes it for an
+    exploration or calls it a confirmation. Where the type was read and
+    is undecided or split, the holds are the confirmatory ones, the most,
+    never the least; where nothing could be read — no stamped id, or a
+    first measurement left untold — no registration was compared at all
+    (`registration_station.station_changes` says which of its cases
+    hold what)."""
+
+    EXPLORATORY = EXPLORATORY
+    CONFIRMATORY = CONFIRMATORY
+    UNDECIDED = "undecided"
+
+
+def workflow_registered(
+    first_types: Collection[str | None], *, first_untold: bool = False
+) -> Workflow:
+    """The workflow a protocol's first measurements registered. FIRST_TYPES
+    is the type each of them saw in its own text (`type_of`, None an
+    undecided one), one entry per first measurement whose text reads.
+    EXPLORATORY or CONFIRMATORY when every entry is that type. UNDECIDED
+    when FIRST_UNTOLD (which run measured first cannot be told, so neither
+    its type), when no text reads, when a type is undecided, and when the
+    first measurements registered different types. Pure."""
+    if first_untold:
+        return Workflow.UNDECIDED
+    distinct = set(first_types)
+    if distinct == {EXPLORATORY}:
+        return Workflow.EXPLORATORY
+    if distinct == {CONFIRMATORY}:
+        return Workflow.CONFIRMATORY
+    return Workflow.UNDECIDED
 
 
 def first_texts(
@@ -716,7 +759,7 @@ def first_texts(
     that text, in FIRSTS' order; UNREAD one sentence per run whose text
     does not, saying why. The one reading of what the first measurements
     registered for the workflow (`registration_hold.workflow`, which reads
-    the type from SEEN) and for a confirmation's link
+    the types from SEEN) and for a confirmation's link
     (`exploration_link.linked_exploration`, which refuses on UNREAD).
     Raises RuntimeError when git fails."""
     seen: list[tuple[RunDir, str]] = []

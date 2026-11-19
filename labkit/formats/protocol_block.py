@@ -95,7 +95,13 @@ MIGRATION = (
     "protocol's runs each to the text it started under and the step it declares "
     "(LAB-003 No run without an intent paragraph)"
 )
-TYPES = ("exploratory", "confirmatory")
+#: the two values of the head's `type`, by name: an exploratory protocol
+#: may go without a criterion (`standard_contract.criterion_owed`) and binds
+#: each run to its own text, a confirmatory one binds its runs to the first
+#: measurement's registration (`registration_station`)
+EXPLORATORY = "exploratory"
+CONFIRMATORY = "confirmatory"
+TYPES = (EXPLORATORY, CONFIRMATORY)
 #: what the kept number asserts: a computation judges no
 #: prediction; a fit judges a model trained or adjusted in this experiment;
 #: an apply judges a model used unchanged — the obligations follow

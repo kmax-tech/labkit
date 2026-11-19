@@ -37,7 +37,12 @@ from labkit.formats.gate import (
     GateFinding,
     cited_rule,
 )
-from labkit.formats.protocol_history import STANDS_AS_REGISTERED, scope_differences
+from labkit.formats.protocol_history import (
+    STANDS_AS_REGISTERED,
+    Workflow,
+    scope_differences,
+    workflow_registered,
+)
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import registration_hold
 from labkit.gates.audit_prompt import Followup, carried_of
@@ -1201,3 +1206,105 @@ class ARunOnlyACommitHoldsIsNamedByItsIdAlone(unittest.TestCase):
             registration_hold.stopped_note(here),
             " (no number yet; whether it still runs cannot be told)",
         )
+
+
+class WorkflowRegistered(unittest.TestCase):
+    """`protocol_history.workflow_registered`: the workflow a protocol's
+    first measurements registered, from the type each saw in its own text
+    — one named value per case, and never an exploration where the type
+    cannot be told."""
+
+    def test_first_measurements_of_one_exploratory_type_explore(self):
+        for types in (["exploratory"], ["exploratory", "exploratory"]):
+            with self.subTest(types=types):
+                self.assertIs(
+                    pure_call(workflow_registered, types), Workflow.EXPLORATORY
+                )
+
+    def test_first_measurements_of_one_confirmatory_type_confirm(self):
+        for types in (["confirmatory"], ["confirmatory", "confirmatory"]):
+            with self.subTest(types=types):
+                self.assertIs(
+                    pure_call(workflow_registered, types), Workflow.CONFIRMATORY
+                )
+
+    def test_a_type_that_cannot_be_told_is_undecided(self):
+        for name, types in (
+            ("the stamp's placeholder", [None]),
+            ("no first measurement whose text reads", []),
+            ("one of two undecided", ["exploratory", None]),
+            ("different types", ["exploratory", "confirmatory"]),
+        ):
+            with self.subTest(name):
+                self.assertIs(pure_call(workflow_registered, types), Workflow.UNDECIDED)
+
+    def test_an_untold_first_measurement_is_undecided_whatever_reads(self):
+        for types in (["exploratory"], ["confirmatory"], []):
+            with self.subTest(types=types):
+                self.assertIs(
+                    pure_call(workflow_registered, types, first_untold=True),
+                    Workflow.UNDECIDED,
+                )
+
+
+class TheRunTheProtocolIsComparedWith(unittest.TestCase):
+    """`registration_hold.run_compared_with`: the answering run's own text
+    in exploration, the first measurements' otherwise — and without a run
+    no run's text in any workflow."""
+
+    RUN = AREA / "runs" / "r2"
+
+    def test_only_an_exploration_compares_with_the_answering_run(self):
+        for flow, compared in (
+            (Workflow.EXPLORATORY, self.RUN),
+            (Workflow.CONFIRMATORY, None),
+            (Workflow.UNDECIDED, None),
+        ):
+            with self.subTest(flow=flow):
+                self.assertEqual(
+                    pure_call(registration_hold.run_compared_with, flow, self.RUN),
+                    compared,
+                )
+
+    def test_without_a_run_no_workflow_compares_with_one(self):
+        for flow in Workflow:
+            with self.subTest(flow=flow):
+                self.assertIsNone(
+                    pure_call(registration_hold.run_compared_with, flow, None)
+                )
+
+
+class DeclaredAsResultAndAStandingAdoption(unittest.TestCase):
+    """Two questions about `[result] run`, each under its own name:
+    `declares_as_result` — is the run read under the protocol as it
+    stands, an adoption's proposal included —, and `standing_adoption` —
+    is there an adoption to withdraw, which a proposal is not."""
+
+    RUN = AREA / "runs" / "2026-10-07T09-25-31_98dd"
+    OTHER = AREA / "runs" / "2026-10-07T10-00-00_ab12"
+    DECLARING = f'```toml\n[result]\nrun = "{RUN.name}"\n```\n'
+
+    def standing(self, run, *, pending: bool):
+        state = area_state(adoption_pending=[PROTOCOL.resolve()] if pending else [])
+        return registration_hold.standing_adoption(PROTOCOL, self.DECLARING, run, state)
+
+    def test_an_adoption_that_stands_declares_and_withdraws_first(self):
+        self.assertTrue(
+            pure_call(registration_hold.declares_as_result, self.DECLARING, self.RUN)
+        )
+        self.assertEqual(self.standing(self.RUN, pending=False), PROTOCOL)
+
+    def test_a_proposal_under_its_check_declares_and_has_nothing_to_withdraw(self):
+        self.assertTrue(
+            pure_call(registration_hold.declares_as_result, self.DECLARING, self.RUN)
+        )
+        self.assertIsNone(self.standing(self.RUN, pending=True))
+
+    def test_another_run_is_neither(self):
+        self.assertFalse(
+            pure_call(registration_hold.declares_as_result, self.DECLARING, self.OTHER)
+        )
+        self.assertFalse(
+            pure_call(registration_hold.declares_as_result, "no block", self.RUN)
+        )
+        self.assertIsNone(self.standing(self.OTHER, pending=False))
