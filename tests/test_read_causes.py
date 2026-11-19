@@ -68,6 +68,31 @@ class RunArtefacts(unittest.TestCase):
         self.metrics.write_text('["criterion_1_pass"]', encoding="utf-8")
         self.assertEqual(self.cause(), files.MALFORMED)
 
+    def test_bytes_that_are_not_utf8_are_malformed_in_every_artefact(self) -> None:
+        self.metrics.write_bytes(b'{"n": "\xff"}')
+        self.assertEqual(self.cause(), files.MALFORMED)
+        for name, read in (
+            ("outputs.json", runs.read_outputs),
+            ("completion.json", runs.read_completion),
+        ):
+            with self.subTest(artefact=name):
+                (self.dir / name).write_bytes(b"\xff[]")
+                with self.assertRaisesRegex(runs.ArtefactError, name) as cm:
+                    read(self.dir)
+                self.assertEqual(cm.exception.cause, files.MALFORMED)
+
+    def test_utf8_beyond_ascii_reads_in_every_artefact(self) -> None:
+        self.metrics.write_text('{"label": "größer"}', encoding="utf-8")
+        self.assertEqual(runs.read_metrics(self.metrics), {"label": "größer"})
+        (self.dir / "outputs.json").write_text(
+            '[{"path": "größer.jsonl"}]', encoding="utf-8"
+        )
+        got = runs.read_outputs(self.dir)
+        assert got is not None
+        self.assertEqual([e.path.name for e in got], ["größer.jsonl"])
+        (self.dir / "completion.json").write_text('{"git": "ä"}', encoding="utf-8")
+        self.assertEqual(runs.read_completion(self.dir), {"git": "ä"})
+
     @unittest.skipIf(AS_ROOT, "root reads every file")
     def test_a_file_that_cannot_be_opened(self) -> None:
         self.metrics.write_text("{}", encoding="utf-8")

@@ -450,7 +450,7 @@ def _json_of(path: Path, what: str) -> object:
     what it holds ("metrics", "outputs", "completion")."""
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ArtefactError(
             f"{path}: unreadable {what} ({exc}) — repair the run or move it aside",
             cause=read_cause(exc),

@@ -471,6 +471,13 @@ class AtStart(unittest.TestCase):
         (w.dir / "outputs.json").write_text("[{", encoding="utf-8")
         self.assertEqual(self.skipped_as(w.dir), (UnreadableRun(w.run_id, MALFORMED),))
 
+    def test_a_completed_run_whose_outputs_are_not_utf8_is_skipped_as_malformed(
+        self,
+    ) -> None:
+        w = self.write_run('{"id": 1}\n')
+        (w.dir / "outputs.json").write_bytes(b"\xff[]")
+        self.assertEqual(self.skipped_as(w.dir), (UnreadableRun(w.run_id, MALFORMED),))
+
     def test_a_chosen_binary_origin_records_bytes_only(self) -> None:
         weights = self.area / "model.bin"
         with runlog.run("w", {}, self.area, data=runlog.NO_INPUTS) as w:
