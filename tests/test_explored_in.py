@@ -8,9 +8,11 @@ writes the link and at the start of the first confirming measurement
 part (`protocol_history.scope_differences`); the runs the named state rests
 on (`exploration_state.basis_closure`); the area stamp that follows that
 state and no run beside it (`scope_sha.exploration_basis`); what the
-confirming audit is shown (`audit_prompt.exploration_evidence`); and the
+confirming audit is shown (`audit_prompt.exploration_evidence`); the
 warning report-check gives for a run of the exploration that audit was not
-shown (`report_exploration.later_use_findings`)."""
+shown (`report_exploration.later_use_findings`); and the blocker it gives
+for a link whose id names no one protocol (`report_exploration.link_gaps`;
+the rule from data in memory: tests/test_rules_report_exploration.py)."""
 
 from __future__ import annotations
 
@@ -45,6 +47,7 @@ from labkit.formats.exploration_state import (
     shared_inputs,
 )
 from labkit.formats.gate import (
+    BLOCKER,
     GUARANTEED,
     NOT_EXECUTABLE,
     STATIC_EVIDENCE,
@@ -60,6 +63,7 @@ from labkit.gates.report_exploration import (
     LAB_050,
     audit_began,
     later_use_findings,
+    link_gaps,
     use_after_audit_findings,
 )
 from labkit.run import runlog
@@ -736,7 +740,8 @@ class AuditBegan(unittest.TestCase):
 
 class LaterUse(_WithSource):
     """report-check's warning for a run of the exploration that shares an
-    input digest and that the covering audit was not shown."""
+    input digest and that the covering audit was not shown, and its
+    blocker for a link that names no one protocol, where no search ran."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -788,42 +793,54 @@ class LaterUse(_WithSource):
         (f,) = self.found(None)
         self.assertIn("the attempt journal gives no start", f.text)
 
-    def test_a_link_that_names_no_protocol_is_a_search_that_did_not_run(self) -> None:
-        """The exploratory protocol is gone after the confirming run: the
-        same call that found the sharing run now says the search did not
-        run — one warning, exact, never the clean result. The twin: while
-        the id names one protocol, no such warning."""
-        (twin,) = self.found(None)
-        self.assertIn(f"run {self.side} of 01-explore", twin.text)
-        self.assertEqual(twin.outcome, SUSPECTED)
+    def chain(self) -> list:
+        """What report-check holds the confirmation to, before an adoption."""
+        ctx = report_check.checked(self.confirm, self.ours)
+        self.assertIsNotNone(ctx.run)
+        return report_check.chain_gaps(ctx, undeclared=True, review=False).found
+
+    def test_a_link_that_names_no_protocol_holds_the_release_once(self) -> None:
+        """The exploratory protocol is gone after the confirming run:
+        report-check's chain holds the release with the one blocker of the
+        link, and the search for shared inputs, which did not run, adds no
+        finding of its own. The twin: while the id names one protocol, the
+        chain tells no finding of the link."""
+        twin = [f for f in self.chain() if "[explored_in]" in f.text]
+        self.assertEqual(twin, [])
+        (searched,) = self.found(None)
+        self.assertEqual(searched.outcome, SUSPECTED)
         self.theirs.unlink()
-        (f,) = self.found(None)
+        (f,) = [f for f in self.chain() if "[explored_in]" in f.text]
         self.assertEqual(
             (f.grade, f.evidence_kind, f.outcome, f.rule),
-            (WARNING, GUARANTEED, NOT_EXECUTABLE, TECHNICAL_RULE),
+            (BLOCKER, GUARANTEED, NOT_EXECUTABLE, TECHNICAL_RULE),
         )
         self.assertIn(
-            f"[explored_in] protocol = {EXPLORATION} names no protocol of this repo",
-            f.text,
+            f"BLOCKER (check not executable): exploration link: [explored_in] "
+            f"protocol = {EXPLORATION} names no protocol of this repo",
+            f.line,
         )
-        self.assertIn("were not searched", f.text)
         assert f.fix is not None
-        self.assertIn("bring the exploratory protocol back", f.fix)
+        self.assertIn("the link itself is registered and stays as written", f.fix)
+        self.assertEqual(self.found(None), [])
 
-    def test_a_link_that_names_two_protocols_is_a_search_that_did_not_run(self) -> None:
+    def test_a_link_that_names_two_protocols_holds_the_release(self) -> None:
         copy = self.confirm / "PROTOCOL-copy.md"
         shutil.copy(self.theirs, copy)
-        (f,) = self.found(None)
+        ctx = report_check.checked(self.confirm, self.ours)
+        (f,) = link_gaps(ctx)
         self.assertEqual(
-            (f.grade, f.evidence_kind, f.outcome), (WARNING, GUARANTEED, NOT_EXECUTABLE)
+            (f.grade, f.evidence_kind, f.outcome), (BLOCKER, GUARANTEED, NOT_EXECUTABLE)
         )
         self.assertIn(
             f"[explored_in] protocol = {EXPLORATION} names 2 protocols", f.text
         )
         self.assertIn(str(copy), f.text)
         self.assertIn(str(self.theirs), f.text)
+        self.assertEqual(self.found(None), [])
         # the twin: the copy gone, the id names one protocol and the search runs
         copy.unlink()
+        self.assertEqual(link_gaps(report_check.checked(self.confirm, self.ours)), [])
         (twin,) = self.found(None)
         self.assertEqual(twin.evidence_kind, STATIC_EVIDENCE)
 
@@ -834,17 +851,15 @@ class LaterUse(_WithSource):
         after the sharing run, the resolved link gives no finding."""
         self.assertEqual(self.found(self.side_started + timedelta(seconds=1)), [])
 
-    def test_report_checks_station_tells_it_from_its_own_context(self) -> None:
-        """What the station adds: from report-check's context of the
-        confirmation, with its answering run, the unresolved link arrives
-        as the one warning."""
+    def test_the_warning_s_station_adds_nothing_for_an_unresolved_link(self) -> None:
+        """One cause, one finding: under a covering audit the station of
+        the warnings is silent for a link that names no protocol — the
+        registration station's blocker is the finding."""
         self.theirs.unlink()
         ctx = report_check.checked(self.confirm, self.ours)
         self.assertIsNotNone(ctx.run)
-        (f,) = use_after_audit_findings(ctx)
-        self.assertEqual(f.outcome, NOT_EXECUTABLE)
-        self.assertIn("WARNING (check not executable): data use after the", f.line)
-        self.assertIn("names no protocol of this repo", f.line)
+        self.assertEqual(use_after_audit_findings(ctx), [])
+        self.assertEqual(len(link_gaps(ctx)), 1)
 
     def test_no_link_warns_of_nothing(self) -> None:
         self.ours.write_text(protocol(CONFIRMATION, "confirmatory"), encoding="utf-8")
