@@ -60,6 +60,7 @@ from labkit.formats.repo import (
     SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
+    git_root,
     layout_root,
     no_such_area,
     protocols_in,
@@ -432,7 +433,13 @@ def repo_imports(files: list[Path], repo: Path) -> list[Path]:
 
 
 def find_pin(start: Path, name: str = "labkit") -> tuple[str, str] | None:
-    """(file, line) of the pin of `name`, searched upwards from the area."""
+    """(file, line) of the pin of `name`, searched upwards from the area
+    START to the root of its git repository (`repo.git_root`), that root
+    included: a requirements file above the repository is not the
+    repository's pin, and taking it would stamp one commit differently on
+    two machines. Outside a repository the search goes on to the
+    filesystem root."""
+    top = git_root(start)
     for d in [start, *start.parents]:
         for fn in ("requirements.lock", "requirements.txt"):
             p = d / fn
@@ -441,6 +448,8 @@ def find_pin(start: Path, name: str = "labkit") -> tuple[str, str] | None:
             lines = requirement_lines(p.read_text(encoding="utf-8"), name)
             if lines:
                 return str(p), lines[0]
+        if top is not None and d.resolve() == top:
+            break
     return None
 
 
