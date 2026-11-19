@@ -18,6 +18,7 @@ import contextlib
 import dataclasses
 import io
 import os
+import shutil
 import tempfile
 import unittest
 from datetime import datetime, timedelta
@@ -43,12 +44,24 @@ from labkit.formats.exploration_state import (
     not_shown_since,
     shared_inputs,
 )
-from labkit.formats.gate import STATIC_EVIDENCE, WARNING
+from labkit.formats.gate import (
+    GUARANTEED,
+    NOT_EXECUTABLE,
+    STATIC_EVIDENCE,
+    SUSPECTED,
+    TECHNICAL_RULE,
+    WARNING,
+)
 from labkit.formats.protocol_block import BlockError, ExploredIn
 from labkit.formats.protocol_history import scope_differences
-from labkit.gates import registration_hold
+from labkit.gates import registration_hold, report_check
 from labkit.gates.audit_prompt import exploration_evidence
-from labkit.gates.report_exploration import LAB_050, audit_began, later_use_findings
+from labkit.gates.report_exploration import (
+    LAB_050,
+    audit_began,
+    later_use_findings,
+    use_after_audit_findings,
+)
 from labkit.run import runlog
 from labkit.tools import protocol_fill
 
@@ -774,6 +787,64 @@ class LaterUse(_WithSource):
     def test_an_audit_of_unknown_start_warns_of_every_sharing_run(self) -> None:
         (f,) = self.found(None)
         self.assertIn("the attempt journal gives no start", f.text)
+
+    def test_a_link_that_names_no_protocol_is_a_search_that_did_not_run(self) -> None:
+        """The exploratory protocol is gone after the confirming run: the
+        same call that found the sharing run now says the search did not
+        run — one warning, exact, never the clean result. The twin: while
+        the id names one protocol, no such warning."""
+        (twin,) = self.found(None)
+        self.assertIn(f"run {self.side} of 01-explore", twin.text)
+        self.assertEqual(twin.outcome, SUSPECTED)
+        self.theirs.unlink()
+        (f,) = self.found(None)
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.outcome, f.rule),
+            (WARNING, GUARANTEED, NOT_EXECUTABLE, TECHNICAL_RULE),
+        )
+        self.assertIn(
+            f"[explored_in] protocol = {EXPLORATION} names no protocol of this repo",
+            f.text,
+        )
+        self.assertIn("were not searched", f.text)
+        assert f.fix is not None
+        self.assertIn("bring the exploratory protocol back", f.fix)
+
+    def test_a_link_that_names_two_protocols_is_a_search_that_did_not_run(self) -> None:
+        copy = self.confirm / "PROTOCOL-copy.md"
+        shutil.copy(self.theirs, copy)
+        (f,) = self.found(None)
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.outcome), (WARNING, GUARANTEED, NOT_EXECUTABLE)
+        )
+        self.assertIn(
+            f"[explored_in] protocol = {EXPLORATION} names 2 protocols", f.text
+        )
+        self.assertIn(str(copy), f.text)
+        self.assertIn(str(self.theirs), f.text)
+        # the twin: the copy gone, the id names one protocol and the search runs
+        copy.unlink()
+        (twin,) = self.found(None)
+        self.assertEqual(twin.evidence_kind, STATIC_EVIDENCE)
+
+    def test_the_twin_a_link_that_names_one_protocol_and_shares_nothing_is_clean(
+        self,
+    ) -> None:
+        """Clean means searched and nothing found: with the audit begun
+        after the sharing run, the resolved link gives no finding."""
+        self.assertEqual(self.found(self.side_started + timedelta(seconds=1)), [])
+
+    def test_report_checks_station_tells_it_from_its_own_context(self) -> None:
+        """What the station adds: from report-check's context of the
+        confirmation, with its answering run, the unresolved link arrives
+        as the one warning."""
+        self.theirs.unlink()
+        ctx = report_check.checked(self.confirm, self.ours)
+        self.assertIsNotNone(ctx.run)
+        (f,) = use_after_audit_findings(ctx)
+        self.assertEqual(f.outcome, NOT_EXECUTABLE)
+        self.assertIn("WARNING (check not executable): data use after the", f.line)
+        self.assertIn("names no protocol of this repo", f.line)
 
     def test_no_link_warns_of_nothing(self) -> None:
         self.ours.write_text(protocol(CONFIRMATION, "confirmatory"), encoding="utf-8")
