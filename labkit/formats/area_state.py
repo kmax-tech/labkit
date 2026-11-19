@@ -120,7 +120,7 @@ class Measured:
             oldest first by name; as the file state holds them, or read back
             from git where a commit holds a run the state lacks
             (`RunDir.from_commit`).
-        lost: The ids of the runs only the local run index lists: deleted,
+        lost_measurements: The ids of the runs only the local run index lists: deleted,
             and never committed — finished, as the index says (`runlog
             reindex` indexes completed runs only), with nothing left to
             read back. Never an invented record. The index names no run
@@ -140,7 +140,7 @@ class Measured:
             counts for none — named where a check tells it
             (`measurements_without_record`), never read as a measurement
             and never as "no run".
-        started_only: The ids of the measurements only a start file
+        started_only_measurements: The ids of the measurements only a start file
             names, bound to PID there (its row says `run_kind =
             "measurement"`): started, with no directory in the working
             tree, no commit that holds it and no row in the run index — it
@@ -170,7 +170,7 @@ class Measured:
         unassigned_missing_starts: The same for the runs of UNASSIGNED,
             which nothing assigns to a protocol: warned of, held
             against none. The same for every PID.
-        conflicts: One clause per run whose protocol its start file, the
+        conflict_clauses: One clause per run whose protocol its start file, the
             run index and its own record name differently, PID among the
             ids named (`binding_conflicts`): which protocol it belongs to
             is contradicted, and no source is taken over another.
@@ -179,13 +179,13 @@ class Measured:
     area: Path
     pid: str
     runs: tuple[RunDir, ...]
-    lost: tuple[str, ...]
+    lost_measurements: tuple[str, ...]
     first_groups: tuple[tuple[RunDir, ...], ...]
     run_facts: tuple[RunFacts, ...]
     unassigned: tuple[str, ...] = ()
-    started_only: tuple[str, ...] = ()
+    started_only_measurements: tuple[str, ...] = ()
     started: Mapping[str, datetime] = field(default_factory=dict)
-    conflicts: tuple[str, ...] = ()
+    conflict_clauses: tuple[str, ...] = ()
     started_as: Mapping[str, RunKind] = field(default_factory=dict)
     unread_starts: tuple[str, ...] = ()
     unassigned_starts: tuple[str, ...] = ()
@@ -234,8 +234,8 @@ class Measured:
         or a preparation, whatever became of its record
         (`may_have_measured`)."""
         return (
-            bool(self.lost)
-            or bool(self.started_only)
+            bool(self.lost_measurements)
+            or bool(self.started_only_measurements)
             or any(self.may_have_measured(rd) for rd in self.runs)
         )
 
@@ -327,7 +327,7 @@ class AreaState:
             protocol, when and as which kind.
         started_only: Run id → protocol id of the runs only the start
             record names, of every kind: no directory in the working tree,
-            no commit and no index row holds them. `Measured.started_only`
+            no commit and no index row holds them. `Measured.started_only_measurements`
             is the measurements among them.
         conflicts: Run id → the (source, protocol id) pairs of each run
             whose sources name different protocols (`binding_conflicts`).
@@ -389,12 +389,12 @@ class AreaState:
             area=self.area,
             pid=pid or "",
             records=[*self.runs, *self.deleted],
-            lost=(),
+            lost_measurements=(),
             repo=self.repo,
             facts=self.run_facts,
             indexed=self.indexed,
             starts=self.starts,
-            started_only=(),
+            started_only_measurements=(),
             conflicts=self.conflicts,
             unassigned_starts=self.unassigned_starts,
             missing_starts=self.missing_starts,
@@ -467,7 +467,7 @@ def assemble(
             area=area,
             pid=pid,
             records=records,
-            lost=tuple(
+            lost_measurements=tuple(
                 r
                 for r, p in lost.items()
                 if p == pid and _started_as(r, starts) in (None, MEASUREMENT)
@@ -476,7 +476,7 @@ def assemble(
             facts=facts,
             indexed=indexed,
             starts=starts,
-            started_only=tuple(
+            started_only_measurements=tuple(
                 r
                 for r, p in started_only.items()
                 if p == pid and _started_as(r, starts) == MEASUREMENT
@@ -582,12 +582,12 @@ def _measured(
     area: Path,
     pid: str,
     records: Sequence[RunDir],
-    lost: tuple[str, ...],
+    lost_measurements: tuple[str, ...],
     repo: Path | None,
     facts: tuple[RunFacts, ...],
     indexed: Mapping[str, str],
     starts: Mapping[str, RunStart],
-    started_only: tuple[str, ...],
+    started_only_measurements: tuple[str, ...],
     conflicts: Mapping[str, tuple[tuple[str, str], ...]],
     unassigned_starts: tuple[str, ...],
     missing_starts: tuple[str, ...],
@@ -615,22 +615,26 @@ def _measured(
         for rd in records
         if rd.error is not None and not _named(rd.dir.name, indexed, starts)
     )
-    of_pid = [*(rd.dir.name for rd in ours), *lost, *started_only]
+    of_pid = [
+        *(rd.dir.name for rd in ours),
+        *lost_measurements,
+        *started_only_measurements,
+    ]
     return Measured(
         area=area,
         pid=pid,
         runs=ours,
-        lost=lost,
+        lost_measurements=lost_measurements,
         first_groups=tuple(tuple(g) for g in groups),
         run_facts=facts,
         unassigned=unassigned,
-        started_only=started_only,
+        started_only_measurements=started_only_measurements,
         started={
             run: at
             for run in of_pid
             if run in starts and (at := starts[run].started) is not None
         },
-        conflicts=tuple(
+        conflict_clauses=tuple(
             f"run {run}: "
             + ", ".join(
                 f"{source} names {named or 'no protocol'}" for source, named in sources
@@ -677,23 +681,28 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
         protocols = area_protocols(area)
         texts = {p.resolve(): p.read_text(encoding="utf-8") for p in protocols}
     pending = [p for p in protocols if pending_adoption(p).is_file()]
-    held = {rd.dir.name for rd in runs}
+    present = {rd.dir.name for rd in runs}
     deleted: list[RunDir] = []
     unread = ""
     if repo is not None:
         try:
-            deleted = committed_runs(repo, area, held)
+            deleted = committed_runs(repo, area, present)
         except HistoryUnread as exc:
             unread = str(exc)
-    gone = held | {rd.dir.name for rd in deleted}
+    # every run a directory holds: in the file state, or in a commit
+    present_or_committed = present | {rd.dir.name for rd in deleted}
     indexed = indexed_bindings(area)
-    lost = {r: p for r, p in indexed.items() if r not in gone}
+    lost = {r: p for r, p in indexed.items() if r not in present_or_committed}
     starts, deleted_starts, missing_starts, unread = _starts_of(
         area, repo, staged, unread
     )
     # against the working tree whatever the file state: a run that stands
     # in the tree and is not staged is not gone
-    standing = gone if not staged else gone | {rd.dir.name for rd in run_dirs(area)}
+    standing = (
+        present_or_committed
+        if not staged
+        else present_or_committed | {rd.dir.name for rd in run_dirs(area)}
+    )
     # a start file that does not read names no protocol: its run is no
     # run "only a start file names" for one (`AreaState.unassigned_starts`)
     started_only = {
@@ -809,10 +818,10 @@ def lost_in_the_tree_too(measured: Measured) -> list[str]:
     the index calls a run lost that stands in the tree and is not staged;
     such a run is not gone, and the tree's own state reads it. Builds the
     tree's state (`state_of`) when MEASURED names a lost run."""
-    if not measured.lost:
+    if not measured.lost_measurements:
         return []
-    tree = state_of(measured.area).measured_of(measured.pid).lost
-    return [run for run in measured.lost if run in tree]
+    tree = state_of(measured.area).measured_of(measured.pid).lost_measurements
+    return [run for run in measured.lost_measurements if run in tree]
 
 
 #: the assumption under which the starts of two start files order two
@@ -1018,14 +1027,14 @@ def measurements_without_record(
     """The runs without a record, as they bear on MEASURED's protocol
     (`WithoutRecord`): each run of LOST_IN_TREE (its directory gone, no
     commit holding it, the run index listing it), each measurement only
-    a start file names (`Measured.started_only`) and each run among
+    a start file names (`Measured.started_only_measurements`) and each run among
     MEASURED's whose record does not read and which may have measured
     (`Measured.may_have_measured`: not one its start file lists as a probe
     or a preparation) — all bound to the protocol by the start
     record or the run index (`assigned_to`) —, and MEASURED's unassigned
     records. LOST_IN_TREE is the lost runs the working tree lacks too —
     `lost_in_the_tree_too(measured)` for a state of the index,
-    `measured.lost` itself for a state of the working tree.
+    `measured.lost_measurements` itself for a state of the working tree.
 
     Assignment first, order second: a file names the protocol, and only
     then a time says whether the run may have been its first measurement.
@@ -1062,7 +1071,7 @@ def measurements_without_record(
             f"that started; no directory, no commit and no row of the run index "
             f"holds it)",
         )
-        for run in measured.started_only
+        for run in measured.started_only_measurements
     ]
     # the reason is `runlog <AREA>`'s to list: it carries the machine's path
     unread = [

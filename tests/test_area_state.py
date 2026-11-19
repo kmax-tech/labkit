@@ -77,7 +77,7 @@ class ADeletedFirstMeasurementStillBinds(_Repository):
         self.assertEqual(first.config.protocol.id, PID)
         self.assertEqual([rd.dir.name for rd in m.deleted], [RUN])
         self.assertEqual(m.present, ())
-        self.assertEqual(m.lost, ())
+        self.assertEqual(m.lost_measurements, ())
         # the registration station still holds the protocol to that run
         ctx = report_check.checked(self.area, self.proto)
         self.assertEqual(report_check.registration_gaps(ctx), [])
@@ -462,7 +462,7 @@ class ARunOnlyTheIndexKnows(unittest.TestCase):
             self.assertEqual(state.lost, {RUN: PID})
             m = state.measured_of(PID)
             self.assertTrue(m.has_measured)
-            self.assertEqual((m.firsts, m.lost), ((), (RUN,)))
+            self.assertEqual((m.firsts, m.lost_measurements), ((), (RUN,)))
             self.assertFalse(state.measured_of("p-other").has_measured)
             (line,) = hook_post_change.index_problems(state_of(area))
             self.assertIn(f"run {RUN}: its directory is gone — runs.tsv lists it", line)
@@ -520,7 +520,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertIsInstance(m, Measured)
         self.assertTrue(m.has_measured)
         self.assertEqual([rd.dir.name for rd in m.firsts], [RUN])
-        self.assertEqual(m.lost, ("2026-10-05T10-00-00_lost",))
+        self.assertEqual(m.lost_measurements, ("2026-10-05T10-00-00_lost",))
         self.assertNotIn("2026-10-06T10-00-00_dead", [rd.dir.name for rd in m.runs])
         # the unreadable record counts for the protocol its index row names
         other = state.measured_of("p-other")
@@ -608,8 +608,8 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             started_only={gone: PID},
         )
         m = state.measured_of(PID)
-        self.assertEqual((m.started_only, m.has_measured), ((gone,), True))
-        self.assertEqual(m.lost, ())
+        self.assertEqual((m.started_only_measurements, m.has_measured), ((gone,), True))
+        self.assertEqual(m.lost_measurements, ())
         self.assertFalse(state.measured_of("p-other").has_measured)
 
     def test_the_twin_a_probe_the_files_name_is_no_measurement(self):
@@ -642,7 +642,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                     started_only={gone: PID},
                 )
                 m = state.measured_of(PID)
-                self.assertEqual((m.started_only, m.lost), ((), ()))
+                self.assertEqual(
+                    (m.started_only_measurements, m.lost_measurements), ((), ())
+                )
                 self.assertEqual(m.runs, (dead,))
                 self.assertFalse(m.has_measured)
                 self.assertEqual(state.started_only, {gone: PID})
@@ -656,7 +658,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             lost={indexed_too: PID},
             indexed={indexed_too: PID, dead.dir.name: PID},
         ).measured_of(PID)
-        self.assertEqual(unlisted.lost, (indexed_too,))
+        self.assertEqual(unlisted.lost_measurements, (indexed_too,))
         self.assertTrue(unlisted.has_measured)
 
     def test_a_start_file_that_does_not_read_bears_on_its_own_run_alone(self):
@@ -683,13 +685,15 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         m = state.measured_of(PID)
         self.assertEqual(m.unread_starts, (RUN, gone))
         self.assertEqual((m.started, m.started_as), ({}, {}))
-        self.assertEqual(m.lost, (gone,))  # no kind known: it may have measured
+        self.assertEqual(
+            m.lost_measurements, (gone,)
+        )  # no kind known: it may have measured
         self.assertEqual(state.conflicts, {})  # an unread file names no protocol
         other = state.measured_of("p-other")
         self.assertEqual((other.unread_starts, other.has_measured), ((), False))
         for measured in (m, other):
             self.assertEqual(measured.unassigned_starts, (alone,))
-            self.assertEqual(measured.started_only, ())
+            self.assertEqual(measured.started_only_measurements, ())
 
     def test_a_missing_start_file_bears_on_its_own_protocol_alone(self):
         """A run whose directory contains the start mark and for which no start
@@ -756,12 +760,12 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         for pid in (PID, "p-other"):
             with self.subTest(pid):
                 m = state.measured_of(pid)
-                self.assertEqual(len(m.conflicts), 2)
+                self.assertEqual(len(m.conflict_clauses), 2)
                 self.assertNotIn(dead, m.runs)
                 self.assertEqual(m.unassigned, ())
         self.assertIn(
             f"run {RUN}: its record names {PID}, its start file names p-other",
-            state.measured_of(PID).conflicts[1],
+            state.measured_of(PID).conflict_clauses[1],
         )
         agreeing = assemble(
             Path("area"),
@@ -777,7 +781,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             },
         )
         self.assertEqual(agreeing.conflicts, {})
-        self.assertEqual(agreeing.measured_of(PID).conflicts, ())
+        self.assertEqual(agreeing.measured_of(PID).conflict_clauses, ())
         self.assertIn(dead, agreeing.measured_of(PID).runs)
 
     def test_what_the_readers_found_is_passed_by_name(self):

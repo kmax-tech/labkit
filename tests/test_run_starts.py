@@ -290,7 +290,7 @@ class ReindexLeavesThem(_Area):
         # the area state: the gone run is one only a start file names
         state = state_of(self.area)
         self.assertEqual(state.started_only, {gone: PID})
-        self.assertEqual(state.measured_of(PID).started_only, (gone,))
+        self.assertEqual(state.measured_of(PID).started_only_measurements, (gone,))
         self.assertNotIn(old, state.measured_of(PID).started)
 
 

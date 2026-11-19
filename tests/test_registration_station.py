@@ -150,7 +150,7 @@ class TheWorkflowReadOfAProtocol(_TwoRuns):
 
     def test_a_contradicted_binding_leaves_the_workflow_undecided(self):
         read = self.read(
-            Measured(self.area, PID, (), (), (), (), conflicts=(self.CONFLICT,))
+            Measured(self.area, PID, (), (), (), (), conflict_clauses=(self.CONFLICT,))
         )
         self.assertIs(read.workflow, Workflow.UNDECIDED)
         (hold,) = read.untold

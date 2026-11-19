@@ -170,7 +170,7 @@ def untold_first_holds(
     out = handover(protocol)
     return (
         unread_history_hold(area, history_unread, out, told_by="finalize")
-        or binding_conflict_hold(pid, area, measured.conflicts, out)
+        or binding_conflict_hold(pid, area, measured.conflict_clauses, out)
         or missing_start_hold(pid, area, measured.missing_starts, out)
         or lost_record_hold(pid, area, without_record_of(measured), out)
     )
@@ -951,7 +951,7 @@ def binding_conflict_hold(
 ) -> list[GateFinding]:
     """The BLOCKER when the files that bind a run to a protocol contradict
     each other and protocol PID is among the ids they name (CONFLICTS, one
-    clause per run: `Measured.conflicts`, `area_state.binding_conflicts`):
+    clause per run: `Measured.conflict_clauses`, `area_state.binding_conflicts`):
     which runs PID measured cannot be told, so neither what it registered
     at its first measurement nor a comparison with it — a check not
     executable, and it blocks: no file is taken over another, and a

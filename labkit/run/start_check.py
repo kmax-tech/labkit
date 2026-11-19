@@ -254,7 +254,7 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
         return None
     measured = state.measured_of(head.id)
     # STATE is the working tree's, so its lost runs are lost in the tree
-    without = measurements_without_record(measured, measured.lost)
+    without = measurements_without_record(measured, measured.lost_measurements)
     told: list[str] = []
     if without.held:
         told.append(
@@ -275,10 +275,10 @@ def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
             f"result that needs its "
             f"rows is held where that result is checked."
         )
-    if measured.conflicts:
+    if measured.conflict_clauses:
         told.append(
             f"which protocol a run belongs to is contradicted: "
-            f"{'; '.join(measured.conflicts)}. The run starts; `finalize` holds "
+            f"{'; '.join(measured.conflict_clauses)}. The run starts; `finalize` holds "
             f"every number of this protocol until the files agree."
         )
     if without.unassigned:

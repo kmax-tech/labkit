@@ -546,9 +546,11 @@ def protocol_piece(
                 firsts=firsts,
                 sources=sources,
             )
-    if measured.lost:
+    if measured.lost_measurements:
         lines += ["", "Known only to the run index (deleted, never committed):"]
-        lines += [f"- {run_id}: nothing left to read" for run_id in measured.lost]
+        lines += [
+            f"- {run_id}: nothing left to read" for run_id in measured.lost_measurements
+        ]
     return (f"{label}{measured.pid}", "\n".join(lines))
 
 

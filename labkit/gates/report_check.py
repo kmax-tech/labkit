@@ -1101,12 +1101,12 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
             | {
                 r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
                 f"{LOST_RUN_SENTENCE}"
-                for r in held.lost
+                for r in held.lost_measurements
             }
             | {
                 r: f"{r}: started (its start file stands), and runs/{r}/ is gone — "
                 f"{LOST_RUN_SENTENCE}"
-                for r in held.started_only
+                for r in held.started_only_measurements
             }
         )
         if gone:
