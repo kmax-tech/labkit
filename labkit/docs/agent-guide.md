@@ -74,7 +74,7 @@ State each promise value in its sentence before the commit. `margin` is the smal
 
 The area's `README.md` is stamped with a route block between `<!-- labkit:route -->` and `<!-- /labkit:route -->`. Keep the block, and keep these names in it: the protocol's file name, `runlog`, `labkit-params`, `scripts/01_measure.py:evaluate_rows` and `config.json`. They tell a reader where the contract, the runs, the effective values, the decision of each id and the record are. The block points and copies no question, answer, run id or threshold. `finalize` warns when the block or one of the names is missing.
 
-After the first measurement, these values stay fixed, and so do the question, its terms, the data, the exclusions, the unit and the head's `[kept]` and `[reference]`: finalize holds a run whose protocol changed them. If the number misses, report the miss. A changed question is a new protocol. Decide a finding about them by the ways under "When you are stuck".
+In a `confirmatory` protocol, these values stay fixed after the first measurement, and so do the question, its terms, the data, the exclusions, the unit and the head's `[kept]` and `[reference]`: finalize holds a run whose protocol changed them. A changed question is a new protocol. In an `exploratory` protocol, such a change is declared as a step before the next run (`--builds-on`, under "Choose the experiment"); finalize holds a run measured under a change no step declares. In both, if the number misses, report the miss. Decide a finding about them by the ways under "When you are stuck".
 
 ### 2. Implement and test the instrument
 
@@ -97,6 +97,8 @@ skeleton's `00_prepare.py --audit` counts are hints for the data profile, not th
 If you fix code, audit the fixed code before the freeze.
 
 Commit the code and the registration. Keep raw data under `data/raw/`. Prepare inputs with a script, `scripts/00_prepare.py`, into `data/prepared/`. Put small inputs into git if you can legally share them. Keep large or protected data outside git on purpose, by an ignore rule (a `.gitignore` or `.git/info/exclude`), or outside the repository (a model directory on scratch), and write their source or access route and version into Data / scope. Pass every input in `data=`: the run records its sha256. At `repeat_cost = low`, finalize holds each source, in git or outside it, to the bytes the run read, and a file in the repository neither tracked nor ignored blocks; one outside the repository is held by the checksum alone. At `high` it skips that comparison and the git check (the agent audit covers provenance there); the data counts in Data / scope and the registered outputs are still held to the run at both repeat costs. To resume a run, use the same measurement command.
+
+Every run, of every kind, writes its start file `run-starts/<run_id>.json` in the area, outside `runs/`, before your script's block runs: the run id, the protocol id, the start in UTC and the run kind. Commit it with its run. Until a commit holds it, it exists on this machine only. The commit is held while a run's record is staged and its start file is not; the refusal names the `git add`. Never edit or delete a committed start file: the change is held.
 
 ### 4. Finalize, audit and decide
 
@@ -163,7 +165,7 @@ REPORT.md`. Say that the question stays open. A report holds one discussion bloc
 
 Any later change, a rewrite of the file included, owes a new review. If the reviewer names a claim that is true, correct the report and review again. A clean draw on the unchanged state releases nothing. If the reviewer misread — the line stands inside a discussion block, the number is the adopted one, the statement agrees with the record —, do not reword a correct text: decide the claim with `labkit-audit <area> --report-review REPORT.md --decide <n> false-positive --why "<the counter-evidence: line, record, number>"`, then run `labkit-audit <area> --review --record <report review file>`. Only a second reviewer's `upheld` releases the report. If it rejects the decision, correct the report or decide again with better evidence; do not draw again on the same decision. A claim cannot be decided `limitation` or `fixed`. If the area's audit evidence is gone, no review runs. Restore the evidence, or remove the run ids and the discussion block and keep the handover block.
 
-Stage the required review records with the commit. `runlog reindex <area>` rebuilds the ignored run index `runs.tsv`.
+Stage the required review records with the commit, and each run's start file (`run-starts/<run_id>.json`) with its run. `runlog reindex <area>` rebuilds the ignored run index `runs.tsv`.
 
 ## When you are stuck — both repeat costs
 

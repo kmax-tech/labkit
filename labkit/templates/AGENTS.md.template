@@ -147,9 +147,9 @@ The handover adopts no result. A finding nobody could settle stays
 
 ## Commit
 
-- Stage the protocol, the report, the outputs, the runs and the audit
-  files together, `audits/attempts.jsonl` included. The commit hook
-  checks the staged state.
+- Stage protocol, report, outputs, runs with their start files
+  (`run-starts/`) and audit files together, `audits/attempts.jsonl`
+  included. The commit hook checks the staged state.
 - Keep every run, audit record and earlier finding, the unsuccessful ones
   included. They are the record of what was tried.
 
