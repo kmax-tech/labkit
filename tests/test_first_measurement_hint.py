@@ -140,7 +140,13 @@ class BothCommandsInTheSameCases(unittest.TestCase):
         index: dict[str, str] | None = None,
     ) -> AreaState:
         return assemble(
-            Path("area"), None, TREE, present, [], lost or {}, indexed=index
+            Path("area"),
+            None,
+            TREE,
+            runs=present,
+            deleted=[],
+            lost=lost or {},
+            indexed=index,
         )
 
     def dead(self) -> runs.RunDir:
@@ -214,9 +220,9 @@ class AnEarlierRunWithoutItsRecord(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            present,
-            [],
-            lost or {},
+            runs=present,
+            deleted=[],
+            lost=lost or {},
             indexed=index,
             starts={
                 run: RunStart(

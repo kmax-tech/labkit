@@ -503,8 +503,8 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [self._record(RUN), self._record(PROBE, run_kind="probe")],
-            [
+            runs=[self._record(RUN), self._record(PROBE, run_kind="probe")],
+            deleted=[
                 runs.RunDir(
                     Path("runs") / "2026-10-06T10-00-00_dead",
                     None,
@@ -513,7 +513,7 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                     "malformed",
                 )
             ],
-            {"2026-10-05T10-00-00_lost": PID},
+            lost={"2026-10-05T10-00-00_lost": PID},
             indexed={"2026-10-06T10-00-00_dead": "p-other"},
         )
         m = state.measured_of(PID)
@@ -542,7 +542,14 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             "unreadable",
             error_cause="malformed",
         )
-        state = assemble(Path("area"), None, TREE, [self._record(RUN), dead], [], {})
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            runs=[self._record(RUN), dead],
+            deleted=[],
+            lost={},
+        )
         for pid in (PID, "p-other"):
             with self.subTest(pid):
                 m = state.measured_of(pid)
@@ -550,7 +557,13 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                 self.assertNotIn(dead, m.runs)
         self.assertFalse(state.measured_of("p-other").has_measured)
         unbound = assemble(
-            Path("area"), None, TREE, [dead], [], {}, indexed={dead.dir.name: ""}
+            Path("area"),
+            None,
+            TREE,
+            runs=[dead],
+            deleted=[],
+            lost={},
+            indexed={dead.dir.name: ""},
         )
         m = unbound.measured_of(PID)
         self.assertEqual((m.runs, m.unassigned, m.has_measured), ((), (), False))
@@ -568,7 +581,13 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         )
         start = RunStart(dead.dir.name, PID, self.NOON, "measurement")
         state = assemble(
-            Path("area"), None, TREE, [dead], [], {}, starts={dead.dir.name: start}
+            Path("area"),
+            None,
+            TREE,
+            runs=[dead],
+            deleted=[],
+            lost={},
+            starts={dead.dir.name: start},
         )
         m = state.measured_of(PID)
         self.assertEqual((m.runs, m.unassigned, m.has_measured), ((dead,), (), True))
@@ -582,9 +601,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [],
-            [],
-            {},
+            runs=[],
+            deleted=[],
+            lost={},
             starts={gone: RunStart(gone, PID, self.NOON, "measurement")},
             started_only={gone: PID},
         )
@@ -612,9 +631,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                     Path("area"),
                     None,
                     TREE,
-                    [dead],
-                    [],
-                    {indexed_too: PID},
+                    runs=[dead],
+                    deleted=[],
+                    lost={indexed_too: PID},
                     indexed={indexed_too: PID},
                     starts={
                         r: RunStart(r, PID, self.NOON, kind)
@@ -632,9 +651,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [dead],
-            [],
-            {indexed_too: PID},
+            runs=[dead],
+            deleted=[],
+            lost={indexed_too: PID},
             indexed={indexed_too: PID, dead.dir.name: PID},
         ).measured_of(PID)
         self.assertEqual(unlisted.lost, (indexed_too,))
@@ -655,9 +674,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [reads],
-            [],
-            {gone: PID},
+            runs=[reads],
+            deleted=[],
+            lost={gone: PID},
             indexed={RUN: PID, gone: PID},
             starts=unread,
         )
@@ -681,9 +700,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [self._record(RUN)],
-            [],
-            {},
+            runs=[self._record(RUN)],
+            deleted=[],
+            lost={},
             indexed={RUN: PID},
             missing_starts=[RUN],
         )
@@ -714,9 +733,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [reads, dead],
-            [],
-            {},
+            runs=[reads, dead],
+            deleted=[],
+            lost={},
             indexed={dead.dir.name: "p-other", RUN: PID},
             starts=starts,
         )
@@ -748,9 +767,9 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
             Path("area"),
             None,
             TREE,
-            [reads, dead],
-            [],
-            {},
+            runs=[reads, dead],
+            deleted=[],
+            lost={},
             indexed={dead.dir.name: PID, RUN: PID},
             starts={
                 r: RunStart(r, PID, self.NOON, "measurement")
@@ -761,9 +780,20 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         self.assertEqual(agreeing.measured_of(PID).conflicts, ())
         self.assertIn(dead, agreeing.measured_of(PID).runs)
 
+    def test_what_the_readers_found_is_passed_by_name(self):
+        """Runs and deleted runs share a type, and so do several others: a
+        positional call, where a swapped pair would pass, is refused."""
+        with self.assertRaises(TypeError):
+            assemble(Path("area"), None, TREE, [], [], {})  # pyright: ignore[reportCallIssue]  # the refused form is the test
+
     def test_nothing_measured(self):
         state = assemble(
-            Path("area"), None, TREE, [self._record(PROBE, run_kind="probe")], [], {}
+            Path("area"),
+            None,
+            TREE,
+            runs=[self._record(PROBE, run_kind="probe")],
+            deleted=[],
+            lost={},
         )
         self.assertFalse(state.measured_of(PID).has_measured)
         self.assertEqual(state.measured_of(PID).runs[0].dir.name, PROBE)
@@ -784,7 +814,13 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         ):
             with self.subTest(name):
                 m = assemble(
-                    Path("area"), None, TREE, present, [], lost, indexed=index
+                    Path("area"),
+                    None,
+                    TREE,
+                    runs=present,
+                    deleted=[],
+                    lost=lost,
+                    indexed=index,
                 ).measured_of(PID)
                 self.assertTrue(m.has_measured)
                 self.assertEqual(m.firsts, ())
