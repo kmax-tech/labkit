@@ -148,7 +148,18 @@ Frage, Verfahren, Seeds, Filter und Bewertung dürfen sich zwischen explorativen
 
 *Einstieg am Code:* `standard_contract.CHECK_SCRIPT` (`scripts/02_analyze.py`), sein Aufruf in report-check für jedes Protokoll, die Vorlagen `analyze-script.py.template` und `analyze-quick-script.py.template`, `recheck.holds` / `holds_from_inputs` (nehmen `protocol=` und `run_id=` schon), die im Testkopf von `tests/test_adopt_per_protocol.py` vermerkte Kopplung und der „Befund am Rand“ oben. Die Meldung, an der es heute scheitert: „recheck: PROTOCOL-<erstes>.md has no answer yet“.
 
-- *Danach:* Punkt 5 (mit aktuellem `main` integrieren, Standardversion nach 0.32, neun Konfliktdateien) und Punkt 6 (vollständiger Ablauf und Gesamtsuite am gemeinsamen Endstand).
+**Gebaut 2026-11-19 (`9665fa86`): Nachrechnung je Protokoll.** report-check ruft die Prüfung des Bereichs mit benanntem Protokoll auf (`scripts/02_analyze.py --check --protocol DATEI`, `standard_contract.check_command`). Das gestempelte Skript nimmt dieses Protokoll, den Lauf, mit dem es antwortet, und rechnet mit dem Skript nach, das dieser Lauf laut seiner Aufzeichnung ausgeführt hat (`recheck.protocol_named`, `recheck.script_module`). Ohne `--protocol` gilt das einzige Protokoll des Bereichs; bei mehreren wird abgelehnt, nie das erste genommen. Zu den fünf Anforderungen:
+
+1. *Protokoll und Ergebnislauf:* Das Protokoll wird benannt; der Ergebnislauf ist der, den dieses Protokoll übernommen hat. Einen Lauf eigens zu benennen ist nicht gebaut (siehe Grenzen).
+2. *Eigene Auswertung:* C wird mit `03_compare.py` nachgerechnet, weil Cs Aufzeichnung dieses Skript nennt; `02_analyze.py` braucht dafür keine Änderung.
+3. *Messläufe abgesichert:* unverändert über die Quellenstation in Cs Kette; im Szenario sperrt ein entfernter Lauf A0 den Bereich, wiederhergestellt besteht er.
+4. *Keine pauschale Sperre:* Das zweite Protokoll wird übernommen, während das erste keine Antwort hat; ein geändertes Messskript des ersten lässt nur dessen Prüfung scheitern.
+5. *Abnahme:* `tests/test_origin_scenario.py`, `test_the_area_passes_with_no_measurement_run_ever_adopted` — kein Messlauf wird je übernommen, am Ende bestehen Bericht und beide Protokolle (`report-check --if-reported`, Exit 0, Stop-Hook 0). Der Umweg-Test ist ersetzt. Dazu `tests/test_adopt_per_protocol.py` (neuer Fall) und `tests/test_recheck_per_protocol.py` (Bedingungen aus Dateien).
+
+- *Kontrolle:* Am Code vor diesem Schritt scheitern beide neuen Szenarien an Cs Übernahme mit „PROTOCOL-<erstes>.md has no answer yet“.
+- *Geprüft:* alle Szenariodateien (`pytest -m slow`) 482 bestanden, Exit 0 (Log labkit-evidence `test-runs/2026-11-19-slow-suite-per-protocol-check.log`); danach nur noch vier Docstring-Korrekturen aus dem unabhängigen Gegenlesen (vier Befunde, alle Wortlaut). Die schnelle Stufe lief im Commit-Hook. Die volle Prüfung am Commit steht noch aus.
+- *Grenzen:* (a) Bruch für bestehende Bereiche: ein vor diesem Stand gestempeltes `02_analyze.py` kennt `--protocol` nicht, report-check sperrt dann mit dem Aufruffehler des Skripts; Ausweg im CHANGELOG (Skript neu aus der Vorlage nehmen). Der Umzug bestehender Labore ist Rollout. (b) Der einfache Aufruf und `--draws` brauchen jetzt einen antwortenden Lauf. (c) Ein älterer Lauf lässt sich über das Skript nicht benennen; `recheck.holds(run_id=…)` verlangt am Ende, dass die Notiz diesen Lauf zitiert. Für Punkt 6 (älterer Lauf unter seinem Text, mit echten Kommandos) braucht es dafür eine Form. (d) Bewusst gekoppelt bleibt: Der Bereichsstempel deckt alle Skripte, eine Skriptänderung macht das Analyse-Audit jedes Protokolls veraltet.
+- *Als Nächstes:* Punkt 5 (mit aktuellem `main` integrieren, Standardversion nach 0.32, neun Konfliktdateien) und Punkt 6 (vollständiger Ablauf und Gesamtsuite am gemeinsamen Endstand).
 
 ### Zufallsvergleich verständlich beschreiben — umgesetzt 2026-11-16
 
