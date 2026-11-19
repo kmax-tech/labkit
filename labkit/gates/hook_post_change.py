@@ -55,7 +55,7 @@ from labkit.formats.area_state import (
 )
 from labkit.formats import evidence
 from labkit.formats.commands import checkout_command, gate_command
-from labkit.formats.run_index import RunIndexError
+from labkit.formats.run_index import RUN_INDEX, RunIndexError
 from labkit.formats.run_starts import START_FILES_DIR, start_path
 from labkit.formats.repo import (
     rel_posix,
@@ -184,17 +184,31 @@ def unread_sources(state: AreaState) -> list[str]:
     - why git could not list the runs or the start files it holds
       (`AreaState.history_unread`, git's words with the command that names
       the damaged object);
-    - a run whose start file does not read: an incomplete start.
+    - a run whose start file does not read: an incomplete start;
+    - a run a start file names whose record (config.json) does not read:
+      its state is not read from its files and its process cannot be
+      asked, so whether it completed is unknown (`unfinished_starts`
+      leaves it out), with the reader's sentence and way out.
 
     A run index that does not read gives no state at all; the hook tells
     that under the same heading (`_untold_evidence`)."""
-    return ([state.history_unread] if state.history_unread else []) + [
-        f"run {r}: its start file does not read ({s.unread}) — an incomplete "
-        f"start: nothing is taken from it; restore it from the commit that "
-        f"holds it, and where none does leave it as it is"
-        for r, s in state.starts.items()
-        if s.unread
-    ]
+    return (
+        ([state.history_unread] if state.history_unread else [])
+        + [
+            f"run {r}: its start file does not read ({s.unread}) — an incomplete "
+            f"start: nothing is taken from it; restore it from the commit that "
+            f"holds it, and where none does leave it as it is"
+            for r, s in state.starts.items()
+            if s.unread
+        ]
+        + [
+            f"run {facts.dir.name}: its record does not read — whether it "
+            f"completed is unknown, so it is not told as broken off; its start "
+            f"file stands: {facts.why}"
+            for facts in state.run_facts
+            if facts.state == runs.UNREADABLE and facts.dir.name in state.starts
+        ]
+    )
 
 
 def unfinished_starts(state: AreaState) -> list[str]:
@@ -203,12 +217,16 @@ def unfinished_starts(state: AreaState) -> list[str]:
     its row names and never completed — its record is here, unlike a run
     whose directory is gone (`gone_runs`). A run whose process still
     lives is left out (`runs.is_alive`: it is running, not aborted); where
-    that cannot be told the line says so. Asks the process table."""
+    that cannot be told the line says so. A run whose record does not read
+    is left out too: whether it completed is unknown (`unread_sources`).
+    Asks the process table."""
     records = {rd.dir.name: rd for rd in state.runs}
     out: list[str] = []
     for facts in state.run_facts:
         name = facts.dir.name
         if name not in state.starts or facts.state == runs.COMPLETED:
+            continue
+        if facts.state == runs.UNREADABLE:
             continue
         cfg = records[name].config
         alive = runs.is_alive(cfg.pid, cfg.script) if cfg is not None else False
@@ -460,7 +478,8 @@ def _untold(
     hint repeated on every edit of the same state is noise; a changed text,
     or another hint for the same bytes (a link replaced by its copy is then
     a report), is told again —, and each target's checker output once per
-    file content."""
+    file content. A protocol whose area's run index does not read is told
+    as not checked, once per content, and checked once the index reads."""
     reports = []
     for path, hint in marked:
         key = f"report-review:{path}"
@@ -470,7 +489,8 @@ def _untold(
             reports.append(hint)
     for kind, path in targets:
         digest = file_digest(path)
-        if cache.get(str(path)) == digest:
+        was = cache.get(str(path))
+        if was == digest:
             continue
         cache[str(path)] = digest
         # from the repo root with the repo-relative path (the hook's cwd is
@@ -483,7 +503,23 @@ def _untold(
                 template = protocol_report.template_lines(
                     protocol_report.find_template(None)
                 )
-                protocol_report.check_files(named, template, tell=told.append)
+                try:
+                    protocol_report.check_files(named, template, tell=told.append)
+                except RunIndexError:
+                    # the check reads what the area measured, so without the
+                    # run index it did not run. Told once per content as not
+                    # checked; the key differs from the file's digest, so the
+                    # check is asked again until the index reads. The index's
+                    # own sentence stands under `run_reports`' heading.
+                    cache[str(path)] = unchecked = f"{digest}:not-checked"
+                    if was != unchecked:
+                        told.append(
+                            f"{named[0]}: not checked — protocol-check reads which "
+                            f"runs the area measured, and the area's run index "
+                            f"({RUN_INDEX}) does not read; repair the index as its own "
+                            f"line says, the protocol is checked at the next change "
+                            f"after it reads"
+                        )
             else:
                 notes_check.check_notes(named, tell=told.append)
         out = "\n".join(told).rstrip()

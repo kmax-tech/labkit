@@ -1847,6 +1847,23 @@ class DataCounts(unittest.TestCase):
         self.assertNotIn("the counts differ", out)
         self.assertNotIn("names prepare run", out)
 
+    def test_the_counts_beside_a_step_are_refused_and_nothing_is_written(self):
+        """`--data-counts` with `--builds-on`: one call wrote the counts,
+        exited 0 and left the step out. Refused before the file is read."""
+        self.lab.fill(
+            self.protocol, "Data / scope=data/raw/points.jsonl by 00_prepare.py"
+        )
+        before = self.protocol.read_text(encoding="utf-8")
+        step = ["--builds-on", "r1", "--step-id", "s", "--occasion", "planned"]
+        err = io.StringIO()
+        with self.assertRaises(SystemExit) as cm, contextlib.redirect_stderr(err):
+            protocol_fill.main(
+                [str(self.protocol), "--data-counts", *step, "--why", "w"]
+            )
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("--data-counts goes alone", err.getvalue())
+        self.assertEqual(self.protocol.read_text(encoding="utf-8"), before)
+
     def test_no_preparation_run_is_refused(self):
         other = Lab()
         self.addCleanup(other.close)

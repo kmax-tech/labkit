@@ -938,9 +938,31 @@ def _check_data_counts_args(
         or args.prompts
         or args.render
         or args.into is not None
+        or args.builds_on is not None
         or args.field is not None
     ):
         ap.error("--data-counts goes alone: it writes the end of Data / scope")
+
+
+def _check_freeze_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Refuse --freeze beside another operation, before file access: the
+    dispatch runs the freeze first and would leave the other out."""
+    if args.freeze is not None and (
+        args.withdraw
+        or args.handover
+        or args.discuss is not None
+        or args.from_run is not None
+        or args.data_counts is not None
+        or args.builds_on is not None
+        or args.explored_in is not None
+        or args.reported_through is not None
+        or args.list
+        or args.prompts
+        or args.render
+        or args.into is not None
+        or args.field is not None
+    ):
+        ap.error("--freeze goes alone: it writes frozen and preflight_audit")
 
 
 def _check_step_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
@@ -1237,6 +1259,7 @@ def main(argv: list[str]) -> int:
     _check_link_args(ap, args)
     _check_through_args(ap, args)
     _check_report_mode_args(ap, args)
+    _check_freeze_args(ap, args)
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2

@@ -353,6 +353,26 @@ class ThePostChangeHookTellsThem(_Area):
         )
         self.assertNotIn("is gone", line)
 
+    def test_a_run_whose_record_does_not_read_is_not_told_as_never_completed(self):
+        """Its start file stands and its record does not read: whether it
+        completed is unknown — here it did —, so it is a source that does
+        not read, never a run that broke off."""
+        done = self.measure()
+        record = self.area / "runs" / done / "config.json"
+        record.write_text("{", encoding="utf-8")
+        state = state_of(self.area)
+        self.assertEqual(hook_post_change.unfinished_starts(state), [])
+        (line,) = hook_post_change.unread_sources(state)
+        self.assertTrue(
+            line.startswith(
+                f"run {done}: its record does not read — whether it completed is "
+                f"unknown, so it is not told as broken off"
+            ),
+            line,
+        )
+        self.assertIn(f"{record}: unreadable run metadata", line)
+        self.assertNotIn("never completed", line)
+
     def test_a_run_whose_directory_is_gone_is_a_record_that_is_gone(self):
         """A probe or a preparation too: it binds no registration, and it
         stays visible here."""

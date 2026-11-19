@@ -218,6 +218,46 @@ class TestOneStampEverywhere(unittest.TestCase):
         self.assertIn(f"  {sha}", buf.getvalue())
 
 
+class TestThePinIsTheRepositorys(unittest.TestCase):
+    """`find_pin` searches from the area up to the root of its git
+    repository: a requirements file above the repository is another
+    project's and moves no stamp. Outside a repository it searches on."""
+
+    PIN = "labkit @ git+file:///l@v0.48.1\n"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.outside = Path(self.tmp.name).resolve()
+        self.repo = self.outside / "lab"
+        self.area = self.repo / "experiments" / "01-x"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "scripts" / "01_measure.py").write_text("x = 1\n")
+
+    def test_a_pin_above_the_repository_is_not_taken(self):
+        (self.repo / ".git").mkdir()
+        before = scope_sha.area_stamp(self.area)
+        (self.outside / "requirements.txt").write_text(self.PIN)
+        self.assertIsNone(scope_sha.find_pin(self.area))
+        # the caller: the same commit stamps the same with and without it
+        self.assertEqual(scope_sha.area_stamp(self.area), before)
+
+    def test_the_twin_a_pin_at_the_repository_root_is_found(self):
+        (self.repo / ".git").mkdir()
+        (self.outside / "requirements.txt").write_text("labkit==0.1\n")
+        (self.repo / "requirements.txt").write_text(self.PIN)
+        found = (str(self.repo / "requirements.txt"), self.PIN.strip())
+        self.assertEqual(scope_sha.find_pin(self.area), found)
+        self.assertEqual(scope_sha.area_stamp(self.area)[2], found)
+
+    def test_outside_a_repository_the_search_goes_on_upwards(self):
+        (self.outside / "requirements.txt").write_text(self.PIN)
+        self.assertEqual(
+            scope_sha.find_pin(self.area),
+            (str(self.outside / "requirements.txt"), self.PIN.strip()),
+        )
+
+
 class TestDeclaredScopeIsStamped(unittest.TestCase):
     """`labkit-audit` reads a promise's declared scope in full, so the stamp
     covers it whether a script imports it or not — a declared helper
