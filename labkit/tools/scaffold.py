@@ -371,7 +371,8 @@ def area_readme(
         "**What `evaluate_rows()` returns.** The kept number under the key the protocol\n"
         "head's `[kept]` names, then <per registered promise its key, in the order\n"
         "of the decision — from the protocol's [[promise]] sentences, not from the\n"
-        "skeleton: [quality-check-1] quality_check_1_pass …, [criterion-1] criterion_1_pass …, [branch-1] branch_1_outcome\n"
+        "skeleton: [quality-check-1] quality_check_1_pass …, [criterion-1] criterion_1_pass …, "
+        "[branch-1] branch_1_outcome\n"
         "(one of its registered outcomes); what comes back when\n"
         "a quality check fails>. The formula lives once, in\n"
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
@@ -1700,7 +1701,8 @@ def main(argv: list[str]) -> int:
         log = stamp_lab(root, a.name or root.name, a.labkit_ref)
         print(f"Lab repo -> {root}\n" + "\n".join(log))
         print(
-            "\nnext: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/labkit-hooks install"
+            "\nnext: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"
+            " && .venv/bin/labkit-hooks install"
             " && .venv/bin/pip freeze > requirements.lock  (the lock pins the environment every run records)"
         )
         return 0

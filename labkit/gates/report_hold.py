@@ -1360,9 +1360,12 @@ def claim_ways(
         (h for h in standing.holding if h.claim.status != report_reviews.OPEN), None
     )
     if undecided is not None:
+        decide = claim_decide_command(
+            area, report, undecided.n, undecided.review.path.name, protocol
+        )
         ways.append(
             "where the reviewer misread, decide the claim with the counter-evidence "
-            f"as its reason (`{claim_decide_command(area, report, undecided.n, undecided.review.path.name, protocol)}`) "
+            f"as its reason (`{decide}`) "
             "— a second reviewer then confirms the decision"
         )
     if decided is not None:

@@ -57,7 +57,9 @@ from labkit.gates.audit_reply import READ_HINT, READ_TAG
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
-#: the one line a decision list with an open BLOCKER prints in place of the ways out: the cause first, where the ways stand, and that `labkit-next` owes the step ({area} as shown)
+#: the one line a decision list with an open BLOCKER prints in place of the ways
+#: out: the cause first, where the ways stand, and that `labkit-next` owes the
+#: step ({area} as shown)
 CAUSE_FIRST = (
     "  before deciding a BLOCKER, name its cause — the ways out, one per cause, "
     'stand in `labkit-next --guide` ("When you are stuck"); `{step}` '
@@ -839,7 +841,10 @@ def stands_check_hint(area: Path, record: findings.Record, f: findings.Finding) 
     try:
         metrics = read_metrics(path)
     except (MetricsError, FileNotFoundError) as exc:
-        return f"hint: the metrics of run {record.run_id} cannot be read ({exc}) — the second auditor will not see the required check `{f.check}` either"
+        return (
+            f"hint: the metrics of run {record.run_id} cannot be read ({exc}) — "
+            f"the second auditor will not see the required check `{f.check}` either"
+        )
     if f.check in metrics:
         return ""
     return (

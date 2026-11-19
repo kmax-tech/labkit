@@ -350,7 +350,8 @@ def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome
 
 @dataclass(frozen=True)
 class Promise:
-    """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
+    """One promise of a protocol to the code: its id, the metrics key that
+    reports it, its sentence, scope and constants."""
 
     id: str  # "criterion-1"
     kind: str  # one of PROMISE_KINDS: "criterion" | "quality-check" | "branch"

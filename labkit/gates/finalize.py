@@ -498,9 +498,10 @@ def check_run_code(
     """Station 4, first half: the code that produced the answering run's
     number, and that of every run it derives from, is the code here now
     (`run_record_check.code_since_run`), for every kind — a fix after the
-    run with no new run would leave the old code's number standing. A module in another repository is a warning. HELD_BY,
-    the protocol that declares the answering run (None: none does), puts
-    the withdrawal first in each blocker's way out (`gate.withdrawn_first`)."""
+    run with no new run would leave the old code's number standing. A module in
+    another repository is a warning. HELD_BY, the protocol that declares the
+    answering run (None: none does), puts the withdrawal first in each
+    blocker's way out (`gate.withdrawn_first`)."""
     changed, apart = code_since_run(area, answering_run)
     findings.take_all(
         withdrawn_first(changed, withdraw_command(held_by) if held_by else None)

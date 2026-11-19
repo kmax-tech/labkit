@@ -414,13 +414,13 @@ def quality_check_reads(
     quality check permits the verdict (LAB-004 Identifiers make the intent addressable). A key
     that is computed and never read is a label without effect: the
     criterion is reported whether the condition held or not. Only a read
-    where a decision is taken counts (`_key_reads`), but a decision on the key is not proof that it withholds the verdict,
-    and a decision in a form this reader does not follow is missed — a key
-    built at run time (`m[f"quality_check_{n}_pass"]`) above all, which
-    the finding's sentence names as the limit — so
-    the finding is a WARNING, and silence means only "decided on
-    somewhere". A key the code does not mention at all is the blocker
-    `promise_block_findings` already reports.
+    where a decision is taken counts (`_key_reads`), but a decision on the key
+    is not proof that it withholds the verdict, and a decision in a form this
+    reader does not follow is missed — a key built at run time
+    (`m[f"quality_check_{n}_pass"]`) above all, which the finding's sentence
+    names as the limit — so the finding is a WARNING, and silence means only
+    "decided on somewhere". A key the code does not mention at all is the
+    blocker `promise_block_findings` already reports.
     """
     owed = [p for p in block.promises if p.kind == "quality-check" and p.key in keys]
     if not owed:

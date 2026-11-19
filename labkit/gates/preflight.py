@@ -437,14 +437,19 @@ def repeat_cost_lines(
     elif repeat_cost is None:
         audit = (
             "  not filled — treated as `high`: the experiment-preflight "
-            "audit is due before freezing (LAB-015 Preflight audit before freezing); set `repeat_cost` in the head "
+            "audit is due before freezing (LAB-015 Preflight audit before freezing); "
+            "set `repeat_cost` in the head "
             "to say otherwise"
         )
     else:
-        audit = f"  {repeat_cost} — the experiment-preflight audit is due before freezing (LAB-015 Preflight audit before freezing)"
+        audit = (
+            f"  {repeat_cost} — the experiment-preflight audit is due before freezing "
+            "(LAB-015 Preflight audit before freezing)"
+        )
     return [
         audit,
-        "  a cold reader is due while the prose can still change (LAB-102 Cold reader before freezing): `labkit-audit <AREA> --mode clarity` — static "
+        "  a cold reader is due while the prose can still change "
+        "(LAB-102 Cold reader before freezing): `labkit-audit <AREA> --mode clarity` — static "
         "evidence, never blocks",
     ]
 

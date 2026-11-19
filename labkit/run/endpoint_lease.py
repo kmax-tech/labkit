@@ -34,9 +34,10 @@ record says who uses it — and refuses nobody.
 The rule here, in one line, on an exclusive slot: **same alias may share, a
 different alias is refused — and a process never blocks itself.** One script that runs the
 generator stage and then the judge stage holds two aliases in one pid: that IS
-the staggering the rule wants, so own-pid records are not conflicts. Sharing an alias costs throughput, never a swap; a second alias
-costs the run. Refusal is immediate (SystemExit) rather than a wait — a
-queue in front of a five-minute swap is the same trap with a nicer name.
+the staggering the rule wants, so own-pid records are not conflicts. Sharing an
+alias costs throughput, never a swap; a second alias costs the run. Refusal is
+immediate (SystemExit) rather than a wait — a queue in front of a five-minute
+swap is the same trap with a nicer name.
 
 Scope, honestly: the lease is a local directory, so it interlocks the
 processes on THIS machine. A run started from another host is invisible to

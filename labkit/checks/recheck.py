@@ -54,7 +54,9 @@ That check holds no note, changes no adoption and releases nothing.
 
 Any disagreement is a SystemExit with a sentence — the area's `--check`
 calls this with no main of labkit's around it (the rule by caller stands
-at `console.Refused`); the verdict names what was compared. Rules of the lab standard: LAB-041 Generate numbers, don't retype them, LAB-043 Runs go through `runlog`.
+at `console.Refused`); the verdict names what was compared. Rules of the
+lab standard: LAB-041 Generate numbers, don't retype them,
+LAB-043 Runs go through `runlog`.
 """
 
 from __future__ import annotations
@@ -104,9 +106,9 @@ class Verdict:
     """What a recheck held: the run, the keys compared, what grew, the numbers the note was held to."""
 
     run_id: str
-    out: (
-        Path | None
-    )  # the output file pinned; None: no output file compared, the run was recomputed from its inputs (`holds_from_inputs`)
+    # the output file pinned; None: no output file compared, the run was
+    # recomputed from its inputs (`holds_from_inputs`)
+    out: Path | None
     keys_compared: int
     grown: list[str]  # keys the recomputation has and the run did not
     numbers: list[str]  # what the note was held to
@@ -849,8 +851,9 @@ def holds_from_inputs(
     agree → cited (`verified_from_inputs`, `_cited_verdict`), for the run
     that answers the protocol (`chosen_run`; or RUN_ID). The code step is
     `holds`'s, and as there a run named by RUN_ID is rechecked under its
-    own text, not held to the promise block as it reads now. Raises SystemExit on the first disagreement, `NotVerifiable`
-    where the code step finds no proof."""
+    own text, not held to the promise block as it reads now. Raises
+    SystemExit on the first disagreement, `NotVerifiable` where the code
+    step finds no proof."""
     run = run_dir(area, protocol or note, run_id)
     answering = run_id is None  # no run named: the one the protocol answers with
     metrics, grown = verified_from_inputs(

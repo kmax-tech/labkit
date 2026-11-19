@@ -28,7 +28,7 @@ tasks with known traps; these cases have the same shape at a probe's scale
 (seconds, no network, no benchmark data), so a cold agent can show where
 labkit's commands, gates and hooks break on a realistic task before a
 round costs half an hour per attempt.
-"""
+"""  # noqa: E501 the table of cases
 
 from __future__ import annotations
 
@@ -51,9 +51,9 @@ class Case:
     kind: str  # compute | fit | apply — what the kept number asserts
     dataset: str  # directory under data/raw/
     output: str  # the file under pred_results/ the evaluation reads
-    columns: tuple[
-        str, ...
-    ]  # its columns, in the task's order — the evaluation reads them by name; stamped as the skeleton's DELIVERABLE_COLUMNS
+    # its columns, in the task's order — the evaluation reads them by name;
+    # stamped as the skeleton's DELIVERABLE_COLUMNS
+    columns: tuple[str, ...]
     metric_key: str  # where the kept number lands in metrics.json — the skeleton's key, never one of the harness's own
     tolerance: (
         float | None

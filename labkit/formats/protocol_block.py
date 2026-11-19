@@ -669,7 +669,9 @@ class Reference:
 
 
 def finite_number(value: object) -> bool:
-    """VALUE is an int or a float that is finite — a bool is no number here, nor NaN or an infinity; the one reading of \"a number\" for the head, the kept number and the verdict (`reference`)."""
+    """VALUE is an int or a float that is finite — a bool is no number here,
+    nor NaN or an infinity; the one reading of \"a number\" for the head, the
+    kept number and the verdict (`reference`)."""
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)

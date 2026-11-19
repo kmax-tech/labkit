@@ -109,21 +109,21 @@ def report_owed(
     hold the protocol to (`audit_binding.audited_run`: the newest kept one;
     DECLARED when declared) for the adoption and the discussion, the
     handover, and — where an adopted run of the area reads this protocol's
-    runs (`reported_through_runs`) — the reported-through block. Why everything else is held: deleting the run id a refusal
-    named must not release the report. Once released, and REVIEW,
-    the report owes a clean report review of this state (`review_gap`):
-    its prose may still present another run as the result — the block
-    shows the adopted number, it cannot tell what the text around it
-    claims. The progress account: while nothing is
-    adopted, a discussion block of this protocol for the run the gates hold
-    it to says what was measured and what is still open — an honest interim
-    state; it passes at the commit, the stop and a check by hand alike,
-    releasing nothing and owing no review yet. A run that exists forces
-    neither an adoption nor a handover; the next step stays `labkit-next`'s
-    to name. Before any measurement and without an answering run or adoption,
-    a report draft owes no result block; it can be saved with registration.
-    Malformed blocks still hold. Once a measurement exists, the progress,
-    result or handover requirements apply."""
+    runs (`reported_through_runs`) — the reported-through block. Why everything
+    else is held: deleting the run id a refusal named must not release the
+    report. Once released, and REVIEW, the report owes a clean report review of
+    this state (`review_gap`): its prose may still present another run as the
+    result — the block shows the adopted number, it cannot tell what the text
+    around it claims. The progress account: while nothing is adopted, a
+    discussion block of this protocol for the run the gates hold it to says
+    what was measured and what is still open — an honest interim state; it
+    passes at the commit, the stop and a check by hand alike, releasing nothing
+    and owing no review yet. A run that exists forces neither an adoption nor a
+    handover; the next step stays `labkit-next`'s to name. Before any
+    measurement and without an answering run or adoption, a report draft owes
+    no result block; it can be saved with registration. Malformed blocks still
+    hold. Once a measurement exists, the progress, result or handover
+    requirements apply."""
     head = protocol_block.head(text)
     if head.report is None:
         return None

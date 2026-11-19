@@ -1,8 +1,10 @@
 """runlog — minimal per-experiment run tracking (stdlib-only, no service).
 
-Convention (LAB-043 Runs go through `runlog`, LAB-079 Self-contained experiment areas): every run — pilots included — goes through
-`with runlog.run(...)`. Each run gets a self-contained dir and one append-only
-run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
+Convention (LAB-043 Runs go through `runlog`,
+LAB-079 Self-contained experiment areas): every run — pilots included — goes
+through `with runlog.run(...)`. Each run gets a self-contained dir and one
+append-only run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting
+numbers.
 
     runs/<run_id>/config.json      the record at start: config, data, git state,
                                    env, models resolved, the binding (protocol id),

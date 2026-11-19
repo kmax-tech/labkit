@@ -656,10 +656,11 @@ class AnsweringRun:
         """(why no run may answer as a BLOCKER with its way out, or None; the
         lines that say what was looked at) — ONE telling for finalize,
         intent-check, recheck, params and the audit, who ask it through
-        `area_state.Measured.told`, so none tells it its own way; a caller that tells a sentence tells its `message`. A chosen run that
-        reports no intent key while the protocol registers ids is a blocker
-        here, everywhere: it is no answer, whether it was a probe or producer
-        run or its script reports no registered key — which, is not read."""
+        `area_state.Measured.told`, so none tells it its own way; a caller
+        that tells a sentence tells its `message`. A chosen run that reports
+        no intent key while the protocol registers ids is a blocker here,
+        everywhere: it is no answer, whether it was a probe or producer run
+        or its script reports no registered key — which, is not read."""
         if self.run_dir is None:
             assert self.blocker is not None and self.rule is not None, (
                 "bound_answering_run sets a blocker whenever no run stands, "

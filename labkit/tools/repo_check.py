@@ -30,7 +30,7 @@ The three checks it bundles exist on their own (`labkit-hooks check`,
 `python -m labkit.formats.rules refs`, the pin line in `requirements.txt`); this
 one command asks all of them, plus the two none of them asks: installed
 against pinned, pinned against the newest tag.
-"""
+"""  # noqa: E501 a sample output table
 
 from __future__ import annotations
 

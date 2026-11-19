@@ -498,6 +498,12 @@ def _audit_unavailable(
             )
             or "none"
         )
+        audit = commands.audit_command(
+            base_dir,
+            "--mode",
+            "preflight",
+            protocol=base_dir / bound.name if bound.head is not None else None,
+        )
         raise SystemExit(
             with_way_out(
                 "runlog: this run declares run_kind='measurement' (a full run) on a "
@@ -506,7 +512,7 @@ def _audit_unavailable(
                 f"attempt of the code as it is now (code {sha}, promises "
                 f"{block_sha or 'no protocol'}, at least "
                 f"{failed_attempts.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}",
-                f"run the audit: `{commands.audit_command(base_dir, '--mode', 'preflight', protocol=base_dir / bound.name if bound.head is not None else None)}`; "
+                f"run the audit: `{audit}`; "
                 "when the backend does not answer, it writes "
                 f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
                 "acknowledgement rests on that file — and its number cannot be "

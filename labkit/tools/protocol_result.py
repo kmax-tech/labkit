@@ -152,11 +152,12 @@ def from_run(
     declaration that the number is reported, `fill_result_run`), the Recorded results
     line, the Limitation lines and the Runs entry as `runs/<run_id>/metrics.json`
     and the covering records render them (`result_render.rendering`; the
-    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limitation line of a record that no longer covers
-    the run dropped; the Summary's Conclusion stays the author's
-    (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
-    Recorded results is refused without `force`; a `[result]` naming another
-    run is refused always (`fill_result_run`: withdraw it first)."""
+    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a
+    Limitation line of a record that no longer covers the run dropped; the
+    Summary's Conclusion stays the author's (`WRITTEN_AFTER_RUN`). Returns
+    (text, what was filled, run_id). A filled Recorded results is refused
+    without `force`; a `[result]` naming another run is refused always
+    (`fill_result_run`: withdraw it first)."""
     run = recheck.chosen_run(area, text, run_id)
     r = rendering(area, text, run, found=evidence.decision_reviews_in_tree(area))
     filled: list[str] = []

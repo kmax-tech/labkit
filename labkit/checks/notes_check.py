@@ -125,7 +125,8 @@ def unresolved_scripts(text: str, root: Path | None) -> list[str]:
 
 
 def collect_notes(paths: list[str]) -> list[Path]:
-    """The measurement notes the arguments name: notes under `notes/messung/` of a repo or directory, or the files given."""
+    """The measurement notes the arguments name: notes under `notes/messung/`
+    of a repo or directory, or the files given."""
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():

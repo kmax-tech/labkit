@@ -537,15 +537,16 @@ def provenance_findings(
     data stay out of the repository, which holds their source or access
     route and version in Data / scope). OUTSIDE names each source kept out
     of git, by an ignore rule or by lying outside the repository, and a
-    run's declaration that it reads no input file (`runs.NO_INPUTS_KEY`). Raises GitError when git cannot list a directory source's tracked
-    files or say which are ignored (`repo.ignoring_rules`): finalize then ends
-    in that error, not in a blocker with a way out that may not lead out.
-    A `data=` entry naming no path blocks. Outside a git repository every
-    source is still held to its record; git's half is skipped with a
-    warning, a check that cannot run and the technical contract. A run that
-    registered no output is the technical contract too: the checks that
-    hold an output to its run have nothing to hold. An output not yet
-    tracked records an open assignment: no rule's sentence states it."""
+    run's declaration that it reads no input file (`runs.NO_INPUTS_KEY`).
+    Raises GitError when git cannot list a directory source's tracked files or
+    say which are ignored (`repo.ignoring_rules`): finalize then ends in that
+    error, not in a blocker with a way out that may not lead out. A `data=`
+    entry naming no path blocks. Outside a git repository every source is
+    still held to its record; git's half is skipped with a warning, a check
+    that cannot run and the technical contract. A run that registered no
+    output is the technical contract too: the checks that hold an output to
+    its run have nothing to hold. An output not yet tracked records an open
+    assignment: no rule's sentence states it."""
     sources, blockers = _recorded_sources(area, answering_run)
     warnings: list[GateFinding] = []
     outside: list[str] = []
@@ -1217,8 +1218,9 @@ def kept_number_gaps(
     or an infinity is none), naming the key, the run and what it holds
     instead, its way out a new protocol of the head's KIND after the first
     measurement; [] when it does. The skeleton's own check sits in an
-    agent-editable script; this one reads the head and the run's record. It binds the key, not its meaning: a wrong computation stored
-    under KEY passes — the area's tests and the analysis audit judge that
+    agent-editable script; this one reads the head and the run's record. It
+    binds the key, not its meaning: a wrong computation stored under KEY
+    passes — the area's tests and the analysis audit judge that
     (docs/notes/2026-11-01-kept-key-in-the-head.md)."""
     if key in metrics and protocol_block.finite_number(metrics[key]):
         return []

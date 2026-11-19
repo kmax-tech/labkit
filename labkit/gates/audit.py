@@ -12,26 +12,26 @@
     labkit-audit <AREA> --review --record <report review file> [--again]
                                                      (`gates/claim_review`)
 
-The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
-(analysis, before a number leaves) as one command, the only runner. The
-instructions ship with the package (`experiment-preflight.agent.md`); the
-files they tell the auditor to read are gathered and inlined
-(`audit_prompt`) — the
-area's protocol, `scripts/*.py`, `analysis/*.py`, the repo-local `lib/`
-modules they import, and from the lab standard that ships with labkit
-exactly the rules the instructions cite (`audit_prompt.cited_rules`):
+The agent audit of LAB-015 Preflight audit before freezing (preflight, before
+freezing) and LAB-050 Analysis audit before reporting (analysis, before a
+number leaves) as one command, the only runner. The instructions ship with the
+package (`experiment-preflight.agent.md`); the files they tell the auditor to
+read are gathered and inlined (`audit_prompt`) — the area's protocol,
+`scripts/*.py`, `analysis/*.py`, the repo-local `lib/` modules they import, and
+from the lab standard that ships with labkit exactly the rules the instructions
+cite (`audit_prompt.cited_rules`):
 LAB-103 The audit reads by declared scope, not by import graph,
 LAB-015 Preflight audit before freezing (the scar table, the severity legend),
 LAB-017 The number of audits follows the cost tier,
 LAB-004 Identifiers make the intent addressable,
-LAB-050 Analysis audit before reporting
-— not the whole standard, which costs ~30k tokens per read. In MODE analysis the answering run's rows come too:
-the first 50 and the last 20 lines of every output it registered, numbered,
-and its `metrics.json` — the auditor has no tools, so what it is told to
-look at must be on the page. One call goes through `labkit.run.llm` to the alias
-the lab's `models.toml` names (`opus` by default, stamped as `claude-cli`).
-Synchronous, with a timeout: on expiry the command fails, it never waits on
-in the background.
+LAB-050 Analysis audit before reporting — not the whole standard, which costs
+~30k tokens per read. In MODE analysis the answering run's rows come too: the
+first 50 and the last 20 lines of every output it registered, numbered, and its
+`metrics.json` — the auditor has no tools, so what it is told to look at must
+be on the page. One call goes through `labkit.run.llm` to the alias the lab's
+`models.toml` names (`opus` by default, stamped as `claude-cli`). Synchronous,
+with a timeout: on expiry the command fails, it never waits on in the
+background.
 
 Exit codes (`AUDIT_EXIT_CONTRACT`, the line --help ends with) are the
 contract, made from one audit result (`audit_reply.parse`): the LAST verdict

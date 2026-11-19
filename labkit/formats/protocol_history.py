@@ -121,12 +121,12 @@ def registration_in_commit(
     holds it (`protocol_check.low_registration_missing`: the fields the
     lane owes written, the repeat_cost declared; a head this labkit cannot read
     is named as such) — [] when it stood whole — or None when that commit
-    does not hold the file, or PATH lies outside a repository. The protocol is read as it was then (`git show`): the tree
-    now says nothing about what stood before the number. KIND_NOW, the
-    kind the protocol declares today: the fields are owed by it, and a
-    commit that declared another kind lacks the kind — a kind changed after
-    the measurement is not registered before it. TYPE_NOW likewise: the
-    criterion is owed when either type owes it."""
+    does not hold the file, or PATH lies outside a repository. The protocol is
+    read as it was then (`git show`): the tree now says nothing about what
+    stood before the number. KIND_NOW, the kind the protocol declares today:
+    the fields are owed by it, and a commit that declared another kind lacks
+    the kind — a kind changed after the measurement is not registered before
+    it. TYPE_NOW likewise: the criterion is owed when either type owes it."""
     root = git_root(path)
     if root is None:
         return None

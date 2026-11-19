@@ -64,13 +64,14 @@ def undecided_state(
     A current handover acknowledges integrity gaps and the open BLOCKERs it
     records for this stop/commit alone (`handovers.acknowledgement`): it
     binds the audit files by blob, so a finding changed or added after it
-    is held again. It decides nothing — the findings stay `open`. At commit, its audit evidence must also match the working
-    tree, so new unstaged evidence cannot borrow an earlier
-    acknowledgement. Where the gaps stand and a handover record of the area
-    does not count, a line per record says why (`handovers.mismatch`).
-    Evidence changed against HEAD in that state, or ignored by git
-    (`evidence.AreaEvidence.change_sentences`, `evidence.ignored`), holds as well, and no
-    handover acknowledges it: a restore from git undoes it."""
+    is held again. It decides nothing — the findings stay `open`. At commit,
+    its audit evidence must also match the working tree, so new unstaged
+    evidence cannot borrow an earlier acknowledgement. Where the gaps stand and
+    a handover record of the area does not count, a line per record says why
+    (`handovers.mismatch`). Evidence changed against HEAD in that state, or
+    ignored by git (`evidence.AreaEvidence.change_sentences`,
+    `evidence.ignored`), holds as well, and no handover acknowledges it: a
+    restore from git undoes it."""
     out: list[str] = []
     acknowledged: list[str] = []
     areas = areas_touched(paths, repo, staged=staged)

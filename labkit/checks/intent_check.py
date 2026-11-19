@@ -251,12 +251,12 @@ def hold(
 ) -> Held:
     """Hold PROTOCOL's registered ids to a metrics.json: METRICS_ARG when
     named, else the newest completed run bound to the stamped id; STATE the
-    area's state, the caller's when it built one. Reads only. The prose and the promise block disagreeing is the first finding
-    and the last; an unregistered protocol is a clean check with its reason
-    as summary. Raises `console.Refused` when nothing can be held: no
-    protocol or head or block that reads, earlier-form ids, no stamped id
-    and no file named, no run that may answer, an unreadable metrics.json
-    or run record."""
+    area's state, the caller's when it built one. Reads only. The prose and
+    the promise block disagreeing is the first finding and the last; an
+    unregistered protocol is a clean check with its reason as summary.
+    Raises `console.Refused` when nothing can be held: no protocol or head
+    or block that reads, earlier-form ids, no stamped id and no file named,
+    no run that may answer, an unreadable metrics.json or run record."""
     if state is None:
         state = state_of(protocol.parent)
     text, pid, block = _read(protocol, state.text_of(protocol))

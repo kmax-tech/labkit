@@ -893,7 +893,7 @@ def render_inventory(
         "",
         "## Finding sites",
         "",
-        "| Site | Function | Channel | Grade | Evidence kind | Rule (data) | Check outcome | Cited in the text | Commands | Wording |",
+        "| Site | Function | Channel | Grade | Evidence kind | Rule (data) | Check outcome | Cited in the text | Commands | Wording |",  # noqa: E501 one table header line
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for s in sites:

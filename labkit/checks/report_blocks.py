@@ -68,7 +68,7 @@ here states, and no more:
 Why: the protocol's Answer is held exactly, but a separate report can
 state a number its run does not hold; without these checks no gate reads
 that file.
-"""
+"""  # noqa: E501 a result block as written
 
 from __future__ import annotations
 
@@ -724,7 +724,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
 #:     run = "2026-11-18T10-00-00_c0c0"
 #:     sources = ["2026-11-18T09-00-00_a0a0", "2026-11-18T09-30-00_b1b1"]
 #:     -->
-#:     Reported through p-…, run 2026-11-18T10-00-00_c0c0, adopted there: runs 2026-11-18T09-00-00_a0a0, 2026-11-18T09-30-00_b1b1 of p-… are inputs of that analysis; p-… reports no result of its own.
+#:     Reported through p-…, run 2026-11-18T10-00-00_c0c0, adopted there: runs 2026-11-18T09-00-00_a0a0, 2026-11-18T09-30-00_b1b1 of p-… are inputs of that analysis; p-… reports no result of its own.  # noqa: E501 the block's one body line
 #:     <!-- /labkit reported-through -->
 #:
 #: The block shows no number and no verdict: the analysis's result block

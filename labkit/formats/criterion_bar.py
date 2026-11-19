@@ -15,7 +15,7 @@ refusal and the arithmetic, so the two skeletons cannot drift apart. A
 registered value is read as written (`Fraction(str(value))`, 0.25 = 1/4):
 in floats a lane exactly at the bar would fail by one ulp. Pure: nothing here
 reads or writes a file.
-"""
+"""  # noqa: E501 the two call lines as written
 
 from __future__ import annotations
 

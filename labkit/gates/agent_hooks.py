@@ -60,9 +60,10 @@ stop
     (`undecided.undecided_state`); a current handover of the area acknowledges
     the loss and the open BLOCKERs it records, and one that no longer
     matches says why.
-    The commit holds the same rule on the index (`commit_gates`). Deciding is cheap and visible: `limitation` with a reason is
-    a documented deviation, which is what the gate is for; a hand-written
-    `fixed` is a lie the next audit sees (LAB-015 Preflight audit before freezing).
+    The commit holds the same rule on the index (`commit_gates`). Deciding is
+    cheap and visible: `limitation` with a reason is a documented deviation,
+    which is what the gate is for; a hand-written `fixed` is a lie the next
+    audit sees (LAB-015 Preflight audit before freezing).
 
 pre-commit
     `claude-hook pre-commit`, run by the stamped `.githooks/pre-commit`

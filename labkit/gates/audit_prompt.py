@@ -204,8 +204,9 @@ def gather(area: Path, protocol: Path | None) -> AuditInputs:
     gone = [f for f in declared if not f.is_file()]
     if gone:
         # a promise resting on a missing file is not audited around
+        scope = os.path.relpath(gone[0], chosen.parent.resolve())
         raise AuditError(
-            f"{chosen.name}: a promise declares scope `{os.path.relpath(gone[0], chosen.parent.resolve())}`, and it is not a file",
+            f"{chosen.name}: a promise declares scope `{scope}`, and it is not a file",
             fix="name a file of the area in the promise's `scope`, or write that file",
         )
     code += [f for f in declared if f not in code]

@@ -702,10 +702,16 @@ def _progress_step(ctx: "Checked") -> Step | None:
     if progress_account(written, owner, ctx.run.name):
         return None
     here = Path.cwd()
+    discuss = report_blocks.discuss_command(
+        shown(ctx.protocol, here),
+        ctx.run.name,
+        shown(report, here),
+        report_blocks.WHY_PROGRESS,
+    )
     return Step(
         f"run {ctx.run.name} is measured, and {shown(report, here)} carries no "
         f"account of it yet",
-        f"`{report_blocks.discuss_command(shown(ctx.protocol, here), ctx.run.name, shown(report, here), report_blocks.WHY_PROGRESS)}`"
+        f"`{discuss}`"
         f" writes it, saved before the checks (replace the placeholder after "
         f"--why); then `labkit-next` again",
         "the result: only the adoption releases it, after the checks it owes",

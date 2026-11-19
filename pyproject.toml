@@ -71,7 +71,7 @@ extend-exclude = ["docs/usability/*.py"]
 
 [tool.ruff.lint]
 # Same pinned scope as the lab repos (a shifting default is a knob nobody set).
-select = ["E4", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103", "D104", "D419", "C901"]
+select = ["E4", "E501", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103", "D104", "D419", "C901"]
 # ANN: every signature annotated (CODE-007 Type hints and docstrings) — ANN401
 # (no `Any`) left out: forwarding `**kw` to a typed function needs it.
 # D1xx: every public module, class and function has a docstring — its first
@@ -80,10 +80,21 @@ select = ["E4", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103",
 # C901: a function past complexity 10 is refused; the functions above it on
 # 2026-10-08 carry `# noqa: C901 complexity baseline 2026-10-08` at their
 # signature — visible debt, grep for it, shrink it.
+# E501: a line past 120 characters is refused (`max-line-length` below). The
+# formatter keeps its own width of 88 and does not break a string or a comment,
+# so this is the limit for those; a verbatim example that must stay one line
+# carries `# noqa: E501` with its reason.
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
 
 [tool.ruff.lint.per-file-ignores]
-# unittest methods: `def test_…(self)` says what it is; `-> None` on each adds nothing
-"tests/*" = ["ANN", "D"]
+# unittest methods: `def test_…(self)` says what it is; `-> None` on each adds nothing.
+# E501: the tests quote message texts whole, as the command prints them
+"tests/*" = ["ANN", "D", "E501"]
+# the text literals of the protocol's form fields, one line per field text
+"labkit/tools/protocol_cuts.py" = ["E501"]
+"labkit/tools/protocol_fill.py" = ["E501"]
 
 [tool.pyright]
 # strict where the code is new (2026-10-08); widen module by module

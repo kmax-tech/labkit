@@ -1,4 +1,6 @@
-"""Stamp WHICH code an audit looked at — the stamp of LAB-019 The stamp covers everything that determines the number (preflight and analysis audit).
+"""Stamp WHICH code an audit looked at — the stamp of
+LAB-019 The stamp covers everything that determines the number (preflight and
+analysis audit).
 
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes

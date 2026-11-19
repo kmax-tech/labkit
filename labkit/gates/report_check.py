@@ -1472,8 +1472,9 @@ def hold_registered(
     changed against HEAD holds first (`evidence.change_blockers`): the
     report of a handover is released by the report reviews of that area.
     A current handover ends the report-path obligation without releasing
-    a result; the report it delivers still owes its review. Raises `protocol_block.BlockError` on a head that does not read — the
-    caller read the declaration off the same text first."""
+    a result; the report it delivers still owes its review. Raises
+    `protocol_block.BlockError` on a head that does not read — the caller read
+    the declaration off the same text first."""
     staged = sources.staged
     state = sources.held_state(protocol.parent)
     held = sources.held_evidence(protocol.parent)

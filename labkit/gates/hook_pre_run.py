@@ -185,7 +185,8 @@ def _low_registration_line(head: str, texts: list[str]) -> str:
     return (
         f"{head}: repeat cost low, but {', '.join(missing)} still "
         f"empty or a placeholder — runlog refuses a full run "
-        f"until the registration is written (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)."
+        f"until the registration is written (LAB-003 No run without an intent paragraph, "
+        f"LAB-017 The number of audits follows the cost tier)."
     )
 
 
