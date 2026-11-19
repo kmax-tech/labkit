@@ -13,6 +13,7 @@ from __future__ import annotations
 import pytest
 
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -853,6 +854,108 @@ class ARunLostBesideAFirstMeasurement(_Repository):
             any("may have been the first" in b for b in collected.blocked),
             collected.blocked,
         )
+
+    READER = "2026-10-09T10-00-00_cd34"
+
+    def _a_newer_run_reads_an_input(self, origin: str | None) -> None:
+        """Beside `_lost_beside_a_first(1)`: READER, a measurement that
+        started after LOST and is the answering run (the newest), its
+        record naming one input, the area's out.jsonl, with ORIGIN as the
+        run that wrote it (None: a plain input)."""
+        self._lost_beside_a_first(1)
+        out = self.area / "out.jsonl"
+        out.write_text('{"id": 1}\n', encoding="utf-8")
+        reader = self._run(_git(self.root, "rev-parse", "HEAD~1"), self.READER)
+        cfg = reader / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["data"] = {
+            "items": {
+                "path": out.relative_to(self.root).as_posix(),
+                "sha256": hashlib.sha256(out.read_bytes()).hexdigest()[
+                    : runs.RECORD_SHA_CHARS
+                ],
+                "rows": 1,
+                runs.ORIGIN_RUN_KEY: origin,
+                runs.ORIGIN_CHOSEN_KEY: False,
+                runs.ORIGIN_UNREADABLE_KEY: [],
+            }
+        }
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        run_starts.write_start(
+            self.area,
+            run_starts.RunStart(
+                self.READER, PID, self.NOON + timedelta(seconds=2), "measurement"
+            ),
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "a run that reads an input")
+        state = area_state.state_of(self.area).measured_of(PID)
+        self.assertEqual(state.answering(None).run_dir, reader)
+        # the first-measurement question only warns: LOST started later
+        sort = registration_hold.without_record_of(state)
+        self.assertEqual((sort.held, len(sort.later)), ((), 1))
+
+    def _both_entry_points(self) -> tuple[Findings, list[gate.GateFinding], list[str]]:
+        """(what finalize found, report-check's blockers, its warnings as
+        told) on the area as it is — both whole, no station stood in for.
+        Both exit 1 in either case: the fixture has no audit and no
+        analysis script; a test reads which finding names LOST."""
+        collected = Findings(tell=None)
+        self.assertEqual(finalize.finalize_area(self.area, self.proto, collected), 1)
+        told: list[str] = []
+        verdict = report_check.protocol_verdict(self.area, self.proto, tell=told.append)
+        self.assertEqual(verdict.exit, 1, told)
+        assert verdict.chain is not None
+        return (
+            collected,
+            verdict.chain.blockers,
+            [line for line in told if "WARNING" in line],
+        )
+
+    def test_a_later_lost_run_an_input_originates_from_still_blocks_at_both(self):
+        """The answering run's record names the lost run as the run that
+        wrote its input. The start time answers only whether the
+        first measurement may be missing; the input's origin is gone, and
+        finalize's input-origins station holds the result — at finalize
+        and, through it, at report-check."""
+        self._a_newer_run_reads_an_input(self.LOST)
+        gone = f"data['items'] = experiments/01-x/out.jsonl: its origin run {self.LOST} is gone"
+        collected, blockers, warned = self._both_entry_points()
+        (blocked_text,) = [b for b in collected.blocked if self.LOST in b]
+        self.assertIn(gone, blocked_text)
+        (hold,) = [b for b in blockers if self.LOST in b.text]
+        self.assertEqual((hold.grade, hold.outcome), (BLOCKER, VIOLATED), hold.text)
+        self.assertIn(f"finalize: {gone}", hold.text)
+        self.assertIn("restore the origin run's directory or record", hold.message)
+        # beside it the same warning as without a dependent, and no hold
+        # over the first measurement
+        self._assert_the_later_loss_only_warns(collected, blockers, warned)
+
+    def test_the_twin_a_later_lost_run_no_input_originates_from_blocks_nothing_that_names_it(
+        self,
+    ):
+        """The same lost run and the same reading run, its input a plain
+        one: no finding of either entry point that holds names the lost
+        run; both warn of it."""
+        self._a_newer_run_reads_an_input(None)
+        collected, blockers, warned = self._both_entry_points()
+        self.assertEqual([b for b in collected.blocked if self.LOST in b], [])
+        self.assertEqual([b.text for b in blockers if self.LOST in b.text], [])
+        self.assertFalse(any("origin run" in b for b in collected.blocked))
+        self._assert_the_later_loss_only_warns(collected, blockers, warned)
+
+    def _assert_the_later_loss_only_warns(
+        self, collected: Findings, blockers: list[gate.GateFinding], warned: list[str]
+    ) -> None:
+        later = f"run {self.LOST} is gone"
+        (warning,) = [w for w in collected.warned if later in w]
+        self.assertIn("taken as started later", warning)
+        self.assertTrue(
+            any(later in w and "taken as started later" in w for w in warned), warned
+        )
+        for text in [*collected.blocked, *(b.text for b in blockers)]:
+            self.assertNotIn("may have been the first", text)
+            self.assertNotIn("whether it owes a report cannot be told", text)
 
 
 class ScopeAsFirstMeasured(_Repository):
