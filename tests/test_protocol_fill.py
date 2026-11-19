@@ -453,6 +453,57 @@ class Freeze(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual(protocol.read_text(encoding="utf-8"), before)
 
+    STEP = [
+        "--builds-on",
+        "r1",
+        "--step-id",
+        "s",
+        "--occasion",
+        "planned",
+        "--why",
+        "w",
+    ]
+
+    def test_freeze_data_counts_and_a_step_take_no_second_operation(self):
+        """Each pair is refused by the argument check, before the file is
+        read: the first mode in the dispatch's order would run and the
+        other be dropped without a word."""
+        _, protocol = self._area()
+        before = protocol.read_text(encoding="utf-8")
+        for argv in (
+            [*self.STEP, "--data-counts"],
+            [*self.STEP, "--freeze"],
+            ["--freeze", "--data-counts"],
+            ["--withdraw", "--why", "w", "--freeze"],
+            ["--freeze", "--from-run"],
+            ["--freeze", "--list"],
+        ):
+            err = io.StringIO()
+            with self.subTest(argv=argv):
+                with (
+                    self.assertRaises(SystemExit) as cm,
+                    contextlib.redirect_stderr(err),
+                ):
+                    protocol_fill.main([str(protocol), *argv])
+                self.assertEqual(cm.exception.code, 2)
+                self.assertRegex(err.getvalue(), "goes alone|cannot be combined")
+                self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+
+    def test_the_twin_each_of_them_alone_passes_the_argument_check(self):
+        """Alone each reaches its own mode: here the mode's refusal for
+        want of a record or a run (exit 2 returned), never argparse's."""
+        _, protocol = self._area()
+        for argv, says in (
+            (["--freeze"], "holds no preflight audit record"),
+            (["--data-counts"], "no completed preparation run"),
+            (self.STEP, "r1"),
+        ):
+            err = io.StringIO()
+            with self.subTest(argv=argv), contextlib.redirect_stderr(err):
+                self.assertEqual(protocol_fill.main([str(protocol), *argv]), 2)
+                self.assertIn(says, err.getvalue())
+                self.assertNotIn("usage:", err.getvalue())
+
 
 class Prompts(unittest.TestCase):
     """The Prompt block written from the scripts' constants holds against
