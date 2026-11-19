@@ -184,17 +184,31 @@ def unread_sources(state: AreaState) -> list[str]:
     - why git could not list the runs or the start files it holds
       (`AreaState.history_unread`, git's words with the command that names
       the damaged object);
-    - a run whose start file does not read: an incomplete start.
+    - a run whose start file does not read: an incomplete start;
+    - a run a start file names whose record (config.json) does not read:
+      its state is not read from its files and its process cannot be
+      asked, so whether it completed is unknown (`unfinished_starts`
+      leaves it out), with the reader's sentence and way out.
 
     A run index that does not read gives no state at all; the hook tells
     that under the same heading (`_untold_evidence`)."""
-    return ([state.history_unread] if state.history_unread else []) + [
-        f"run {r}: its start file does not read ({s.unread}) — an incomplete "
-        f"start: nothing is taken from it; restore it from the commit that "
-        f"holds it, and where none does leave it as it is"
-        for r, s in state.starts.items()
-        if s.unread
-    ]
+    return (
+        ([state.history_unread] if state.history_unread else [])
+        + [
+            f"run {r}: its start file does not read ({s.unread}) — an incomplete "
+            f"start: nothing is taken from it; restore it from the commit that "
+            f"holds it, and where none does leave it as it is"
+            for r, s in state.starts.items()
+            if s.unread
+        ]
+        + [
+            f"run {facts.dir.name}: its record does not read — whether it "
+            f"completed is unknown, so it is not told as broken off; its start "
+            f"file stands: {facts.why}"
+            for facts in state.run_facts
+            if facts.state == runs.UNREADABLE and facts.dir.name in state.starts
+        ]
+    )
 
 
 def unfinished_starts(state: AreaState) -> list[str]:
@@ -203,12 +217,16 @@ def unfinished_starts(state: AreaState) -> list[str]:
     its row names and never completed — its record is here, unlike a run
     whose directory is gone (`gone_runs`). A run whose process still
     lives is left out (`runs.is_alive`: it is running, not aborted); where
-    that cannot be told the line says so. Asks the process table."""
+    that cannot be told the line says so. A run whose record does not read
+    is left out too: whether it completed is unknown (`unread_sources`).
+    Asks the process table."""
     records = {rd.dir.name: rd for rd in state.runs}
     out: list[str] = []
     for facts in state.run_facts:
         name = facts.dir.name
         if name not in state.starts or facts.state == runs.COMPLETED:
+            continue
+        if facts.state == runs.UNREADABLE:
             continue
         cfg = records[name].config
         alive = runs.is_alive(cfg.pid, cfg.script) if cfg is not None else False

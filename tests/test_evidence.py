@@ -33,7 +33,12 @@ from labkit.formats import evidence, findings, run_starts  # noqa: E402
 from labkit.formats.area_state import INDEX, state_of  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
-from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
+from protocol_fixture import (  # noqa: E402
+    head,
+    protocol_id_of,
+    registration_of,
+    run_record,
+)
 from repo_fixture import git as _git  # noqa: E402
 from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
 from repo_fixture import init_repo
@@ -563,11 +568,33 @@ class Told(unittest.TestCase):
         )
         self.assertIn(f"run {gone}: its directory is gone", line)
 
+    def _broken_off(self) -> None:
+        """The run OPEN without a completion, its record readable (pid 1
+        is no run of the script: not alive)."""
+        d = _run_dir(self.area, OPEN, closed=False)
+        (d / "config.json").write_text(json.dumps(run_record()), encoding="utf-8")
+
+    def test_a_run_whose_record_does_not_read_is_told_as_unread(self):
+        """A start file names it, its directory stands with metrics and
+        completion, its record does not read: told under the heading of
+        what does not read, never as a run that never completed."""
+        d = _run_dir(self.area, OPEN, closed=True)
+        (d / "config.json").write_text("{", encoding="utf-8")
+        run_starts.write_start(
+            self.area, run_starts.RunStart(OPEN, "p-1", NOON, "measurement")
+        )
+        ctx = self._told()
+        heading, line = ctx.splitlines()
+        self.assertTrue(heading.startswith("the run index, a start file or"), heading)
+        self.assertIn(f"experiments/01-x: run {OPEN}: its record does not read", line)
+        self.assertNotIn("never completed", ctx)
+        self.assertNotIn("is gone —", ctx)
+
     def test_a_standing_unfinished_run_has_a_heading_of_its_own_never_gone(self):
         """The run started (its start file stands), its directory stands
         without a completion: nothing of it is gone, and no line of the hook
         says so."""
-        _run_dir(self.area, OPEN, closed=False)
+        self._broken_off()
         run_starts.write_start(
             self.area, run_starts.RunStart(OPEN, "p-1", NOON, "measurement")
         )
@@ -591,7 +618,7 @@ class Told(unittest.TestCase):
             run_starts.write_start(
                 self.area, run_starts.RunStart(run, "p-1", NOON, "measurement")
             )
-        _run_dir(self.area, OPEN, closed=False)
+        self._broken_off()
         under_gone, under_unfinished = self._told().split("\na run of ")
         self.assertIn(", is gone — ", under_gone.splitlines()[0])
         self.assertIn(f"run {gone}: its directory is gone", under_gone)
