@@ -21,6 +21,11 @@ run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
                                    commit, patch, untracked files copied to
                                    code/ (`code_repos`)
     runs/<run_id>/<raw files>      verbatim model output etc. (save_raw)
+    runs/<run_id>/start-file       the mark that a start file was written for
+                                   the run, holding its path (`run_starts`)
+    run-starts/<run_id>.json       the run's start file, outside `runs/`: run id,
+                                   protocol id, start in UTC, run kind — written
+                                   last at every start, never overwritten
     runs.tsv                       run index, one row per completed run
                                    (columns: RUN_INDEX_COLS) — derived, never a source
 
@@ -72,13 +77,14 @@ a leak raises before the run starts, rather than inflating a score nobody can
 explain later. Recording the files is what makes "which data was that?"
 answerable six weeks on; the split keys are what make it answerable by a tool.
 
-A run directory exists only with its config.json (everything that can
-fail is read before mkdir, a failure while writing the record removes the
-directory). An incomplete run leaves its dir with config.json but
+A run directory exists only with its config.json and its start mark, and
+only when the run's start file was written (every start check refuses
+before mkdir; a failure while writing the record, the mark or the start
+file removes the directory). An incomplete run leaves its dir with config.json but
 without the required completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
 unfinalized · corrupt · unreadable (config.json damaged, or written before
-schema 4 — read with its pinned labkit).
+schema 5 — read with its pinned labkit).
 """
 
 from __future__ import annotations
@@ -415,34 +421,41 @@ class Run:
     """One measure run: its directory, its frozen config, the outputs it
     registers and the metrics it reports.
 
-    `__init__` is three phases, every refusal BEFORE the directory exists:
+    `__init__` is three phases; every refusal of phases 1 and 2 comes
+    BEFORE the directory exists:
 
       1. preparation (`prepare`): the parent a derived run names, the
          protocol binding, the promise snapshot, the config frozen
-      2. the start check, in this order: the registration
-         (tables owed, constants unchanged), the detach gate only for a
-         declared long run whose lane forbids the foreground, whose
-         harness sets a limit and which is not already detached; the run
-         index header; data leakage when data is supplied; for a full
-         run the freeze gate; the origin of each input among the area's
-         completed runs (`input_origins` — one eligible run is the origin,
-         several need a `RunOutput` choice, a wrong choice is refused, none
-         is a plain input; a run whose record does not read is never an
-         origin, a choice that names it is refused, and an automatic
-         decision made without it is warned of, `unreadable_warning`)
-         (undecided blockers, the freeze or the registration, the
-         acknowledgement over a failed audit); the imported code read per
-         repository (`code_repos.read_code`), and for a full run refused when
-         part of it cannot be recorded
+      2. the start check, in this order: the registration (tables owed,
+         constants unchanged); a reseed's conditions
+         (`require_valid_reseed`); the detach gate only for a declared
+         long run whose lane forbids the foreground, whose harness sets a
+         limit and which is not already detached; the run index header;
+         for a full run that no run of the same script is still open
+         (`_require_no_open_twin`); when data is supplied, data leakage
+         and the origin of each input among the area's completed runs
+         (`input_origins` — one eligible run is the origin, several need
+         a `RunOutput` choice, a wrong choice is refused, none is a plain
+         input; a run whose record does not read is never an origin, a
+         choice that names it is refused, and an automatic decision made
+         without it is warned of, `unreadable_warning`); for a full run
+         the freeze gate (undecided blockers, the freeze or the
+         registration, the acknowledgement over a failed audit); the
+         imported code read per repository (`code_repos.read_code`), and
+         for a full run refused when part of it cannot be recorded
       3. creation: git, environment and models read (`record_provenance` — a
          derived run resolves no model anew), then under one lock for a
          repeat: the draw counted and, with RESEED, its seed derived
-         (`_repeat_draw`), mkdir, the record written (`_write_record`); a
-         failure there removes the directory
+         (`_repeat_draw`), mkdir, the record written (`_write_record`),
+         the start mark (`write_start_mark`) and last the run's start
+         file (`_write_start_file`, `run-starts/<run_id>.json`); a failure
+         of any of the three removes the directory
 
     A refusal in 1 or 2 is a SystemExit (a RuntimeError for the index
-    header and a leak), and leaves no run directory behind. `class run` is
-    the context manager around this."""
+    header and a leak), and leaves no run directory behind. A start file
+    that cannot be written, or exists already, is a SystemExit in 3 after
+    mkdir, and the directory is removed. `class run` is the context
+    manager around this."""
 
     #: the run's id: its directory's name and its row in the run index
     run_id: str

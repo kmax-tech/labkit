@@ -153,7 +153,7 @@ def untold_first_holds(
     pid: str, area: Path, protocol: Path, measured: Measured
 ) -> list[GateFinding]:
     """What leaves untold which run of PID measured first, the first that
-    applies: a run whose protocol the start record, the run index and its
+    applies: a run whose protocol the start file, the run index and its
     record name differently, PID among them (`binding_conflict_hold`), else
     a run of PID whose mark says a start file was written and for which
     none is found (`missing_start_hold`), else a run of PID that left no
@@ -278,8 +278,9 @@ def workflow(
     measurements that registered different types, or no first measurement
     whose text reads (outside a repository none does) — the caller then
     holds the confirmatory way, the most, never the least. The holds
-    (`type_changes`): the type of the answering RUN as it saw the protocol,
-    and of the protocol as it stands, against the first measurements'.
+    (`types_split_hold`, `type_hold`): the type of the answering RUN as it
+    saw the protocol, and of the protocol as it stands, against the first
+    measurements'.
     Raises RuntimeError when git fails."""
     firsts = [rd for group in measured.first_groups for rd in group]
     seen, _ = protocol_history.first_texts(protocol, firsts, root)
