@@ -45,14 +45,17 @@ def station_changes(
     first-measurement lock (`registration_changes`) — an undecided or
     unreadable type is never read as exploratory. Before either, what
     leaves the first measurement untold (`untold_first_holds`: the type
-    that decides the workflow is that run's) is the one finding. (False,
+    that decides the workflow is that run's; a history git could not list
+    is the first of them) is the one finding. (False,
     []) without an answering run or a stamped id. Raises RuntimeError when
     git fails."""
     if pid is None or run is None:
         return False, []
     root = git_root(protocol)
     measured = state.measured_of(pid)
-    untold = untold_first_holds(pid, area, protocol, measured)
+    untold = untold_first_holds(
+        pid, area, protocol, measured, history_unread=state.history_unread
+    )
     if untold:
         return False, untold
     flow, typed = workflow(protocol, pid, run, root, measured, state)

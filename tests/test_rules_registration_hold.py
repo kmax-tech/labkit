@@ -30,6 +30,7 @@ from labkit.formats.followup import (
 )
 from labkit.formats.gate import (
     BLOCKER,
+    GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
@@ -1140,6 +1141,56 @@ class AStartFileThatIsNowhere(unittest.TestCase):
         assert warning is not None
         self.assertIn("`finalize` holds every number of this protocol", warning.text)
         self.assertIn("never written anew from memory", warning.fix or "")
+
+
+class AHistoryGitCannotList(unittest.TestCase):
+    """`unread_history_hold`: git could not list what a commit holds under
+    the area, so the runs and start files a commit holds were not read back
+    and the check for a missing start file did not run — a BLOCKER of a
+    check not executable, guaranteed: git said so. The twin, a history that
+    was listed, holds nothing."""
+
+    WORDS = (
+        "what git holds under area/runs/ cannot be listed: fatal: bad object "
+        "0123abcd (`git fsck` names the damaged object)"
+    )
+
+    def test_an_unlisted_history_blocks_with_its_ways_out(self):
+        (hold,) = pure_call(
+            registration_hold.unread_history_hold,
+            AREA,
+            self.WORDS,
+            HANDOVER_WAY,
+            told_by="finalize",
+        )
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome, hold.evidence_kind),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE, GUARANTEED),
+        )
+        self.assertEqual(hold.known_as, registration_hold.UNREAD_HISTORY)
+        self.assertIn(self.WORDS, hold.text)
+        self.assertIn("whether a start file is missing was not checked", hold.text)
+        self.assertIn("which run measured first is not told", hold.text)
+        for way in (
+            "restore the repository's missing objects",
+            "then run the check again (`finalize area`)",
+            HANDOVER_WAY,
+        ):
+            self.assertIn(way, hold.fix or "")
+        # the condition is the repository's: a new registration lifts nothing
+        self.assertNotIn("register anew", hold.fix or "")
+
+    def test_the_twin_a_history_that_was_listed_holds_nothing(self):
+        self.assertEqual(
+            pure_call(
+                registration_hold.unread_history_hold,
+                AREA,
+                "",
+                HANDOVER_WAY,
+                told_by="finalize",
+            ),
+            [],
+        )
 
 
 class ABindingTheFilesContradict(unittest.TestCase):

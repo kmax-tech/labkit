@@ -632,6 +632,52 @@ class ARegistrationReleaseThatCannotBeChecked(unittest.TestCase):
         self.assertEqual(self._held(lambda *_a, **_k: []), [])
 
 
+class AnUnlistedHistoryComesBeforeTheOtherHolds(unittest.TestCase):
+    """Station 2 (`registration_station.station_changes`): a history git
+    could not list is the one finding, before the hold on a start file
+    that is found nowhere — that check did not run on the commits' files.
+    The twin, a history that was listed, leaves the other hold its turn.
+    Composition: the state is written down, no repository is read for it."""
+
+    WORDS = "what git holds under area/runs/ cannot be listed: fatal: bad object"
+    MISSING = "2026-10-07T10-00-00_ab12"
+
+    def _station(self, history_unread: str) -> list[GateFinding]:
+        from labkit.formats.area_state import Measured
+        from labkit.gates import registration_station
+        from state_fixture import area_evidence
+
+        measured = Measured(AREA, PID, (), (), (), (), missing_starts=(self.MISSING,))
+        state = area_state(history_unread=history_unread, measured={PID: measured})
+        exploring, holds = registration_station.station_changes(
+            AREA,
+            AREA / "PROTOCOL-x.md",
+            PID,
+            AREA / "runs" / "r1",
+            state,
+            area_evidence(),
+        )
+        self.assertFalse(exploring)
+        return holds
+
+    def test_an_unlisted_history_is_the_one_blocker(self):
+        from labkit.formats.gate import BLOCKER
+        from labkit.gates.registration_hold import UNREAD_HISTORY
+
+        (hold,) = self._station(self.WORDS)
+        self.assertEqual(
+            (hold.grade, hold.outcome, hold.known_as),
+            (BLOCKER, NOT_EXECUTABLE, UNREAD_HISTORY),
+        )
+        self.assertIn(self.WORDS, hold.text)
+        self.assertNotIn("a start file was written", hold.text)
+
+    def test_the_twin_a_listed_history_leaves_the_next_hold_its_turn(self):
+        (hold,) = self._station("")
+        self.assertIsNone(hold.known_as)
+        self.assertIn(f"a start file was written for run {self.MISSING}", hold.text)
+
+
 class CriterionNStation(unittest.TestCase):
     """finalize's criterion-n station reads a run's inputs and outputs only
     when its metrics.json holds a denominator; a record that does not read

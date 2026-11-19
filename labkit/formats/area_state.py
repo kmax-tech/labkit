@@ -295,10 +295,14 @@ class AreaState:
             back from git (`committed_runs`; `RunDir.from_commit` the
             commit a checkout restores each from), oldest first by name;
             () when git could not list them (HISTORY_UNREAD).
-        history_unread: Git's words when the runs a commit holds could not
-            be listed (`committed_runs`: an object the repository lacks, a
-            tree it cannot read), "" when they could — a damaged repository
-            is told, never read as "no run was deleted"; the stations that
+        history_unread: Git's words when the runs, the start files or
+            the start marks a commit holds could not be listed
+            (`last_committed`: an object the repository lacks, a tree it
+            cannot read), "" when they could — a damaged repository is
+            told, never read as "no run was deleted": DELETED and
+            MISSING_STARTS are then incomplete, and finalize's registration
+            station and report-check hold on it
+            (`registration_hold.unread_history_hold`); the stations that
             read a commit name the damaged object themselves
             (`protocol_history.committed_at`).
         lost: Run id → protocol id of the runs only the local run index
@@ -715,7 +719,8 @@ def _starts_of(
     marked runs for which no start file is found; and UNREAD, the words
     for a history that could not be listed so far, with what is added
     here. With a history that does not read, "found nowhere" is not told:
-    the missing starts stay empty."""
+    the missing starts stay empty, and the release is held on the words
+    returned (`registration_hold.unread_history_hold`)."""
     if staged and repo is not None:
         starts = indexed_starts(repo, area)
     else:

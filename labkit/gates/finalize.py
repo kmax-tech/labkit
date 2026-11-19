@@ -30,7 +30,12 @@ each step's condition):
                     reads which may have been the first measurement, a
                     blocker in place of the comparison
                     (`registration_hold.lost_record_hold`), any other
-                    such run a warning (`lost_record_warnings`)
+                    such run a warning (`lost_record_warnings`); a
+                    history git could not list, a blocker before all of
+                    these (`registration_hold.unread_history_hold`) —
+                    like them only with an answering run: without one
+                    this station is skipped, and report-check's report
+                    duty tells that history
   3. intent-check   every registered promise has a metrics key (and vice
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id

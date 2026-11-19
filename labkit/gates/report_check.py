@@ -151,6 +151,7 @@ from labkit.gates.finalize import (
 )
 from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
+from labkit.gates.registration_hold import UNREAD_HISTORY, unread_history_hold
 from labkit.gates.report_hold import (
     Sources,
     discussing_reports,
@@ -711,6 +712,20 @@ def without_declaration_blocker(
     ]
 
 
+def without_unread_history(finalized: list[GateFinding]) -> list[GateFinding]:
+    """FINALIZED, finalize's findings (`finalize_findings`), without the
+    blocker its registration station tells for a history git could not
+    list — picked out by its name (`registration_hold.UNREAD_HISTORY`).
+    The report duty's station holds the same history as its blocker
+    (`report_binding_gaps`), with an answering run or without one; both
+    read the one area state, in every file state."""
+    return [
+        f
+        for f in finalized
+        if not (f.grade == BLOCKER and f.known_as == UNREAD_HISTORY)
+    ]
+
+
 def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
     """A blocker while an adoption was cut off during its check: the head may
     hold a proposal no check passed (`repo.pending_adoption`);
@@ -758,9 +773,19 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     protocol cannot be determined (`registered_report.unassigned_record_note`):
     the duty was read without it; one for a start file that does not
     read (`registered_report.unread_start_note`), and one for a start file a
-    run's mark names and nobody finds (`registered_report.missing_start_note`)."""
+    run's mark names and nobody finds (`registered_report.missing_start_note`).
+    Before them, the BLOCKER for a history git could not list
+    (`registration_hold.unread_history_hold`): a measurement a commit holds
+    was not read back then, so "no duty" and "no start file missing" are
+    not told."""
     state = ctx.area_state
     measured = state.measured_of(ctx.head.id)
+    unread = unread_history_hold(
+        ctx.area,
+        state.history_unread,
+        ways_out.handover(ctx.protocol),
+        told_by="report-check",
+    )
     gap = report_binding_gap(ctx.protocol, ctx.text, measured=measured)
     warnings = [
         unassigned_record_note(measured),
@@ -768,7 +793,8 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
         missing_start_note(measured),
     ]
     return (
-        ([] if gap is None else [gap])
+        unread
+        + ([] if gap is None else [gap])
         + [w for w in warnings if w is not None]
         + orphaned_duty_gaps(state)
     )
@@ -923,7 +949,8 @@ def chain_gaps(
        measurement's committed registration where the lane owes that; a
        declared replacement's changes; the report duties the state drops
        (`report_binding_gaps`: a head without the report it owes, a
-       measured protocol gone from the area).
+       measured protocol gone from the area), and before them a history
+       git could not list.
     3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it,
@@ -948,7 +975,9 @@ def chain_gaps(
     run (left out of station 5), a field written twice (left out of station
     2), the marks that make a run unreportable (finalize's warning left out
     beside station 4's blocker), a `[result]` table that does not read
-    (finalize's blocker left out beside station 1's). Finalize's own stations
+    (finalize's blocker left out beside station 1's), a history git could
+    not list (finalize's blocker left out beside station 2's, in every
+    state: both read one area state). Finalize's own stations
     are named by what they check, never by number, here.
     UNDECLARED (no run adopted yet, the one a next step asks about):
     the stations the adoption writes and holds on its proposal — the result
@@ -981,6 +1010,8 @@ def chain_gaps(
     # stations hold is not told again as finalize's: the `[result]` table
     # that does not read (station 1) and the unreportable marks (station 4)
     finalized = finalize_findings(ctx.area, ctx.protocol, ctx.area_state, ctx.evidence)
+    # the history git could not list is station 2's blocker, whatever the text
+    finalized = without_unread_history(finalized)
     if same_text:
         finalized = without_declaration_blocker(finalized, ctx)
         finalized = without_unreportable_warnings(finalized, ctx.run)

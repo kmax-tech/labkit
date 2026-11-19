@@ -31,6 +31,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
+from labkit.gates import registration_station
 from labkit.tools import next_command, report_command
 from labkit.formats import (
     area_state,
@@ -629,6 +630,88 @@ ALL_ROADS = (
     "- **Unit:** a fraction of the buffer's area\n"
 )
 REFERENCE = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
+
+
+class AHistoryGitCannotList(_Repository):
+    """A repository that lacks an object of its history: git cannot list the
+    runs and start files a commit holds, so the check for a missing start
+    file did not run and a deleted measurement is not read back. finalize's
+    registration station and report-check's report duty hold on git's own
+    words, and report-check's chain tells the cause once. Replayed on a real
+    repository with a tree object removed; the twin is the same repository
+    before the damage."""
+
+    OLDER = "2026-10-07T09-00-00_0001"
+
+    def _deleted_run_beside_an_answering_one(self) -> None:
+        """Two measurements committed, the older one deleted by a commit."""
+        sha = self._commit(REGISTRATION)
+        older = self._run(sha, self.OLDER)
+        self._run(sha)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the runs")
+        _git(self.root, "rm", "-rq", str(older))
+        _git(self.root, "commit", "-qm", "deleted the older run")
+
+    def _damage(self) -> None:
+        """Remove the tree of the commit before the deletion: listing what
+        the deleting commit removed needs it."""
+        tree = _git(self.root, "rev-parse", "HEAD~1^{tree}")
+        obj = self.root / ".git" / "objects" / tree[:2] / tree[2:]
+        self.assertTrue(obj.is_file(), obj)
+        obj.unlink()
+
+    def _held(self) -> tuple[list[gate.GateFinding], ...]:
+        """(finalize's station 2, report-check's duty station, the chain's
+        blockers) for the area as it is."""
+        ctx = report_context.checked(self.area, self.proto)
+        assert ctx.run is not None, ctx.why
+        _, station = registration_station.station_changes(
+            ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
+        )
+        duty = report_check.report_binding_gaps(ctx)
+        chain = report_check.chain_gaps(ctx, undeclared=True, review=False).blockers
+        return station, duty, chain
+
+    def test_finalize_and_report_check_hold_on_gits_words(self):
+        self._deleted_run_beside_an_answering_one()
+        self._damage()
+        station, duty, chain = self._held()
+        for name, found in (("finalize's station", station), ("the duty", duty)):
+            with self.subTest(name):
+                (hold,) = found
+                self.assertEqual(
+                    (hold.grade, hold.rule, hold.outcome, hold.evidence_kind),
+                    (
+                        BLOCKER,
+                        gate.TECHNICAL_RULE,
+                        gate.NOT_EXECUTABLE,
+                        gate.GUARANTEED,
+                    ),
+                )
+                self.assertIn("cannot be listed", hold.text)
+                self.assertIn("unable to read tree", hold.text)
+                self.assertIn(
+                    "whether a start file is missing was not checked", hold.text
+                )
+                self.assertIn("git fsck", hold.fix or "")
+        # one cause, one blocker: the chain's own station tells it, finalize's
+        # is left out
+        (told,) = [f for f in chain if f.known_as == registration_hold.UNREAD_HISTORY]
+        self.assertFalse(told.text.startswith(report_check.FINALIZE), told.text)
+
+    def test_the_twin_a_history_git_lists_is_not_held(self):
+        self._deleted_run_beside_an_answering_one()
+        station, duty, chain = self._held()
+        for found in (station, duty, chain):
+            self.assertEqual(
+                [f for f in found if f.known_as == registration_hold.UNREAD_HISTORY],
+                [],
+            )
+        self.assertEqual(duty, [])
+        # the deleted run is read back from its commit, and no hold says
+        # the first measurement is untold
+        self.assertFalse(any("cannot be listed" in f.text for f in station), station)
 
 
 class ScopeAsFirstMeasured(_Repository):
