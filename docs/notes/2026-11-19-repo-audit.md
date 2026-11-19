@@ -99,4 +99,21 @@ Found equal (**R**, each opened): no `run-starts.tsv`, 26-hour rule or pre-renam
 9. A line-length rule for the package, with the form texts of `protocol_cuts.py` exempt or wrapped.
 10. A clarity reading of the eight modules no reader opened.
 
+## Done 2026-11-19
+
+Worked the same day in four parallel worktrees and merged, 20 commits up to 9195dadb; the full checks exited 0, run alone on the unchanged merged tree. Line numbers above are those of a3951e92 and no longer hold.
+
+| Point | State                                                                                                                                                                                                                                                                        |
+|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1     | Built: a history git cannot list is a blocker at finalize's registration station and at report-check's report duty (`registration_hold.unread_history_hold`). The run start still does not name it.                                                                          |
+| 2     | Built as the author decided: the report duty reads the registration station's order (`WithoutRecord`); a run that provably started later warns at both, an unknown order holds at both, a lost run a result needs holds as before. A lost input-origin run was not replayed. |
+| 3     | Not built, by the author's decision: the classification and its reasons belong in one place, the messages stay per entry point. [Plan](2026-11-19-shared-run-classification-plan.md).                                                                                        |
+| 4     | Built: `protocol_history.workflow_registered` returns a `Workflow`; the station, the audit prompt and the hold read it. Without a run only the prompt compares, against the first measurement; kept, documented and tested.                                                  |
+| 5     | Built: `Measured` and the area state are built by keyword; `Measured` has `lost_measurements`, `started_only_measurements`, `conflict_clauses`; `state_of` has `present` and `present_or_committed`.                                                                         |
+| 6     | Built: the hook prints three headings (gone; started and never completed; does not read).                                                                                                                                                                                    |
+| 7     | Built as a warning: no other gate tells such a link after the first measurement. Warning or blocker is the author's to decide.                                                                                                                                               |
+| 8     | Done: 20 of 22 places by the documentation commits, the other two with the code that owns them; the changelog carries the wave's five changes.                                                                                                                               |
+| 9     | Built: E501 at 120 characters for the package; the tests and the two form modules are exempt, six verbatim example lines carry a `noqa` with its reason.                                                                                                                     |
+| 10    | Read: 30 findings in the eight modules, three that change a result, none releases a number silently. Not opened by the main session, not fixed; listed in `TODO.md`.                                                                                                         |
+
 Readers' full reports, outside the repo and not kept: drift and homes as files in the session's scratchpad, the two clarity reports in the session's transcript.
