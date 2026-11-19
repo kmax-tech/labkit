@@ -1,6 +1,8 @@
 # Shared run classification: a bounded plan (f2820d23, 2026-11-19)
 
 > Plan, not commissioned; decided by the author 2026-11-19: classification and reasons shared, messages stay per entry point.
+>
+> State 2026-11-19, later the same day: both contradictions named below are repaired by reuse, without a new layer. The report duty reads `WithoutRecord` (d56cc46b). The handover asks `Measured.may_have_measured` (2e1b893d), as the author decided: a run whose readable start file names it a probe or a preparation is no possible measurement; with the kind unknown it still counts. The line numbers below are those of 79a42aff. Open question 1 at the end is answered by that decision.
 
 The [audit of 2026-11-19](2026-11-19-repo-audit.md) proposed one function that turns what an area measured into the findings every entry point tells (its open point 3). The author declined that and narrowed the goal: one place decides how a run is classified and why; each entry point keeps its own sentences. This note lists where a classification is decided twice today, which differences between the entry points are meant, and the smallest step per real contradiction. Nothing here is built.
 
