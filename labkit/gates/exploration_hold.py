@@ -19,11 +19,13 @@ on, and no other:
    by its own text, and first measurements that saw different texts hold
    nothing here; a later run without a step that differs from every first
    measurement is a change undeclared;
-4. once the protocol adopts the answering run as its result (`adopted`),
-   the protocol as it stands is that run's own text in what the number is
-   about (`live_holds`): the result is read under the text it was
-   measured under. Before the adoption a newer text — a step prepared,
-   not yet measured — leaves the older run checkable under its own text.
+4. once the protocol declares the answering run as its result
+   (`registration_hold.declares_as_result`: an adoption that stands, and
+   an adoption's proposal under its own check), the protocol as it stands
+   is that run's own text in what the number is about (`live_holds`): the
+   result is read under the text it was measured under. Before the
+   adoption a newer text — a step prepared, not yet measured — leaves the
+   older run checkable under its own text.
 
 Read-only; finalize tells what it finds.
 """
@@ -33,7 +35,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
-from labkit.formats import evidence, protocol_block, protocol_history, protocol_then
+from labkit.formats import evidence, protocol_history, protocol_then
 from labkit.formats.area_state import AreaState, Measured
 from labkit.formats.commands import (
     builds_on_command,
@@ -53,11 +55,12 @@ from labkit.gates.registration_hold import (
     anew_way,
     awaiting_followup,
     by_cause,
-    declaring_protocol,
+    declares_as_result,
     first_measurement,
     quoted_changes,
     scope_now,
     scope_rule,
+    standing_adoption,
     unread_hold,
     waiting_refs,
 )
@@ -78,8 +81,9 @@ def exploration_changes(
     answering RUN, in the module's order: a chain that cannot be read
     stops there (what follows needs its texts); otherwise every step whose
     declared changes do not match, the run without a step
-    (`unstepped_holds`), and — once PROTOCOL adopts RUN (`adopted`) — the
-    protocol as it stands against RUN's own text. MEASURED is what the
+    (`unstepped_holds`), and — once PROTOCOL declares RUN as its result
+    (`declares_as_result`) — the protocol as it stands against RUN's own
+    text. MEASURED is what the
     area measured of PID, STATE the area's
     state, HELD its audit evidence. Outside a repository (ROOT None) no
     run's text reads back and nothing is held here. Raises RuntimeError
@@ -95,21 +99,11 @@ def exploration_changes(
         if (hold := step_gap_hold(protocol, pid, later, basis)) is not None
     ]
     found += unstepped_holds(area, protocol, pid, chain[-1], measured, root)
-    if adopted(state.text_of(protocol), run):
+    if declares_as_result(state.text_of(protocol), run):
         found += live_holds(
             area, protocol, pid, run, chain[0], root, measured, state, held
         )
     return found
-
-
-def adopted(text: str, run: Path) -> bool:
-    """Does the protocol TEXT declare RUN as its reported result (`[result]
-    run`, written by `protocol-fill --from-run`)? Only then is RUN read
-    under the protocol as it stands; adoption checks its proposal through
-    report-check, so the hold reaches it there. A `[result]` that does
-    not read adopts nothing here; the gates refuse it on their own
-    (`protocol_block.declared_run`)."""
-    return protocol_block.declared_run_shown(text) == run.name
 
 
 def step_chain(
@@ -307,8 +301,8 @@ def live_holds(
     refs = waiting_refs(now.kept, waiting)
     # an adoption that stands keeps RUN the answering run, so a step
     # measured beside it releases nothing until it is withdrawn; an
-    # adoption's own proposal has nothing to withdraw (`declaring_protocol`)
-    held_by = declaring_protocol(protocol, state.text_of(protocol), run, state)
+    # adoption's own proposal has nothing to withdraw (`standing_adoption`)
+    held_by = standing_adoption(protocol, state.text_of(protocol), run, state)
     withdrawal = (
         f"to go on exploring, withdraw the adoption "
         f"(`{withdraw_command(held_by)}`; {answering.run_id}, its number and the "

@@ -1272,3 +1272,39 @@ class TheRunTheProtocolIsComparedWith(unittest.TestCase):
                 self.assertIsNone(
                     pure_call(registration_hold.run_compared_with, flow, None)
                 )
+
+
+class DeclaredAsResultAndAStandingAdoption(unittest.TestCase):
+    """Two questions about `[result] run`, each under its own name:
+    `declares_as_result` — is the run read under the protocol as it
+    stands, an adoption's proposal included —, and `standing_adoption` —
+    is there an adoption to withdraw, which a proposal is not."""
+
+    RUN = AREA / "runs" / "2026-10-07T09-25-31_98dd"
+    OTHER = AREA / "runs" / "2026-10-07T10-00-00_ab12"
+    DECLARING = f'```toml\n[result]\nrun = "{RUN.name}"\n```\n'
+
+    def standing(self, run, *, pending: bool):
+        state = area_state(adoption_pending=[PROTOCOL.resolve()] if pending else [])
+        return registration_hold.standing_adoption(PROTOCOL, self.DECLARING, run, state)
+
+    def test_an_adoption_that_stands_declares_and_withdraws_first(self):
+        self.assertTrue(
+            pure_call(registration_hold.declares_as_result, self.DECLARING, self.RUN)
+        )
+        self.assertEqual(self.standing(self.RUN, pending=False), PROTOCOL)
+
+    def test_a_proposal_under_its_check_declares_and_has_nothing_to_withdraw(self):
+        self.assertTrue(
+            pure_call(registration_hold.declares_as_result, self.DECLARING, self.RUN)
+        )
+        self.assertIsNone(self.standing(self.RUN, pending=True))
+
+    def test_another_run_is_neither(self):
+        self.assertFalse(
+            pure_call(registration_hold.declares_as_result, self.DECLARING, self.OTHER)
+        )
+        self.assertFalse(
+            pure_call(registration_hold.declares_as_result, "no block", self.RUN)
+        )
+        self.assertIsNone(self.standing(self.OTHER, pending=False))

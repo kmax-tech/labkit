@@ -24,6 +24,7 @@ from labkit.formats.protocol_history import Workflow
 from labkit.gates import exploration_hold
 from labkit.gates.registration_hold import (
     corrected_in_place,
+    declares_as_result,
     lost_record_warnings,
     registration_changes,
     type_changes,
@@ -118,7 +119,7 @@ def check_registration(
             "changes"
             + (
                 ", and what the number is about is the text the answering run measured"
-                if exploration_hold.adopted(state.text_of(protocol), run)
+                if declares_as_result(state.text_of(protocol), run)
                 else "; the protocol as it stands is held to the answering run's "
                 "text once it adopts that run as its result"
             )

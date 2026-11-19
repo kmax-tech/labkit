@@ -598,7 +598,7 @@ def _scope_held(
         all(cause_refs) for _, cause_refs in by_cause(now.kept, refs)
     )
     code_changed = any_cause_decided and code_since_run(area, run)[0]
-    declaring = declaring_protocol(protocol, text, run, state) if code_changed else None
+    declaring = standing_adoption(protocol, text, run, state) if code_changed else None
     return now_hold(
         pid,
         run.name,
@@ -1054,14 +1054,28 @@ def moved_fields(seen: str, text: str) -> set[str]:
     return {what for what, _, _ in protocol_history.scope_differences(seen, text)}
 
 
-def declaring_protocol(
+def declares_as_result(text: str, run: Path) -> bool:
+    """Does the protocol TEXT declare RUN as its reported result (`[result]
+    run`, written by `protocol-fill --from-run`)? True for an adoption
+    that stands and for an adoption's proposal still under its own check:
+    either way RUN is read under the protocol as it stands, and an
+    adoption checks its proposal through report-check, so a hold on the
+    declared text reaches it there (`exploration_hold.live_holds`). Whether
+    an adoption stands to withdraw is `standing_adoption`. A `[result]`
+    that does not read declares nothing here; the gates refuse it on their
+    own (`protocol_block.declared_run`). Pure."""
+    return protocol_block.declared_run_shown(text) == run.name
+
+
+def standing_adoption(
     protocol: Path, text: str, run: Path, state: AreaState
 ) -> Path | None:
-    """PROTOCOL (TEXT its text) when it declares RUN as its result, so a
-    hold on RUN withdraws first (`gate.withdrawn_first`); None otherwise,
-    and while the declaration is an adoption's proposal under its own
-    check (STATE's `adoption_pending`): no adoption stands to withdraw."""
-    if protocol_block.declared_run_shown(text) != run.name:
+    """PROTOCOL (TEXT its text) when its adoption of RUN stands, so a hold
+    on RUN withdraws first (`gate.withdrawn_first`). None when TEXT does
+    not declare RUN (`declares_as_result`), and while the declaration is an
+    adoption's proposal under its own check (STATE's `adoption_pending`):
+    no adoption stands to withdraw."""
+    if not declares_as_result(text, run):
         return None
     return None if state.adoption_pending_for(protocol) else protocol
 
