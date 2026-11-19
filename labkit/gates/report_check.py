@@ -106,10 +106,7 @@ from labkit.formats.gate import (
     outcome_of_failed_read,
     withdrawn_first,
 )
-from labkit.formats.answering_run import (
-    adopted_run,
-    is_measurement,
-)
+from labkit.formats.answering_run import adopted_run
 from labkit.formats.area_state import (
     FileState,
     file_state_of,
@@ -1064,9 +1061,12 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     """Where PROTOCOL of AREA, as TEXT holds it, stands for an adoption —
     the account a handover records (`handovers.RunAccount`):
 
-    - NOT_MEASURED: no measurement bound to it (completed or not) and none
-      unreadable (`area_state.Measured`) — a preparation or probe run
-      measures nothing;
+    - NOT_MEASURED: no run bound to it that may have measured (completed
+      or not; `area_state.Measured.may_have_measured`) — a preparation or
+      probe run measures nothing, by its record or, where that does not
+      read, by its start file; a record that does not read counts as a
+      possible measurement where no start file names the run's kind (none
+      is found, or it does not read);
     - UNUSABLE: a measurement of it, and no number from it — the run choice
       holds (no completed run, an unreadable or same-second rival:
       `answering_run.bound_answering_run`), it chose a run that is no
@@ -1087,7 +1087,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
     state = state_of(area)
     held = state.measured_of(pid)
-    measured = [rd for rd in held.present if is_measurement(rd)]
+    measured = [rd for rd in held.present if held.may_have_measured(rd)]
     if not measured:
         # measured and deleted since: git or the index keeps them, so a
         # handover never says "no run of it was measured" over deleted runs
@@ -1096,7 +1096,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
                 rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
                 f"{gone_run_restore(rd)}"
                 for rd in held.deleted
-                if is_measurement(rd)
+                if held.may_have_measured(rd)
             }
             | {
                 r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "

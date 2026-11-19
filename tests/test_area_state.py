@@ -18,10 +18,11 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
+from typing import cast
 
 from protocol_fixture import PID, completed_run, head, run_record, scope_file
 
-from labkit.formats import area_state, run_index, runs
+from labkit.formats import area_state, handovers, run_index, run_starts, runs
 from labkit.formats.area_state import INDEX, TREE, Measured, assemble, state_of
 from labkit.formats.run_starts import RunStart
 from labkit.gates import hook_post_change, report_check
@@ -487,6 +488,155 @@ class ARunOnlyTheIndexKnows(unittest.TestCase):
             self.assertEqual(
                 [rd.dir.name for rd in state.measured_of(PID).present], [RUN]
             )
+
+
+class TheHandoverReadsARecordThatDoesNotReadAsEveryCheckDoes(unittest.TestCase):
+    """The handover asks `Measured.may_have_measured` — which run ends an
+    acknowledgement (`handovers.runs_since`) and where a protocol stands
+    when handed over (`report_check.adoption_state`). A record that does
+    not read is no measurement where its start file reads and names the
+    run a probe or a preparation; with the kind unknown — no start file,
+    or one that does not read — it may be one and counts."""
+
+    NOON = datetime(2026, 10, 7, 12, 0, 0, tzinfo=timezone.utc)
+    DEAD = "2026-10-07T12-00-00_dead"
+
+    def _starts(self, kind: runs.RunKind | None) -> dict[str, RunStart]:
+        """The start file of DEAD naming KIND; None: one that does not read."""
+        if kind is None:
+            return {self.DEAD: RunStart(self.DEAD, None, None, None, "not JSON")}
+        return {self.DEAD: RunStart(self.DEAD, PID, self.NOON, kind)}
+
+    def _since_as_the_home_says(
+        self, starts: dict[str, RunStart], indexed: dict[str, str]
+    ) -> list[str]:
+        dead = runs.RunDir(
+            Path("runs") / self.DEAD, None, "unreadable", error_cause="malformed"
+        )
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            runs=[dead],
+            deleted=[],
+            lost={},
+            indexed=indexed,
+            starts=starts,
+        )
+        m = state.measured_of(PID)
+        # the handover's answer is the home's, for the run and for the protocol
+        since = handovers.runs_since(m, None)
+        self.assertEqual(bool(since), m.may_have_measured(dead))
+        self.assertEqual(bool(since), m.has_measured)
+        return since
+
+    def test_a_known_probe_or_preparation_does_not_end_a_handover(self):
+        for kind in ("probe", "preparation"):
+            with self.subTest(kind):
+                self.assertEqual(
+                    self._since_as_the_home_says(self._starts(kind), {}), []
+                )
+
+    def test_the_twin_a_measurement_or_an_unknown_kind_ends_it(self):
+        for name, starts, indexed in (
+            ("the start file names a measurement", self._starts("measurement"), {}),
+            ("no start file, the index binds it", {}, {self.DEAD: PID}),
+            (
+                "a start file that does not read, the index binds it",
+                self._starts(None),
+                {self.DEAD: PID},
+            ),
+        ):
+            with self.subTest(name):
+                self.assertEqual(
+                    self._since_as_the_home_says(starts, indexed), [self.DEAD]
+                )
+        # newer than the run handed over, as for a record that reads
+        m = assemble(
+            Path("area"),
+            None,
+            TREE,
+            runs=[
+                runs.RunDir(
+                    Path("runs") / self.DEAD,
+                    None,
+                    "unreadable",
+                    error_cause="malformed",
+                )
+            ],
+            deleted=[],
+            lost={},
+            indexed={self.DEAD: PID},
+        ).measured_of(PID)
+        self.assertEqual(handovers.runs_since(m, self.DEAD), [])
+        self.assertEqual(handovers.runs_since(m, RUN), [self.DEAD])
+
+    def _account(self, start: str | None, *, indexed: bool) -> handovers.RunAccount:
+        """Where the protocol stands with one finished probe whose
+        config.json was damaged since: its start file's text START (None:
+        no start file), a row of the run index binding it when INDEXED."""
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        area = root / "area"
+        area.mkdir()
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(head(repeat_cost="low"), encoding="utf-8")
+        scope_file(area)
+        run = completed_run(area, self.DEAD, metrics={"n": 1}, run_kind="probe")
+        (run / "config.json").write_text("{ damaged", encoding="utf-8")
+        if start is not None:
+            path = run_starts.start_path(area, self.DEAD)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(start, encoding="utf-8")
+        if indexed:
+            (area / run_index.RUN_INDEX).write_text(
+                "\t".join(run_index.RUN_INDEX_COLS)
+                + "\n"
+                + "\t".join(
+                    [self.DEAD, "g", "01_measure.py", "{}", "{}", "{}", "", PID]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        m = state_of(area).measured_of(PID)
+        self.assertEqual([rd.dir.name for rd in m.present], [self.DEAD])
+        return report_check.adoption_state(
+            area, proto, proto.read_text(encoding="utf-8")
+        )
+
+    def _start_text(self, kind: str) -> str:
+        """A start file's text as `run_starts.write_start` writes it."""
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        path = run_starts.write_start(
+            root, RunStart(self.DEAD, PID, self.NOON, cast(runs.RunKind, kind))
+        )
+        return path.read_text(encoding="utf-8")
+
+    def test_a_known_probe_is_handed_over_as_not_measured(self):
+        for indexed in (False, True):
+            with self.subTest(indexed=indexed):
+                account = self._account(self._start_text("probe"), indexed=indexed)
+                self.assertEqual(
+                    (account.run, account.state, account.why),
+                    (None, handovers.NOT_MEASURED, ()),
+                )
+
+    def test_the_twin_a_measurement_or_an_unknown_kind_is_handed_over_without_a_number(
+        self,
+    ):
+        for name, start, indexed in (
+            ("the start file names a measurement", "measurement", False),
+            ("no start file, the index binds it", None, True),
+            ("a start file that does not read, the index binds it", "{ no", True),
+        ):
+            with self.subTest(name):
+                text = self._start_text(start) if start == "measurement" else start
+                account = self._account(text, indexed=indexed)
+                self.assertEqual(
+                    (account.run, account.state), (self.DEAD, handovers.UNUSABLE)
+                )
+                self.assertIn("unreadable run metadata", account.why[0])
 
 
 class AStateBuiltWithoutFiles(unittest.TestCase):

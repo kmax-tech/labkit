@@ -361,8 +361,10 @@ def is_measurement(rd: RunDir) -> bool:
     record (`runs.MEASUREMENT`), or a record that cannot be read (it may be
     one)? A preparation or probe run measures nothing; a repeat is a
     measurement. A reader of a record that reads asks its `run_kind`
-    against `runs.MEASUREMENT`; this one is for the question "may this run
-    have measured", where an unreadable record counts."""
+    against `runs.MEASUREMENT`. This one reads the record alone, so every
+    record that does not read counts; a check that asks "may this run
+    have measured" asks `area_state.Measured.may_have_measured`, which
+    also reads the kind the run's start file names."""
     return rd.error is not None or (
         rd.config is not None and rd.config.run_kind == MEASUREMENT
     )

@@ -48,7 +48,6 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats import digests
 from labkit.formats import (
-    answering_run,
     files,
     findings,
     jsonl,
@@ -797,6 +796,11 @@ class PresentRuns(Protocol):
         """The protocol's runs as the file state holds them."""
         ...
 
+    def may_have_measured(self, rd: runs.RunDir) -> bool:
+        """May the run RD of the protocol have measured it — the one
+        answer every check reads (`area_state.Measured.may_have_measured`)."""
+        ...
+
 
 class AreaRuns(Protocol):
     """What a handover reads of the area's state — the shape of
@@ -808,11 +812,14 @@ class AreaRuns(Protocol):
 
 
 def runs_since(held: PresentRuns, run: str | None) -> list[str]:
-    """The measurements among HELD (what the area measured of one protocol,
-    `area_state.Measured.present`: bound to it, or unreadable, as the tree
-    holds them) newer than RUN (all of them when RUN is None), oldest
-    first — a run id sorts by its start (`answering_run.is_measurement`)."""
-    ours = [rd.dir.name for rd in held.present if answering_run.is_measurement(rd)]
+    """The runs among HELD (what the area measured of one protocol,
+    `area_state.Measured.present`: bound to it, as the tree holds them)
+    that may have measured it, newer than RUN (all of them when RUN is
+    None), oldest first — a run id sorts by its start. Which run may have
+    measured is `area_state.Measured.may_have_measured`: a record that
+    does not read counts, unless its start file names the run a probe or a
+    preparation."""
+    ours = [rd.dir.name for rd in held.present if held.may_have_measured(rd)]
     return sorted(r for r in ours if run is None or r > run)
 
 
