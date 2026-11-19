@@ -235,7 +235,10 @@ def unstepped_holds(
         for rd, text in registered
         if (diffs := protocol_history.registration_differences(text, origin.text))
     ]
-    if len(gaps) < len(registered) or not gaps:
+    # it repeats none of them; with no first measurement without a step
+    # there is nothing to repeat and nothing held
+    differs_from_every_first = bool(registered) and len(gaps) == len(registered)
+    if not differs_from_every_first:
         return []
     first, diffs = gaps[0]
     return [
