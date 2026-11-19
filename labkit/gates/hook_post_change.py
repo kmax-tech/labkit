@@ -55,7 +55,7 @@ from labkit.formats.area_state import (
 )
 from labkit.formats import evidence
 from labkit.formats.commands import checkout_command, gate_command
-from labkit.formats.run_index import RunIndexError
+from labkit.formats.run_index import RUN_INDEX, RunIndexError
 from labkit.formats.run_starts import START_FILES_DIR, start_path
 from labkit.formats.repo import (
     rel_posix,
@@ -460,7 +460,8 @@ def _untold(
     hint repeated on every edit of the same state is noise; a changed text,
     or another hint for the same bytes (a link replaced by its copy is then
     a report), is told again —, and each target's checker output once per
-    file content."""
+    file content. A protocol whose area's run index does not read is told
+    as not checked, once per content, and checked once the index reads."""
     reports = []
     for path, hint in marked:
         key = f"report-review:{path}"
@@ -470,7 +471,8 @@ def _untold(
             reports.append(hint)
     for kind, path in targets:
         digest = file_digest(path)
-        if cache.get(str(path)) == digest:
+        was = cache.get(str(path))
+        if was == digest:
             continue
         cache[str(path)] = digest
         # from the repo root with the repo-relative path (the hook's cwd is
@@ -483,7 +485,23 @@ def _untold(
                 template = protocol_report.template_lines(
                     protocol_report.find_template(None)
                 )
-                protocol_report.check_files(named, template, tell=told.append)
+                try:
+                    protocol_report.check_files(named, template, tell=told.append)
+                except RunIndexError:
+                    # the check reads what the area measured, so without the
+                    # run index it did not run. Told once per content as not
+                    # checked; the key differs from the file's digest, so the
+                    # check is asked again until the index reads. The index's
+                    # own sentence stands under `run_reports`' heading.
+                    cache[str(path)] = unchecked = f"{digest}:not-checked"
+                    if was != unchecked:
+                        told.append(
+                            f"{named[0]}: not checked — protocol-check reads which "
+                            f"runs the area measured, and the area's run index "
+                            f"({RUN_INDEX}) does not read; repair the index as its own "
+                            f"line says, the protocol is checked at the next change "
+                            f"after it reads"
+                        )
             else:
                 notes_check.check_notes(named, tell=told.append)
         out = "\n".join(told).rstrip()

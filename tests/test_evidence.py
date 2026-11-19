@@ -619,6 +619,51 @@ class Told(unittest.TestCase):
         self.assertNotIn("is gone —", ctx)
         self.assertNotIn("never completed", ctx)
 
+    def _cut_index(self) -> None:
+        (self.area / "runs.tsv").write_text(
+            "run_id\tgit\tscript\tdata\tconfig\tmetrics\tnote\tprotocol_id\n"
+            f"{CLOSED}\tcut short\n",
+            encoding="utf-8",
+        )
+
+    def _change_protocol(self) -> None:
+        protocol = self.area / "PROTOCOL-x.md"
+        protocol.write_text(
+            protocol.read_text(encoding="utf-8") + "\n- **Unit:** one text\n",
+            encoding="utf-8",
+        )
+
+    def test_a_changed_protocol_beside_an_index_that_does_not_read_is_told(self):
+        """protocol-check needs the index for what the area measured: the
+        hook says the protocol was not checked and tells the index under
+        its heading — it raised the index's refusal before. Once per
+        content, and the check runs when the index reads again."""
+        self._cut_index()
+        self._change_protocol()
+        ctx = self._told()
+        not_checked, heading, line = ctx.splitlines()
+        self.assertTrue(
+            not_checked.startswith(
+                "experiments/01-x/PROTOCOL-x.md: not checked — protocol-check reads "
+                "which runs the area measured, and the area's run index (runs.tsv) "
+                "does not read"
+            ),
+            not_checked,
+        )
+        self.assertTrue(heading.startswith("the run index, a start file or"), heading)
+        self.assertIn("runs.tsv:2: 2 of 8 tab-separated columns", line)
+        self.assertEqual(self._told(), "")  # the same state: told once
+        (self.area / "runs.tsv").unlink()
+        self.assertIn("PROTOCOL-x.md: MISSING (must): Question", self._told())
+
+    def test_the_twin_a_changed_protocol_beside_an_index_that_reads_is_checked(self):
+        self._change_protocol()
+        ctx = self._told()
+        self.assertIn("experiments/01-x/PROTOCOL-x.md: MISSING (must): Question", ctx)
+        self.assertNotIn("not checked", ctx)
+        self.assertNotIn("does not read", ctx)
+        self.assertEqual(self._told(), "")
+
     def test_a_start_file_that_does_not_read_is_told_as_unread_never_as_gone(self):
         """Nothing else names the run: whether it ever had a directory is
         unknown, so it is not told as gone."""
