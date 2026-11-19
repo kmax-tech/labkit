@@ -457,7 +457,9 @@ class Count(unittest.TestCase):
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 2, err)
         self.assertIn("no analysis audit saw the area as it is now", err)
-        self.assertIn("02_analyze.py --check exits 1", err)
+        self.assertIn(
+            f"02_analyze.py --check --protocol {self.protocol.name} exits 1", err
+        )
         rc, out = lab.pre_commit(self.measure)
         self.assertEqual(rc, 1, out)
         lab.git("checkout", "--", str(self.measure))

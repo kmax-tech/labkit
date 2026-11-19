@@ -2,44 +2,51 @@
 """Hold the kept number to its own output — one formula, imported, never copied.
 
     ../../.venv/bin/python scripts/02_analyze.py            # the metrics, recomputed from OUT
-    ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold NOTE to it
+    ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold the protocol (or NOTE) to it
     ../../.venv/bin/python scripts/02_analyze.py --draws    # the kept run and its repeats: the spread
+    ../../.venv/bin/python scripts/02_analyze.py --check --protocol PROTOCOL-<name>.md   # as report-check runs it
 
+Each for one protocol at a time: the one `--protocol` names, else the
+area's only one — an area of several protocols owes the name. Every call,
+the plain one and `--draws` too, first takes the protocol, the run that
+answers it and that run's script, and ends with the reason where one of
+them is missing.
 `labkit.checks.recheck.holds` does the three things every area used to re-implement
 (and twice got wrong, 2026-10-05): the output file pinned to the run's
-recorded sha, metrics.json against `evaluate_rows()`, the note holding every
-reported number and the run_id. The formula is `01_measure.evaluate_rows`,
-imported by path under a unique name — a second copy here diverged from the
-measurement twice in one day (0.8333 against 0.9167).
+recorded sha, metrics.json against `evaluate_rows()`, the protocol (or
+`NOTE`, once the number is promoted) holding every reported number and the
+run_id. The formula is the one of the script the
+held run ran, imported (`recheck.script_module`: `01_measure.py`, or the
+script of its own a second protocol of the area is measured by) — a second
+copy here diverged from the measurement twice in one day (0.8333 against
+0.9167), and another protocol's script is another number's formula. That
+script defines `OUT`, `KEPT_KEY`, `evaluate_rows`, `read_jsonl` and
+`answer_of` as `01_measure.py` does.
 """
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
-import sys
 from pathlib import Path
+from types import ModuleType
 
 from labkit.checks import recheck
 from labkit.formats import answering_run, runs
 
 AREA = Path(__file__).resolve().parent.parent
-NOTE = AREA / "PROTOCOL-<name>.md"     # or notes/results/<note>.md once the number is promoted
-_spec = importlib.util.spec_from_file_location("measure_<name>", AREA / "scripts" / "01_measure.py")
-assert _spec is not None and _spec.loader is not None
-measure = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = measure
-_spec.loader.exec_module(measure)
+#: the note held to the numbers: None for the protocol itself, or
+#: notes/results/<note>.md once the number is promoted
+NOTE: Path | None = None
 
 
-def draws() -> list[str]:
-    """The kept run and its repeats (`01_measure.py --repeat-of`): every draw
+def draws(primary: Path, measure: ModuleType) -> list[str]:
+    """The kept run PRIMARY and its repeats (`01_measure.py --repeat-of`),
+    MEASURE the script PRIMARY ran: every draw
     held like the kept number (`recheck.verified`: its file pinned, scopes
     and block unchanged, its metrics recomputed from its rows), then the kept
     number per draw (`measure.KEPT_KEY`) with each registered criterion's
     verdict, its range, and the items whose parsed answer differs. The answer
     stays draw 1; this is the spread around it (LAB-036 Validate)."""
-    primary = recheck.run_dir(AREA, NOTE)
     seen: dict[str, dict[int, object]] = {}
     key = measure.KEPT_KEY
     lines, accs = [], []
@@ -69,19 +76,26 @@ def draws() -> list[str]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--check", action="store_true",
-                    help="pin OUT to the answering run, recompute, hold NOTE to it")
+                    help="pin OUT to the answering run, recompute, hold the protocol (or NOTE) to it")
     ap.add_argument("--draws", action="store_true",
                     help="the kept run and its repeats: the kept number per draw, range, flipped items")
+    ap.add_argument("--protocol", metavar="FILE",
+                    help="the protocol to hold, by file name — owed where the area has several")
     args = ap.parse_args()
+    protocol = recheck.protocol_named(AREA, args.protocol)
+    run = recheck.run_dir(AREA, protocol)        # the run that protocol answers with
+    measure = recheck.script_module(AREA, run)   # the script that run ran: its formula, no other protocol's
     if args.draws:
-        print("\n".join(draws()))
+        print("\n".join(draws(run, measure)))
         return
     if args.check:
         # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers):
         # a format of its own here (`:.4f`) failed the check right after the
         # write-back (cold Sonnet, 2026-10-14)
-        v = recheck.holds(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows, note=NOTE)
-        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, {NOTE.name} carries "
+        note = NOTE or protocol
+        v = recheck.holds(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows, note=note,
+                          protocol=protocol)
+        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, {note.name} carries "
               f"the numbers and the run_id" + (f"; grown: {v.grown}" if v.grown else ""))
         return
     print(json.dumps(measure.evaluate_rows(measure.read_jsonl(measure.OUT)), indent=1))

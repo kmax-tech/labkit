@@ -34,14 +34,15 @@ class Timeouts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d)
             area = repo / "experiments" / "01-x"
+            protocol = area / "PROTOCOL-x.md"
             (area / "scripts").mkdir(parents=True)
             (area / "scripts" / "02_analyze.py").write_text(
                 "import time\ntime.sleep(30)\n", encoding="utf-8"
             )
             with mock.patch.object(report_check, "CHECK_TIMEOUT_S", 1.0):
                 with self.assertRaises(report_check.CheckUnfinished) as raised:
-                    report_check.check_analysis_script(area, repo)
-                (f,) = report_check.recomputation_findings(area, repo)
+                    report_check.check_analysis_script(area, repo, protocol)
+                (f,) = report_check.recomputation_findings(area, repo, protocol)
             self.assertIn("did not finish in 1 s", str(raised.exception))
             self.assertEqual(
                 (f.grade, f.outcome, f.rule),

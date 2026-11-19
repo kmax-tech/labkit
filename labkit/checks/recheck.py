@@ -27,6 +27,12 @@ the protocol answers with, and report-check reads the clause
 `NOT_VERIFIABLE` off that check's output; a recheck of any other run only
 says so.
 
+An area's `--check` names the protocol it holds (`protocol_named`; an
+area of several protocols owes the name) and recomputes that protocol's
+run with the script the run ran (`script_module`): a second protocol with
+a script of its own is held by its own evaluation, and by nothing of the
+other protocol's.
+
 A run that computes from other runs' outputs (a comparison over its
 source runs) is held by `holds_from_inputs`: inputs → scopes → code →
 block → agree → cited. The inputs step comes first and stands apart from the
@@ -44,11 +50,14 @@ at `console.Refused`); the verdict names what was compared. Rules of the lab sta
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
+import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 
 from labkit.formats import (
     jsonl,
@@ -58,7 +67,13 @@ from labkit.formats import (
 )
 from labkit.formats.area_state import state_of
 from labkit.formats.protocol_then import as_measured, bound_protocol_file
-from labkit.formats.repo import file_text, git_root, path_kind
+from labkit.formats.repo import (
+    ProtocolChoiceError,
+    file_text,
+    git_root,
+    path_kind,
+    the_protocol,
+)
 from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
 from labkit.checks.origin_check import origin_gap, origin_now
@@ -155,6 +170,57 @@ def _named_run(d: Path, pid: str) -> Path:
 def run_dir(area: Path, protocol: Path, run_id: str | None = None) -> Path:
     """`chosen_run` for a protocol the area's state holds."""
     return chosen_run(area, state_of(area).text_of(protocol), run_id)
+
+
+def protocol_named(area: Path, name: str | None) -> Path:
+    """The protocol an area's `--check` holds: the one NAME names — a file
+    name inside AREA, or a path —, else the area's only one
+    (`repo.the_protocol`, the choice every command makes). Raises
+    SystemExit where the area has no protocol, where the named one is not
+    there, and — listing the candidates — where it has several and none
+    is named: the check never takes the first."""
+    try:
+        return the_protocol(area, Path(name) if name is not None else None)
+    except ProtocolChoiceError as exc:
+        raise SystemExit(f"recheck: {exc}") from exc
+
+
+def script_module(area: Path, run: Path) -> ModuleType:
+    """The script RUN ran, imported from where it stands in AREA now
+    (`run_record_check.script_of`): its evaluation is the one a
+    recalculation of RUN owes, whichever protocol of the area RUN answers.
+    Whether that file is still the code the run ran is `require_run_code`'s
+    question, asked inside `holds`. Raises SystemExit when RUN's record
+    does not read, and `NotVerifiable` when no record says which script
+    ran, or that script is gone or cannot be told apart from another of
+    its name. Side effect: runs the script's module level — also of a
+    script changed since the run, which `holds` refuses only afterwards."""
+    try:
+        cfg = runs.read_run_config(run)
+    except runs.RunConfigError as exc:
+        raise SystemExit(f"recheck: {exc}") from exc
+    # a sentence in place of the file: gone, or several of its name
+    script = (
+        "it has no record of the script it ran"
+        if cfg is None
+        else run_record_check.script_of(area, cfg)
+    )
+    if isinstance(script, str):
+        raise NotVerifiable(
+            f"recheck: run {run.name} {NOT_VERIFIABLE}: {script}. Its number is "
+            f"recomputed with the script it ran, never with another: restore "
+            f"that script and the run's record, or measure anew and hold that run"
+        )
+    # unique per area and script: two areas' `01_measure.py` in one process
+    # must not share a module
+    name = re.sub(r"\W", "_", f"script_{area.name}_{script.stem}")
+    spec = importlib.util.spec_from_file_location(name, script)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"recheck: run {run.name}: {script} does not import")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module  # a dataclass in it looks its module up here
+    spec.loader.exec_module(module)
+    return module
 
 
 def pin(run: Path, out: Path) -> None:

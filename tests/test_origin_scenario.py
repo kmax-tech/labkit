@@ -17,6 +17,7 @@ import time
 import unittest
 from collections.abc import Mapping
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -28,7 +29,7 @@ from labkit.checks.audit_binding import (
     SOURCE_PROTOCOL_LABEL,
     run_rows,
 )
-from labkit.gates import report_check
+from labkit.gates import audit, report_check
 from labkit.gates.finalize import finalize_area
 from labkit.formats import standard_contract as sc
 from labkit.formats import protocol_block
@@ -165,7 +166,9 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         rc, out = self.report_check()
         self.assertEqual(rc, 1, out)
         self.assertIn(
-            f"--check exits 1: recheck: run {compared} is not verifiable", out
+            f"--check --protocol {self.protocol.name} exits 1: recheck: run "
+            f"{compared} is not verifiable",
+            out,
         )
         self.assertIn(gate.NOT_EXECUTABLE_MARK, out)
         self.assertIn("or measure anew, audit and adopt that run", out)
@@ -405,21 +408,42 @@ class TwoProtocolsOfOneArea(CountCommands):
             ).exit
         return code, out.getvalue()
 
-    def test_the_measurement_protocols_report_is_released_by_its_final_form(self):
+    def report_review(self, report: Path, protocol: Path) -> tuple[int, str]:
+        """`labkit-audit AREA --report-review REPORT --protocol PROTOCOL`,
+        the reader naming no claim: (exit, what it told)."""
+        out = io.StringIO()
+        with (
+            mock.patch.object(
+                audit.llm, "complete", lambda alias, prompt, **kw: "verdict: 0 claim(s)"
+            ),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(out),
+        ):
+            rc = audit.main(
+                [
+                    str(self.area),
+                    "--report-review",
+                    str(report),
+                    "--protocol",
+                    str(protocol),
+                ]
+            )
+        return rc, out.getvalue()
+
+    def test_the_area_passes_with_no_measurement_run_ever_adopted(self):
         """The measurement protocol registered REPORT.md and reports no
         result of its own: its run A0 is an input of C, which the
-        computation protocol adopts. Without the reported-through block the
+        computation protocol adopts. No run of the measurement protocol is
+        adopted at any point. C is recomputed by the check of its own
+        protocol, with the script C ran; the measurement protocol having no
+        answer holds nothing of C. Without the reported-through block the
         report hold names it with its command; written by that command, the
         block releases the report, A0's citation in it is no promotion, and
-        the report's review stays owed.
-
-        Not shown, and not reachable with real commands today: the whole
-        area passing in that state. `scripts/02_analyze.py --check` belongs
-        to the area's first protocol and report-check runs it for every
-        protocol (tests/test_adopt_per_protocol.py), so C is adopted only
-        while the measurement protocol has an answer. Here the measurement
-        adopts A0 first and withdraws it after C's adoption; asserted is
-        the registered report's hold alone."""
+        the report's review stays owed. Reviewed, the whole area passes —
+        both protocols and the report. The source stays held without an
+        adoption of its own: A0 gone holds C and the report, restored they
+        pass. C's adoption withdrawn, the block says something false."""
         lab, measured = self.lab, self.protocol
         text = measured.read_text(encoding="utf-8")
         pid = protocol_block.head(text).id
@@ -437,19 +461,36 @@ class TwoProtocolsOfOneArea(CountCommands):
             encoding="utf-8",
         )
         lab.commit("A0, and the computation protocol beside the measurement")
-        rc, out, _ = self.analysis(self.clean, measured)
-        self.assertEqual(rc, 0, out)
-        rc, out = lab.adopt(measured, a0)
-        self.assertEqual(rc, 0, out)
-        lab.commit("the measurement adopts A0")
         c = self.run_script("03_compare.py")
         rc, out, _ = self.analysis(self.clean, computed)
         self.assertEqual(rc, 0, out)
         rc, out = lab.adopt(computed, c)
         self.assertEqual(rc, 0, out)
-        lab.commit("C adopted")
-        rc, out = self.withdraw("reported through the comparison instead")
-        self.assertEqual(rc, 0, out)
+        lab.commit("C adopted, the measurement has adopted no run")
+        self.assertIsNone(
+            protocol_block.declared_run(measured.read_text(encoding="utf-8"))
+        )
+
+        # the area's check, one protocol at a time: C by the script C ran;
+        # the measurement's own state is its own, and with two protocols
+        # the check takes none unnamed
+        told = lab.script(
+            self.area, "02_analyze.py", "--check", "--protocol", computed.name
+        )
+        self.assertIn(f"check: run {c} ", told)
+        self.assertIn(f"{computed.name} carries them and the run_id", told)
+        self.assertIn("recomputed from its recorded inputs, the same numbers", told)
+        with self.assertRaises(AssertionError) as cm:
+            lab.script(
+                self.area, "02_analyze.py", "--check", "--protocol", measured.name
+            )
+        self.assertIn(f"recheck: {measured.name} has no answer yet", str(cm.exception))
+        with self.assertRaises(AssertionError) as cm:
+            lab.script(self.area, "02_analyze.py", "--check")
+        self.assertIn("name one with --protocol FILE", str(cm.exception))
+        code, out = self.verdict(computed)
+        self.assertEqual(code, 0, out)
+
         report = lab.root / "REPORT.md"
         report.write_text("# Report\n\nThe comparison is below.\n", encoding="utf-8")
         out = io.StringIO()
@@ -488,6 +529,39 @@ class TwoProtocolsOfOneArea(CountCommands):
         # the block replaces no review: the registered report owes its own
         self.assertEqual(code, 1, told)
         self.assertIn(f"{measured.name} registers and has no clean report review", told)
+
+        # reviewed: the whole area passes — the measurement protocol through
+        # its final form, C through its own chain, the report through both
+        for protocol in (measured, computed):
+            rc, out = self.report_review(report, protocol)
+            self.assertEqual(rc, 0, out)
+        everything = (
+            report,
+            measured,
+            computed,
+            self.area / "scripts" / "02_analyze.py",
+        )
+        code, told = self.held(*everything)
+        self.assertEqual(code, 0, told)
+        # C's chain ran
+        self.assertIn(f"{computed.name} (its head has adopted {c})", told)
+        self.assertIsNone(
+            protocol_block.declared_run(measured.read_text(encoding="utf-8"))
+        )
+        lab.commit("the report, reviewed")
+        rc, err = lab.stop_hook()
+        self.assertEqual(rc, 0, err)
+
+        # the source is held without an adoption of its own: A0 gone holds
+        # C; restored from git, the area passes again
+        lab.git("rm", "-r", "-q", str(self.area / "runs" / a0))
+        code, told = self.held(*everything)
+        self.assertEqual(code, 1, told)
+        self.assertIn(f"its origin run {a0} is gone", told)
+        lab.git("reset", "-q", "HEAD", "--", str(self.area / "runs" / a0))
+        lab.git("checkout", "--", str(self.area / "runs" / a0))
+        code, told = self.held(*everything)
+        self.assertEqual(code, 0, told)
 
         # C's adoption withdrawn: the block says something false and holds
         out = io.StringIO()

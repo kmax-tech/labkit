@@ -103,9 +103,10 @@ class TheRelease(unittest.TestCase):
                         self.assertIn("the run is the instrument check", first)
 
     def test_the_check_command_is_the_areas_analysis_script(self):
+        """One script per area, asked for one protocol by its file name."""
         self.assertEqual(
-            sc.check_command(Path("/x/01-a")),
-            ["/x/01-a/scripts/02_analyze.py", "--check"],
+            sc.check_command(Path("/x/01-a"), Path("/x/01-a/PROTOCOL-b.md")),
+            ["/x/01-a/scripts/02_analyze.py", "--check", "--protocol", "PROTOCOL-b.md"],
         )
 
 

@@ -45,6 +45,10 @@ from labkit.gates import report_check
 from labkit.gates import report_context
 
 
+#: the fixture area's check as report-check tells it
+CHECK_RAN = "scripts/02_analyze.py --check --protocol PROTOCOL-x.md"
+
+
 class ReportCheck(unittest.TestCase):
     def _area(self, repeat_cost: str = "high", frozen: bool = True) -> Path:
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
@@ -542,13 +546,17 @@ class ReportCheck(unittest.TestCase):
     def test_each_station_blocks_on_its_own(self):
         area = self._area(frozen=False)
         self._answered(area)  # the analysis station holds an answering run only
-        code, out = self._run(area, finalize=1, check="02_analyze.py --check exits 1")
+        code, out = self._run(
+            area,
+            finalize=1,
+            check="02_analyze.py --check --protocol PROTOCOL-x.md exits 1",
+        )
         self.assertEqual(code, 1)
         for needle in (
             "not `frozen = true`",
             "finalize",
             "analysis audit: no analysis audit saw the area as it is now",
-            "--check exits 1",
+            "--check --protocol PROTOCOL-x.md exits 1",
         ):
             self.assertIn(needle, out)
         self.assertIn("4 blocker(s)", out)
@@ -561,7 +569,8 @@ class ReportCheck(unittest.TestCase):
         area = self._area()
         self._audited(area)
         unproven = (
-            "scripts/02_analyze.py --check exits 1: recheck: run r is not "
+            "scripts/02_analyze.py --check --protocol PROTOCOL-x.md exits 1: "
+            "recheck: run r is not "
             "verifiable — nothing shows that the code here now is the code it ran"
         )
         code, out = self._run(area, check=unproven)
@@ -570,7 +579,7 @@ class ReportCheck(unittest.TestCase):
         self.assertIn(gate.NOT_EXECUTABLE_MARK, out)
         self.assertIn("or measure anew, audit and adopt that run", out)
         self.assertNotIn("never typed", out)
-        code, out = self._run(area, check="scripts/02_analyze.py --check exits 1: x")
+        code, out = self._run(area, check=f"{CHECK_RAN} exits 1: x")
         self.assertEqual(code, 1, out)
         self.assertNotIn(gate.NOT_EXECUTABLE_MARK, out)
         self.assertIn("never typed", out)
@@ -637,14 +646,35 @@ class ReportCheck(unittest.TestCase):
     def test_the_check_runs_the_areas_script(self):
         area = self._area()
         repo = area.parent.parent
-        self.assertIsNone(report_check.check_analysis_script(area, repo))
+        protocol = area / "PROTOCOL-x.md"
+        self.assertIsNone(report_check.check_analysis_script(area, repo, protocol))
         (area / "scripts" / "02_analyze.py").write_text(
             "import sys\nprint('recheck: numbers not in PROTOCOL')\nsys.exit(1)\n",
             encoding="utf-8",
         )
-        failed = report_check.check_analysis_script(area, repo) or ""
-        self.assertIn("exits 1", failed)
+        failed = report_check.check_analysis_script(area, repo, protocol) or ""
+        self.assertIn(f"{CHECK_RAN} exits 1", failed)
         self.assertIn("numbers not in PROTOCOL", failed)
+
+    def test_the_check_is_asked_for_the_protocol_report_check_holds(self):
+        """The script is run with the protocol named, never left to choose:
+        of two protocols in the area each check names its own, and the line
+        to run by hand is the same command."""
+        area = self._area()
+        repo = area.parent.parent
+        (area / "scripts" / "02_analyze.py").write_text(
+            "import sys\nprint('asked:', *sys.argv[1:])\nsys.exit(1)\n",
+            encoding="utf-8",
+        )
+        for name in ("PROTOCOL-x.md", "PROTOCOL-other.md"):
+            with self.subTest(name):
+                failed = report_check.check_analysis_script(area, repo, area / name)
+                self.assertIn(f"asked: --check --protocol {name}", failed or "")
+                self.assertTrue(
+                    report_check.shown_check(area, area / name).endswith(
+                        f"scripts/02_analyze.py --check --protocol {name}"
+                    )
+                )
 
     def test_the_check_is_one_command_at_every_tier(self):
         """Every skeleton stamps `02_analyze.py` (`standard_contract.CHECK_SCRIPT`),
@@ -654,12 +684,15 @@ class ReportCheck(unittest.TestCase):
             with self.subTest(cost):
                 area = self._area(repeat_cost=cost, frozen=cost != "low")
                 repo = area.parent.parent
-                self.assertIsNone(report_check.check_analysis_script(area, repo))
+                protocol = area / "PROTOCOL-x.md"
+                self.assertIsNone(
+                    report_check.check_analysis_script(area, repo, protocol)
+                )
                 (area / "scripts" / "02_analyze.py").unlink()
                 (area / "scripts" / "01_measure.py").write_text(
                     "print('ok')\n", encoding="utf-8"
                 )
-                failed = report_check.check_analysis_script(area, repo) or ""
+                failed = report_check.check_analysis_script(area, repo, protocol) or ""
                 self.assertIn("no scripts/02_analyze.py —", failed)
                 self.assertIn("analyze-quick-script.py.template", failed)
 
@@ -700,5 +733,7 @@ class ReportCheck(unittest.TestCase):
             "import sys\nsys.stderr.buffer.write(b'bad \\xff byte\\n')\nsys.exit(1)\n",
             encoding="utf-8",
         )
-        failed = report_check.check_analysis_script(area, area.parent.parent)
+        failed = report_check.check_analysis_script(
+            area, area.parent.parent, area / "PROTOCOL-x.md"
+        )
         self.assertIn("exits 1: bad \ufffd byte", failed or "")

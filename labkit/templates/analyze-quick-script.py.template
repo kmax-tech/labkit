@@ -3,9 +3,14 @@
 
     ../../.venv/bin/python scripts/02_analyze.py            # the number, recomputed from OUT
     ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold the protocol to it
+    ../../.venv/bin/python scripts/02_analyze.py --check --protocol PROTOCOL-<name>.md   # as report-check runs it
 
 The one public recheck of every area (`report-check` runs it when the number
-is written back, LAB-041 Generate numbers, don't retype them): `labkit.checks.recheck.holds`
+is written back, LAB-041 Generate numbers, don't retype them), for one
+protocol at a time: the one `--protocol` names, else the area's only one —
+an area of several protocols owes the name. Every call, the plain one
+too, first takes the protocol, the run that answers it and that run's
+script, and ends with the reason where one of them is missing. `labkit.checks.recheck.holds`
 pins the output file to the run's recorded sha, recomputes `metrics.json`
 from the kept rows and holds the protocol to every number and the run_id.
 A run that reads another run's output is recomputed from its recorded
@@ -13,51 +18,52 @@ inputs as well (`recheck.verified_from_inputs`, `01_measure.metrics_from_inputs`
 a run whose code changed since it ran is refused, not recomputed; where
 nothing shows that the code here is the code the run ran, the check ends
 "not verifiable" — a missing proof, and report-check holds the release on it.
-The formula is `01_measure.evaluate_rows`, imported by path under a unique
-name — a second copy here would be a second truth of the number; the
-metrics recomputed are `01_measure.metrics_of`'s, the formula and, where
-the head registers a `[reference]`, the verdict against it, so the check
-holds the comparison too.
+The formula is the one of the script the held run ran, imported
+(`recheck.script_module`: `01_measure.py`, or the script of its own a
+second protocol of the area is computed by) — a second copy here would be
+a second truth of the number, and another protocol's script another
+number's formula. That script defines `OUT`, `expected_ids`, `metrics_of`
+and `metrics_from_inputs` as `01_measure.py` does; the metrics recomputed
+are its `metrics_of`'s, the formula and, where the head registers a
+`[reference]`, the verdict against it, so the check holds the comparison
+too.
 """
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
-import sys
 from pathlib import Path
 
 from labkit.checks import recheck
 
 AREA = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location("measure_<name>", AREA / "scripts" / "01_measure.py")
-assert _spec is not None and _spec.loader is not None
-measure = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = measure
-_spec.loader.exec_module(measure)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--check", action="store_true",
                     help="pin OUT to the run, recompute from its rows, hold the protocol to it")
+    ap.add_argument("--protocol", metavar="FILE",
+                    help="the protocol to hold, by file name — owed where the area has several")
     args = ap.parse_args()
+    protocol = recheck.protocol_named(AREA, args.protocol)
+    run = recheck.run_dir(AREA, protocol)        # the run that protocol answers with
+    measure = recheck.script_module(AREA, run)   # the script that run ran: its formula, no other protocol's
     ids = measure.expected_ids()   # the denominator comes from the source, never from the rows
     if args.check:
         # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers)
         v = recheck.holds(area=AREA, out=measure.OUT, recompute=lambda rows: measure.metrics_of(rows, ids),
-                          note=measure.PROTOCOL)
+                          note=protocol)
         # a run that computes from another run's output (an input with an
         # origin run) is recomputed from those inputs too: its rows alone
         # would hold the number to a file this run wrote itself. The code
         # step ran inside holds() above (changed code and code that cannot
         # be compared end the check there) and runs again here
-        run = recheck.run_dir(AREA, measure.PROTOCOL)
         from_inputs = recheck.reads_another_run(run)
         if from_inputs:
             recheck.verified_from_inputs(run, AREA, measure.metrics_from_inputs)
         print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
-              f"{measure.PROTOCOL.name} carries them and the run_id"
+              f"{protocol.name} carries them and the run_id"
               + ("; recomputed from its recorded inputs, the same numbers" if from_inputs else "")
               + (f"; grown since the run: {v.grown}" if v.grown else ""))
         return

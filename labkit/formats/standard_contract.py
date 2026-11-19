@@ -235,15 +235,20 @@ def registration_owed_before_run(
 #: script's `--check` pins the output to the run, recomputes the metrics
 #: and holds the note to them (`recheck.holds`; LAB-041 Generate numbers,
 #: don't retype them). Every skeleton stamps it (`Skeleton.scripts`), and
-#: report-check runs it for recomputation.
+#: report-check runs it for recomputation, once per protocol: the protocol
+#: is named (`CHECK_PROTOCOL_FLAG`), so the result of one protocol is held
+#: by its own run and script and by nothing of another protocol of the area.
 CHECK_SCRIPT = Path("scripts") / "02_analyze.py"
 CHECK_FLAG = "--check"
+CHECK_PROTOCOL_FLAG = "--protocol"
 
 
-def check_command(area: Path) -> list[str]:
-    """The recheck of AREA as a command line, without its interpreter (the
-    caller picks the repo's own, `preflight.area_test_python`)."""
-    return [str(area / CHECK_SCRIPT), CHECK_FLAG]
+def check_command(area: Path, protocol: Path) -> list[str]:
+    """The recheck of PROTOCOL's result in AREA as a command line, without
+    its interpreter (the caller picks the repo's own,
+    `preflight.area_test_python`). The protocol is named by its file name:
+    the script never chooses one of several itself."""
+    return [str(area / CHECK_SCRIPT), CHECK_FLAG, CHECK_PROTOCOL_FLAG, protocol.name]
 
 
 @dataclass(frozen=True)
@@ -252,7 +257,8 @@ class Skeleton:
     area then has: the script skeletons (template, destination under
     `scripts/`), the area's test template, and whether a `--probe` stage
     comes before the run. Every skeleton stamps `CHECK_SCRIPT`, so the
-    release's check (`check_command`) is one command for every area.
+    release's check (`check_command`) is one command for every area and
+    protocol.
 
     Attributes:
         instrument: `compute`, `estimator` or `model` — the three instruments

@@ -11,10 +11,11 @@ holds its own protocol); here what the commands pass on — the adoption
 released nor held by the other's records, decided or not, while a change of
 the area's shared code is held for each by its own audit coverage.
 
-One coupling stays (TODO.md, 6b): `scripts/02_analyze.py --check` belongs to
-the first protocol and finalize runs it for every protocol of the area, so
-the second is adopted only after the first — the order every scenario here
-keeps.
+The recomputation is per protocol as well: report-check runs
+`scripts/02_analyze.py --check --protocol FILE`, which holds that
+protocol's run with the script the run ran (`recheck.script_module`), so
+the second is adopted while the first has no answer, and the first's
+measuring script changed holds the first alone.
 """
 
 from __future__ import annotations
@@ -227,9 +228,7 @@ class EachProtocolAdoptsItsOwn(CountCommands):
     def test_a_change_of_the_shared_code_is_held_for_each_by_its_own_coverage(self):
         """Both protocols audited without a finding, the first adopted; then
         the analysis script changes — code the area's stamp covers for both,
-        and code neither run measured with (a changed measuring script
-        would end the area's one check for both: no recalculation of the
-        first's run with other code). Each protocol is held by its own
+        and code neither run measured with. Each protocol is held by its own
         analysis coverage; a new audit of the first covers nothing of the
         second, the second's own audit does."""
         for protocol in (self.first, self.second):
@@ -261,3 +260,46 @@ class EachProtocolAdoptsItsOwn(CountCommands):
         rc, out = self.labkit_adopt(self.second, self.run_second)
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.declared_run(self.second), self.run_second)
+
+    def test_the_second_is_adopted_while_the_first_has_no_answer(self):
+        """The recomputation holds each protocol by its own run and script.
+        The second is adopted first: the first having no answer holds
+        nothing of it. Then the first's measuring script changes — code the
+        second's run never ran: the second's check still recomputes its
+        number, the first's refuses to recompute with other code. The
+        area's stamp covers that script for both, so each owes a new
+        audit; with it the second's adoption stands, and the first's own
+        is held by the change."""
+        for protocol in (self.first, self.second):
+            rc, out, _ = self.analysis(self.clean, protocol)
+            self.assertEqual(rc, 0, out)
+        rc, out = self.labkit_adopt(self.second, self.run_second)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared_run(self.second), self.run_second)
+        self.assertIsNone(self.declared_run(self.first))
+
+        measure = self.area / "scripts" / "01_measure.py"
+        measure.write_text(
+            measure.read_text(encoding="utf-8") + "# changed after both runs\n",
+            encoding="utf-8",
+        )
+        check = ("02_analyze.py", "--check", "--protocol")
+        told = self.lab.script(self.area, *check, self.second.name)
+        self.assertIn(f"check: run {self.run_second} ", told)
+        with self.assertRaises(AssertionError) as cm:
+            self.lab.script(self.area, *check, self.first.name)
+        self.assertIn(
+            f"the code that computed run {self.run_first} is not the code here now",
+            str(cm.exception),
+        )
+
+        for protocol in (self.first, self.second):
+            rc, out, _ = self.analysis(self.clean, protocol)
+            self.assertEqual(rc, 0, out)
+        rc, out = self.labkit_adopt(self.second, self.run_second)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"has adopted {self.run_second} already", out)
+        rc, out = self.labkit_adopt(self.first, self.run_first)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"changed since {self.run_first} ran it", out)
+        self.assertIsNone(self.declared_run(self.first))

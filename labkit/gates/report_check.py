@@ -195,7 +195,6 @@ from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import area_files, areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
-    CHECK_FLAG,
     CHECK_SCRIPT,
     check_command,
     lane,
@@ -224,10 +223,20 @@ class CheckUnfinished(RuntimeError):
     result was found, neither a pass nor a failure."""
 
 
-def check_analysis_script(area: Path, repo: Path) -> str | None:
-    """Why the area's check (`standard_contract.check_command`: the analysis
-    script's `--check`, stamped by every skeleton) does not pass, or None:
-    no script, or a nonzero exit with the last lines it printed. Raises
+def shown_check(area: Path, protocol: Path) -> str:
+    """The check of PROTOCOL's result as report-check runs it
+    (`standard_contract.check_command`), as a line to run from here."""
+    script, *flags = check_command(area, protocol)
+    words = [shown(Path(script), Path.cwd()), *flags]
+    return ".venv/bin/python " + " ".join(shlex.quote(w) for w in words)
+
+
+def check_analysis_script(area: Path, repo: Path, protocol: Path) -> str | None:
+    """Why the check of PROTOCOL's result (`standard_contract.check_command`:
+    the area's analysis script's `--check` with the protocol named, stamped
+    by every skeleton) does not pass, or None: no script, or a nonzero exit
+    with the last lines it printed. Another protocol of the area is not
+    checked here: its result is held by its own chain. Raises
     CheckUnfinished when the check does not end within CHECK_TIMEOUT_S."""
     script = CHECK_SCRIPT
     if area / script not in area_files(area):
@@ -237,9 +246,11 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
             f"for a computation, analyze-script.py.template for a fit or an "
             f"apply, as {script}"
         )
+    # the check as told: the script from the area, the flags as run
+    ran = " ".join([str(script), *check_command(area, protocol)[1:]])
     try:
         r = subprocess.run(
-            [area_test_python(repo), *check_command(area)],
+            [area_test_python(repo), *check_command(area, protocol)],
             cwd=repo,
             capture_output=True,
             text=True,
@@ -248,13 +259,11 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
             timeout=CHECK_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired as exc:
-        raise CheckUnfinished(
-            f"{script} --check did not finish in {CHECK_TIMEOUT_S:g} s"
-        ) from exc
+        raise CheckUnfinished(f"{ran} did not finish in {CHECK_TIMEOUT_S:g} s") from exc
     if r.returncode == 0:
         return None
     tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]
-    return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
+    return f"{ran} exits {r.returncode}: " + " | ".join(tail)
 
 
 def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
@@ -797,15 +806,15 @@ def analysis_findings(
     return out
 
 
-def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
-    """Run the analysis script's check and return its failure as a blocker;
+def recomputation_findings(area: Path, repo: Path, protocol: Path) -> list[GateFinding]:
+    """Run the analysis script's check for PROTOCOL and return its failure as a blocker;
     a check that did not end (`CheckUnfinished`) and one that ended "not
     verifiable" (`recheck.NOT_VERIFIABLE`: nothing shows that the code here
     is the code the run ran) as a check not executed — no number was
     compared, and the release waits all the same."""
-    check = f"`.venv/bin/python {shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}`"
+    check = f"`{shown_check(area, protocol)}`"
     try:
-        failed = check_analysis_script(area, repo)
+        failed = check_analysis_script(area, repo, protocol)
     except CheckUnfinished as exc:
         return [
             blocker(
@@ -882,7 +891,8 @@ def chain_gaps(
     5. Analysis: coverage and rendered results where the lane owes it,
        with an answering run — without one (where finalize reads CTX's
        text) finalize's run choice is the one blocker.
-    6. Recomputation: the analysis script's `--check`, always.
+    6. Recomputation: the analysis script's `--check` for CTX's protocol
+       (its own run, that run's script), always.
     7. Decisions: reviews and follow-ups where the lane owes the analysis.
     8. Report: the registered report, once delivered in CTX's state, and
        the review every report discussing a run of the protocol owes
@@ -950,7 +960,9 @@ def chain_gaps(
         out += withdrawn_first(analysis, withdrawal)
     # 6. recomputation — always, unless `undeclared`
     if not undeclared:
-        out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), withdrawal)
+        out += withdrawn_first(
+            recomputation_findings(ctx.area, ctx.repo, ctx.protocol), withdrawal
+        )
     # 7. decisions — where the lane owes the analysis
     if ANALYSIS_AUDIT in ln.audits:
         out += withdrawn_first(review_findings(ctx), withdrawal)

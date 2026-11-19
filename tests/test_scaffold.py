@@ -526,13 +526,16 @@ class Exp(unittest.TestCase):
         self.assertNotIn("- **Next step:**", proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
         # the one public recheck of every skeleton: the compute skeleton's 02_analyze.py
-        # imports evaluate_rows from 01_measure.py and carries the --check
+        # carries the --check for a named protocol and imports the formula
+        # from the script the held run ran, not from a script it names itself
         analyze = (area / "scripts" / "02_analyze.py").read_text(encoding="utf-8")
         self.assertIn('"--check"', analyze)
         # the metrics recomputed are the formula's plus the reference verdict
         # (`metrics_of`): the check holds the comparison with a stated value too
         self.assertIn("measure.metrics_of(rows, ids)", analyze)
-        self.assertIn('AREA / "scripts" / "01_measure.py"', analyze)
+        self.assertIn('"--protocol"', analyze)
+        self.assertIn("measure = recheck.script_module(AREA, run)", analyze)
+        self.assertNotIn('"scripts" / "01_measure.py"', analyze)
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         # one home for the check: the compute skeleton's 01_measure.py only measures
         self.assertNotIn('add_argument("--check"', script)
