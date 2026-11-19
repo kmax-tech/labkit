@@ -33,7 +33,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import commands
-from labkit.formats.protocol_block import DIMENSIONLESS, PROTOCOL_KINDS, Kept
+from labkit.formats.protocol_block import (
+    DIMENSIONLESS,
+    EXPLORATORY,
+    PROTOCOL_KINDS,
+    Kept,
+)
 from labkit.formats.protocol_block import head as head_of
 from labkit.formats.protocol_block import reference as reference_of
 from labkit.formats.repo import area_test_stem, split_area_name
@@ -185,11 +190,6 @@ def has_bar(kind: str) -> bool:
     if kind not in PROTOCOL_KINDS:
         raise ValueError(f"kind {kind!r} is not one of {', '.join(PROTOCOL_KINDS)}")
     return kind != COMPUTE_KIND
-
-
-#: the protocol type that may go without a criterion
-#: (`protocol_block.TYPES`)
-EXPLORATORY = "exploratory"
 
 
 def criterion_owed(kind: str, protocol_type: str | None) -> bool:

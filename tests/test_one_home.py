@@ -109,6 +109,13 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"kind [=!]= \"(compute|fit|apply)\"",
         {"standard_contract"},
     ),
+    # a protocol type is a constant with one definition, never compared as a
+    # word; `protocol_block.EXPLORATORY`, `CONFIRMATORY`
+    (
+        "a protocol type named by hand",
+        r"[=!]= \"(exploratory|confirmatory)\"|^(EXPLORATORY|CONFIRMATORY)\b.* = ",
+        {"protocol_block"},
+    ),
     # `core.hooksPath` is set in one place
     (
         "core.hooksPath set by hand",
@@ -645,6 +652,7 @@ class OneHome(unittest.TestCase):
             "a run record file spelled by hand": 'cfg = run_dir / "config.json"',
             "a data= entry read by key": 'n = entry.get("rows")',
             "a kind compared as a word": 'if kind == "apply":',
+            "a protocol type named by hand": 'if head.type != "confirmatory":',
             "core.hooksPath set by hand": 'git_run(["config", "core.hooksPath", ".githooks"], root)',
             "an answer-line separator spelled by hand": 'CLAIM = re.compile(r"CLAIM\\s*(?:·|—|–|:)")',
             "a prompt joined by hand": 'body = "".join(f"===== {lbl} =====\\n{txt}\\n" for lbl, txt in p)',

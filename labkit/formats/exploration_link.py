@@ -29,13 +29,11 @@ from typing import NamedTuple
 from labkit.formats import protocol_block, protocol_history, runs
 from labkit.formats.area_state import TREE, FileState, state_of
 from labkit.formats.gate import TECHNICAL_RULE, RuleAssignment, cited_rule
-from labkit.formats.protocol_block import ExploredIn
+from labkit.formats.protocol_block import CONFIRMATORY, EXPLORATORY, ExploredIn
 from labkit.formats.repo import git_root
 from labkit.formats.runs import RunDir
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-#: the two types, by name (`protocol_block.TYPES` is their home)
-EXPLORATORY, CONFIRMATORY = protocol_block.TYPES
 
 
 class LinkedExploration(NamedTuple):

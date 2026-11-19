@@ -44,7 +44,11 @@ from labkit.formats.exploration_state import (
 )
 from labkit.formats.runs import ArtefactError, read_data, recorded_models
 from labkit.formats.prompts import prompt_body
-from labkit.formats.protocol_block import repo_protocol_ids
+from labkit.formats.protocol_block import (
+    CONFIRMATORY,
+    EXPLORATORY,
+    repo_protocol_ids,
+)
 from labkit.formats.protocol_then import as_measured
 from labkit.formats.protocol_history import (
     ABSENT,
@@ -69,7 +73,6 @@ from labkit.formats.scope_sha import (
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     COMPUTE_KIND,
-    EXPLORATORY,
 )
 from labkit.gates import ways_out
 from labkit.gates.registration_hold import workflow
@@ -406,7 +409,7 @@ def predecessor_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
         head = protocol_block.head(text)
     except protocol_block.BlockError:
         return ()
-    if rep is None or head.type != "confirmatory" or head.id is None:
+    if rep is None or head.type != CONFIRMATORY or head.id is None:
         return ()
     repo = layout_root(area)
     hits = repo_protocol_ids(area).get(rep.protocol, [])

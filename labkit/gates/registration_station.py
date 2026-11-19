@@ -19,7 +19,7 @@ from labkit.formats.area_state import (
 )
 from labkit.formats.gate import Findings, GateFinding
 from labkit.formats.repo import git_root
-from labkit.formats.standard_contract import EXPLORATORY
+from labkit.formats.protocol_block import EXPLORATORY
 from labkit.gates import exploration_hold
 from labkit.gates.registration_hold import (
     corrected_in_place,

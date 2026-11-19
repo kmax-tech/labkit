@@ -1343,8 +1343,8 @@ def low_registration_missing(
     # without), its table too — under the stricter of the two types
     types = (head.type,) if type_now is None else (head.type, type_now)
     type_owing = next(
-        (t for t in types if t != standard_contract.EXPLORATORY),
-        standard_contract.EXPLORATORY,
+        (t for t in types if t != protocol_block.EXPLORATORY),
+        protocol_block.EXPLORATORY,
     )
     labels = standard_contract.registration_owed_before_run(
         kind or standard_contract.APPLY_KIND, model_named(text), type_owing

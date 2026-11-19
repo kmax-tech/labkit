@@ -622,7 +622,7 @@ def predecessor_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
             kind = protocol_block.head(text).type
         except (OSError, protocol_block.BlockError):
             continue
-        if rep is None or kind != "confirmatory":
+        if rep is None or kind != protocol_block.CONFIRMATORY:
             continue
         name = f"{PREDECESSOR_KEY} of {_key(p, root)}"
         entries.append((name, rep.protocol.encode("utf-8")))
