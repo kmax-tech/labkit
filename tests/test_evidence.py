@@ -547,6 +547,92 @@ class Told(unittest.TestCase):
         self.assertIn("the stop and the commit do not hold it", ctx)
         self.assertNotIn("the stop and the commit hold what each line names", ctx)
 
+    def test_a_gone_run_is_told_under_the_heading_of_the_gone_ones(self):
+        gone = "2026-11-01T15-21-44_e8a0"
+        run_starts.write_start(
+            self.area, run_starts.RunStart(gone, "p-1", NOON, "measurement")
+        )
+        ctx = self._told()
+        heading, line = ctx.splitlines()
+        self.assertTrue(
+            heading.startswith(
+                "a run of experiments/01-x, or a run's start file, is gone — the "
+                "stop and the commit do not hold it"
+            ),
+            heading,
+        )
+        self.assertIn(f"run {gone}: its directory is gone", line)
+
+    def test_a_standing_unfinished_run_has_a_heading_of_its_own_never_gone(self):
+        """The run started (its start file stands), its directory stands
+        without a completion: nothing of it is gone, and no line of the hook
+        says so."""
+        _run_dir(self.area, OPEN, closed=False)
+        run_starts.write_start(
+            self.area, run_starts.RunStart(OPEN, "p-1", NOON, "measurement")
+        )
+        ctx = self._told()
+        heading, line = ctx.splitlines()
+        self.assertTrue(
+            heading.startswith(
+                "a run of experiments/01-x started and never completed — its "
+                "directory stands and nothing of it is gone"
+            ),
+            heading,
+        )
+        self.assertIn(f"experiments/01-x: run {OPEN}: started as a measurement", line)
+        self.assertNotIn("is gone —", ctx)
+        self.assertNotIn("do not hold it", ctx)
+        self.assertNotIn("does not read", ctx)
+
+    def test_a_gone_and_an_unfinished_run_are_told_under_two_headings(self):
+        gone = "2026-11-01T15-21-44_e8a0"
+        for run in (gone, OPEN):
+            run_starts.write_start(
+                self.area, run_starts.RunStart(run, "p-1", NOON, "measurement")
+            )
+        _run_dir(self.area, OPEN, closed=False)
+        under_gone, under_unfinished = self._told().split("\na run of ")
+        self.assertIn(", is gone — ", under_gone.splitlines()[0])
+        self.assertIn(f"run {gone}: its directory is gone", under_gone)
+        self.assertNotIn(OPEN, under_gone)
+        self.assertIn("started and never completed", under_unfinished.splitlines()[0])
+        self.assertIn(f"run {OPEN}: started as a measurement", under_unfinished)
+        self.assertNotIn(gone, under_unfinished)
+
+    def test_an_index_that_does_not_read_is_told_as_unread_never_as_gone(self):
+        (self.area / "runs.tsv").write_text(
+            "run_id\tgit\tscript\tdata\tconfig\tmetrics\tnote\tprotocol_id\n"
+            f"{CLOSED}\tcut short\n",
+            encoding="utf-8",
+        )
+        ctx = self._told()
+        heading, line = ctx.splitlines()
+        self.assertTrue(
+            heading.startswith(
+                "the run index, a start file or git's history of experiments/01-x "
+                "does not read — what it says of a run is unknown"
+            ),
+            heading,
+        )
+        self.assertIn("runs.tsv:2: 2 of 8 tab-separated columns", line)
+        self.assertNotIn("is gone —", ctx)
+        self.assertNotIn("never completed", ctx)
+
+    def test_a_start_file_that_does_not_read_is_told_as_unread_never_as_gone(self):
+        """Nothing else names the run: whether it ever had a directory is
+        unknown, so it is not told as gone."""
+        unknown = "2026-11-01T15-21-44_e8a0"
+        path = run_starts.start_path(self.area, unknown)
+        path.parent.mkdir()
+        path.write_text("{", encoding="utf-8")
+        ctx = self._told()
+        heading, line = ctx.splitlines()
+        self.assertTrue(heading.startswith("the run index, a start file or"), heading)
+        self.assertIn(f"run {unknown}: its start file does not read", line)
+        self.assertNotIn("is gone —", ctx)
+        self.assertNotIn("never completed", ctx)
+
     def test_a_decision_and_a_new_run_are_silent(self):
         findings.write_decision(self.record, 1, "limitation", "noted", "stands")
         _run_dir(self.area, OPEN, closed=False)

@@ -114,11 +114,23 @@ def gone_run_areas(repo: Path) -> list[Path]:
 
 
 def index_problems(state: AreaState) -> list[str]:
-    """What the runs of an area (its STATE) that are gone or never finished
-    tell the evidence check — told, never skipped, and each case in words
-    of its own:
+    """Every line the runs of an area (its STATE) that are gone, never
+    finished or not readable give the evidence check, the three conditions
+    in a row: `gone_runs`, `unfinished_starts`, `unread_sources`. The hook
+    prints each condition under a heading of its own (`run_reports`).
 
-    - why git could not list the runs it holds;
+    A known limit, open: a start file that is present and names another
+    protocol than the run's record gets no line here, and this hook does
+    not prevent the commit. The release is held by finalize's registration
+    station and by report-check (`registration_hold.binding_conflict_hold`),
+    and the run's start names it."""
+    return gone_runs(state) + unfinished_starts(state) + unread_sources(state)
+
+
+def gone_runs(state: AreaState) -> list[str]:
+    """One line per run of STATE's area whose directory or whose start
+    file is gone — told, never skipped, and each case in words of its own:
+
     - a run a commit holds whose directory is gone, with the checkout that
       restores it;
     - a run only the local run index lists: it finished, its record is
@@ -127,21 +139,14 @@ def index_problems(state: AreaState) -> list[str]:
       names and did not complete, and its record is gone;
     - a run whose start file a commit holds and the tree lacks, with the
       checkout that restores it;
-    - a run whose start file does not read: an incomplete start;
     - a run whose mark says a start file was written and for which
-      none is found: evidence that is lost;
-    - a run with a start file whose directory stands without a
-      completion (`unfinished_starts`): it started and never completed —
-      an abort, its record still here.
+      none is found: evidence that is lost.
 
-    A known limit, open: a start file that is present and names another
-    protocol than the run's record gets no line here, and this hook does
-    not prevent the commit. The release is held by finalize's registration
-    station and by report-check (`registration_hold.binding_conflict_hold`),
-    and the run's start names it."""
+    A run whose directory stands without a completion is not among them
+    (`unfinished_starts`), nor is a file that does not read
+    (`unread_sources`)."""
     return (
-        ([state.history_unread] if state.history_unread else [])
-        + [
+        [
             f"run {rd.dir.name}: its directory is gone — {gone_run_restore(rd)}"
             for rd in state.deleted
         ]
@@ -163,28 +168,40 @@ def index_problems(state: AreaState) -> list[str]:
             for r, at in state.deleted_starts.items()
         ]
         + [
-            f"run {r}: its start file does not read ({s.unread}) — an incomplete "
-            f"start: nothing is taken from it; restore it from the commit that "
-            f"holds it, and where none does leave it as it is"
-            for r, s in state.starts.items()
-            if s.unread
-        ]
-        + [
             f"run {r}: a start file was written for it — the mark in its directory "
             f"says so — and none is found, in the working tree, the index or a commit: "
             f"evidence of its start is lost; bring it back from a copy or a "
             f"clone that holds it"
             for r in state.missing_starts
         ]
-        + unfinished_starts(state)
     )
+
+
+def unread_sources(state: AreaState) -> list[str]:
+    """One line per source of STATE's area that does not read, so that
+    what it would say of a run is unknown — no run is told as gone for it:
+
+    - why git could not list the runs or the start files it holds
+      (`AreaState.history_unread`, git's words with the command that names
+      the damaged object);
+    - a run whose start file does not read: an incomplete start.
+
+    A run index that does not read gives no state at all; the hook tells
+    that under the same heading (`_untold_evidence`)."""
+    return ([state.history_unread] if state.history_unread else []) + [
+        f"run {r}: its start file does not read ({s.unread}) — an incomplete "
+        f"start: nothing is taken from it; restore it from the commit that "
+        f"holds it, and where none does leave it as it is"
+        for r, s in state.starts.items()
+        if s.unread
+    ]
 
 
 def unfinished_starts(state: AreaState) -> list[str]:
     """One line per run a start file of STATE's area names whose
     directory stands and which did not complete: it started as the kind
     its row names and never completed — its record is here, unlike a run
-    whose directory is gone (`index_problems`). A run whose process still
+    whose directory is gone (`gone_runs`). A run whose process still
     lives is left out (`runs.is_alive`: it is running, not aborted); where
     that cannot be told the line says so. Asks the process table."""
     records = {rd.dir.name: rd for rd in state.runs}
@@ -218,21 +235,30 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
     `<area>: <sentence>` with its way out: what the stop and the commit
     hold — every integrity problem (`evidence.AreaEvidence`) and every
     change git can undo (`evidence.AreaEvidence.change_sentences`, `evidence.ignored`) — and,
-    apart, what is only lost: a run the index lists whose directory is gone
-    (`index_problems`), which neither holds. An area found clean forgets its
+    apart, what neither holds, each condition under its own heading
+    (`run_reports`): a run or a start file that is gone (`gone_runs`), a
+    run that started and never completed and whose directory stands
+    (`unfinished_starts`), and a source that does not read
+    (`unread_sources`; a run index that does not read gives no state, and
+    its refusal is the one line then). An area found clean forgets its
     state, so a later problem of the same text is told again."""
     out: list[str] = []
     for area in areas:
+        gone: list[str] = []
+        unfinished: list[str] = []
         try:
             state = state_of(area)
         except RunIndexError as exc:
-            # the index does not read: told as a loss, held by nothing
-            state, lost = None, [exc.why]
+            # no state without the index: nothing is known of the area's
+            # runs, so none is told as gone or unfinished
+            unread = [exc.why]
         else:
-            lost = index_problems(state)
+            gone = gone_runs(state)
+            unfinished = unfinished_starts(state)
+            unread = unread_sources(state)
         kept = evidence.read_evidence(area, staged=False)
         held = [*kept.problems, *kept.change_sentences(), *kept.ignored]
-        lines = held + lost
+        lines = held + gone + unfinished + unread
         key = f"{EVIDENCE_KEY}{area}"
         if not lines:
             cache.pop(key, None)
@@ -249,13 +275,47 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
                 "acknowledges a loss, never a change git can undo):\n  "
                 + "\n  ".join(f"{shown_area}: {line}" for line in held)
             )
-        if lost:
-            out.append(
-                f"a run of {shown_area} is gone — the stop and the commit do not "
-                "hold it, and nothing brings its rows back but git:\n  "
-                + "\n  ".join(f"{shown_area}: {line}" for line in lost)
-            )
+        out += run_reports(shown_area, gone=gone, unfinished=unfinished, unread=unread)
     return out
+
+
+def run_reports(
+    shown_area: str, *, gone: list[str], unfinished: list[str], unread: list[str]
+) -> list[str]:
+    """The lines about SHOWN_AREA's runs that neither the stop nor the
+    commit holds, one report per condition that has a line, each as its
+    heading — what is the case and what to do next — over the lines as
+    `<area>: <sentence>`: GONE (`gone_runs`), UNFINISHED
+    (`unfinished_starts`) and UNREAD (`unread_sources`, or the refusal of a
+    run index that does not read). A run whose directory stands is never
+    under the heading of the gone ones, nor is a file that does not read.
+    Pure."""
+    headed = (
+        (
+            gone,
+            f"a run of {shown_area}, or a run's start file, is gone — the stop and "
+            "the commit do not hold it, and nothing brings a run's rows back but "
+            "git; restore now what a line names a way for:",
+        ),
+        (
+            unfinished,
+            f"a run of {shown_area} started and never completed — its directory "
+            "stands and nothing of it is gone, so there is nothing to restore; "
+            "read why it ended before the next run:",
+        ),
+        (
+            unread,
+            f"the run index, a start file or git's history of {shown_area} does not "
+            "read — what it says of a run is unknown, so no run is told as gone "
+            "for it; repair what each line names, until then what is told of the "
+            "area's runs is incomplete:",
+        ),
+    )
+    return [
+        heading + "\n  " + "\n  ".join(f"{shown_area}: {line}" for line in lines)
+        for lines, heading in headed
+        if lines
+    ]
 
 
 def wants_check(path: Path) -> str | None:
