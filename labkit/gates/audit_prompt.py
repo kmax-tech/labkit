@@ -44,11 +44,7 @@ from labkit.formats.exploration_state import (
 )
 from labkit.formats.runs import ArtefactError, read_data, recorded_models
 from labkit.formats.prompts import prompt_body
-from labkit.formats.protocol_block import (
-    CONFIRMATORY,
-    EXPLORATORY,
-    repo_protocol_ids,
-)
+from labkit.formats.protocol_block import CONFIRMATORY, repo_protocol_ids
 from labkit.formats.protocol_then import as_measured
 from labkit.formats.protocol_history import (
     ABSENT,
@@ -75,7 +71,7 @@ from labkit.formats.standard_contract import (
     COMPUTE_KIND,
 )
 from labkit.gates import ways_out
-from labkit.gates.registration_hold import workflow
+from labkit.gates.registration_hold import run_compared_with, workflow
 from labkit.gates.ways_out import (
     AUDIT_AGAIN,
     PROTOCOL_NAMED,
@@ -923,11 +919,14 @@ def _field_change(
 ) -> FieldChange:
     """The change of the field F corrects in PROTOCOL (TEXT now): its value
     in the text the registration hold compares with, and as it reads now.
-    That text is the first measurement's (`registrations_as_first_measured`)
-    — and in an exploratory protocol RUN's own (`as_measured`), since there
-    the hold compares the protocol as it stands with the answering run
-    (`exploration_hold.live_holds`), and a verdict releases only the change
-    it judged. Raises RuntimeError when git fails."""
+    Which text that is, the hold's own answer says
+    (`registration_hold.run_compared_with` over the protocol's workflow,
+    `registration_hold.workflow`): in an exploratory workflow the own text
+    of RUN, the run audited (`as_measured`) — there the hold compares the
+    protocol as it stands with the answering run, and a verdict releases
+    only the change it judged —, else the first measurement's
+    (`registrations_as_first_measured`), and that one too when no run is
+    audited (RUN None). Raises RuntimeError when git fails."""
     at = f.place
     if at is None:
         raise ValueError(f"{f.one_line}: names no field of {protocol.name}")
@@ -940,11 +939,11 @@ def _field_change(
     state = state_of(protocol.parent)
     measured = state.measured_of(pid)
     root = git_root(protocol)
-    if run is not None and workflow(protocol, pid, run, root, measured, state)[0] == (
-        EXPLORATORY
-    ):
+    flow = workflow(protocol.parent, protocol, pid, root, measured).workflow
+    compared = run_compared_with(flow, run)
+    if compared is not None:
         own, why = as_measured(
-            protocol, read_run_dir(run), root, role="the run audited"
+            protocol, read_run_dir(compared), root, role="the run audited"
         )
         texts = [(own, why)] if own is not None else []
     else:

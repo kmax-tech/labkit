@@ -6,8 +6,10 @@ recorded it (`registration_changes`), what the number is about as first
 measured (`scope_changes`) —, which change a correction in place releases
 (`resolved_corrections`, `awaiting_followup`) and the phrasing of each
 hold and its way back. Here too: which workflow the first measurements'
-own type names, and the hold on a type changed since (`workflow`,
-`type_hold`). Read-only; finalize tells what it finds.
+own type names (`workflow`, the one reading every gate and the audit
+prompt share), the run whose text a workflow compares the protocol with
+(`run_compared_with`), and the holds on a type changed since
+(`type_changes`). Read-only; finalize tells what it finds.
 """
 
 from __future__ import annotations
@@ -59,7 +61,7 @@ from labkit.formats.area_state import (
     unassigned_record_warning,
 )
 from labkit.formats import protocol_history, protocol_then
-from labkit.formats.protocol_history import type_of
+from labkit.formats.protocol_history import Workflow, type_of, workflow_registered
 from labkit.formats.reference import LAB_035
 from labkit.formats.repo import (
     rel_posix,
@@ -262,32 +264,88 @@ def registration_changes(
     ]
 
 
+@dataclass(frozen=True)
+class WorkflowRead:
+    """What `workflow` read of one protocol.
+
+    Attributes:
+        workflow: The workflow that binds the protocol's runs.
+        untold: The holds on what leaves the first measurement untold
+            (`untold_first_holds`); with one, `workflow` is UNDECIDED and
+            no text was read.
+        seen: Each first measurement whose text reads, with that text —
+            what `type_changes` compares the later types with.
+    """
+
+    workflow: Workflow
+    untold: list[GateFinding]
+    seen: list[tuple[RunDir, str]]
+
+
 def workflow(
+    area: Path, protocol: Path, pid: str, root: Path | None, measured: Measured
+) -> WorkflowRead:
+    """Which workflow binds the runs of PROTOCOL (stamped id PID) in AREA
+    — the one reading: finalize's station 2
+    (`registration_station.station_changes`) and the follow-up audit's
+    prompt (`audit_prompt`) both take it from here. The types are the ones
+    the first measurements of MEASURED registered, read from their own
+    texts (`protocol_history.first_texts`) — the head as it stands names
+    no workflow, so relabelling lifts no lock and makes no confirmation —,
+    and `protocol_history.workflow_registered` decides: UNDECIDED while
+    something leaves the first measurement untold (`untold_first_holds`;
+    the texts are then not read), for an undecided type, for first
+    measurements that registered different types, and where no first
+    measurement's text reads (outside a repository, ROOT None, none does).
+    No answering run is needed: the workflow is the first measurements'.
+    Raises RuntimeError when git fails."""
+    untold = untold_first_holds(pid, area, protocol, measured)
+    if untold:
+        return WorkflowRead(workflow_registered((), first_untold=True), untold, [])
+    firsts = [rd for group in measured.first_groups for rd in group]
+    seen, _ = protocol_history.first_texts(protocol, firsts, root)
+    types = [type_of(text) for _, text in seen]
+    return WorkflowRead(workflow_registered(types), [], seen)
+
+
+def run_compared_with(flow: Workflow, run: Path | None) -> Path | None:
+    """The run whose own text the protocol as it stands is compared with
+    in what the number is about: RUN, the answering run, in an exploratory
+    workflow FLOW; None in a confirmatory or undecided one — the first
+    measurements' texts are compared then. The one answer for the hold's
+    release (`corrected_in_place`) and for the field change a follow-up
+    audit is shown (`audit_prompt._field_change`), so a verdict judges the
+    change the hold compares.
+
+    Without a RUN the answer is None in exploration too, and the two
+    readers part: no hold compares anything (finalize's station 2 runs
+    only with an answering run), while a follow-up audit of no run still
+    shows a corrected field, against the first measurements' text — the
+    only registered text there is. A verdict given there releases nothing
+    until a run answers and its own text is the one compared."""
+    return run if flow is Workflow.EXPLORATORY else None
+
+
+def type_changes(
     protocol: Path,
     pid: str,
     run: Path,
     root: Path | None,
-    measured: Measured,
+    seen: list[tuple[RunDir, str]],
     state: AreaState,
-) -> tuple[str | None, list[GateFinding]]:
-    """(the workflow, the holds on the type): the type the first
-    measurements of PROTOCOL registered, read from their own texts
-    (`protocol_then.as_measured`) — the head as it stands names no
-    workflow, so relabelling lifts no lock and makes no confirmation. None
-    where no type can be read: an undecided one (`type_of`), first
-    measurements that registered different types, or no first measurement
-    whose text reads (outside a repository none does) — the caller then
-    holds the confirmatory way, the most, never the least. The holds
-    (`type_changes`): the type of the answering RUN as it saw the protocol,
-    and of the protocol as it stands, against the first measurements'.
-    Raises RuntimeError when git fails."""
-    firsts = [rd for group in measured.first_groups for rd in group]
-    seen, _ = protocol_history.first_texts(protocol, firsts, root)
+) -> list[GateFinding]:
+    """The holds on the type of PROTOCOL (stamped id PID) against the
+    types its first measurements registered (SEEN, each with its own
+    text: `WorkflowRead.seen`): first measurements that registered
+    different types (`types_split_hold`), else one hold per text whose
+    type is not the registered one (`type_hold`) — the answering RUN as it
+    saw the protocol, and the protocol as it stands. [] where no first
+    measurement's text reads. Raises RuntimeError when git fails."""
     types = list(dict.fromkeys(type_of(text) for _, text in seen))
     if len(types) > 1:
-        return None, [types_split_hold(protocol, pid, seen)]
+        return [types_split_hold(protocol, pid, seen)]
     if not types:
-        return None, []
+        return []
     registered = types[0]
     first = seen[0][0]
     answering = read_run_dir(run)
@@ -300,12 +358,11 @@ def workflow(
         (f"as the answering run {run.name} saw the protocol", then),
         ("as the protocol stands now", state.text_of(protocol)),
     ]
-    holds = [
+    return [
         type_hold(protocol, pid, first, registered, type_of(text), where, root)
         for where, text in texts
         if text is not None and type_of(text) != registered
     ]
-    return registered, holds
 
 
 def types_split_hold(
@@ -1254,18 +1311,19 @@ def corrected_in_place(
     state: AreaState,
     held: evidence.AreaEvidence,
     *,
-    exploring: bool = False,
+    flow: Workflow,
 ) -> list[str]:
     """One line per field of PROTOCOL changed since its first measurement
     that a correction released (`scope_now`): the field, its old and new
     value, the correction and the follow-up's why — what the release says
-    of a description corrected in place. EXPLORING (an exploratory
-    workflow, `workflow`): compared with the answering run's own text
-    instead. Empty without an answering run, a stamped id or such a field.
-    Raises RuntimeError when git fails."""
+    of a description corrected in place. In an exploratory workflow FLOW
+    (`workflow`) the change is the one since the answering run's own text
+    instead (`run_compared_with`). Empty without an answering run, a
+    stamped id or such a field. Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
     root, measured = git_root(protocol), state.measured_of(pid)
+    own = run_compared_with(flow, run)
     now = scope_now(
         area,
         protocol,
@@ -1275,11 +1333,11 @@ def corrected_in_place(
         measured,
         state,
         held,
-        against=[read_run_dir(run)] if exploring else None,
+        against=[read_run_dir(own)] if own is not None else None,
     )
     if now is None:
         return []
-    since = "the answering run" if exploring else "the first measurement"
+    since = "the answering run" if own is not None else "the first measurement"
     return [
         f"corrected in place after {since} {now.first.dir.name}: "
         f'{what} "{_quoted(old)}" → "{_quoted(new)}" — {c.ref} resolved in '

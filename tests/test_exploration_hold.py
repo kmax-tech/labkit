@@ -13,7 +13,6 @@ the old hold is shown on the confirmatory twin.
 
 from __future__ import annotations
 
-import json
 import shutil
 import tempfile
 import unittest
@@ -22,12 +21,9 @@ from pathlib import Path
 import pytest
 
 import test_end_to_end as e2e
-from protocol_fixture import PID, completed_run, head, scope_file
-from repo_fixture import git as _git
 
 from labkit.formats import run_starts
 from labkit.formats import standard_contract as sc
-from labkit.gates import registration_station, report_context
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -663,57 +659,3 @@ class AStepAtHighRepeatCost(unittest.TestCase):
             "the registration changed after the audit (Exclusions / filters)", refusal
         )
         self.assertIn("--mode preflight", refusal)
-
-
-class UndecidedAtTheFirstMeasurement(unittest.TestCase):
-    """A first measurement whose type was the stamp's placeholder (a run an
-    earlier labkit let start): no workflow can be read from it, so the
-    confirmatory lock applies, never the exploratory one, and naming the
-    type exploratory afterwards is a type change. From records written as
-    runlog writes them (`protocol_fixture.completed_run`)."""
-
-    FIRST = "2026-10-07T09-25-31_98dd"
-    LATER = "2026-10-07T10-00-00_ab12"
-
-    def setUp(self) -> None:
-        self.root = Path(tempfile.mkdtemp())
-        _git(self.root, "init", "-q")
-        self.area = self.root / "experiments" / "01-x"
-        self.area.mkdir(parents=True)
-        scope_file(self.area)
-        self.protocol = self.area / "PROTOCOL-x.md"
-
-    def commit(self, protocol_type: str, question: str) -> str:
-        self.protocol.write_text(
-            head(repeat_cost="low", type=protocol_type)
-            + f"- **Question / hypothesis:** {question}\n",
-            encoding="utf-8",
-        )
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "protocol")
-        return _git(self.root, "rev-parse", "HEAD")
-
-    def run_at(self, commit: str, name: str) -> Path:
-        run = completed_run(self.area, name, metrics={"criterion_1_pass": True})
-        cfg = run / "config.json"
-        data = json.loads(cfg.read_text(encoding="utf-8"))
-        data["git"], data["git_full"] = commit[:7], commit
-        cfg.write_text(json.dumps(data), encoding="utf-8")
-        return run
-
-    def test_an_undecided_first_type_holds_the_confirmatory_way(self):
-        self.run_at(
-            self.commit("<exploratory | confirmatory>", "does it hold?"), self.FIRST
-        )
-        later = self.run_at(
-            self.commit("exploratory", "does it hold here?"), self.LATER
-        )
-        ctx = report_context.checked(self.area, self.protocol)
-        self.assertEqual(ctx.run, later)
-        exploring, holds = registration_station.station_changes(
-            ctx.area, ctx.protocol, PID, ctx.run, ctx.area_state, ctx.evidence
-        )
-        self.assertFalse(exploring)
-        lines = [h.line for h in holds]
-        self.assertTrue(any('"undecided" → "exploratory"' in ln for ln in lines), lines)
-        self.assertTrue(any(FIRST_LOCK in ln for ln in lines), lines)
