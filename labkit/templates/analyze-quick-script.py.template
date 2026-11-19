@@ -62,7 +62,7 @@ def main() -> None:
         from_inputs = recheck.reads_another_run(run)
         if from_inputs:
             recheck.verified_from_inputs(run, AREA, measure.metrics_from_inputs)
-        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
+        print(f"check: run {v.run_id} of {protocol.name} — {v.keys_compared} keys identical, "
               f"{protocol.name} carries them and the run_id"
               + ("; recomputed from its recorded inputs, the same numbers" if from_inputs else "")
               + (f"; grown since the run: {v.grown}" if v.grown else ""))

@@ -1954,6 +1954,12 @@ class Estimator(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         # no model: Raw output is not owed, and the stamp left it out
         self.assertNotIn("**Raw output", self.protocol.read_text(encoding="utf-8"))
+        # repeats come before the audit and the adoption: a measured run
+        # is enough to draw again and to show the spread, no result adopted
+        self.assertIsNone(
+            protocol_block.declared_run(self.protocol.read_text(encoding="utf-8"))
+        )
+        self._a_repeat_draws_a_derived_seed_and_never_answers(run_id, draw=2)
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         rc, out = lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)
@@ -1967,7 +1973,7 @@ class Estimator(unittest.TestCase):
         self.assertIn(f"(run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
         assert_draws(self, lab, self.area, run_id, "score", "accuracy")
-        self._a_repeat_draws_a_derived_seed_and_never_answers(run_id)
+        self._a_repeat_draws_a_derived_seed_and_never_answers(run_id, draw=3)
         # the repeat widens what the audit judged (`protocol_runs`): the
         # earlier record stays and no longer covers the area; a new one does
         rc, err = lab.stop_hook()
@@ -1983,39 +1989,42 @@ class Estimator(unittest.TestCase):
         lab.commit("the verdict, adopted")
         self._the_class_counts_reach_the_report_block_and_are_held()
 
-    def _a_repeat_draws_a_derived_seed_and_never_answers(self, run_id: str) -> None:
+    def _a_repeat_draws_a_derived_seed_and_never_answers(
+        self, run_id: str, draw: int
+    ) -> None:
         """`01_measure.py --repeat-of`: the kept run
-        drawn again with the seed labkit derives — a run of its own, never
-        the answer; `--draws` shows it and the declared run still answers.
-        A seed of the script's own beside it is refused."""
+        drawn again (its DRAW-th draw) with the seed labkit derives — a run
+        of its own, never the answer; `--draws` shows it and RUN_ID still
+        answers, adopted or not. A seed of the script's own beside it is
+        refused."""
         lab = type(self).lab
         with self.assertRaises(AssertionError) as cm:
             lab.script(self.area, "01_measure.py", "--repeat-of", run_id, "--seed", "3")
         self.assertIn("drop --seed", str(cm.exception))
         out = lab.script(self.area, "01_measure.py", "--repeat-of", run_id)
         repeat = lab.run_id_of(out)
-        self.assertIn(f"draw 2 of {run_id}", out)
+        self.assertIn(f"draw {draw} of {run_id}", out)
         recorded = json.loads(
             (self.area / "runs" / repeat / "config.json").read_text(encoding="utf-8")
         )
-        self.assertEqual((recorded["repeat_of"], recorded["draw"]), (run_id, 2))
+        self.assertEqual((recorded["repeat_of"], recorded["draw"]), (run_id, draw))
         self.assertEqual(
-            recorded["config"]["seed"], answering_run.repeat_seed(run_id, 2)
+            recorded["config"]["seed"], answering_run.repeat_seed(run_id, draw)
         )
         # measured with the recorded seed: every row of the draw's own file
         # carries it (a script that kept the parent's seed would show a spread
         # of 0)
-        (draw_file,) = (self.area / "output").glob("*_draw2.jsonl")
+        (draw_file,) = (self.area / "output").glob(f"*_draw{draw}.jsonl")
         rows = [
             json.loads(x) for x in draw_file.read_text(encoding="utf-8").splitlines()
         ]
         self.assertTrue(rows)
         self.assertEqual(
             {r["_instrument"]["seed"] for r in rows},
-            {answering_run.repeat_seed(run_id, 2)},
+            {answering_run.repeat_seed(run_id, draw)},
         )
         out = lab.script(self.area, "02_analyze.py", "--draws")
-        self.assertIn(f"draw 2  {repeat}  score", out)
+        self.assertIn(f"draw {draw}  {repeat}  score", out)
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
         pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id

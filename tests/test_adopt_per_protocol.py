@@ -285,7 +285,7 @@ class EachProtocolAdoptsItsOwn(CountCommands):
         )
         check = ("02_analyze.py", "--check", "--protocol")
         told = self.lab.script(self.area, *check, self.second.name)
-        self.assertIn(f"check: run {self.run_second} ", told)
+        self.assertIn(f"check: run {self.run_second} of {self.second.name} — ", told)
         with self.assertRaises(AssertionError) as cm:
             self.lab.script(self.area, *check, self.first.name)
         self.assertIn(

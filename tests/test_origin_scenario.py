@@ -477,8 +477,7 @@ class TwoProtocolsOfOneArea(CountCommands):
         told = lab.script(
             self.area, "02_analyze.py", "--check", "--protocol", computed.name
         )
-        self.assertIn(f"check: run {c} ", told)
-        self.assertIn(f"{computed.name} carries them and the run_id", told)
+        self.assertIn(f"check: run {c} of {computed.name} — ", told)
         self.assertIn("recomputed from its recorded inputs, the same numbers", told)
         with self.assertRaises(AssertionError) as cm:
             lab.script(

@@ -95,7 +95,7 @@ def main() -> None:
         note = NOTE or protocol
         v = recheck.holds(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows, note=note,
                           protocol=protocol)
-        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, {note.name} carries "
+        print(f"check: run {v.run_id} of {protocol.name} — {v.keys_compared} keys identical, {note.name} carries "
               f"the numbers and the run_id" + (f"; grown: {v.grown}" if v.grown else ""))
         return
     print(json.dumps(measure.evaluate_rows(measure.read_jsonl(measure.OUT)), indent=1))
