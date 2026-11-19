@@ -312,6 +312,9 @@ def workflow(
     measurements that registered different types, and where no first
     measurement's text reads (outside a repository, ROOT None, none does).
     No answering run is needed: the workflow is the first measurements'.
+    Whose text the prompt shows a corrected field against while the answer
+    here is UNDECIDED for an untold first measurement is another question
+    (`workflow_of_first_texts`).
     Raises RuntimeError when git fails."""
     untold = untold_first_holds(
         pid, area, protocol, measured, history_unread=history_unread
@@ -333,13 +336,35 @@ def run_compared_with(flow: Workflow, run: Path | None) -> Path | None:
     audit is shown (`audit_prompt._field_change`), so a verdict judges the
     change the hold compares.
 
-    Without a RUN the answer is None in exploration too, and the two
-    readers part: no hold compares anything (finalize's station 2 runs
-    only with an answering run), while a follow-up audit of no run still
-    shows a corrected field, against the first measurements' text — the
-    only registered text there is. A verdict given there releases nothing
-    until a run answers and its own text is the one compared."""
+    The two readers part in two cases, and in neither does a hold release
+    anything. Without a RUN the answer is None in exploration too: no hold
+    compares anything (finalize's station 2 runs only with an answering
+    run), while a follow-up audit of no run still shows a corrected field,
+    against the first measurements' text — the only registered text there
+    is. And while something leaves the first measurement untold, the
+    workflow that binds is UNDECIDED and the station returns that one
+    hold, comparing nothing; the prompt then asks this function with the
+    workflow of the texts that read (`workflow_of_first_texts`), so the
+    run audited keeps its own text as the one shown."""
     return run if flow is Workflow.EXPLORATORY else None
+
+
+def workflow_of_first_texts(
+    protocol: Path, root: Path | None, measured: Measured
+) -> Workflow:
+    """The workflow the first measurements of MEASURED whose text reads
+    registered for PROTOCOL (`protocol_history.workflow_registered` over
+    their types) — whatever leaves the first measurement untold. Not the
+    workflow that binds the runs: `workflow` decides that, and it is
+    UNDECIDED while a first measurement is untold. The follow-up audit's
+    prompt alone reads this, and only in that state, to decide whose text
+    it shows a corrected field against (`audit_prompt._field_change`): an
+    undecided workflow holds the release and does not exchange the text of
+    the run audited for another one's. Raises RuntimeError when git
+    fails."""
+    firsts = [rd for group in measured.first_groups for rd in group]
+    seen, _ = protocol_history.first_texts(protocol, firsts, root)
+    return workflow_registered([type_of(text) for _, text in seen])
 
 
 def type_changes(

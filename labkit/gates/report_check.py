@@ -207,7 +207,7 @@ from labkit.gates.report_context import (
 )
 from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
 from labkit.gates.report_replacement import replacement_gaps
-from labkit.gates.report_exploration import use_after_audit_findings
+from labkit.gates.report_exploration import link_gaps, use_after_audit_findings
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
@@ -852,7 +852,9 @@ def analysis_findings(
     rendered result out (before an adoption, which writes it). Where an
     audit covers, a confirmation that names its exploration is warned of
     every run of that exploration's area sharing an input digest that the
-    audit was not shown (`report_exploration.use_after_audit_findings`).
+    audit was not shown (`report_exploration.use_after_audit_findings`);
+    a link that names no one protocol is the registration station's
+    blocker and is not told here (`chain_gaps`, station 2).
     """
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
@@ -952,7 +954,11 @@ def chain_gaps(
        declared replacement's changes; the report duties the state drops
        (`report_binding_gaps`: a head without the report it owes, a
        measured protocol gone from the area), and before them a history
-       git could not list.
+       git could not list; a link to an exploration (`[explored_in]`)
+       whose id names no one protocol of the repo
+       (`report_exploration.link_gaps`) — a blocker with or without an
+       answering run, so the adoption's check of its proposal holds it
+       before the result is declared.
     3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it,
@@ -1008,6 +1014,9 @@ def chain_gaps(
         out += registration_gaps(ctx)
     out += replacement_gaps(ctx)
     out += report_binding_gaps(ctx)
+    # every lane, with or without an answering run: a link to an
+    # exploration that names no one protocol
+    out += link_gaps(ctx)
     # 3. finalize — always; where it read this text, what this chain's own
     # stations hold is not told again as finalize's: the `[result]` table
     # that does not read (station 1) and the unreportable marks (station 4)
