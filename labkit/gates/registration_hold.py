@@ -152,10 +152,14 @@ def registration_rule(was: dict, now: dict) -> RuleAssignment:
 
 
 def untold_first_holds(
-    pid: str, area: Path, protocol: Path, measured: Measured
+    pid: str, area: Path, protocol: Path, measured: Measured, *, history_unread: str
 ) -> list[GateFinding]:
     """What leaves untold which run of PID measured first, the first that
-    applies: a run whose protocol the start record, the run index and its
+    applies: a history git could not list (HISTORY_UNREAD,
+    `AreaState.history_unread`; `unread_history_hold`) — first, since the
+    three below were then decided without the runs and start files a
+    commit holds —, else
+    a run whose protocol the start record, the run index and its
     record name differently, PID among them (`binding_conflict_hold`), else
     a run of PID whose mark says a start file was written and for which
     none is found (`missing_start_hold`), else a run of PID that left no
@@ -165,7 +169,8 @@ def untold_first_holds(
     decides the workflow. [] when none applies."""
     out = handover(protocol)
     return (
-        binding_conflict_hold(pid, area, measured.conflicts, out)
+        unread_history_hold(area, history_unread, out, told_by="finalize")
+        or binding_conflict_hold(pid, area, measured.conflicts, out)
         or missing_start_hold(pid, area, measured.missing_starts, out)
         or lost_record_hold(pid, area, without_record_of(measured), out)
     )
@@ -209,7 +214,9 @@ def registration_changes(
         return []
     root = git_root(protocol)
     measured = state.measured_of(pid)
-    untold = untold_first_holds(pid, area, protocol, measured)
+    untold = untold_first_holds(
+        pid, area, protocol, measured, history_unread=state.history_unread
+    )
     if untold:
         # ends here: neither comparison below runs against a later run
         return untold
@@ -283,7 +290,13 @@ class WorkflowRead:
 
 
 def workflow(
-    area: Path, protocol: Path, pid: str, root: Path | None, measured: Measured
+    area: Path,
+    protocol: Path,
+    pid: str,
+    root: Path | None,
+    measured: Measured,
+    *,
+    history_unread: str,
 ) -> WorkflowRead:
     """Which workflow binds the runs of PROTOCOL (stamped id PID) in AREA
     — the one reading: finalize's station 2
@@ -293,13 +306,16 @@ def workflow(
     texts (`protocol_history.first_texts`) — the head as it stands names
     no workflow, so relabelling lifts no lock and makes no confirmation —,
     and `protocol_history.workflow_registered` decides: UNDECIDED while
-    something leaves the first measurement untold (`untold_first_holds`;
+    something leaves the first measurement untold (`untold_first_holds`,
+    with HISTORY_UNREAD, `AreaState.history_unread`, the first of them;
     the texts are then not read), for an undecided type, for first
     measurements that registered different types, and where no first
     measurement's text reads (outside a repository, ROOT None, none does).
     No answering run is needed: the workflow is the first measurements'.
     Raises RuntimeError when git fails."""
-    untold = untold_first_holds(pid, area, protocol, measured)
+    untold = untold_first_holds(
+        pid, area, protocol, measured, history_unread=history_unread
+    )
     if untold:
         return WorkflowRead(workflow_registered((), first_untold=True), untold, [])
     firsts = [rd for group in measured.first_groups for rd in group]
@@ -886,6 +902,50 @@ def without_record_of(measured: Measured) -> WithoutRecord:
     return measurements_without_record(measured, lost_in_the_tree_too(measured))
 
 
+#: the name the hold on a history git could not list is known by
+#: (`GateFinding.known_as`): report-check tells it at its own station and
+#: leaves finalize's out by this name (`report_check.without_unread_history`)
+UNREAD_HISTORY = "unread history"
+
+
+def unread_history_hold(
+    area: Path, history_unread: str, handover_way: str, *, told_by: str
+) -> list[GateFinding]:
+    """The BLOCKER when git could not list what a commit holds under AREA
+    (HISTORY_UNREAD, `AreaState.history_unread`: git's words, "" when it
+    could): the runs and start files a commit holds and the file state
+    lacks were not read back. The check for a start file that is found
+    nowhere did not run then (`missing_start_hold` has nothing to hold
+    on), and a run a commit holds reads as never measured, or as deleted
+    before a commit — a check not executable, and the release is held:
+    silence would read as "no start file is missing". The condition is
+    the repository's, not one protocol's, and no new registration lifts
+    it. Told at two stations: finalize's registration station, which runs
+    only with an answering run and a stamped id (`untold_first_holds`),
+    and report-check's report duty, which runs always
+    (`report_check.report_binding_gaps`). The ways out: the repository's
+    objects restored (`evidence.UNREAD_WAY`), then the check that told it
+    again on AREA (TOLD_BY, the tool's name: `finalize` or
+    `report-check`); where they cannot be restored, the handover
+    (HANDOVER_WAY). Known as UNREAD_HISTORY. [] when the history was
+    listed. Pure."""
+    if not history_unread:
+        return []
+    return [
+        blocker(
+            f"{history_unread} — the runs and start files a commit holds were "
+            f"not read back, so whether a start file is missing was not checked "
+            f"and which run measured first is not told; no number of this area "
+            f"is released over it",
+            fix=f"{evidence.UNREAD_WAY} (`{gate_command(told_by, area)}`); "
+            f"where they cannot be restored, {handover_way}",
+            stated_outcome=NOT_EXECUTABLE,
+            rule=TECHNICAL_RULE,
+            known_as=UNREAD_HISTORY,
+        )
+    ]
+
+
 def binding_conflict_hold(
     pid: str, area: Path, conflicts: Sequence[str], handover_way: str
 ) -> list[GateFinding]:
@@ -1016,26 +1076,37 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
       (`area_state.unassigned_record_warning`, the one sentence).
 
     [] when WITHOUT has neither. Pure."""
-    found: list[GateFinding] = []
-    if without.later:
-        found.append(
-            GateFinding(
-                WARNING,
-                f"{'; '.join(without.later)} — the start files put "
-                f"{'its start' if len(without.later) == 1 else 'each start'} "
-                f"after that of a measurement of this protocol "
-                f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "
-                f"so the comparison with the first measurement runs without it; a "
-                f"result that needs its rows is held where that result is checked",
-                rule=TECHNICAL_RULE,
-                fix=RECORD_BACK,
-                evidence_kind=GUARANTEED,
-            )
-        )
-    unassigned = unassigned_record_warning(without.unassigned)
-    if unassigned is not None:
-        found.append(unassigned)
-    return found
+    warnings = (
+        later_record_warning(without),
+        unassigned_record_warning(without.unassigned),
+    )
+    return [w for w in warnings if w is not None]
+
+
+def later_record_warning(without: WithoutRecord) -> GateFinding | None:
+    """The WARNING about the runs of the protocol without a record that the
+    start files put after a measurement of it that reads (WITHOUT's
+    `later`), None without one — the one sentence the registration station
+    (`lost_record_warnings`) and report-check's report duty
+    (`registered_report.later_record_note`) print for them. The start time
+    answers one question only: could the first measurement be missing
+    here? It could not, so what the first measurement registered is read
+    without the run. It does not make the loss harmless: a result that
+    needs the run's own rows is held by that result's check. Pure."""
+    if not without.later:
+        return None
+    return GateFinding(
+        WARNING,
+        f"{'; '.join(without.later)} — the start files put "
+        f"{'its start' if len(without.later) == 1 else 'each start'} "
+        f"after that of a measurement of this protocol "
+        f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "
+        f"so the comparison with the first measurement runs without it; a "
+        f"result that needs its rows is held where that result is checked",
+        rule=TECHNICAL_RULE,
+        fix=RECORD_BACK,
+        evidence_kind=GUARANTEED,
+    )
 
 
 def anew_way(pid: str) -> str:

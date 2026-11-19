@@ -939,7 +939,14 @@ def _field_change(
     state = state_of(protocol.parent)
     measured = state.measured_of(pid)
     root = git_root(protocol)
-    flow = workflow(protocol.parent, protocol, pid, root, measured).workflow
+    flow = workflow(
+        protocol.parent,
+        protocol,
+        pid,
+        root,
+        measured,
+        history_unread=state.history_unread,
+    ).workflow
     compared = run_compared_with(flow, run)
     if compared is not None:
         own, why = as_measured(

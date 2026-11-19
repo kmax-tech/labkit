@@ -42,7 +42,7 @@ from labkit.formats import findings, promises, protocol_block, protocol_check, r
 from labkit.formats import audit_gaps
 from labkit.formats.exploration_link import NotLinked, linked_exploration
 from labkit.formats import failed_attempts
-from labkit.formats.answering_run import REPEAT_SEED_KEY, is_measurement
+from labkit.formats.answering_run import REPEAT_SEED_KEY
 from labkit.formats.gate import BLOCKER, with_rule, with_way_out
 from labkit.formats.standard_contract import (
     PREFLIGHT_AUDIT,
@@ -155,7 +155,7 @@ def _committed_registration(
     retains its separate freeze checks. Later measurements use the first
     one's binding: once the area measured the protocol — a measurement of
     it whose record reads, or a run without a record that its start file
-    or the run index binds to it (`area_state.measurements_without_record`)
+    or the run index binds to it (`Measured.has_measured`)
     — no run is held
     to HEAD as the first, and HEAD is not named as what binds; where the
     earlier run may have been the first, `earlier_measurement_note` says so
@@ -172,11 +172,7 @@ def _committed_registration(
     root = repo.git_root(base_dir)
     if root is None or head is None or head.id is None or not isinstance(rel, str):
         return []
-    measured = state.measured_of(head.id)
-    # STATE is the working tree's, so its lost runs are lost in the tree
-    without = measurements_without_record(measured, measured.lost)
-    reads = any(rd.config is not None and is_measurement(rd) for rd in measured.runs)
-    if reads or without.of_protocol:
+    if state.measured_of(head.id).has_measured:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")

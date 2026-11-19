@@ -80,7 +80,20 @@ class UnreadFirstMeasurement(ChangedQuestion):
     def test_a_missing_tree_blocks_and_restored_holds_again(self):
         tree = git(self.lab.root, "rev-parse", f"{self.commit_of_a()}^{{tree}}")
         where = self.remove_object(tree)
-        self.assert_unread_blocks(self.finalized(), "read-tree")
+        # without that tree git cannot list what the commits hold under the
+        # area either: that hold comes first, and no comparison runs
+        # (`registration_hold.unread_history_hold`)
+        out = self.finalized()
+        (line,) = [
+            ln
+            for ln in out.splitlines()
+            if "cannot be listed" in ln and "BLOCKER (" in ln
+        ]
+        self.assertIn("unable to read tree", line)
+        self.assertIn("whether a start file is missing was not checked", line)
+        self.assertIn("git fetch", line)
+        self.assertNotIn(UNREAD, out)
+        self.assertNotIn("are the ones the first measurement registered", out)
         shutil.move(str(self.kept / tree), str(where))
         out = self.finalized()
         self.assertIn(self.HELD, out)

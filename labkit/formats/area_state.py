@@ -47,6 +47,7 @@ from labkit.formats.answering_run import (
     facts_of,
     first_measurement_groups,
     is_measurement,
+    is_unrepeated_measurement,
 )
 from labkit.formats.repo import (
     rel_posix,
@@ -295,10 +296,14 @@ class AreaState:
             back from git (`committed_runs`; `RunDir.from_commit` the
             commit a checkout restores each from), oldest first by name;
             () when git could not list them (HISTORY_UNREAD).
-        history_unread: Git's words when the runs a commit holds could not
-            be listed (`committed_runs`: an object the repository lacks, a
-            tree it cannot read), "" when they could — a damaged repository
-            is told, never read as "no run was deleted"; the stations that
+        history_unread: Git's words when the runs, the start files or
+            the start marks a commit holds could not be listed
+            (`last_committed`: an object the repository lacks, a tree it
+            cannot read), "" when they could — a damaged repository is
+            told, never read as "no run was deleted": DELETED and
+            MISSING_STARTS are then incomplete, and finalize's registration
+            station and report-check hold on it
+            (`registration_hold.unread_history_hold`); the stations that
             read a commit name the damaged object themselves
             (`protocol_history.committed_at`).
         lost: Run id → protocol id of the runs only the local run index
@@ -381,18 +386,18 @@ class AreaState:
         if pid is not None and pid in self.measured:
             return self.measured[pid]
         return _measured(
-            self.area,
-            pid or "",
-            [*self.runs, *self.deleted],
-            (),
-            self.repo,
-            self.run_facts,
-            self.indexed,
-            self.starts,
-            (),
-            self.conflicts,
-            self.unassigned_starts,
-            self.missing_starts,
+            area=self.area,
+            pid=pid or "",
+            records=[*self.runs, *self.deleted],
+            lost=(),
+            repo=self.repo,
+            facts=self.run_facts,
+            indexed=self.indexed,
+            starts=self.starts,
+            started_only=(),
+            conflicts=self.conflicts,
+            unassigned_starts=self.unassigned_starts,
+            missing_starts=self.missing_starts,
         )
 
 
@@ -400,6 +405,7 @@ def assemble(
     area: Path,
     repo: Path | None,
     file_state: FileState,
+    *,
     runs: Sequence[RunDir],
     deleted: Sequence[RunDir],
     lost: Mapping[str, str],
@@ -423,8 +429,10 @@ def assemble(
     commit with that commit, and STARTED_ONLY the runs only they name with their
     protocol ids —, every derived field computed here once:
     the one assembly for `state_of` and for a test that builds a state
-    without files. Pure but for git's ancestry questions in the first
-    measurements' order (REPO None: none asked)."""
+    without files. Everything after FILE_STATE is passed by name: several
+    of them share a type, and a swapped pair would type-check. Pure but
+    for git's ancestry questions in the first measurements' order (REPO
+    None: none asked)."""
     records = sorted([*runs, *deleted], key=lambda rd: rd.dir.name)
     facts = tuple(
         f for rd in sorted(runs, key=lambda rd: rd.dir.name) if (f := facts_of(rd))
@@ -456,26 +464,26 @@ def assemble(
     )
     measured = {
         pid: _measured(
-            area,
-            pid,
-            records,
-            tuple(
+            area=area,
+            pid=pid,
+            records=records,
+            lost=tuple(
                 r
                 for r, p in lost.items()
                 if p == pid and _started_as(r, starts) in (None, MEASUREMENT)
             ),
-            repo,
-            facts,
-            indexed,
-            starts,
-            tuple(
+            repo=repo,
+            facts=facts,
+            indexed=indexed,
+            starts=starts,
+            started_only=tuple(
                 r
                 for r, p in started_only.items()
                 if p == pid and _started_as(r, starts) == MEASUREMENT
             ),
-            conflicts,
-            unassigned_starts,
-            tuple(missing_starts),
+            conflicts=conflicts,
+            unassigned_starts=unassigned_starts,
+            missing_starts=tuple(missing_starts),
         )
         for pid in pids
     }
@@ -570,6 +578,7 @@ def _started_as(run: str, starts: Mapping[str, RunStart]) -> RunKind | None:
 
 
 def _measured(
+    *,
     area: Path,
     pid: str,
     records: Sequence[RunDir],
@@ -580,8 +589,8 @@ def _measured(
     starts: Mapping[str, RunStart],
     started_only: tuple[str, ...],
     conflicts: Mapping[str, tuple[tuple[str, str], ...]],
-    unassigned_starts: tuple[str, ...] = (),
-    missing_starts: tuple[str, ...] = (),
+    unassigned_starts: tuple[str, ...],
+    missing_starts: tuple[str, ...],
 ) -> Measured:
     """`Measured` of PID over RECORDS (present and deleted runs together):
     the runs bound to PID — by their record, or, where it does not read, by
@@ -608,20 +617,20 @@ def _measured(
     )
     of_pid = [*(rd.dir.name for rd in ours), *lost, *started_only]
     return Measured(
-        area,
-        pid,
-        ours,
-        lost,
-        tuple(tuple(g) for g in groups),
-        facts,
-        unassigned,
-        started_only,
-        {
+        area=area,
+        pid=pid,
+        runs=ours,
+        lost=lost,
+        first_groups=tuple(tuple(g) for g in groups),
+        run_facts=facts,
+        unassigned=unassigned,
+        started_only=started_only,
+        started={
             run: at
             for run in of_pid
             if run in starts and (at := starts[run].started) is not None
         },
-        tuple(
+        conflicts=tuple(
             f"run {run}: "
             + ", ".join(
                 f"{source} names {named or 'no protocol'}" for source, named in sources
@@ -629,15 +638,19 @@ def _measured(
             for run, sources in conflicts.items()
             if pid in {named for _, named in sources}
         ),
-        {
+        started_as={
             run: kind
             for run in of_pid
             if run in starts and (kind := starts[run].run_kind) is not None
         },
-        tuple(run for run in of_pid if run in starts and starts[run].unread),
-        unassigned_starts,
-        tuple(run for run in missing_starts if run in of_pid),
-        tuple(run for run in missing_starts if run in unassigned),
+        unread_starts=tuple(
+            run for run in of_pid if run in starts and starts[run].unread
+        ),
+        unassigned_starts=unassigned_starts,
+        missing_starts=tuple(run for run in missing_starts if run in of_pid),
+        unassigned_missing_starts=tuple(
+            run for run in missing_starts if run in unassigned
+        ),
     )
 
 
@@ -646,9 +659,11 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
     the working tree (TREE, PROPOSED) or of git's index (INDEX), the runs a
     commit holds and that state lacks, the index-only ones, the ones only
     a start file names. Raises `run_index.RunIndexError` on a run index
-    that does not read and `run_starts.RunStartsError` on a start file
-    that does not — whether a deleted run was measured or started cannot
-    be told then —, GitError or RuntimeError when git fails."""
+    that does not read — whether a deleted run was measured cannot be
+    told then —, GitError or RuntimeError when git fails. A start file
+    that does not read raises nothing: it is its run's incomplete start
+    (`run_starts.start_of`, `RunStart.unread`). A history git cannot list
+    raises nothing either: its words are the state's `history_unread`."""
     repo = git_root(area)
     staged = staged_of(file_state)
     runs = present_run_dirs(area, repo=repo, file_state=file_state)
@@ -690,18 +705,18 @@ def state_of(area: Path, *, file_state: FileState = TREE) -> AreaState:
         area,
         repo,
         file_state,
-        runs,
-        deleted,
-        lost,
-        unread,
-        protocols,
-        texts,
-        pending,
-        indexed,
-        starts,
-        started_only,
-        deleted_starts,
-        missing_starts,
+        runs=runs,
+        deleted=deleted,
+        lost=lost,
+        history_unread=unread,
+        protocols=protocols,
+        protocol_texts=texts,
+        adoption_pending=pending,
+        indexed=indexed,
+        starts=starts,
+        started_only=started_only,
+        deleted_starts=deleted_starts,
+        missing_starts=missing_starts,
     )
 
 
@@ -715,7 +730,8 @@ def _starts_of(
     marked runs for which no start file is found; and UNREAD, the words
     for a history that could not be listed so far, with what is added
     here. With a history that does not read, "found nowhere" is not told:
-    the missing starts stay empty."""
+    the missing starts stay empty, and the release is held on the words
+    returned (`registration_hold.unread_history_hold`)."""
     if staged and repo is not None:
         starts = indexed_starts(repo, area)
     else:
@@ -1030,13 +1046,7 @@ def measurements_without_record(
     the registration station (`registration_hold.lost_record_hold`,
     `lost_record_warnings`). Why, and what was rejected for the order:
     docs/notes/2026-11-18-lost-first-measurement.md."""
-    reads = [
-        rd.dir.name
-        for rd in measured.runs
-        if rd.config is not None
-        and rd.config.run_kind == MEASUREMENT
-        and rd.config.repeat_of is None
-    ]
+    reads = [rd.dir.name for rd in measured.runs if is_unrepeated_measurement(rd)]
     started = measured.started
     gone = [
         (

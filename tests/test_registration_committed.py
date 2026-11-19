@@ -23,6 +23,7 @@ import tempfile
 import time
 import unittest
 from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -31,6 +32,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
+from labkit.gates import registration_station
 from labkit.tools import next_command, report_command
 from labkit.formats import (
     area_state,
@@ -629,6 +631,228 @@ ALL_ROADS = (
     "- **Unit:** a fraction of the buffer's area\n"
 )
 REFERENCE = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
+
+
+class AHistoryGitCannotList(_Repository):
+    """A repository that lacks an object of its history: git cannot list the
+    runs and start files a commit holds, so the check for a missing start
+    file did not run and a deleted measurement is not read back. finalize's
+    registration station and report-check's report duty hold on git's own
+    words, and report-check's chain tells the cause once. Replayed on a real
+    repository with a tree object removed; the twin is the same repository
+    before the damage."""
+
+    OLDER = "2026-10-07T09-00-00_0001"
+
+    def _deleted_run_beside_an_answering_one(self) -> None:
+        """Two measurements committed, the older one deleted by a commit."""
+        sha = self._commit(REGISTRATION)
+        older = self._run(sha, self.OLDER)
+        self._run(sha)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the runs")
+        _git(self.root, "rm", "-rq", str(older))
+        _git(self.root, "commit", "-qm", "deleted the older run")
+
+    def _damage(self) -> None:
+        """Remove the tree of the commit before the deletion: listing what
+        the deleting commit removed needs it."""
+        tree = _git(self.root, "rev-parse", "HEAD~1^{tree}")
+        obj = self.root / ".git" / "objects" / tree[:2] / tree[2:]
+        self.assertTrue(obj.is_file(), obj)
+        obj.unlink()
+
+    def _held(self) -> tuple[list[gate.GateFinding], ...]:
+        """(finalize's station 2, report-check's duty station, the chain's
+        blockers) for the area as it is."""
+        ctx = report_context.checked(self.area, self.proto)
+        assert ctx.run is not None, ctx.why
+        _, station = registration_station.station_changes(
+            ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
+        )
+        duty = report_check.report_binding_gaps(ctx)
+        chain = report_check.chain_gaps(ctx, undeclared=True, review=False).blockers
+        return station, duty, chain
+
+    def test_finalize_and_report_check_hold_on_gits_words(self):
+        self._deleted_run_beside_an_answering_one()
+        self._damage()
+        station, duty, chain = self._held()
+        for name, found in (("finalize's station", station), ("the duty", duty)):
+            with self.subTest(name):
+                (hold,) = found
+                self.assertEqual(
+                    (hold.grade, hold.rule, hold.outcome, hold.evidence_kind),
+                    (
+                        BLOCKER,
+                        gate.TECHNICAL_RULE,
+                        gate.NOT_EXECUTABLE,
+                        gate.GUARANTEED,
+                    ),
+                )
+                self.assertIn("cannot be listed", hold.text)
+                self.assertIn("unable to read tree", hold.text)
+                self.assertIn(
+                    "whether a start file is missing was not checked", hold.text
+                )
+                self.assertIn("git fsck", hold.fix or "")
+        # one cause, one blocker: the chain's own station tells it, finalize's
+        # is left out
+        (told,) = [f for f in chain if f.known_as == registration_hold.UNREAD_HISTORY]
+        self.assertFalse(told.text.startswith(report_check.FINALIZE), told.text)
+
+    def test_the_twin_a_history_git_lists_is_not_held(self):
+        self._deleted_run_beside_an_answering_one()
+        station, duty, chain = self._held()
+        for found in (station, duty, chain):
+            self.assertEqual(
+                [f for f in found if f.known_as == registration_hold.UNREAD_HISTORY],
+                [],
+            )
+        self.assertEqual(duty, [])
+        # the deleted run is read back from its commit, and no hold says
+        # the first measurement is untold
+        self.assertFalse(any("cannot be listed" in f.text for f in station), station)
+
+
+class ARunLostBesideAFirstMeasurement(_Repository):
+    """Whether a run without a record may have been the first measurement
+    is decided once (`area_state.measurements_without_record`), and
+    finalize's registration station and report-check's report duty read
+    that one sort. A run the start files put after a measurement that
+    reads warns at both and holds at neither; one that may have been the
+    first, or whose order is unknown, holds at both. The start time lifts
+    nothing else: a result that needs the lost run is still held by its
+    own check. Replayed on a real repository: a first measurement that
+    registered no report, and a run only the run index lists."""
+
+    LOST = "2026-10-08T10-00-00_105e"
+    NOON = datetime(2026, 10, 7, 12, 0, 0, tzinfo=timezone.utc)
+
+    def _lost_beside_a_first(self, lost_after: int | None, result: str = "") -> None:
+        """The protocol registering no report, committed; RUN measured at
+        that commit, its start file saying NOON; LOST only in the run
+        index, its start file LOST_AFTER seconds from NOON (None: no start
+        file for it). RESULT: the run the head adopts, "" for none."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=None, result=result or None) + REGISTRATION,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        row = run_index.index_row(self.LOST, "g", "s", {}, {}, {}, "", PID)
+        (self.area / run_index.RUN_INDEX).write_text(
+            "\t".join(run_index.RUN_INDEX_COLS) + "\n" + "\t".join(row) + "\n",
+            encoding="utf-8",
+        )
+        starts = {RUN: 0} | ({} if lost_after is None else {self.LOST: lost_after})
+        for run, after in starts.items():
+            run_starts.write_start(
+                self.area,
+                run_starts.RunStart(
+                    run, PID, self.NOON + timedelta(seconds=after), "measurement"
+                ),
+            )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the run and the start files")
+
+    def _told(self) -> tuple[list[gate.GateFinding], Findings]:
+        """(report-check's duty station, what finalize's registration
+        station tells) for the area as it is."""
+        ctx = report_context.checked(self.area, self.proto)
+        assert ctx.run is not None, ctx.why
+        station = Findings(tell=None)
+        registration_station.check_registration(
+            station,
+            ctx.area,
+            ctx.protocol,
+            ctx.head.id,
+            ctx.run,
+            ctx.area_state,
+            ctx.evidence,
+        )
+        return report_check.report_binding_gaps(ctx), station
+
+    def test_a_later_loss_warns_at_report_check_and_at_finalize_alike(self):
+        self._lost_beside_a_first(1)
+        text = self.proto.read_text(encoding="utf-8")
+        self.assertIsNone(
+            registered_report.report_duty(_measured(self.proto, text), self.root)
+        )
+        duty, station = self._told()
+        (warning,) = duty
+        self.assertEqual(warning.grade, gate.WARNING)
+        self.assertIn(f"run {self.LOST} is gone", warning.text)
+        self.assertIn("taken as started later", warning.text)
+        # finalize's station tells the same sentence, and holds nothing
+        self.assertIn(warning.message, station.warned)
+        self.assertEqual(station.blocked, [])
+
+    def test_a_loss_that_started_before_the_first_holds_at_both(self):
+        self._lost_beside_a_first(-1)
+        self._assert_held_at_both("may have been the first measurement")
+
+    def test_a_loss_whose_order_is_unknown_holds_at_both(self):
+        self._lost_beside_a_first(None)
+        self._assert_held_at_both(
+            f"is unknown — no start file holds a start for {self.LOST}"
+        )
+
+    def _assert_held_at_both(self, said: str) -> None:
+        duty, station = self._told()
+        (hold,) = duty
+        self.assertEqual(
+            (hold.grade, hold.outcome), (BLOCKER, gate.NOT_EXECUTABLE), hold.text
+        )
+        self.assertIn("whether it owes a report cannot be told", hold.text)
+        (held,) = station.blocked
+        for text in (hold.text, held):
+            self.assertIn(f"run {self.LOST} is gone", text)
+            self.assertIn(said, text)
+            self.assertIn("may have been the first measurement", text)
+
+    def test_a_later_lost_run_the_head_adopts_still_blocks(self):
+        """The start time says the lost run was not the first measurement;
+        it does not answer for a result that is that run."""
+        self._lost_beside_a_first(1, result=self.LOST)
+        collected = Findings(tell=None)
+        code = finalize.finalize_area(self.area, self.proto, collected)
+        self.assertEqual(code, 1, collected.blocked)
+        self.assertTrue(
+            any(
+                f"[result] names {self.LOST}, which cannot answer" in b
+                for b in collected.blocked
+            ),
+            collected.blocked,
+        )
+        self.assertFalse(
+            any("may have been the first" in b for b in collected.blocked),
+            collected.blocked,
+        )
+
+    def test_a_later_lost_run_the_answering_run_derives_from_still_blocks(self):
+        """A required predecessor: the answering run names the lost run as
+        the run it derives from, so its rows cannot be held to a run."""
+        self._lost_beside_a_first(1)
+        cfg = self.area / "runs" / RUN / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["derived_from"] = self.LOST
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        collected = Findings(tell=None)
+        code = finalize.finalize_area(self.area, self.proto, collected)
+        self.assertEqual(code, 1, collected.blocked)
+        self.assertTrue(
+            any(
+                f"the lineage of {RUN} is broken" in b and self.LOST in b
+                for b in collected.blocked
+            ),
+            collected.blocked,
+        )
+        self.assertFalse(
+            any("may have been the first" in b for b in collected.blocked),
+            collected.blocked,
+        )
 
 
 class ScopeAsFirstMeasured(_Repository):
@@ -1336,7 +1560,8 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self.assertEqual(
             (gap.rule, gap.outcome), (gate.TECHNICAL_RULE, gate.NOT_EXECUTABLE)
         )
-        self.assertIn(f"a measurement of it is lost ({RUN}", gap.text)
+        self.assertIn(f"run {RUN} is gone (the run index lists it", gap.text)
+        self.assertIn("it may have been the first measurement", gap.text)
 
     def test_a_first_measurement_off_heads_history_is_read_at_its_own_commit(self):
         """The run started on a line HEAD does not contain; its commit is in

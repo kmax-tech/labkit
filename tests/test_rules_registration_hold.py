@@ -20,6 +20,7 @@ from unittest import mock
 import pytest
 
 from check_guards import pure_call
+from labkit.checks.audit_binding import check_audited_runs_kept
 from labkit.formats import findings
 from labkit.formats.commands import AUDIT, MEASURE, RESTORE, WITHDRAW, Command
 from labkit.formats.followup import (
@@ -30,6 +31,7 @@ from labkit.formats.followup import (
 )
 from labkit.formats.gate import (
     BLOCKER,
+    GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
@@ -958,6 +960,31 @@ class ARunWithoutItsRecord(unittest.TestCase):
         self.assertIn("which labkit does not check", warning.text)
         self.assertIn("a copy that holds it", warning.fix or "")
 
+    def test_a_later_lost_run_a_result_needs_is_held_by_that_results_check(self):
+        """The start time answers only whether the first measurement may be
+        missing. A lost run that started later is no hold on the
+        registration — and stays one wherever a result needs the run
+        itself — here an analysis record that names it as the run it read
+        (adopted as the result, or as the run another derives from:
+        tests/test_registration_committed.py, `ARunLostBesideAFirstMeasurement`)."""
+        started = {self.FIRST.dir.name: self.NOON, self.GONE: self.AFTER}
+        measured = Measured(
+            AREA, PID, (self.FIRST,), (self.GONE,), (), (), started=started
+        )
+        without = pure_call(measurements_without_record, measured, (self.GONE,))
+        self.assertEqual((without.held, len(without.later)), ((), 1))
+        self.assertEqual(self.held(without), [])
+        record = audit_record(
+            "2026-11-10T10-00-analysis.toml", mode=ANALYSIS_AUDIT, run_id=self.GONE
+        )
+        (kept,) = pure_call(
+            check_audited_runs_kept,
+            area_state(protocols=[PROTOCOL], runs=[self.FIRST]),
+            evidence=area_evidence(records=[record]),
+        )
+        self.assertEqual(kept.grade, BLOCKER)
+        self.assertIn(f"names {self.GONE} as the run it read", kept.text)
+
     def test_a_repeat_or_a_probe_that_reads_orders_nothing(self):
         """Only a measurement that registers — no repeat, no probe — tells
         what stood registered before a later run."""
@@ -1145,6 +1172,56 @@ class AStartFileThatIsNowhere(unittest.TestCase):
         assert warning is not None
         self.assertIn("`finalize` holds every number of this protocol", warning.text)
         self.assertIn("never written anew from memory", warning.fix or "")
+
+
+class AHistoryGitCannotList(unittest.TestCase):
+    """`unread_history_hold`: git could not list what a commit holds under
+    the area, so the runs and start files a commit holds were not read back
+    and the check for a missing start file did not run — a BLOCKER of a
+    check not executable, guaranteed: git said so. The twin, a history that
+    was listed, holds nothing."""
+
+    WORDS = (
+        "what git holds under area/runs/ cannot be listed: fatal: bad object "
+        "0123abcd (`git fsck` names the damaged object)"
+    )
+
+    def test_an_unlisted_history_blocks_with_its_ways_out(self):
+        (hold,) = pure_call(
+            registration_hold.unread_history_hold,
+            AREA,
+            self.WORDS,
+            HANDOVER_WAY,
+            told_by="finalize",
+        )
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome, hold.evidence_kind),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE, GUARANTEED),
+        )
+        self.assertEqual(hold.known_as, registration_hold.UNREAD_HISTORY)
+        self.assertIn(self.WORDS, hold.text)
+        self.assertIn("whether a start file is missing was not checked", hold.text)
+        self.assertIn("which run measured first is not told", hold.text)
+        for way in (
+            "restore the repository's missing objects",
+            "then run the check again (`finalize area`)",
+            HANDOVER_WAY,
+        ):
+            self.assertIn(way, hold.fix or "")
+        # the condition is the repository's: a new registration lifts nothing
+        self.assertNotIn("register anew", hold.fix or "")
+
+    def test_the_twin_a_history_that_was_listed_holds_nothing(self):
+        self.assertEqual(
+            pure_call(
+                registration_hold.unread_history_hold,
+                AREA,
+                "",
+                HANDOVER_WAY,
+                told_by="finalize",
+            ),
+            [],
+        )
 
 
 class ABindingTheFilesContradict(unittest.TestCase):

@@ -47,7 +47,7 @@ def station_changes(
     0. no stamped id — UNDECIDED, nothing held here;
     1. something leaves the first measurement untold — UNDECIDED, and
        that hold is the one finding: the type that decides the workflow
-       is that run's;
+       is that run's; a history git could not list is the first of them;
     2. the holds on a type changed since the first measurement
        (`type_changes`), in every workflow;
     3. EXPLORATORY — `exploration_hold.exploration_changes`; CONFIRMATORY
@@ -59,7 +59,9 @@ def station_changes(
         return Workflow.UNDECIDED, []
     root = git_root(protocol)
     measured = state.measured_of(pid)
-    read = workflow(area, protocol, pid, root, measured)
+    read = workflow(
+        area, protocol, pid, root, measured, history_unread=state.history_unread
+    )
     if read.untold:  # 1
         return read.workflow, read.untold
     typed = type_changes(protocol, pid, run, root, read.seen, state)  # 2

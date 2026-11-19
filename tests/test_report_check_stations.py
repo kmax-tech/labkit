@@ -26,9 +26,10 @@ from labkit.formats.gate import (
     cited_rule,
 )
 from labkit.gates import finalize, report_check
+from labkit.gates.registration_hold import UNREAD_HISTORY, unread_history_hold
 from labkit.gates.report_context import Checked
 from protocol_fixture import head
-from state_fixture import AREA, checked
+from state_fixture import AREA, area_state, checked
 
 TEXT = head(repeat_cost="low")
 
@@ -240,6 +241,40 @@ class FinalizeFindingsTheChainHoldsItself(unittest.TestCase):
         told = as_finalize_tells(found, "the table in other words")
         reads = checked(TEXT, run=None)
         self.assertEqual(report_check.without_declaration_blocker(told, reads), told)
+
+
+class AHistoryGitCannotListHoldsTheReportDuty(unittest.TestCase):
+    """`report_binding_gaps`, `without_unread_history`: where git could not
+    list what a commit holds, the report duty's station holds — a
+    measurement a commit holds was not read back, so "no duty" is not told
+    —, and finalize's blocker for the same history is left out by its name.
+    The twin: a history that was listed adds nothing."""
+
+    WORDS = "what git holds under area/runs/ cannot be listed: fatal: bad object"
+
+    def test_the_station_holds_with_no_answering_run(self):
+        ctx = checked(TEXT, run=None, state=area_state(history_unread=self.WORDS))
+        (hold,) = report_check.report_binding_gaps(ctx)
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome, hold.known_as),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE, UNREAD_HISTORY),
+        )
+        self.assertIn(self.WORDS, hold.text)
+        self.assertIn("restore the repository's missing objects", hold.fix or "")
+        # the way out names the check that told it, not finalize
+        self.assertIn("then run the check again (`report-check area`)", hold.fix or "")
+
+    def test_the_twin_a_listed_history_holds_nothing(self):
+        self.assertEqual(report_check.report_binding_gaps(checked(TEXT, run=None)), [])
+
+    def test_finalizes_blocker_for_it_is_left_out_by_its_name(self):
+        own = unread_history_hold(AREA, self.WORDS, "hand over", told_by="finalize")
+        (told,) = as_finalize_tells(own, "the history in other words")
+        other = blocker(told.text, fix="`x`", rule=TECHNICAL_RULE)
+        warned = replace(told, grade=WARNING)
+        self.assertEqual(
+            report_check.without_unread_history([told, other, warned]), [other, warned]
+        )
 
 
 class AReportedNumberOwesTheFreeze(unittest.TestCase):

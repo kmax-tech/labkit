@@ -145,7 +145,7 @@ class TheWorkflowReadOfAProtocol(_TwoRuns):
     def read(self, measured: Measured) -> registration_hold.WorkflowRead:
         self.write("exploratory", "4 documents")
         return registration_hold.workflow(
-            self.area, self.protocol, PID, self.root, measured
+            self.area, self.protocol, PID, self.root, measured, history_unread=""
         )
 
     def test_a_contradicted_binding_leaves_the_workflow_undecided(self):

@@ -368,6 +368,20 @@ def is_measurement(rd: RunDir) -> bool:
     )
 
 
+def is_unrepeated_measurement(rd: RunDir) -> bool:
+    """Is the run RD a measurement whose record reads and that is no repeat
+    (`run_kind = "measurement"`, no `repeat_of`)? Only such a run can be a
+    first measurement. Not `is_measurement`, which counts a repeat and a record that
+    does not read. The one home of the condition: the first measurements
+    (`first_measurement_groups`) and the measurements a run without a
+    record is ordered against (`area_state.measurements_without_record`)."""
+    return (
+        rd.config is not None
+        and rd.config.run_kind == MEASUREMENT
+        and rd.config.repeat_of is None
+    )
+
+
 def bound_runs(
     facts: Sequence[RunFacts], pid: str
 ) -> tuple[list[RunFacts], list[RunFacts]]:
@@ -440,8 +454,7 @@ def first_measurement_groups(
         for rd in records
         if (cfg := rd.config) is not None
         and cfg.protocol.id == pid
-        and cfg.repeat_of is None
-        and cfg.run_kind == MEASUREMENT
+        and is_unrepeated_measurement(rd)
     ]
     if repo is None:
         return [[rd] for rd, _ in sorted(measured, key=lambda m: m[0].dir.name)]
