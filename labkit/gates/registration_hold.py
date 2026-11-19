@@ -1010,26 +1010,37 @@ def lost_record_warnings(without: WithoutRecord) -> list[GateFinding]:
       (`area_state.unassigned_record_warning`, the one sentence).
 
     [] when WITHOUT has neither. Pure."""
-    found: list[GateFinding] = []
-    if without.later:
-        found.append(
-            GateFinding(
-                WARNING,
-                f"{'; '.join(without.later)} — the start files put "
-                f"{'its start' if len(without.later) == 1 else 'each start'} "
-                f"after that of a measurement of this protocol "
-                f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "
-                f"so the comparison with the first measurement runs without it; a "
-                f"result that needs its rows is held where that result is checked",
-                rule=TECHNICAL_RULE,
-                fix=RECORD_BACK,
-                evidence_kind=GUARANTEED,
-            )
-        )
-    unassigned = unassigned_record_warning(without.unassigned)
-    if unassigned is not None:
-        found.append(unassigned)
-    return found
+    warnings = (
+        later_record_warning(without),
+        unassigned_record_warning(without.unassigned),
+    )
+    return [w for w in warnings if w is not None]
+
+
+def later_record_warning(without: WithoutRecord) -> GateFinding | None:
+    """The WARNING about the runs of the protocol without a record that the
+    start files put after a measurement of it that reads (WITHOUT's
+    `later`), None without one — the one sentence the registration station
+    (`lost_record_warnings`) and report-check's report duty
+    (`registered_report.later_record_note`) print for them. The start time
+    answers one question only: could the first measurement be missing
+    here? It could not, so what the first measurement registered is read
+    without the run. It does not make the loss harmless: a result that
+    needs the run's own rows is held by that result's check. Pure."""
+    if not without.later:
+        return None
+    return GateFinding(
+        WARNING,
+        f"{'; '.join(without.later)} — the start files put "
+        f"{'its start' if len(without.later) == 1 else 'each start'} "
+        f"after that of a measurement of this protocol "
+        f"that reads, and it is taken as started later, {CLOCKS_ASSUMED}; "
+        f"so the comparison with the first measurement runs without it; a "
+        f"result that needs its rows is held where that result is checked",
+        rule=TECHNICAL_RULE,
+        fix=RECORD_BACK,
+        evidence_kind=GUARANTEED,
+    )
 
 
 def anew_way(pid: str) -> str:

@@ -166,6 +166,7 @@ from labkit.gates.report_hold import (
 )
 from labkit.gates.registered_report import (
     formerly_registering,
+    later_record_note,
     missing_report,
     missing_start_note,
     orphaned_report_duties,
@@ -771,7 +772,10 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     (`registered_report.orphaned_report_duties`). Nothing outside a
     repository. With them, a WARNING for a record of the area whose
     protocol cannot be determined (`registered_report.unassigned_record_note`):
-    the duty was read without it; one for a start file that does not
+    the duty was read without it; one for a run without a record that
+    started after a measurement that reads
+    (`registered_report.later_record_note`): it was not the first
+    measurement, and the duty was read without it too; one for a start file that does not
     read (`registered_report.unread_start_note`), and one for a start file a
     run's mark names and nobody finds (`registered_report.missing_start_note`).
     Before them, the BLOCKER for a history git could not list
@@ -788,6 +792,7 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     )
     gap = report_binding_gap(ctx.protocol, ctx.text, measured=measured)
     warnings = [
+        later_record_note(measured),
         unassigned_record_note(measured),
         unread_start_note(measured),
         missing_start_note(measured),

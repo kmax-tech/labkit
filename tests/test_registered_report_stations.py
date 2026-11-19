@@ -62,7 +62,9 @@ class AReportBinding(unittest.TestCase):
             (gap.grade, gap.rule, gap.outcome),
             (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
         )
-        self.assertIn("a measurement of it is lost (2026-11-10T10-00-00_lost", gap.text)
+        self.assertIn("run 2026-11-10T10-00-00_lost is gone", gap.text)
+        self.assertIn("it may have been the first measurement", gap.text)
+        self.assertIn("a copy that holds it", gap.text)
         # the twins: a head that registers a report, here or elsewhere
         self.assertIsNone(self._gap(lost, self.text))
         self.assertIsNone(

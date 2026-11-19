@@ -27,14 +27,15 @@ from labkit.gates.report_hold import (
     through_gap,
 )
 from labkit.formats.area_state import (
+    RECORD_BACK,
     Measured,
-    lost_in_the_tree_too,
     missing_start_warning,
     unassigned_record_warning,
     unread_start_warning,
 )
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GateFinding, RuleAssignment, blocker
+from labkit.gates.registration_hold import later_record_warning, without_record_of
 from labkit.formats import (
     handovers,
     protocol_block,
@@ -437,12 +438,22 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
 
     Where no first measurement's registration reads — its commit not
     recorded, not held by the repository or not holding the protocol, or
-    the measurement lost — that is UNREAD, never "no duty". A lost
-    measurement, a run only a start file names, and a run whose record
-    does not read and which its start file or the run index binds to
-    this protocol (`area_state.assigned_to`; its commit is unknowable), are
-    UNREAD beside readable ones too: each may have been the first — but
-    for a run its start file lists as a probe or a preparation, which
+    the measurement lost — the duty is undetermined (`ReportDuty.unread`,
+    a blocker where it is checked), never "no duty". A run of this
+    protocol without a record leaves the duty undetermined only if it may
+    have been the first measurement, beside readable ones too. Such a run
+    is a lost measurement, a run only a start file names, or a run whose
+    record does not read and which its start file or the run index binds
+    to this protocol (`area_state.assigned_to`; its commit is unknowable).
+    Whether it may have been the first is the registration station's
+    sort, read here and decided nowhere else
+    (`registration_hold.without_record_of`,
+    `area_state.measurements_without_record`): it may where no measurement
+    that reads is known to precede it, and where the start files do not
+    tell the order; it may not where the start files put it after a
+    measurement that reads — that measurement's registration is the one
+    that binds, and `later_record_note` names the run where the duty is
+    checked. A run its start file lists as a probe or a preparation
     measured nothing (`Measured.may_have_measured`). A record
     that does not read and that neither file names is
     assigned to no protocol (`Measured.unassigned`): no duty is derived
@@ -465,30 +476,33 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             "",
             f"what it registered at its first measurement {run} cannot be read — {why}",
         )
-    unreadable = [
-        rd.dir.name
-        for rd in measured.runs
-        if rd.error is not None and measured.may_have_measured(rd)
-    ]
-    if unreadable:
+    # the runs without a record that hold, as the registration station
+    # sorts them: no measurement that reads is known to precede them, or
+    # their order is unknown; one that started after a measurement that
+    # reads is not among them
+    held = without_record_of(measured).held
+    if held:
         return ReportDuty(
             None,
             "",
-            f"the record of run {unreadable[0]} does not read, so it may have "
-            f"been the first measurement, and what stood registered then is not "
-            f"told (restore its config.json from a commit or a copy that holds "
-            f"it; a record written anew from memory settles nothing)",
-        )
-    lost = [*lost_in_the_tree_too(measured), *measured.started_only]
-    if lost:
-        return ReportDuty(
-            None,
-            "",
-            f"a measurement of it is lost ({', '.join(lost)}: deleted without a "
-            f"commit, only the run index or its start file lists it), and with "
-            f"it the commit that says what stood registered then",
+            f"{'; '.join(held)} — "
+            f"{'it' if len(held) == 1 else 'each'} may have been the "
+            f"first measurement, and what stood registered then is not told; "
+            f"{RECORD_BACK}",
         )
     return None
+
+
+def later_record_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    a run of MEASURED's protocol left no record that reads and the start
+    files put it after a measurement that reads
+    (`registration_hold.later_record_warning`, the sentence the
+    registration station prints too); None without one. The duty is read
+    without that run (`report_duty`): it was not the first measurement, so
+    it holds nothing here. Builds the tree's state when a run is lost
+    (`registration_hold.without_record_of`)."""
+    return later_record_warning(without_record_of(measured))
 
 
 def unassigned_record_note(measured: Measured) -> GateFinding | None:
