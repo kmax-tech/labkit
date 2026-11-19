@@ -43,6 +43,15 @@ station) —, and only then does the computing run's own evaluation over
 those inputs have to give the numbers its metrics.json holds (`agree`).
 The source runs are not run again.
 
+An older run is checked apart from the answering one
+(`holds_as_measured`, an area's `--check --run <run_id>`): under the
+protocol text it started under, with its rows as it recorded them — the
+file as it stands, or, where a later run overwrote it, the bytes a commit
+holds with the recorded sha256, read into a temporary directory
+(`output_as_recorded`). Where no bytes with that sha256 are left, the run
+is not verifiable; the file as it stands is never read in their place.
+That check holds no note, changes no adoption and releases nothing.
+
 Any disagreement is a SystemExit with a sentence — the area's `--check`
 calls this with no main of labkit's around it (the rule by caller stands
 at `console.Refused`); the verdict names what was compared. Rules of the lab standard: LAB-041 Generate numbers, don't retype them, LAB-043 Runs go through `runlog`.
@@ -50,25 +59,30 @@ at `console.Refused`); the verdict names what was compared. Rules of the lab sta
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import re
 import sys
-from collections.abc import Callable, Mapping
+import tempfile
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
 from labkit.formats import (
+    digests,
     jsonl,
     promises,
     protocol_block,
     runs,
 )
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.protocol_then import as_measured, bound_protocol_file
 from labkit.formats.repo import (
     ProtocolChoiceError,
+    blob_bytes,
+    blobs_in_history,
     file_text,
     git_root,
     path_kind,
@@ -109,20 +123,30 @@ NOT_VERIFIABLE = (
 
 class NotVerifiable(SystemExit):
     """A recalculation that could not be made: nothing shows that the code
-    here now is the code the run ran. A missing proof, not a failed
-    comparison — no number was compared. A SystemExit like every refusal
-    of this module, so an area's `--check` ends nonzero with the sentence,
-    which carries the clause `NOT_VERIFIABLE`; a caller that looks into a
-    run no release waits on catches this class and reports it."""
+    here now is the code the run ran (`require_run_code`, the sentence
+    carries the clause `NOT_VERIFIABLE`), or the rows an older run
+    recorded are nowhere left (`output_as_recorded`). A missing proof, not
+    a failed comparison — no number was compared. A SystemExit like every
+    refusal of this module, so an area's `--check` ends nonzero with the
+    sentence; a caller that looks into a run no release waits on catches
+    this class and reports it."""
 
 
-def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Path:
+def chosen_run(
+    area: Path,
+    protocol_text: str,
+    run_id: str | None = None,
+    *,
+    state: AreaState | None = None,
+) -> Path:
     """The run a protocol is held to — and the run `--from-run` writes back.
 
     The choice is `answering_run.bound_answering_run` for the protocol's stamped id,
     the same one finalize and intent-check make; RUN_ID names a run instead,
     which must be completed and bound to that id. Never a repeat draw, named
-    or not.
+    or not. STATE is the area's state when the caller built it already
+    (`holds`: one build per check); None builds it here, and only when the
+    choice is asked (no RUN_ID).
     """
     try:
         pid = protocol_block.head(protocol_text).id
@@ -135,7 +159,8 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
         )
     if run_id is not None:
         return _named_run(runs.run_path(area, run_id), pid)
-    choice, blocker, lines = state_of(area).measured_of(pid).told(protocol_text)
+    held = state if state is not None else state_of(area)
+    choice, blocker, lines = held.measured_of(pid).told(protocol_text)
     if blocker or choice.run_dir is None:
         why = blocker.message if blocker else "no run answers"
         raise SystemExit(f"recheck: {why}" + "".join(f"\n  {ln}" for ln in lines))
@@ -167,9 +192,17 @@ def _named_run(d: Path, pid: str) -> Path:
     return d
 
 
-def run_dir(area: Path, protocol: Path, run_id: str | None = None) -> Path:
-    """`chosen_run` for a protocol the area's state holds."""
-    return chosen_run(area, state_of(area).text_of(protocol), run_id)
+def run_dir(
+    area: Path,
+    protocol: Path,
+    run_id: str | None = None,
+    *,
+    state: AreaState | None = None,
+) -> Path:
+    """`chosen_run` for a protocol the area's state holds — STATE, or the
+    state built here once for the protocol's text and the choice."""
+    held = state if state is not None else state_of(area)
+    return chosen_run(area, held.text_of(protocol), run_id, state=held)
 
 
 def protocol_named(area: Path, name: str | None) -> Path:
@@ -237,6 +270,79 @@ def pin(run: Path, out: Path) -> None:
             f"recheck: {out.name} is not the file run {run.name} recorded — "
             f"{drift.why}; rerun the script or name that run"
         )
+
+
+@dataclass(frozen=True)
+class RecordedOutput:
+    """An output of a run as the run recorded it (`output_as_recorded`).
+
+    Attributes:
+        path: Where those bytes read: the output's own path, or a copy in
+            a temporary directory.
+        commit: The commit whose blob the copy is; None for the file as it
+            stands in the tree.
+    """
+
+    path: Path
+    commit: str | None
+
+    @property
+    def source(self) -> str:
+        """Where the bytes came from, as a check's line says it."""
+        if self.commit is None:
+            return "the file as it stands"
+        return f"commit {self.commit[:12]}, which holds the file as the run recorded it"
+
+
+@contextlib.contextmanager
+def output_as_recorded(run: Path, out: Path, area: Path) -> Iterator[RecordedOutput]:
+    """The output OUT of RUN (a run of AREA) with exactly the bytes RUN
+    recorded — their sha256 starts with the digest outputs.json holds: the
+    file as it stands where it still is that file, else the newest commit
+    any ref reaches that holds OUT with those bytes
+    (`repo.blobs_in_history`), written to a temporary directory that is
+    removed when the block ends. The working tree, OUT included, is not
+    touched. Raises SystemExit when RUN did not register OUT, and
+    `NotVerifiable` when the record holds no sha256 for it or no bytes
+    with that sha256 are left — the file as it stands is never read in
+    their place. Raises RuntimeError when git fails."""
+    outputs = runs.read_outputs(run) or []
+    recorded = next((o for o in outputs if o.path.resolve() == out.resolve()), None)
+    if recorded is None:
+        raise SystemExit(
+            f"recheck: run {run.name} did not register {out.name} as an output"
+        )
+    now = runs.output_now(recorded)
+    drift = run_record_check.output_drift(now)
+    if drift is None:
+        yield RecordedOutput(out, None)
+        return
+    missing = (
+        f"recheck: run {run.name} is not verifiable — {out.name} as it stands is "
+        f"not the file that run recorded ({drift.why})"
+    )
+    way = (
+        "A missing proof, not a failed comparison: no number was compared, and "
+        "the file as it stands is never read in its place. Commit a run's output "
+        "before a later run overwrites it, or let each run write a file of its own"
+    )
+    sha = recorded.sha256
+    root = git_root(area)
+    if sha is None or root is None:
+        raise NotVerifiable(f"{missing}. {way}")
+    versions = blobs_in_history(root, out.resolve())
+    for commit, blob in versions:
+        data = blob_bytes(root, blob)
+        if digests.digest(data, None).startswith(sha):
+            with tempfile.TemporaryDirectory(prefix="labkit-recheck-") as tmp:
+                copy = Path(tmp) / out.name
+                copy.write_bytes(data)
+                yield RecordedOutput(copy, commit)
+            return
+    raise NotVerifiable(
+        f"{missing}, and none of the {len(versions)} version(s) of it the commits "
+        f"of this repository hold has the recorded sha256 {sha}. {way}"
+    )
 
 
 def scopes_unchanged(run: Path, area: Path) -> None:
@@ -352,7 +458,7 @@ def kept_keys(run: Path, area: Path) -> frozenset[str]:
     return frozenset({table.key}) if table is not None and table.key else frozenset()
 
 
-def block_unchanged(run: Path, area: Path) -> None:
+def block_unchanged(run: Path, area: Path, *, state: AreaState | None = None) -> None:
     """Refuse to hold a note whose promises changed after the run.
 
     A lowered threshold can leave the verdict unchanged by chance — the
@@ -360,7 +466,9 @@ def block_unchanged(run: Path, area: Path) -> None:
     nobody registered before the number. The bound
     protocol's block as it reads now must be the one the run recorded.
     The step of a run the protocol answers with; an older run named for a
-    recheck is held under its own text instead (`holds`).
+    recheck is held under its own text instead (`holds`). The protocol's
+    text is read off STATE, the area's state (built here when None, for a
+    bound run only).
     """
     cfg = runs.read_run_config(run)
     if cfg is None or cfg.protocol.id is None:
@@ -368,7 +476,8 @@ def block_unchanged(run: Path, area: Path) -> None:
     pid = cfg.protocol.id
     try:
         protocol = protocol_block.find_by_id(area, pid)  # by id; the path goes stale
-        block = promises.parse_block(state_of(area).text_of(protocol))
+        held = state if state is not None else state_of(area)
+        block = promises.parse_block(held.text_of(protocol))
     except (protocol_block.BlockError, promises.PromiseError) as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     drift = promises.block_drift(cfg.promises, block)
@@ -513,6 +622,7 @@ def verified(
     ignore: frozenset[str] = LABKIT_KEYS,
     *,
     hold_block_now: bool = True,
+    state: AreaState | None = None,
 ) -> tuple[dict, list[str]]:
     """pin → scopes → code → block (if HOLD_BLOCK_NOW) → agree for one run, no note: (its metrics, the
     keys the recomputation grew). What `holds` checks before the note, and
@@ -521,14 +631,16 @@ def verified(
     metrics.json the range. The block step holds the protocol as it reads
     now to the block the run recorded (`block_unchanged`) unless
     HOLD_BLOCK_NOW is False — an older run rechecked after the protocol moved on; the
-    kept key is always the one of the run's own text (`kept_keys`). Raises
+    kept key is always the one of the run's own text (`kept_keys`). STATE
+    is the area's state the caller built (`holds`); with None the block
+    step builds it, for a run bound to a protocol only. Raises
     SystemExit on the first disagreement, `NotVerifiable` where the code
     step finds no proof."""
     pin(run, out)
     scopes_unchanged(run, area)
     require_run_code(run, area)
     if hold_block_now:
-        block_unchanged(run, area)
+        block_unchanged(run, area, state=state)
     metrics = runs.read_metrics(runs.metrics_path(run))
     grown = agree(
         metrics, recompute(rows_of(out)), ignore, reported=kept_keys(run, area)
@@ -558,14 +670,66 @@ def holds(
     a run whose code cannot be compared with the code here.
 
     `numbers(metrics)` formats what the note must carry — pass your own when
-    the note rounds. Raises SystemExit on the first disagreement,
-    `NotVerifiable` where the code step finds no proof."""
-    run = run_dir(area, protocol or note, run_id)
+    the note rounds. The area's state is built once, here, and the run
+    choice and the block step read that build. Raises SystemExit on the
+    first disagreement, `NotVerifiable` where the code step finds no proof."""
+    state = state_of(area)
+    run = run_dir(area, protocol or note, run_id, state=state)
     answering = run_id is None  # no run named: the one the protocol answers with
     metrics, grown = verified(
-        run, area, out, recompute, ignore, hold_block_now=answering
+        run, area, out, recompute, ignore, hold_block_now=answering, state=state
     )
     return _cited_verdict(run, out, metrics, grown, note, numbers, ignore)
+
+
+@dataclass(frozen=True)
+class AsMeasured:
+    """What the separate check of an older run held (`holds_as_measured`).
+
+    Attributes:
+        run_id: The run.
+        source: Where its rows were read (`RecordedOutput.source`).
+        keys_compared: The keys of its metrics.json compared.
+        grown: Keys the recomputation has and the run did not.
+    """
+
+    run_id: str
+    source: str
+    keys_compared: int
+    grown: list[str]
+
+
+def holds_as_measured(
+    area: Path,
+    out: Path,
+    recompute: Callable[[list[dict]], dict],
+    run_id: str,
+    protocol: Path,
+    ignore: frozenset[str] = LABKIT_KEYS,
+) -> AsMeasured:
+    """The separate check of an older run RUN_ID of PROTOCOL: rows →
+    scopes → code → agree, under the text the run started under. Its rows
+    are the bytes it recorded (`output_as_recorded`: the file as it
+    stands, else a commit's copy in a temporary directory); the `[kept]`
+    key compared exactly is the one of its own text (`kept_keys`), and the
+    protocol as it reads now is not held to the block the run recorded.
+    No note is read: the check changes no adoption and releases nothing —
+    the protocol's number is held by `holds` alone. RUN_ID must be a
+    completed measurement bound to PROTOCOL, no repeat (`chosen_run`).
+    Raises SystemExit on the first disagreement, `NotVerifiable` where the
+    recorded rows are nowhere left or the code step finds no proof."""
+    run = run_dir(area, protocol, run_id)
+    with output_as_recorded(run, out, area) as kept:
+        scopes_unchanged(run, area)
+        require_run_code(run, area)
+        metrics = runs.read_metrics(runs.metrics_path(run))
+        grown = agree(
+            metrics,
+            recompute(rows_of(kept.path)),
+            ignore,
+            reported=kept_keys(run, area),
+        )
+        return AsMeasured(run.name, kept.source, len(set(metrics) - ignore), grown)
 
 
 def _cited_verdict(

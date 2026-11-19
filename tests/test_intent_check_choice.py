@@ -7,8 +7,6 @@ does, no run answers. The choice runs among the completed runs bound to
 the protocol's id (`test_intent_check_binding.py`).
 """
 
-import contextlib
-import io
 import json
 import sys
 import tempfile
@@ -19,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from labkit.checks import intent_check  # noqa: E402
 from protocol_fixture import run_record, PID, head  # noqa: E402
+from command_fixture import run_main
 
 CRITERION = "- **Inference criterion:** [criterion-1] holds\n"
 
@@ -69,10 +68,7 @@ def _area(d, runs):
 
 
 def _run_main(argv):
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        code = intent_check.main(argv)
-    return code, buf.getvalue()
+    return run_main(intent_check.main, argv)
 
 
 class TestMetricsChoice(unittest.TestCase):

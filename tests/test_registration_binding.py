@@ -24,6 +24,8 @@ BODY = """
 - **Inference criterion:** [criterion-1] above the trivial decider
 - **Quality check:** [quality-check-1] every case parsed
 - **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels at chance
+- **Exclusions / filters:** none
+- **Unit:** one case
 """
 
 
@@ -51,6 +53,16 @@ class Stamp(unittest.TestCase):
         compute = protocol_check.registration_stamp(_protocol("compute"))
         # [kept] is part of the registration at every kind
         self.assertEqual(list(compute), ["kind", "kept", "Question / hypothesis"])
+
+    def test_with_the_audited_fields_a_preflight_record_binds_them_too(self):
+        text = _protocol()
+        plain = protocol_check.registration_stamp(text)
+        bound = protocol_check.registration_stamp(text, audited=True)
+        self.assertEqual(
+            [k for k in bound if k not in plain], list(protocol_check.AUDITED_FIELDS)
+        )
+        self.assertEqual({k: bound[k] for k in plain}, plain)
+        self.assertNotEqual(bound["Unit"], protocol_check.REGISTRATION_ABSENT)
 
     def test_a_reflowed_field_keeps_its_stamp_and_a_reworded_one_does_not(self):
         text = _protocol()
@@ -92,7 +104,7 @@ class PreflightRecord(unittest.TestCase):
         self.area.mkdir(parents=True)
         scope_file(self.area)
 
-    def _record(self, text: str) -> str:
+    def _record(self, text: str, *, audited: bool = True) -> str:
         return findings.write(
             self.area,
             "preflight",
@@ -101,7 +113,7 @@ class PreflightRecord(unittest.TestCase):
             promises.block_stamp(text),
             (0, 0, 0),
             [],
-            registration=protocol_check.registration_stamp(text),
+            registration=protocol_check.registration_stamp(text, audited=audited),
             protocol_id=protocol_id_of(self.area),
         ).name
 
@@ -122,6 +134,36 @@ class PreflightRecord(unittest.TestCase):
             "the registration changed after the audit (Question / hypothesis)",
             gap.why,
         )
+
+    def test_a_rewritten_field_read_before_the_run_owes_a_new_audit(self):
+        """What the number is about, in words: the exclusions rewritten
+        after the audit change the measurement as a code change would."""
+        text = _protocol()
+        name = self._record(text)
+        now = text.replace("filters:** none", "filters:** cases without a label")
+        gap = audit_gaps.audit_record_gap(self.area, name, now)
+        assert gap is not None
+        self.assertIn(
+            "the registration changed after the audit (Exclusions / filters)",
+            gap.why,
+        )
+
+    def test_the_twin_a_field_written_after_the_run_leaves_the_record_standing(self):
+        text = _protocol()
+        name = self._record(text)
+        written = text + "- **Conclusion:** eleven lines.\n"
+        self.assertIsNone(audit_gaps.audit_record_gap(self.area, name, written))
+
+    def test_a_record_that_binds_no_field_read_before_the_run_covers_nothing(self):
+        """A preflight record written without those fields did not bind
+        what the audit read: each is named, and a new audit is owed."""
+        text = _protocol()
+        gap = audit_gaps.audit_record_gap(
+            self.area, self._record(text, audited=False), text
+        )
+        assert gap is not None
+        self.assertIn("Exclusions / filters", gap.why)
+        self.assertIn("Unit", gap.why)
 
     def test_a_block_that_does_not_read_is_its_own_cause_and_way_out(self):
         """Nothing is compared: the gap carries the rule the block's cause
@@ -167,7 +209,7 @@ class PreflightRecord(unittest.TestCase):
                     "WARNING · scripts/01_measure.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z",
                 )
             ],
-            registration=protocol_check.registration_stamp(text),
+            registration=protocol_check.registration_stamp(text, audited=True),
             protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, open_.name, text)

@@ -35,7 +35,8 @@ claim the protocol makes now (`claim_sha`: the Conclusion,
 are generated from the record and the run and bound through them),
 carries a `[[decision]]` for N whose `decision_sha` is the digest of the
 finding as it stands now, says `upheld`, and is no `--again` draw — at
-least one review on that state must be one (`upholding`). A changed
+least one review on that state must be one (`upholding`, by the release
+rule `released_by`). A changed
 reason, effect or status makes the review stale, and so does a rewritten
 claim — the wording of the claim is what separates upheld from rejected.
 `rejected` and
@@ -70,8 +71,10 @@ from __future__ import annotations
 
 import time
 import tomllib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from labkit.formats import findings
 from labkit.formats.findings import REVIEW_NAME, create_file, written_order
@@ -129,9 +132,41 @@ class Review:
         return next((d for d in self.decisions if d.finding == n), None)
 
 
-def counts_of(decisions: list[Decision] | tuple[Decision, ...]) -> tuple[int, int, int]:
-    """(upheld, rejected, insufficient) over DECISIONS."""
-    return tuple(sum(1 for d in decisions if d.verdict == v) for v in VERDICTS)  # type: ignore[return-value]
+class Judged(Protocol):
+    """What carries a verdict (VERDICTS): a `Decision` here, a
+    `report_reviews.ClaimVerdict` on a report claim."""
+
+    @property
+    def verdict(self) -> str:
+        """One of VERDICTS."""
+        ...
+
+
+def counts_of(judged: Sequence[Judged]) -> tuple[int, int, int]:
+    """(upheld, rejected, insufficient) over JUDGED. Pure."""
+    u, r, i = (sum(1 for j in judged if j.verdict == v) for v in VERDICTS)
+    return u, r, i
+
+
+def released_by(draws: Sequence[tuple[bool, str]]) -> bool:
+    """Do DRAWS, every draw on one state as (was it an `--again` draw, its
+    verdict), release that state? Yes only when at least one of them is no
+    `--again` draw and every one said `upheld`: `rejected` and
+    `insufficient` do not release, a later `upheld` does not outvote them,
+    and an `--again` draw's `upheld` alone releases nothing. The one
+    release rule of a second reviewer's verdicts — on a finding's decision
+    (`upholding`) and on a report claim's (`report_reviews.upheld`). Pure."""
+    return any(not again for again, _ in draws) and all(
+        verdict == UPHELD for _, verdict in draws
+    )
+
+
+def first_not_upheld(verdicts: Sequence[str]) -> int | None:
+    """The index in VERDICTS, one per draw on one state, of the first that
+    is not `upheld`, or None. With one, the state is contested: another
+    draw settles nothing, an `--again` draw's verdict like any other's
+    (`contested`, `report_reviews.not_upheld`). Pure."""
+    return next((i for i, v in enumerate(verdicts) if v != UPHELD), None)
 
 
 def write_review(
@@ -347,9 +382,7 @@ def upholding(
     outvote them, an `--again` draw's `upheld` releases nothing, and a
     review of a decision or a claim since changed says nothing."""
     pairs = _on_state(record, n, reviews, text)
-    return any(not r.again for r, _ in pairs) and all(
-        d.verdict == UPHELD for _, d in pairs
-    )
+    return released_by([(r.again, d.verdict) for r, d in pairs])
 
 
 def contested(
@@ -358,7 +391,8 @@ def contested(
     """Has a review of finding N as decided and claimed now said anything
     but `upheld`? Then another draw on this state settles nothing
     (`decision_review` refuses one unless asked for a measurement)."""
-    return any(d.verdict != UPHELD for d in verdicts_on_state(record, n, reviews, text))
+    verdicts = verdicts_on_state(record, n, reviews, text)
+    return first_not_upheld([d.verdict for d in verdicts]) is not None
 
 
 def rejected(record: findings.Record, n: int, reviews: list[Review], text: str) -> bool:

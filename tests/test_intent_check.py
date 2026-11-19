@@ -18,6 +18,7 @@ from protocol_fixture import run_record, PID, head
 
 REPO = Path(__file__).resolve().parent.parent
 from labkit.checks import intent_check  # noqa: E402
+from command_fixture import run_main  # noqa: E402
 
 PROTOCOL = (
     head()
@@ -77,10 +78,7 @@ class _AreaWithRun(unittest.TestCase):
 
 class TestIntentCheck(_AreaWithRun):
     def _run(self, argv):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = intent_check.main(argv)
-        return rc, buf.getvalue()
+        return run_main(intent_check.main, argv)
 
     # -- extraction -------------------------------------------------------
     def test_ids_found_anywhere_in_free_structure(self):

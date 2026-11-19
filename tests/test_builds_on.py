@@ -12,20 +12,21 @@ from __future__ import annotations
 import contextlib
 import io
 import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
+from command_fixture import run_main
 from protocol_fixture import DEFAULT_BLOCK, PID, head, scope_file
+from repo_fixture import git as _git
 
 from labkit.formats import protocol_block, runs
 from labkit.formats.protocol_block import BlockError, BuildsOn, StepChange
 from labkit.formats.protocol_history import (
     change_list_gaps,
     step_change_gaps,
-    step_then,
 )
+from labkit.formats.protocol_then import step_then
 from labkit.run import runlog
 from labkit.tools import protocol_fill
 
@@ -223,16 +224,6 @@ class StartRefusal(unittest.TestCase):
         self.assertIn("[builds_on] occasion = 'hunch'", str(cm.exception.code))
 
 
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-
-
 class InARepository(unittest.TestCase):
     """Each run's step read from its own text, and `protocol-fill
     --builds-on` computing the changes from the basis's own text, in a
@@ -262,13 +253,7 @@ class InARepository(unittest.TestCase):
 
     def fill(self, *argv: str) -> tuple[int, str]:
         """protocol-fill on the protocol: (exit, what it printed)."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            try:
-                code = protocol_fill.main([str(self.protocol), *argv])
-            except SystemExit as exc:
-                code = int(exc.code or 0)
-        return code, out.getvalue()
+        return run_main(protocol_fill.main, [str(self.protocol), *argv])
 
     def builds_on(self, basis: str) -> tuple[int, str]:
         return self.fill(

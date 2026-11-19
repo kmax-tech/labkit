@@ -1,39 +1,28 @@
 # AGENTS.md — labkit
 
-Entry file for any coding agent working in this repo (Claude Code reads it
-through the `CLAUDE.md` symlink). It holds only what an agent without the
-author's machine needs; everything else is linked.
+Entry file for any coding agent working in this repo (Claude Code reads it through the `CLAUDE.md` symlink). It holds only what an agent without the author's machine needs; everything else is linked.
 
 ## What this is
 
-labkit is the shared helper package of a research lab: run index, LLM
-backend, protocol checks and the gates around a run. Its claim:
+labkit is the shared helper package of a research lab: run index, LLM backend, protocol checks and the gates around a run. Its claim:
 
-> labkit detects violations of explicitly encoded scientific intent across
-> implementation, execution and reporting.
+> labkit detects violations of explicitly encoded scientific intent across implementation, execution and reporting.
 
-The chain is `intent → explicit promise → code → run → reported number`.
-Every check belongs to one of three tiers — **guaranteed** (exact,
-mechanical, silent on correct input), **static evidence** (warns, never
-blocks), **agent audit** (semantics). Never present a static check as proof
-of semantics. A gate's finding carries its kind as data
-(`gate.GateFinding.evidence_kind`, guaranteed or static evidence — a
-static-evidence blocker is refused); the agent audit's findings are the
-records' (`findings.Finding`). Contract and rationale: `docs/promise-block.md`.
+The chain is `intent → explicit promise → code → run → reported number`. Every check belongs to one of three tiers — **guaranteed** (exact, mechanical, silent on correct input), **static evidence** (warns, never blocks), **agent audit** (semantics). Never present a static check as proof of semantics. A gate's finding carries its kind as data (`gate.GateFinding.evidence_kind`, guaranteed or static evidence — a static-evidence blocker is refused); the agent audit's findings are the records' (`findings.Finding`). Contract and rationale: `docs/promise-block.md`.
 
 ## Read first
 
-| File | For |
-|---|---|
-| `docs/architecture.md` | the model (rules, checks, gates, lane), what a check is and at which layer its test stands, layers, the chain from promise to number (module, command, tier), one home per question |
-| `docs/workflow.md` | the steps from a registered question to a kept number — command, files, preconditions, what clean means; `docs/examples/count-walkthrough.sh` walks them |
-| `README.md` | console commands, the coined terms (one word, one thing) |
-| `TODO.md` | the work order and why (German); top section "Reihenfolge" decides what is next |
-| `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
-| `docs/protocol-run-binding.md` | which run belongs to which protocol |
-| `docs/student-repos.md` | how a student thesis repo gets labkit (pinned from GitHub) and moves to a newer one |
+| File                                               | For                                                                                                                                                                                                  |
+|----------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `docs/architecture.md`                             | the model (rules, checks, gates, lane), what a check is and at which layer its test stands, layers, the chain from promise to number (module, command, tier), one home per question                  |
+| `docs/workflow.md`                                 | the steps from a registered question to a kept number — command, files, preconditions, what clean means; `docs/examples/count-walkthrough.sh` walks them                                             |
+| `README.md`                                        | console commands, the coined terms (one word, one thing)                                                                                                                                             |
+| `TODO.md`                                          | the work order and why (German); top section "Reihenfolge" decides what is next                                                                                                                      |
+| `docs/promise-block.md`                            | promise kinds `criterion`, `quality-check` and `branch`, the TOML block, what the declared-scope hash states                                                                                         |
+| `docs/protocol-run-binding.md`                     | which run belongs to which protocol                                                                                                                                                                  |
+| `docs/student-repos.md`                            | how a student thesis repo gets labkit (pinned from GitHub) and moves to a newer one                                                                                                                  |
 | `labkit/docs/standard.md`, `labkit/docs/rules.tsv` | the lab standard every gate cites (`LAB-nnn Name`) and its ledger; `python -m labkit.formats.rules show LAB-nnn` prints one rule, `labkit/formats/rules.py` checks heads, ledger and every reference |
-| `docs/coding-style.md` | binding for every line of code (vendored copy — do not edit here) |
+| `docs/coding-style.md`                             | binding for every line of code (vendored copy — do not edit here)                                                                                                                                    |
 
 ## Setup and tests
 
@@ -42,95 +31,23 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest -q
 ```
 
-The editor's type checker reads the same `.venv` (`[tool.pyright]` in
-`pyproject.toml`).
-Reading and debugging recipes (a test under pdb, a command's call tree or
-timeline): `justfile` (`just` lists them); in VS Code `.vscode/launch.json`.
-The checks come in two tiers, one script (`.githooks/checks`, `just check`):
-ruff, ruff format and pyright — all three clean (docs/coding-style.md CODE-008
-Run the linter and the type checker) — and the suite green. Before a commit
-the fast tier: the suite without the end-to-end scenario files, which carry
-`pytestmark = pytest.mark.slow` (~1½ min instead of ~6½). Before a push the
-whole suite. The versioned hooks run them: `.githooks/pre-commit` (fast;
-skipped for a commit that stages only `docs/notes/` and `TODO.md`, which no
-test reads) and `.githooks/pre-push` (full; it refuses a push of a commit
-other than HEAD, or with tracked changes, since the checks read the working
-tree). Turn both on once per clone with `git config core.hooksPath .githooks`.
-While working, run the touched test files; do not run the whole suite by
-hand right before a commit. A new scenario file that runs real commands
-through a temporary repo gets the `slow` mark.
-A release is one step: write the `CHANGELOG.md` entry, then `just release
-X.Y.Z` sets the version, runs the whole suite, commits through the hook and tags that commit — in
-this order the tag test (`tests/test_release_tags.py`) is never red; the
-push stays with the author.
+The editor's type checker reads the same `.venv` (`[tool.pyright]` in `pyproject.toml`). Reading and debugging recipes (a test under pdb, a command's call tree or timeline): `justfile` (`just` lists them); in VS Code `.vscode/launch.json`. The checks come in two tiers, one script (`.githooks/checks`, `just check`): ruff, ruff format and pyright — all three clean (docs/coding-style.md CODE-008 Run the linter and the type checker) — and the suite green. Before a commit the fast tier: the suite without the end-to-end scenario files, which carry `pytestmark = pytest.mark.slow` (~1½ min instead of ~6½). Before a push the whole suite. The versioned hooks run them: `.githooks/pre-commit` (fast; skipped for a commit that stages only `docs/notes/` and `TODO.md`, which no test reads) and `.githooks/pre-push` (full; it refuses a push of a commit other than HEAD, or with tracked changes, since the checks read the working tree). Turn both on once per clone with `git config core.hooksPath .githooks`. While working, run the touched test files; do not run the whole suite by hand right before a commit. A new scenario file that runs real commands through a temporary repo gets the `slow` mark. A release is one step: write the `CHANGELOG.md` entry, then `just release X.Y.Z` sets the version, runs the whole suite, commits through the hook and tags that commit — in this order the tag test (`tests/test_release_tags.py`) is never red; the push stays with the author.
 
-The suite is self-contained: it passes in a fresh clone with an empty home
-directory (a shallow clone without tags skips the tag test; `git fetch
---tags origin` brings them). One test skips everywhere for want of
-a `requirements.lock` (`tests/test_runlog_env.py`). `usability stage` stamps
-its probe from the package's own templates (since 0.78.0) and builds the
-probe venv with the staging interpreter's labkit, as its `pip freeze` line
-names it: an editable install is refused (stage from a non-editable
-install of a `git archive` of the commit), and `--venv` links an existing
-venv instead (an editable one warned). The stamped `requirements.txt`
-still pins the release tag on GitHub, which `stage --restamp` installs —
-until that tag is pushed, that `pip install` fails.
+The suite is self-contained: it passes in a fresh clone with an empty home directory (a shallow clone without tags skips the tag test; `git fetch --tags origin` brings them). One test skips everywhere for want of a `requirements.lock` (`tests/test_runlog_env.py`). `usability stage` stamps its probe from the package's own templates (since 0.78.0) and builds the probe venv with the staging interpreter's labkit, as its `pip freeze` line names it: an editable install is refused (stage from a non-editable install of a `git archive` of the commit), and `--venv` links an existing venv instead (an editable one warned). The stamped `requirements.txt` still pins the release tag on GitHub, which `stage --restamp` installs — until that tag is pushed, that `pip install` fails.
 
 ## Rules
 
-- **stdlib only.** `dependencies = []` is deliberate; a lab helper that
-  pulls packages in decides every experiment's environment. Dev tools go in
-  the `dev` extra.
-- **Fail loud.** No bare `except`, no silent skip. A malformed input raises
-  with a sentence naming the field.
-- **The current rule first, the history in a note.** A docstring says
-  what holds today: task, inputs, result, side effects, errors, the
-  conditions in force. A comment at the code names one non-obvious
-  decision or limit a later editor would otherwise break, with the short
-  why. Dates, the incident and the rejected approaches go into a note under
-  `docs/notes/` (one per topic, dated), which the code links. Test for each
-  historical sentence: would removing it make a present limit unclear or a
-  wrong change likelier? Then a short why stays; else it moves.
-- **Check, file access and display apart.** A validation or comparison is a
-  pure function: input in, result or error out — a `validate_*` never
-  writes. A format reads and writes its own files in its own module, and a
-  writer names its side effect (`write_*`). A check returns data and works
-  without a console; output goes through `console` and `gate`. Order and
-  conditions of the checks stand at the entry point (`preflight`,
-  `finalize`, `report_check`).
-- **One home per logic.** The id alphabet lives in `labkit/formats/promises.py`;
-  other modules import it. A second use means moving code, not copying it.
-- **Every number-producing function gets a test.** A gate that blocks gets
-  a twin test: the correct variant must pass (no false blocker). A
-  condition is tested once, from data in memory, in a rule test; a gate
-  test holds what the gate adds, a scenario test what one command passes
-  to the next (`docs/architecture.md`, "Checks and their tests").
-- **Language.** Code, identifiers, docstrings, docs in `docs/`, commit
-  messages: English. Talk to the user, and write `TODO.md` entries, in
-  German.
-- **Breaking changes, not legacy paths.** Build for the current format;
-  keep code clear and modular. Do not add or extend code that reads old
-  formats. A format change is an announced break (`CHANGELOG.md`,
-  "Breaking", naming the last version that reads the old format); old runs
-  are reproduced with the repo's commit and its pinned labkit version.
-  Existing legacy paths go in one Breaking release, not piecemeal (0.48.0
-  the id letters, 0.89.0 the `legacy` run state and the `endpoint` string).
-  The exception is the public API (`docs/architecture.md`, "Public
-  API"): a listed name, signature or behaviour breaks only after one
-  release in which the old form still works and warns.
-- **Order before features.** Build what `TODO.md` puts next, nothing ahead
-  of it: static-evidence checks wait for the benchmark pilot to show they
-  are needed. Rollout to other repos, templates and the house doctrine is a
-  separate task and out of reach here.
-- **One commit per step**, the message says why. Do not push, tag or
-  release; report what is ready to commit.
+- **stdlib only.** `dependencies = []` is deliberate; a lab helper that pulls packages in decides every experiment's environment. Dev tools go in the `dev` extra.
+- **Fail loud.** No bare `except`, no silent skip. A malformed input raises with a sentence naming the field.
+- **The current rule first, the history in a note.** A docstring says what holds today: task, inputs, result, side effects, errors, the conditions in force. A comment at the code names one non-obvious decision or limit a later editor would otherwise break, with the short why. Dates, the incident and the rejected approaches go into a note under `docs/notes/` (one per topic, dated), which the code links. Test for each historical sentence: would removing it make a present limit unclear or a wrong change likelier? Then a short why stays; else it moves.
+- **Check, file access and display apart.** A validation or comparison is a pure function: input in, result or error out — a `validate_*` never writes. A format reads and writes its own files in its own module, and a writer names its side effect (`write_*`). A check returns data and works without a console; output goes through `console` and `gate`. Order and conditions of the checks stand at the entry point (`preflight`, `finalize`, `report_check`).
+- **One home per logic.** The id alphabet lives in `labkit/formats/promises.py`; other modules import it. A second use means moving code, not copying it.
+- **Every number-producing function gets a test.** A gate that blocks gets a twin test: the correct variant must pass (no false blocker). A condition is tested once, from data in memory, in a rule test; a gate test holds what the gate adds, a scenario test what one command passes to the next (`docs/architecture.md`, "Checks and their tests").
+- **Language.** Code, identifiers, docstrings, docs in `docs/`, commit messages: English. Talk to the user, and write `TODO.md` entries, in German.
+- **Breaking changes, not legacy paths.** Build for the current format; keep code clear and modular. Do not add or extend code that reads old formats. A format change is an announced break (`CHANGELOG.md`, "Breaking", naming the last version that reads the old format); old runs are reproduced with the repo's commit and its pinned labkit version. Existing legacy paths go in one Breaking release, not piecemeal (0.48.0 the id letters, 0.89.0 the `legacy` run state and the `endpoint` string). The exception is the public API (`docs/architecture.md`, "Public API"): a listed name, signature or behaviour breaks only after one release in which the old form still works and warns.
+- **Order before features.** Build what `TODO.md` puts next, nothing ahead of it: static-evidence checks wait for the benchmark pilot to show they are needed. Rollout to other repos, templates and the house doctrine is a separate task and out of reach here.
+- **One commit per step**, the message says why. Do not push, tag or release; report what is ready to commit.
 
 ## Not in this repo
 
-The research thread (literature, paper plan, benchmark case list), the
-author's house rules (the German `arbeitsstandard`, seven rules on notes and
-the thread) and the dated incidents behind every rule live on the author's
-machine. The lab standard itself ships here (`labkit/docs/standard.md`, since
-0.77.0). Where a docstring cites `LAB-015 Preflight audit before freezing`,
-that is a rule of this standard; where it cites a dated incident, that is
-the evidence; the code's own docstring states the rule it enforces.
+The research thread (literature, paper plan, benchmark case list), the author's house rules (the German `arbeitsstandard`, seven rules on notes and the thread) and the dated incidents behind every rule live on the author's machine. The lab standard itself ships here (`labkit/docs/standard.md`, since 0.77.0). Where a docstring cites `LAB-015 Preflight audit before freezing`, that is a rule of this standard; where it cites a dated incident, that is the evidence; the code's own docstring states the rule it enforces.

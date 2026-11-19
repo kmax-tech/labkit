@@ -27,17 +27,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import hook_post_change
 from labkit.gates import hook_session
-from labkit.formats import evidence, findings  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+from labkit.formats import evidence, findings, run_starts  # noqa: E402
+from labkit.formats.area_state import INDEX, state_of  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
 from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
-from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
+from repo_fixture import git as _git  # noqa: E402
+from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
+from repo_fixture import init_repo
 
 WARNING = (
     "WARNING",
     "WARNING · scripts/01_measure.py:9 · statement · LAB-015 Preflight audit before freezing · the seed is not recorded",
 )
 CLOSED = "2026-10-28T10-00-00_ab12"
+NOON = datetime(2026, 10, 28, 12, 0, 0, tzinfo=timezone.utc)
 OPEN = "2026-10-28T11-00-00_cd34"
 
 
@@ -130,9 +136,7 @@ class Committed(unittest.TestCase):
         self.answer.write_text("FINDING ...\n", encoding="utf-8")
         self.closed = _run_dir(self.area, CLOSED, closed=True)
         self.open = _run_dir(self.area, OPEN, closed=False)
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "evidence")
 
@@ -240,6 +244,157 @@ class Committed(unittest.TestCase):
         self.assertIn("git checkout HEAD --", out.getvalue())
 
 
+class CommittedStartFile(unittest.TestCase):
+    """A run's start file, once a commit holds it, never changes or goes:
+    the tree and the index against HEAD name it with its restore, as a
+    blocker; the twins — a start file untouched, one nobody committed yet,
+    one restored — are no finding."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.area = self.root / "experiments" / "01-x"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
+        self.start = run_starts.write_start(self.area, self._start(CLOSED))
+        init_repo(self.root)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "a start")
+        self.rel = f"experiments/01-x/run-starts/{CLOSED}.json"
+
+    @staticmethod
+    def _start(run_id: str) -> run_starts.RunStart:
+        return run_starts.RunStart(run_id, "p-0123456789abcdef", NOON, "measurement")
+
+    def found(self, *, staged: bool = False) -> list[str]:
+        return evidence.change_sentences(
+            evidence.change_findings(self.area, staged=staged)
+        )
+
+    def test_the_twins_untouched_and_not_yet_committed_are_no_finding(self):
+        self.assertEqual(self.found(), [])
+        new = run_starts.write_start(self.area, self._start(OPEN))
+        self.assertEqual(self.found(), [])
+        new.write_text("edited before any commit held it\n", encoding="utf-8")
+        self.assertEqual(self.found(), [])
+
+    def test_a_start_file_changed_is_named_with_its_restore_and_blocks(self):
+        self.start.write_text(
+            self.start.read_text(encoding="utf-8").replace("0123", "9999"),
+            encoding="utf-8",
+        )
+        (line,) = self.found()
+        self.assertIn(
+            f"run-starts/{CLOSED}.json: the start file changed in the tree since HEAD",
+            line,
+        )
+        self.assertIn(f"`git checkout HEAD -- {self.rel}`", line)
+        (hold,) = evidence.change_blockers(evidence.change_findings(self.area))
+        self.assertEqual(hold.grade, "BLOCKER")
+        _git(self.root, "checkout", "HEAD", "--", self.rel)
+        self.assertEqual(self.found(), [])
+
+    def test_a_start_file_deleted_is_named_in_the_tree_and_in_the_index(self):
+        self.start.unlink()
+        (line,) = self.found()
+        self.assertIn("the start file deleted in the tree since HEAD", line)
+        self.assertIn(f"`git checkout HEAD -- {self.rel}`", line)
+        _git(self.root, "add", "-A")
+        (line,) = self.found(staged=True)
+        self.assertIn("the start file deleted in the index since HEAD", line)
+
+
+class TheCommitCarriesTheStartFile(unittest.TestCase):
+    """The commit's check reads the index: a start file in the working tree
+    that is not staged is no part of the commit. A run whose mark says a
+    start file was written for it (`run_starts.START_MARK`) needs that
+    file staged or committed — also when the run's record was committed
+    earlier, and also when the committed mark was deleted since; for a
+    run without a mark no start-file duty is evidenced, and none is
+    asked."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.area = self.root / "experiments" / "01-x"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
+        init_repo(self.root)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the area")
+        self.run_dir = _run_dir(self.area, CLOSED, closed=True)
+        run_starts.write_start_mark(self.run_dir)
+        self.start = run_starts.write_start(
+            self.area,
+            run_starts.RunStart(CLOSED, "p-0123456789abcdef", NOON, "measurement"),
+        )
+
+    def staged(self) -> list[tuple[str, str]]:
+        return evidence.change_findings(self.area, staged=True)
+
+    def test_a_run_staged_without_its_start_file_holds_the_commit(self):
+        _git(self.root, "add", str(self.run_dir))
+        ((why, fix),) = self.staged()
+        self.assertIn(
+            f"run-starts/{CLOSED}.json: the start file of run {CLOSED} stands in "
+            f"the working tree and is neither staged nor committed",
+            why,
+        )
+        self.assertIn(
+            f"`git add -- experiments/01-x/run-starts/{CLOSED}.json`",
+            fix.replace(str(self.root) + "/", ""),
+        )
+        (hold,) = evidence.change_blockers(self.staged())
+        self.assertEqual(hold.grade, "BLOCKER")
+        # the area state of the commit does not count the file either
+        self.assertEqual(state_of(self.area, file_state=INDEX).starts, {})
+        # the tree's own check is not asked this
+        self.assertEqual(evidence.change_findings(self.area), [])
+
+    def test_the_twin_the_start_file_staged_passes(self):
+        _git(self.root, "add", str(self.run_dir), str(self.start))
+        self.assertEqual(self.staged(), [])
+        self.assertEqual(list(state_of(self.area, file_state=INDEX).starts), [CLOSED])
+
+    def test_a_run_committed_earlier_without_its_start_file_holds(self):
+        """The bypass: the record was committed before, the start file never
+        was. Nothing of the run is staged now, and the commit's state still
+        lacks the file — held, whatever the commit carries."""
+        _git(self.root, "add", str(self.run_dir))
+        _git(self.root, "commit", "-qm", "the run, without its start file")
+        ((why, fix),) = self.staged()
+        self.assertIn("is neither staged nor committed", why)
+        self.assertIn("git add -- ", fix)
+        self.assertIn(f"run-starts/{CLOSED}.json", fix)
+        # the twin: the start file committed, and it passes
+        _git(self.root, "add", str(self.start))
+        _git(self.root, "commit", "-qm", "its start file")
+        self.assertEqual(self.staged(), [])
+
+    def test_deleting_a_committed_mark_does_not_lift_the_duty(self):
+        """The mark a commit holds counts where the tree and the index lack
+        it: the start file is still asked for."""
+        _git(self.root, "add", str(self.run_dir))
+        _git(self.root, "commit", "-qm", "the run, marked, without its start file")
+        (self.run_dir / run_starts.START_MARK).unlink()
+        _git(self.root, "add", "-A", str(self.run_dir))
+        whys = [why for why, _ in self.staged()]
+        self.assertTrue(
+            any("is neither staged nor committed" in why for why in whys), whys
+        )
+
+    def test_the_twin_a_run_with_no_duty_evidenced_is_not_asked(self):
+        """Its directory contains no mark, as every run from before start files:
+        an existing lab's runs pass, staged now or committed long ago, with
+        no start file anywhere."""
+        old = _run_dir(self.area, OPEN, closed=True)
+        _git(self.root, "add", str(old))
+        self.assertEqual(self.staged(), [])
+        _git(self.root, "commit", "-qm", "an old run")
+        self.assertEqual(self.staged(), [])
+
+    def test_the_twin_nothing_of_the_run_in_the_index_is_not_asked(self):
+        self.assertEqual(self.staged(), [])  # the commit's state holds no run
+
+
 class Session(unittest.TestCase):
     """The stop: the session's commits against their parents, HEAD's reflog."""
 
@@ -251,9 +406,7 @@ class Session(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
         (self.area / "scripts" / "01_measure.py").write_text("x = 1\n")
         self.record = _record(self.area)
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         with _dated(3600):  # the repo predates the session
             _git(self.root, "commit", "-qm", "init")
@@ -345,9 +498,7 @@ class Told(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
         self.record = _record(self.area)
         self.closed = _run_dir(self.area, CLOSED, closed=True)
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "evidence")
         self.event = {

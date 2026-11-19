@@ -24,6 +24,7 @@ import json
 from datetime import datetime, timezone
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -34,10 +35,22 @@ from unittest import mock
 
 from labkit.tools import report_command
 from labkit.formats.area_state import state_of
-from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
+from labkit.gates import (
+    audit,
+    agent_hooks,
+    finalize,
+    hook_post_change,
+    preflight,
+    registration_hold,
+    report_check,
+    report_context,
+)
 from labkit.tools import protocol_fill, scaffold
+from labkit.run import runlog, start_check
 from labkit.formats import (
     answering_run,
+    run_index,
+    run_starts,
     findings,
     promises,
     protocol_block,
@@ -55,6 +68,9 @@ from protocol_fixture import (
     shown_sha,
 )  # noqa: E402
 from labkit.formats.runs import RUN_ID_TIME  # noqa: E402
+from repo_fixture import git
+from command_fixture import run_main
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -93,9 +109,7 @@ class Lab:
         self.root = Path(self.tmp.name) / "lab"
         self.root.mkdir()
         scaffold.stamp_lab(self.root, "lab")
-        self.git("init", "-q")
-        self.git("config", "user.email", "t@t")
-        self.git("config", "user.name", "t")
+        init_repo(self.root)
         self.env = {
             **os.environ,
             "CLAUDE_PROJECT_DIR": str(self.root),
@@ -106,10 +120,7 @@ class Lab:
         self.tmp.cleanup()
 
     def git(self, *args: str) -> str:
-        r = subprocess.run(
-            ["git", *args], cwd=self.root, capture_output=True, text=True, check=True
-        )
-        return r.stdout
+        return git(self.root, *args)
 
     def commit(self, message: str) -> None:
         self.git("add", "-A")
@@ -122,11 +133,11 @@ class Lab:
 
     def fill(self, protocol: Path, *pairs: str) -> None:
         """`protocol-fill PROTOCOL "label=value" …`, must succeed."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = protocol_fill.main([str(protocol), *pairs])
+        rc, out = run_main(
+            protocol_fill.main, [str(protocol), *pairs], capture_stderr=False
+        )
         if rc != 0:
-            raise AssertionError(f"protocol-fill: {out.getvalue()}")
+            raise AssertionError(f"protocol-fill: {out}")
 
     def conclude(
         self, protocol: Path, answer: str = "The documents hold about two lines each."
@@ -197,36 +208,33 @@ class Lab:
             shown_sha=(
                 shown_sha(area, area / "runs" / run_id) if run_id is not None else None
             ),
-            registration=registration_of(area),
+            registration=registration_of(area, preflight=mode == sc.PREFLIGHT_AUDIT),
             protocol_id=protocol_id_of(area),
         )
         return sha
 
     def finalize(self, area: Path) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = finalize.main([str(area)])
-        return rc, out.getvalue()
+        return run_main(finalize.main, [str(area)], capture_stderr=False)
 
     def adopt(self, protocol: Path, run_id: str) -> tuple[int, str]:
         """`protocol-fill PROTOCOL --from-run RUN_ID`, the Conclusion written
         first where it is open (`concluded`), as the author does: the
         adoption owes it. Its refusal without one: tests/test_adopt.py."""
         self.concluded(protocol)
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = protocol_fill.main([str(protocol), "--from-run", run_id])
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main,
+            [str(protocol), "--from-run", run_id],
+            capture_stderr=False,
+        )
 
     def adopt_forced(self, protocol: Path, run_id: str) -> tuple[int, str]:
         """`protocol-fill PROTOCOL --from-run RUN_ID --force`: (exit, what it
         printed, a refusal included), the Conclusion written first where it
         is open (`concluded`)."""
         self.concluded(protocol)
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = protocol_fill.main([str(protocol), "--from-run", run_id, "--force"])
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main, [str(protocol), "--from-run", run_id, "--force"]
+        )
 
     def stop_hook(self) -> tuple[int, str]:
         """`claude-hook stop` over everything git sees as changed."""
@@ -679,21 +687,21 @@ class CountCommands(unittest.TestCase):
         """`labkit-audit AREA --decide N`: its output, the decision's line.
         PROTOCOL is named with `--protocol`, as the decide line is printed
         in an area of several protocols."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            rc = audit.main(
-                [
-                    str(self.area),
-                    "--decide",
-                    str(n),
-                    *decide_words(status, reason),
-                    "--record",
-                    str(record),
-                    *(["--protocol", str(protocol)] if protocol else []),
-                ]
-            )
-        self.assertEqual(rc, 0, out.getvalue())
-        return out.getvalue()
+        rc, out = run_main(
+            audit.main,
+            [
+                str(self.area),
+                "--decide",
+                str(n),
+                *decide_words(status, reason),
+                "--record",
+                str(record),
+                *(["--protocol", str(protocol)] if protocol else []),
+            ],
+            capture_stderr=False,
+        )
+        self.assertEqual(rc, 0, out)
+        return out
 
     def withdraw(self, why: str, *more: str) -> tuple[int, str]:
         out, err = io.StringIO(), io.StringIO()
@@ -733,6 +741,80 @@ class CountCommands(unittest.TestCase):
         )
 
 
+class AnOlderRunRechecked(CountCommands):
+    """`02_analyze.py --check --run <run_id>`, the separate check of an
+    older run after a later run of the same script overwrote its rows
+    (every row carries its run's id): the rows are read from the commit
+    that holds them with the recorded sha256, and nothing of the tree or
+    the protocol changes."""
+
+    def older(self, run_id: str) -> tuple[int, str]:
+        """The check of RUN_ID as an agent runs it: (exit, its output)."""
+        r = subprocess.run(
+            [
+                sys.executable,
+                str(self.area / "scripts" / "02_analyze.py"),
+                "--check",
+                "--run",
+                run_id,
+            ],
+            cwd=self.lab.root,
+            capture_output=True,
+            text=True,
+            env=self.lab.env,
+        )
+        return r.returncode, r.stdout + r.stderr
+
+    def rows(self) -> bytes:
+        (out,) = (self.area / "output").glob("*.jsonl")
+        return out.read_bytes()
+
+    def test_the_twin_rows_that_still_stand_are_read_where_they_are(self) -> None:
+        a = self.measure()
+        rc, told = self.older(a)
+        self.assertEqual(rc, 0, told)
+        self.assertIn(f"historical check: run {a}", told)
+        self.assertIn("rows read from the file as it stands", told)
+
+    def test_overwritten_rows_are_read_from_their_commit(self) -> None:
+        a = self.measure()
+        self.lab.commit("run A and its rows")
+        b = self.measure()
+        after_b, protocol = self.rows(), self.protocol.read_bytes()
+        self.assertIn(b.encode(), after_b)
+        rc, told = self.older(a)
+        self.assertEqual(rc, 0, told)
+        self.assertIn(f"historical check: run {a}", told)
+        self.assertIn("rows read from commit ", told)
+        self.assertIn("this releases nothing", told)
+        # the tree is as the later run left it, and nothing was adopted
+        self.assertEqual(self.rows(), after_b)
+        self.assertEqual(self.protocol.read_bytes(), protocol)
+
+    def test_rows_no_commit_holds_are_not_verifiable(self) -> None:
+        """A's rows were overwritten before any commit held them: the
+        later run's rows are not read in their place."""
+        a = self.measure()
+        self.measure()
+        self.lab.commit("only the later run's rows")
+        rc, told = self.older(a)
+        self.assertNotEqual(rc, 0, told)
+        self.assertIn(f"run {a} is not verifiable", told)
+        self.assertIn("never read in its place", told)
+
+    def test_the_run_is_named_only_for_a_check(self) -> None:
+        a = self.measure()
+        r = subprocess.run(
+            [sys.executable, str(self.area / "scripts" / "02_analyze.py"), "--run", a],
+            cwd=self.lab.root,
+            capture_output=True,
+            text=True,
+            env=self.lab.env,
+        )
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--run names an older run for --check", r.stderr)
+
+
 class MeasuredRunsKeepTheirSecond(CountCommands):
     def test_two_measurements_back_to_back_carry_different_seconds(self):
         """The fixture's `measure` never writes two runs of one second:
@@ -740,6 +822,443 @@ class MeasuredRunsKeepTheirSecond(CountCommands):
         hooks."""
         a, b = self.measure(), self.measure()
         self.assertNotEqual(a[: len(_SECOND)], b[: len(_SECOND)])
+
+
+class FirstMeasurementLost(CountCommands):
+    """A measured, never committed, its directory deleted: only the run
+    index names it. The next start is not held to HEAD as a first
+    measurement and says what is missing; finalize holds the number as a
+    check not executable, and with the record back from a copy the
+    comparison with A runs again
+    (docs/notes/2026-11-18-lost-first-measurement.md). Confirmatory: the
+    comparison with the first measurement is that workflow's hold; what a
+    lost run holds in exploration is `test_exploration_hold.ARunLost`."""
+
+    PROTOCOL_TYPE = "confirmatory"
+
+    OLD = "How many lines does a document of data/raw/docs hold on average?"
+    NEW = "How many lines does the longest document of data/raw/docs hold?"
+
+    def lose_a(self) -> tuple[str, Path]:
+        """Measure A and delete its directory: (its id, a copy kept
+        outside the lab)."""
+        run_a = self.measure()
+        kept = Path(tempfile.mkdtemp()) / run_a
+        self.addCleanup(shutil.rmtree, kept.parent)
+        shutil.move(str(self.area / "runs" / run_a), str(kept))
+        return run_a, kept
+
+    def start_b(self, run_a: str) -> tuple[str, str]:
+        """Start B in a later second than A: (its id, what the start printed)."""
+        while time.strftime(RUN_ID_TIME) <= run_a[: len(_SECOND)]:
+            time.sleep(0.02)
+        out = self.lab.script(self.area, "01_measure.py")
+        return self.lab.run_id_of(out), out
+
+    def test_the_start_warns_and_finalize_holds_until_the_record_is_back(self):
+        run_a, kept = self.lose_a()
+        _replace(self.protocol, [(self.OLD, self.NEW)])
+        self.lab.commit("the question, rewritten after A")
+        run_b, out = self.start_b(run_a)
+        self.assertIn(
+            "PROTOCOL-lines.md: this run is not held to HEAD as its first measurement",
+            out,
+        )
+        self.assertIn(f"run {run_a} is gone", out)
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("BLOCKER (check not executable): what the number is about", out)
+        self.assertIn(f"run {run_a} is gone", out)
+        # the start files hold both starts, A's first: nothing is unknown
+        self.assertNotIn("is unknown", out)
+        self.assertNotIn("are the ones the first measurement registered", out)
+        for way in ("a copy that holds it", "register anew", "--handover"):
+            self.assertIn(way, out)
+        # the twin: A back from the copy, and the comparison with it runs
+        shutil.move(str(kept), str(self.area / "runs" / run_a))
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertNotIn("check not executable", out)
+        self.assertIn(
+            f"what the number is about changed after the first measurement {run_a}",
+            out,
+        )
+        self.assertIn(f"as the answering run {run_b} saw the protocol", out)
+
+    def test_the_twin_a_later_run_lost_is_named_and_holds_nothing(self):
+        """A stands and reads; a second measurement is deleted before a
+        commit. The start files put its start after A's, so the
+        registration station compares as before and warns of the lost run.
+        What needs the lost run's own evidence is held by its own check:
+        the output file holds the lost run's rows, and the row provenance
+        station (`run_record_check.row_provenance_findings`) blocks A's
+        number over them."""
+        run_a = self.measure()
+        later = self.measure()
+        shutil.rmtree(self.area / "runs" / later)
+        rc, out = self.lab.finalize(self.area)
+        self.assertIn("are the ones the first measurement registered", out)
+        self.assertIn(f"WARNING: run {later} is gone", out)
+        self.assertIn("the comparison with the first measurement runs", out)
+        self.assertIn("which labkit does not check", out)
+        self.assertNotIn("what the number is about cannot be compared", out)
+        self.assertNotIn(f"run {run_a} is gone", out)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"row(s) from {later} — a run this run neither is, continues nor "
+            f"derives from",
+            out,
+        )
+
+    def break_off(self) -> str:
+        """A measurement that starts and breaks off in the measuring
+        script; the script as committed again afterwards. Its id."""
+        measure = self.area / "scripts" / "01_measure.py"
+        ok = '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}'
+        _replace(measure, [(ok, '    raise RuntimeError("broke off")')])
+        r = subprocess.run(
+            [sys.executable, str(measure)],
+            cwd=self.lab.root,
+            capture_output=True,
+            text=True,
+            env=self.lab.env,
+        )
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.lab.git("checkout", "--", str(measure))
+        (broke_off,) = [d.name for d in (self.area / "runs").iterdir()]
+        return broke_off
+
+    def test_a_measurement_that_broke_off_and_was_deleted_keeps_counting(self):
+        """A starts and breaks off: no index row, and its directory is
+        deleted. Its start file is all that is left — through a reindex
+        too. The next start says so and starts; finalize holds
+        the number of the run that followed."""
+        broke_off = self.break_off()
+        starts = run_starts.start_path(self.area, broke_off)
+        self.assertIn(f'"run_id": "{broke_off}"', starts.read_text(encoding="utf-8"))
+        index = self.area / "runs.tsv"
+        indexed = index.read_text(encoding="utf-8") if index.is_file() else ""
+        self.assertNotIn(broke_off, indexed)
+        shutil.rmtree(self.area / "runs" / broke_off)
+        kept = starts.read_text(encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            runlog.reindex(self.area)
+        self.assertEqual(starts.read_text(encoding="utf-8"), kept)
+        _, out = self.start_b(broke_off)
+        self.assertIn(
+            "PROTOCOL-lines.md: this run is not held to HEAD as its first measurement",
+            out,
+        )
+        self.assertIn(
+            f"run {broke_off} is gone (its start file lists it as a measurement "
+            f"that started",
+            out,
+        )
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("BLOCKER (check not executable): what the number is about", out)
+        self.assertIn(f"run {broke_off} is gone (its start file lists it", out)
+        self.assertIn("may have been the first", out)
+        self.assertNotIn("are the ones the first measurement registered", out)
+
+    def test_a_committed_deletion_of_the_start_file_leaves_the_run_known(self):
+        """A breaks off; its start file is committed, its directory never
+        is. Then the directory and the start file are deleted and the
+        deletion is committed. The run is still known from the commit that
+        held its start file: the next start warns, finalize holds B's
+        number, and the hook names the checkout that restores the file."""
+        broke_off = self.break_off()
+        start = run_starts.start_path(self.area, broke_off)
+        self.lab.git("add", str(start))
+        self.lab.git("commit", "-qm", "the start of a run that broke off")
+        held = self.lab.git("rev-parse", "HEAD").strip()
+        shutil.rmtree(self.area / "runs" / broke_off)
+        start.unlink()
+        self.lab.git("add", "-A")
+        self.lab.git("commit", "-qm", "the start file, deleted")
+        state = state_of(self.area)
+        self.assertEqual(state.deleted_starts, {broke_off: held})
+        self.assertEqual(state.started_only, {broke_off: protocol_id_of(self.area)})
+        (line,) = [
+            ln
+            for ln in hook_post_change.index_problems(state)
+            if "start file is gone" in ln
+        ]
+        self.assertIn(f"git checkout {held} -- ", line)
+        self.assertIn(f"{broke_off}.json", line)
+        _, out = self.start_b(broke_off)
+        self.assertIn(
+            f"run {broke_off} is gone (its start file lists it as a measurement "
+            f"that started",
+            out,
+        )
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("BLOCKER (check not executable): what the number is about", out)
+        self.assertIn("may have been the first", out)
+        # the twin: the file back from that commit, and nothing is told as deleted
+        self.lab.git("checkout", held, "--", str(start))
+        self.assertEqual(state_of(self.area).deleted_starts, {})
+
+    def test_a_start_file_that_does_not_read_refuses_nothing(self):
+        """A measured and adoptable; then its start file is damaged. The
+        area's checks still run: finalize warns of the incomplete start,
+        names no hand repair, and holds nothing for it."""
+        run_a = self.measure()
+        run_starts.start_path(self.area, run_a).write_text(
+            "{not json", encoding="utf-8"
+        )
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            f"WARNING (check not executable): the start file of run {run_a} does "
+            f"not read",
+            out,
+        )
+        self.assertIn("no value is written into a start file by hand", out)
+        self.assertIn("are the ones the first measurement registered", out)
+
+    def test_a_record_of_unknown_protocol_holds_nothing_and_establishes_nothing(
+        self,
+    ):
+        """One protocol in the area, and a record that does not read and
+        that no index row names: the protocol count assigns it to nobody.
+        finalize holds nothing for it, warns that its binding is unknown,
+        and does not say the first measurement's registration is
+        established."""
+        self.measure()
+        unknown = self.area / "runs" / "2026-01-01T10-00-00_0bad"
+        unknown.mkdir()
+        (unknown / "config.json").write_text("{not json", encoding="utf-8")
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            f"WARNING (check not executable): the record of run {unknown.name} "
+            f"does not read",
+            out,
+        )
+        self.assertIn("which protocol it belongs to cannot be determined", out)
+        self.assertIn("nor that none came before", out)
+        self.assertIn(
+            "are the ones the first measurement that reads registered — an earlier "
+            "measurement is not excluded",
+            out,
+        )
+        self.assertNotIn("the ones the first measurement registered", out)
+
+    def test_a_later_start_is_not_held_to_head_as_the_first(self):
+        """With the protocol out of HEAD a first measurement is refused as
+        not committed (`test_start_gate_unread`); after a lost one the start
+        check names no gap, as after one whose record reads."""
+        self.lose_a()
+        rel = self.protocol.relative_to(self.lab.root).as_posix()
+        self.lab.git("rm", "-q", "--cached", rel)
+        self.lab.git("commit", "-qm", "the protocol out of the index")
+        bound = start_check.protocol_binding(self.area, self.protocol.name)
+        state = state_of(self.area)
+        self.assertEqual(
+            start_check._freeze_findings(self.area, bound, state),  # noqa: SLF001
+            [],
+        )
+
+
+#: what one process of `ParallelStarts` runs: wait for the common signal,
+#: then start and finish its runs in the area, printing each run id
+_STARTER = """
+import contextlib, io, sys, time
+from pathlib import Path
+from labkit.run import runlog
+
+area, go, runs_each = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
+while not go.exists():
+    time.sleep(0.001)
+for n in range(runs_each):
+    with contextlib.redirect_stdout(io.StringIO()):
+        with runlog.run("x", {"n": n}, area, run_kind="preparation") as run:
+            run.metrics(n=n)
+    print(run.run_id)
+"""
+
+
+class ParallelStarts(unittest.TestCase):
+    """Processes of their own, not threads on one handle, start runs in one
+    area at the same moment: every run gets an id of its own and one
+    start file, whole — each created in one step and never written into by
+    another start (`run_starts.write_start`) —, and the run index, appended
+    under its lock, lists the same runs."""
+
+    PROCESSES = 8
+    RUNS_EACH = 5
+    REPETITIONS = 3
+
+    def one_round(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        area, go = tmp / "area", tmp / "go"
+        area.mkdir()
+        started = [
+            subprocess.Popen(
+                [
+                    sys.executable,
+                    "-c",
+                    _STARTER,
+                    str(area),
+                    str(go),
+                    str(self.RUNS_EACH),
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            for _ in range(self.PROCESSES)
+        ]
+        go.touch()
+        ids: list[str] = []
+        for proc in started:
+            out, err = proc.communicate(timeout=120)
+            self.assertEqual(proc.returncode, 0, err)
+            ids += out.split()
+        total = self.PROCESSES * self.RUNS_EACH
+        self.assertEqual(len(set(ids)), total)
+        # one start file per run, each whole (a torn one would not read),
+        # and nothing else in their directory: no temporary file
+        starts = run_starts.read_starts(area)
+        self.assertEqual(sorted(starts), sorted(ids))
+        files = sorted(p.name for p in (area / run_starts.START_FILES_DIR).iterdir())
+        self.assertEqual(files, sorted(f"{r}.json" for r in ids))
+        self.assertEqual({s.run_kind for s in starts.values()}, {"preparation"})
+        self.assertEqual(sorted(run_index.indexed_bindings(area)), sorted(ids))
+
+    def test_every_start_has_its_own_id_and_one_whole_start_file(self):
+        for n in range(self.REPETITIONS):
+            with self.subTest(round=n):
+                self.one_round()
+
+
+class LosingTheStartFile(CountCommands):
+    """Does losing a start file ease a release? The same scenario twice —
+    with the start file, and after deleting it while no commit holds it —
+    through every check that reads the start: finalize's registration
+    station, report-check, the run's start check and the post-change hook.
+
+    Two cases, kept apart. An evidenced loss holds: something else still
+    names the run — its index row, its record with the start mark —, and
+    no check that held with the file passes without it. A complete loss of
+    every trace is the detection limit: with the run directory and the
+    only start file gone before a commit held either, labkit has no
+    evidence and sees nothing; only the commit secures a start file
+    (docs/notes/2026-11-18-run-start-record.md).
+
+    For the start, "holds" means that its warning names the run: the start
+    refuses nothing, and a new run starts while the number waits."""
+
+    def checks(self, run: str) -> dict[str, bool]:
+        """Per check: does it hold the protocol's number, or name RUN, now?"""
+        ctx = report_context.checked(self.area, self.protocol)
+        held = registration_hold.registration_changes(
+            ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
+        )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            report_command.main([str(self.area)])
+        state = state_of(self.area)
+        bound = start_check.protocol_binding(self.area, self.protocol.name)
+        note = start_check.earlier_measurement_note(bound, state) or ""
+        return {
+            "registration station": any(f.grade == "BLOCKER" for f in held),
+            "report-check": "BLOCKER (check not executable): finalize: "
+            in out.getvalue(),
+            "start check": run in note,
+            "post-change hook": any(
+                run in line for line in hook_post_change.index_problems(state)
+            ),
+        }
+
+    def with_and_without(self, run: str) -> tuple[dict[str, bool], dict[str, bool]]:
+        """(the checks with RUN's start file, the checks after deleting it)."""
+        before = self.checks(run)
+        run_starts.start_path(self.area, run).unlink()
+        return before, self.checks(run)
+
+    ALL = {
+        "registration station": True,
+        "report-check": True,
+        "start check": True,
+        "post-change hook": True,
+    }
+    NONE = dict.fromkeys(ALL, False)
+
+    def break_off(self) -> str:
+        """A measurement that starts and breaks off; its id."""
+        measure = self.area / "scripts" / "01_measure.py"
+        ok = '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}'
+        _replace(measure, [(ok, '    raise RuntimeError("broke off")')])
+        subprocess.run(
+            [sys.executable, str(measure)],
+            cwd=self.lab.root,
+            capture_output=True,
+            text=True,
+            env=self.lab.env,
+        )
+        self.lab.git("checkout", "--", str(measure))
+        (run,) = [d.name for d in (self.area / "runs").iterdir()]
+        return run
+
+    def test_the_counter_case_an_intact_start_file_holds_nothing(self):
+        run = self.measure()
+        self.assertEqual(self.checks(run), self.NONE)
+
+    def test_evidenced_a_finished_run_deleted_keeps_holding(self):
+        """A finished — the index lists it — and its directory was deleted;
+        B measured. The index row keeps A whatever becomes of its start
+        file."""
+        run_a = self.measure()
+        shutil.rmtree(self.area / "runs" / run_a)
+        self.measure()
+        self.assertEqual(self.with_and_without(run_a), (self.ALL, self.ALL))
+
+    def test_evidenced_a_run_whose_record_names_the_start_file_holds(self):
+        """A stands, and its directory contains the start mark. With its start
+        file nothing holds; without it the loss is evidenced, and the
+        release is held."""
+        run_a = self.measure()
+        self.assertEqual(self.with_and_without(run_a), (self.NONE, self.ALL))
+
+    def test_the_start_refuses_nothing_while_the_release_is_held(self):
+        """A's start file is lost and the release is held. A new run of the
+        same protocol still starts and completes: only the number waits."""
+        run_a = self.measure()
+        run_starts.start_path(self.area, run_a).unlink()
+        run_b = self.measure()
+        self.assertNotEqual(run_b, run_a)
+        self.assertTrue((self.area / "runs" / run_b / "completion.json").is_file())
+        self.assertTrue(self.checks(run_a)["registration station"])
+
+    def test_evidenced_a_contradicting_start_file_deleted_still_holds(self):
+        """A stands; its start file names another protocol, which holds the
+        release. Deleting the file does not lift the hold: the record still
+        names a start file, and none is found."""
+        run_a = self.measure()
+        path = run_starts.start_path(self.area, run_a)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["protocol_id"] = "p-0000000000000000"
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        before, after = self.with_and_without(run_a)
+        self.assertEqual(before, {**self.ALL, "post-change hook": False})
+        self.assertEqual(after, self.ALL)
+
+    def test_the_limit_a_run_gone_with_its_only_start_file_is_not_seen(self):
+        """A LIMIT, NOT A GUARANTEE. A broke off — no index row — and its
+        directory was deleted, the start mark with it; its start file is
+        its only trace, and no commit holds it. With the file every check
+        holds or names A; with the file deleted too, labkit has no evidence
+        of A and sees nothing. This asserts what is, so that a change is
+        seen: it does not say the state is acceptable. Only a commit
+        secures a start file."""
+        run_a = self.break_off()
+        shutil.rmtree(self.area / "runs" / run_a)
+        self.measure()
+        self.assertEqual(self.with_and_without(run_a), (self.ALL, self.NONE))
 
 
 class Withdraw(CountCommands):
@@ -934,15 +1453,13 @@ class Withdraw(CountCommands):
             f"verdict: {int(verdict == 'upheld')} upheld, "
             f"{int(verdict == 'rejected')} rejected, 0 insufficient\n"
         )
-        out = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
         ):
-            rc = audit.main([str(self.area), "--review", "--record", str(record)])
-        return rc, out.getvalue()
+            return run_main(
+                audit.main, [str(self.area), "--review", "--record", str(record)]
+            )
 
     def test_a_false_positive_blocker_is_held_until_a_second_auditor_upholds_it(self):
         """The deciding agent's own `dismissed` does not release a blocking
@@ -1281,10 +1798,9 @@ class DataCounts(unittest.TestCase):
         return next(f.value for f in fields(text) if f.name == "data / scope")
 
     def counts(self, *args: str) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = protocol_fill.main([str(self.protocol), "--data-counts", *args])
-        return rc, out.getvalue()
+        return run_main(
+            protocol_fill.main, [str(self.protocol), "--data-counts", *args]
+        )
 
     def finalized(self) -> tuple[int, str]:
         return self.lab.finalize(self.area)
@@ -1481,25 +1997,20 @@ class Judge(unittest.TestCase):
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area), protocol_id=protocol_id_of(self.area),)  # fmt: skip
 
     def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = audit.main(
-                [
-                    str(self.area),
-                    "--decide",
-                    "1",
-                    *decide_words(*argv),
-                    "--record",
-                    str(record),
-                ]
-            )
-        return rc, out.getvalue()
+        return run_main(
+            audit.main,
+            [
+                str(self.area),
+                "--decide",
+                "1",
+                *decide_words(*argv),
+                "--record",
+                str(record),
+            ],
+        )
 
     def _report_check(self) -> tuple[int, str]:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_command.main([str(self.area)])
-        return rc, out.getvalue()
+        return run_main(report_command.main, [str(self.area)])
 
     def _review(self, record: Path, verdict: str = "upheld") -> tuple[int, str]:
         """The decision review, its model faked to VERDICT the one decision."""
@@ -1509,15 +2020,13 @@ class Judge(unittest.TestCase):
             f"{int(verdict == 'rejected')} rejected, "
             f"{int(verdict == 'insufficient')} insufficient\n"
         )
-        out = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
         ):
-            rc = audit.main([str(self.area), "--review", "--record", str(record)])
-        return rc, out.getvalue()
+            return run_main(
+                audit.main, [str(self.area), "--review", "--record", str(record)]
+            )
 
     def test_04_an_accepted_blocker_reaches_the_protocol_as_its_limit(self):
         """An accepted BLOCKER may carry a

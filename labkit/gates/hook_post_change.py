@@ -50,10 +50,13 @@ from labkit.formats.area_state import (
     LOST_RUN_SENTENCE,
     gone_run_restore,
     index_names_gone_runs,
+    starts_name_open_runs,
     state_of,
 )
 from labkit.formats import evidence
+from labkit.formats.commands import checkout_command, gate_command
 from labkit.formats.run_index import RunIndexError
+from labkit.formats.run_starts import START_FILES_DIR, start_path
 from labkit.formats.repo import (
     rel_posix,
     EXPERIMENTS,
@@ -73,9 +76,15 @@ def _git_changed(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
     return [repo / path for xy, path in entries if "D" not in xy]
 
 
+#: the directories of an area that hold its evidence: the audit files, the
+#: runs and the runs' start files
+EVIDENCE_DIRS = (findings.DIR, runs.RUNS_DIR, START_FILES_DIR)
+
+
 def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
     """The areas whose evidence ENTRIES (`repo.status_entries` of REPO) name
-    — a path in an area's `audits/` or `runs/`, deleted, changed or new —,
+    — a path in an area's `audits/`, `runs/` or `run-starts/`, deleted,
+    changed or new —,
     each once, in order."""
     out: list[Path] = []
     for _, rel in entries:
@@ -84,30 +93,52 @@ def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
         if area is None:
             continue
         inside = path.resolve().relative_to(area.resolve()).parts
-        if inside and inside[0] in (findings.DIR, runs.RUNS_DIR) and area not in out:
+        if inside and inside[0] in EVIDENCE_DIRS and area not in out:
             out.append(area)
     return out
 
 
 def gone_run_areas(repo: Path) -> list[Path]:
     """The areas of REPO's `experiments/` whose run index lists a run whose
-    directory is gone. Deleting an untracked run leaves nothing for git
-    status to name, so `evidence_areas` does not see it."""
+    directory is gone, or with a start file of a run that is gone or
+    stands without a completion. Deleting an untracked run leaves nothing
+    for git status to name, so `evidence_areas` does not see it."""
     base = repo / EXPERIMENTS
     if not base.is_dir():
         return []
     return [
         area
         for area in sorted(p for p in base.iterdir() if p.is_dir())
-        if index_names_gone_runs(area)
+        if index_names_gone_runs(area) or starts_name_open_runs(area)
     ]
 
 
 def index_problems(state: AreaState) -> list[str]:
-    """What the deleted runs of an area (its STATE) tell the evidence check:
-    each run a commit holds whose directory is gone, with the checkout that
-    restores it; each run only the local run index lists, lost; or why git
-    could not list the runs it holds — told, never skipped."""
+    """What the runs of an area (its STATE) that are gone or never finished
+    tell the evidence check — told, never skipped, and each case in words
+    of its own:
+
+    - why git could not list the runs it holds;
+    - a run a commit holds whose directory is gone, with the checkout that
+      restores it;
+    - a run only the local run index lists: it finished, its record is
+      gone;
+    - a run only a start file names: it started as the kind the file
+      names and did not complete, and its record is gone;
+    - a run whose start file a commit holds and the tree lacks, with the
+      checkout that restores it;
+    - a run whose start file does not read: an incomplete start;
+    - a run whose mark says a start file was written and for which
+      none is found: evidence that is lost;
+    - a run with a start file whose directory stands without a
+      completion (`unfinished_starts`): it started and never completed —
+      an abort, its record still here.
+
+    A known limit, open: a start file that is present and names another
+    protocol than the run's record gets no line here, and this hook does
+    not prevent the commit. The release is held by finalize's registration
+    station and by report-check (`registration_hold.binding_conflict_hold`),
+    and the run's start names it."""
     return (
         ([state.history_unread] if state.history_unread else [])
         + [
@@ -119,7 +150,62 @@ def index_problems(state: AreaState) -> list[str]:
             f"{LOST_RUN_SENTENCE}, and an audit that read it holds the adoption"
             for r in state.lost
         ]
+        + [
+            f"run {r}: its directory is gone — its start file lists it as a "
+            f"{state.starts[r].run_kind} that started, runs.tsv lists no completion "
+            f"of it, and {LOST_RUN_SENTENCE}"
+            for r in state.started_only
+        ]
+        + [
+            f"run {r}: its start file is gone, and a commit holds it — "
+            f"`{checkout_command(start_path(state.area, r), at)}` restores it; the "
+            f"run still counts as started as that file says"
+            for r, at in state.deleted_starts.items()
+        ]
+        + [
+            f"run {r}: its start file does not read ({s.unread}) — an incomplete "
+            f"start: nothing is taken from it; restore it from the commit that "
+            f"holds it, and where none does leave it as it is"
+            for r, s in state.starts.items()
+            if s.unread
+        ]
+        + [
+            f"run {r}: a start file was written for it — the mark in its directory "
+            f"says so — and none is found, in the working tree, the index or a commit: "
+            f"evidence of its start is lost; bring it back from a copy or a "
+            f"clone that holds it"
+            for r in state.missing_starts
+        ]
+        + unfinished_starts(state)
     )
+
+
+def unfinished_starts(state: AreaState) -> list[str]:
+    """One line per run a start file of STATE's area names whose
+    directory stands and which did not complete: it started as the kind
+    its row names and never completed — its record is here, unlike a run
+    whose directory is gone (`index_problems`). A run whose process still
+    lives is left out (`runs.is_alive`: it is running, not aborted); where
+    that cannot be told the line says so. Asks the process table."""
+    records = {rd.dir.name: rd for rd in state.runs}
+    out: list[str] = []
+    for facts in state.run_facts:
+        name = facts.dir.name
+        if name not in state.starts or facts.state == runs.COMPLETED:
+            continue
+        cfg = records[name].config
+        alive = runs.is_alive(cfg.pid, cfg.script) if cfg is not None else False
+        if alive is True:
+            continue
+        out.append(
+            f"run {name}: started as a {state.starts[name].run_kind or 'run'} "
+            f"(its start file stands) and never completed — its directory stands, "
+            f"{facts.state}"
+            + ("; whether it still runs cannot be told" if alive is None else "")
+            + f" (`{gate_command('runlog', state.area)}` lists why); its number, "
+            f"if it wrote one, is no result"
+        )
+    return out
 
 
 #: the post-change cache's key of an area's evidence state, before the area

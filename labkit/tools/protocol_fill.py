@@ -70,6 +70,11 @@ command line.
                                                of the registration against RUN_ID's own
                                                text, computed (`protocol_step`); an
                                                earlier step replaced
+    protocol-fill PROTOCOL-x.md --explored-in EXPLORATION_PROTOCOL
+                                               a confirmation's link to its exploration:
+                                               `[explored_in]` naming the exploratory
+                                               protocol's id and the run it has adopted
+                                               (`protocol_exploration`); an earlier link replaced
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -138,7 +143,7 @@ from labkit.formats.protocol_check import (
     not_owed,
     placeholder_fields,
 )
-from labkit.tools import protocol_step
+from labkit.tools import protocol_exploration, protocol_step
 from labkit.tools.protocol_edit import (
     HEAD_HINTS,
     as_filled,
@@ -395,7 +400,7 @@ def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str,
     and on a block in REPORT that does not read."""
     run = declared_run_dir(text, area, "a report shows an adopted result only")
     body = report_blocks.block_body(
-        rendering(area, text, run, found=evidence.decision_reviews(area))
+        rendering(area, text, run, found=evidence.decision_reviews_in_tree(area))
     )
     return report_blocks.with_block(report, protocol, run.name, body), run.name
 
@@ -597,7 +602,8 @@ def _evidence_mode(args: argparse.Namespace, text: str) -> int | None:
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the mode ARGS name (--withdraw, --data-counts,
     --handover, --list, --prompts, --render, --discuss, --reported-through,
-    --into, --from-run, --builds-on), or None when they name none: a field fill."""
+    --into, --from-run, --builds-on, --explored-in), or None when they name
+    none: a field fill."""
     evidence = _evidence_mode(args, text)
     if evidence is not None:
         return evidence
@@ -615,9 +621,37 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
         return _into_file(args.protocol, text, args.into)
     if args.from_run is not None:
         return _write_back(args, text)
+    return _basis_mode(args, text)
+
+
+def _basis_mode(args: argparse.Namespace, text: str) -> int | None:
+    """The exit code of the mode that names what the protocol builds on —
+    --builds-on (a step on an earlier run of it) or --explored-in (a
+    confirmation's exploration) —, or None when ARGS name neither."""
     if args.builds_on is not None:
         return _step_file(args, text)
+    if args.explored_in is not None:
+        return _link_file(args.protocol, text, args.explored_in)
     return None
+
+
+def _link_file(protocol: Path, text: str, exploration: Path) -> int:
+    """`--explored-in`: PROTOCOL's one `[explored_in]` written, naming the
+    protocol file EXPLORATION by its id and the run it has adopted
+    (`protocol_exploration`). Refused with exit 2, the file untouched: an
+    exploration that has adopted no run, a link the start of the first
+    confirming measurement would refuse
+    (`exploration_link.linked_exploration`), or a head that does not read."""
+    try:
+        link, new = protocol_exploration.link_to(protocol, text, exploration)
+    except (ValueError, protocol_block.BlockError) as exc:
+        console.refuse("protocol-fill", f"no link written — {exc}")
+        return 2
+    files.write_atomic(protocol, new)
+    print(
+        f"explored in {exploration.name} ({link.protocol}), its adopted run {link.run}"
+    )
+    return 0
 
 
 def _step_file(args: argparse.Namespace, text: str) -> int:
@@ -651,7 +685,7 @@ def newest_preparation(area: Path) -> Path:
         r
         for r in runs.completed_runs(area, with_repeats=False)
         if (cfg := runs.read_run_config(r)) is not None
-        and cfg.run_kind == "preparation"
+        and cfg.run_kind == runs.PREPARATION
     ]
     if not prepared:
         raise ValueError(
@@ -935,6 +969,30 @@ def _check_step_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> N
         ap.error("--builds-on cannot be combined with another operation")
 
 
+def _check_link_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Refuse --explored-in beside another operation, before file access."""
+    if args.explored_in is None:
+        return
+    if (
+        args.discuss is not None
+        or args.why is not None
+        or args.from_run is not None
+        or args.data_counts is not None
+        or args.builds_on is not None
+        or args.reported_through is not None
+        or args.into is not None
+        or args.freeze is not None
+        or args.withdraw
+        or args.handover
+        or args.force
+        or args.list
+        or args.prompts
+        or args.render
+        or args.field is not None
+    ):
+        ap.error("--explored-in EXPLORATION_PROTOCOL goes alone")
+
+
 def _check_through_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Refuse --reported-through without --into or beside another
     operation, before file access."""
@@ -1149,6 +1207,18 @@ def main(argv: list[str]) -> int:
         help="with --builds-on: what gave rise to the step",
     )
     ap.add_argument(
+        "--explored-in",
+        dest="explored_in",
+        type=Path,
+        default=None,
+        metavar="EXPLORATION_PROTOCOL",
+        help="write a confirmatory protocol's link to its exploration — "
+        "[explored_in] naming the exploratory protocol file's id and the run it "
+        "has adopted now; refused unless that protocol's first measurements "
+        "were exploratory and the run is its completed, adopted measurement; "
+        "an earlier link is replaced",
+    )
+    ap.add_argument(
         "--line",
         type=int,
         default=None,
@@ -1164,6 +1234,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     _check_data_counts_args(ap, args)
     _check_step_args(ap, args)
+    _check_link_args(ap, args)
     _check_through_args(ap, args)
     _check_report_mode_args(ap, args)
     if not args.protocol.is_file():

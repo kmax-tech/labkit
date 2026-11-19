@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -36,6 +35,8 @@ from protocol_fixture import (
     head,
     scope_file,
 )  # noqa: E402
+from repo_fixture import git as _git
+from repo_fixture import init_repo
 
 BODY = """
 - **Model / tool:** haiku
@@ -44,13 +45,6 @@ BODY = """
 - **Quality check:** [quality-check-1] every case parsed
 - **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 """
-
-
-def _git(cwd: Path, *args: str) -> str:
-    r = subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
-    )
-    return r.stdout.strip()
 
 
 def _repo(cost: str) -> tuple[Path, Path]:
@@ -62,9 +56,7 @@ def _repo(cost: str) -> tuple[Path, Path]:
     protocol.write_text(
         head(repeat_cost=cost, promises=DEFAULT_BLOCK) + BODY, encoding="utf-8"
     )
-    _git(root, "init", "-q", ".")
-    _git(root, "config", "user.email", "t@t")
-    _git(root, "config", "user.name", "t")
+    init_repo(root)
     _git(root, "add", "-A")
     _git(root, "commit", "-qm", "register")
     return root, protocol
@@ -90,6 +82,18 @@ class RepeatCostLowered(unittest.TestCase):
         self.assertIn(f"{first[:7]}: high -> low", warning)
         self.assertIn("LAB-017", warning)
 
+    def test_the_warning_names_a_suspicion_not_a_breach_of_a_rule(self):
+        """No rule forbids lowering the tier: the sentence says what may
+        follow (fewer audits owed) and that the change itself is allowed."""
+        _, protocol = _repo("high")
+        warning = protocol_history.repeat_cost_lowered(
+            protocol, _set_cost(protocol, "low")
+        )
+        assert warning is not None
+        self.assertIn("a suspicion, not a shown fault", warning)
+        self.assertIn("may reduce the audits this protocol owes", warning)
+        self.assertIn("no rule forbids lowering it", warning)
+
     def test_a_later_commit_does_not_launder_the_tier(self):
         """The first commit is the registration; a committed lowering still warns."""
         root, protocol = _repo("high")
@@ -109,14 +113,14 @@ class RepeatCostLowered(unittest.TestCase):
         root, protocol = _repo("high")
         old = (
             protocol.read_text(encoding="utf-8")
-            .replace('standard = "0.31"', 'standard = "0.22"')
+            .replace('standard = "0.33"', 'standard = "0.22"')
             .replace('repeat_cost = "high"', 'cost = "hours"')
         )
         protocol.write_text(old, encoding="utf-8")
         _git(root, "add", "-A")
         _git(root, "commit", "-q", "--amend", "-m", "registered at 0.22")
         protocol.write_text(
-            old.replace('standard = "0.22"', 'standard = "0.31"').replace(
+            old.replace('standard = "0.22"', 'standard = "0.33"').replace(
                 'cost = "hours"', 'repeat_cost = "high"'
             ),
             encoding="utf-8",
@@ -251,7 +255,7 @@ class WaivedAudit(unittest.TestCase):
             block,
             (0, 0, 0),
             [],
-            registration=registration_of(self.area),
+            registration=registration_of(self.area, preflight=True),
             protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, other.name, text)
@@ -265,7 +269,7 @@ class WaivedAudit(unittest.TestCase):
             "otherblock00",
             (0, 0, 0),
             [],
-            registration=registration_of(self.area),
+            registration=registration_of(self.area, preflight=True),
             protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, stale.name, text)
@@ -283,7 +287,7 @@ class WaivedAudit(unittest.TestCase):
                     "BLOCKER · scripts/01_measure.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z",
                 )
             ],
-            registration=registration_of(self.area),
+            registration=registration_of(self.area, preflight=True),
             protocol_id=protocol_id_of(self.area),
         )
         gap = audit_gaps.audit_record_gap(self.area, open_.name, text)
@@ -296,7 +300,7 @@ class WaivedAudit(unittest.TestCase):
             block,
             (0, 0, 0),
             [],
-            registration=registration_of(self.area),
+            registration=registration_of(self.area, preflight=True),
             protocol_id=protocol_id_of(self.area),
         )
         self.assertIsNone(audit_gaps.audit_record_gap(self.area, good.name, text))

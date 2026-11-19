@@ -6,6 +6,7 @@ and the commit, in a repository: tests/test_report_blocks.py."""
 
 from __future__ import annotations
 
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
@@ -120,7 +121,12 @@ class Blocks(unittest.TestCase):
 
         def fix(tree_run: str) -> str:
             source = report_blocks.BlockSource(
-                None, None, "only the tree", TECHNICAL_RULE, stage=P, tree_run=tree_run
+                None,
+                None,
+                "only the tree",
+                TECHNICAL_RULE,
+                stage=Path(P),
+                tree_run=tree_run,
             )
             (gap,) = report_blocks.block_gaps(found, {P: source}, report)
             return gap.line
@@ -161,7 +167,7 @@ class Blocks(unittest.TestCase):
         twin: a run neither holds keeps the sentence of a lost run."""
         lost = "2026-10-07T10-00-00_ffff"
         cited = report_blocks.cited_run_ids(f"see {RUN}\nand {lost}\n")
-        outside_index = {RUN: f"experiments/01-x/runs/{RUN}"}
+        outside_index = {RUN: Path(f"experiments/01-x/runs/{RUN}")}
         gaps = report_blocks.cited_gaps(
             cited, set(), structured={1, 2}, outside_index=outside_index
         )
@@ -187,6 +193,36 @@ class Blocks(unittest.TestCase):
 
 
 class Discussions(unittest.TestCase):
+    def test_the_discussion_line_reads_back_under_a_path_with_a_space(self):
+        """`discuss_command` quotes the protocol and the report like every
+        builder of `commands`: under a path with a space the line reads
+        back as its words. The twins: a plain path is printed bare, and a
+        placeholder (`<PROTOCOL>`, `<FILE>`) stays as written."""
+        line = report_blocks.discuss_command(
+            "my lab/01 x/PROTOCOL-x.md", RUN, "my lab/REPORT.md", "<why>"
+        ).line
+        self.assertEqual(
+            shlex.split(line),
+            [
+                "protocol-fill",
+                "my lab/01 x/PROTOCOL-x.md",
+                "--discuss",
+                RUN,
+                "--why",
+                "<why>",
+                "--into",
+                "my lab/REPORT.md",
+            ],
+        )
+        self.assertEqual(
+            report_blocks.discuss_command(P, RUN, "REPORT.md", "<why>").line,
+            f'protocol-fill {P} --discuss {RUN} --why "<why>" --into REPORT.md',
+        )
+        self.assertEqual(
+            report_blocks.discuss_command("<PROTOCOL>", "<run>", "<FILE>", "…").line,
+            'protocol-fill <PROTOCOL> --discuss <run> --why "…" --into <FILE>',
+        )
+
     """The discussion block: TOML head, the line written from it."""
 
     def test_write_appends_then_replaces_and_keeps_other_discussions(self):

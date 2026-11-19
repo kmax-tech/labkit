@@ -340,6 +340,14 @@ class GateFinding:
             also for code that could not be compared. Callers order their
             advice by it, never by the words
             (`report_check.held_declaration`).
+        known_as: The name a caller knows this finding by among a gate's
+            others — a label, set where the finding is built and only where
+            a caller has to pick it out (`finalize.UNREPORTABLE_NUMBER`,
+            `finalize.UNREADABLE_RESULT_TABLE`); None for every other
+            finding. A gate that holds the same cause at a station of its
+            own leaves the finding out by it, never by the words
+            (`report_check.without_unreportable_warnings`,
+            `report_check.without_declaration_blocker`).
     """
 
     grade: str
@@ -353,6 +361,7 @@ class GateFinding:
     step: Command | None = field(default=None, kw_only=True)
     withdraw_first: Command | None = field(default=None, kw_only=True)
     stated_outcome: str | None = field(default=None, kw_only=True)
+    known_as: str | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.grade not in (BLOCKER, WARNING):
@@ -489,12 +498,14 @@ def blocker(
     step: Command | None = None,
     stated_outcome: str | None = None,
     rule: RuleAssignment,
+    known_as: str | None = None,
 ) -> GateFinding:
     """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
     check returns as data for the gate that takes it (`Findings.take`).
     STATED_OUTCOME: NOT_EXECUTABLE for a check that could not run, else None
     (`GateFinding.stated_outcome`); RULE: its rule assignment
-    (`GateFinding.rule`)."""
+    (`GateFinding.rule`); KNOWN_AS: the name a caller picks it out by, else
+    None (`GateFinding.known_as`)."""
     return GateFinding(
         BLOCKER,
         text,
@@ -503,6 +514,7 @@ def blocker(
         evidence_kind=GUARANTEED,
         step=step,
         stated_outcome=stated_outcome,
+        known_as=known_as,
     )
 
 

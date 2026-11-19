@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -27,6 +26,7 @@ from labkit.checks.protocol_report import check_files, template_lines  # noqa: E
 from labkit.checks.protocol_report import find_template  # noqa: E402
 from labkit.gates import report_check  # noqa: E402
 from protocol_fixture import head  # noqa: E402
+from repo_fixture import git
 
 REFUSED = "a protocol must be a regular file, not a symbolic link"
 
@@ -47,7 +47,7 @@ class ProtocolLinks(unittest.TestCase):
         self.tmp.cleanup()
 
     def git(self, *args: str) -> None:
-        subprocess.run(["git", *args], cwd=self.root, check=True)
+        git(self.root, *args)
 
     def regular(self) -> None:
         if self.protocol.is_symlink():

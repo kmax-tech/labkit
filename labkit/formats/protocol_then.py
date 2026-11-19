@@ -2,7 +2,8 @@
 
 The text a run started under is its recorded commit's protocol with the
 part of its `uncommitted.patch` that touches the protocol, held to the
-promise block the run recorded (`as_measured`); the file is found by the
+promise block the run recorded (`as_measured`), and the step it made is that text's `[builds_on]`
+(`step_then`); the file is found by the
 id the run is bound to, now (`bound_protocol_file`) and in that commit
 (`protocol_path_at`). Mechanics only — what a difference between two such
 texts means is `protocol_history`'s and the gates'. Read-only; git is
@@ -11,6 +12,7 @@ asked through `repo`.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises, protocol_block, runs
@@ -129,6 +131,46 @@ def as_measured(
         text,
         f"as {role} {rd.dir.name} saw it ({commit[:12]}{patched})",
     )
+
+
+@dataclass(frozen=True)
+class StepThen:
+    """The step a run made, read from its own protocol text (`step_then`).
+
+    Attributes:
+        run_id: The run.
+        text: The protocol as the run saw it, None when it cannot be read
+            back.
+        step: Its `[builds_on]` then, None when it declared none — or when
+            the step cannot be told (UNKNOWN set).
+        where: Where TEXT was read from, or why it cannot be.
+        unknown: Why the step cannot be told — the text cannot be read back,
+            or its `[builds_on]` does not read; None when it can.
+    """
+
+    run_id: str
+    text: str | None
+    step: protocol_block.BuildsOn | None
+    where: str
+    unknown: str | None
+
+
+def step_then(protocol: Path, rd: RunDir, root: Path | None) -> StepThen:
+    """The step run RD of PROTOCOL made, as its own text holds it
+    (`as_measured`): the one reconstruction every consumer of a run's basis
+    shares — the basis is stored only there, never in the run record. When
+    it cannot be read back the step is unknown and says why; nothing is
+    invented in its place. RD's config must read. Raises RuntimeError when
+    git fails."""
+    text, where = as_measured(protocol, rd, root, role="run")
+    if text is None:
+        return StepThen(rd.dir.name, None, None, where, where)
+    try:
+        step = protocol_block.builds_on(text)
+    except protocol_block.BlockError as exc:
+        why = f"run {rd.dir.name}: its [builds_on] then does not read — {exc}"
+        return StepThen(rd.dir.name, text, None, where, why)
+    return StepThen(rd.dir.name, text, step, where, None)
 
 
 def block_sha_of(text: str) -> str | None:

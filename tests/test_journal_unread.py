@@ -14,20 +14,14 @@ restored, the cut is held again."""
 from __future__ import annotations
 
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
 import test_end_to_end as e2e
 from labkit.formats import attempts
+from repo_fixture import git
 
 UNREAD = "git cannot read the journal"
-
-
-def git(root: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, text=True, check=True
-    ).stdout.strip()
 
 
 class JournalAtHead(e2e.CountCommands):

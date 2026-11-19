@@ -590,8 +590,8 @@ def estimator_placeholders(
 
 
 def count_placeholders(text: str) -> str:
-    """The low cut without a model, its Terms and Question placeholders
-    replaced by COMPUTE_PLACEHOLDERS. Raises when the cut lacks one of them."""
+    """The low form without a model, its Terms and Question placeholders
+    replaced by COMPUTE_PLACEHOLDERS. Raises when the form lacks one of them."""
     lines = text.split("\n")
     for label, value in COMPUTE_PLACEHOLDERS.items():
         if not _replace_placeholder(lines, label, value):

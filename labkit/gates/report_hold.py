@@ -33,6 +33,7 @@ from labkit.formats import (
     report_reviews,
     runs,
 )
+from labkit.formats.answering_run import adopted_run
 from labkit.gates.ways_out import report_way_while_lost
 from labkit.checks.audit_binding import (
     AuditError,
@@ -76,7 +77,9 @@ from labkit.formats.commands import (
     claim_decide_command,
     claim_review_command,
     into_command,
+    path_word,
     report_review_command,
+    reported_check_command,
     stage_command,
 )
 from labkit.formats.runs import read_run_config, unreportable
@@ -153,37 +156,65 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
 
 
-def runs_outside_index(repo: Path, area: Path) -> dict[str, str]:
+def runs_outside_index(repo: Path, area: Path) -> dict[str, Path]:
     """The completed runs of AREA that only the working tree holds — a
     `runs/<id>/` whose completion record git does not track (`??` in
-    `git status`) — as run id → its directory relative to REPO. A run the
+    `git status`) — as run id → its directory. A run the
     index holds in another version is not among them. What the commit's
     gates cannot see while they judge the index: a step read from there
     would ask for the measurement again."""
     prefix = f"{rel_posix(area, repo)}/{RUNS_DIR}/"
-    out: dict[str, str] = {}
+    out: dict[str, Path] = {}
     for xy, path in status_entries(repo, (rel_posix(area, repo),)):
         if xy != "??" or not path.startswith(prefix):
             continue
         run_id, _, name = path[len(prefix) :].partition("/")
         if name == COMPLETION_FILE:
-            out[run_id] = f"{prefix}{run_id}"
+            out[run_id] = run_path(area, run_id)
     return out
+
+
+def adoption_outside_index(repo: Path, protocol: Path) -> str | None:
+    """The run PROTOCOL's head in the working tree has adopted while its
+    head in the index has adopted none — the adoption a commit of the index
+    would not carry —, or None: the tree holds no such file, its head has
+    adopted nothing, or the index's head has adopted a run as well. The one
+    reading of "adopted in the tree only", for the commit's step
+    (`result_outside_index`) and for a report block's source
+    (`_undeclared_source`).
+
+    A `[result]` that does not read counts as no adoption in either state
+    (`answering_run.adopted_run`) and raises nothing here: report-check
+    blocks on that table in the state it judges (`repo_sources`), and what
+    the index lacks is not told from a head that does not read.
+
+    Raises:
+        UnicodeDecodeError: the protocol's bytes in the tree or the index
+            are not UTF-8 (`repo.state_text`).
+    """
+    tree_text = state_text(repo, protocol, staged=False)
+    if tree_text is None:
+        return None
+    tree_run = adopted_run(tree_text)
+    if tree_run is None:
+        return None
+    index_text = state_text(repo, protocol, staged=True)
+    if index_text is not None and adopted_run(index_text) is not None:
+        return None
+    return tree_run
 
 
 def result_outside_index(repo: Path, area: Path, protocol: Path) -> bool:
     """Whether AREA's working tree holds a result the index lacks: a
     completed run only the tree holds (`runs_outside_index`), or
     PROTOCOL's head in the tree declaring a result that the index's head
-    does not declare. Then the commit's step is to stage the area, not the
-    step the index alone would give."""
-    if runs_outside_index(repo, area):
-        return True
-    tree_text = file_text(protocol)
-    if tree_text is None or protocol_block.declared_run(tree_text) is None:
-        return False
-    index_text = state_text(repo, protocol, staged=True)
-    return index_text is None or protocol_block.declared_run(index_text) is None
+    does not declare (`adoption_outside_index`, where a `[result]` that
+    does not read declares none). Then the commit's step is to stage the
+    area, not the step the index alone would give."""
+    return (
+        bool(runs_outside_index(repo, area))
+        or adoption_outside_index(repo, protocol) is not None
+    )
 
 
 def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
@@ -261,16 +292,31 @@ def report_files(
     return out
 
 
-def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
+def registering_protocols(
+    paths: list[Path],
+    repo: Path,
+    *,
+    staged: bool,
+    sources: Sources | None = None,
+) -> list[Path]:
     """The protocols of REPO whose head registers a file among PATHS as
     their report (`protocol_block.Head.report`), in the repo's order — the
     protocols a change of the report reaches though no path lies in their
     area: REPORT.md at the repository root is the usual case. Reads every
     protocol's head as the state holds it (the index when STAGED,
     `repo.state_text`) only when PATHS hold a candidate, a Markdown file
-    that is not a protocol. A protocol the state does not hold, a link, or
+    that is not a protocol; a protocol SOURCES read already
+    (`Sources.registered`, from `repo_sources`) is not read again. A
+    protocol the state does not hold, a link, or
     a head that does not read registers nothing here: its own hold names
-    the error where it is among the paths (`report_check.hold_declared`)."""
+    the error where it is among the paths (`report_check.hold_declared`).
+    Raises ValueError when SOURCES were read from the other file state."""
+    if sources is not None and sources.staged != staged:
+        raise ValueError(
+            f"registering_protocols: staged={staged}, and the sources were "
+            f"read with staged={sources.staged}"
+        )
+    read = sources.registered if sources is not None else {}
     root = repo.resolve()
     candidates = {
         own_path(p if p.is_absolute() else root / p)
@@ -282,45 +328,69 @@ def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> lis
     protocols = protocols_in(repo, staged=staged)
     out: list[Path] = []
     for p in protocols:
-        try:
-            text = state_text(repo, p, staged=staged)
-            registered = protocol_block.head(text).report if text is not None else None
-        except (OSError, UnicodeError, protocol_block.BlockError):
-            continue  # registers nothing; held as a protocol where it is touched
+        if p in read:
+            registered = read[p]
+        else:
+            try:
+                text = state_text(repo, p, staged=staged)
+            except (OSError, UnicodeError):
+                continue  # registers nothing; held as a protocol where it is touched
+            registered = None if text is None else head_report(text)
         if registered is not None and own_path(root / registered) in candidates:
             out.append(p)
     return out
 
 
+def head_report(text: str) -> str | None:
+    """The report the head of the protocol TEXT registers
+    (`protocol_block.Head.report`), None for none — and for a head that
+    does not read: it registers nothing, and the protocol's own hold names
+    the error (`report_check.hold_declared`)."""
+    try:
+        return protocol_block.head(text).report
+    except protocol_block.BlockError:
+        return None
+
+
 def newly_declared(
-    protocols: list[Path], repo: Path, *, staged: bool
+    protocols: list[Path],
+    repo: Path,
+    *,
+    staged: bool,
+    sources: Sources | None = None,
 ) -> dict[str, list[Path]]:
     """The runs PROTOCOLS declare as their result in the gate's state that
     HEAD's version of the same protocol did not — run id → the protocols
     newly declaring it. A protocol HEAD does not hold declares everything
     newly; one whose head does not read in either state names nothing
     here (`hold_declared` holds it). Empty outside a repository or before
-    the first commit: no committed state to differ from."""
+    the first commit: no committed state to differ from. The gate's side is
+    the text SOURCES hold where they read the protocol already
+    (`Sources.text_of`); HEAD's side is always read from git. Raises
+    ValueError when SOURCES were read from the other file state."""
+    if sources is not None and sources.staged != staged:
+        raise ValueError(
+            f"newly_declared: staged={staged}, and the sources were read "
+            f"with staged={sources.staged}"
+        )
     out: dict[str, list[Path]] = {}
     if git_root(repo) is None:
         return out
     for p in protocols:
         if not under_root(repo, p):
             continue  # outside the repo: no HEAD to differ from
-        text = state_text(repo, p, staged=staged)
+        text = (
+            sources.text_of(p)
+            if sources is not None
+            else state_text(repo, p, staged=staged)
+        )
         if text is None:
             continue
-        try:
-            now = protocol_block.declared_run(text)
-        except protocol_block.BlockError:
-            continue
+        now = adopted_run(text)
         if now is None:
             continue
         before = text_at(repo, p, "HEAD")
-        try:
-            was = None if before is None else protocol_block.declared_run(before)
-        except protocol_block.BlockError:
-            was = None
+        was = None if before is None else adopted_run(before)
         if now != was:
             out.setdefault(now, []).append(p)
     return out
@@ -376,18 +446,20 @@ class Sources:
     """What the repo holds for a report to cite, as one file state holds it
     (STAGED: the index, what the commit carries; else the tree), and the
     cache of one check run: the repo's root (REPO, resolved), every run
-    directory's id (KNOWN), per protocol its text (TEXTS) and the run its
+    directory's id (KNOWN), per protocol its text (TEXTS), the run its
     head declares (DECLARED: None for none; a head that does not read is in
-    UNREADABLE with the reason instead); `held_state` and `held_evidence`
+    UNREADABLE with the reason instead) and the report its head registers
+    (REGISTERED: None for none and for a head that does not read,
+    `head_report`); `held_state` and `held_evidence`
     build each area's state and audit evidence once, in STAGED's file state.
 
     Two forms, named by their constructors: `repo_sources` reads every
     protocol of the repo (KNOWN through `area_state.present_run_dirs`, the
     reader `held_state`'s runs come from too, so the two agree); `blank`
     carries the file state, the texts given and the cache alone — KNOWN,
-    DECLARED and UNREADABLE empty — for a hold that checks no report's
-    citations. The file state a hold judges is STAGED here, never a second
-    flag beside it."""
+    DECLARED, UNREADABLE and REGISTERED empty — for a hold that checks no
+    report's citations. The file state a hold judges is STAGED here, never
+    a second flag beside it."""
 
     repo: Path
     known: set[str]
@@ -398,7 +470,10 @@ class Sources:
     # STAGED only: the completed runs only the tree holds, run id →
     # directory (`runs_outside_index`), so a citation of one is named with
     # its staging, not as gone
-    outside_index: dict[str, str] = field(default_factory=dict)
+    outside_index: dict[str, Path] = field(default_factory=dict)
+    # per protocol `repo_sources` read (the keys of TEXTS there): the report
+    # its head registers; a protocol that is no key was not read for it
+    registered: dict[Path, str | None] = field(default_factory=dict)
     _states: dict[Path, AreaState] = field(
         default_factory=dict, repr=False, compare=False
     )
@@ -409,6 +484,17 @@ class Sources:
     def declaring(self, run_id: str) -> list[Path]:
         """The protocols declaring RUN_ID as their result."""
         return [p for p, r in self.declared.items() if r == run_id]
+
+    def text_of(self, protocol: Path) -> str | None:
+        """PROTOCOL's text as the sources' file state holds it: the text
+        read already (TEXTS), else read now (`repo.state_text`: None when
+        the state does not hold the file, a link's stored target for a
+        link) — `repo_sources` leaves a link and a file that does not read
+        out of TEXTS, so those are read, and fail, as without the cache.
+        Raises OSError or UnicodeDecodeError when that read does."""
+        if protocol in self.texts:
+            return self.texts[protocol]
+        return state_text(self.repo, protocol, staged=self.staged)
 
     @classmethod
     def blank(
@@ -477,6 +563,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
         if text is None:
             continue
         out.texts[p] = text
+        out.registered[p] = head_report(text)
         try:
             out.declared[p] = protocol_block.declared_run(text)
         except protocol_block.BlockError as exc:
@@ -532,15 +619,9 @@ def block_sources(
 def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
     """The block source of protocol P whose head in SOURCES' file state
     declares no result: in the index while the working tree's head has
-    adopted a run, its staging is the way out, not a new adoption."""
-    tree_run = None
-    if sources.staged:
-        tree = state_text(sources.repo, p, staged=False)
-        if tree is not None:
-            try:
-                tree_run = protocol_block.declared_run(tree)
-            except protocol_block.BlockError:
-                tree_run = None  # the tree's own check names its head
+    adopted a run (`adoption_outside_index`), its staging is the way out,
+    not a new adoption."""
+    tree_run = adoption_outside_index(sources.repo, p) if sources.staged else None
     if tree_run is None:
         return report_blocks.BlockSource(
             None, None, "it has adopted no result", LAB_104
@@ -551,7 +632,7 @@ def _undeclared_source(p: Path, sources: Sources) -> report_blocks.BlockSource:
         f"its head in the index has adopted no result; the working tree's has "
         f"adopted {tree_run}",
         LAB_104,
-        stage=p.relative_to(sources.repo).as_posix(),
+        stage=p,
         tree_run=tree_run,
     )
 
@@ -951,6 +1032,8 @@ def link_gap(
     source = shown(linked_file(path, link_target), repo)
     steps = [f"rm {shlex.quote(rel)}", f"cp {shlex.quote(source)} {shlex.quote(rel)}"]
     if staged:
+        # the three steps are one line run at the repository root, each
+        # naming REL as `rm` and `cp` do — home: not commands.stage_command
         steps.append(f"git add {shlex.quote(rel)}")
     return blocker(
         f"{rel}: a symbolic link to {link_target} — a report is held as a file "
@@ -1100,7 +1183,9 @@ def report_review_owed(
     by_protocol: dict[Path, list[report_blocks.Discussion]] = {}
     for d in discussed:
         by_protocol.setdefault((path.parent / d.protocol).resolve(), []).append(d)
-    registering = set(registering_protocols([path], sources.repo, staged=staged))
+    registering = set(
+        registering_protocols([path], sources.repo, staged=staged, sources=sources)
+    )
     for protocol, mine in by_protocol.items():
         protocol_text = sources.texts.get(protocol)
         if protocol in registering or protocol_text is None:
@@ -1375,7 +1460,7 @@ def undeclared_findings(
                     f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
                     f"reported, but {named} has adopted it as its result",
                     fix="remove the discussion block — the generated result block "
-                    f"shows the number —, then `report-check --if-reported {rel}`",
+                    f"shows the number —, then `{reported_check_command(path)}`",
                     rule=OPEN_RULE,
                 )
             )
@@ -1407,7 +1492,7 @@ def undeclared_findings(
                     f"{rel}: cites {run_id}, the answering run of {named}, which "
                     f"adopts it in the working tree but not in the index — the "
                     f"adoption (`labkit-adopt`) wrote is not staged",
-                    fix=f"`git add {named}` stages the protocol with its "
+                    fix=f"`{stage_command(protocol)}` stages the protocol with its "
                     f"adoption; commit the report and the protocol together",
                     rule=TECHNICAL_RULE,
                 )
@@ -1428,6 +1513,10 @@ def undeclared_findings(
                 )
             )
             continue
+        # both files as the working directory reaches them: REL, the
+        # report from the repo root, heads the sentence and runs nowhere else
+        here = Path.cwd()
+        discuss = discuss_command(shown(protocol, here), run_id, shown(path, here))
         out.append(
             blocker(
                 f"{rel}: cites {run_id}, the answering run of {named}, which has adopted "
@@ -1435,9 +1524,9 @@ def undeclared_findings(
                 step=adopt_command(protocol, run_id),
                 fix=f"a full run's number leaves the area through "
                 f"`{adopt_command(protocol, run_id)}` (it names what the "
-                f"adoption still owes), then `--into {rel}` writes its block; a run "
-                f"this report looks at without reporting it stands in a discussion "
-                f"block: `{report_blocks.discuss_command(shown(protocol, Path.cwd()), run_id, rel)}`",
+                f"adoption still owes), then `--into {path_word(shown(path, here))}` "
+                f"writes its block; a run this report looks at without reporting "
+                f"it stands in a discussion block: `{discuss}`",
                 rule=LAB_104,
             )
         )
@@ -1448,8 +1537,8 @@ def undeclared_findings(
                 WARNING,
                 f"{rel}: cites {', '.join(looked_at)}, which no protocol has adopted as "
                 f"its result — a reported number is adopted by `labkit-adopt "
-                f"<area> <run_id>`, and its block written by `protocol-fill "
-                f"<PROTOCOL> --into {rel}`; an exploration's run is cited, not "
+                f"<area> <run_id>`, and its block written by "
+                f"`{into_command(None, path)}`; an exploration's run is cited, not "
                 f"reported",
                 evidence_kind=GUARANTEED,
                 rule=LAB_104,
@@ -1614,12 +1703,14 @@ def reached_reports(
     repo: Path,
     *,
     staged: bool,
+    sources: Sources | None = None,
 ) -> list[tuple[Path, str, str]]:
     """(path, text, why held) of every committed report not among REPORTS
     that cites a run one of PROTOCOLS newly declares in the gate's state
     (`newly_declared`, `committed_reports`); the third element is the
-    heading `hold_report` prints, naming the declaring protocol(s)."""
-    declared = newly_declared(protocols, repo, staged=staged)
+    heading `hold_report` prints, naming the declaring protocol(s).
+    SOURCES: the texts the check run read already (`newly_declared`)."""
+    declared = newly_declared(protocols, repo, staged=staged, sources=sources)
     held = {p for p, _ in reports}
     out: list[tuple[Path, str, str]] = []
     for path, text in committed_reports(set(declared), repo, staged=staged):

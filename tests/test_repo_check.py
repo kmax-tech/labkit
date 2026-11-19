@@ -1,24 +1,12 @@
 """labkit-check: one command says whether a lab repo is on its pin and the pin is current."""
 
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from labkit.gates import install_hooks
 from labkit.tools import repo_check
-
-GIT_ID = ["-c", "user.name=t", "-c", "user.email=t@example.org"]
-
-
-def git(root: Path, *args: str) -> str:
-    r = subprocess.run(
-        ["git", *GIT_ID, "-C", str(root), *args],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return r.stdout
+from repo_fixture import git
 
 
 def master_repo(version: str, tags: tuple[str, ...]) -> Path:
@@ -110,7 +98,7 @@ class Source(unittest.TestCase):
 
 FROZEN_HEAD = """```toml
 [protocol]
-standard = "0.31"
+standard = "0.33"
 id = "p-0123456789abcdef"
 type = "exploratory"
 repeat_cost = "low"

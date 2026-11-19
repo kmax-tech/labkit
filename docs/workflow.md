@@ -8,18 +8,18 @@ The [executable count walkthrough](examples/count-walkthrough.sh) takes a small 
 
 ## The steps at a glance
 
-| Step | Purpose | Main command |
-|---|---|---|
-| 0. Area | Create the question's workspace and skeleton. | `labkit-init exp` |
-| 1. Code | Implement and test the measurement. | `code-check AREA` |
-| 2. Registration | Record and commit the scientific choices. | `protocol-fill`, `protocol-check` |
-| 3. Run | Measure with recorded inputs and code. | The area's measurement script |
-| 4. Finalize | Check the completed run. | `finalize AREA` |
-| 5. Analysis audit | Review the evidence and decide findings. | `labkit-audit AREA --mode analysis` |
-| 6. Decision review | Check decisions that require another reviewer. | `labkit-audit AREA --review` |
-| 7. Adoption | Select and generate the reported result. | `labkit-adopt AREA` |
-| 8. Report | Complete the text and its required review. | `protocol-fill --into`, `labkit-audit --report-review` |
-| 9. Stop and commit | Check the delivered state. | Hooks; `report-check` |
+| Step               | Purpose                                        | Main command                                           |
+|--------------------|------------------------------------------------|--------------------------------------------------------|
+| 0. Area            | Create the question's workspace and skeleton.  | `labkit-init exp`                                      |
+| 1. Code            | Implement and test the measurement.            | `code-check AREA`                                      |
+| 2. Registration    | Record and commit the scientific choices.      | `protocol-fill`, `protocol-check`                      |
+| 3. Run             | Measure with recorded inputs and code.         | The area's measurement script                          |
+| 4. Finalize        | Check the completed run.                       | `finalize AREA`                                        |
+| 5. Analysis audit  | Review the evidence and decide findings.       | `labkit-audit AREA --mode analysis`                    |
+| 6. Decision review | Check decisions that require another reviewer. | `labkit-audit AREA --review`                           |
+| 7. Adoption        | Select and generate the reported result.       | `labkit-adopt AREA`                                    |
+| 8. Report          | Complete the text and its required review.     | `protocol-fill --into`, `labkit-audit --report-review` |
+| 9. Stop and commit | Check the delivered state.                     | Hooks; `report-check`                                  |
 
 Code and registration may be developed together before measurement. Later changes use the [repair path](#repair-and-recovery); they do not rewrite the evidence of earlier work. The steps below describe repeat cost `low`, with additional `high` requirements where relevant.
 
@@ -63,7 +63,7 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **Allowed changes:** run the instrument; let runlog write its records. Do not edit a completed run's metrics or outputs to repair the experiment.
 
-**Command and output:** run `.venv/bin/python AREA/scripts/01_measure.py`. It records the run under `runs/<run_id>/`, its inputs, code and protocol binding, outputs and completion, and updates the run index. Commit the relevant source, outputs and records using explicit paths. A run that computes from another run's output (a comparison C over measurements A and B) records that run as the input's origin; the duty is that C can still reach exactly the bytes it read. The simplest way: each measurement run that feeds a computation writes its rows to a file of its own, so a later run of the same script does not overwrite them — otherwise C is held (the bytes it read are gone) and computed anew.
+**Command and output:** run `.venv/bin/python AREA/scripts/01_measure.py`. It records the run under `runs/<run_id>/`, its inputs, code and protocol binding, outputs and completion, and updates the run index. Before the script's block runs it writes the run's start file outside that directory, `run-starts/<run_id>.json` (run id, protocol id, UTC start, run kind). Commit the relevant source, outputs and records using explicit paths, the start file among them: until a commit holds it, it exists on this machine only, and git reports the tree as changed. Only the commit secures it: a run whose directory and start file both vanish before a commit holds either leaves labkit no evidence, and nothing is seen. A run that computes from another run's output (a comparison C over measurements A and B) records that run as the input's origin; the duty is that C can still reach exactly the bytes it read. The simplest way: each measurement run that feeds a computation writes its rows to a file of its own, so a later run of the same script does not overwrite them — otherwise C is held (the bytes it read are gone) and computed anew.
 
 **Done / way out:** the measurement completed. With a registered report and nothing adopted, `labkit-next` names the progress account next, before the audit and before any gap: `protocol-fill PROTOCOL --discuss RUN_ID --why "WHAT WAS MEASURED, WHAT IS STILL OPEN" --into REPORT.md`. It saves the state and releases nothing; the next call names the remaining gap as before. A start refusal names the missing prerequisite before creating the run. A failed execution uses the repair path. For long commands use [detached execution and waiting](architecture.md#long-running-commands). Run-record details: [protocol/run binding](protocol-run-binding.md).
 

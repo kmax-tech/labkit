@@ -92,8 +92,8 @@ from labkit.formats.gate import (
     with_way_out,
 )
 from labkit.formats.repo import area_path, no_such_area, shown
-from labkit.formats.commands import audit_command, decide_command
-from labkit.formats.runs import completed_runs
+from labkit.formats.commands import audit_command, decide_command, freeze_command
+from labkit.formats.runs import completed_runs, now_stamp
 from labkit.formats.scope_sha import (
     area_stamp,
     validation_note,
@@ -216,10 +216,13 @@ def _answer_or_record(
     stamp: Stamp,
     block_sha: str,
     protocol: Path,
+    reading_began: str,
 ) -> tuple[str, attempts.Running]:
     """(the auditor's report, its attempt in the area's journal — the
     caller ends it with the record). The attempt, on BLOCK_SHA and the
-    PROTOCOL audited (its start names both), is begun right before the
+    PROTOCOL audited (its start names both, and READING_BEGAN as its
+    time: when the command began reading the area, before the prompt was
+    built), is begun right before the
     call (`attempts.begin`: refused while another audit of the area runs
     or a record the journal or HEAD names is gone; an earlier attempt
     without an end is marked interrupted and named). When the backend does not answer (the CLI died,
@@ -258,6 +261,7 @@ def _answer_or_record(
         stamp.sha,
         block_sha=block_sha,
         protocol=protocol.name,
+        started=reading_began,
     )
     for note in running.notes:
         console.progress("labkit-audit", note)
@@ -330,7 +334,7 @@ def main(argv: list[str]) -> int:
         nargs=2,
         metavar=("N", "STATUS"),
         help="store your decision on finding N of the newest record: STATUS "
-        f"({' | '.join(s for s in findings.STATUSES if s != 'open')}), its reason "
+        f"({' | '.join(s for s in findings.STATUSES if s != findings.OPEN)}), its reason "
         f"with --why (owed for {', '.join(findings.REASON_OWED)}); no audit runs. "
         "With --report-review REPORT: your decision on claim N of the report "
         "review (--record, else the one review of this state that names a "
@@ -398,7 +402,8 @@ def main(argv: list[str]) -> int:
         "a verdict other than upheld, or a claim, holds the state like any review's "
         "— and it releases nothing: it lifts no hold an earlier review placed, and "
         "its upheld or clean verdict alone releases no decision and no report; "
-        "exit: the state's, with or without --again",
+        "exit: the state's, with or without --again — 1 while a BLOCKER's "
+        "decision is not upheld and holds the number, else 0",
     )
     ap.add_argument(
         "--record",
@@ -438,6 +443,10 @@ def main(argv: list[str]) -> int:
         return _without_audit(args)
     if args.mode == CLARITY:
         return _clarity(args)
+    # before anything of the area is read: the attempt's start states this
+    # time, and a run started after it counts as not shown to the audit
+    # (`report_exploration.audit_began`)
+    reading_began = now_stamp()
     try:
         reading = gather(args.area, args.protocol)
         protocol, code = reading.protocol, reading.code
@@ -453,7 +462,13 @@ def main(argv: list[str]) -> int:
             f"{args.model} · {len(bound.prompt) // 1000} kB",
         )
         report, running = _answer_or_record(
-            args, argv, bound.prompt, bound.stamp, bound.state.block_sha, protocol
+            args,
+            argv,
+            bound.prompt,
+            bound.stamp,
+            bound.state.block_sha,
+            protocol,
+            reading_began,
         )
     except REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
@@ -628,8 +643,8 @@ def _stamp_report(
     print(f"\nstamp: {stamp_facts(stamp, grades, verdict[2])}", file=sys.stderr)
     if mode == PREFLIGHT_AUDIT:
         print(
-            f"freeze: once every finding is decided, `protocol-fill <PROTOCOL> "
-            f"--freeze {recorded.name}` names this record in the head and sets "
+            f"freeze: once every finding is decided, "
+            f"`{freeze_command(None, recorded.name)}` names this record in the head and sets "
             f"frozen = true (LAB-015 Preflight audit before freezing)",
             file=sys.stderr,
         )

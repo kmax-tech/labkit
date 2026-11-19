@@ -146,8 +146,8 @@ from labkit.checks.recheck import NOT_VERIFIABLE
 from labkit.gates.finalize import (
     UNREPORTABLE_RULES,
     finalize_area,
-    declared_run_gaps,
-    unreportable_warnings,
+    UNREADABLE_RESULT_TABLE,
+    UNREPORTABLE_NUMBER,
 )
 from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
@@ -166,9 +166,12 @@ from labkit.gates.report_hold import (
 from labkit.gates.registered_report import (
     formerly_registering,
     missing_report,
+    missing_start_note,
     orphaned_report_duties,
     report_binding_gap,
     report_owed,
+    unassigned_record_note,
+    unread_start_note,
 )
 from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
@@ -178,7 +181,6 @@ from labkit.formats.repo import (
     protocol_links,
     protocols_in,
     shown,
-    state_text,
 )
 from labkit.formats.commands import (
     ADOPT,
@@ -206,6 +208,7 @@ from labkit.gates.report_context import (
 )
 from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
 from labkit.gates.report_replacement import replacement_gaps
+from labkit.gates.report_exploration import use_after_audit_findings
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
@@ -278,7 +281,7 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
         else [
             blocker(
                 f"{name}: not `frozen = true` — a reported number owes the freeze",
-                fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "
+                fix=f"freeze it: `{gate_command('preflight', ctx.area)}` "
                 f"clean, the preflight audit run and decided "
                 f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
                 f"then `{freeze_command(ctx.protocol)}`",
@@ -669,27 +672,43 @@ def without_unreportable_warnings(
     finalized: list[GateFinding], run: Path | None
 ) -> list[GateFinding]:
     """FINALIZED, finalize's findings (`finalize_findings`), without the
-    warnings it tells for RUN's marks that make its number unreportable
-    (`finalize.unreportable_warnings`, the one spelling) — the full-run
-    station holds the same marks as blockers. FINALIZED as it is without a
-    run."""
-    if run is None:
+    warnings it tells for the marks that make its answering run's number
+    unreportable — picked out by their name (`finalize.UNREPORTABLE_NUMBER`),
+    whatever their sentence says. The full-run station holds the same marks
+    as blockers on RUN, the chain's answering run. Every such warning goes,
+    not only RUN's: finalize's answering run is RUN wherever the chain has
+    one, since both read the one choice off the one state and text
+    (`area_state.Measured.told`). FINALIZED as it is without a run, where
+    that station holds nothing."""
+    if run is None:  # no full-run station: finalize's warning is the one telling
         return finalized
-    told = {FINALIZE + w.text for w in unreportable_warnings(run)}
-    return [f for f in finalized if not (f.grade == WARNING and f.text in told)]
+    return [
+        f
+        for f in finalized
+        if not (f.grade == WARNING and f.known_as == UNREPORTABLE_NUMBER)
+    ]
 
 
 def without_declaration_blocker(
     finalized: list[GateFinding], ctx: Checked
 ) -> list[GateFinding]:
     """FINALIZED, finalize's findings (`finalize_findings`), without the
-    blocker it tells for a `[result]` table that does not read
-    (`finalize.declared_run_gaps`, the one spelling) — the declaration
-    station holds the same table as its blocker (`declaration_gaps`). Only
-    for a text finalize read too: CTX's text is the one given to
-    `declared_run_gaps`."""
-    told = {FINALIZE + g.text for g in declared_run_gaps(ctx.text, ctx.protocol)}
-    return [f for f in finalized if not (f.grade == BLOCKER and f.text in told)]
+    blocker it tells for a `[result]` table that does not read — picked out
+    by its name (`finalize.UNREADABLE_RESULT_TABLE`), whatever its
+    sentence says. The declaration station holds the same table as its
+    blocker (`declaration_gaps`); FINALIZED as it is where CTX's table
+    reads and that station holds nothing. Only for a text finalize read
+    too."""
+    # finalize's blocker goes only where the declaration station tells the
+    # table: on one text the two agree, and the guard keeps a blocker of
+    # finalize's alone from vanishing should they ever read two texts
+    if not ctx.declaration_gap:
+        return finalized
+    return [
+        f
+        for f in finalized
+        if not (f.grade == BLOCKER and f.known_as == UNREADABLE_RESULT_TABLE)
+    ]
 
 
 def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
@@ -735,12 +754,24 @@ def report_binding_gaps(ctx: Checked) -> list[GateFinding]:
     (`registered_report.report_binding_gap`), and those of protocols the
     area measured under and no longer holds
     (`registered_report.orphaned_report_duties`). Nothing outside a
-    repository."""
+    repository. With them, a WARNING for a record of the area whose
+    protocol cannot be determined (`registered_report.unassigned_record_note`):
+    the duty was read without it; one for a start file that does not
+    read (`registered_report.unread_start_note`), and one for a start file a
+    run's mark names and nobody finds (`registered_report.missing_start_note`)."""
     state = ctx.area_state
-    gap = report_binding_gap(
-        ctx.protocol, ctx.text, measured=state.measured_of(ctx.head.id)
+    measured = state.measured_of(ctx.head.id)
+    gap = report_binding_gap(ctx.protocol, ctx.text, measured=measured)
+    warnings = [
+        unassigned_record_note(measured),
+        unread_start_note(measured),
+        missing_start_note(measured),
+    ]
+    return (
+        ([] if gap is None else [gap])
+        + [w for w in warnings if w is not None]
+        + orphaned_duty_gaps(state)
     )
-    return ([] if gap is None else [gap]) + orphaned_duty_gaps(state)
 
 
 def orphaned_duty_gaps(state: AreaState) -> list[GateFinding]:
@@ -790,12 +821,19 @@ def analysis_findings(
 
     The entry point decides whether this stage runs. Missing coverage and
     result differences are all kept; RESULT_SECTION False leaves the
-    rendered result out (before an adoption, which writes it).
+    rendered result out (before an adoption, which writes it). Where an
+    audit covers, a confirmation that names its exploration is warned of
+    every run of that exploration's area sharing an input digest that the
+    audit was not shown (`report_exploration.use_after_audit_findings`).
     """
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
     if gap:
         out.append(replace(gap, text=f"analysis audit: {gap.text}"))
+    else:
+        # an audit covers: what it was not shown of the exploration a
+        # confirmation names — warnings, static evidence
+        out.extend(use_after_audit_findings(ctx))
     # the rendered result section is held here too, named as what it is:
     # under "analysis audit:" a retyped Recorded results line reads as a
     # record problem
@@ -890,7 +928,9 @@ def chain_gaps(
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it,
        with an answering run — without one (where finalize reads CTX's
-       text) finalize's run choice is the one blocker.
+       text) finalize's run choice is the one blocker; under a covering
+       audit, the warnings for a named exploration's runs it was not
+       shown (`report_exploration`).
     6. Recomputation: the analysis script's `--check` for CTX's protocol
        (its own run, that run's script), always.
     7. Decisions: reviews and follow-ups where the lane owes the analysis.
@@ -1015,16 +1055,24 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     if not measured:
         # measured and deleted since: git or the index keeps them, so a
         # handover never says "no run of it was measured" over deleted runs
-        gone = {
-            rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
-            f"{gone_run_restore(rd)}"
-            for rd in held.deleted
-            if is_measurement(rd)
-        } | {
-            r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
-            f"{LOST_RUN_SENTENCE}"
-            for r in held.lost
-        }
+        gone = (
+            {
+                rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
+                f"{gone_run_restore(rd)}"
+                for rd in held.deleted
+                if is_measurement(rd)
+            }
+            | {
+                r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
+                f"{LOST_RUN_SENTENCE}"
+                for r in held.lost
+            }
+            | {
+                r: f"{r}: started (its start file stands), and runs/{r}/ is gone — "
+                f"{LOST_RUN_SENTENCE}"
+                for r in held.started_only
+            }
+        )
         if gone:
             return handovers.RunAccount(
                 max(gone), handovers.UNUSABLE, tuple(gone[r] for r in sorted(gone))
@@ -1211,7 +1259,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
         else Sources.blank(repo, staged=staged)
     )
     for p in [
-        *registering_protocols(paths, repo, staged=staged),
+        *registering_protocols(paths, repo, staged=staged, sources=sources),
         *formerly_registering(paths, repo, sources),
     ]:
         if p not in protocols:
@@ -1264,7 +1312,9 @@ def hold_reported(
     (`HoldVerdict`)."""
     touched = reached_by(paths, repo, staged=staged)
     protocols, reports = touched.protocols, touched.reports
-    reached = reached_reports(protocols, reports, repo, staged=staged)
+    reached = reached_reports(
+        protocols, reports, repo, staged=staged, sources=touched.sources
+    )
     held = {p for p, _ in reports} | {p for p, _, _ in reached}
     reached += discussing_reports(paths, held, repo, staged=staged)
     # touched.sources is blank when no report is among PATHS (`reached_by`);
@@ -1331,7 +1381,7 @@ def hold_declared(
         console.refuse("report-check", link[protocol])
         return ProtocolVerdict(2, None)
     try:
-        text = state_text(repo, protocol, staged=staged)
+        text = sources.text_of(protocol)  # the hold's one read of it
     except (OSError, UnicodeError) as exc:  # a refusal, never a traceback
         console.refuse("report-check", f"{protocol}: {exc}")
         return ProtocolVerdict(2, None)

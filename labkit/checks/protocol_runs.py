@@ -41,13 +41,9 @@ from labkit.formats.findings import (
 )
 from labkit.formats.followup import DiffAsked
 from labkit.formats.protocol_block import BlockError
-from labkit.formats.protocol_history import (
-    StepThen,
-    registration_differences,
-    step_then,
-)
+from labkit.formats.protocol_history import registration_differences
 from labkit.formats.promises import PromiseError
-from labkit.formats.protocol_then import bound_protocol_file
+from labkit.formats.protocol_then import StepThen, bound_protocol_file, step_then
 from labkit.formats.repo import GitError, git_root, layout_root, shown, text_at
 from labkit.formats.run_code import (
     CodeDifference,
@@ -131,7 +127,7 @@ class RunSeen:
         rd: Its record (read back from a commit for a run gone from the
             tree).
         state: What became of it — `runs.run_state`, or gone, or unreadable.
-        step: Its step from its own text (`protocol_history.step_then`);
+        step: Its step from its own text (`protocol_then.step_then`);
             None for a record that does not read.
     """
 

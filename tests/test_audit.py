@@ -55,6 +55,7 @@ from labkit.formats import (
     runs,
     scope_sha,
 )  # noqa: E402
+from command_fixture import run_main
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [criterion-1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
@@ -590,7 +591,9 @@ class Audit(unittest.TestCase):
             audit_gaps.audit_coverage(
                 area,
                 "preflight",
-                findings.AuditedState(before, block, registration_of(area)),
+                findings.AuditedState(
+                    before, block, registration_of(area, preflight=True)
+                ),
             )
             or "",
         )
@@ -599,7 +602,9 @@ class Audit(unittest.TestCase):
             audit_gaps.audit_coverage(
                 area,
                 "preflight",
-                findings.AuditedState(after, block, registration_of(area)),
+                findings.AuditedState(
+                    after, block, registration_of(area, preflight=True)
+                ),
             )
             or "",
         )
@@ -662,6 +667,31 @@ class Audit(unittest.TestCase):
         (attempt,) = attempts.read_journal(area)
         self.assertEqual(attempt.outcome, "none")
         self.assertIn("counts 1 blocker(s)", attempt.error)
+
+    def test_the_attempt_states_the_time_before_the_area_was_read(self):
+        """The journal's start is taken before the prompt is built: a run
+        started after it counts as not shown to this audit."""
+        area = repo_with()
+        order: list[str] = []
+
+        def stamp() -> str:
+            order.append("time")
+            return "2026-11-19T10:00:00"
+
+        gather = audit.gather
+
+        def reading(*a, **k):
+            order.append("read")
+            return gather(*a, **k)
+
+        with (
+            mock.patch.object(audit, "now_stamp", stamp),
+            mock.patch.object(audit, "gather", reading),
+        ):
+            run(area, WARN)
+        (attempt,) = attempts.read_journal(area)
+        self.assertEqual(attempt.started, "2026-11-19T10:00:00")
+        self.assertEqual(order[:2], ["time", "read"])
 
     def test_the_stamp_facts_are_printed(self):
         _, _, err, _ = run(repo_with(), WARN)
@@ -2276,14 +2306,8 @@ def findings_listing(area: Path) -> tuple[int, str]:
     def no_call(alias, prompt, **kw):
         raise AssertionError("--findings called the model")
 
-    out = io.StringIO()
-    with (
-        mock.patch.object(audit.llm, "complete", no_call),
-        contextlib.redirect_stdout(out),
-        contextlib.redirect_stderr(out),
-    ):
-        rc = audit.main([str(area), "--findings"])
-    return rc, out.getvalue()
+    with mock.patch.object(audit.llm, "complete", no_call):
+        return run_main(audit.main, [str(area), "--findings"])
 
 
 class UnrecordedCall(unittest.TestCase):

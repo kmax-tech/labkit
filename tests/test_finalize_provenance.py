@@ -5,8 +5,6 @@ Elsewhere the station is n/a."""
 
 from __future__ import annotations
 
-import contextlib
-import io
 import json
 import subprocess
 import sys
@@ -32,6 +30,9 @@ from protocol_fixture import (
     scope_file,
     script_sha_of,
 )  # noqa: E402
+from repo_fixture import git as _git
+from command_fixture import run_main
+from repo_fixture import init_repo
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -47,10 +48,6 @@ HIGH = (
     + head(repeat_cost="high", frozen=True, promises=None, kept=("mean", "1"))
     + BODY
 )
-
-
-def _git(cwd, *args):
-    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
 
 
 def _recorded(path: Path) -> str:
@@ -73,9 +70,7 @@ class Provenance(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self._tmp.name)
-        _git(self.repo, "init", "-q", ".")
-        _git(self.repo, "config", "user.email", "t@t")
-        _git(self.repo, "config", "user.name", "t")
+        init_repo(self.repo)
         self.area = self.repo / "experiments" / "01-x"
         self.area.mkdir(parents=True)
         self.src = self.repo / "data" / "raw" / "cases.jsonl"
@@ -141,10 +136,7 @@ class Provenance(unittest.TestCase):
         return d
 
     def _finalize(self) -> tuple[int, str]:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = finalize.main([str(self.area)])
-        return rc, buf.getvalue()
+        return run_main(finalize.main, [str(self.area)], capture_stderr=False)
 
     def _frozen(self) -> dict:
         """The run's `data=` record of the source as it is now, as runlog
@@ -259,7 +251,7 @@ class Provenance(unittest.TestCase):
         self._run(SHORT, self._frozen(), commit=False)
         line = self._blocker_line()
         self.assertIn("Next: if it is small and may legally be shared", line)
-        self.assertIn(f"`git add {self.src}`", line)
+        self.assertIn(f"`git add -- {self.src.resolve()}`", line)
         self.assertIn("large or protected data stay out of git on purpose", line)
         self.assertIn("an ignore rule for it", line)
         self.assertIn("route and version in the protocol's Data / scope", line)
@@ -361,7 +353,7 @@ class Provenance(unittest.TestCase):
         (self.repo / ".gitignore").write_text("data/raw/*\n!data/raw/cases.jsonl\n")
         self._run(SHORT, self._frozen(), commit=False)
         line = self._blocker_line()
-        self.assertIn(f"commit it (`git add {self.src}`)", line)
+        self.assertIn(f"commit it (`git add -- {self.src.resolve()}`)", line)
 
     def test_a_manifest_beside_an_untracked_source_pins_nothing(self):
         """`MANIFEST.sha256` is no route; it is not read."""

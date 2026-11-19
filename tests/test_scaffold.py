@@ -27,6 +27,7 @@ from labkit.formats import (
     standard_contract,
 )
 from protocol_fixture import head, run_record, take_criterion_offer  # noqa: E402
+from repo_fixture import git
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -193,9 +194,6 @@ class Lab(unittest.TestCase):
             )
 
 
-GIT_ID = ["-c", "user.name=t", "-c", "user.email=t@example.org"]
-
-
 class LabTemplatesOffRef(unittest.TestCase):
     """`lab_templates_off_ref` against a labkit-like checkout tagged v1.0.0."""
 
@@ -213,14 +211,7 @@ class LabTemplatesOffRef(unittest.TestCase):
         self.git("tag", "v1.0.0")
 
     def git(self, *args: str) -> str:
-        r = subprocess.run(
-            ["git", *GIT_ID, *args],
-            cwd=self.repo,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return r.stdout.strip()
+        return git(self.repo, *args)
 
     def test_the_templates_as_tagged_pass(self) -> None:
         self.assertEqual(scaffold.lab_templates_off_ref(self.repo, "v1.0.0"), [])
@@ -836,12 +827,7 @@ class Exp(unittest.TestCase):
         self.assertEqual(snapshot(), before)
 
     def _git(self, *args: str) -> None:
-        subprocess.run(
-            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-        )
+        git(self.root, *args)
 
     def _stamped_by_an_earlier_labkit(
         self,
@@ -2182,12 +2168,7 @@ class AreaNumbers(unittest.TestCase):
         self.tmp.cleanup()
 
     def _git(self, *args: str, cwd: Path | None = None) -> None:
-        subprocess.run(
-            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-            cwd=cwd or self.root,
-            check=True,
-            capture_output=True,
-        )
+        git(cwd or self.root, *args)
 
     def _areas(self, *names: str) -> None:
         for name in names:

@@ -15,19 +15,13 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
 import test_end_to_end as e2e
+from repo_fixture import git
 
 UNREAD = "cannot be compared with its first measurement"
-
-
-def git(root: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, text=True, check=True
-    ).stdout.strip()
 
 
 class ChangedQuestion(e2e.CorrectionCommands):

@@ -89,7 +89,7 @@ from labkit.formats.repo import (
     tracked,
     tracked_under,
 )
-from labkit.formats.commands import gate_command, measure_anew
+from labkit.formats.commands import gate_command, measure_anew, stage_command
 
 LAB_010 = cited_rule("LAB-010 Commit before the run")
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
@@ -595,7 +595,7 @@ def provenance_findings(
             warnings.append(
                 GateFinding(
                     WARNING,
-                    f"output {f.name} is not yet tracked — `git add {f}` before "
+                    f"output {f.name} is not yet tracked — `{stage_command(f)}` before "
                     f"the commit that cites the number",
                     rule=OPEN_RULE,
                     evidence_kind=GUARANTEED,
@@ -782,7 +782,7 @@ def _untracked_files(repo: Path, source: Path) -> list[Path]:
     pass the untracked data files beside it). An empty or all-hidden
     directory passes — the run read no file of it. A symbolic link under it
     counts as tracked when git holds the link, not its target's content.
-    The directory is resolved first and lies in REPO (`_source_finding`
+    The directory is resolved first and lies in REPO (`source_finding`
     passes one outside it over). Raises GitError when git fails."""
     if path_kind(source) != "dir":
         return [] if tracked(repo, source) else [source]
@@ -812,9 +812,9 @@ def _untracked_source(source: SourceNow) -> GateFinding:
         names = ", ".join(shown(f, source.path) for f in loose[:NAMED_UNTRACKED])
         more = ", …" if len(loose) > NAMED_UNTRACKED else ""
         what += f": {len(loose)} file(s) under it ({names}{more})"
-        add = "git add -- " + " ".join(shlex.quote(str(f)) for f in loose)
+        add = stage_command(*loose)
     else:
-        add = f"git add {shlex.quote(str(source.path))}"
+        add = stage_command(source.path)
     return blocker(
         f"{what} — whether it belongs to the project is left open",
         fix=f"if it is small and may legally be shared, commit it (`{add}`); "

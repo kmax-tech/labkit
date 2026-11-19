@@ -55,7 +55,9 @@ def is_alive(pid: object, script: object) -> bool | None:
     can belong to another process days later. So the command line is
     checked for the recorded script name as well. If that cannot be
     decided (no `ps`, no script name), the answer is **None**, not `True`:
-    an "unknown" is usable, a false "running" is not.
+    an "unknown" is usable, a false "running" is not. A PID that is no
+    integer, or one the system cannot hold as a process id, is undecidable
+    too: the record does not say which process it meant.
     """
     if not isinstance(pid, int):
         return None
@@ -63,6 +65,8 @@ def is_alive(pid: object, script: object) -> bool | None:
         os.kill(pid, 0)  # signal 0: existence check only
     except ProcessLookupError:
         return False
+    except OverflowError:
+        return None  # larger than any process id: not a PID the record can mean
     except PermissionError:
         pass  # exists, belongs to someone else
     cmd = _command_of(pid)
@@ -95,6 +99,10 @@ RunKind = Literal["preparation", "probe", "measurement"]
 #: the run kind that measures the registered question — the one spelling
 #: every reader compares a readable record's `run_kind` with
 MEASUREMENT: RunKind = "measurement"
+#: the two kinds that answer no registered question: a run that builds the
+#: data, and a small run that tries the instrument
+PREPARATION: RunKind = "preparation"
+PROBE: RunKind = "probe"
 #: the measurement script every skeleton stamps (`standard_contract`): the
 #: one script that opens the full run and carries the `DELIVERABLES`
 #: constant the stamp fills; `params` reads its constants
@@ -103,10 +111,10 @@ MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 
 def parse_run_kind(value: object) -> RunKind:
     """Validate the declared purpose of a run, naming the field on failure."""
-    if value == "preparation":
-        return "preparation"
-    if value == "probe":
-        return "probe"
+    if value == PREPARATION:
+        return PREPARATION
+    if value == PROBE:
+        return PROBE
     if value == MEASUREMENT:
         return MEASUREMENT
     raise ValueError(
@@ -267,14 +275,43 @@ def write_failure(
     return path
 
 
-def stopped_without_number(rd: RunDir) -> str | None:
-    """Why run RD, as the file state holds it, wrote no metrics.json — its
-    failure (`read_failure`), or "" when it left none —; None when it wrote
-    one or when only a commit holds RD (`RunDir.from_commit`): its files
-    are not here to read. RunConfigError when failure.json cannot be read."""
-    if rd.from_commit is not None or metrics_path(rd.dir).is_file():
-        return None
-    return read_failure(rd.dir) or ""
+@dataclass(frozen=True)
+class NumberWritten:
+    """Whether a run wrote its number (metrics.json), as far as the file
+    state shows it (`number_written`). The four states:
+
+    - `answer` "yes": the run directory holds a metrics.json.
+    - `answer` "cannot tell": only a commit holds the run
+      (`RunDir.from_commit`), so its files are not here to read.
+    - `answer` "no", `failure` None: no metrics.json and no failure.json —
+      the run stopped without a failure record, or it still runs.
+    - `answer` "no", `failure` set: no metrics.json, and failure.json says
+      why (`<Type>: <message>`, `read_failure`).
+
+    Raises ValueError for a failure beside another answer than "no"."""
+
+    answer: Literal["yes", "no", "cannot tell"]
+    failure: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.failure is not None and self.answer != "no":
+            raise ValueError(
+                f"NumberWritten: failure = {self.failure!r} beside answer = "
+                f"{self.answer!r}; a failure says why no number was written"
+            )
+
+
+def number_written(rd: RunDir) -> NumberWritten:
+    """Did run RD write its number (metrics.json), as the file state holds
+    it — and when not, the failure it recorded (`read_failure`)? "cannot
+    tell" when only a commit holds RD (`RunDir.from_commit`): its files are
+    not here to read. Reads RD's directory. RunConfigError when failure.json
+    cannot be read."""
+    if rd.from_commit is not None:
+        return NumberWritten("cannot tell")
+    if metrics_path(rd.dir).is_file():
+        return NumberWritten("yes")
+    return NumberWritten("no", read_failure(rd.dir))
 
 
 def read_failure(run_dir: Path) -> str | None:

@@ -61,7 +61,7 @@ def counts_text(run_dir: Path) -> str:
     `item_counts`. Raises ValueError for a run that is no completed
     preparation run, or holds no `n_items`."""
     cfg = runs.read_run_config(run_dir)
-    if cfg is None or cfg.run_kind != "preparation":
+    if cfg is None or cfg.run_kind != runs.PREPARATION:
         raise ValueError(f"{run_dir.name} is no preparation run (run_kind)")
     if runs.run_state(run_dir, alive=False) != runs.COMPLETED:
         raise ValueError(f"{run_dir.name} did not complete")

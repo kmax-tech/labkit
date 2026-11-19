@@ -30,6 +30,8 @@ from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from repo_fixture import git
+from repo_fixture import init_repo
 
 AUDIT = "2026-10-05T10-00-preflight.toml"  # a record name; no such record is written
 FROZEN = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, model="haiku")
@@ -110,7 +112,7 @@ class FreezeGate(unittest.TestCase):
                 promises.block_stamp(text),
                 (0, 0, 0),
                 [],
-                registration=protocol_check.registration_stamp(text),
+                registration=protocol_check.registration_stamp(text, audited=True),
                 protocol_id=protocol_id_of(self.tmp),
             )
             text = head(
@@ -141,16 +143,7 @@ class FreezeGate(unittest.TestCase):
         # a start on a written, uncommitted registration is refused: finalize
         # would be clean and adoption refused for good. The twin: committed,
         # it starts; a second measurement is not held here.
-        import subprocess
-
-        def git(*args: str) -> None:
-            subprocess.run(
-                ["git", *args], cwd=self.tmp, check=True, capture_output=True
-            )
-
-        git("init", "-q")
-        git("config", "user.email", "t@t")
-        git("config", "user.name", "t")
+        init_repo(self.tmp)
         area = self._area(SECONDS_COMPUTE)
         err = io.StringIO()
         with (
@@ -161,8 +154,8 @@ class FreezeGate(unittest.TestCase):
             runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("is not committed", str(cm.exception) + err.getvalue())
         self.assertFalse((area / "runs").exists())
-        git("add", "-A")
-        git("commit", "-qm", "registration")
+        git(self.tmp, "add", "-A")
+        git(self.tmp, "commit", "-qm", "registration")
         r, out = self._start(SECONDS_COMPUTE, run_kind="measurement")
         self.assertTrue((r.dir / "config.json").is_file(), out)
         (area / "PROTOCOL-x.md").write_text(SECONDS_COMPUTE + "\nmore prose\n")
@@ -196,7 +189,7 @@ class FreezeGate(unittest.TestCase):
             "b",
             (0, 0, 0),
             [],
-            registration=protocol_check.registration_stamp(text),
+            registration=protocol_check.registration_stamp(text, audited=True),
             protocol_id=protocol_id_of(self.tmp),
         )
         area = self._area(
@@ -241,7 +234,7 @@ class FreezeGate(unittest.TestCase):
                     "WARNING · x.py:1 · statement · LAB-015 Preflight audit before freezing · x",
                 )
             ],
-            registration=protocol_check.registration_stamp(text),
+            registration=protocol_check.registration_stamp(text, audited=True),
             protocol_id=protocol_id_of(self.tmp),
         )
         area = self._area(
@@ -444,6 +437,20 @@ class FreezeGate(unittest.TestCase):
         finally:
             os.environ.pop(env, None)
             os.environ.pop("CLAUDECODE", None)
+
+    def test_the_detached_start_it_names_runs_under_a_path_with_a_space(self):
+        """The refusal of a foreground measurement names the detached
+        start as a line that runs: the area quoted where its path needs
+        it. The twin: a plain path is printed bare."""
+        with tempfile.TemporaryDirectory() as d, contextlib.chdir(d):
+            for area, word in (("my lab/01 x", "'my lab/01 x'"), ("area", "area")):
+                with self.subTest(area=area):
+                    with self.assertRaises(SystemExit) as cm:
+                        start_check.require_detached(Path(area), (120.0, "X"))
+                    self.assertIn(
+                        f"`runlog start {word} -- <the same command>`",
+                        str(cm.exception),
+                    )
 
     def test_tier_is_recorded_for_pilots_too(self):
         r, _ = self._start(FROZEN, run_kind="probe")

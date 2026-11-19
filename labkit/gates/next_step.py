@@ -76,7 +76,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from labkit.formats.commands import contract_command
+from labkit.formats.commands import contract_command, list_command, wait_command
 from labkit.formats import (
     findings,
     handovers,
@@ -201,8 +201,7 @@ def next_step(
         return Step(
             f"{names} {'are' if many else 'is'} still running in "
             f"{shown(area, Path.cwd())}",
-            f"`runlog {shown(area, Path.cwd())} --wait` waits for it; then "
-            f"`labkit-next` again",
+            f"`{wait_command(area)}` waits for it; then `labkit-next` again",
             "every step on its rows: a second measurement beside it must wait — "
             "runlog refuses one beside an open run, not yet beside a start whose "
             "run has not opened",
@@ -629,7 +628,6 @@ def _field_step(
     """The step the field report of PROTOCOL asks for first: a bound field
     written more than once (`FieldReport.repeated`), then the missing MUST
     fields; None when neither. HINT closes the way (`_before_first_hint`)."""
-    named = shown(protocol, Path.cwd())
     if report.repeated:
         return Step(
             f"{protocol.name} writes a field more than once: "
@@ -648,7 +646,7 @@ def _field_step(
             f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
             + ", ".join(report.missing_must),
             (f"{fill}; " if fill else "")
-            + f"`protocol-fill {named} --list` names every open field with its "
+            + f"`{list_command(protocol)}` names every open field with its "
             f"values, `{contract_command(protocol)}` what each one owes" + hint,
             "the first measurement: fill and commit the registration first, "
             "because it cannot change after that run",
@@ -663,7 +661,7 @@ def _field_step(
             f"{protocol.name}: {len(labels)} MUST field(s) still a placeholder: "
             + ", ".join(labels),
             (f"{fill}; " if fill else "")
-            + f"`protocol-fill {named} --list` names every open field with its "
+            + f"`{list_command(protocol)}` names every open field with its "
             f"values" + hint,
             "the commit and every gate that reads the fields: a placeholder is "
             "not a registration",
@@ -674,8 +672,9 @@ def _field_step(
 def _before_first_hint(protocol: Path, text: str, measured: Measured) -> str:
     """The sentences a step before the first measurement adds
     (`standard_contract.first_measurement_hint`: the report, a computation's
-    `[reference]` and its hand-checked case); "" after a measurement
-    (MEASURED)."""
+    `[reference]` and its hand-checked case); "" once the area measured
+    the protocol (MEASURED, `area_state.Measured.has_measured` — runlog's
+    first step asks the same, `start_check.measurement_refusal`)."""
     if measured.has_measured:
         return ""
     return first_measurement_hint(protocol, text)

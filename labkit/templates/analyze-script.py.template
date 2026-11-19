@@ -5,6 +5,7 @@
     ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold the protocol (or NOTE) to it
     ../../.venv/bin/python scripts/02_analyze.py --draws    # the kept run and its repeats: the spread
     ../../.venv/bin/python scripts/02_analyze.py --check --protocol PROTOCOL-<name>.md   # as report-check runs it
+    ../../.venv/bin/python scripts/02_analyze.py --check --run <run_id>   # an older run, under the text it started under; releases nothing
 
 Each for one protocol at a time: the one `--protocol` names, else the
 area's only one — an area of several protocols owes the name. Every call,
@@ -81,10 +82,25 @@ def main() -> None:
                     help="the kept run and its repeats: the kept number per draw, range, flipped items")
     ap.add_argument("--protocol", metavar="FILE",
                     help="the protocol to hold, by file name — owed where the area has several")
+    ap.add_argument("--run", metavar="RUN_ID",
+                    help="with --check: an older run of that protocol instead of the answering one, held under the "
+                         "protocol text it started under; its rows are read from the commit that holds them where a "
+                         "later run overwrote the file. Releases nothing")
     args = ap.parse_args()
+    if args.run and not args.check:
+        ap.error("--run names an older run for --check")
     protocol = recheck.protocol_named(AREA, args.protocol)
-    run = recheck.run_dir(AREA, protocol)        # the run that protocol answers with
+    run = recheck.run_dir(AREA, protocol, args.run)   # the run that protocol answers with, or the older one named
     measure = recheck.script_module(AREA, run)   # the script that run ran: its formula, no other protocol's
+    if args.run:
+        # the separate check of an older run: no note is held and nothing
+        # is released — the protocol's number is held by `--check` alone
+        h = recheck.holds_as_measured(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows,
+                                      run_id=args.run, protocol=protocol)
+        print(f"historical check: run {h.run_id} of {protocol.name}, under the text it started under — "
+              f"{h.keys_compared} keys identical; rows read from {h.source}; this releases nothing"
+              + (f"; grown: {h.grown}" if h.grown else ""))
+        return
     if args.draws:
         print("\n".join(draws(run, measure)))
         return

@@ -47,6 +47,7 @@ from labkit.formats.repo import (
     commit_of,
     text_at,
     git_run,
+    rel_posix,
     repo_protocols,
 )
 from labkit.formats.requirements import (
@@ -223,7 +224,7 @@ def ref_problems(repo: Path) -> tuple[int, int, list[str]]:
     problems: list[str] = []
     for f in files:
         text = f.read_text(encoding="utf-8")
-        problems += rules.check_refs(str(f.relative_to(repo)), text, rows)
+        problems += rules.check_refs(rel_posix(f, repo), text, rows)
     return len(files), len(records), problems
 
 

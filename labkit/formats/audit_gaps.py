@@ -73,7 +73,7 @@ def registration_note(records: list[Record], registration: Mapping[str, str]) ->
     """For a refusal: "" unless the newest of RECORDS judged another
     registration than REGISTRATION, else a clause naming what changed
     (`protocol_check.registration_drift`) — the question or another field
-    the kind owes, rewritten after the audit, owes a new one."""
+    the record binds, rewritten after the audit, owes a new one."""
     if not records:
         return ""
     changed = registration_drift(dict(records[-1].registration), registration)
@@ -81,7 +81,7 @@ def registration_note(records: list[Record], registration: Mapping[str, str]) ->
         return ""
     return (
         f" — the registration changed after the audit ({', '.join(changed)}): "
-        f"the audit judged another question than the protocol asks now"
+        f"the audit read another registration than the protocol carries now"
     )
 
 
@@ -319,8 +319,10 @@ def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
 def _protocol_gap(record: Record, name: str, text: str, audit: str) -> RecordGap | None:
     """Why RECORD (named NAME) judged another protocol than TEXT, or None:
     another promise block (`block_sha`) or another registration — the kind,
-    the question or another field the kind owes (`registration`) —, the
-    preflight audit's rule, the way out a new audit (AUDIT). A promise
+    the question, another field the kind owes or a field read before the
+    run (`registration_stamp` with the audited fields, as a preflight
+    record binds them) —, the preflight audit's rule, the way out a new
+    audit (AUDIT). A promise
     block that does not read is not compared: its own cause with the rule
     that cause names (`PromiseError.rule`), the way out its repair — a new
     audit would not read it either."""
@@ -340,7 +342,7 @@ def _protocol_gap(record: Record, name: str, text: str, audit: str) -> RecordGap
             audit,
             LAB_015,
         )
-    changed = registration_note([record], registration_stamp(text))
+    changed = registration_note([record], registration_stamp(text, audited=True))
     if not changed:
         return None
     return RecordGap(

@@ -95,10 +95,13 @@ KNOWN_CROSSINGS = {
     # whole (docs/architecture.md, "The import rule"), and licenses no other
     ("start_check", "protocol_history"),  # protocol_history.registration_in_commit
     ("start_check", "standard_contract"),  # standard_contract.lane
+    # a confirmation's link to its exploration, held at its first measurement:
+    # the same kind of start refusal, leaving with the others
+    ("start_check", "exploration_link"),  # exploration_link.linked_exploration
     ("runlog", "standard_contract"),  # standard_contract.lane (the exception above)
     # the field catalogue and a rule's text in the code check — the boundary
     # case: the TOML head is core, the prose fields are doctrine
-    ("prompt_check", "protocol_check"),  # protocol_check.fields
+    ("prompt_check", "protocol_check"),  # protocol_check.registered_prompt_blocks
     ("code_check", "rules"),  # rules.paragraph
     ("code_check", "standard_contract"),  # standard_contract.lane (the exception above)
     # the pin check is core; checking rule references and hooks is doctrine

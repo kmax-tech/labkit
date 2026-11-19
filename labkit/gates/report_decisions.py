@@ -20,6 +20,7 @@ from functools import partial
 
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import GUARANTEED
+from labkit.formats.findings import LIMITATION
 from labkit.formats.gate import (
     BLOCKER,
     GateFinding,
@@ -398,7 +399,7 @@ def check_first_dismissals_upheld(
                 f"{reviews.state(record, n, found, text)} — a blocking finding is not "
                 f"released by the deciding agent's own decision",
                 fix=f"{review_way()} asks a second auditor whether the reason "
-                f"shows it {_closing_question('false-positive')}",
+                f"shows it {_closing_question(findings.FALSE_POSITIVE)}",
                 evidence_kind=GUARANTEED,
                 rule=LAB_015,
             )
@@ -466,7 +467,7 @@ def _decide_again(ctx: Checked, record: findings.Record) -> Callable[[int], Comm
 
     def command(n: int) -> Command:
         return decide_command(
-            ctx.area, n, "limitation", "<why>", record.path.name, protocol=ctx.protocol
+            ctx.area, n, LIMITATION, "<why>", record.path.name, protocol=ctx.protocol
         )
 
     return command
@@ -489,6 +490,6 @@ def _review_step(ctx: Checked, record: findings.Record) -> str:
 def _closing_question(status: str) -> str:
     """What the reviewer is asked of a closed contested finding, by status."""
     return {
-        "false-positive": "does not apply to the code and run as audited",
-        "fixed": "gone in the files as audited",
+        findings.FALSE_POSITIVE: "does not apply to the code and run as audited",
+        findings.FIXED: "gone in the files as audited",
     }[status]

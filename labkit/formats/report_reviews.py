@@ -114,7 +114,13 @@ from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.findings import create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.digests import digest
-from labkit.formats.reviews import UPHELD, VERDICTS
+from labkit.formats.reviews import (
+    UPHELD,
+    VERDICTS,
+    counts_of,
+    first_not_upheld,
+    released_by,
+)
 
 FOLDER = "report-reviews"
 #: the mode of a report review's attempts in the area's journal (`attempts`):
@@ -126,7 +132,7 @@ CLAIM_KINDS = ("result", "contradiction")
 RESULT, CONTRADICTION = CLAIM_KINDS
 #: the statuses a claim takes, of `findings.STATUSES`: undecided, or the
 #: reader misread — every other status is refused (`claim_refusal`)
-OPEN, FALSE_POSITIVE = "open", "false-positive"
+OPEN, FALSE_POSITIVE = findings.OPEN, findings.FALSE_POSITIVE
 CLAIM_STATUSES = (OPEN, FALSE_POSITIVE)
 #: the line that opens a claim's table, for the decision lines' rewrite
 CLAIM_HEADER = findings.array_header("claim")
@@ -175,14 +181,14 @@ def claim_refusal(kind: str, status: str) -> str | None:
     no longer covers the state and a review of the new state judges it.
     As `findings.subject_refusal` refuses a limitation on an
     implementation finding. Pure."""
-    if status == "fixed":
+    if status == findings.FIXED:
         return (
             "a claim is not decided `fixed`: a repair changes the report or a "
             "source the reader read, so this record no longer covers the state "
             "— review the repaired state (`labkit-audit <AREA> --report-review "
             "<REPORT>`), which judges the repair"
         )
-    if status != "limitation":
+    if status != findings.LIMITATION:
         return None
     if kind == RESULT:
         return (
@@ -531,8 +537,8 @@ class ClaimReview:
 
 
 def verdict_counts(verdicts: Sequence[ClaimVerdict]) -> tuple[int, ...]:
-    """(upheld, rejected, insufficient) over VERDICTS."""
-    return tuple(sum(1 for v in verdicts if v.verdict == kind) for kind in VERDICTS)
+    """(upheld, rejected, insufficient) over VERDICTS (`reviews.counts_of`)."""
+    return counts_of(verdicts)
 
 
 def write_claim_review(
@@ -698,14 +704,12 @@ def upheld(review: ReportReview, n: int, claim_reviews: Sequence[ClaimReview]) -
     draw judged the decision as it stands and every review of it said
     `upheld`: `rejected` and `insufficient` do not release, a later draw
     does not outvote them, an `--again` draw's `upheld` releases nothing,
-    and a verdict on a decision since changed says nothing. As
-    `reviews.upholding`. Pure."""
+    and a verdict on a decision since changed says nothing — the release
+    rule `reviews.released_by`, which `reviews.upholding` reads too. Pure."""
     if review.claims[n - 1].status != FALSE_POSITIVE:
         return False
     pairs = verdicts_on_decision(review, n, claim_reviews)
-    return any(not cr.again for cr, _ in pairs) and all(
-        v.verdict == UPHELD for _, v in pairs
-    )
+    return released_by([(cr.again, v.verdict) for cr, v in pairs])
 
 
 def not_upheld(
@@ -715,14 +719,9 @@ def not_upheld(
     decided now, with its claim review, or None. Then another draw on this
     decision settles nothing: the way on is a decision with a revised
     reason (`gates/claim_review` refuses a draw unless asked for one)."""
-    return next(
-        (
-            (cr, v)
-            for cr, v in verdicts_on_decision(review, n, claim_reviews)
-            if v.verdict != UPHELD
-        ),
-        None,
-    )
+    pairs = verdicts_on_decision(review, n, claim_reviews)
+    first = first_not_upheld([v.verdict for _, v in pairs])
+    return None if first is None else pairs[first]
 
 
 def verdict_on_revised_decision(
@@ -827,6 +826,8 @@ def standing(
         for n, c in enumerate(r.claims, start=1)
         if not upheld(r, n, claim_reviews)
     ]
+    # a report review carries claims, no verdict; whether each claim is
+    # released is HOLDING's question — home: not `reviews.released_by`
     released = not holding and any(not r.again for r in on_state)
     earlier = next((r for r in reversed(mine) if r.fingerprint != whole), None)
     return Standing(released, holding, on_state, earlier)

@@ -40,12 +40,18 @@ from labkit.formats.digests import digest, tree_digest
 from labkit.formats.files import ReadError, read_cause
 from labkit.formats.runs import (
     CONFIG_FILE,
+    OUTPUTS_FILE,
+    ArtefactError,
     metrics_path,
+    outputs_now,
+    patch_path,
     recorded_runs,
     run_dirs,
     run_path,
 )
+from labkit.formats.answering_run import adopted_run
 from labkit.formats import console, protocol_block
+from labkit.formats.exploration_state import ClosureRun, named_state
 from pathlib import Path
 
 from labkit.formats.repo import (
@@ -460,9 +466,10 @@ class Snapshot:
         pin: (file, line) of the labkit pin, or None.
         validation: One sentence per `annotation_validity` the area's
             protocols declare, naming what of it the sha covers
-            (`validation_basis`), and one per confirmatory successor for
-            its predecessor's run records (`predecessor_basis`); () when
-            there is neither.
+            (`validation_basis`), one per confirmatory successor for
+            its predecessor's run records (`predecessor_basis`), and one
+            per confirmation for the exploration it names
+            (`exploration_basis`); () when there is none of them.
     """
 
     sha: str
@@ -525,12 +532,19 @@ def area_snapshot(
     entries = sorted((_key(f, root), contents[f]) for f in contents)
     basis, told = validation_basis(area)
     before, told_before = predecessor_basis(area)
+    explored, told_explored = exploration_basis(area)
     # appended after the files and only when declared: an area without an
-    # `annotation_validity` and without a confirmatory successor keeps the
-    # stamp it had
-    sha = tree_digest([*entries, *basis, *before], trailer=[pin[1]] if pin else [])
+    # `annotation_validity`, a confirmatory successor or an `[explored_in]`
+    # keeps the stamp it had
+    sha = tree_digest(
+        [*entries, *basis, *before, *explored], trailer=[pin[1]] if pin else []
+    )
     return Snapshot(
-        sha, tuple(files), MappingProxyType(contents), pin, told + told_before
+        sha,
+        tuple(files),
+        MappingProxyType(contents),
+        pin,
+        told + told_before + told_explored,
     )
 
 
@@ -629,6 +643,109 @@ def predecessor_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
     return entries, tuple(told)
 
 
+#: entry names of the exploration basis start so
+EXPLORED_IN_KEY = "explored_in"
+#: the stamped value of a part the exploratory protocol does not hold
+NOT_THERE = "(none)"
+
+
+def exploration_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, ...]]:
+    """(entries, sentences): what the area stamp covers of the exploration
+    a protocol of AREA names in `[explored_in]`, so an audit that judged
+    the confirmation from it (`audit_prompt.exploration_evidence`) goes
+    stale when the named state changes — and only then. Per such protocol:
+    the link as written; where its id names exactly one protocol of the
+    repo, three parts of that protocol:
+
+    - the basis: per run of the closure (`exploration_state.named_state`) its record,
+      its `uncommitted.patch` (with the recorded commit, the text it
+      started under), its outputs.json and the sha256 of each registered
+      output as it stands (a marker for one that is gone and for one
+      outputs.json recorded no digest of — a change of the latter is not
+      seen); what of a run does not read as that sentence;
+    - the selection: the run the exploratory protocol adopts now
+      (`[result] run`), NOT_THERE once withdrawn;
+    - the conclusion: its Conclusion field as it stands.
+
+    A run of the exploratory protocol outside the closure adds no entry:
+    an independent side run leaves the audit standing. Whether the link is
+    valid is the start's (`exploration_link.linked_exploration`), not the
+    stamp's. Never raises for a protocol it cannot read — the head check
+    names that; raises RuntimeError when git fails, OSError when a
+    registered output of the closure stands and does not read."""
+    root = layout_root(area)
+    entries: list[tuple[str, bytes]] = []
+    told: list[str] = []
+    ids: dict[str, list[Path]] | None = None
+    for p in area_protocols(area):
+        try:
+            link = protocol_block.explored_in(p.read_text(encoding="utf-8"))
+        except (OSError, protocol_block.BlockError):
+            continue
+        if link is None:
+            continue
+        name = f"{EXPLORED_IN_KEY} of {_key(p, root)}"
+        entries.append((name, f"{link.protocol} {link.run}".encode("utf-8")))
+        if ids is None:
+            ids = protocol_block.repo_protocol_ids(area)
+        hits = ids.get(link.protocol, [])
+        if len(hits) != 1:
+            told.append(
+                f"{_key(p, root)} names the exploration {link.protocol}, no one "
+                f"protocol of the repo"
+            )
+            continue
+        named = named_state(hits[0], link)
+        entries += [
+            (f"{name}: selection", (named.adopted or NOT_THERE).encode("utf-8")),
+            (f"{name}: conclusion", (named.conclusion or NOT_THERE).encode("utf-8")),
+        ]
+        for member in named.closure:
+            entries += _closure_entries(f"{name}: run {member.run_id}", member, root)
+        told.append(
+            f"{_key(p, root)} names the exploration {_key(hits[0], root)} (its "
+            f"adopted run, its Conclusion, and run {link.run} with the runs it "
+            f"rests on, {len(named.closure)} in all, each with its record and "
+            f"outputs)"
+        )
+    return entries, tuple(told)
+
+
+def _closure_entries(
+    name: str, member: ClosureRun, root: Path
+) -> list[tuple[str, bytes]]:
+    """One run of an exploration's closure as stamp entries under NAME
+    (`exploration_basis`): the bytes of its config.json, uncommitted.patch
+    and outputs.json where each stands, the sha256 of each registered
+    output as the tree holds it — a marker for one that is gone, and for
+    one outputs.json recorded no digest of —, each output named relative
+    to ROOT, and what of the run does not read as its sentences."""
+    run_dir = member.rd.dir
+    entries = [
+        (f"{name}: {f.name}", f.read_bytes())
+        for f in (run_dir / CONFIG_FILE, patch_path(run_dir), run_dir / OUTPUTS_FILE)
+        if f.is_file()
+    ]
+    unread = list(member.unread)
+    try:
+        outputs = outputs_now(run_dir) or []
+    except ArtefactError as exc:
+        outputs = []
+        unread.append(str(exc))
+    entries += [
+        (
+            f"{name}: output {_key(o.entry.path, root)}",
+            (o.sha256 or ("no recorded digest" if o.stands else "gone")).encode(
+                "utf-8"
+            ),
+        )
+        for o in outputs
+    ]
+    if unread:
+        entries.append((f"{name}: unread", "\n".join(unread).encode("utf-8")))
+    return entries
+
+
 def _run_records(area: Path, pid: str) -> list[Path]:
     """The `config.json` of every run of AREA bound to the protocol id PID,
     and of every run whose record does not read, by run name
@@ -691,8 +808,8 @@ def _bound_files(bound: Path) -> list[Path]:
 
     out = [bound]
     try:
-        run = protocol_block.declared_run(bound.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, protocol_block.BlockError):
+        run = adopted_run(bound.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
         run = None
     if run is not None:
         run_dir = run_path(bound.parent, run)

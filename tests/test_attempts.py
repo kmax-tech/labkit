@@ -9,6 +9,7 @@ import contextlib
 import io
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -25,6 +26,7 @@ from labkit.formats import evidence  # noqa: E402
 from labkit.gates import undecided
 from labkit.formats import failed_attempts
 from labkit.formats.attempts import Attempt  # noqa: E402
+from repo_fixture import git
 
 A = Attempt("a1", "analysis", "opus", "s", "2026-10-26T09:16:02", "here")
 START = json.dumps(
@@ -35,15 +37,6 @@ START2 = START.replace('"a1"', '"a2"')
 END_R = json.dumps(
     {"event": "ended", "id": "a1", "outcome": "record", "file": "r.toml"}
 )
-
-
-def git(cwd: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-    )
 
 
 def area_in_repo() -> Path:
@@ -133,11 +126,20 @@ class Journal(unittest.TestCase):
 
 
 class Gaps(unittest.TestCase):
-    """`gaps` is pure: journal, files and HEAD in, sentences out."""
+    """`gaps` is pure: journal, files and HEAD in, sentences out; the area
+    is only the path its restore commands name."""
+
+    AREA = Path("experiments") / "01 x"
 
     def _gaps(self, attempts_, present=(), at_head=(), now="", head=None, alive=None):
         return attempts.gaps(
-            list(attempts_), set(present), set(at_head), now, head, alive or {}
+            list(attempts_),
+            set(present),
+            set(at_head),
+            now,
+            head,
+            alive or {},
+            area=self.AREA,
         )
 
     def test_the_twin_a_journal_and_its_files_agree(self):
@@ -157,20 +159,29 @@ class Gaps(unittest.TestCase):
 
     def test_heads_lost_file_names_the_restore_that_works_there(self):
         """The restore named is one that works there: on disk it is staged,
-        else it is lost — never a restore that cannot work."""
+        else it is lost — never a restore that cannot work. Each command
+        names the file as the working directory reaches it, quoted: the
+        area's path has a space."""
         head = START + "\n" + END_R + "\n"
         (gap,) = self._gaps([], present={"r.toml"}, now=head, head=head).blockers
         self.assertIn(
-            "bring it back and commit it — stage it (`git add audits/r.toml`)", gap
+            "bring it back and commit it — stage it "
+            "(`git add -- 'experiments/01 x/audits/r.toml'`)",
+            gap,
         )
         copy = Path("/copy/r.toml")
         (gap,) = attempts.gaps(
-            [], set(), set(), head, head, {}, kept={"r.toml": copy}
+            [], set(), set(), head, head, {}, area=self.AREA, kept={"r.toml": copy}
         ).blockers
         self.assertIn(
             "bring it back and commit it — restore it as the audit wrote", gap
         )
-        self.assertIn(f"cp {copy} audits/r.toml", gap)
+        self.assertIn(
+            f"`mkdir -p 'experiments/01 x/audits' && cp {copy} "
+            "'experiments/01 x/audits/r.toml'`",
+            gap,
+        )
+        self.assertNotIn("in the area", gap)
         (gap,) = self._gaps([], now=head, head=head).blockers
         self.assertIn(attempts.LOST_WAY, gap)
         self.assertNotIn("git add", gap)
@@ -202,6 +213,20 @@ class Gaps(unittest.TestCase):
 
 
 class Begin(unittest.TestCase):
+    def test_the_start_states_the_time_the_caller_began_reading(self):
+        area = area_in_repo()
+        attempts.begin(
+            area,
+            "analysis",
+            "opus",
+            "s",
+            block_sha="b",
+            protocol="PROTOCOL-x.md",
+            started="2026-11-19T10:00:00",
+        ).end("none", error="x")
+        (a,) = attempts.read_journal(area)
+        self.assertEqual(a.started, "2026-11-19T10:00:00")
+
     def test_begin_end_and_the_area_as_it_is_now(self):
         area = area_in_repo()
         running = attempts.begin(
@@ -447,7 +472,8 @@ class EvidenceCopy(unittest.TestCase):
 
     @staticmethod
     def restore(line: str) -> str:
-        """The command the restore names, run where it says: in the area."""
+        """The command the restore names; the area lies outside the working
+        directory here, so it names absolute paths and runs anywhere."""
         return line.split("restore it as the audit wrote it (`")[1].split("`")[0]
 
     def test_the_end_keeps_the_record_and_the_answer(self):
@@ -557,6 +583,96 @@ class EvidenceCopy(unittest.TestCase):
         (gap,) = attempts.area_gaps(area).blockers
         self.assertIn("no commit and no copy keeps it: it is lost", gap)
         self.assertIn("handover", gap)
+
+
+class RestoreRunsFromTheRepoRoot(unittest.TestCase):
+    """The stage and the checkout a gone record names run as printed from
+    the working directory they were printed in — here the repository root,
+    where the hooks and labkit-next run —, as every command builder names
+    its paths. The twin of each: after the command the gap is gone."""
+
+    @staticmethod
+    def committed_record() -> tuple[Path, Path, Path]:
+        """(root, area, record): a record under the area's audits/, committed."""
+        area = area_in_repo()
+        root = area.parent.parent
+        record = area / "audits" / "r.toml"
+        record.write_text("# a record\n", encoding="utf-8")
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "the audit")
+        return root, area, record
+
+    @staticmethod
+    def run_as_printed(gap: str, lead: str, root: Path) -> None:
+        command = gap.split(f"{lead} (`")[1].split("`")[0]
+        subprocess.run(command, shell=True, cwd=root, check=True, capture_output=True)
+
+    def test_the_checkout_of_a_record_gone_from_the_tree(self):
+        root, area, record = self.committed_record()
+        record.unlink()
+        with contextlib.chdir(root):
+            (gap,) = attempts.area_gaps(area).blockers
+        self.assertIn("is committed and gone from the tree", gap)
+        self.run_as_printed(gap, "restore it", root)
+        self.assertTrue(record.is_file())
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_the_stage_of_a_record_gone_from_the_index(self):
+        root, area, record = self.committed_record()
+        git(root, "rm", "-q", "--cached", str(record.relative_to(root)))
+        with contextlib.chdir(root):
+            (gap,) = attempts.area_gaps(area, staged=True).blockers
+        self.assertIn("is committed and gone from the index", gap)
+        self.run_as_printed(gap, "stage it", root)
+        self.assertEqual(attempts.area_gaps(area, staged=True).blockers, [])
+
+    @staticmethod
+    def journaled_attempt(area: Path) -> None:
+        """One ended attempt in AREA's journal, its record on disk."""
+        running = attempts.begin(
+            area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"
+        )
+        (area / "audits" / "r.toml").write_text("x", encoding="utf-8")
+        running.end("record", file="r.toml")
+
+    def test_the_checkout_of_a_journal_cut_against_head(self):
+        area = area_in_repo()
+        root = area.parent.parent
+        self.journaled_attempt(area)
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "audited")
+        journal = attempts.journal_path(area)
+        journal.write_text("", encoding="utf-8")  # cut in the tree
+        with contextlib.chdir(root):
+            cut = [
+                g
+                for g in attempts.area_gaps(area).blockers
+                if "no longer starts with the lines HEAD holds" in g
+            ]
+        (gap,) = cut
+        command = gap.split("restore it (`")[1].split("`")[0]
+        self.assertEqual(
+            shlex.split(command),
+            ["git", "checkout", "HEAD", "--", "experiments/01-x/audits/attempts.jsonl"],
+        )
+        self.run_as_printed(gap, "restore it", root)
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_the_lines_the_copy_keeps_come_back(self):
+        area = area_in_repo()
+        root = area.parent.parent
+        self.journaled_attempt(area)
+        shutil.rmtree(area / "audits")  # before any commit: only the copy keeps it
+        with contextlib.chdir(root):
+            lost = [g for g in attempts.area_gaps(area).blockers if "lost 2 line" in g]
+        (gap,) = lost
+        command = gap.split("restore them: `")[1].split("`")[0]
+        self.assertIn("mkdir -p experiments/01-x/audits && touch ", command)
+        subprocess.run(command, shell=True, cwd=root, check=True, capture_output=True)
+        self.assertNotIn(
+            "lost 2 line", "\n".join(attempts.area_gaps(area).blockers)
+        )  # the record itself stays gone: the twin's own blocker
+        self.assertEqual(len(attempts.journal_path(area).read_text().splitlines()), 2)
 
 
 class Hook(unittest.TestCase):

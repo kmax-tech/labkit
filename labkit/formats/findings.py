@@ -39,7 +39,9 @@ records only.
 A record binds what the auditor read: the code (`scope_sha`), the promise
 block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`), not the
-report fields written after the run — and, in mode analysis, the
+report fields written after the run; a preflight record also the fields
+read before the run (`protocol_check.AUDITED_FIELDS`), which an analysis
+record binds through what it was shown — and, in mode analysis, the
 answering run (`run_id`).
 A full run at `high` needs the preflight record the head names
 (`preflight_audit = "<minute>-preflight.toml"`) to be one of the code and
@@ -88,7 +90,6 @@ from __future__ import annotations
 
 import functools
 import re
-import shlex
 import time
 import tomllib
 from collections.abc import Iterable, Mapping, Sequence
@@ -104,7 +105,7 @@ from labkit.formats.gate import (
     WARNING,
     RuleAssignment,
 )
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, stage_command
 from labkit.formats import promises, protocol_block
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_history import correctable
@@ -139,20 +140,26 @@ FAILED_SUFFIX = "-failed.toml"
 #: and never read as one: `<minute>-review[-<n>].toml` (`create_file`
 #: numbers a second file of the minute before the suffix)
 REVIEW_NAME = re.compile(r"-review(?:-\d+)?\.toml$")
-STATUSES = ("open", "fixed", "limitation", "false-positive")
-REASON_OWED = ("limitation", "false-positive")
+#: what a person decided about a finding — the one spelling every reader
+#: compares a `status` with, and the word the record's TOML holds
+OPEN = "open"
+FIXED = "fixed"
+LIMITATION = "limitation"
+FALSE_POSITIVE = "false-positive"
+STATUSES = (OPEN, FIXED, LIMITATION, FALSE_POSITIVE)
+REASON_OWED = (LIMITATION, FALSE_POSITIVE)
 #: the statuses under which a finding leaves the result's limits without
 #: a Limitation line — the fault removed, put off, or not a fault. After a
 #: review did not uphold a decision on the finding, none of them settles
 #: it alone (`reviews.once_not_upheld`, `report_decisions.review_findings`)
-CLOSING = ("fixed", "false-positive")
+CLOSING = (FIXED, FALSE_POSITIVE)
 #: every status but `open`: what deciding a finding sets
-DECIDED = tuple(s for s in STATUSES if s != "open")
+DECIDED = tuple(s for s in STATUSES if s != OPEN)
 #: the decided statuses as a step names them: "fixed / limitation / false-positive"
 DECIDED_LIST = " / ".join(DECIDED)
 #: a carried finding (`carries`: a follow-up did not find its fault gone)
 #: closed with one of these owes a decision review before the number leaves
-CARRIED_CLOSING = ("false-positive",)
+CARRIED_CLOSING = (FALSE_POSITIVE,)
 #: a limit's effect on the verdicts: they stand with the limit, or the run
 #: judges the named promises not at all (`--not-assessable`)
 EFFECT_STANDS = "stands"
@@ -336,12 +343,12 @@ class Finding:
     @property
     def effect_owed(self) -> bool:
         """A BLOCKER decided `limitation` owes the effect it has on the verdicts."""
-        return self.grade == BLOCKER and self.status == "limitation"
+        return self.grade == BLOCKER and self.status == LIMITATION
 
     @property
     def effect_allowed(self) -> bool:
         """A BLOCKER or WARNING decided `limitation` carries an effect; nothing else."""
-        return self.grade in EFFECT_GRADES and self.status == "limitation"
+        return self.grade in EFFECT_GRADES and self.status == LIMITATION
 
 
 #: an analysis audit's verdict on an earlier decided BLOCKER (fixed,
@@ -686,7 +693,7 @@ def subject_refusal(f: Finding, status: str) -> str | None:
     is an `undetermined` one: a limit line does not settle
     a suspicion — its check runs, the person decides `fixed` (the check
     built and run), and the follow-up judges the value."""
-    if status != "limitation" or f.subject not in (IMPLEMENTATION, UNDETERMINED):
+    if status != LIMITATION or f.subject not in (IMPLEMENTATION, UNDETERMINED):
         return None
     if f.subject == UNDETERMINED and f.check.startswith(REQUEST_CHECKS):
         return (
@@ -796,7 +803,7 @@ def decision_after_restore(f: Finding) -> tuple[str, str] | None:
     if f.subject != STATEMENT:
         return None
     return (
-        "limitation",
+        LIMITATION,
         "<the registered text stands; what the finding names is a limit>",
     )
 
@@ -895,7 +902,7 @@ def decision_entails(
     review = audit_command(
         area, "--review", "--record", record.name, protocol=protocol, base=here
     )
-    if f.status == "fixed":
+    if f.status == FIXED:
         owed = (
             f"; the check owed: {check_order(f.check, f.check_note)}" if f.check else ""
         )
@@ -904,7 +911,7 @@ def decision_entails(
             "audit judges it, and a BLOCKER's number does not leave before"
             f"{owed}; what `fixed` means for this repair, and where its next step is named, is the line below"
         )
-    if f.status == "limitation" and f.effect == EFFECT_STANDS:
+    if f.status == LIMITATION and f.effect == EFFECT_STANDS:
         # the review is owed at every repeat cost, a low one too; a
         # WARNING's line does not say "before the number leaves", since the
         # adoption lets it through
@@ -920,7 +927,7 @@ def decision_entails(
             "— give its effect on the claim in the reason; "
             f"{held}, at every repeat cost: `{review}`"
         )
-    if f.status == "limitation" and f.effect:
+    if f.status == LIMITATION and f.effect:
         held = (
             "the number does not leave until a second auditor confirms that the "
             "fault prevents judging it"
@@ -934,12 +941,12 @@ def decision_entails(
             f"names — `{f.effect}` stands in the report's Limitation line; "
             f"{held}, at every repeat cost: `{review}`"
         )
-    if f.status == "limitation":
+    if f.status == LIMITATION:
         return (
             "limitation: the finding holds and is recorded; a NOTE limits nothing in "
             "the report"
         )
-    if f.status == "false-positive":
+    if f.status == FALSE_POSITIVE:
         held = (
             f"; a second auditor must uphold it before the number leaves: `{review}`"
             if false_positive_blocker(f) or carried_and_closed(f)
@@ -967,7 +974,7 @@ def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
     the field's change (`followup.earlier_corrections`), and finalize
     releases that change only on its `resolved` (`registration_hold.scope_changes`)."""
     at = f.place
-    if f.status != "fixed" or at is None or at[0] != protocol.name:
+    if f.status != FIXED or at is None or at[0] != protocol.name:
         return None
     hit = field_or_none(text, at[1])
     return hit.name if hit is not None and correctable(hit.label) else None
@@ -1076,7 +1083,8 @@ class Record:
     model: str
     scope_sha: str  # the code the auditor read
     block_sha: str  # the promise block it read (promises.NO_BLOCK: none declared)
-    # the registration it judged: the kind and a digest per owed field
+    # the registration it judged: the kind and a digest per owed field —
+    # in mode preflight also per field read before the run
     # (`protocol_check.registration_stamp`), in the order written
     registration: tuple[tuple[str, str], ...]
     run_id: (
@@ -1108,7 +1116,7 @@ class Record:
     @property
     def open(self) -> list[Finding]:
         """The findings nobody has decided yet."""
-        return [f for f in self.findings if f.status == "open"]
+        return [f for f in self.findings if f.status == OPEN]
 
     def limits(self) -> list[tuple[int, Finding]]:
         """(number, finding) of every finding that is a limit of the result:
@@ -1301,7 +1309,7 @@ def false_positive_blocker(f: Finding) -> bool:
     owes none (its missing review warns). The one rule the gate
     (`report_decisions.review_findings`) and the review
     (`decision_review.reviewable`) both read."""
-    return f.grade == BLOCKER and f.status == "false-positive"
+    return f.grade == BLOCKER and f.status == FALSE_POSITIVE
 
 
 def fixed_claim(f: Finding) -> bool:
@@ -1318,7 +1326,7 @@ def fixed_claim(f: Finding) -> bool:
     at = f.place
     return (
         f.grade == BLOCKER
-        and f.status == "fixed"
+        and f.status == FIXED
         and at is not None
         and PROTOCOL_NAME.match(at[0]) is not None
         and field_name(at[1]) == field_name(CONCLUSION_LABEL)
@@ -2231,7 +2239,7 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
             errors.append(
                 f"{', '.join(shown(p, Path.cwd()) for p in left)}: in the tree, not in the "
                 f"index — the commit would leave the audit record behind; stage it "
-                f"(`git add {' '.join(shlex.quote(shown(p, Path.cwd())) for p in left)}`)"
+                f"(`{stage_command(*left)}`)"
                 f" — a record a later change made outdated is staged too, its "
                 f"BLOCKERs decided (`fixed`, naming the change, where it repaired "
                 f"them), never deleted"

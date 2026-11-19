@@ -14,30 +14,21 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from protocol_fixture import PID, completed_run, head, run_record, scope_file
 
 from labkit.formats import area_state, run_index, runs
 from labkit.formats.area_state import INDEX, TREE, Measured, assemble, state_of
+from labkit.formats.run_starts import RunStart
 from labkit.gates import hook_post_change, report_check
+from repo_fixture import git as _git
 
 RUN = "2026-10-07T10-00-00_ab12"
 PROBE = "2026-10-07T09-00-00_0000"
-
-
-def _git(cwd: Path, *args: str) -> str:
-    r = subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return r.stdout.strip()
 
 
 class _Repository(unittest.TestCase):
@@ -265,6 +256,78 @@ class OneStateBuildPerCheckRun(_Repository):
             )
         self.assertEqual((builds, len(reads)), (1, 1), "\n".join(lines))
 
+    def test_the_report_path_reads_each_protocols_text_once(self):
+        """`hold_reported` over a repository with two protocols and one
+        report: the hold reads each protocol's text from the file state once
+        (`report_hold.repo_sources`), and the registered report, the newly
+        adopted run, the former registrations and the protocol's own hold
+        read that text (`Sources.registered`, `Sources.text_of`). Counted
+        at `repo.state_text` as the modules of the hold that read protocols
+        call it (`report_hold`, `registered_report`); the area state's own
+        texts are another reader, one per build."""
+        from collections import Counter
+        from unittest import mock
+
+        from labkit.checks import report_blocks
+        from labkit.gates import registered_report, report_hold
+
+        self._run(RUN)
+        other = self.root / "experiments" / "02-y"
+        other.mkdir()
+        scope_file(other)
+        registering = other / "PROTOCOL-y.md"
+        registering.write_text(
+            head(id="p-bbbbbbbbbbbbbbbb", repeat_cost="low", report="REPORT.md")
+            + "\n- **Question / hypothesis:** how many?\n",
+            encoding="utf-8",
+        )
+        report = self.root / "REPORT.md"
+        report.write_text(
+            report_blocks.with_discussion(
+                "# Report\n",
+                f"experiments/01-x/{self.proto.name}",
+                RUN,
+                "a probe of the setup, not the answer",
+            ),
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "a second protocol and the report")
+        self.assertEqual(
+            report_hold.registering_protocols([report], self.root, staged=False),
+            [registering.resolve()],
+        )
+        read = report_hold.repo_sources(self.root, staged=False)
+        self.assertEqual(
+            report_hold.registering_protocols(
+                [report], self.root, staged=False, sources=read
+            ),
+            [registering.resolve()],
+        )
+        with self.assertRaises(ValueError):  # sources of the other file state
+            report_hold.registering_protocols(
+                [report], self.root, staged=True, sources=read
+            )
+        reads: Counter[str] = Counter()
+        real = report_hold.state_text
+
+        def counting(repo: Path, path: Path, *, staged: bool) -> str | None:
+            if path.name.startswith("PROTOCOL-"):
+                reads[path.name] += 1
+            return real(repo, path, staged=staged)
+
+        lines: list[str] = []
+        with (
+            mock.patch.object(report_hold, "state_text", counting),
+            mock.patch.object(registered_report, "state_text", counting),
+        ):
+            report_check.hold_reported(
+                [report], self.root, staged=False, tell=lines.append
+            )
+        self.assertEqual(
+            dict(reads), {self.proto.name: 1, registering.name: 1}, "\n".join(lines)
+        )
+
     def test_the_commits_gate_builds_the_state_once_per_protocol(self):
         """`hold_reported` at the commit (STAGED): the one protocol the paths
         touch, one build of its area's state."""
@@ -315,6 +378,33 @@ class TheFileStateNamedIsTheOneRead(_Repository):
         shutil.rmtree(run)
         self.assertIn(RUN, report_hold.repo_sources(self.root, staged=True).known)
         self.assertNotIn(RUN, report_hold.repo_sources(self.root, staged=False).known)
+
+
+class AnAdoptionOnlyTheTreeHolds(_Repository):
+    """The commit's step asks whether the tree's head declares a result the
+    index's does not (`report_hold.result_outside_index`), read from the
+    real tree and index. A `[result]` typed by hand into the tree's head
+    does not read: it declares none and raises nothing — the index, which
+    the commit judges, reads. The rule over both texts:
+    `test_report_hold_stations.AnAdoptionOutsideTheIndex`."""
+
+    def outside(self, result: str) -> bool:
+        from labkit.gates import report_hold
+
+        self.proto.write_text(
+            head(repeat_cost="low", result=result)
+            + "\n- **Question / hypothesis:** how many?\n",
+            encoding="utf-8",
+        )
+        return report_hold.result_outside_index(self.root, self.area, self.proto)
+
+    def test_a_result_that_does_not_read_in_the_tree_declares_none(self):
+        self.assertFalse(self.outside("typed"))
+
+    def test_the_twin_an_adoption_in_the_tree_is_outside_the_index(self):
+        self.assertTrue(self.outside(RUN))
+        _git(self.root, "add", "-A")
+        self.assertFalse(self.outside(RUN))
 
 
 class OneRuleForAReportsPlace(unittest.TestCase):
@@ -424,19 +514,252 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
                 )
             ],
             {"2026-10-05T10-00-00_lost": PID},
+            indexed={"2026-10-06T10-00-00_dead": "p-other"},
         )
         m = state.measured_of(PID)
         self.assertIsInstance(m, Measured)
         self.assertTrue(m.has_measured)
         self.assertEqual([rd.dir.name for rd in m.firsts], [RUN])
         self.assertEqual(m.lost, ("2026-10-05T10-00-00_lost",))
-        # the unreadable record counts for every protocol: it may be one
+        self.assertNotIn("2026-10-06T10-00-00_dead", [rd.dir.name for rd in m.runs])
+        # the unreadable record counts for the protocol its index row names
         other = state.measured_of("p-other")
         self.assertTrue(other.has_measured)
         self.assertEqual(other.firsts, ())
         self.assertEqual(
             [rd.dir.name for rd in other.deleted], ["2026-10-06T10-00-00_dead"]
         )
+        self.assertEqual((m.unassigned, other.unassigned), ((), ()))
+
+    def test_an_unreadable_record_no_row_names_counts_for_no_protocol(self):
+        """Its protocol cannot be determined: among no protocol's runs,
+        measured for none, and named as unassigned for each — the twin of
+        the record an index row binds; a row that records the run unbound
+        assigns it to no protocol either, and leaves nothing unknown."""
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead",
+            None,
+            "unreadable",
+            error_cause="malformed",
+        )
+        state = assemble(Path("area"), None, TREE, [self._record(RUN), dead], [], {})
+        for pid in (PID, "p-other"):
+            with self.subTest(pid):
+                m = state.measured_of(pid)
+                self.assertEqual(m.unassigned, ("2026-10-06T10-00-00_dead",))
+                self.assertNotIn(dead, m.runs)
+        self.assertFalse(state.measured_of("p-other").has_measured)
+        unbound = assemble(
+            Path("area"), None, TREE, [dead], [], {}, indexed={dead.dir.name: ""}
+        )
+        m = unbound.measured_of(PID)
+        self.assertEqual((m.runs, m.unassigned, m.has_measured), ((), (), False))
+
+    NOON = datetime(2026, 10, 6, 12, 0, 0, tzinfo=timezone.utc)
+
+    def test_the_start_record_assigns_a_record_that_does_not_read(self):
+        """A measurement that broke off has no index row; its start file
+        binds its damaged record to the protocol, and to that one alone."""
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead",
+            None,
+            "unreadable",
+            error_cause="malformed",
+        )
+        start = RunStart(dead.dir.name, PID, self.NOON, "measurement")
+        state = assemble(
+            Path("area"), None, TREE, [dead], [], {}, starts={dead.dir.name: start}
+        )
+        m = state.measured_of(PID)
+        self.assertEqual((m.runs, m.unassigned, m.has_measured), ((dead,), (), True))
+        self.assertEqual(m.started, {dead.dir.name: self.NOON})
+        other = state.measured_of("p-other")
+        self.assertEqual((other.runs, other.has_measured), ((), False))
+
+    def test_a_run_only_the_start_record_names_counts_as_measured(self):
+        gone = "2026-10-06T10-00-00_105e"
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [],
+            [],
+            {},
+            starts={gone: RunStart(gone, PID, self.NOON, "measurement")},
+            started_only={gone: PID},
+        )
+        m = state.measured_of(PID)
+        self.assertEqual((m.started_only, m.has_measured), ((gone,), True))
+        self.assertEqual(m.lost, ())
+        self.assertFalse(state.measured_of("p-other").has_measured)
+
+    def test_the_twin_a_probe_the_files_name_is_no_measurement(self):
+        """A start file names its run's kind. A probe or a preparation run
+        whose directory is gone — only a start file names it, or the
+        index lists it too — and one whose record does not read are kept in
+        the area's state and counted as measured for no protocol; the same
+        runs without a start file count, as nothing says what they were."""
+        gone, indexed_too = "2026-10-06T10-00-00_105e", "2026-10-06T10-00-01_105e"
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead",
+            None,
+            "unreadable",
+            error_cause="malformed",
+        )
+        for kind in ("probe", "preparation"):
+            with self.subTest(kind):
+                state = assemble(
+                    Path("area"),
+                    None,
+                    TREE,
+                    [dead],
+                    [],
+                    {indexed_too: PID},
+                    indexed={indexed_too: PID},
+                    starts={
+                        r: RunStart(r, PID, self.NOON, kind)
+                        for r in (gone, indexed_too, dead.dir.name)
+                    },
+                    started_only={gone: PID},
+                )
+                m = state.measured_of(PID)
+                self.assertEqual((m.started_only, m.lost), ((), ()))
+                self.assertEqual(m.runs, (dead,))
+                self.assertFalse(m.has_measured)
+                self.assertEqual(state.started_only, {gone: PID})
+                self.assertEqual(state.lost, {indexed_too: PID})
+        unlisted = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [dead],
+            [],
+            {indexed_too: PID},
+            indexed={indexed_too: PID, dead.dir.name: PID},
+        ).measured_of(PID)
+        self.assertEqual(unlisted.lost, (indexed_too,))
+        self.assertTrue(unlisted.has_measured)
+
+    def test_a_start_file_that_does_not_read_bears_on_its_own_run_alone(self):
+        """An incomplete start gives no protocol, no time and no kind. Its
+        run stays the protocol's its record or its index row names, with
+        no start to order it by; an independent protocol of the area is
+        not touched; and a run nothing else names is unassigned for every
+        protocol — named, counted for none."""
+        reads = self._record(RUN)
+        gone, alone = "2026-10-06T10-00-01_105e", "2026-10-06T10-00-02_105e"
+        unread = {
+            r: RunStart(r, None, None, None, "not JSON") for r in (RUN, gone, alone)
+        }
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [reads],
+            [],
+            {gone: PID},
+            indexed={RUN: PID, gone: PID},
+            starts=unread,
+        )
+        m = state.measured_of(PID)
+        self.assertEqual(m.unread_starts, (RUN, gone))
+        self.assertEqual((m.started, m.started_as), ({}, {}))
+        self.assertEqual(m.lost, (gone,))  # no kind known: it may have measured
+        self.assertEqual(state.conflicts, {})  # an unread file names no protocol
+        other = state.measured_of("p-other")
+        self.assertEqual((other.unread_starts, other.has_measured), ((), False))
+        for measured in (m, other):
+            self.assertEqual(measured.unassigned_starts, (alone,))
+            self.assertEqual(measured.started_only, ())
+
+    def test_a_missing_start_file_bears_on_its_own_protocol_alone(self):
+        """A run whose directory contains the start mark and for which no start
+        file is found is its own protocol's loss: an independent protocol
+        of the area has nothing missing and nothing measured, so neither
+        its release nor its start is touched."""
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [self._record(RUN)],
+            [],
+            {},
+            indexed={RUN: PID},
+            missing_starts=[RUN],
+        )
+        self.assertEqual(state.measured_of(PID).missing_starts, (RUN,))
+        other = state.measured_of("p-other")
+        self.assertEqual(
+            (other.missing_starts, other.unassigned_missing_starts, other.has_measured),
+            ((), (), False),
+        )
+
+    def test_sources_that_name_different_protocols_are_a_conflict_not_a_choice(self):
+        """A start file against the index for a record that does not
+        read, and against a record that reads: named for each protocol
+        involved, the unreadable one assigned to neither; the twin, sources
+        that agree, is none."""
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead",
+            None,
+            "unreadable",
+            error_cause="malformed",
+        )
+        reads = self._record(RUN)
+        starts = {
+            dead.dir.name: RunStart(dead.dir.name, PID, self.NOON, "measurement"),
+            RUN: RunStart(RUN, "p-other", self.NOON, "measurement"),
+        }
+        state = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [reads, dead],
+            [],
+            {},
+            indexed={dead.dir.name: "p-other", RUN: PID},
+            starts=starts,
+        )
+        self.assertEqual(
+            state.conflicts,
+            {
+                dead.dir.name: (
+                    ("its start file", PID),
+                    ("the run index", "p-other"),
+                ),
+                RUN: (
+                    ("its record", PID),
+                    ("its start file", "p-other"),
+                    ("the run index", PID),
+                ),
+            },
+        )
+        for pid in (PID, "p-other"):
+            with self.subTest(pid):
+                m = state.measured_of(pid)
+                self.assertEqual(len(m.conflicts), 2)
+                self.assertNotIn(dead, m.runs)
+                self.assertEqual(m.unassigned, ())
+        self.assertIn(
+            f"run {RUN}: its record names {PID}, its start file names p-other",
+            state.measured_of(PID).conflicts[1],
+        )
+        agreeing = assemble(
+            Path("area"),
+            None,
+            TREE,
+            [reads, dead],
+            [],
+            {},
+            indexed={dead.dir.name: PID, RUN: PID},
+            starts={
+                r: RunStart(r, PID, self.NOON, "measurement")
+                for r in (dead.dir.name, RUN)
+            },
+        )
+        self.assertEqual(agreeing.conflicts, {})
+        self.assertEqual(agreeing.measured_of(PID).conflicts, ())
+        self.assertIn(dead, agreeing.measured_of(PID).runs)
 
     def test_nothing_measured(self):
         state = assemble(
@@ -444,6 +767,27 @@ class AStateBuiltWithoutFiles(unittest.TestCase):
         )
         self.assertFalse(state.measured_of(PID).has_measured)
         self.assertEqual(state.measured_of(PID).runs[0].dir.name, PROBE)
+
+    def test_measured_without_a_first_that_reads(self):
+        # a lost run and an unreadable record the index binds each count as
+        # measured, though neither is among the first measurements whose
+        # record reads
+        dead = runs.RunDir(
+            Path("runs") / "2026-10-06T10-00-00_dead",
+            None,
+            "unreadable",
+            error_cause="malformed",
+        )
+        for name, present, lost, index in (
+            ("lost", [], {"2026-10-05T10-00-00_lost": PID}, {}),
+            ("unreadable", [dead], {}, {dead.dir.name: PID}),
+        ):
+            with self.subTest(name):
+                m = assemble(
+                    Path("area"), None, TREE, present, [], lost, indexed=index
+                ).measured_of(PID)
+                self.assertTrue(m.has_measured)
+                self.assertEqual(m.firsts, ())
 
 
 class ARecordGitHolds(unittest.TestCase):

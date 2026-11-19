@@ -252,7 +252,7 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
     def test_an_untracked_file_blocks_though_its_bytes_match(self):
         f = self._blocker(LAB_017, kind="file", loose=(self.SOURCE,), untracked=True)
         self.assertIn("neither tracked in git nor ignored by a rule", f.text)
-        self.assertIn("git add data/items.jsonl", f.fix or "")
+        self.assertIn("git add -- data/items.jsonl", f.fix or "")
         self.assertIn("sha256 ab12", f.fix or "")
 
     def test_an_untracked_directory_names_its_loose_files(self):

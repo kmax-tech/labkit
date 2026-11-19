@@ -158,7 +158,7 @@ def from_run(
     Recorded results is refused without `force`; a `[result]` naming another
     run is refused always (`fill_result_run`: withdraw it first)."""
     run = recheck.chosen_run(area, text, run_id)
-    r = rendering(area, text, run, found=evidence.decision_reviews(area))
+    r = rendering(area, text, run, found=evidence.decision_reviews_in_tree(area))
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:
@@ -228,7 +228,9 @@ def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     (text, what was written). Raises ValueError without a declared run or
     without `runs/<id>/` for it — `--from-run` declares first."""
     run = declared_run_dir(text, area, "--render only writes the result again")
-    r: Rendering = rendering(area, text, run, found=evidence.decision_reviews(area))
+    r: Rendering = rendering(
+        area, text, run, found=evidence.decision_reviews_in_tree(area)
+    )
     written: list[str] = []
     before = text
     text = fill(text, RECORDED_RESULTS_LABEL, r.recorded_results, force=True)

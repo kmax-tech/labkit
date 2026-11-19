@@ -7,7 +7,9 @@ refuses what cannot be read) and the checks the constructor
 sequences — the low registration (`require_registration`), a reseed's
 conditions (`require_valid_reseed`), the
 detach gate (`require_detached`, with `foreground_timeout`), and for a
-full run the freeze gate (`freeze_gate`: undecided blockers, the freeze
+full run the freeze gate (`freeze_gate`: undecided blockers, a
+confirmation's link to its exploration at its first measurement
+(`require_exploration_link`), the freeze
 or the registration, the acknowledgement over a failed audit). Each
 `require_*` raises SystemExit with the sentence a person acts on, and so
 does every other refusal here — a measure script reaches it with no main
@@ -21,17 +23,26 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
-from labkit.formats.area_state import AreaState, state_of
+from labkit.formats.area_state import (
+    CLOCKS_ASSUMED,
+    UNASSIGNED_LEAVES_OPEN,
+    AreaState,
+    measurements_without_record,
+    missing_start_warning,
+    state_of,
+    unread_start_warning,
+)
 from labkit.formats import evidence
 from labkit.formats.commands import checkout_command, contract_command, fill_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
-from labkit.formats.runs import RunKind, parse_run_kind
+from labkit.formats.runs import PROBE, RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, protocol_check, repo
 from labkit.formats import audit_gaps
+from labkit.formats.exploration_link import NotLinked, linked_exploration
 from labkit.formats import failed_attempts
-from labkit.formats.answering_run import REPEAT_SEED_KEY
+from labkit.formats.answering_run import REPEAT_SEED_KEY, is_measurement
 from labkit.formats.gate import BLOCKER, with_rule, with_way_out
 from labkit.formats.standard_contract import (
     PREFLIGHT_AUDIT,
@@ -142,9 +153,18 @@ def _committed_registration(
     """Refuse a first measurement whose report differs from HEAD, on both
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
-    one's binding. A HEAD git cannot read is refused as such, before
-    either. No commitment check outside Git or for an unbound protocol.
-    Reads HEAD and the first measurements; writes nothing.
+    one's binding: once the area measured the protocol — a measurement of
+    it whose record reads, or a run without a record that its start file
+    or the run index binds to it (`area_state.measurements_without_record`)
+    — no run is held
+    to HEAD as the first, and HEAD is not named as what binds; where the
+    earlier run may have been the first, `earlier_measurement_note` says so
+    at the start and the registration station holds the number
+    (`registration_hold.lost_record_hold`). A record that does not read and
+    that neither file names counts for no protocol: the run is held to HEAD
+    as before. A HEAD git cannot read is refused as such, before either. No
+    commitment check outside Git or for an unbound protocol. Reads HEAD,
+    and what the area measured (STATE); writes nothing.
     """
     from labkit.formats.protocol_history import registration_in_commit
 
@@ -152,7 +172,11 @@ def _committed_registration(
     root = repo.git_root(base_dir)
     if root is None or head is None or head.id is None or not isinstance(rel, str):
         return []
-    if state.measured_of(head.id).firsts:
+    measured = state.measured_of(head.id)
+    # STATE is the working tree's, so its lost runs are lost in the tree
+    without = measurements_without_record(measured, measured.lost)
+    reads = any(rd.config is not None and is_measurement(rd) for rd in measured.runs)
+    if reads or without.of_protocol:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")
@@ -196,14 +220,101 @@ def _committed_registration(
     return []
 
 
+def earlier_measurement_note(bound: _Bound, state: AreaState) -> str | None:
+    """The warning a measurement starts with about runs without a record
+    (`area_state.measurements_without_record` over STATE, the working
+    tree's), one sentence per case:
+
+    - a run of the protocol that may have been its first measurement —
+      also where the start files do not tell its order against a
+      measurement that reads, which its clause says: this run is not held
+      to HEAD as
+      the first, what stood registered then cannot be read from
+      here, and the registration station holds every number of the protocol
+      until the record is back or the protocol is registered anew or handed
+      over;
+    - a run of the protocol that the start files put after a
+      measurement that reads: named, with the assumption that takes it as
+      the later one (`area_state.CLOCKS_ASSUMED`); nothing is held for it;
+    - a run whose protocol its start file, the run index and its record
+      name differently, this protocol among them: finalize will hold the
+      number;
+    - a start file that does not read: an incomplete start, named with
+      what it leaves unknown (`area_state.unread_start_warning`);
+    - a run whose mark says a start file was written and for which
+      none is found: evidence that is lost
+      (`area_state.missing_start_warning`);
+    - a record that does not read and that neither file names: its
+      protocol cannot be determined, in an area of one protocol too, and
+      the sentence says what that leaves open
+      (`area_state.UNASSIGNED_LEAVES_OPEN`).
+
+    A warning, never a refusal: a started investigation may go on, and only
+    a result that needs the missing record is held
+    (docs/notes/2026-11-18-lost-first-measurement.md). None when every
+    measurement has its record, and for an unbound protocol. Pure."""
+    head = bound.head
+    if head is None or head.id is None:
+        return None
+    measured = state.measured_of(head.id)
+    # STATE is the working tree's, so its lost runs are lost in the tree
+    without = measurements_without_record(measured, measured.lost)
+    told: list[str] = []
+    if without.held:
+        told.append(
+            f"this run is not held to HEAD as its first measurement — a run that "
+            f"may have been the first left no record that reads: "
+            f"{'; '.join(without.held)}. What stood registered "
+            f"then cannot be read from here, and the protocol as committed now "
+            f"does not stand in for it. The run starts; `finalize` and "
+            f"`report-check` hold every number of this protocol until the record "
+            f"is back, or the protocol is registered anew or handed over "
+            f"(finalize names each way)."
+        )
+    if without.later:
+        told.append(
+            f"{'; '.join(without.later)} — by the start files after a "
+            f"measurement of this protocol that reads started, and taken "
+            f"as the later one, {CLOCKS_ASSUMED}; so nothing is held for it; a "
+            f"result that needs its "
+            f"rows is held where that result is checked."
+        )
+    if measured.conflicts:
+        told.append(
+            f"which protocol a run belongs to is contradicted: "
+            f"{'; '.join(measured.conflicts)}. The run starts; `finalize` holds "
+            f"every number of this protocol until the files agree."
+        )
+    if without.unassigned:
+        told.append(
+            f"the record of run {', '.join(without.unassigned)} does not read, "
+            f"and neither a start file nor the run index lists it: which "
+            f"protocol it belongs to "
+            f"cannot be determined — {UNASSIGNED_LEAVES_OPEN}; restore "
+            f"its config.json from a commit or a copy that holds it."
+        )
+    unread = unread_start_warning(measured.unread_starts, measured.unassigned_starts)
+    missing = missing_start_warning(
+        measured.missing_starts, measured.unassigned_missing_starts
+    )
+    for warning in (unread, missing):
+        if warning is not None:
+            told.append(f"{warning.text}. {warning.fix}.")
+    if not told:
+        return None
+    return f"runlog: WARNING — {bound.name}: " + " Also: ".join(told)
+
+
 def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
     """The next action before a full run: low's registration, or high's
     report commitment when missing, otherwise its freeze. Reads the first
     measurement and HEAD at high cost through the shared commitment check;
-    writes nothing. Before the first measurement each step ends with what
-    only the task can say (`standard_contract.first_measurement_hint`): runlog is the
-    last stop before that run, and an agent that never ran labkit-next sees
-    only this line.
+    writes nothing. While the area has not measured the protocol
+    (`area_state.Measured.has_measured`, the question `labkit-next` asks)
+    each step ends with what only the task can say
+    (`standard_contract.first_measurement_hint`): runlog is the last stop
+    before that run, and an agent that never ran labkit-next sees only this
+    line.
     """
     head = bound.head
     hint = ""
@@ -213,7 +324,7 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
         and head is not None
         and head.id is not None
         and isinstance(rel, str)
-        and not state.measured_of(head.id).firsts
+        and not state.measured_of(head.id).has_measured
     ):
         hint = first_measurement_hint(base_dir / rel, bound.text)
     if bound.text is not None and protocol_check.repeated_fields(bound.text):
@@ -714,6 +825,46 @@ def require_step_basis(base_dir: Path, pid: str | None, text: str | None) -> Non
         )
 
 
+def require_exploration_link(base_dir: Path, bound: _Bound, state: AreaState) -> None:
+    """Refuse a measurement under a protocol whose `[explored_in]` does not
+    read, and the first measurement under one whose link names no adopted
+    exploratory run (`exploration_link.linked_exploration`), before mkdir.
+    Once the area measured the protocol (`Measured.has_measured`) the link
+    is not asked again: it is a registration part the first measurement
+    fixed, and a change of the state it names makes the confirming audit
+    stale (`scope_sha.exploration_basis`). No acknowledgement passes it: a
+    first measurement under an invalid link would register it. Nothing
+    without a protocol or the table. Raises SystemExit with the sentence
+    and its way out, RuntimeError when git fails."""
+    text, head = bound.text, bound.head
+    if text is None or head is None:
+        return
+    path = bound.binding.get("path")
+    command = commands.explored_in_command(
+        base_dir / path if isinstance(path, str) else None
+    )
+    again = (
+        f"write the link with `{command}`: it names the run that protocol has "
+        f"adopted and refuses with the reason where the link cannot hold"
+    )
+    try:
+        declared = protocol_block.explored_in(text)
+    except protocol_block.BlockError as exc:
+        raise SystemExit(with_way_out(f"runlog: {exc}", again)) from exc
+    if declared is None or state.measured_of(head.id).has_measured:
+        return
+    link = linked_exploration(text, protocol_block.repo_protocol_ids(base_dir))
+    if isinstance(link, NotLinked):
+        raise SystemExit(
+            with_way_out(
+                f"runlog: this is the first measurement of {bound.name}, and its "
+                f"[explored_in] is no valid link to an exploration — {link.why}",
+                f"{again}; or remove the table: a confirmation without an "
+                f"exploration of this repo names none",
+            )
+        )
+
+
 @dataclass(frozen=True)
 class Prepared:
     """Phase 1 of a run's start, the preparation: what the run is held to,
@@ -767,7 +918,7 @@ def prepare(
     repeat_cost = bound.head.repeat_cost if bound.head is not None else None
     # Seconds uses the complete measurement as its instrument check.
     # Rationale: docs/notes/2026-10-20-run-kinds.md.
-    if run_kind == "probe" and not lane(repeat_cost).probe_allowed:
+    if run_kind == PROBE and not lane(repeat_cost).probe_allowed:
         raise SystemExit(
             with_way_out(
                 "runlog: run_kind='probe' is not allowed at repeat_cost='low' — "
@@ -801,9 +952,9 @@ def require_detached(base_dir: Path, limit: tuple[float, str]) -> None:
         with_way_out(
             f"runlog: this run declares run_kind='measurement' and sits in a "
             f"foreground shell an agent harness kills after {limit[0]:g} s "
-            f"({limit[1]}) — the kill takes the process group mid-run (2026-08-13)",
-            f"start it detached: `runlog start {shown_area(base_dir)} -- <the same "
-            f"command>`; or, if the caller already detached it (run_in_background, "
+            f"({limit[1]}) — the kill takes the process group mid-run",
+            f"start it detached: `{commands.detached_start_command(base_dir)}`; "
+            f"or, if the caller already detached it (run_in_background, "
             f"nohup+setsid), acknowledge with LABKIT_DETACHED=1",
         )
     )
@@ -817,7 +968,11 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
 
     In order: an undecided BLOCKER of a preflight audit refuses, with or
     without the acknowledgement — a finding nobody read is not an unfrozen
-    protocol. Then the gaps (`_freeze_findings`: the freeze at
+    protocol. Then a confirmation's link to its exploration, held at its
+    first measurement and passed by no acknowledgement either
+    (`require_exploration_link`). Then the warning for an earlier measurement without a record
+    that reads (`earlier_measurement_note`; it refuses nothing). Then the
+    gaps (`_freeze_findings`: the freeze at
     high repeat cost, the registration at low repeat cost): none, and the run starts
     plain; gaps and `LABKIT_UNFROZEN=1`, and the run starts acknowledged —
     at high repeat cost only over an audit that could NOT run
@@ -842,7 +997,12 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
                 f"`{commands.audit_command(base_dir, '--findings')}` prints per finding",
             )
         )
+    require_exploration_link(base_dir, prepared.bound, state)
     gaps = _freeze_findings(base_dir, prepared.bound, state)
+    # told whether the run starts or not: it holds for the next start too
+    note = earlier_measurement_note(prepared.bound, state)
+    if note is not None:
+        print(note)
     if not gaps:
         return False, None
     if os.environ.get("LABKIT_UNFROZEN") != "1":  # "0" is no acknowledgement
@@ -878,9 +1038,3 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
         )
     )
     return True, failed.path.name if failed is not None else None
-
-
-def shown_area(area: Path) -> str:
-    """AREA as a person types it from here: relative to the working directory
-    when it lies below it, else absolute."""
-    return repo.shown(area, Path.cwd())

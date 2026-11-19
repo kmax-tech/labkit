@@ -31,18 +31,9 @@ from protocol_fixture import (  # noqa: E402
     run_record,
     script_sha_of,
 )
+from repo_fixture import git as _git
 
 SCRIPT = "import features\nfrom lib import counting\n\nprint(counting.n(features.FILES) + 1)\n"
-
-
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
 
 
 class CodeSinceRun(unittest.TestCase):

@@ -95,7 +95,7 @@ import uuid
 from pathlib import Path
 from types import TracebackType
 
-from labkit.formats.commands import checkout_command
+from labkit.formats.commands import checkout_command, wait_command
 from labkit.formats.run_index import (
     RUN_INDEX,
     RunIndexError,
@@ -105,6 +105,13 @@ from labkit.formats.run_index import (
     index_row,
     read_index,
     read_index_now,
+)
+from labkit.formats.run_starts import (
+    RunStart,
+    start_path,
+    utc_now,
+    write_start,
+    write_start_mark,
 )
 from labkit.formats.runs import (
     NO_INPUTS_DECLARED,
@@ -125,6 +132,7 @@ from labkit.formats.runs import (
     CONFIG_FILE,
     MEASUREMENT,
     OUTPUTS_FILE,
+    PROBE,
     RECORD_SHA_CHARS,
     RUN_ID_TIME,
     RUN_SCHEMA,
@@ -447,7 +455,7 @@ class Run:
         config: dict,
         base_dir: Path,
         data: dict | NoInputs | None = None,
-        run_kind: RunKind = "probe",
+        run_kind: RunKind = PROBE,
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
@@ -524,9 +532,57 @@ class Run:
             self.run_id, self.dir = _make_run_dir(base_dir)
             try:
                 self._write_record(provenance)
+                # the mark says a start file is written for this run,
+                # then it is: a failure of either leaves no run directory
+                write_start_mark(self.dir)
+                # the last step of the start, after every refusal and after
+                # the record: a start that was refused left no start file,
+                # and a start file names a run whose record was written.
+                # Durable before the script's block runs; a failed write
+                # refuses the start. Every kind: a probe can produce
+                # numbers too.
+                self._write_start_file(prepared.run_kind)
             except BaseException:
                 shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
                 raise
+
+    def _write_start_file(self, run_kind: RunKind) -> None:
+        """The run's start file (`run_starts`): its id, the protocol id it
+        is bound to ("" unbound), the time now in UTC and RUN_KIND, whole
+        and synced to disk, outside the run's directory.
+
+        Side effects:
+            Creates <area>/run-starts/<run_id>.json.
+
+        Raises SystemExit naming the file when it cannot be written, or
+        when a start file of this run id exists already — it is never
+        overwritten: a run whose start is recorded nowhere outside its own
+        directory does not start."""
+        start = RunStart(
+            self.run_id, self._protocol.get("id") or "", utc_now(), run_kind
+        )
+        path = start_path(self.base, self.run_id)
+        try:
+            write_start(self.base, start)
+        except FileExistsError as exc:
+            raise SystemExit(
+                with_way_out(
+                    f"runlog: {path} exists — a run with the id {self.run_id} "
+                    f"started before, and its start file is never overwritten; "
+                    f"this run did not start, and no run directory is left",
+                    "start the run again: it draws a new id; the earlier start "
+                    "file stays as it is",
+                )
+            ) from exc
+        except OSError as exc:
+            raise SystemExit(
+                with_way_out(
+                    f"runlog: the start of {self.run_id} could not be recorded in "
+                    f"{path}: {exc} — the run did not start, and no run directory "
+                    f"is left",
+                    "make the area's run-starts/ writable, then start the run again",
+                )
+            ) from exc
 
     @property
     def config(self) -> dict:
@@ -817,7 +873,7 @@ class run:
         config: dict,
         base_dir: str | Path | None = None,
         data: dict | NoInputs | None = None,
-        run_kind: RunKind = "probe",
+        run_kind: RunKind = PROBE,
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
@@ -942,7 +998,7 @@ def _require_no_open_twin(base_dir: str | Path) -> None:
             with_way_out(
                 f"runlog: {script} is still measuring in {base_dir}: {named} — a "
                 f"second measurement beside it would read and write the same files",
-                f"wait for it (`runlog {base_dir} --wait`), then read its result",
+                f"wait for it (`{wait_command(Path(base_dir))}`), then read its result",
             )
         )
 

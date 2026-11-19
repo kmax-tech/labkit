@@ -541,6 +541,22 @@ class RestampLaysTheStampOverTheProbe(unittest.TestCase):
         self.assertEqual((self.probe / "AGENTS.md").read_text(), "old agents\n")
 
 
+class ScoreLineAfterStaging(unittest.TestCase):
+    def test_the_score_line_runs_under_a_path_with_a_space(self):
+        """The line `usability stage` prints for the scoring names the
+        staged directory as one word. The twin: a plain path is bare."""
+        import shlex
+
+        line = usability.score_line(Path("/tmp/my probes/p 1"))
+        self.assertEqual(
+            shlex.split(line)[:3], ["usability", "score", "/tmp/my probes/p 1"]
+        )
+        self.assertEqual(
+            usability.score_line(Path("/tmp/p1")),
+            "usability score /tmp/p1 --transcript <its transcript>",
+        )
+
+
 class LogStepWritesBeforeItRuns(unittest.TestCase):
     """`usability log`: one line with the time, then the command,
     whose exit code it returns; a tag outside the contract is refused."""

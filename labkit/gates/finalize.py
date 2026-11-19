@@ -26,7 +26,11 @@ each step's condition):
                     (sentences, keys, constants, scopes) and the way back;
                     first measurements that recorded different blocks, a
                     blocker (`registration_changes`, LAB-003 No run without
-                    an intent paragraph)
+                    an intent paragraph); a run without a record that
+                    reads which may have been the first measurement, a
+                    blocker in place of the comparison
+                    (`registration_hold.lost_record_hold`), any other
+                    such run a warning (`lost_record_warnings`)
   3. intent-check   every registered promise has a metrics key (and vice
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id
@@ -98,7 +102,6 @@ read-only gate that reports findings.
 
 from __future__ import annotations
 
-import shlex
 from functools import partial
 from dataclasses import replace
 from pathlib import Path
@@ -155,12 +158,12 @@ from labkit.formats.repo import (
     git_root,
     layout_root,
     ProtocolChoiceError,
-    shown,
     the_protocol,
 )
 from labkit.formats.commands import (
     adopt_command,
     contract_command,
+    data_counts_command,
     fill_command,
     measure_command,
     withdraw_command,
@@ -360,10 +363,20 @@ UNREPORTABLE_RULES = {
 }
 
 
+#: the names of the two findings of finalize whose cause report-check's
+#: chain holds at a station of its own (`GateFinding.known_as`): the chain
+#: leaves finalize's finding out by this name
+#: (`report_check.without_unreportable_warnings`,
+#: `report_check.without_declaration_blocker`)
+UNREPORTABLE_NUMBER = "unreportable number"
+UNREADABLE_RESULT_TABLE = "unreadable result table"
+
+
 def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
     """Why the answering run's number cannot be reported (`runs.unreportable`),
-    each a warning here with the rule of its cause: finalize holds the run,
-    report-check refuses the report."""
+    each a warning here with the rule of its cause, known as
+    UNREPORTABLE_NUMBER: finalize holds the run, report-check refuses the
+    report."""
     cfg = read_run_config(answering_run)
     if cfg is None:
         return []
@@ -374,6 +387,7 @@ def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
             f"cannot be reported (report-check refuses it)",
             rule=UNREPORTABLE_RULES[mark.cause],
             evidence_kind=GUARANTEED,
+            known_as=UNREPORTABLE_NUMBER,
         )
         for mark in unreportable(cfg)
     ]
@@ -458,8 +472,8 @@ def check_intent_keys_in_metrics(
     except console.Refused as exc:  # nothing to hold: a blocker, as its exit 2
         findings.block(
             f"intent-check: {exc.why}",
-            fix=f"repair what the sentence names; `intent-check "
-            f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",
+            fix=f"repair what the sentence names; "
+            f"`{gate_command('intent-check', protocol)}` holds it alone",
             rule=TECHNICAL_RULE,
         )
         return
@@ -583,7 +597,7 @@ def check_open_fields(
     for twice in repeated:
         findings.block(
             f"{protocol.name}: {twice}",
-            fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
+            fix=f"{REPEATED_WAY_OUT}; then `{gate_command('finalize', protocol.parent)}`",
             rule=TECHNICAL_RULE,
         )
     stale = readme_placeholders(protocol.parent)
@@ -621,8 +635,8 @@ def check_data_counts(
         return True
     findings.block(
         gap.why,
-        fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {gap.run_id}` "
-        f"writes them from the run — never typed",
+        fix=f"`{data_counts_command(protocol, gap.run_id)}` writes them from the run "
+        "— never typed",
         rule=gap.rule,
     )
     return False
@@ -1223,7 +1237,8 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
     id, a stray key: `protocol_block.declared_run`'s sentence). An adopted
     run that is no completed run of the protocol — no `runs/<id>/` among
     them — is the run choice's blocker (`choose_answering_run`). Empty
-    without a declaration or with one that reads."""
+    without a declaration or with one that reads. The blocker is known as
+    UNREADABLE_RESULT_TABLE."""
     written = (
         f"`{withdraw_command(protocol)}` removes it; audit the run that answers, "
         f"then `{adopt_command(protocol, '<run_id>')}` writes the table for it"
@@ -1237,6 +1252,7 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
                 fix=written,
                 step=withdraw_command(protocol),
                 rule=TECHNICAL_RULE,
+                known_as=UNREADABLE_RESULT_TABLE,
             )
         ]
     return []

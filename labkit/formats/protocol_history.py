@@ -221,7 +221,10 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     is refused — the same move as rewriting the promises until no check is
     due. Exact over git: the head as it
     was first committed against the head now; a legitimate correction says
-    why in the protocol. Static evidence, never a blocker."""
+    why in the protocol. Static evidence, never a blocker: the sentence
+    names a suspicion (the lower tier may reduce the audits owed) and
+    cites the rule for what each tier owes — no rule forbids the change,
+    so the sentence must not read as a breach of one."""
     was = first_repeat_cost(path)
     if was is None or head.repeat_cost is None:
         return None
@@ -237,9 +240,11 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     )
     return (
         f"{path}: WARNING: repeat cost lowered since {since} "
-        f"({commit[:7]}: {first} -> {head.repeat_cost}) — a lower tier owes less "
-        f"(LAB-017 The number of audits follows the cost tier); say why in the "
-        f"protocol, or restore it"
+        f"({commit[:7]}: {first} -> {head.repeat_cost}) — a suspicion, not a "
+        f"shown fault: the lower tier may reduce the audits this protocol owes "
+        f"(what each tier owes: "
+        f"LAB-017 The number of audits follows the cost tier; "
+        f"no rule forbids lowering it); say why in the protocol, or restore it"
     )
 
 
@@ -456,8 +461,9 @@ def scope_value(value: str) -> str:
 def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     """(what, from, to) for every difference between the protocol texts OLD
     and NEW in what the number is about: each of SCOPE_FIELDS
-    (`scope_value`), the head's kind, its `[kept]` and its `[reference]` as
-    the head writes them. ABSENT where one text has nothing; a head or a `[reference]` that
+    (`scope_value`), the head's kind, its `[kept]`, its `[reference]` and
+    its `[explored_in]` — the exploration a confirmation names is part of
+    what it registered — as the head writes them. ABSENT where one text has nothing; a head or a `[reference]` that
     does not read is compared as the sentence its error says, so the fields
     are compared whatever the head held then — a first measurement may have
     run on a commit whose `[reference]` did not read yet. Pure."""
@@ -465,7 +471,7 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     ka, kb = _head_part(old, "kind"), _head_part(new, "kind")
     if ka != kb:
         out.append(("kind", ka, kb))
-    for table in ("kept", "reference"):
+    for table in ("kept", "reference", "explored_in"):
         ta, tb = _head_part(old, table), _head_part(new, table)
         if ta != tb:
             out.append((f"[{table}]", ta, tb))
@@ -483,15 +489,19 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
 
 def _head_part(text: str, part: str) -> str:
     """The head's PART of TEXT as `scope_differences` compares it: "kind"
-    its kind, "kept" its `[kept]` and "reference" its `[reference]` as TOML
-    on one line (ABSENT without the table); `(does not read: …)` with the
-    error where the head or the table does not parse."""
+    its kind, "kept" its `[kept]`, "reference" its `[reference]` and
+    "explored_in" its `[explored_in]` as TOML on one line (ABSENT without
+    the table); `(does not read: …)` with the error where the head or the
+    table does not parse."""
     try:
         if part == "kind":
             return str(protocol_block.head(text).kind)
         if part == "kept":
             kept = protocol_block.kept(text)
             toml = protocol_block.kept_toml(kept) if kept is not None else None
+        elif part == "explored_in":
+            link = protocol_block.explored_in(text)
+            toml = protocol_block.explored_in_toml(link) if link is not None else None
         else:
             ref = protocol_block.reference(text)
             toml = protocol_block.reference_toml(ref) if ref is not None else None
@@ -509,8 +519,8 @@ def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     """(what, from, to) for every difference of the registration between the
     protocol texts OLD and NEW (K1): the head's kind, per promise id its
     sentence, key, each constant and its scope, an id added or dropped,
-    what the number is about (`scope_differences`: `[kept]`, `[reference]`
-    and SCOPE_FIELDS — the one comparison finalize holds a protocol's first
+    what the number is about (`scope_differences`: `[kept]`, `[reference]`,
+    `[explored_in]` and SCOPE_FIELDS — the one comparison finalize holds a protocol's first
     measurement to, so the hold that points to a new registration and the
     declaration it asks for name the same changes), and COMPARED_FIELDS.
     Values as `protocol_check.field_values` reads them (by `field_name`,
@@ -687,44 +697,37 @@ def differences_among_first_measurements(
     ]
 
 
-@dataclass(frozen=True)
-class StepThen:
-    """The step a run made, read from its own protocol text (`step_then`).
-
-    Attributes:
-        run_id: The run.
-        text: The protocol as the run saw it, None when it cannot be read
-            back.
-        step: Its `[builds_on]` then, None when it declared none — or when
-            the step cannot be told (UNKNOWN set).
-        where: Where TEXT was read from, or why it cannot be.
-        unknown: Why the step cannot be told — the text cannot be read back,
-            or its `[builds_on]` does not read; None when it can.
-    """
-
-    run_id: str
-    text: str | None
-    step: protocol_block.BuildsOn | None
-    where: str
-    unknown: str | None
-
-
-def step_then(protocol: Path, rd: "RunDir", root: Path | None) -> StepThen:
-    """The step run RD of PROTOCOL made, as its own text holds it
-    (`as_measured`): the one reconstruction every consumer of a run's basis
-    shares — the basis is stored only there, never in the run record. When
-    it cannot be read back the step is unknown and says why; nothing is
-    invented in its place. RD's config must read. Raises RuntimeError when
-    git fails."""
-    text, where = as_measured(protocol, rd, root, role="run")
-    if text is None:
-        return StepThen(rd.dir.name, None, None, where, where)
+def type_of(text: str) -> str | None:
+    """The `type` TEXT's head declares, None while it holds the stamp's
+    placeholder — or when the head does not read: either way no workflow
+    can be read from it, and the strict one applies
+    (`registration_hold.workflow`). Pure."""
     try:
-        step = protocol_block.builds_on(text)
-    except protocol_block.BlockError as exc:
-        why = f"run {rd.dir.name}: its [builds_on] then does not read — {exc}"
-        return StepThen(rd.dir.name, text, None, where, why)
-    return StepThen(rd.dir.name, text, step, where, None)
+        return protocol_block.head(text).type
+    except protocol_block.BlockError:
+        return None
+
+
+def first_texts(
+    protocol: Path, firsts: Sequence["RunDir"], root: Path | None
+) -> tuple[list[tuple["RunDir", str]], list[str]]:
+    """(seen, unread): PROTOCOL as each of its first measurements FIRSTS
+    saw it (`as_measured`) — SEEN the runs whose text reads, each with
+    that text, in FIRSTS' order; UNREAD one sentence per run whose text
+    does not, saying why. The one reading of what the first measurements
+    registered for the workflow (`registration_hold.workflow`, which reads
+    the type from SEEN) and for a confirmation's link
+    (`exploration_link.linked_exploration`, which refuses on UNREAD).
+    Raises RuntimeError when git fails."""
+    seen: list[tuple[RunDir, str]] = []
+    unread: list[str] = []
+    for rd in firsts:
+        text, where = as_measured(protocol, rd, root)
+        if text is None:
+            unread.append(where)
+        else:
+            seen.append((rd, text))
+    return seen, unread
 
 
 @dataclass(frozen=True)

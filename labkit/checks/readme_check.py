@@ -20,6 +20,7 @@ from labkit.formats.gate import (
     GateFinding,
     cited_rule,
 )
+from labkit.formats.runs import MEASURE_SCRIPT
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files, readme_text, parse_source
 
 
@@ -127,7 +128,7 @@ def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
                     evidence_kind=GUARANTEED,
                 )
             )
-    script = area / "scripts" / "01_measure.py"
+    script = area / MEASURE_SCRIPT
     if script not in area_files(area, (SCRIPT_GLOB,)):
         out.append(
             GateFinding(

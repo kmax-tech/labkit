@@ -1,6 +1,8 @@
 """finalize's named decisions, each testable alone (CODE-006 One function, one thing)."""
 
 import json
+import re
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
@@ -489,6 +491,57 @@ class DataCountsStation(unittest.TestCase):
     def test_the_twin_a_scope_without_generated_counts_passes(self):
         held, found = self._station("data/x.csv, 4 items")
         self.assertEqual((held, found.found), (True, []))
+
+
+class WaysOutUnderAPathWithASpace(unittest.TestCase):
+    """Station 5's two ways out name their command through its builder
+    (`commands.data_counts_command`, `commands.gate_command`): under an area
+    path with a space the printed line reads back as the words it means. The
+    twin: a path without a space is printed bare, as before."""
+
+    @staticmethod
+    def _printed(fix: str | None) -> list[str]:
+        """The words of the last command FIX names between backticks."""
+        return shlex.split(re.findall(r"`([^`]*)`", fix or "")[-1])
+
+    def _counts_fix(self, protocol: Path) -> str | None:
+        found = Findings(tell=None)
+        text = "- **Data / scope:** data/x.csv · counts (prepare run r9): 4 items\n"
+        state = area_state(area=protocol.parent)
+        self.assertFalse(finalize.check_data_counts(found, protocol, text, state))
+        (f,) = found.found
+        return f.fix
+
+    def test_the_counts_command_reads_back_as_four_words(self):
+        protocol = Path("my lab") / "01 x" / "PROTOCOL-x.md"
+        self.assertEqual(
+            self._printed(self._counts_fix(protocol)),
+            ["protocol-fill", "my lab/01 x/PROTOCOL-x.md", "--data-counts", "r9"],
+        )
+
+    def test_the_twin_a_plain_path_is_printed_bare(self):
+        fix = self._counts_fix(Path("area") / "PROTOCOL-x.md")
+        self.assertIn("`protocol-fill area/PROTOCOL-x.md --data-counts r9`", fix or "")
+
+    def _repeated_fix(self, area: Path) -> str:
+        text = head(repeat_cost="low") + "- **Unit:** one\n- **Unit:** two\n"
+        found = Findings(tell=None)
+        finalize.check_open_fields(
+            found,
+            area / "PROTOCOL-x.md",
+            text,
+            protocol_block.head(text),
+            area_state(area=area),
+        )
+        (fix,) = [f.fix for f in found.found if "written 2 times" in f.text]
+        return fix or ""
+
+    def test_the_finalize_after_a_repeated_field_reads_back_as_two_words(self):
+        fix = self._repeated_fix(Path("my lab") / "01 x")
+        self.assertEqual(self._printed(fix), ["finalize", "my lab/01 x"])
+
+    def test_the_twin_a_plain_area_is_printed_bare(self):
+        self.assertIn("then `finalize area`", self._repeated_fix(Path("area")))
 
 
 class AreaTestsTold(unittest.TestCase):

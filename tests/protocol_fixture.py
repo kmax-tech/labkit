@@ -52,11 +52,12 @@ C1_PROSE = "- **Inference criterion:** [criterion-1] the criterion holds\n"
 KEPT = ("n", "1")
 
 
-def registration_of(area: Path) -> dict[str, str]:
+def registration_of(area: Path, *, preflight: bool = False) -> dict[str, str]:
     """The registration a record a test writes judged: that of AREA's
     `PROTOCOL-x.md` (else its one protocol) as it stands now
     (`protocol_check.registration_stamp`) — a record written right after the
-    protocol covers it, as one `labkit-audit` writes would. With no protocol
+    protocol covers it, as one `labkit-audit` writes would; PREFLIGHT for a
+    preflight record, which binds the fields read before the run too. With no protocol
     in AREA, or a head that does not read, the kind alone, unset: the record
     covers no protocol."""
     from labkit.formats import protocol_block, protocol_check
@@ -66,7 +67,7 @@ def registration_of(area: Path) -> dict[str, str]:
     if len(found) == 1:
         try:
             return protocol_check.registration_stamp(
-                found[0].read_text(encoding="utf-8")
+                found[0].read_text(encoding="utf-8"), audited=preflight
             )
         except protocol_block.BlockError:
             pass
@@ -297,7 +298,7 @@ def head(
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.31"',
+        'standard = "0.33"',
         f'id = "{id}"',
         f'type = "{type}"',
         f'repeat_cost = "{repeat_cost}"',

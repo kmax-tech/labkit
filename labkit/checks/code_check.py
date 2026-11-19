@@ -415,7 +415,9 @@ def quality_check_reads(
     that is computed and never read is a label without effect: the
     criterion is reported whether the condition held or not. Only a read
     where a decision is taken counts (`_key_reads`), but a decision on the key is not proof that it withholds the verdict,
-    and a decision in a form this reader does not follow is missed — so
+    and a decision in a form this reader does not follow is missed — a key
+    built at run time (`m[f"quality_check_{n}_pass"]`) above all, which
+    the finding's sentence names as the limit — so
     the finding is a WARNING, and silence means only "decided on
     somewhere". A key the code does not mention at all is the blocker
     `promise_block_findings` already reports.
@@ -443,10 +445,14 @@ def quality_check_reads(
         coded(
             WARNING,
             keys[p.key][0],
-            f"[{p.id}] key '{p.key}' is written but nothing decides on it · "
-            f"the criterion verdict is reported whether [{p.id}] held or not",
+            f"[{p.id}] key '{p.key}' is written but nothing decides on it under "
+            f"its literal name · if no decision reads it, the criterion verdict "
+            f"is reported whether [{p.id}] held or not; a key built at run time "
+            f'(`m[f"quality_check_{{n}}_pass"]`) is not followed — a static '
+            f"check cannot tell which keys such a line reads",
             rule=ID_RULE,
-            fix=f'withhold the verdict when it fails (`if not m["{p.key}"]: …`)',
+            fix=f"withhold the verdict when it fails, reading the key by its "
+            f'literal name (`if not m["{p.key}"]: …`)',
             evidence_kind=STATIC_EVIDENCE,
         )
         for p in owed

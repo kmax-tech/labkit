@@ -101,6 +101,8 @@ from labkit.formats.commands import (
     adopt_command,
     fill_command,
     into_command,
+    path_word,
+    stage_command,
 )
 
 LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
@@ -289,9 +291,9 @@ class BlockSource:
     """What a block's protocol says now: the run it declares (None: no
     result declared, or no protocol there — WHY says which, RULE the rule
     assignment of that cause) and the body it renders for that run (None
-    when it cannot be rendered — WHY says why). STAGE: the protocol's path
-    to stage when only the working tree's head declares a result, the way
-    out then; "" otherwise. TREE_RUN: the run that head declares — staging
+    when it cannot be rendered — WHY says why). STAGE: the protocol to
+    stage when only the working tree's head declares a result, the way
+    out then; None otherwise. TREE_RUN: the run that head declares — staging
     alone settles a block of that run, a block of another is written again
     after. Raises ValueError for a source without a declared run that names
     no rule."""
@@ -300,7 +302,7 @@ class BlockSource:
     body: str | None
     why: str = ""
     rule: RuleAssignment | None = None
-    stage: str = ""
+    stage: Path | None = None
     tree_run: str | None = None
 
     def __post_init__(self) -> None:
@@ -326,9 +328,9 @@ def block_gaps(
         at = f"line {b.first}: the result block of {b.protocol} (run {b.run_id})"
         into_cmd = into_command(report.parent / b.protocol, report)
         into = f"`{into_cmd}`"
-        if s.run_id is None and s.stage:
+        if s.run_id is None and s.stage is not None:
             assert s.rule is not None
-            stage = f"git add -- {s.stage}"
+            stage = stage_command(s.stage)
             gaps.append(
                 blocker(
                     f"{at}: {s.why} — a block shows an adopted result only",
@@ -439,7 +441,7 @@ def cited_gaps(
     known: set[str],
     structured: set[int],
     *,
-    outside_index: Mapping[str, str] | None = None,
+    outside_index: Mapping[str, Path] | None = None,
 ) -> list[GateFinding]:
     """Why a cited token names no run, one finding each with its way out:
     not in the shape runlog writes, or no `runs/<id>/` among KNOWN (the run
@@ -461,7 +463,7 @@ def cited_gaps(
                 f"line {n}: cites run {token} — runs/{token}/ lies in the working "
                 "tree, not in the index the commit carries"
             )
-            fix = f"stage it: `git add -- {outside_index[token]}`"
+            fix = f"stage it: `{stage_command(outside_index[token])}`"
         elif token not in known:
             why = f"line {n}: cites run {token} — no runs/{token}/ in the repo"
             fix = (
@@ -525,11 +527,15 @@ def discuss_command(
     protocol: str, run_id: str, report: str, why: str = WHY_LOOKED_AT
 ) -> Command:
     """The `protocol-fill … --discuss` line that writes the block
-    discussing RUN_ID of PROTOCOL into REPORT, each path as the caller
-    names it, WHY the placeholder of its reason."""
+    discussing RUN_ID of PROTOCOL into REPORT: each path as the caller
+    names it — as the working directory reaches it, or a placeholder
+    (`<PROTOCOL>`, `<FILE>`) —, shell-quoted unless it is a placeholder
+    (`commands.path_word`); RUN_ID a run's id or a placeholder, as given;
+    WHY the placeholder of its reason."""
     return Command(
         DISCUSS,
-        f'protocol-fill {protocol} --discuss {run_id} --why "{why}" --into {report}',
+        f"protocol-fill {path_word(protocol)} --discuss {run_id} "
+        f'--why "{why}" --into {path_word(report)}',
     )
 
 

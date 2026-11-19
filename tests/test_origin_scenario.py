@@ -34,6 +34,7 @@ from labkit.gates.finalize import finalize_area
 from labkit.formats import standard_contract as sc
 from labkit.formats import protocol_block
 from labkit.tools import protocol_fill
+from command_fixture import run_main
 from test_end_to_end import CountCommands, Lab, stamp_count
 
 # an end-to-end scenario file: the full suite before a push runs it, the
@@ -411,25 +412,22 @@ class TwoProtocolsOfOneArea(CountCommands):
     def report_review(self, report: Path, protocol: Path) -> tuple[int, str]:
         """`labkit-audit AREA --report-review REPORT --protocol PROTOCOL`,
         the reader naming no claim: (exit, what it told)."""
-        out = io.StringIO()
         with (
             mock.patch.object(
                 audit.llm, "complete", lambda alias, prompt, **kw: "verdict: 0 claim(s)"
             ),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
         ):
-            rc = audit.main(
+            return run_main(
+                audit.main,
                 [
                     str(self.area),
                     "--report-review",
                     str(report),
                     "--protocol",
                     str(protocol),
-                ]
+                ],
             )
-        return rc, out.getvalue()
 
     def test_the_area_passes_with_no_measurement_run_ever_adopted(self):
         """The measurement protocol registered REPORT.md and reports no

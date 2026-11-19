@@ -18,14 +18,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from protocol_fixture import run_record  # noqa: E402
 from labkit.run import runlog_command  # noqa: E402
+from command_fixture import run_main
 
 
 class TestCli(unittest.TestCase):
     def _run_main(self, argv):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            code = runlog_command.main(argv)
-        return code, buf.getvalue()
+        return run_main(runlog_command.main, argv)
 
     def test_empty_area_says_so_instead_of_staying_silent(self):
         with tempfile.TemporaryDirectory() as d:
@@ -78,6 +76,31 @@ class TestCli(unittest.TestCase):
                 runlog_command.main(["--help"])
         self.assertEqual(ctx.exception.code, 0)
         self.assertIn("usage: runlog", buf.getvalue())
+
+    def test_reindex_help_prints_usage_instead_of_reading_it_as_an_area(self):
+        """`runlog reindex --help` answers as `runlog start --help` does:
+        the usage, exit 0 — not "no such area: --help". The twins: a missing
+        area is still refused, and an area without runs is reindexed."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit) as ctx:
+                runlog_command.main(["reindex", "--help"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertIn("usage: runlog reindex [AREA]", buf.getvalue())
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._run_main(["reindex", str(Path(d) / "does-not-exist")])
+            self.assertEqual(code, 2)
+            self.assertIn("no such area", out)
+            code, out = self._run_main(["reindex", d])
+            self.assertEqual(code, 0, out)
+
+    def test_the_help_text_is_english(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit):
+                runlog_command.main(["--help"])
+        self.assertNotIn("Nachsehen", buf.getvalue())
+        self.assertIn("Look instead of asking", " ".join(buf.getvalue().split()))
 
     def test_a_finished_run_is_listed_as_finished_not_open(self):
         with tempfile.TemporaryDirectory() as d:

@@ -9,7 +9,7 @@ Held, in this order, for the answering run and every basis it builds on,
 back to a run without a step (`step_chain`) — the runs its release depends
 on, and no other:
 
-1. each run's own text and step read back (`protocol_history.step_then`);
+1. each run's own text and step read back (`protocol_then.step_then`);
    a step that cannot be told holds, never reads as "no step";
 2. each step's declared changes are the differences of its run's own text
    from its basis run's own text (`protocol_history.step_change_gaps`) —
@@ -33,7 +33,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
-from labkit.formats import evidence, protocol_block, protocol_history
+from labkit.formats import evidence, protocol_block, protocol_history, protocol_then
 from labkit.formats.area_state import AreaState, Measured
 from labkit.formats.commands import (
     builds_on_command,
@@ -42,14 +42,14 @@ from labkit.formats.commands import (
     withdraw_command,
 )
 from labkit.formats.gate import (
-    OPEN_RULE,
     TECHNICAL_RULE,
     GateFinding,
     blocker,
 )
-from labkit.formats.protocol_history import StepThen
+from labkit.formats.protocol_then import StepThen
 from labkit.formats.runs import RunDir, read_run_dir, run_path
 from labkit.gates.registration_hold import (
+    LAB_003,
     anew_way,
     awaiting_followup,
     by_cause,
@@ -130,7 +130,7 @@ def step_chain(
         if rd.config is None:
             why = f"run {rd.dir.name} does not read: {rd.error or 'no record'}"
             return chain, unknown_step_hold(area, protocol, pid, chain, why)
-        st = protocol_history.step_then(protocol, rd, root)
+        st = protocol_then.step_then(protocol, rd, root)
         if st.unknown is not None or st.text is None:
             return chain, unknown_step_hold(
                 area, protocol, pid, chain, st.unknown or st.where
@@ -200,7 +200,7 @@ def step_gap_hold(
         fix=f"write the step as the texts stand (`{builds_on_command(protocol, basis.run_id)}` "
         f"computes the changes), measure again and audit that run — {later.run_id} "
         f"keeps the text it ran under; or, {anew_way(pid)}",
-        rule=OPEN_RULE,
+        rule=LAB_003,
     )
 
 
@@ -228,7 +228,7 @@ def unstepped_holds(
     registered: list[tuple[RunDir, str]] = []
     unread: list[str] = []
     for rd in firsts:
-        st = protocol_history.step_then(protocol, rd, root)
+        st = protocol_then.step_then(protocol, rd, root)
         if st.unknown is not None or st.text is None:
             unread.append(st.unknown or st.where)
         elif st.step is None:
@@ -253,7 +253,7 @@ def unstepped_holds(
             fix=f"declare the step (`{builds_on_command(protocol, first.dir.name)}`, "
             f"or on another run it builds on), measure again and audit that run — "
             f"{origin.run_id} keeps the text it ran under; or, {anew_way(pid)}",
-            rule=OPEN_RULE,
+            rule=LAB_003,
         )
     ]
 

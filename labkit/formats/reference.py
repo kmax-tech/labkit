@@ -26,7 +26,7 @@ be rendered. Pure: nothing here reads or writes a file.
 
 from __future__ import annotations
 
-from labkit.formats.commands import register_anew
+from labkit.formats.commands import measure_slot_command, register_anew
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import AREA_SLOT
 from labkit.formats.gate import GateFinding, blocker, cited_rule
@@ -177,8 +177,7 @@ def comparison_gaps(
                 f"the number",
                 fix="register the stated value in the head's [reference] table "
                 "(value, tolerance, relation, source), or drop the keys from "
-                f"evaluate_rows(); then `.venv/bin/python "
-                f"{AREA_SLOT}/scripts/01_measure.py`",
+                f"evaluate_rows(); then `{measure_slot_command(AREA_SLOT)}`",
                 rule=LAB_035,
             )
         ]

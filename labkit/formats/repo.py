@@ -693,6 +693,53 @@ def blob_text(repo: Path, sha: str) -> str:
     return blob.stdout
 
 
+def blob_bytes(repo: Path, sha: str) -> bytes:
+    """The bytes of blob SHA in REPO's object store (`git cat-file blob`),
+    as git stores them — no end-of-line or filter conversion. Raises
+    GitError when git cannot run, RuntimeError when it cannot read the
+    blob."""
+    args = ["git", "cat-file", "blob", sha]
+    try:
+        blob = subprocess.run(
+            args, cwd=repo, capture_output=True, timeout=GIT_TIMEOUT_S
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise GitError(f"{' '.join(args)} in {repo}: {exc}") from exc
+    if blob.returncode != 0:
+        raise RuntimeError(
+            f"{' '.join(args)} failed in {repo}: "
+            f"{blob.stderr.decode('utf-8', 'replace').strip()}"
+        )
+    return blob.stdout
+
+
+def blobs_in_history(repo: Path, path: Path) -> list[tuple[str, str]]:
+    """(commit, blob id) for each distinct content PATH had in a commit any
+    ref of REPO reaches, newest commit first, each content once with the
+    newest commit that changed PATH to it. A commit that deleted PATH adds
+    nothing; renames are not followed. PATH must lie under REPO. [] for a
+    path never committed and a repository without a commit. Raises
+    RuntimeError when git fails."""
+    if not head_sha(repo):
+        return []
+    rel = rel_posix(path, repo)
+    args = ["log", "--all", "--format=%H", "--", rel]
+    log = git_run(args, repo)
+    if log.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args)} failed in {repo}: {log.stderr.strip()}"
+        )
+    found: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for commit in log.stdout.split():
+        blob = git_run(["rev-parse", "--verify", "--quiet", f"{commit}:{rel}"], repo)
+        sha = blob.stdout.strip()
+        if blob.returncode == 0 and sha and sha not in seen:
+            seen.add(sha)
+            found.append((commit, sha))
+    return found
+
+
 def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:
     """(commit, path then): the one commit under REPO that added PATH,
     followed back through renames (`git log --follow`), and the path PATH

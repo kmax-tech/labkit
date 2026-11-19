@@ -35,6 +35,7 @@ from labkit.formats import (  # noqa: E402
 from labkit.checks import protocol_report  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
 from protocol_fixture import protocol_id_of, head, scope_file  # noqa: E402
+import command_fixture  # noqa: E402
 
 
 MUST = [f.label for f in protocol_check.FIELDS if f.level == "must"]
@@ -134,10 +135,9 @@ def run_main(text: str) -> tuple[int, str]:
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / "PROTOCOL-x.md"
         p.write_text(text, encoding="utf-8")
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = protocol_report.main([str(p)])
-        return rc, buf.getvalue()
+        return command_fixture.run_main(
+            protocol_report.main, [str(p)], capture_stderr=False
+        )
 
 
 class AuditedTexts(unittest.TestCase):
@@ -239,10 +239,9 @@ class TestStagedReadsTheIndex(unittest.TestCase):
         return p
 
     def _check(self, argv: list[str]) -> tuple[int, str]:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = protocol_report.main(argv)
-        return rc, buf.getvalue()
+        return command_fixture.run_main(
+            protocol_report.main, argv, capture_stderr=False
+        )
 
     def test_a_frozen_index_under_an_unfrozen_tree_is_refused(self):
         p = self._repo(index=self.FROZEN_WITH_GAPS, tree=pilot())
@@ -485,7 +484,7 @@ class TestFixtures(unittest.TestCase):
                 promises.block_stamp(frozen()),
                 (0, 0, 0),
                 [],
-                registration=protocol_check.registration_stamp(frozen()),
+                registration=protocol_check.registration_stamp(frozen(), audited=True),
                 protocol_id=protocol_id_of(area),
             )
             p.write_text(frozen(preflight_audit=record.name), encoding="utf-8")
@@ -595,7 +594,7 @@ WRITTEN = 'rename the label on line {line} from "Noise ceiling → threshold" to
 
 
 class TestRenamedLabel(unittest.TestCase):
-    """A protocol that set standard 0.31 and kept a label the migration
+    """A protocol that set standard 0.33 and kept a label the migration
     renames (`protocol_block.RENAMED_LABELS`) is told to rename that line,
     not to add the field beside it; the earlier label never counts."""
 
@@ -683,10 +682,9 @@ class TestCheckFileAsData(unittest.TestCase):
 
 class TestMain(unittest.TestCase):
     def _run(self, argv):
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            code = protocol_report.main(argv)
-        return code, out.getvalue()
+        return command_fixture.run_main(
+            protocol_report.main, argv, capture_stderr=False
+        )
 
     def test_template_itself_must_fail(self):
         """The template itself fails — and that is the point.
@@ -1409,7 +1407,7 @@ class TestHeadValues(unittest.TestCase):
         for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
-                    pilot().replace('standard = "0.31"', f'standard = "{std}"')
+                    pilot().replace('standard = "0.33"', f'standard = "{std}"')
                 )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)

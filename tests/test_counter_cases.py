@@ -38,6 +38,7 @@ from labkit.gates import report_context
 from labkit.gates import report_replacement
 from labkit.run import llm  # noqa: E402
 import test_end_to_end as e2e  # noqa: E402 — the module, so its tests are not collected here
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -96,30 +97,25 @@ class _Chain(unittest.TestCase):
 
     def audit(self, answer: str) -> tuple[int, str]:
         """`labkit-audit AREA --mode analysis`, the model's answer SIMULATED."""
-        out = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-            contextlib.redirect_stdout(out),
-            contextlib.redirect_stderr(out),
         ):
-            rc = audit.main([str(self.area), "--mode", "analysis"])
-        return rc, out.getvalue()
+            return run_main(audit.main, [str(self.area), "--mode", "analysis"])
 
     def decide(self, record: Path, *argv: str) -> None:
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = audit.main(
-                [
-                    str(self.area),
-                    "--decide",
-                    "1",
-                    *decide_words(*argv),
-                    "--record",
-                    str(record),
-                ]
-            )
-        self.assertEqual(rc, 0, out.getvalue())
+        rc, out = run_main(
+            audit.main,
+            [
+                str(self.area),
+                "--decide",
+                "1",
+                *decide_words(*argv),
+                "--record",
+                str(record),
+            ],
+        )
+        self.assertEqual(rc, 0, out)
 
     def conflict(self) -> tuple[str, str]:
         """Two first measurements at one commit that saw different
@@ -272,7 +268,7 @@ class HonestMiss(_Chain):
 
 class ConflictHandedOver(_Chain):
     """No run answers a registered question; the agent hands over
-    (`ways_out.HANDOVER`): no [result] table, a report that names the protocol
+    (`ways_out.HANDOVER_WAY`): no [result] table, a report that names the protocol
     and says what stands in the way, no number. The stop and the commit let
     it through; a report that cites the answering run is held, and the
     adoption of a run as the result is refused. Confirmatory: an exploratory

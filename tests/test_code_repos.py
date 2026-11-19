@@ -26,15 +26,7 @@ from protocol_fixture import head
 
 from labkit.formats.runs import CODE_FILE
 from labkit.run import code_repos, runlog
-
-
-def git(cwd: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-    )
+from repo_fixture import git
 
 
 def checkout(root: Path, files: dict[str, str]) -> Path:

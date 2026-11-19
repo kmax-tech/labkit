@@ -11,7 +11,6 @@ import pytest
 
 import contextlib
 import io
-import os
 import sys
 import unittest
 from types import SimpleNamespace
@@ -26,6 +25,7 @@ from labkit.formats import protocol_block  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
+from command_fixture import run_main
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -38,15 +38,8 @@ class Adopt(unittest.TestCase):
         self.addCleanup(self.lab.close)
 
     def labkit_adopt(self, area: Path, *args: str) -> tuple[int, str]:
-        out = io.StringIO()
-        old = Path.cwd()
-        os.chdir(self.lab.root)
-        try:
-            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-                rc = adopt.main([str(area), *args])
-        finally:
-            os.chdir(old)
-        return rc, out.getvalue()
+        with contextlib.chdir(self.lab.root):
+            return run_main(adopt.main, [str(area), *args])
 
     def measured(
         self, report_file: str | None, concluded: bool = True

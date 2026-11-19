@@ -102,6 +102,59 @@ class TwoProtocols(unittest.TestCase):
         v = recheck.holds(self.area, self.out, evaluate, self.a)
         self.assertEqual(v.run_id, RUN_A)
 
+    def test_one_check_builds_the_area_state_once(self):
+        """`holds`, an area's `--check`: the run choice, the block comparison
+        and the kept key read one build of the area's state — two builds in
+        one check can differ when a run finishes between them."""
+        from unittest import mock
+
+        text, _, _ = protocol_result.from_run(
+            self.a.read_text(encoding="utf-8"), self.area
+        )
+        self.a.write_text(text, encoding="utf-8")
+        builds: list[int] = []
+        real = recheck.state_of
+
+        def counting(*args, **kwargs):
+            builds.append(1)
+            return real(*args, **kwargs)
+
+        with mock.patch.object(recheck, "state_of", counting):
+            v = recheck.holds(self.area, self.out, evaluate, self.a)
+        self.assertEqual((v.run_id, len(builds)), (RUN_A, 1))
+
+    def _verified_builds(self, run_id: str) -> int:
+        """How often `verified`, called without a state, builds the area's."""
+        from unittest import mock
+
+        builds: list[int] = []
+        real = recheck.state_of
+
+        def counting(*args, **kwargs):
+            builds.append(1)
+            return real(*args, **kwargs)
+
+        with mock.patch.object(recheck, "state_of", counting):
+            metrics, _ = recheck.verified(
+                self.area / "runs" / run_id, self.area, self.out, evaluate
+            )
+        self.assertEqual(metrics, {"n_items": 1})
+        return len(builds)
+
+    def test_a_draw_verified_alone_builds_the_area_state_once(self):
+        """`verified` without a caller's state, as `02_analyze.py --draws`
+        calls it per draw: the block comparison and the kept key read one
+        build. The twin: a run bound to no protocol holds nothing to its
+        area and builds none."""
+        self.assertEqual(self._verified_builds(RUN_A), 1)
+        unbound = "2026-10-15T12-00-00_cccc"
+        self._run(unbound, PID_A, {"n_items": 1})
+        config = self.area / "runs" / unbound / "config.json"
+        record = json.loads(config.read_text(encoding="utf-8"))
+        record["protocol"] = {"id": None, "path": None}
+        config.write_text(json.dumps(record), encoding="utf-8")
+        self.assertEqual(self._verified_builds(unbound), 0)
+
     def test_a_named_run_bound_elsewhere_is_refused(self):
         with self.assertRaises(SystemExit) as cm:
             recheck.run_dir(self.area, self.a, RUN_B)

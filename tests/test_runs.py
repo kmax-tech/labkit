@@ -401,6 +401,71 @@ class DataEntries(unittest.TestCase):
         )
 
 
+class NumberWritten(unittest.TestCase):
+    """`runs.number_written`: whether a run wrote its metrics.json, each of
+    the four states apart — a run only a commit holds is "cannot tell",
+    never "yes"."""
+
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp()) / "2026-01-01T00-00-00_aaaa"
+        self.dir.mkdir()
+
+    def _here(self) -> runs.RunDir:
+        return runs.RunDir(self.dir, None, None)
+
+    def test_a_metrics_file_is_yes(self):
+        (self.dir / "metrics.json").write_text("{}")
+        self.assertEqual(runs.number_written(self._here()), runs.NumberWritten("yes"))
+
+    def test_a_metrics_file_beside_a_failure_record_is_yes(self):
+        (self.dir / "metrics.json").write_text("{}")
+        runs.write_failure(self.dir, RuntimeError, RuntimeError("late"))
+        self.assertEqual(runs.number_written(self._here()), runs.NumberWritten("yes"))
+
+    def test_a_run_only_a_commit_holds_cannot_be_told(self):
+        """Its files are not read: neither an absent metrics.json nor a
+        failure.json that does not read decides anything."""
+        (self.dir / "failure.json").write_text("{not json")
+        held_by_commit = runs.RunDir(self.dir, None, None, from_commit="abc1234")
+        self.assertEqual(
+            runs.number_written(held_by_commit), runs.NumberWritten("cannot tell")
+        )
+        (self.dir / "metrics.json").write_text("{}")
+        self.assertEqual(
+            runs.number_written(held_by_commit), runs.NumberWritten("cannot tell")
+        )
+
+    def test_no_metrics_and_no_failure_record_is_no_without_a_failure(self):
+        wrote = runs.number_written(self._here())
+        self.assertEqual(wrote, runs.NumberWritten("no", None))
+        self.assertIsNone(wrote.failure)
+
+    def test_no_metrics_and_a_failure_record_is_no_with_its_failure(self):
+        runs.write_failure(self.dir, ValueError, ValueError("resume refused"))
+        self.assertEqual(
+            runs.number_written(self._here()),
+            runs.NumberWritten("no", "ValueError: resume refused"),
+        )
+
+    def test_a_failure_record_with_an_empty_message_is_still_a_failure(self):
+        runs.write_failure(self.dir, KeyboardInterrupt, None)
+        self.assertEqual(
+            runs.number_written(self._here()),
+            runs.NumberWritten("no", "KeyboardInterrupt: "),
+        )
+
+    def test_a_failure_record_that_does_not_read_raises(self):
+        (self.dir / "failure.json").write_text("{not json")
+        with self.assertRaisesRegex(runs.RunConfigError, "failure.json: unreadable"):
+            runs.number_written(self._here())
+
+    def test_a_failure_beside_another_answer_than_no_is_refused(self):
+        for answer in ("yes", "cannot tell"):
+            with self.subTest(answer=answer):
+                with self.assertRaisesRegex(ValueError, "a failure says why"):
+                    runs.NumberWritten(answer, "ValueError: x")
+
+
 class TheRunStateAlphabetHasOneHome(unittest.TestCase):
     """`runs.RunState` is the alphabet; `FAILED_STATES`, `runlog.OPEN_STATES`
     and the wait's reasons (`runlog_command._FAILED_WHY`) spell subsets of

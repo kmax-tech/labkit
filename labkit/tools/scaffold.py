@@ -18,7 +18,7 @@ the package. The lab standard is not
 copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
-(the full form with its † fields; `--repeat-cost low` stamps the low cut
+(the full form with its † fields; `--repeat-cost low` stamps the low form
 instead, `--report` the full form there too or appends the † fields to an
 existing area when the run graduates; `--report-file
 PATH` registers the report file, repo-relative, that owes the protocol's
@@ -71,10 +71,9 @@ from dataclasses import dataclass
 import importlib.metadata
 import os
 import re
-import shlex
 
 from labkit.formats import markdown
-from labkit.formats.commands import report_fields_command, step_command
+from labkit.formats.commands import fill_command, report_fields_command, step_command
 from labkit.formats import runs
 from labkit.formats import console
 from pathlib import Path
@@ -103,6 +102,7 @@ from labkit.formats.repo import (
     git_root,
     lab_root,
     area_test_stem,
+    rel_posix,
     split_area_name,
     text_at,
 )
@@ -604,7 +604,7 @@ def script_stamps(
         out[area / "scripts" / dest] = text
     out[root / "tests" / tname] = (
         template(skeleton.test)
-        .replace("<area>", str(area.relative_to(root)))
+        .replace("<area>", rel_posix(area, root))
         .replace("<NN>_<name>", tname[len("test_") : -3])
         .replace("<name>", slug)
     )
@@ -660,12 +660,12 @@ def stamp_area(
             raise console.Refused(
                 "labkit-init",
                 f"--report-file names the report at the area's stamp; {found} "
-                f"is stamped — before its first measurement `protocol-fill "
-                f"<PROTOCOL> report={shlex.quote(report_file)}` registers it",
+                f"is stamped — before its first measurement "
+                f"`{fill_command(None, f'report={report_file}')}` registers it",
             )
         return found, "\n".join(promote(root, found))
     kind = asked_kind(kind)
-    quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
+    low_cut = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     stamped = protocol_stamp(
         root,
@@ -719,7 +719,7 @@ def stamp_area(
     # area's state, and AGENTS.md's loop starts there (printed steps would
     # be a second copy of the route, read once and then stale)
     return area, (
-        f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
+        f"{'Measurement' if low_cut else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + f"\nnext: `{step_command(area)}` names the one next step, with its command; "
         f"`labkit-next --guide` the whole route"
@@ -747,7 +747,7 @@ def protocol_stamp(
     nothing. The cut and the skeleton are the contract's answers, not read
     off the tier here (a tier compared by hand outside the contract is a
     copy)."""
-    quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
+    low_cut = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     tmpl = stamped_head(
         template(PROTOCOL_TEMPLATE.name),
@@ -765,11 +765,15 @@ def protocol_stamp(
     # should ones and the adoption the result ones, and a frozen protocol
     # without them holds its agent; the low cut never owes them (REPORT
     # appends them to an existing area, `promote`).
-    whole = report or not quick
-    form = form_cut(promise_tables_for(tmpl, kind), kind, bool(model), low=not whole)
+    full_form = report or not low_cut
+    form = form_cut(
+        promise_tables_for(tmpl, kind), kind, bool(model), low=not full_form
+    )
     if skeleton is standard_contract.ESTIMATOR:
-        form = estimator_placeholders(form, kind=kind, model=bool(model), low=not whole)
-    elif skeleton is standard_contract.COMPUTE and not whole:
+        form = estimator_placeholders(
+            form, kind=kind, model=bool(model), low=not full_form
+        )
+    elif skeleton is standard_contract.COMPUTE and not full_form:
         form = count_placeholders(form)
     if standard_contract.has_bar(kind):
         # the criterion is an offer: optional in exploration, owed in
@@ -836,7 +840,7 @@ def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
         )
     log = write_kind_change(area, plan)
     # the area as `stamp_area`'s closing line names it, from the repo root
-    step = next_step(area, plan.protocol).render(str(area.relative_to(root)))
+    step = next_step(area, plan.protocol).render(rel_posix(area, root))
     return area, (
         f"Kind {plan.old_kind} -> {kind} in {area}\n" + "\n".join(log) + "\n" + step
     )
@@ -883,6 +887,7 @@ def _name_one(areas: list[Path]) -> str:
     area without a number cannot be named apart from the others."""
     numbered = [p.name for p in areas if split_area_name(p.name)[0] is not None]
     how = (
+        # home: no builder in commands — an area's name, not a path
         [f"name the one you mean by its number (`labkit-init exp {numbered[0]} …`)"]
         if numbered
         else []
@@ -908,6 +913,7 @@ def restampable_area(root: Path, name: str, kind: str) -> Path:
         raise console.Refused(
             "labkit-init",
             f"--change-kind: no area {slug!r} under {experiments} — "
+            # home: no builder in commands — an area's name, not a path
             f"`labkit-init exp {slug} --kind {kind}` stamps a new one",
         )
     protocol = area / f"PROTOCOL-{slug}.md"

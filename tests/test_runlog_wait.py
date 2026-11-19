@@ -29,13 +29,11 @@ from labkit.formats import findings, promises, protocol_check, runs, scope_sha  
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import console  # noqa: E402
 from protocol_fixture import protocol_id_of, run_record, head, scope_file  # noqa: E402
+from command_fixture import run_main
 
 
 def _run_main(argv):
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        code = runlog_command.main(argv)
-    return code, buf.getvalue()
+    return run_main(runlog_command.main, argv, capture_stderr=False)
 
 
 class TestWait(unittest.TestCase):
@@ -945,6 +943,27 @@ class TestStartNamesTheArea(unittest.TestCase):
             self.assertEqual(len(list((area / "output").glob("start-*.log"))), 1)
             self.assertFalse((Path(d) / "output").exists())
 
+    def test_the_printed_status_and_wait_lines_run_under_a_path_with_a_space(self):
+        """`runlog start` prints the two lines that follow the run it
+        detached; each reads back (`shlex.split`) as the command it means
+        when the area's path holds a space."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d) / "my lab" / "01 x"
+            area.mkdir(parents=True)
+            cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                code, out = _run_main(
+                    ["start", "my lab/01 x", "--", sys.executable, "-c", "print(1)"]
+                )
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(code, 0)
+        (line,) = [ln for ln in out.splitlines() if ln.startswith("status:")]
+        status, wait = line.removeprefix("status:").split("wait:")
+        self.assertEqual(shlex.split(status), ["runlog", "my lab/01 x"])
+        self.assertEqual(shlex.split(wait), ["runlog", "my lab/01 x", "--wait"])
+
     def test_a_missing_area_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             cwd = os.getcwd()
@@ -988,7 +1007,7 @@ class TestLongGate(unittest.TestCase):
                 promises.block_stamp(text),
                 (0, 0, 0),
                 [],
-                registration=protocol_check.registration_stamp(text),
+                registration=protocol_check.registration_stamp(text, audited=True),
                 protocol_id=protocol_id_of(Path(d)),
             )
             text = head(frozen=True, preflight_audit=record.name)

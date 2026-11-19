@@ -26,7 +26,10 @@ from labkit.gates import agent_hooks, claude_hooks  # noqa: E402
 from labkit.gates import undecided
 from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
-from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
+from repo_fixture import git as _git  # noqa: E402
+from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
+from command_fixture import run_main
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -52,9 +55,7 @@ class Undecided(unittest.TestCase):
             (area / "scripts").mkdir(parents=True)
             (area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
             (area / "scripts" / "01_measure.py").write_text("x = 1\n")
-        _git(self.root, "init", "-q", ".")
-        _git(self.root, "config", "user.email", "t@t")
-        _git(self.root, "config", "user.name", "t")
+        init_repo(self.root)
         _git(self.root, "add", "-A")
         with _dated(3600):  # the repo predates the session
             _git(self.root, "commit", "-qm", "init")
@@ -344,10 +345,8 @@ class Undecided(unittest.TestCase):
         _git(self.root, "add", str(script))
 
         def commit_gate() -> tuple[int, str]:
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
-                rc = claude_hooks.main(["pre-commit"])
-            return rc, out.getvalue()
+            with contextlib.chdir(self.root):
+                return run_main(claude_hooks.main, ["pre-commit"], capture_stderr=False)
 
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
@@ -369,15 +368,13 @@ class Undecided(unittest.TestCase):
         _git(self.root, "add", str(script))
 
         def commit_gate() -> tuple[int, str]:
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
-                rc = claude_hooks.main(["pre-commit"])
-            return rc, out.getvalue()
+            with contextlib.chdir(self.root):
+                return run_main(claude_hooks.main, ["pre-commit"], capture_stderr=False)
 
         rc, out = commit_gate()
         self.assertEqual(rc, 1, out)
         self.assertIn("in the tree, not in the index", out)
-        self.assertIn(f"git add experiments/01-x/audits/{path.name}", out)
+        self.assertIn(f"git add -- experiments/01-x/audits/{path.name}", out)
         self.assertIn("a record a later change made outdated is staged too", out)
         findings.write_decision(path, 1, "limitation", "measured in area 02", "stands")
         _git(self.root, "add", str(path))

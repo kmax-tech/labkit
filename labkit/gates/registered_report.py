@@ -26,7 +26,13 @@ from labkit.gates.report_hold import (
     stated_through,
     through_gap,
 )
-from labkit.formats.area_state import Measured, state_of
+from labkit.formats.area_state import (
+    Measured,
+    lost_in_the_tree_too,
+    missing_start_warning,
+    unassigned_record_warning,
+    unread_start_warning,
+)
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import GateFinding, RuleAssignment, blocker
 from labkit.formats import (
@@ -432,12 +438,18 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
     Where no first measurement's registration reads — its commit not
     recorded, not held by the repository or not holding the protocol, or
     the measurement lost — that is UNREAD, never "no duty". A lost
-    measurement, and a run of the area whose record does not read (its
-    binding and its commit are unknowable), are UNREAD beside readable
-    ones too: either may have been the first, and no other station holds
-    an unreadable run for a protocol that has adopted nothing. A readable
-    first measurement that registered a report settles the duty whatever
-    else does not read. Raises RuntimeError when git fails."""
+    measurement, a run only a start file names, and a run whose record
+    does not read and which its start file or the run index binds to
+    this protocol (`area_state.assigned_to`; its commit is unknowable), are
+    UNREAD beside readable ones too: each may have been the first — but
+    for a run its start file lists as a probe or a preparation, which
+    measured nothing (`Measured.may_have_measured`). A record
+    that does not read and that neither file names is
+    assigned to no protocol (`Measured.unassigned`): no duty is derived
+    from it, and `unassigned_record_note` names it where the duty is
+    checked. A readable first
+    measurement that registered a report settles the duty whatever else
+    does not read. Raises RuntimeError when git fails."""
     if not measured.has_measured:
         return None
     # no path of today: at a path the commit does not hold, `committed_at`
@@ -453,7 +465,11 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             "",
             f"what it registered at its first measurement {run} cannot be read — {why}",
         )
-    unreadable = [rd.dir.name for rd in measured.runs if rd.error is not None]
+    unreadable = [
+        rd.dir.name
+        for rd in measured.runs
+        if rd.error is not None and measured.may_have_measured(rd)
+    ]
     if unreadable:
         return ReportDuty(
             None,
@@ -463,26 +479,48 @@ def report_duty(measured: Measured, root: Path) -> ReportDuty | None:
             f"told (restore its config.json from a commit or a copy that holds "
             f"it; a record written anew from memory settles nothing)",
         )
-    lost = _lost_in_the_tree_too(measured)
+    lost = [*lost_in_the_tree_too(measured), *measured.started_only]
     if lost:
         return ReportDuty(
             None,
             "",
             f"a measurement of it is lost ({', '.join(lost)}: deleted without a "
-            f"commit, only the run index lists it), and with it the commit that "
-            f"says what stood registered then",
+            f"commit, only the run index or its start file lists it), and with "
+            f"it the commit that says what stood registered then",
         )
     return None
 
 
-def _lost_in_the_tree_too(measured: Measured) -> list[str]:
-    """MEASURED's lost runs that the working tree lacks as well. A state of
-    the index calls a run lost that stands in the tree and is not staged;
-    such a run is not gone, and the tree's own state reads it."""
-    if not measured.lost:
-        return []
-    tree = state_of(measured.area).measured_of(measured.pid).lost
-    return [run for run in measured.lost if run in tree]
+def unassigned_record_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    MEASURED's area holds a record that does not read and that no index
+    row names (`area_state.unassigned_record_warning`, the sentence the
+    registration station prints too); None without one. The duty is read
+    without that record (`report_duty`): whether it was a measurement of
+    this protocol is unresolved, so no duty and no hold follow from it,
+    and the warning says so in place of a silent "no duty". Pure."""
+    return unassigned_record_warning(measured.unassigned)
+
+
+def unread_start_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    a start file of MEASURED's protocol, or one nothing else assigns, does
+    not read (`area_state.unread_start_warning`, the sentence the
+    registration station prints too); None without one. It holds nothing:
+    the duty is read from the runs' own records. Pure."""
+    return unread_start_warning(measured.unread_starts, measured.unassigned_starts)
+
+
+def missing_start_note(measured: Measured) -> GateFinding | None:
+    """The WARNING report-check tells where it checks the report duty when
+    a run's mark says a start file was written and none is found
+    (`area_state.missing_start_warning`, the sentence the registration
+    station holds on for a run of the protocol and warns of for one
+    nothing assigns); None without one. It holds nothing here: the
+    release is held where it is checked. Pure."""
+    return missing_start_warning(
+        measured.missing_starts, measured.unassigned_missing_starts
+    )
 
 
 def _undetermined_duty(who: str, duty: ReportDuty, way_out: str) -> GateFinding:
@@ -628,7 +666,7 @@ def formerly_registering(paths: list[Path], repo: Path, sources: Sources) -> lis
     out: list[Path] = []
     for p in protocols:
         try:
-            text = state_text(repo, p, staged=staged)
+            text = sources.text_of(p)  # the hold's one read of it
             head = protocol_block.head(text) if text is not None else None
         except (OSError, UnicodeError, protocol_block.BlockError):
             continue

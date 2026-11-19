@@ -21,6 +21,7 @@ from labkit.formats import findings, handovers, promises  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from labkit.formats.gate import Findings  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
+from command_fixture import run_main
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -86,10 +87,7 @@ def _run_preflight(area, protocol=None):
     argv = [str(area)]
     if protocol:
         argv += ["--protocol", str(protocol)]
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        code = preflight.main(argv)
-    return code, buf.getvalue()
+    return run_main(preflight.main, argv)
 
 
 class TestAreaTests(unittest.TestCase):
@@ -452,7 +450,7 @@ class TestAuditFindings(unittest.TestCase):
             _block(area),
             (0, 1, 0),
             self.ROW,
-            registration=registration_of(area),
+            registration=registration_of(area, preflight=True),
             protocol_id=protocol_id_of(area),
         )
         return area, path
@@ -489,7 +487,7 @@ class TestAuditFindings(unittest.TestCase):
                 _block(area),
                 (0, 1, 0),
                 self.ROW,
-                registration=registration_of(area),
+                registration=registration_of(area, preflight=True),
                 protocol_id=protocol_id_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=stale.name))
@@ -511,7 +509,7 @@ class TestAuditFindings(unittest.TestCase):
                 _block(area),
                 (0, 0, 0),
                 [],
-                registration=registration_of(area),
+                registration=registration_of(area, preflight=True),
                 protocol_id=protocol_id_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=other.name))
@@ -555,7 +553,7 @@ class TestAuditFindings(unittest.TestCase):
                 _block(area),
                 (0, 0, 0),
                 [],
-                registration=registration_of(area),
+                registration=registration_of(area, preflight=True),
                 protocol_id=protocol_id_of(area),
             )
             p = area / "PROTOCOL-x.md"
@@ -576,7 +574,7 @@ class TestAuditFindings(unittest.TestCase):
                 _block(area),
                 (0, 0, 0),
                 [],
-                registration=registration_of(area),
+                registration=registration_of(area, preflight=True),
                 protocol_id=protocol_id_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=good.name))
@@ -608,7 +606,7 @@ class TestAuditFindings(unittest.TestCase):
                 "b",
                 (0, 1, 0),
                 self.ROW,
-                registration=registration_of(other),
+                registration=registration_of(other, preflight=True),
                 protocol_id=protocol_id_of(other),
             )
             # an open finding elsewhere is that area's work in progress: not told

@@ -7,15 +7,38 @@ a fence regex — come back while memory alone holds them. This test greps
 `labkit/*.py` for the shapes a copy takes; a match outside the home fails,
 naming file and line. A line that must stay says why in a comment on it or
 directly above it that names the home it is not after `home:`.
+
+The tests' own shared helpers are held the same way (`TEST_RULES`): a git
+runner, a main-runner or a repository setup written into a test file beside
+`repo_fixture` or `command_fixture` fails, naming file and function. A
+function that keeps its own form on purpose is exempt by name, with the
+reason beside it.
 """
 
 from __future__ import annotations
 
 import re
+import tomllib
 import unittest
 from pathlib import Path
+from typing import get_args
+
+from labkit.formats import runs
 
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
+TESTS = Path(__file__).resolve().parent
+#: labkit's console commands (`[project.scripts]`), longest first, as one
+#: alternation: a command added there is held by the command rules below
+CONSOLE_COMMANDS = "|".join(
+    re.escape(name)
+    for name in sorted(
+        tomllib.loads((PACKAGE.parent / "pyproject.toml").read_text(encoding="utf-8"))[
+            "project"
+        ]["scripts"],
+        key=len,
+        reverse=True,
+    )
+)
 #: rules that also hold in the stamped script templates — a stamped area reads
 #: its tier off the contract like labkit does
 IN_TEMPLATES = {
@@ -137,6 +160,13 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"\"metric_key\":\s*\"(?:score|accuracy)\"",
         {"standard_contract"},
     ),
+    # what a second reviewer's draws release is one rule for a finding's
+    # decision and a report claim's; `reviews.released_by`
+    (
+        "the release rule of a review's draws spelled by hand",
+        r"any\(\s*not \w+\.again\b",
+        {"reviews"},
+    ),
     # audit modes, the experiments folder and a file:// URL have one
     # spelling each
     (
@@ -220,6 +250,27 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"fixed / limitation / false-positive|\(\"fixed\", \"false-positive\"\)",
         {"findings"},
     ),
+    # a decision status is a constant, never compared as a word — a mistyped
+    # word compares false without an error: `findings.OPEN`, `FIXED`,
+    # `LIMITATION`, `FALSE_POSITIVE`. The shape is the quoted word beside
+    # `==`, `!=` or `in`, so the word in a sentence does not match
+    (
+        "a decision status compared as a word",
+        r"(?:[=!]=\s*|\bin\s*[(\[{][^)\]}\n]*)"
+        r"[\"'](?:open|fixed|limitation|false-positive)[\"']"
+        r"|[\"'](?:open|fixed|limitation|false-positive)[\"']\s*"
+        r"(?:[=!]=|(?:not\s+)?in\b)",
+        {"findings"},
+    ),
+    # the same for a run's kind: `runs.PREPARATION`, `PROBE`, `MEASUREMENT`
+    (
+        "a run kind compared as a word",
+        r"(?:[=!]=\s*|\bin\s*[(\[{][^)\]}\n]*)"
+        r"[\"'](?:preparation|probe|measurement)[\"']"
+        r"|[\"'](?:preparation|probe|measurement)[\"']\s*"
+        r"(?:[=!]=|(?:not\s+)?in\b)",
+        {"runs"},
+    ),
     # a bare area name is read neither by a glob, whose `*` runs over
     # dashes, nor by a slug comparison taking the first match:
     # `repo.areas_named` reads it by the name grammar
@@ -259,6 +310,62 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"print\(f\"[a-z-]+: .*file=sys\.stderr",
         {"console"},
     ),
+    # a printed command names its path through a builder, which quotes it as
+    # the working directory reaches it: a console command opening a
+    # backticked line with an interpolated first argument, or
+    # `protocol-fill <PROTOCOL>` with an interpolated one after it, is a
+    # line spelled by hand. A sentence with slots only (`<PROTOCOL>`,
+    # `<area>`) names no path and stands, as does the area slot a gate
+    # fills (`gate.AREA_SLOT`)
+    (
+        "a console command spelled by hand",
+        rf"`(?:{CONSOLE_COMMANDS})(?: [a-z-]+)? \{{(?!AREA_SLOT\}})"
+        r"|protocol-fill <PROTOCOL> [^`\n]*\{",
+        {"commands"},
+    ),
+    # a staging is one quoted line after `--`, each path as the working
+    # directory reaches it: `commands.stage_command`
+    (
+        "a staging spelled by hand",
+        r"""git add[^`\n]*(?:\{|["'] \+)""",
+        {"commands"},
+    ),
+    # a `runlog AREA` line outside backticks (the status and wait lines of a
+    # detached start) escapes the console-command rule above:
+    # `commands.gate_command`, `wait_command`, `detached_start_command`
+    ("a runlog line spelled by hand", r"runlog (?:start )?\{", {"commands"}),
+    # a protocol as a printed command names it — quoted, as the working
+    # directory reaches it — is `commands.protocol_word`
+    (
+        "a protocol's word spelled by hand",
+        r"shlex\.quote\(\s*shown\(\s*protocol\b",
+        {"commands"},
+    ),
+    # a discussion block's line quotes its paths in one place:
+    # `report_blocks.discuss_command`
+    ("a discuss command spelled by hand", r"--discuss \{", {"report_blocks"}),
+    # the measurement script is `runs.MEASURE_SCRIPT`, as a path and in a
+    # printed line (`commands.measure_command`, `measure_slot_command`)
+    (
+        "the measurement script named by hand",
+        r"/ \"01_measure\.py\"|\}/scripts/01_measure\.py",
+        {"runs"},
+    ),
+    # a path relative to the repository root, as git names it, is
+    # `repo.rel_posix`: it resolves the root and says where a path outside
+    # it lies. The shape tells a repository from an area by the name of the
+    # base alone (`root`, `repo`); a base under another name is not held
+    (
+        "a repo-relative path spelled by hand",
+        r"\.relative_to\((?:root|repo)\)\.as_posix\(\)",
+        {"repo"},
+    ),
+    # the same path taken with `str()`, as a record or a stamp writes it
+    (
+        "a repo-relative path spelled by hand (str form)",
+        r"str\([^()\n]*\.relative_to\((?:root|repo)\)\)",
+        {"repo"},
+    ),
 ]
 
 
@@ -281,7 +388,106 @@ BLOCK_RULES: list[tuple[str, str, set[str]]] = [
         r"print\(\n\s*f\"labkit-[a-z]+: [^\n]*\n(?:[^\n]*\n){0,3}?\s*file=sys\.stderr",
         {"console"},
     ),
+    # the one-line form is held above; here the command closes one string
+    # piece and its interpolated path opens the next
+    (
+        "a console command spelled by hand (split form)",
+        rf"`(?:{CONSOLE_COMMANDS})(?: [a-z-]+)? \"\n\s*f?\"\{{(?!AREA_SLOT\}})",
+        {"commands"},
+    ),
+    # "the adopted run, None where `[result]` does not read" has one
+    # answer: `answering_run.adopted_run`. A reader that keeps the sentence
+    # (`report_context.declaration`) or refuses with it is not this shape
+    (
+        "an adopted run read by hand",
+        r"try:\n[^\n]*declared_run\([^\n]*\n\s*except [^\n]*BlockError[^\n]*:"
+        r"\n\s*(?:return None|\w+ = None|pass)\n",
+        {"answering_run"},
+    ),
 ]
+
+
+#: the shapes a copy of a shared test helper takes — (what, regex over the
+#: file, the fixture module where it belongs, the functions that keep their
+#: own form as `file.py:function`, each with its reason)
+TEST_RULES: list[tuple[str, str, str, set[str]]] = [
+    # a function that takes `*args` and passes them to `["git", …]`:
+    # `repo_fixture.git`
+    (
+        "a git runner beside repo_fixture.git",
+        r"def \w+\([^)]*\*(\w+)[^)]*\)[^:\n]*:\n"
+        r"(?:[^\n]*\n){0,8}?[^\n]*\[\s*\"git\",[^\]]*\*\1\b",
+        "repo_fixture",
+        {
+            # returns the process, and `check=False` lets a test read the
+            # exit of a commit its hook refused
+            "test_install_hooks.py:run_git",
+            # reads labkit's own repository, not a fixture's: no identity,
+            # a timeout, and a failing git (a shallow clone) is not an error
+            "test_release_tags.py:_git",
+        },
+    ),
+    # stdout caught, a `main` called, (exit code, text) returned — with or
+    # without stderr, a working directory or a patched model around it:
+    # `command_fixture.run_main`. A helper that returns the two streams apart
+    # or joins them after the call is not this shape
+    (
+        "a main-runner beside command_fixture.run_main",
+        r"redirect_stdout\((\w+)\)(?:[^\n]*\n){1,6}?\s+(\w+) = [\w.]+\.main\("
+        r"(?:[^\n]*\n){1,14}?\s+return \2, \1\.getvalue\(\)$",
+        "command_fixture",
+        set(),
+    ),
+    # an identity written into a repository's config by hand:
+    # `repo_fixture.init_repo`
+    (
+        "a repository identity set beside repo_fixture.init_repo",
+        r"\"config\",\s*\"user\.(?:email|name)\"",
+        "repo_fixture",
+        {
+            # the three below run git with its exit unchecked, as they did
+            # before the home existed: a setup that failed went on
+            "test_preflight.py:_area",
+            "test_protocol_id.py:_repo",
+            "test_runlog_active.py:_repo",
+            # a script run under a decoy GIT_DIR — where its `git config`
+            # lands is what the test asserts
+            "test_git_env_isolation.py:<module>",
+        },
+    ),
+]
+
+
+def enclosing_function(text: str, start: int, end: int) -> str:
+    """The function the match TEXT[START:END] lies in: the `def` the match
+    opens with, else the nearest `def` above it that is indented less than
+    the match's least indented line; `<module>` outside every function."""
+    opened = re.match(r"def (\w+)\(", text[start:])
+    if opened:
+        return opened.group(1)
+    line_start = text.rfind("\n", 0, start) + 1
+    lines = [ln for ln in text[line_start:end].splitlines() if ln.strip()]
+    indent = min(len(ln) - len(ln.lstrip()) for ln in lines)
+    for above in reversed(text[:line_start].splitlines()):
+        found = re.match(r"([ \t]*)def (\w+)\(", above)
+        if found and len(found.group(1)) < indent:
+            return found.group(2)
+    return "<module>"
+
+
+def helper_copies(shape: str, home: str) -> dict[str, int]:
+    """Where the tests hold SHAPE outside its HOME module and this file (its
+    samples): `file.py:function` to the line of the first match there."""
+    out: dict[str, int] = {}
+    pattern = re.compile(shape, re.MULTILINE)
+    for path in sorted(TESTS.glob("*.py")):
+        if path.stem in {home, Path(__file__).stem}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for m in pattern.finditer(text):
+            name = f"{path.name}:{enclosing_function(text, m.start(), m.end())}"
+            out.setdefault(name, text.count("\n", 0, m.start()) + 1)
+    return out
 
 
 def block_offenders(what: str, shape: str, homes: set[str]) -> list[str]:
@@ -325,6 +531,70 @@ class OneHome(unittest.TestCase):
         found += [o for rule in BLOCK_RULES for o in block_offenders(*rule)]
         self.assertEqual(found, [], "\n" + "\n".join(found))
 
+    def test_no_copy_of_a_shared_test_helper(self):
+        """A test file calls the shared helper; a function named as exempt
+        still holds the shape (an exemption that names nothing is drift)."""
+        for what, shape, home, exempt in TEST_RULES:
+            with self.subTest(what=what):
+                found = helper_copies(shape, home)
+                copies = [
+                    f"{name.replace(':', f':{line}:')}: {what}"
+                    for name, line in found.items()
+                    if name not in exempt
+                ]
+                self.assertEqual(copies, [], "\n" + "\n".join(copies))
+                self.assertEqual(exempt - set(found), set(), "exempt, but not found")
+
+    def test_the_test_rules_bite(self):
+        samples = {
+            "a git runner beside repo_fixture.git": (
+                "def _git(cwd: Path, *args: str) -> None:\n"
+                '    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)\n'
+            ),
+            "a main-runner beside command_fixture.run_main": (
+                "    buf = io.StringIO()\n"
+                "    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):\n"
+                "        code = finalize.main(argv)\n"
+                "    return code, buf.getvalue()\n"
+            ),
+            "a repository identity set beside repo_fixture.init_repo": (
+                '    _git(root, "config", "user.email", "t@t")\n'
+            ),
+        }
+        self.assertEqual(set(samples), {what for what, _, _, _ in TEST_RULES})
+        for what, shape, _, _ in TEST_RULES:
+            with self.subTest(what=what):
+                self.assertIsNotNone(
+                    re.compile(shape, re.MULTILINE).search(samples[what]), shape
+                )
+
+    def test_a_copy_is_named_by_its_function(self):
+        text = (
+            "class A:\n"
+            "    def helper(self):\n"
+            "        def fake():\n"
+            "            return 1\n"
+            "        with (\n"
+            "            x,\n"
+            "        ):\n"
+            "            pass\n"
+            "        return 2\n"
+            "def top(*args):\n"
+            "    pass\n"
+        )
+        inner, last = text.index("x,"), text.index("return 2") + len("return 2")
+        self.assertEqual(enclosing_function(text, inner, last), "helper")
+        opened = text.index("def top")
+        self.assertEqual(enclosing_function(text, opened, len(text)), "top")
+        self.assertEqual(enclosing_function(text, 0, len("class A:")), "<module>")
+
+    def test_the_run_kinds_are_the_named_constants(self):
+        """`RunKind` is a Literal, whose words cannot be built from the
+        constants: the two spellings are held equal here."""
+        self.assertEqual(
+            get_args(runs.RunKind), (runs.PREPARATION, runs.PROBE, runs.MEASUREMENT)
+        )
+
     def test_the_block_rules_bite(self):
         samples = {
             "a path shown relative by hand (try/except form)": (
@@ -336,6 +606,16 @@ class OneHome(unittest.TestCase):
                 '            f"{args.model} · {len(prompt) // 1000} kB",\n'
                 "            file=sys.stderr,\n"
                 "        )\n"
+            ),
+            "a console command spelled by hand (split form)": (
+                '            fix=f"repair what the sentence names; `intent-check "\n'
+                '            f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",\n'
+            ),
+            "an adopted run read by hand": (
+                "    try:\n"
+                "        tree_run = protocol_block.declared_run(tree)\n"
+                "    except protocol_block.BlockError:\n"
+                "        tree_run = None\n"
             ),
         }
         self.assertEqual(set(samples), {what for what, _, _ in BLOCK_RULES})
@@ -389,6 +669,8 @@ class OneHome(unittest.TestCase):
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
             "the decided statuses spelled by hand": 'if f.status in ("fixed", "false-positive"):',
+            "a decision status compared as a word": 'if decided.status == "limitation":',
+            "a run kind compared as a word": 'and cfg.run_kind == "preparation"',
             "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
@@ -397,7 +679,16 @@ class OneHome(unittest.TestCase):
             "an area's test file named by hand": 'stem = f"test_{nn}_" + name',
             "a stamp placeholder tested by hand": 'if v.startswith("<") and v.endswith(">"):',
             "a git restore spelled by hand": 'f"restore it (`git checkout HEAD -- {path}`)"',
+            "the release rule of a review's draws spelled by hand": "return any(not cr.again for cr, _ in pairs) and all(",
             "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
+            "a console command spelled by hand": 'fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "',
+            "a staging spelled by hand": 'fix = f"stage it: `git add -- {outside_index[token]}`"',
+            "a runlog line spelled by hand": 'print(f"status:  runlog {area}        wait:  runlog {area} --wait")',
+            "a protocol's word spelled by hand": "named = shlex.quote(shown(protocol, Path.cwd()))",
+            "a discuss command spelled by hand": 'f"`protocol-fill {name} --discuss {run_id} --why …`"',
+            "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
+            "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
+            "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

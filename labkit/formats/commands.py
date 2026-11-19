@@ -18,6 +18,7 @@ from labkit.formats.repo import (
     own_path,
     shown,
 )
+from labkit.formats.runs import MEASURE_SCRIPT
 
 
 #: the command that adopts a run — what every printed adoption line starts with
@@ -122,16 +123,17 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> Command:
 
 def checkout_command(path: str | Path, rev: str = "HEAD") -> Command:
     """The `git checkout REV -- PATH` line that brings PATH back as REV holds
-    it: PATH shell-quoted, unless the whole of it is a placeholder (`<path>`,
-    `protocol_block.is_stamp_placeholder`), which stays as written; REV, a
-    commit hash or `HEAD`, as given — the one spelling of every restore from
+    it: PATH as one word (`path_word`: shell-quoted, a placeholder as
+    written); REV, a commit hash or `HEAD`, as given — the one spelling of every restore from
     git a way out names."""
-    target = str(path)
-    placeholder = protocol_block.is_stamp_placeholder(target)
-    return Command(
-        RESTORE,
-        f"git checkout {rev} -- {target if placeholder else shlex.quote(target)}",
-    )
+    return Command(RESTORE, f"git checkout {rev} -- {path_word(str(path))}")
+
+
+def path_word(path: str) -> str:
+    """PATH, as the caller names it, as one word of a printed line:
+    shell-quoted, unless the whole of it is a placeholder (`<path>`,
+    `protocol_block.is_stamp_placeholder`), which stays as written."""
+    return path if protocol_block.is_stamp_placeholder(path) else shlex.quote(path)
 
 
 def report_shown(text: str, root: Path) -> str | None:
@@ -177,8 +179,15 @@ def measure_command(area: Path) -> Command:
     """The line that measures AREA: its stamped `scripts/01_measure.py` (every
     skeleton has one) with the repo's interpreter, the script as the working
     directory reaches it; the script opens its run through runlog."""
-    script = shown(area / "scripts" / "01_measure.py", Path.cwd())
+    script = shown(area / MEASURE_SCRIPT, Path.cwd())
     return Command(MEASURE, f".venv/bin/python {shlex.quote(script)}")
+
+
+def measure_slot_command(slot: str) -> Command:
+    """`measure_command` for a check that does not know the working
+    directory: SLOT (`gate.AREA_SLOT`) stands for the area, unquoted — the
+    gate that knows the area fills it shell-quoted (`gate.Findings.take`)."""
+    return Command(MEASURE, f".venv/bin/python {slot}/{MEASURE_SCRIPT.as_posix()}")
 
 
 def measure_anew(area: Path) -> str:
@@ -190,10 +199,22 @@ def measure_anew(area: Path) -> str:
 def gate_command(tool: str, target: Path) -> Command:
     """The line that runs labkit's read-only TOOL on TARGET — a check
     (`code-check`, `finalize`, `report-check`, `preflight`, `notes-check`,
-    `protocol-check`) or `labkit-next`, which reads the gates —, TARGET
+    `protocol-check`), `labkit-next`, which reads the gates, or `runlog`,
+    which lists an area's runs —, TARGET
     shell-quoted as the working directory reaches it: the last step of a
     way out whose repair is by hand. Its kind is CHECK: it writes nothing."""
     return Command(CHECK, f"{tool} {shlex.quote(shown(target, Path.cwd()))}")
+
+
+def reported_check_command(report: Path) -> Command:
+    """The `report-check --if-reported REPORT` line — the check the stop and
+    the commit run on REPORT —, the report shell-quoted as the working
+    directory reaches it (`shown`): the last step after a report is
+    repaired by hand."""
+    return Command(
+        CHECK,
+        f"report-check --if-reported {shlex.quote(shown(report, Path.cwd()))}",
+    )
 
 
 def contract_command(protocol: Path) -> Command:
@@ -205,17 +226,56 @@ def contract_command(protocol: Path) -> Command:
     )
 
 
+def protocol_word(protocol: Path | None) -> str:
+    """PROTOCOL as a printed command names it: shell-quoted as the working
+    directory reaches it (`shown`); None: the `<PROTOCOL>` placeholder, for
+    a sentence that knows no path."""
+    if protocol is None:
+        return "<PROTOCOL>"
+    return shlex.quote(shown(protocol, Path.cwd()))
+
+
 def fill_command(protocol: Path | None, assignment: str) -> Command:
     """The `protocol-fill … "<label>=<value>"` line that writes one field
-    of PROTOCOL (named as the working directory reaches it, `shown`; None:
-    the `<PROTOCOL>` placeholder, for a sentence that knows no path), with
-    ASSIGNMENT as written, quoted once here."""
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "<PROTOCOL>"
+    of PROTOCOL (`protocol_word`), with ASSIGNMENT as written, quoted once
+    here."""
+    return Command(FILL, f'protocol-fill {protocol_word(protocol)} "{assignment}"')
+
+
+def list_command(protocol: Path) -> Command:
+    """The `protocol-fill PROTOCOL --list` line that names every open field
+    of PROTOCOL with its values, the protocol shell-quoted as the working
+    directory reaches it (`shown`). Its kind is CHECK: it writes nothing."""
+    return Command(CHECK, f"protocol-fill {protocol_word(protocol)} --list")
+
+
+def wait_command(area: Path) -> Command:
+    """The `runlog AREA --wait` line that waits for AREA's open run, the
+    area shell-quoted as the working directory reaches it (`shown`)."""
+    return Command(WAIT, f"runlog {shlex.quote(shown(area, Path.cwd()))} --wait")
+
+
+def detached_start_command(area: Path, command: str = "<the same command>") -> Command:
+    """The `runlog start AREA -- COMMAND` line that starts a run of AREA
+    detached, the area shell-quoted as the working directory reaches it
+    (`shown`); COMMAND as given — a placeholder for the measurement's own
+    line, which the reader replaces."""
+    return Command(
+        MEASURE, f"runlog start {shlex.quote(shown(area, Path.cwd()))} -- {command}"
     )
-    return Command(FILL, f'protocol-fill {named} "{assignment}"')
+
+
+def data_counts_command(protocol: Path, run_id: str) -> Command:
+    """The `protocol-fill PROTOCOL --data-counts RUN_ID` line that writes
+    the counts preparation run RUN_ID recorded as the end of PROTOCOL's
+    Data / scope, the protocol as the working directory reaches it
+    (`shown`), every word shell-quoted."""
+    return Command(
+        FILL,
+        shlex.join(
+            ["protocol-fill", shown(protocol, Path.cwd()), "--data-counts", run_id]
+        ),
+    )
 
 
 def builds_on_command(protocol: Path, basis: str) -> Command:
@@ -227,6 +287,17 @@ def builds_on_command(protocol: Path, basis: str) -> Command:
         FILL,
         f"protocol-fill {shlex.quote(shown(protocol, Path.cwd()))} --builds-on "
         f'{basis} --step-id <step> --occasion <observation | planned | repair> --why "…"',
+    )
+
+
+def explored_in_command(protocol: Path | None) -> Command:
+    """The `protocol-fill … --explored-in EXPLORATION_PROTOCOL` line that
+    writes PROTOCOL's link to its exploration (`tools.protocol_exploration`),
+    the exploratory protocol left for the agent to name — the one wording
+    of the way out where a link is refused."""
+    return Command(
+        FILL,
+        f"protocol-fill {protocol_word(protocol)} --explored-in <EXPLORATION_PROTOCOL>",
     )
 
 
@@ -243,12 +314,7 @@ def render_command(protocol: Path | None = None, *, from_run: bool = False) -> C
     the working directory reaches it, or the `<PROTOCOL>` placeholder where
     the check knows no path (`result_render`)."""
     flag = "--from-run" if from_run else "--render"
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "<PROTOCOL>"
-    )
-    return Command(RENDER, f"protocol-fill {named} {flag}")
+    return Command(RENDER, f"protocol-fill {protocol_word(protocol)} {flag}")
 
 
 def report_fields_step(protocol: Path) -> str:
@@ -312,17 +378,16 @@ def claim_review_command(area: Path, record: str, protocol: Path) -> Command:
     return Command(REVIEW, line)
 
 
-def into_command(protocol: Path, report: Path) -> Command:
+def into_command(protocol: Path | None, report: Path) -> Command:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them
     (`shown`), shell-quoted: a protocol named relative to the report and a
-    report relative to the repo runs from neither."""
-    here = Path.cwd()
+    report relative to the repo runs from neither. PROTOCOL None: the
+    `<PROTOCOL>` placeholder (`protocol_word`)."""
     return Command(
         INTO,
-        shlex.join(
-            ["protocol-fill", shown(protocol, here), "--into", shown(report, here)]
-        ),
+        f"protocol-fill {protocol_word(protocol)} --into "
+        f"{shlex.quote(shown(report, Path.cwd()))}",
     )
 
 
@@ -336,24 +401,31 @@ def report_fields_command(area: Path) -> Command:
     )
 
 
-def freeze_command(protocol: Path, record: str | None = None) -> Command:
+def freeze_command(protocol: Path | None, record: str | None = None) -> Command:
     """The `protocol-fill PROTOCOL --freeze [RECORD]` line that freezes
     PROTOCOL — `frozen = true`, `preflight_audit` naming the decided
     preflight RECORD (without one, the area's newest) — as the working
-    directory reaches it (`shown`): the one writer of the freeze, which
-    refuses what the freeze gate would hold and leaves the file as it was
+    directory reaches it (`shown`; None: the `<PROTOCOL>` placeholder,
+    `protocol_word`): the one writer of the freeze, which refuses what the
+    freeze gate would hold and leaves the file as it was
     (`protocol_fill._freeze_file`)."""
-    words = ["protocol-fill", shown(protocol, Path.cwd()), "--freeze"]
+    line = f"protocol-fill {protocol_word(protocol)} --freeze"
     if record:
-        words.append(record)
-    return Command(FREEZE, shlex.join(words))
+        line += f" {shlex.quote(record)}"
+    return Command(FREEZE, line)
 
 
-def stage_command(area: Path) -> Command:
-    """The `git add -- AREA` line that stages the whole area, as the working
-    directory reaches it (`shown`): the pre-commit's way out while the
-    area's tree differs from the index (`report_hold.staged_area_gap`)."""
-    return Command(STAGE, f"git add -- {shlex.quote(shown(area, Path.cwd()))}")
+def stage_command(*paths: Path) -> Command:
+    """The `git add -- PATH …` line that stages PATHS — an area as a whole,
+    or files —, each shell-quoted as the working directory reaches it
+    (`shown`): the one spelling of every staging a way out names. Raises
+    ValueError without a path: `git add --` alone stages nothing."""
+    if not paths:
+        raise ValueError("a stage command names at least one path")
+    here = Path.cwd()
+    return Command(
+        STAGE, shlex.join(["git", "add", "--", *(shown(p, here) for p in paths)])
+    )
 
 
 def handover_command(protocol: Path | None, report: str | None = None) -> Command:
@@ -362,11 +434,7 @@ def handover_command(protocol: Path | None, report: str | None = None) -> Comman
     REPORT — when not given, the report PROTOCOL's head registers
     (`registered_report_shown`), else `REPORT.md` —, its why and tried as
     placeholders; it runs no model."""
-    named = (
-        shlex.quote(shown(protocol, Path.cwd()))
-        if protocol is not None
-        else "<PROTOCOL>"
-    )
+    named = protocol_word(protocol)
     if report is None:
         registered = registered_report_shown(protocol) if protocol is not None else None
         report = registered if registered is not None else "REPORT.md"

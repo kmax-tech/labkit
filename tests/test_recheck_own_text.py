@@ -10,13 +10,18 @@ lowers the bar. A's `score` is still compared exactly, a different
 read back that is said — the text as it reads now is never read in its
 place. The answering run, rechecked without a name, still holds the
 protocol as it reads now to the block it recorded.
+
+The separate check of an older run (`recheck.holds_as_measured`) reads the
+rows the run recorded: the file as it stands, or — a later run overwrote
+it — the bytes a commit holds with the recorded sha256, in a temporary
+directory; with no such bytes left the run is not verifiable, and the
+file as it stands is never read in their place.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,19 +30,10 @@ from unittest import mock
 from labkit.checks import recheck
 from labkit.formats import promises
 from protocol_fixture import C1_BLOCK, PID, head, run_record, started_at
+from repo_fixture import git as _git
 
 RUN_A = "2026-11-18T10-00-00_aaaa"
 ROWS = [{"id": 1, "ok": True}, {"id": 2, "ok": True}, {"id": 3, "ok": False}]
-
-
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
 
 
 def evaluate(rows: list[dict]) -> dict:
@@ -164,6 +160,88 @@ class AnOlderRunUnderItsOwnText(unittest.TestCase):
         self.assertIn(f"the protocol run {RUN_A} was measured under cannot be", told)
         self.assertIn("a commit this clone does not hold", told)
         self.assertIn("not taken from the protocol as it reads now", told)
+
+
+class AnOlderRunFromTheRowsItRecorded(AnOlderRunUnderItsOwnText):
+    """A's output is committed, then a later run overwrites the file."""
+
+    LATER = [{"id": 1, "ok": False}, {"id": 2, "ok": False}]
+
+    def overwrite(self, *, commit: bool = True) -> bytes:
+        """The output as a later run leaves it; its bytes."""
+        self.out.write_text("".join(json.dumps(r) + "\n" for r in self.LATER))
+        if commit:
+            _git(self.repo, "add", "-A")
+            _git(self.repo, "commit", "-qm", "a later run's rows")
+        return self.out.read_bytes()
+
+    def check(self, recompute=evaluate) -> recheck.AsMeasured:
+        return recheck.holds_as_measured(
+            self.area, self.out, recompute, RUN_A, self.protocol
+        )
+
+    def test_the_twin_a_file_that_still_stands_is_read_where_it_is(self) -> None:
+        held = self.check()
+        self.assertEqual(held.source, "the file as it stands")
+        self.assertEqual((held.run_id, held.keys_compared), (RUN_A, 3))
+
+    def test_overwritten_rows_are_read_from_the_commit_that_holds_them(self) -> None:
+        """The protocol moved on and the file is another run's: A is held
+        by its own rows and its own kept key, and the tree is untouched."""
+        self.move_on()
+        later = self.overwrite()
+        seen: list[Path] = []
+
+        def recompute(rows: list[dict]) -> dict:
+            seen.append(Path(tempfile.gettempdir()))
+            self.assertEqual(rows, ROWS)
+            return evaluate(rows)
+
+        held = self.check(recompute)
+        self.assertIn("commit ", held.source)
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(self.out.read_bytes(), later)
+        self.assertEqual(_git(self.repo, "status", "--porcelain").strip(), "")
+
+    def test_the_restored_rows_are_compared_not_trusted(self) -> None:
+        self.overwrite()
+        with self.assertRaises(SystemExit) as cm:
+            self.check(lambda rows: {**evaluate(rows), "score": 0.1})
+        self.assertNotIsInstance(cm.exception, recheck.NotVerifiable)
+        self.assertIn("the kept number ['score']", str(cm.exception))
+
+    def test_rows_no_commit_holds_are_not_verifiable(self) -> None:
+        """A's bytes were never committed with the recorded sha256: the
+        record names another digest than every version git holds. The
+        file as it stands is not read — the recomputation is not called."""
+        self.overwrite()
+        entry = json.loads((self.run_a / "outputs.json").read_text())
+        entry[0]["sha256"] = "0" * 16
+        (self.run_a / "outputs.json").write_text(json.dumps(entry))
+        calls: list[int] = []
+
+        def counted(rows: list[dict]) -> dict:
+            calls.append(1)
+            return evaluate(rows)
+
+        with self.assertRaises(recheck.NotVerifiable) as cm:
+            self.check(counted)
+        told = str(cm.exception)
+        self.assertIn("is not verifiable", told)
+        self.assertIn("none of the 2 version(s)", told)
+        self.assertIn("never read in its place", told)
+        self.assertEqual(calls, [])
+
+    def test_the_check_holds_no_note(self) -> None:
+        """The protocol cites another run and other numbers by now: the
+        separate check of A does not read it."""
+        self.protocol.write_text(
+            protocol("score").replace(RUN_A, "another run").replace("3 items", "x"),
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-qm", "the note moved on")
+        self.assertEqual(self.check().run_id, RUN_A)
 
 
 if __name__ == "__main__":

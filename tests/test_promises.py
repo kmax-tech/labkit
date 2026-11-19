@@ -23,6 +23,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -32,6 +33,7 @@ from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE  # noqa: E402
 from protocol_fixture import head  # noqa: E402
+from command_fixture import run_main
 
 MEASURE = """\
 def filter_items(rows):
@@ -100,7 +102,7 @@ class Parse(unittest.TestCase):
 
     def test_block_without_promise_tables_declares_none(self):
         self.assertIsNone(
-            promises.parse_block('```toml\n[protocol]\nstandard = "0.31"\n```\n')
+            promises.parse_block('```toml\n[protocol]\nstandard = "0.33"\n```\n')
         )
 
     def test_unknown_top_level_table(self):
@@ -324,10 +326,7 @@ class Chain(unittest.TestCase):
         return run.dir
 
     def check(self) -> tuple[int, str]:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = intent_check.main([str(self.protocol)])
-        return rc, buf.getvalue()
+        return run_main(intent_check.main, [str(self.protocol)], capture_stderr=False)
 
     GOOD = {"criterion_1_pass": True, "quality_check_1_anchor_ok": True}
 
@@ -636,6 +635,18 @@ class Redefinition(unittest.TestCase):
         )
 
 
+@dataclass(frozen=True)
+class _Config:
+    """A script's config object as the stamped scripts declare one: a bar
+    without a default, one of a pair, a count, a flag, a field set in the script."""
+
+    min_acc: float
+    max_empty: int = 0
+    margin: float | None = None
+    on: bool = False
+    model: str = "alias"
+
+
 class Constants(unittest.TestCase):
     """A constant is named like its config key, has one home, and is held
     type-strictly."""
@@ -677,6 +688,80 @@ class Constants(unittest.TestCase):
             promises.all_constants(parsed(protocol_text(C1, a1))),
             {"min_acc": 0.7, "max_empty": 2},
         )
+
+    def test_constants_into_builds_the_config_from_the_block(self):
+        a1 = A1.replace(
+            'scope = ["scripts/01_measure.py"]',
+            'scope = ["scripts/01_measure.py"]\nconstants = { max_empty = 2 }',
+        )
+        block = parsed(protocol_text(C1, a1))
+        self.assertEqual(
+            promises.constants_into(_Config, block, model="m"),
+            _Config(min_acc=0.7, max_empty=2, model="m"),
+        )
+
+    def test_constants_into_takes_what_the_field_declares(self):
+        """An integer for a `float`, a member of a union; the value is
+        passed on as written, not converted."""
+        for written, field in (("1", "min_acc"), ("0.5", "min_acc")):
+            block = parsed(
+                protocol_text(C1.replace("min_acc = 0.7", f"min_acc = {written}"))
+            )
+            with self.subTest(written=written, field=field):
+                got = promises.constants_into(_Config, block)
+                self.assertEqual(repr(got.min_acc), written)
+        union = parsed(protocol_text(C1.replace("min_acc = 0.7", "margin = 0.25")))
+        self.assertEqual(
+            promises.constants_into(_Config, union, min_acc=0.1).margin, 0.25
+        )
+
+    def test_constants_into_refuses_a_constant_of_another_type(self):
+        """A quoted number would pass the constructor and fail only where
+        the verdict compares it; a boolean is never a number."""
+        cases = (
+            (
+                'min_acc = "0.7"',
+                "constant min_acc = '0.7' is a string, but _Config.min_acc is declared `float`",
+            ),
+            (
+                "min_acc = true",
+                "constant min_acc = True is a boolean, but _Config.min_acc is declared `float`",
+            ),
+            (
+                "max_empty = 2.0",
+                "constant max_empty = 2.0 is a float, but _Config.max_empty is declared `int`",
+            ),
+            (
+                'margin = "0.25"',
+                "constant margin = '0.25' is a string, but _Config.margin is declared `float | None`",
+            ),
+            (
+                "on = 1",
+                "constant on = 1 is an integer, but _Config.on is declared `bool`",
+            ),
+        )
+        for written, told in cases:
+            block = parsed(protocol_text(C1.replace("min_acc = 0.7", written)))
+            with self.subTest(written=written):
+                with self.assertRaises(promises.PromiseError) as cm:
+                    promises.constants_into(_Config, block, min_acc=0.1)
+                self.assertIn("[[promise]] criterion-1: " + told, str(cm.exception))
+
+    def test_constants_into_leaves_names_to_the_constructor(self):
+        """An unknown constant and an unfilled field stay the TypeError the
+        stamped script documents."""
+        unknown = parsed(protocol_text(C1.replace("min_acc = 0.7", "min_f1 = 0.7")))
+        with self.assertRaisesRegex(TypeError, "multiple values"):
+            promises.constants_into(_Config, parsed(protocol_text(C1)), min_acc=0.1)
+        with self.assertRaisesRegex(TypeError, "min_f1"):
+            promises.constants_into(_Config, unknown, min_acc=0.1)
+        with self.assertRaisesRegex(TypeError, "min_acc"):
+            promises.constants_into(
+                _Config,
+                parsed(
+                    protocol_text(C1.replace("constants = { min_acc = 0.7 }\n", ""))
+                ),
+            )
 
     def test_constant_records_are_type_strict(self):
         block = parsed(protocol_text(C1.replace("min_acc = 0.7", "min_acc = 1")))

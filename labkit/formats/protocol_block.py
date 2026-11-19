@@ -8,7 +8,7 @@ unit) and may carry a `[reference]` table, the stated value that number is
 compared with (`reference`):
 
     [protocol]
-    standard = "0.31"
+    standard = "0.33"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     repeat_cost = "low"         # low | high — the price of a repeat
@@ -48,7 +48,7 @@ from labkit.formats.runs import REPEAT_COSTS, RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.31"
+STANDARD = "0.33"
 #: the field labels the migration renames, earlier label → label of STANDARD;
 #: the refusal says it, and a protocol that set the version but kept an
 #: earlier label is told to rename that line (`protocol_check.rename_way`),
@@ -57,8 +57,10 @@ RENAMED_LABELS = {"Noise ceiling → threshold": "Noise floor → threshold"}
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    f'from 0.30: set standard = "{STANDARD}"; from 0.24, 0.25, 0.26, 0.27, 0.28 '
-    "or 0.29: set it and "
+    f'from 0.30, 0.31 or 0.32: set standard = "{STANDARD}", state the `type` '
+    "(exploratory or confirmatory) where it is open, and give a fit or an apply "
+    "the `[kept]` table (key and unit of the number it reports); from 0.24, 0.25, "
+    "0.26, 0.27, 0.28 or 0.29: that, and "
     + "; ".join(
         f'rename the field label "{old}" to "{new}"'
         for old, new in RENAMED_LABELS.items()
@@ -83,7 +85,15 @@ MIGRATION = (
     "noisy labels allow; what it owes is unchanged (LAB-011 Required-field check), "
     "0.31 leaves not assessable only the promises a limitation names — a quality "
     "check named alone voids no criterion; a decision meant to void the criteria "
-    "names each and is reviewed again (LAB-015 Preflight audit before freezing)"
+    "names each and is reviewed again (LAB-015 Preflight audit before freezing), "
+    "0.32 keeps every run's start in a start file outside its directory, "
+    "tracked and committed with the run (LAB-043 Runs go through `runlog`), and "
+    "keeps a measurement that started counting when its record is missing "
+    "(LAB-003 No run without an intent paragraph), 0.33 names the reported number "
+    "in `[kept]` at every kind (LAB-004 Identifiers make the intent addressable), "
+    "owes the `type` before the first measurement and holds an exploratory "
+    "protocol's runs each to the text it started under and the step it declares "
+    "(LAB-003 No run without an intent paragraph)"
 )
 TYPES = ("exploratory", "confirmatory")
 #: what the kept number asserts: a computation judges no
@@ -103,6 +113,7 @@ _TOP_LEVEL = {
     "gate",
     "replaces",
     "builds_on",
+    "explored_in",
     "reference",
     "kept",
 }
@@ -819,7 +830,9 @@ class Change:
 @dataclass(frozen=True)
 class Replaces:
     """`[replaces]`: the protocol this one replaces and every change of the
-    registration against it (K1, docs/notes/2026-10-27-new-registration-contracts.md)."""
+    registration against it (the contract that a new registration names
+    its predecessor and declares its changes:
+    docs/notes/2026-10-27-new-registration-contracts.md, section K1)."""
 
     protocol: str
     changes: tuple[Change, ...]
@@ -979,6 +992,65 @@ def _step_changes(rows: object) -> tuple[StepChange, ...]:
             )
         )
     return tuple(out)
+
+
+#: the fields of `[explored_in]`, a confirmation's link to its exploration
+EXPLORED_IN_KEYS = ("protocol", "run")
+
+
+@dataclass(frozen=True)
+class ExploredIn:
+    """`[explored_in]`: the exploration a confirmatory protocol builds on —
+    the exploratory PROTOCOL's id, which locates its area anywhere in the
+    repo, and the RUN that protocol had adopted when the link was written.
+    Not `[replaces]`, which names an invalid registration replaced, and not
+    `[builds_on]`, a step within one exploratory protocol."""
+
+    protocol: str
+    run: str
+
+
+def explored_in(text: str) -> ExploredIn | None:
+    """The protocol's `[explored_in]` table, or None without one: no
+    exploration named. `protocol-fill --explored-in` writes it from the
+    exploration's adopted run; a table written by hand reads the same —
+    its values are held, not who wrote them. `protocol` an id in the shape
+    labkit stamps (ID_SHAPE), `run` a run id as runlog writes it
+    (`runs.RUN_ID`).
+    Whether the pair names an adopted exploratory run is
+    `exploration_link.linked_exploration`'s, not the parser's. Raises
+    BlockError naming the field on any other shape."""
+    data = parse_toml_block(text)
+    if "explored_in" not in data:
+        return None
+    table = data["explored_in"]
+    if not isinstance(table, dict):
+        raise BlockError("`explored_in` must be a table: [explored_in]")
+    _only_keys(table, "[explored_in]", EXPLORED_IN_KEYS)
+    pid, run = table.get("protocol"), table.get("run")
+    if not isinstance(pid, str) or not ID_SHAPE.match(pid):
+        raise BlockError(
+            f"[explored_in] protocol = {pid!r} — the id of the exploratory "
+            f"protocol (`p-` plus 16 lowercase hex digits)"
+        )
+    if not isinstance(run, str) or not RUN_ID.fullmatch(run):
+        raise BlockError(
+            f"[explored_in] run = {run!r} — no run id as runlog writes one; "
+            f"`protocol-fill <PROTOCOL> --explored-in <EXPLORATION_PROTOCOL>` "
+            f"writes the link from the run that protocol has adopted"
+        )
+    return ExploredIn(pid, run)
+
+
+def explored_in_toml(link: ExploredIn) -> str:
+    """LINK as the head writes it: the `[explored_in]` table, one field per
+    line. What `explored_in` reads back, and what a comparison of two
+    registrations shows of it."""
+    return (
+        "[explored_in]\n"
+        f"protocol = {toml_string(link.protocol)}\n"
+        f"run = {toml_string(link.run)}\n"
+    )
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:

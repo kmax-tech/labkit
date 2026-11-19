@@ -11,7 +11,8 @@ carries it, filled when its value is not a `<…>` placeholder; an explicit
 What lives here, each stated as its current rule:
 
   * **The fields** (`fields`, `FieldLine`): every `- **<label>:**` line
-    with its value, span and whether it is still a placeholder.
+    with its value, span and whether it is still a placeholder. The line
+    grammar itself is `protocol_fields`'s, which reads no template.
   * **What a protocol owes** (`owed_fields`, `owed`, `check_fields`): two tiers, one
     template. MUST is the pilot minimum; SHOULD is what a REPORTABLE run
     owes on top. `frozen = true` escalates every SHOULD field to MUST and
@@ -43,6 +44,12 @@ from typing import Protocol
 from labkit.formats import markdown
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment, cited_rule
 from labkit.formats import digests
+from labkit.formats.protocol_fields import (
+    CONCLUSION_LABEL,
+    HTML_COMMENT,
+    field_name,
+    labelled_fields,
+)
 from labkit import PACKAGE_DIR
 from labkit.formats import (
     promises,
@@ -306,17 +313,6 @@ def audited_texts(text: str) -> str:
     )
 
 
-#: a bold field label opening a line: `- **Label (gloss) †:** value`
-_BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"  # `- `, `* `, `1. `, `1) ` or none
-_FIELD_OPEN = re.compile(
-    _BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$"
-)
-#: the lead of a field's label line, its indent and list marker
-#: (`protocol_edit` keeps it when it rewrites the line)
-FIELD_LEAD = re.compile(_BULLET)
-HTML_COMMENT = re.compile(r"<!--.*?-->")
-
-
 def label_line(label: str, *, placeholder: bool = False) -> re.Pattern[str]:
     """The stamped line that opens field LABEL, `- **LABEL †:**`, the dagger
     optional: group 1 the line up to its `:**` — with PLACEHOLDER up to the
@@ -331,16 +327,6 @@ def display_label(label: str) -> str:
     `Recorded results †` → `Recorded results` (its gloss kept; `field_name`
     is the label normalised for comparison)."""
     return label.replace("†", "").strip()
-
-
-def _continues(line: str, own: int) -> bool:
-    """Does LINE, below a field opened at indent OWN, continue its value? A
-    plain indented line does; a list item does when it sits deeper than the
-    field's own line and opens no field of its own."""
-    item = re.match(r"\s*(?:[-*]\s+|\d+[.)]\s)", line)
-    if item is None:
-        return True
-    return len(line) - len(line.lstrip()) > own and not _FIELD_OPEN.match(line)
 
 
 #: the one protocol template labkit stamps (`labkit-init exp`); the readers
@@ -423,11 +409,6 @@ STAMPED_ITEM = re.compile(r"[-*]\s+(<[^<>]*>[\s—–-]*)+")
 #: the stamped Runs entry, written by `protocol-fill --from-run` after the run
 #: (group 1: the list marker with its indent — protocol_fill keeps it)
 RUNS_PLACEHOLDER = re.compile(r"^(\s*[-*]\s+)<run_id>\s+[—–-]\s+<[^<>]*>\s*$")
-
-
-def field_name(label: str) -> str:
-    """`Prompt (verbatim, per variant)` → `prompt`; `Free knobs †` → `free knobs`."""
-    return label.split("(")[0].replace("†", "").strip().casefold()
 
 
 def rename_way(text: str, label: str) -> str | None:
@@ -629,9 +610,13 @@ def insert_line(lines: list[str], at: int, new: str) -> None:
 def fields(text: str) -> list[FieldLine]:
     """Every bold field label in the prose, outside code fences. A label may
     wrap onto the next line (`- **Resolution check (ZERO calls, …\n
-    extremes):** <…>`); it is read whole. Parsed once per text: the checker
-    asks for a protocol's fields from seven places (owed fields, holes,
-    the model, the measure runs, the leftovers, the references)."""
+    extremes):** <…>`); it is read whole. Parsed once per text: one check
+    of a protocol asks for its fields many times — thirteen functions of
+    this module read them (`field_values`, `repeated_fields`, `field_at`,
+    `named_field`, `promise_names`, `placeholder_fields`, `open_holes`,
+    `check_fields`, `low_registration_missing`, `written_before_run`,
+    `reported_claim`, `recorded_results_field`, `prompt_blocks`), and the
+    gates and tools ask again."""
     return list(_parsed_fields(text))
 
 
@@ -654,76 +639,30 @@ def _content_below(
 
 
 @functools.lru_cache(maxsize=64)
-def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity baseline 2026-10-08
+def _parsed_fields(text: str) -> tuple[FieldLine, ...]:
+    """The labelled lines of TEXT (`protocol_fields.labelled_fields`, the
+    one line grammar), each with what stands below its value (`block`)."""
     out: list[FieldLine] = []
     lines = text.splitlines()
     # opening line -> (first body line, line after the body), 0-based
     spans = {s - 1: (s, e) for _, s, e in markdown.fence_spans(lines)}
-    fence: str | None = None  # the open fence's marker; nested fences are body
-    comment = False  # inside a multi-line <!-- … --> — not prose
-    for i, line in enumerate(lines):
-        if comment:
-            comment = "-->" not in line
-            continue
-        if line.strip().startswith("<!--") and "-->" not in line:
-            comment = True
-            continue
-        if fence is not None:
-            if markdown.closes(line, fence):
-                fence = None
-            continue
-        opened = markdown.FENCE.match(line)
-        if opened:
-            fence = opened.group(2)
-            continue
-        if "**" not in line:
-            continue
-        joined, nxt = line, i + 1
-        if (
-            re.match(_BULLET + r"\*\*", line)
-            and ":**" not in line
-            and i + 1 < len(lines)
-        ):
-            joined, nxt = line + " " + lines[i + 1].strip(), i + 2
-        m = _FIELD_OPEN.match(joined)
-        if not m:
-            continue
-        # The value runs on over indented continuation lines: a bare
-        # `- **Label:**` with the text below is written, not empty (reading
-        # the first line only, the registration gate would refuse a written
-        # registration). Sub-bullets deeper than the field's own line are its
-        # value too, as the placeholder rule already counts them: read as
-        # nothing, a Data / scope written as a list would compare empty in the
-        # scope hold and hide its source digest. A deeper
-        # line that opens a field of its own (`- **registered:**`) ends it.
-        own = len(line) - len(line.lstrip())
-        parts = [m.group("value")]
-        while (
-            nxt < len(lines)
-            and lines[nxt].startswith((" ", "\t"))
-            and lines[nxt].strip()
-            and not markdown.FENCE.match(lines[nxt])
-            and _continues(lines[nxt], own)
-        ):
-            parts.append(re.sub(_BULLET, "", lines[nxt]).strip())
-            nxt += 1
-        value = HTML_COMMENT.sub("", " ".join(parts)).strip()
-        label = " ".join(m.group("label").split())
+    for f in labelled_fields(text):
         # for every field: a fence holding only a stamp placeholder is
         # skipped, not read as content (the template has one, under Prompt)
-        below = _content_below(lines, nxt, spans)
+        below = _content_below(lines, f.last, spans)
+        line = lines[f.line - 1]
         indent = len(line) - len(line.lstrip())
         deeper = len(below) - len(
             below.lstrip()
         ) > indent and not below.lstrip().startswith("#")
         out.append(
             FieldLine(
-                line=i + 1,
-                name=field_name(label),
-                label=label,
-                value=value,
+                line=f.line,
+                name=f.name,
+                label=f.label,
+                value=f.value,
                 block=bool(markdown.FENCE.match(below)) or deeper,
-                last=nxt,
+                last=f.last,
             )
         )
     return tuple(out)
@@ -1446,7 +1385,7 @@ REGISTRATION_REFERENCE = "reference"
 REGISTRATION_KEPT = "kept"
 
 
-def registration_stamp(text: str) -> dict[str, str]:
+def registration_stamp(text: str, *, audited: bool = False) -> dict[str, str]:
     """The scientific basis an audit judged, as its record binds it: the
     head's `kind` (REGISTRATION_KIND), and per registration field the kind
     owes (`standard_contract.registration_fields`, the most while the kind
@@ -1460,9 +1399,12 @@ def registration_stamp(text: str) -> dict[str, str]:
     stated value changed, added or dropped after the audit is a changed
     registration. So is its `[kept]` (REGISTRATION_KEPT, the digest of
     `protocol_block.kept_toml`): the kept number named anew after the audit
-    is a changed registration. A head that does not read counts as an unset
-    kind — the head check names it; a `[reference]` or a `[kept]` that does
-    not read counts as none."""
+    is a changed registration. With AUDITED also each of AUDITED_FIELDS,
+    digested the same way — what a preflight record binds: it has no run
+    whose shown text carries them (`audited_texts`), and a costly run
+    starts only under the fields its audit read. A head that does not read
+    counts as an unset kind — the head check names it; a `[reference]` or a
+    `[kept]` that does not read counts as none."""
     try:
         kind = protocol_block.head(text).kind
     except protocol_block.BlockError:
@@ -1488,7 +1430,7 @@ def registration_stamp(text: str) -> dict[str, str]:
         out[REGISTRATION_REFERENCE] = digests.digest(
             protocol_block.reference_toml(ref).encode("utf-8")
         )
-    for label in labels:
+    for label in (*labels, *(AUDITED_FIELDS if audited else ())):
         value = values.get(field_name(label))
         out[label] = (
             REGISTRATION_ABSENT
@@ -1568,7 +1510,6 @@ def written_before_run(
 
 
 RECORDED_RESULTS_LABEL = "Recorded results"
-CONCLUSION_LABEL = "Conclusion"
 #: the question registered before the run, anchored at the first
 #: measurement (`protocol_history.UNCORRECTABLE_FIELDS`) — not the Summary's
 #: `Question †`, its plain rewording written after the run

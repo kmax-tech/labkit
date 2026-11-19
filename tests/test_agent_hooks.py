@@ -25,7 +25,6 @@ import io
 import json
 import os
 import signal
-import subprocess
 import sys
 import tempfile
 import time
@@ -53,6 +52,8 @@ from protocol_fixture import (
     script_sha_of,
     shown_sha,
 )  # noqa: E402
+from repo_fixture import git as _git
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -94,10 +95,6 @@ RUN_SCRIPT = (
 )
 
 
-def _git(cwd, *args):
-    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
-
-
 def _repo(frozen: bool, script: str = RUN_SCRIPT, repeat_cost: str = "high") -> Path:
     root = Path(tempfile.mkdtemp())
     area = root / "experiments" / "01-x"
@@ -107,9 +104,7 @@ def _repo(frozen: bool, script: str = RUN_SCRIPT, repeat_cost: str = "high") -> 
     )
     (area / "scripts" / "01_measure.py").write_text(script, encoding="utf-8")
     (root / "notes" / "messung").mkdir(parents=True)
-    _git(root, "init", "-q", ".")
-    _git(root, "config", "user.email", "t@t")
-    _git(root, "config", "user.name", "t")
+    init_repo(root)
     _git(root, "add", "-A")
     _git(root, "commit", "-qm", "init")
     return root

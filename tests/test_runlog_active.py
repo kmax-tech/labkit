@@ -58,6 +58,12 @@ class TestIsAlive(unittest.TestCase):
         self.assertIsNone(is_alive(None, "x.py"))
         self.assertIsNone(is_alive("81892", "x.py"))  # string, not int
 
+    def test_a_pid_larger_than_any_process_id_is_none(self):
+        """A record with a PID the system cannot hold names no process:
+        undecidable, not a traceback and not a "dead" that frees a lease."""
+        self.assertIsNone(is_alive(2**31, "x.py"))
+        self.assertIsNone(is_alive(2**70, "x.py"))
+
 
 if __name__ == "__main__":
     unittest.main()

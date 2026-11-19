@@ -14,7 +14,7 @@ the old hold is shown on the confirmatory twin.
 from __future__ import annotations
 
 import json
-import subprocess
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,7 +23,10 @@ import pytest
 
 import test_end_to_end as e2e
 from protocol_fixture import PID, completed_run, head, scope_file
+from repo_fixture import git as _git
 
+from labkit.formats import run_starts
+from labkit.formats import standard_contract as sc
 from labkit.gates import registration_station, report_context
 
 # an end-to-end scenario file: the full suite before a push runs it, the
@@ -510,14 +513,156 @@ class ConfirmationTurnedExploratory(_Exploration):
         self.assertEqual(rc, 1, out)
 
 
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+class ARunLost(_Exploration):
+    """A run deleted before a commit held it, in exploration: what the
+    answering run does not build on holds nothing where the start files put
+    it after a measurement that reads; what it builds on holds. The
+    confirmatory scenarios are `test_end_to_end.FirstMeasurementLost`."""
+
+    def lose(self, run: str) -> None:
+        """RUN's directory moved out of the lab, no commit holding it."""
+        kept = Path(tempfile.mkdtemp()) / run
+        shutil.move(str(self.area / "runs" / run), str(kept))
+
+    def test_a_lost_side_run_does_not_hold_a_declared_step(self):
+        """A reads and was first; a second run is lost; B builds on A by a
+        declared step. The lost run is named and holds nothing."""
+        side = self.measure()
+        self.lose(side)
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.step_on(self.run_a)
+        self.lab.commit("B filters empty documents, declared as a step on A")
+        self.measure()
+        rc, out, blockers = self.holds()
+        self.assertEqual(blockers, [], out)
+        self.assertIn(f"WARNING: run {side} is gone", out)
+        self.assertIn(EXPLORING, out)
+        self.assertEqual(rc, 0, out)
+
+    def test_a_lost_run_of_the_basis_chain_holds(self):
+        """The twin: C builds on B builds on A, and B is the run lost."""
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.step_on(self.run_a)
+        self.lab.commit("B: a step on A")
+        b = self.measure()
+        self.lab.fill(self.protocol, "--force", UNIT)
+        self.step_on(b, "unit")
+        self.lab.commit("C: a step on B")
+        c = self.measure()
+        self.lose(b)
+        rc, out, blockers = self.holds()
+        line, *_ = [ln for ln in blockers if "cannot be told" in ln]
+        self.assertIn(f"run {b} does not read", line)
+        self.assertIn(f"reached from the answering run {c} through its steps", line)
+        self.assertEqual(rc, 1, out)
+
+    def test_a_basis_without_its_start_file_holds(self):
+        """The twin: B builds on A, and A's start file is deleted before a
+        commit held it."""
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.step_on(self.run_a)
+        self.measure()
+        run_starts.start_path(self.area, self.run_a).unlink()
+        rc, out, blockers = self.holds()
+        line, *_ = [ln for ln in blockers if "check not executable" in ln]
+        self.assertIn(f"a start file was written for run {self.run_a}", line)
+        self.assertEqual(rc, 1, out)
+
+
+class OrderUnknown(_Exploration):
+    """Runs that read and whose order no start file tells (runs from before
+    start files: neither mark nor file): the order alone holds nothing in
+    exploration. With a record lost as well it holds —
+    `test_rules_registration_hold`, the unordered run."""
+
+    def unmark(self, run: str) -> None:
+        (self.area / "runs" / run / run_starts.START_MARK).unlink()
+        run_starts.start_path(self.area, run).unlink()
+
+    def test_a_side_run_of_unknown_order_holds_no_declared_step(self):
+        side = self.measure()
+        for run in (self.run_a, side):
+            self.unmark(run)
+        self.lab.fill(self.protocol, "--force", FILTER)
+        self.step_on(self.run_a)
+        self.unmark(self.measure())
+        rc, out, blockers = self.holds()
+        self.assertEqual(blockers, [], out)
+        self.assertIn(EXPLORING, out)
+        self.assertEqual(rc, 0, out)
+
+
+class AStepAtHighRepeatCost(unittest.TestCase):
+    """An exploratory fit at high repeat cost, preflight-audited and
+    frozen, run A measured: the costly run of a step starts only while the
+    preflight audit covers what the step changed. A repeat and a step that
+    changes nothing the audit read start under the audit that stands; a
+    step that rewrites a field the audit read owes a new one."""
+
+    # set by the estimator scenario's setup, which this class borrows
+    lab: e2e.Lab
+    area: Path
+    protocol: Path
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        e2e.Estimator.setUpClass.__func__(cls)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.lab.close()
+
+    def frozen(self) -> None:
+        """The probe, the preflight audit decided, the † fields, the freeze."""
+        lab = self.lab
+        lab.script(self.area, "01_measure.py", "--probe", "8")
+        lab.commit("the estimator, filled")
+        lab.record(self.area, self.protocol, sc.PREFLIGHT_AUDIT)
+        lab.exp("threshold", repeat_cost="high", report=True)
+        lab.fill_open(self.protocol)
+        lab.fill(self.protocol, "--freeze")
+        lab.commit("frozen")
+
+    def step_on(self, basis: str, step: str) -> None:
+        self.lab.fill(
+            self.protocol,
+            "--builds-on",
+            basis,
+            "--step-id",
+            step,
+            "--occasion",
+            "planned",
+            "--why",
+            "another draw of the split",
+        )
+
+    def test_the_audit_covers_a_repeat_and_an_unchanged_step_not_a_rewritten_field(
+        self,
+    ):
+        lab = self.lab
+        self.frozen()
+        run_a = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        # a repeat is a new run id under the same audit
+        out = lab.script(self.area, "01_measure.py", "--repeat-of", run_a)
+        self.assertIn(f"draw 2 of {run_a}", out)
+        # a step that changes nothing the audit read
+        self.step_on(run_a, "again")
+        lab.commit("B: a step on A that rewrites no field")
+        run_b = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        # a step that rewrites what the number is about
+        lab.fill(
+            self.protocol, "--force", "Exclusions / filters=points with an empty text"
+        )
+        self.step_on(run_b, "filter")
+        lab.commit("C: a step on B that rewrites the exclusions")
+        with self.assertRaises(AssertionError) as cm:
+            lab.script(self.area, "01_measure.py")
+        refusal = str(cm.exception)
+        self.assertIn("no longer covers the protocol", refusal)
+        self.assertIn(
+            "the registration changed after the audit (Exclusions / filters)", refusal
+        )
+        self.assertIn("--mode preflight", refusal)
 
 
 class UndecidedAtTheFirstMeasurement(unittest.TestCase):

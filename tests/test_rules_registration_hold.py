@@ -14,6 +14,7 @@ the commands: tests/test_end_to_end.py, `CorrectedDescription` and
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 import pytest
@@ -27,7 +28,15 @@ from labkit.formats.followup import (
     chain,
     released_corrections,
 )
-from labkit.formats.gate import BLOCKER, OPEN_RULE, cited_rule
+from labkit.formats.gate import (
+    BLOCKER,
+    NOT_EXECUTABLE,
+    OPEN_RULE,
+    TECHNICAL_RULE,
+    WARNING,
+    GateFinding,
+    cited_rule,
+)
 from labkit.formats.protocol_history import STANDS_AS_REGISTERED, scope_differences
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import registration_hold
@@ -37,13 +46,25 @@ from labkit.gates.registration_hold import (
     DESCRIPTION_ADDED,
     FirstMeasurement,
     description_added,
+    lost_record_warnings,
     now_hold,
     seen_hold,
     split_released,
     waiting_refs,
 )
-from labkit.formats.area_state import Measured
-from state_fixture import AREA, area_evidence, area_state, audit_record
+from labkit.formats.area_state import (
+    CLOCKS_ASSUMED,
+    UNASSIGNED_LEAVES_OPEN,
+    Measured,
+    WithoutRecord,
+    measurements_without_record,
+    missing_start_warning,
+    unread_start_warning,
+)
+from labkit.formats.runs import RunDir, parse_run_config
+from labkit.gates.ways_out import HANDOVER_WAY
+from protocol_fixture import run_record
+from state_fixture import AREA, area_evidence, area_state, audit_record, run_dir
 
 pytestmark = pytest.mark.rule
 
@@ -788,3 +809,395 @@ class TheRuleAChangedRegistrationRecords(unittest.TestCase):
         was = self.snap("s1", **{"criterion-1": two})
         now = self.snap("s2", **{"criterion-1": {**two, "scope": ["b.py", "a.py"]}})
         self.assertEqual(registration_hold.registration_rule(was, now), self.LAB_003)
+
+
+class ARunWithoutItsRecord(unittest.TestCase):
+    """`area_state.measurements_without_record` sorts the runs without a
+    record by what each means for one protocol, and the registration
+    station acts on each sort: `lost_record_hold` blocks where the run may
+    have been the first measurement — none that reads is known to precede
+    it, or the start files do not tell their order —,
+    `lost_record_warnings` names a run the start files put after a
+    measurement that reads and a record whose protocol cannot be
+    determined. Two runs are ordered only where start files hold a
+    UTC start for both; which protocol a run belongs to is `Measured`'s
+    (tests/test_area_state.py)."""
+
+    FIRST = run_dir(
+        "2026-10-07T10-00-00_ab12",
+        config=parse_run_config(run_record(protocol={"id": PID, "path": "P.md"})),
+    )
+    GONE = "2026-10-07T10-00-05_105e"
+    DEAD = run_dir(GONE, error="config.json: not JSON")
+    NOON = datetime(2026, 10, 7, 12, 0, 0, tzinfo=timezone.utc)
+    BEFORE, AFTER = NOON - timedelta(seconds=1), NOON + timedelta(seconds=1)
+
+    def sorted_out(
+        self,
+        runs: tuple[RunDir, ...] = (),
+        lost: tuple[str, ...] = (),
+        unassigned: tuple[str, ...] = (),
+        started_only: tuple[str, ...] = (),
+        started: dict[str, datetime] | None = None,
+    ) -> WithoutRecord:
+        """The sort for PID over its RUNS, its LOST runs, the runs only a
+        start file names, the area's UNASSIGNED records and the starts
+        the start files hold (run id → UTC)."""
+        measured = Measured(
+            AREA, PID, runs, lost, (), (), unassigned, started_only, started or {}
+        )
+        return pure_call(measurements_without_record, measured, lost)
+
+    def held(self, without: WithoutRecord) -> list[GateFinding]:
+        return pure_call(
+            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER_WAY
+        )
+
+    def test_a_lost_run_no_measurement_that_reads_precedes_holds(self):
+        first = self.FIRST.dir.name
+        for name, runs, started in (
+            ("nothing else measured", (), {}),
+            (
+                "started before the one that reads",
+                (self.FIRST,),
+                {self.GONE: self.BEFORE, first: self.NOON},
+            ),
+        ):
+            with self.subTest(name):
+                without = self.sorted_out(runs, (self.GONE,), started=started)
+                self.assertEqual(len(without.may_be_first), 1)
+                self.assertEqual(
+                    (without.unordered, without.later, without.unassigned),
+                    ((), (), ()),
+                )
+                (hold,) = self.held(without)
+                self.assertEqual(
+                    (hold.grade, hold.rule, hold.outcome),
+                    (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+                )
+                self.assertIn(f"run {self.GONE} is gone", hold.text)
+                self.assertIn("may have been the first", hold.text)
+                self.assertIn("does not stand in for it", hold.text)
+                self.assertNotIn("is unknown", hold.text)
+                for way in ("a copy that holds it", "register anew", HANDOVER_WAY):
+                    self.assertIn(way, hold.fix or "")
+                self.assertEqual(pure_call(lost_record_warnings, without), [])
+
+    def test_a_run_only_the_start_record_names_holds_like_a_lost_one(self):
+        """A measurement that started and left nothing else — it broke off,
+        or was deleted before it finished — keeps counting."""
+        without = self.sorted_out(started_only=(self.GONE,))
+        (hold,) = self.held(without)
+        self.assertIn(
+            f"run {self.GONE} is gone (its start file lists it as a measurement that "
+            f"started",
+            hold.text,
+        )
+        self.assertIn("may have been the first", hold.text)
+
+    def test_an_order_the_start_record_does_not_tell_holds_and_says_so(self):
+        """A start missing for either run, or two in one second, orders
+        nothing — whatever the run ids or the index say: the run may have
+        been the first, and the hold names the order as unknown with what
+        is missing; its own case, on neither side silently."""
+        first = self.FIRST.dir.name
+        for name, started, why in (
+            (
+                "no start for the lost run",
+                {first: self.NOON},
+                f"no start file holds a start for {self.GONE}",
+            ),
+            (
+                "no start for the one that reads",
+                {self.GONE: self.AFTER},
+                f"no start file holds a start for {first}",
+            ),
+            (
+                "no start for either",
+                {},
+                f"no start file holds a start for {self.GONE}, {first}",
+            ),
+            (
+                "the same second",
+                {self.GONE: self.NOON, first: self.NOON},
+                "the start files give it the same second as one of them",
+            ),
+        ):
+            with self.subTest(name):
+                without = self.sorted_out((self.FIRST,), (self.GONE,), started=started)
+                self.assertEqual((without.may_be_first, without.later), ((), ()))
+                (hold,) = self.held(without)
+                self.assertEqual(hold.outcome, NOT_EXECUTABLE)
+                self.assertIn(f"run {self.GONE} is gone", hold.text)
+                self.assertIn(
+                    "whether it started before the measurements that read is unknown",
+                    hold.text,
+                )
+                self.assertIn(why, hold.text)
+                self.assertEqual(pure_call(lost_record_warnings, without), [])
+
+    def test_a_lost_run_started_after_a_measurement_that_reads_is_named_not_held(
+        self,
+    ):
+        started = {self.FIRST.dir.name: self.NOON, self.GONE: self.AFTER}
+        without = self.sorted_out((self.FIRST,), (self.GONE,), started=started)
+        self.assertEqual(without.held, ())
+        self.assertEqual(self.held(without), [])
+        (warning,) = pure_call(lost_record_warnings, without)
+        self.assertEqual((warning.grade, warning.rule), (WARNING, TECHNICAL_RULE))
+        self.assertIn(f"run {self.GONE} is gone", warning.text)
+        self.assertIn("the comparison with the first measurement runs", warning.text)
+        # a UTC start removes the zone, not the clock: the assumption is said
+        self.assertIn("the start files put its start after", warning.text)
+        self.assertIn(CLOCKS_ASSUMED, warning.text)
+        self.assertIn("which labkit does not check", warning.text)
+        self.assertIn("a copy that holds it", warning.fix or "")
+
+    def test_a_repeat_or_a_probe_that_reads_orders_nothing(self):
+        """Only a measurement that registers — no repeat, no probe — tells
+        what stood registered before a later run."""
+        bound = {"protocol": {"id": PID, "path": "P.md"}}
+        for name, fields in (
+            ("a repeat", {"repeat_of": "2026-10-01T10-00-00_0000", "draw": 2}),
+            ("a probe", {"run_kind": "probe"}),
+        ):
+            with self.subTest(name):
+                cfg = parse_run_config(run_record({**bound, **fields}))
+                other = run_dir(self.FIRST.dir.name, config=cfg)
+                started = {other.dir.name: self.NOON, self.GONE: self.AFTER}
+                without = self.sorted_out((other,), (self.GONE,), started=started)
+                self.assertEqual(len(without.may_be_first), 1)
+
+    def test_a_record_that_does_not_read_is_sorted_like_a_lost_run(self):
+        """Among the protocol's runs by its start file or the index
+        (`Measured.runs`): it holds or is named by the same rule."""
+        first, dead = self.FIRST.dir.name, self.DEAD.dir.name
+        (hold,) = self.held(
+            self.sorted_out(
+                (self.DEAD, self.FIRST), started={dead: self.BEFORE, first: self.NOON}
+            )
+        )
+        self.assertIn(f"the record of run {dead} does not read", hold.text)
+        self.assertIn("written anew from memory settles nothing", hold.fix or "")
+        without = self.sorted_out(
+            (self.FIRST, self.DEAD), started={dead: self.AFTER, first: self.NOON}
+        )
+        self.assertEqual(self.held(without), [])
+        self.assertEqual(len(without.later), 1)
+
+    def test_the_twin_a_record_the_start_row_lists_as_a_probe_holds_nothing(self):
+        """A start file says what a run started as: a probe or a preparation
+        whose record does not read measured nothing, alone or beside a
+        measurement that reads; without a start file the same record may
+        have measured, and holds."""
+        dead = self.DEAD.dir.name
+        for kind in ("probe", "preparation"):
+            with self.subTest(kind):
+                measured = Measured(
+                    AREA, PID, (self.DEAD,), (), (), (), started_as={dead: kind}
+                )
+                without = pure_call(measurements_without_record, measured, ())
+                self.assertEqual(without, WithoutRecord((), (), (), ()))
+                self.assertFalse(measured.has_measured)
+        unlisted = Measured(AREA, PID, (self.DEAD,), (), (), ())
+        self.assertTrue(unlisted.has_measured)
+        self.assertEqual(
+            len(pure_call(measurements_without_record, unlisted, ()).may_be_first), 1
+        )
+
+    def test_a_record_no_protocol_can_be_assigned_holds_none_and_is_warned_of(self):
+        """Its protocol cannot be determined: no hold for any protocol, and
+        a warning of a check not executable that names the run and the way
+        back — never a silent pass."""
+        dead = self.DEAD.dir.name
+        without = self.sorted_out((self.FIRST,), unassigned=(dead,))
+        self.assertEqual(without, WithoutRecord((), (), (), (dead,)))
+        self.assertEqual(self.held(without), [])
+        (warning,) = pure_call(lost_record_warnings, without)
+        self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
+        self.assertIn(f"the record of run {dead} does not read", warning.text)
+        self.assertIn("which protocol it belongs to cannot be determined", warning.text)
+        self.assertIn(UNASSIGNED_LEAVES_OPEN, warning.text)
+        self.assertIn("nor that none came before", warning.text)
+        self.assertIn("it is counted for no protocol", warning.text)
+        self.assertIn("no hold follows from it", warning.text)
+        self.assertIn("written anew from memory settles nothing", warning.fix or "")
+
+    def test_the_twins_every_measurement_with_its_record_and_none_pass(self):
+        from_git = run_dir(
+            self.FIRST.dir.name, config=self.FIRST.config, from_commit="c0ffee"
+        )
+        for name, runs in (
+            ("never measured", ()),
+            ("a measurement that reads", (self.FIRST,)),
+            ("a deleted run a commit holds", (from_git,)),
+        ):
+            with self.subTest(name):
+                without = self.sorted_out(runs)
+                self.assertEqual(without, WithoutRecord((), (), (), ()))
+                self.assertEqual(self.held(without), [])
+                self.assertEqual(pure_call(lost_record_warnings, without), [])
+
+
+class AStartFileThatDoesNotRead(unittest.TestCase):
+    """`area_state.unread_start_warning` and what an incomplete start leaves
+    open: a warning of a check not executable, no hold of its own; the
+    order it can no longer tell is held where it matters, for the protocol
+    the run belongs to and for no other."""
+
+    FIRST = ARunWithoutItsRecord.FIRST
+    GONE = ARunWithoutItsRecord.GONE
+
+    def test_the_warning_names_each_case_and_no_hand_repair(self):
+        warning = pure_call(unread_start_warning, (self.GONE,), ("r-alone",))
+        assert warning is not None
+        self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
+        self.assertIn(f"the start file of run {self.GONE} does not read", warning.text)
+        self.assertIn("its order against other runs is unknown", warning.text)
+        self.assertIn("the start file of run r-alone does not read", warning.text)
+        self.assertIn("it is held against no protocol", warning.text)
+        self.assertIn("nothing is taken from a start file", warning.text)
+        for way in (
+            "restore the file from the commit that holds it",
+            "no value is written into a start file by hand",
+            "the start stays unknown",
+        ):
+            self.assertIn(way, warning.fix or "")
+
+    def test_the_twin_start_files_that_read_warn_of_nothing(self):
+        self.assertIsNone(pure_call(unread_start_warning, (), ()))
+
+    def test_a_lost_run_beside_a_measurement_with_an_unread_start_is_unordered(self):
+        """The readable measurement's start file does not read: its start is
+        unknown, so a lost run that started after it by its own start file
+        is no longer known to be the later one — held, the missing start
+        named."""
+        first = self.FIRST.dir.name
+        noon = ARunWithoutItsRecord.NOON
+        measured = Measured(
+            AREA, PID, (self.FIRST,), (self.GONE,), (), (), started={self.GONE: noon}
+        )
+        without = pure_call(measurements_without_record, measured, (self.GONE,))
+        (clause,) = without.unordered
+        self.assertIn(f"no start file holds a start for {first}", clause)
+        (hold,) = pure_call(
+            registration_hold.lost_record_hold, PID, AREA, without, HANDOVER_WAY
+        )
+        self.assertEqual(hold.outcome, NOT_EXECUTABLE)
+
+
+class AStartFileThatIsNowhere(unittest.TestCase):
+    """A run's mark says a start file was written and none is found: a
+    loss of evidence. For a run of the protocol it holds the release
+    (`missing_start_hold`, a BLOCKER of a check not executable); for a run
+    nothing assigns it is a warning, held against none
+    (`area_state.missing_start_warning`). The twin, nothing missing,
+    is neither."""
+
+    RUN = "2026-10-07T10-00-00_ab12"
+
+    def test_a_run_of_the_protocol_holds_with_every_way_out(self):
+        (hold,) = pure_call(
+            registration_hold.missing_start_hold, PID, AREA, (self.RUN,), HANDOVER_WAY
+        )
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+        )
+        self.assertIn(f"a start file was written for run {self.RUN}", hold.text)
+        self.assertIn("none is found", hold.text)
+        self.assertIn("lost, not merely unknown", hold.text)
+        for way in (
+            "back from a commit, a clone or a copy that holds it",
+            "never written anew from memory",
+            "no value put in its place",
+            "register anew",
+            HANDOVER_WAY,
+        ):
+            self.assertIn(way, hold.fix or "")
+
+    def test_the_twin_a_start_file_that_is_found_holds_nothing(self):
+        self.assertEqual(
+            pure_call(
+                registration_hold.missing_start_hold, PID, AREA, (), HANDOVER_WAY
+            ),
+            [],
+        )
+        self.assertIsNone(pure_call(missing_start_warning, (), ()))
+
+    def test_a_run_nothing_assigns_is_warned_of_and_held_against_none(self):
+        warning = pure_call(missing_start_warning, (), (self.RUN,))
+        assert warning is not None
+        self.assertEqual((warning.grade, warning.outcome), (WARNING, NOT_EXECUTABLE))
+        self.assertIn(f"a start file was written for run {self.RUN}", warning.text)
+        self.assertIn("held against none", warning.text)
+        self.assertNotIn("holds every number", warning.text)
+
+    def test_the_warning_for_a_run_of_the_protocol_names_the_hold(self):
+        """Where a station does not hold — the run's start, the report
+        duty — it says where the release is held."""
+        warning = pure_call(missing_start_warning, (self.RUN,), ())
+        assert warning is not None
+        self.assertIn("`finalize` holds every number of this protocol", warning.text)
+        self.assertIn("never written anew from memory", warning.fix or "")
+
+
+class ABindingTheFilesContradict(unittest.TestCase):
+    """`binding_conflict_hold`: its start file, the run index and a run's
+    own record name different protocols — which runs the protocol measured
+    cannot be told, a BLOCKER of a check not executable; no file wins."""
+
+    CLAUSE = (
+        "run 2026-10-07T10-00-00_ab12: its start file names p-0123456789abcdef, "
+        "the run index names p-fedcba9876543210"
+    )
+
+    def test_a_contradiction_blocks_with_every_way_out(self):
+        (hold,) = pure_call(
+            registration_hold.binding_conflict_hold,
+            PID,
+            AREA,
+            (self.CLAUSE,),
+            HANDOVER_WAY,
+        )
+        self.assertEqual(
+            (hold.grade, hold.rule, hold.outcome),
+            (BLOCKER, TECHNICAL_RULE, NOT_EXECUTABLE),
+        )
+        self.assertIn(self.CLAUSE, hold.text)
+        self.assertIn("no file is taken over another", hold.text)
+        for way in (
+            "restored from that commit, never edited",
+            "never deleted",
+            "register anew",
+            HANDOVER_WAY,
+        ):
+            self.assertIn(way, hold.fix or "")
+
+    def test_the_twin_files_that_agree_hold_nothing(self):
+        self.assertEqual(
+            pure_call(
+                registration_hold.binding_conflict_hold, PID, AREA, (), HANDOVER_WAY
+            ),
+            [],
+        )
+
+
+class ARunOnlyACommitHoldsIsNamedByItsIdAlone(unittest.TestCase):
+    """`stopped_note` on a run whose files are not here to read
+    (`runs.number_written`: "cannot tell"): no note, whatever the run did —
+    apart from a run the file state holds without a number."""
+
+    CONFIG = ARunWithoutItsRecord.FIRST.config
+    NAME = ARunWithoutItsRecord.FIRST.dir.name
+
+    def test_a_run_a_commit_holds_gets_no_note(self):
+        from_git = run_dir(self.NAME, config=self.CONFIG, from_commit="c0ffee")
+        self.assertEqual(registration_hold.stopped_note(from_git), "")
+
+    def test_the_twin_a_run_the_state_holds_without_a_number_is_named(self):
+        here = run_dir(self.NAME, config=self.CONFIG)
+        self.assertEqual(
+            registration_hold.stopped_note(here),
+            " (no number yet; whether it still runs cannot be told)",
+        )

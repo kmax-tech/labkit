@@ -282,8 +282,10 @@ class MeasureConfig:
     its thresholds from here and nowhere else. The thresholds have NO
     default: they come from the protocol's [[promise]] tables under the SAME
     name (`constants = { margin = 0.25 }` ↔ `margin`) through
-    `promises.all_constants()`; runlog refuses a run whose config lacks a
-    registered constant or carries another value. A registered
+    `promises.constants_into()`; runlog refuses a run whose config lacks a
+    registered constant or carries another value, and at import a constant
+    this class does not know fails (TypeError: unexpected keyword), as does
+    one of another type than its field (PromiseError). A registered
     [criterion-1] (`bar_criterion`) registers exactly one of `at_least` and
     `margin`; both or neither raise ValueError here, before any row is
     read — and either without [criterion-1] too: a bar nothing judges.
@@ -333,9 +335,9 @@ class MeasureConfig:
 # The registered execution: thresholds from the protocol, nothing copied;
 # `--seed` replaces one field.
 _BLOCK = promises.load(PROTOCOL)
-CONFIG = MeasureConfig(**promises.all_constants(_BLOCK),
-                       bar_criterion="criterion-1" in _BLOCK.by_id(),
-                       chance_criterion="criterion-2" in _BLOCK.by_id())
+CONFIG = promises.constants_into(MeasureConfig, _BLOCK,
+                                 bar_criterion="criterion-1" in _BLOCK.by_id(),
+                                 chance_criterion="criterion-2" in _BLOCK.by_id())
 #: the kept number's key in metrics.json, as the protocol head's `[kept]`
 #: names it — set there, never here; 02_analyze.py and the test read this
 #: name. Read at import: a head without the table, or with its key still

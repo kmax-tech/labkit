@@ -4,6 +4,7 @@
     ../../.venv/bin/python scripts/02_analyze.py            # the number, recomputed from OUT
     ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold the protocol to it
     ../../.venv/bin/python scripts/02_analyze.py --check --protocol PROTOCOL-<name>.md   # as report-check runs it
+    ../../.venv/bin/python scripts/02_analyze.py --check --run <run_id>   # an older run, under the text it started under; releases nothing
 
 The one public recheck of every area (`report-check` runs it when the number
 is written back, LAB-041 Generate numbers, don't retype them), for one
@@ -45,11 +46,30 @@ def main() -> None:
                     help="pin OUT to the run, recompute from its rows, hold the protocol to it")
     ap.add_argument("--protocol", metavar="FILE",
                     help="the protocol to hold, by file name — owed where the area has several")
+    ap.add_argument("--run", metavar="RUN_ID",
+                    help="with --check: an older run of that protocol instead of the answering one, held under the "
+                         "protocol text it started under; its rows are read from the commit that holds them where a "
+                         "later run overwrote the file. Releases nothing")
     args = ap.parse_args()
+    if args.run and not args.check:
+        ap.error("--run names an older run for --check")
     protocol = recheck.protocol_named(AREA, args.protocol)
-    run = recheck.run_dir(AREA, protocol)        # the run that protocol answers with
+    run = recheck.run_dir(AREA, protocol, args.run)   # the run that protocol answers with, or the older one named
     measure = recheck.script_module(AREA, run)   # the script that run ran: its formula, no other protocol's
     ids = measure.expected_ids()   # the denominator comes from the source, never from the rows
+    if args.run:
+        # the separate check of an older run: no note is held and nothing
+        # is released — the protocol's number is held by `--check` alone
+        h = recheck.holds_as_measured(area=AREA, out=measure.OUT, recompute=lambda rows: measure.metrics_of(rows, ids),
+                                      run_id=args.run, protocol=protocol)
+        from_inputs = recheck.reads_another_run(run)
+        if from_inputs:
+            recheck.verified_from_inputs(run, AREA, measure.metrics_from_inputs, hold_block_now=False)
+        print(f"historical check: run {h.run_id} of {protocol.name}, under the text it started under — "
+              f"{h.keys_compared} keys identical; rows read from {h.source}"
+              + ("; recomputed from its recorded inputs, the same numbers" if from_inputs else "")
+              + "; this releases nothing" + (f"; grown since the run: {h.grown}" if h.grown else ""))
+        return
     if args.check:
         # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers)
         v = recheck.holds(area=AREA, out=measure.OUT, recompute=lambda rows: measure.metrics_of(rows, ids),

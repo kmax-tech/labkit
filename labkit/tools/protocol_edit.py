@@ -20,8 +20,8 @@ from labkit.formats import (
     promises,
     protocol_block,
 )
+from labkit.formats.protocol_fields import FIELD_LEAD
 from labkit.formats.protocol_check import (
-    FIELD_LEAD,
     FieldPlaceError,
     field_lines,
     field_meant,

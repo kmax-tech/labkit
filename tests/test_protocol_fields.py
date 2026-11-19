@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import protocol_check, protocol_history
+from labkit.formats import protocol_check, protocol_fields, protocol_history
 from labkit.checks import protocol_report
 from protocol_fixture import head
 
@@ -375,3 +375,66 @@ class SubBulletValues(unittest.TestCase):
         text = "- **Unit:** one\n- a sibling bullet, not the Unit's\n"
         got = {f.name: f.value for f in protocol_check.fields(text)}
         self.assertEqual(got["unit"], "one")
+
+
+class LabelledLines(unittest.TestCase):
+    """The line grammar alone (`protocol_fields`): label, value and span, no
+    template and no catalogue."""
+
+    TEXT = (
+        "# Protocol\n\n"
+        "- **Unit (what one row is):** one answer\n"
+        "- **Conclusion †:**\n"
+        "  short ones carry it,\n"
+        "  long ones do not <!-- draft -->\n"
+        "```\n- **Fenced:** no field\n```\n"
+        "<!--\n- **Commented:** no field\n-->\n"
+        "- **Unit:** a second one\n"
+    )
+
+    def test_label_value_and_span_are_read_as_written(self):
+        unit, conclusion, again = protocol_fields.labelled_fields(self.TEXT)
+        self.assertEqual(
+            (unit.line, unit.name, unit.label, unit.value, unit.last),
+            (3, "unit", "Unit (what one row is)", "one answer", 3),
+        )
+        self.assertEqual(
+            (conclusion.line, conclusion.name, conclusion.value, conclusion.last),
+            (4, "conclusion", "short ones carry it, long ones do not", 6),
+        )
+        self.assertEqual(again.line, 13)
+
+    def test_the_value_of_the_one_field_a_label_names(self):
+        value = protocol_fields.named_value(self.TEXT, protocol_fields.CONCLUSION_LABEL)
+        self.assertEqual(value, "short ones carry it, long ones do not")
+
+    def test_no_value_for_a_label_missing_or_written_twice(self):
+        self.assertIsNone(protocol_fields.named_value(self.TEXT, "Prompt"))
+        self.assertIsNone(protocol_fields.named_value(self.TEXT, "Unit"))
+        # a part of a label names no field
+        self.assertIsNone(protocol_fields.named_value(self.TEXT, "Conclu"))
+
+    def test_an_empty_value_is_empty_not_missing(self):
+        self.assertEqual(
+            protocol_fields.named_value("- **Conclusion:**\n", "Conclusion"), ""
+        )
+
+    def test_the_catalogue_reader_holds_the_same_lines(self):
+        """`protocol_check.fields` adds what stands below a label; label,
+        value and span are these lines'."""
+        for text in (self.TEXT, TEMPLATE):
+            self.assertEqual(
+                [
+                    (f.line, f.name, f.label, f.value, f.last)
+                    for f in protocol_check.fields(text)
+                ],
+                [
+                    (f.line, f.name, f.label, f.value, f.last)
+                    for f in protocol_fields.labelled_fields(text)
+                ],
+            )
+
+    def test_the_catalogue_names_the_label_the_core_reads(self):
+        self.assertIn(
+            protocol_fields.CONCLUSION_LABEL, [f.label for f in protocol_check.FIELDS]
+        )

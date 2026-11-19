@@ -32,12 +32,22 @@ from protocol_fixture import PID, completed_run, head, scope_file
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import next_command, report_command
-from labkit.formats import area_state, gate, protocol_history, protocol_then, runs
+from labkit.formats import (
+    area_state,
+    gate,
+    protocol_history,
+    protocol_then,
+    run_index,
+    run_starts,
+    runs,
+)
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, VIOLATED, Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check, report_hold
 from labkit.gates import report_context
+from repo_fixture import git as _git
+from repo_fixture import init_repo
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
@@ -54,12 +64,6 @@ BAR = (
 #: hours behind UTC (its id sorts before a run started a moment earlier
 #: here), one ahead (about this machine's), fourteen ahead (after)
 ZONES = ("Etc/GMT+12", "Etc/GMT-1", "Etc/GMT-14")
-
-
-def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
-    ).stdout.strip()
 
 
 def _report_check(area: Path) -> tuple[int, str]:
@@ -106,9 +110,7 @@ class _Repository(unittest.TestCase):
 
     def setUp(self) -> None:
         root = Path(tempfile.mkdtemp())
-        _git(root, "init", "-q", ".")
-        _git(root, "config", "user.email", "t@t")
-        _git(root, "config", "user.name", "t")
+        init_repo(root)
         self.area = root / "experiments" / "01-x"
         self.area.mkdir(parents=True)
         scope_file(self.area)
@@ -288,7 +290,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         sha = self._commit(REGISTRATION.replace("", ""))
         self.proto.write_text(
             self.proto.read_text(encoding="utf-8").replace(
-                'standard = "0.31"', 'standard = "0.21"'
+                'standard = "0.33"', 'standard = "0.21"'
             ),
             encoding="utf-8",
         )
@@ -1800,9 +1802,12 @@ class ReportOwedByADeletedProtocol(_Repository):
                 _, out = self._hold([self.proto, renamed], staged=staged)
                 self.assertNotIn("no protocol of the area carries", out)
 
-    def _unreadable_run_beside(self, report: str | None) -> None:
+    def _unreadable_run_beside(
+        self, report: str | None, *, indexed: bool = True
+    ) -> None:
         """The protocol registering REPORT, a readable measurement at that
-        commit, and an older run of the area whose record does not read."""
+        commit, and an older run of the area whose record does not read —
+        bound to the protocol by a row of the run index when INDEXED."""
         self.proto.write_text(
             head(repeat_cost="low", report=report) + REGISTRATION, encoding="utf-8"
         )
@@ -1812,13 +1817,102 @@ class ReportOwedByADeletedProtocol(_Repository):
         broken = self.area / "runs" / "2026-10-01T10-00-00_bad0"
         broken.mkdir(parents=True)
         (broken / "config.json").write_text("{not json", encoding="utf-8")
+        if indexed:
+            row = run_index.index_row(broken.name, "g", "s", {}, {}, {}, "", PID)
+            (self.area / run_index.RUN_INDEX).write_text(
+                "\t".join(run_index.RUN_INDEX_COLS) + "\n" + "\t".join(row) + "\n",
+                encoding="utf-8",
+            )
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the runs", "--no-verify")
 
+    def test_the_twin_an_unreadable_run_no_index_row_names_starts_no_duty(self):
+        """Its protocol cannot be determined, so it is held against none:
+        the readable measurement registered no report, and none is owed."""
+        self._unreadable_run_beside(None, indexed=False)
+        text = self.proto.read_text(encoding="utf-8")
+        measured = _measured(self.proto, text)
+        self.assertEqual(measured.unassigned, ("2026-10-01T10-00-00_bad0",))
+        self.assertIsNone(registered_report.report_duty(measured, self.root))
+
+    def _duty_station(self) -> list[gate.GateFinding]:
+        """report-check's station of the report duty on the area as it is."""
+        return report_check.report_binding_gaps(
+            report_context.checked(self.area, self.proto)
+        )
+
+    def test_report_check_names_a_record_of_unknown_protocol_and_holds_nothing(self):
+        """Where the report duty is checked, the record is a warning of a
+        check not executable — unresolved, counted for no protocol, no hold,
+        the way back — and no blocker."""
+        self._unreadable_run_beside(None, indexed=False)
+        (warning,) = self._duty_station()
+        self.assertEqual(
+            (warning.grade, warning.outcome), (gate.WARNING, gate.NOT_EXECUTABLE)
+        )
+        for said in (
+            "the record of run 2026-10-01T10-00-00_bad0 does not read",
+            "which protocol it belongs to cannot be determined",
+            "is unresolved",
+            "it is counted for no protocol",
+            "no hold follows from it",
+        ):
+            self.assertIn(said, warning.text)
+        self.assertIn("back from a commit, a clone or a copy", warning.fix or "")
+
+    def test_report_check_names_a_start_file_that_does_not_read_and_holds_nothing(
+        self,
+    ):
+        """The incomplete-start warning stands at the report duty's station
+        too, in the registration station's words; a warning, no blocker."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        run = self._run(_git(self.root, "rev-parse", "HEAD"))
+        start = run_starts.start_path(self.area, run.name)
+        start.parent.mkdir()
+        start.write_text("{not json", encoding="utf-8")
+        (warning,) = self._duty_station()
+        self.assertEqual(
+            (warning.grade, warning.outcome), (gate.WARNING, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn(f"the start file of run {run.name} does not read", warning.text)
+        self.assertIn(
+            "no value is written into a start file by hand", warning.fix or ""
+        )
+
+    def test_report_check_names_a_start_file_nobody_finds_and_holds_nothing(self):
+        """The run's mark says a start file was written; none is found.
+        The loss stands at the report duty's station too, as a warning."""
+        self.proto.write_text(
+            head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        run = self._run(_git(self.root, "rev-parse", "HEAD"))
+        run_starts.write_start_mark(run)
+        (warning,) = self._duty_station()
+        self.assertEqual(
+            (warning.grade, warning.outcome), (gate.WARNING, gate.NOT_EXECUTABLE)
+        )
+        self.assertIn(f"a start file was written for run {run.name}", warning.text)
+        self.assertIn("lost, not merely unknown", warning.text)
+
+    def test_the_twin_an_area_without_such_a_record_gets_no_warning(self):
+        self.proto.write_text(
+            head(repeat_cost="low", report=None) + REGISTRATION, encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        self._run(_git(self.root, "rev-parse", "HEAD"))
+        self.assertEqual(self._duty_station(), [])
+
     def test_an_unreadable_run_may_have_been_the_first_measurement(self):
-        """Its binding and its commit are unknowable; beside a readable
-        measurement that registered no report, "no duty" is not told — at
-        report-check, at the stop and at the commit."""
+        """Bound to the protocol by its index row, its commit unknowable;
+        beside a readable measurement that registered no report, "no duty"
+        is not told — at report-check, at the stop and at the commit."""
         self._unreadable_run_beside(None)
         for staged in (True, False):
             with self.subTest(staged=staged):

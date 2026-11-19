@@ -1,7 +1,8 @@
 """evidence — what an area's committed evidence may become, and the changes
 against a commit that break it.
 
-An area's evidence is what labkit wrote under `audits/` and `runs/`. Once a
+An area's evidence is what labkit wrote under `audits/`, `runs/` and
+`run-starts/`. Once a
 commit holds it, it stays as written:
 
     audits/<record>.toml   only its findings' decision lines change —
@@ -21,6 +22,10 @@ commit holds it, it stays as written:
     runs/<run_id>/         never changes or goes once the commit holds the
                            run closed — `completion.json` or `failure.json`
                            in it; a run still open there is runlog's to write
+    run-starts/<run_id>.json
+                           never changes or goes once a commit holds it: the
+                           run's start file, written once at its start
+                           (`run_starts`)
 
 Three witnesses, each git's own and exact for what it saw:
 
@@ -79,7 +84,14 @@ from labkit.formats.repo import (
     state_text,
     text_at,
 )
-from labkit.formats.commands import audit_command
+from labkit.formats.area_state import HistoryUnread, marked_runs
+from labkit.formats.commands import audit_command, stage_command
+from labkit.formats.run_starts import (
+    START_FILES_DIR,
+    START_MARK,
+    is_start_file,
+    start_path,
+)
 from labkit.formats.runs import (
     COMPLETION_FILE,
     CONFIG_FILE,
@@ -103,8 +115,11 @@ RUN_RECORD_FILES = (
     COMPLETION_FILE,
     FAILURE_FILE,
     patch_path(Path()).name,
+    START_MARK,
 )
 _SCRIPT_COPY = script_copy_path(Path(), "").stem
+#: how `broken` names a run's start file among its findings
+START_FILE = "start file"
 #: the suffixes of the files labkit writes under `audits/` (records,
 #: reviews, failed attempts, the journal, kept answers, handover records)
 AUDIT_SUFFIXES = (".toml", ".jsonl", ".txt", ".json")
@@ -197,7 +212,9 @@ def broken(
     """Which of ENTRIES — (git's letter, path relative to the area) between
     an earlier and a later state — break their rule: the audit paths as
     (rel, what it is), the journal left out, a deletion only with DELETIONS
-    (`attempts.gaps` names one against HEAD); and per run CLOSED in the
+    (`attempts.gaps` names one against HEAD); a run's start file changed or
+    deleted, among them as (rel, "start file changed" or "start file
+    deleted"); and per run CLOSED in the
     earlier state its paths changed or deleted, each as (path in the run's
     folder, how). TEXTS reads a record's two versions (earlier, later): one
     whose decisions alone changed breaks nothing, nor does a report review
@@ -205,7 +222,9 @@ def broken(
     moved aside (`moved_aside`). UNDONE tells a later
     version that is back as labkit first committed it (`original`): a
     restore breaks nothing either. Pure apart from TEXTS and UNDONE."""
-    audits: list[tuple[str, str]] = []
+    # a start file lies in run-starts/ and in no run's folder: the loop below
+    # passes it over, and `start_file_changes` holds it
+    audits = start_file_changes(entries, undone)
     runs: dict[str, list[tuple[str, str]]] = {}
     added = {rel for letter, rel in entries if letter == "A"}
     for letter, rel in entries:
@@ -227,6 +246,24 @@ def broken(
         if what is not None and not undone(rel):
             audits.append((rel, what))
     return audits, runs
+
+
+def start_file_changes(
+    entries: list[tuple[str, str]], undone: Callable[[str], bool]
+) -> list[tuple[str, str]]:
+    """The start files among ENTRIES (git's letter, path relative to the
+    area) that were changed or deleted, each as (rel, "start file changed"
+    or "start file deleted"): written once at the run's start, a start
+    file never changes or goes once a commit holds it. A deletion is told
+    against every state — no other witness names it —, a change unless the
+    file is back as first committed (UNDONE). Pure apart from UNDONE."""
+    return [
+        (rel, f"{START_FILE} {how}")
+        for letter, rel in entries
+        if is_start_file(rel)
+        and (how := _HOW.get(letter)) is not None
+        and (how == "deleted" or not undone(rel))
+    ]
 
 
 def _changed_audit_file(
@@ -287,6 +324,16 @@ def told(
                     f'false-positive --why "<why>" --record {Path(rel).name}`',
                 )
             )
+        elif what.startswith(START_FILE):
+            out.append(
+                (
+                    f"{rel}: the {what} {where} — a start file stays as the "
+                    "run's start wrote it: it says which protocol the run was "
+                    "bound to and when it started, also when the run's directory "
+                    "is gone",
+                    f"restore it ({checkout(rel)})",
+                )
+            )
         else:
             out.append(
                 (
@@ -322,9 +369,14 @@ def _base(area: Path, root: Path) -> str:
 
 
 def _specs(area: Path, root: Path) -> list[str]:
-    """The pathspecs of AREA's evidence: its `audits/` and its `runs/`."""
+    """The pathspecs of AREA's evidence: its `audits/`, its `runs/` and
+    its runs' start files (`run_starts.START_FILES_DIR`)."""
     base = _base(area, root)
-    return [f"{base}/{findings.DIR}", f"{base}/{RUNS_DIR}"]
+    return [
+        f"{base}/{findings.DIR}",
+        f"{base}/{RUNS_DIR}",
+        f"{base}/{START_FILES_DIR}",
+    ]
 
 
 def _name_status(text: str) -> list[tuple[str, str]]:
@@ -472,7 +524,9 @@ def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]
     (sentence, way out) — in the working tree, or STAGED in the index (what
     a commit now would carry): a record changed beyond its decision lines,
     another audit file changed, a run HEAD holds closed whose files changed
-    or went. A version back as labkit first committed it is no change
+    or went, a start file changed or deleted; and, STAGED only, a run the
+    index holds whose start file is not staged (`unstaged_start_files`).
+    A version back as labkit first committed it is no change
     (`original`): restoring a record a commit past the pre-commit rewrote
     passes. [] outside git and before the first commit; a deleted audit
     file is `attempts.gaps`'s to name. Git unable to read what the
@@ -514,8 +568,10 @@ def _change_findings(
     entries = _in_area(
         _state_diff(root, "HEAD", _specs(area, root), staged=staged), _base(area, root)
     )
+    # 2. what the commit would lack: only the index is asked
+    unstaged = unstaged_start_files(area, root) if staged else []
     if not entries:
-        return []
+        return unstaged
 
     def texts(rel: str) -> tuple[str | None, str | None]:
         path = area / rel
@@ -528,7 +584,49 @@ def _change_findings(
         _undone_in(root, area, rev=None, staged=staged),
         deletions=False,
     )
-    return told(area, root, audits, runs, where, "HEAD")
+    return told(area, root, audits, runs, where, "HEAD") + unstaged
+
+
+def unstaged_start_files(area: Path, root: Path) -> list[tuple[str, str]]:
+    """(sentence, way out) per run of AREA whose record in the index says a
+    start file was written for it (`run_starts.START_MARK` in the run's
+    directory — staged now, or committed earlier) while the index does not
+    hold that start file and the working tree does: the commit's state
+    would document the run without the file that says which protocol it
+    started with and when, and a check of that state — a report or an
+    adoption that names the run among them — must not count a safeguard
+    it lacks. The way out stages the file. [] when every such run's start
+    file is in the index. The mark counts as the index holds it or as a
+    commit holds it (`area_state.marked_runs`): deleting a committed mark
+    does not lift the duty. For a run without a mark no start-file duty is
+    evidenced, and none is asked — its own record decides, never a guess.
+    A marked run whose start file stands nowhere is not held here: nothing
+    could be staged, a deletion a commit made is `start_file_changes`'s,
+    and the loss is told (`area_state.missing_start_warning`). Raises
+    GitError when git fails."""
+    try:
+        marked = sorted(marked_runs(area, root, staged=True))
+    except HistoryUnread:
+        # the history's marks cannot be read: the index's are asked, and
+        # the area state tells the unread history
+        marked = sorted(
+            rel.split("/")[0]
+            for rel in files_at(root, area / RUNS_DIR) or set()
+            if rel.count("/") == 1 and rel.endswith(f"/{START_MARK}")
+        )
+    staged = files_at(root, area / START_FILES_DIR) or set()
+    return [
+        (
+            f"{START_FILES_DIR}/{path.name}: the start file of run {run} stands in "
+            f"the working tree and is neither staged nor committed, while the "
+            f"index holds the run's record — the commit's state would document "
+            f"the run without the file that says which protocol it started with "
+            f"and when",
+            f"stage it (`{stage_command(path)}`)",
+        )
+        for run in marked
+        if (path := start_path(area, run)).name not in staged and path.is_file()
+    ]
 
 
 def commit_changes(area: Path, since: str) -> list[str]:
@@ -684,10 +782,7 @@ def orphaned_runs(root: Path, since: datetime) -> list[str]:
             if folder in lost or not closed:
                 continue
             present = [root / p for p in files if (root / p).is_file()]
-            now = {
-                p.relative_to(root).as_posix(): b
-                for p, b in blobs_now(root, present).items()
-            }
+            now = {rel_posix(p, root): b for p, b in blobs_now(root, present).items()}
             gone = [p for p, b in files.items() if now.get(p) != b]
             if gone:
                 lost[folder] = (commit, gone)
@@ -860,12 +955,13 @@ def read_evidence(area: Path, staged: bool) -> AreaEvidence:
     )
 
 
-def decision_reviews(area: Path) -> list[reviews.Review]:
-    """AREA's decision reviews as the gates read them (`read_evidence`, the
-    tree's), for a review to be drawn or a rendering to be written. Raises
-    `reviews.ReviewError` when one does not read: a decision judged or a
-    line written past it would read as unreviewed. Raises RuntimeError when
-    git fails."""
+def decision_reviews_in_tree(area: Path) -> list[reviews.Review]:
+    """AREA's decision reviews as the working tree holds them, for a review
+    to be drawn or a rendering to be written. A review has no other file
+    state: a check of the index reads the tree's too (`read_evidence`), so
+    these are the reviews every gate judges by. Raises `reviews.ReviewError`
+    when one does not read: a decision judged or a line written past it
+    would read as unreviewed. Raises RuntimeError when git fails."""
     held = read_evidence(area, staged=False)
     if held.reviews_unread:
         raise reviews.ReviewError(

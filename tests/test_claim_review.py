@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import subprocess
 import sys
 import tempfile
 import time
@@ -24,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.formats import attempts, evidence, handovers, report_reviews  # noqa: E402
 from labkit.gates import audit, claim_review, report_hold, report_review  # noqa: E402
 from test_report_review import MARKED, Area  # noqa: E402
+from repo_fixture import git
 
 #: the first reviewer names the report's line 11 — MARKED's last line, a
 #: verdict on the criterion beside a discussed run
@@ -41,17 +41,6 @@ REJECTED = (
     "verdict: 0 upheld, 1 rejected, 0 insufficient\n"
 )
 WHY = "line 11 repeats the discussion block's own why"
-
-
-def git(cwd: Path, *args: str) -> str:
-    done = subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return done.stdout.strip()
 
 
 class Lab:
