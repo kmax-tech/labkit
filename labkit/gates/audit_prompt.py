@@ -71,7 +71,11 @@ from labkit.formats.standard_contract import (
     COMPUTE_KIND,
 )
 from labkit.gates import ways_out
-from labkit.gates.registration_hold import run_compared_with, workflow
+from labkit.gates.registration_hold import (
+    run_compared_with,
+    workflow,
+    workflow_of_first_texts,
+)
 from labkit.gates.ways_out import (
     AUDIT_AGAIN,
     PROTOCOL_NAMED,
@@ -711,15 +715,23 @@ EARLIER_MAX_BYTES = 60_000
 
 
 class FieldChange(NamedTuple):
-    """A corrected field as the follow-up shows it: its LABEL, its value as
-    the first measurement registered it — REGISTERED, None when that text
-    cannot be read back, WHERE saying which text it is or why not — and its
-    value NOW."""
+    """A corrected field as the follow-up shows it: its LABEL, its value in
+    the text the change is taken against — REGISTERED, None when that text
+    cannot be read back; WHERE saying which text it is (the first
+    measurement's, or the own text of the run audited) or why it cannot be
+    read — and its value NOW. UNTOLD is filled only with a run audited:
+    why the first measurement of the protocol is not told (the sentences
+    of `registration_hold.untold_first_holds`), and the follow-up then
+    says that the workflow is undetermined and that no text shown is
+    known to be the first registration. "" when the first measurement is
+    told — and without a run audited, whatever is told: there the first
+    measurement's text is shown as before, with no such line."""
 
     label: str
     registered: str | None
     where: str
     now: str
+    untold: str = ""
 
 
 class Followup(NamedTuple):
@@ -782,7 +794,10 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     text)` piece with every earlier decided BLOCKER and correction as
     `<record>#<n>`, its text, its recorded subject, its
     decision (status, reason, effect), for a
-    correction the field as first registered and as it reads now, and, when
+    correction the field in the text its change is taken against, named
+    (`FieldChange.where`), and as it reads now — with a line saying that
+    the first registration is undetermined where the first measurement is
+    not told (`FieldChange.untold`) —, and, when
     the finding requires a check, that metrics.json key with its note and
     its whole value as shown, or that it is missing — or one piece saying
     there is none."""
@@ -813,6 +828,14 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
                 else f"\n  {change.label} registered: cannot be read back — {change.where}"
             )
             entry += f"{then}\n  {change.label} now: {change.now}"
+            if change.untold:
+                entry += (
+                    f"\n  first registration: undetermined — {change.untold}. "
+                    f"Which workflow binds this protocol's runs is undetermined "
+                    f"too. The value above is from the text named in the "
+                    f"parentheses after `registered`, and nothing here shows "
+                    f"that text to be the first registration"
+                )
         line = required_check_line(f, shown.metrics)
         if line:
             entry += f"\n  {line}"
@@ -927,7 +950,19 @@ def _field_change(
     protocol as it stands with the answering run, and a verdict releases
     only the change it judged —, else the first measurement's
     (`registrations_as_first_measured`), and that one too when no run is
-    audited (RUN None). Raises RuntimeError when git fails."""
+    audited (RUN None).
+
+    While something leaves the first measurement untold and a run is
+    audited, the workflow that binds is UNDECIDED and finalize holds the
+    release; the text of the run audited is not exchanged for it. The
+    change is then taken as the first measurements whose text reads
+    registered (`registration_hold.workflow_of_first_texts`): against
+    RUN's own text where they registered exploratory. The change says
+    what is missing (`FieldChange.untold`): that the first measurement
+    is not told and why, so the workflow is undetermined and no first
+    registration is shown as such. Where a text cannot be read back, the
+    change carries no value and the reason; no other text stands in.
+    Raises RuntimeError when git fails."""
     at = f.place
     if at is None:
         raise ValueError(f"{f.one_line}: names no field of {protocol.name}")
@@ -940,15 +975,24 @@ def _field_change(
     state = state_of(protocol.parent)
     measured = state.measured_of(pid)
     root = git_root(protocol)
-    flow = workflow(
+    binding = workflow(
         protocol.parent,
         protocol,
         pid,
         root,
         measured,
         history_unread=state.history_unread,
-    ).workflow
-    compared = run_compared_with(flow, run)
+    )
+    if binding.untold and run is not None:
+        # the first measurement is untold and a run is audited: finalize
+        # holds the release, and the run audited still keeps its own text
+        # as the one shown
+        shown_by = workflow_of_first_texts(protocol, root, measured)
+        untold = "; ".join(hold.text for hold in binding.untold)
+    else:
+        shown_by = binding.workflow
+        untold = ""
+    compared = run_compared_with(shown_by, run)
     if compared is not None:
         own, why = as_measured(
             protocol, read_run_dir(compared), root, role="the run audited"
@@ -959,11 +1003,11 @@ def _field_change(
             protocol, measured.first_groups, root
         )
     if not texts:
-        return FieldChange(hit.label, None, why, hit.value)
+        return FieldChange(hit.label, None, why, hit.value, untold)
     then, where = texts[0]
     old = protocol_check.named_field(then, hit.label)
     return FieldChange(
-        hit.label, old.value if old is not None else ABSENT, where, hit.value
+        hit.label, old.value if old is not None else ABSENT, where, hit.value, untold
     )
 
 

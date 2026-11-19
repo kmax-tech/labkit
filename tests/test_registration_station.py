@@ -3,7 +3,9 @@ workflow it reads from the first measurements' own type
 (`registration_hold.workflow`) and which holds follow, and that the
 follow-up audit's prompt compares a corrected field with the text the hold
 compares (`registration_hold.run_compared_with`, read by
-`registration_station.check_registration` and `audit_prompt._field_change`).
+`registration_station.check_registration` and `audit_prompt._field_change`)
+— and that an untold first measurement, which leaves the station with its
+one hold, does not exchange the text of the run audited in that prompt.
 
 The fixture is a repository with a protocol committed twice and one run
 recorded at each commit, written as runlog writes them
@@ -15,6 +17,8 @@ tests/test_exploration_hold.py.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import shutil
 import tempfile
@@ -23,8 +27,9 @@ from pathlib import Path
 
 from protocol_fixture import PID, completed_run, head, scope_file
 from repo_fixture import git as _git
+from state_fixture import audit_record
 
-from labkit.formats import findings
+from labkit.formats import findings, followup
 from labkit.formats.area_state import Measured
 from labkit.formats.gate import BLOCKER
 from labkit.formats.protocol_history import Workflow
@@ -34,11 +39,14 @@ from labkit.gates import (
     registration_station,
     report_context,
 )
+from labkit.run import runlog
 
 FIRST_LOCK = "what the number is about changed after the first measurement"
 LIVE_HOLD = "what the number is about changed after the answering run"
 FIRST = "2026-10-07T09-25-31_98dd"
 LATER = "2026-10-07T10-00-00_ab12"
+#: a run id before FIRST's, for a measurement that is lost
+LOST = "2026-10-06T08-00-00_0c0c"
 UNDECIDED_TYPE = "<exploratory | confirmatory>"
 
 
@@ -227,6 +235,69 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         flow, _, _ = self.station()
         self.assertIs(flow, Workflow.UNDECIDED)
         self.assertEqual(self.shown(later).registered, "4 documents")
+
+    def lose_a_possible_first(self) -> None:
+        """A measurement only the run index lists: measured, indexed and
+        deleted before any commit held it, with no start file to tell its
+        order — it may have been the first, so the first measurement is
+        untold (`registration_hold.lost_record_hold`)."""
+        lost = completed_run(self.area, LOST, metrics={"criterion_1_pass": True})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(runlog.reindex(self.area), 0)
+        shutil.rmtree(lost)
+
+    def test_an_untold_first_keeps_the_audited_runs_own_text(self):
+        """An exploration whose first measurement is untold: the station
+        returns the one hold and no workflow, as before — and the follow-up
+        still shows the corrected field against the own text of the run
+        audited, not against another run's, and says what is missing."""
+        later = self.measured_twice("exploratory")
+        self.lose_a_possible_first()
+        flow, lines, ctx = self.station()
+        self.assertEqual(ctx.run, later)
+        self.assertIs(flow, Workflow.UNDECIDED)
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn(f"{LOST}", lines[0])
+        self.assertIn("may have been the first measurement", lines[0])
+        change = self.shown(later)
+        self.assertEqual(
+            (change.registered, change.now), ("2 documents", "3 documents")
+        )
+        self.assertIn(f"the run audited {LATER}", change.where)
+        self.assertIn("may have been the first measurement", change.untold)
+        self.assertIn(LOST, change.untold)
+        # what the prompt prints of it
+        record = audit_record(
+            "r.toml", mode="analysis", run_id=LATER, found=[self.CORRECTION]
+        )
+        member = followup.Member(record, 1, self.CORRECTION)
+        shown = audit_prompt.Followup([member], None, {}, {member.ref: change})
+        ((_, text),) = audit_prompt.earlier_piece(shown)
+        self.assertIn(f"Data / scope registered (as the run audited {LATER} saw", text)
+        self.assertIn("): 2 documents\n  Data / scope now: 3 documents", text)
+        self.assertIn("\n  first registration: undetermined — ", text)
+        self.assertIn("Which workflow binds this protocol's runs is undetermined", text)
+        self.assertNotIn("4 documents", text)
+
+    def test_the_twin_an_untold_first_in_confirmation_names_the_first_that_reads(
+        self,
+    ):
+        """The twin: the same loss in a confirmatory protocol. The field is
+        compared with the first measurement that reads, as without the
+        loss, and the change says that the first is not told."""
+        later = self.measured_twice("confirmatory")
+        self.lose_a_possible_first()
+        flow, lines, _ = self.station()
+        self.assertIs(flow, Workflow.UNDECIDED)
+        self.assertEqual(len(lines), 1, lines)
+        change = self.shown(later)
+        self.assertEqual(change.registered, "4 documents")
+        self.assertIn(f"first measurement {FIRST}", change.where)
+        self.assertIn("may have been the first measurement", change.untold)
+
+    def test_a_told_first_names_nothing_missing(self):
+        later = self.measured_twice("exploratory")
+        self.assertEqual(self.shown(later).untold, "")
 
     def test_without_a_run_only_the_prompt_compares_and_names_the_first(self):
         """The one case where the two part, kept as it was: with no run
