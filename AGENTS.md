@@ -47,6 +47,11 @@ The suite is self-contained: it passes in a fresh clone with an empty home direc
 - **Breaking changes, not legacy paths.** Build for the current format; keep code clear and modular. Do not add or extend code that reads old formats. A format change is an announced break (`CHANGELOG.md`, "Breaking", naming the last version that reads the old format); old runs are reproduced with the repo's commit and its pinned labkit version. Existing legacy paths go in one Breaking release, not piecemeal (0.48.0 the id letters, 0.89.0 the `legacy` run state and the `endpoint` string). The exception is the public API (`docs/architecture.md`, "Public API"): a listed name, signature or behaviour breaks only after one release in which the old form still works and warns.
 - **Order before features.** Build what `TODO.md` puts next, nothing ahead of it: static-evidence checks wait for the benchmark pilot to show they are needed. Rollout to other repos, templates and the house doctrine is a separate task and out of reach here.
 - **One commit per step**, the message says why. Do not push, tag or release; report what is ready to commit.
+- **Before reporting a task as done.** A task is what the user ordered, usually several commits; these four hold at its end, not at each commit.
+  - Run the whole suite once on the final state and report its exit status. The fast tier at each commit does not replace it.
+  - Claim only what was checked: name the cases, files or runs the check covered, and say what it did not cover. "Works" for a path nobody ran is too wide.
+  - A side finding becomes its own step: report it, or put it in `TODO.md`. Do not fix it inside the task; a contract or format change is never a by-product.
+  - Have an independent reader read the final diff before the report: an agent that did not write the code (`code-clarity`), with a stated scope. Say in the report who read what.
 
 ## Not in this repo
 
