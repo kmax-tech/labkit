@@ -454,7 +454,9 @@ def _registration_at(
     return []
 
 
-def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
+def analysis_audit_gap(
+    ctx: Checked, *, link_unresolved: bool = False
+) -> GateFinding | None:
     """Why no decided analysis record covers the code, the promise
     block, the answering run and what the audit was shown of it as they are
     now, as a blocker with its way out, or None. Without an answering run
@@ -463,7 +465,16 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     attempt of any mode ended with deleted, a journal cut), labkit-audit
     starts no audit (`attempts.begin`), so the blocker names the loss and
     its restore, or the handover, instead of an audit command; a covering
-    record with findings open is decided, which needs no attempt."""
+    record with findings open is decided, which needs no attempt.
+
+    LINK_UNRESOLVED (the registration station holds CTX's `[explored_in]`
+    link, `report_exploration.link_gaps`): where no record covers, the
+    blocker stands and its way out is the link's, not an audit. The area
+    stamp covers the exploration the link names
+    (`scope_sha.exploration_basis`) and is one digest: while the id names
+    no one protocol it differs from every audited stamp, whether or not
+    anything else changed, and an audit run now would be held to that
+    state and cover nothing once the link resolves."""
     audit = (
         f"audit the answering run as it stands: "
         f"`{audit_command(ctx.area, '--mode', 'analysis', protocol=ctx.protocol)}`, "
@@ -518,6 +529,22 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     # the rule of the lane: at low the cost tier's, which owes this one
     # audit at the promotion of the number; else the analysis audit's
     owed = cited_rule(lane(ctx.head.repeat_cost).analysis_rule)
+    if link_unresolved and not covering:
+        # the blocker stays: the one digest cannot tell the link from another
+        # change. Only the audit is not offered — it would not release
+        return blocker(
+            "no analysis audit covers the area as it is now, and none can "
+            "until the exploration link resolves — the stamp an audit is held "
+            "to covers the exploration the link names, and that is not read "
+            "while its id names no one protocol; whether an audit on record "
+            "covers the area shows once it does",
+            fix=f"resolve the exploration link first, as its blocker names; "
+            f"then `{gate_command('report-check', ctx.area)}` names the audit "
+            f"where one is still owed. No audit before that: it would be held "
+            f"to the area without the exploration and cover nothing once the "
+            f"link resolves",
+            rule=owed,
+        )
     return blocker(gap, fix=audit, rule=owed)
 
 
@@ -843,7 +870,7 @@ def finalize_findings(
 
 
 def analysis_findings(
-    ctx: Checked, *, result_section: bool = True
+    ctx: Checked, *, result_section: bool = True, link_unresolved: bool = False
 ) -> list[GateFinding]:
     """Coverage and rendered-result blockers for an analysis stage already due.
 
@@ -854,10 +881,12 @@ def analysis_findings(
     every run of that exploration's area sharing an input digest that the
     audit was not shown (`report_exploration.use_after_audit_findings`);
     a link that names no one protocol is the registration station's
-    blocker and is not told here (`chain_gaps`, station 2).
+    blocker and is not told here (`chain_gaps`, station 2). While that
+    blocker stands (LINK_UNRESOLVED), missing coverage names the link's
+    way out, not an audit (`analysis_audit_gap`).
     """
     out: list[GateFinding] = []
-    gap = analysis_audit_gap(ctx)
+    gap = analysis_audit_gap(ctx, link_unresolved=link_unresolved)
     if gap:
         out.append(replace(gap, text=f"analysis audit: {gap.text}"))
     else:
@@ -985,7 +1014,12 @@ def chain_gaps(
     beside station 4's blocker), a `[result]` table that does not read
     (finalize's blocker left out beside station 1's), a history git could
     not list (finalize's blocker left out beside station 2's, in every
-    state: both read one area state). Finalize's own stations
+    state: both read one area state). A link to an exploration that names
+    no one protocol (station 2) leaves station 5's blocker for missing
+    coverage standing — the area stamp is one digest and cannot tell the
+    link from another change — and that blocker names the link's way out,
+    never an audit, which could not release while the link does not
+    resolve (`analysis_audit_gap`). Finalize's own stations
     are named by what they check, never by number, here.
     UNDECLARED (no run adopted yet, the one a next step asks about):
     the stations the adoption writes and holds on its proposal — the result
@@ -1016,7 +1050,8 @@ def chain_gaps(
     out += report_binding_gaps(ctx)
     # every lane, with or without an answering run: a link to an
     # exploration that names no one protocol
-    out += link_gaps(ctx)
+    link = link_gaps(ctx)
+    out += link
     # 3. finalize — always; where it read this text, what this chain's own
     # stations hold is not told again as finalize's: the `[result]` table
     # that does not read (station 1) and the unreportable marks (station 4)
@@ -1038,7 +1073,10 @@ def chain_gaps(
     # without one, finalize's run-choice station holds it where it reads
     # this text
     if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or not same_text):
-        analysis = analysis_findings(ctx, result_section=not undeclared)
+        # while the link holds, the audit is not the next step (station 2's is)
+        analysis = analysis_findings(
+            ctx, result_section=not undeclared, link_unresolved=bool(link)
+        )
         out += withdrawn_first(analysis, withdrawal)
     # 6. recomputation — always, unless `undeclared`
     if not undeclared:

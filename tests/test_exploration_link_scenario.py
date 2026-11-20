@@ -16,10 +16,15 @@ tree, or a second file carrying its id — and `labkit-adopt` runs:
   `git status` are as before, and no copy of an unchecked proposal is left
   (`repo.pending_adoption`);
 - `report-check AREA` names the same blocker, once;
+- the link's blocker is printed first and is the step `labkit-next` owes;
+  the analysis audit, which the broken link leaves uncovered, stays a
+  blocker and offers no audit — one run now could not release;
 - the way out the blocker prints, run, removes it, and the adoption then
   passes.
 
-The twin: with the link resolvable, the same adoption succeeds.
+The twins: with the link resolvable, the same adoption succeeds; and an
+analysis audit stale from a change of the area's code is told with the
+audit as its next step.
 """
 
 from __future__ import annotations
@@ -38,13 +43,24 @@ from command_fixture import run_main
 from labkit.checks import protocol_report
 from labkit.formats import protocol_block
 from labkit.formats.repo import pending_adoption
-from labkit.tools import adopt, protocol_fill, report_command, scaffold
+from labkit.tools import (
+    adopt,
+    next_command,
+    protocol_fill,
+    report_command,
+    scaffold,
+)
 
 # an end-to-end scenario file: the full suite before a push runs it, the
 # commit hook does not (.githooks/checks)
 pytestmark = pytest.mark.slow
 
 NOT_EXECUTABLE = "BLOCKER (check not executable): exploration link: [explored_in]"
+RESOLVE = "make the id name exactly one protocol of the repo: "
+UNCOVERED = (
+    "BLOCKER: analysis audit: no analysis audit covers the area as it is now, "
+    "and none can until the exploration link resolves"
+)
 RESTORE = "git checkout <commit> -- <EXPLORATION_PROTOCOL>"
 RESTAMP = "labkit-init exp <name> --kind …"
 
@@ -104,6 +120,36 @@ class _Confirmation(e2e.CountCommands):
         """`report-check AREA`."""
         return self.command(report_command.main, self.rel(self.area))
 
+    def labkit_next(self) -> str:
+        """`labkit-next AREA`: what it prints."""
+        rc, out = self.command(next_command.main, self.rel(self.area))
+        self.assertEqual(rc, 0, out)
+        return out
+
+    @staticmethod
+    def blockers(out: str) -> list[str]:
+        """The BLOCKER lines of OUT, in the order printed."""
+        return [
+            ln.strip() for ln in out.splitlines() if ln.strip().startswith("BLOCKER")
+        ]
+
+    def link_first_and_no_audit_offered(self, out: str) -> None:
+        """In OUT, a gate's lines on the broken link: the link's blocker
+        is the first one printed, and the analysis audit it leaves
+        uncovered is told once, as a blocker whose way out is the link's —
+        no audit command, which could not release."""
+        told = self.blockers(out)
+        self.assertTrue(told[0].startswith(NOT_EXECUTABLE), told[0])
+        (audit,) = [ln for ln in told if ln.startswith("BLOCKER: analysis audit:")]
+        self.assertTrue(audit.startswith(UNCOVERED), audit)
+        self.assertIn(
+            f"Next: resolve the exploration link first, as its blocker names; "
+            f"then `report-check {self.rel(self.area)}` names the audit where "
+            f"one is still owed",
+            audit,
+        )
+        self.assertNotIn("labkit-audit", audit)
+
     def link_blockers(self, out: str) -> list[str]:
         """The BLOCKER lines of the link in OUT, as the gate prints its
         findings (the closing summary lists each again without the word)."""
@@ -147,6 +193,7 @@ class _Confirmation(e2e.CountCommands):
         )
         self.assertIn("the result is not released over it", line)
         self.assertEqual(out.count("- (check not executable) exploration link:"), 1)
+        self.link_first_and_no_audit_offered(out)
         self.assertIn("protocol-fill: not adopted", out)
         self.assertNotIn("labkit-adopt: 2.", out)
         self.assertEqual(self.state(), before)
@@ -155,6 +202,16 @@ class _Confirmation(e2e.CountCommands):
         self.assertNotEqual(rc, 0, checked)
         self.assertEqual(self.link_blockers(checked), [line])
         self.assertEqual(checked.count("- (check not executable) exploration link:"), 1)
+        self.link_first_and_no_audit_offered(checked)
+        # the step labkit-next owes is the link's way out, not the audit
+        step = self.labkit_next()
+        self.assertIn(
+            f"  where: exploration link: [explored_in] protocol = "
+            f"{self.exploration_id} names {named}",
+            step,
+        )
+        self.assertIn(f"  next:  {RESOLVE}", step)
+        self.assertNotIn("--mode analysis", step)
         self.assertEqual(self.state(), before)
         return line
 
@@ -189,6 +246,33 @@ class TheLinkResolves(_Confirmation):
         self.assertFalse(pending_adoption(self.protocol).exists())
         rc, checked = self.report_check()
         self.assertEqual(rc, 0, checked)
+
+    def test_an_audit_stale_from_the_area_s_own_change_is_told_with_the_audit(
+        self,
+    ) -> None:
+        """A stale analysis audit with a cause of its own, the link
+        resolving: the measuring script changed after the audit. The
+        blocker names the audit as its next step, and no link finding
+        stands beside it."""
+        measure = self.area / "scripts" / "01_measure.py"
+        measure.write_text(
+            measure.read_text(encoding="utf-8") + "\n# a later change\n",
+            encoding="utf-8",
+        )
+        rc, checked = self.report_check()
+        self.assertEqual(rc, 1, checked)
+        self.assertNotIn("exploration link", checked)
+        (audit,) = [
+            ln
+            for ln in self.blockers(checked)
+            if ln.startswith("BLOCKER: analysis audit:")
+        ]
+        self.assertIn("no analysis audit saw the area as it is now", audit)
+        self.assertIn(
+            f"Next: audit the answering run as it stands: `labkit-audit "
+            f"{self.rel(self.area)} --mode analysis`, then decide its findings",
+            audit,
+        )
 
 
 class TheLinkNamesNoProtocol(_Confirmation):

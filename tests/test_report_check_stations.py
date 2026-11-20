@@ -121,6 +121,75 @@ class AMissingAnalysisAuditRecordsTheRuleOfTheLane(unittest.TestCase):
         )
 
 
+class NoAuditIsOfferedWhileTheExplorationLinkHolds(unittest.TestCase):
+    """`analysis_audit_gap` under LINK_UNRESOLVED: where no record covers,
+    the blocker stands with the lane's rule and its way out is the link's —
+    an audit run before the link resolves would not release. The twins:
+    with the link resolved the same gap names the audit, and a covering
+    record with findings open keeps its own way out under either."""
+
+    def _found(self, *, link_unresolved: bool, covering: list, gap: str):
+        ctx = checked(TEXT, run=AREA / "runs" / "r1")
+        with (
+            mock.patch.object(report_check, "analysis_now"),
+            mock.patch.object(report_check, "covering_analysis", return_value=covering),
+            mock.patch.object(
+                report_check.audit_gaps, "audit_coverage", return_value=gap
+            ),
+        ):
+            (f,) = report_check.analysis_findings(
+                ctx, result_section=False, link_unresolved=link_unresolved
+            )
+        return f
+
+    def test_missing_coverage_stays_a_blocker_and_names_the_link_s_way_out(self):
+        f = self._found(link_unresolved=True, covering=[], gap="none saw it")
+        self.assertEqual(
+            (f.grade, f.rule),
+            (
+                BLOCKER,
+                cited_rule("LAB-017 The number of audits follows the cost tier"),
+            ),
+        )
+        self.assertTrue(
+            f.text.startswith(
+                "analysis audit: no analysis audit covers the area as it is now, "
+                "and none can until the exploration link resolves"
+            ),
+            f.text,
+        )
+        assert f.fix is not None
+        self.assertTrue(
+            f.fix.startswith(
+                "resolve the exploration link first, as its blocker names; "
+                "then `report-check area` names the audit where one is still owed"
+            ),
+            f.fix,
+        )
+        self.assertNotIn("labkit-audit", f.line)
+
+    def test_the_twin_with_the_link_resolved_the_gap_names_the_audit(self):
+        f = self._found(link_unresolved=False, covering=[], gap="none saw it")
+        self.assertEqual(f.text, "analysis audit: none saw it")
+        self.assertEqual(
+            f.fix,
+            "audit the answering run as it stands: `labkit-audit area --mode "
+            "analysis`, then decide its findings",
+        )
+
+    def test_a_covering_record_with_findings_open_keeps_its_way_out(self):
+        for link_unresolved in (True, False):
+            with self.subTest(link_unresolved=link_unresolved):
+                f = self._found(
+                    link_unresolved=link_unresolved,
+                    covering=[object()],
+                    gap="1 finding undecided",
+                )
+                self.assertEqual(f.text, "analysis audit: 1 finding undecided")
+                assert f.fix is not None
+                self.assertIn("then decide its findings", f.fix)
+
+
 class AnAnsweringRunWithoutItsRecord(unittest.TestCase):
     """`unreportable_gaps`: an answering run whose config.json the file
     state lacks cannot be held to what it was; a run that reads and is a
