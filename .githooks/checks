@@ -24,11 +24,41 @@ if [ ! -x "$venv/python" ]; then
     echo "checks: no $venv/python — create it: python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'" >&2
     exit 1
 fi
+gitdir=$(git rev-parse --absolute-git-dir)
+# The state the checks read: the tree of every file not ignored, as the
+# working tree holds it (tracked and untracked, through an index of its own,
+# since the checks read the tree and not the commit), the interpreter and the
+# installed packages. labkit's own editable line is left out: it names HEAD,
+# which the release commit moves, and its code is in the tree. Empty when
+# git cannot build the tree; then nothing is reused or recorded.
+state_key() {
+    tmp=$(mktemp -d) || return 1
+    tree=$(GIT_INDEX_FILE="$tmp/index" git read-tree HEAD 2>/dev/null &&
+        GIT_INDEX_FILE="$tmp/index" git add -A . 2>/dev/null &&
+        GIT_INDEX_FILE="$tmp/index" git write-tree 2>/dev/null)
+    code=$?
+    rm -rf "$tmp"
+    [ "$code" -eq 0 ] || return 1
+    python=$("$venv/python" -V 2>&1) || return 1
+    packages=$("$venv/python" -m pip freeze --exclude-editable 2>/dev/null | git hash-object --stdin) || return 1
+    printf 'tree %s\n%s\npackages %s\n' "$tree" "$python" "$packages"
+}
+# A whole run that passed on this state stands for both tiers (the fast tier
+# is part of it): the release's run before its commit is reused by the
+# commit hook and the push hook, where the same content ran again for about
+# twelve minutes (2026-11-20). Written only by a green full run whose state
+# did not change while it ran. Delete the file to run anyway.
+record="$gitdir/labkit-checks-passed"
+key=$(state_key) || key=""
+if [ -n "$key" ] && [ -f "$record" ] && [ "$(cat "$record")" = "$key" ]; then
+    echo "checks ($tier): the whole checks passed on this state already, not run again (record: $record)"
+    exit 0
+fi
 fail=0
 # Every check's whole output and exit code, kept until the next run of this
 # tier: a failure shown as its last 25 lines could not be told apart from a
 # known flaky test afterwards (2026-11-03). In this worktree's own git dir.
-log="$(git rev-parse --absolute-git-dir)/labkit-checks-$tier.log"
+log="$gitdir/labkit-checks-$tier.log"
 : > "$log"
 run() {
     name=$1
@@ -55,3 +85,10 @@ else
 fi
 [ "$fail" -eq 0 ] || exit 1
 echo "checks ($tier): ruff, format, pyright, pytest green"
+if [ "$tier" = full ] && [ -n "$key" ]; then
+    if [ "$(state_key)" = "$key" ]; then
+        printf '%s\n' "$key" > "$record"
+    else
+        echo "checks ($tier): the state changed while the checks ran — green, but no record for a later hook" >&2
+    fi
+fi
