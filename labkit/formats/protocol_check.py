@@ -1638,20 +1638,30 @@ def prompt_blocks(protocol: Path) -> list[str]:
     for n, f in enumerate(found):
         if f.name != "prompt":
             continue
-        indent = len(lines[f.line - 1]) - len(lines[f.line - 1].lstrip())
-        end = len(lines)
-        for g in found[n + 1 :]:
-            deeper = len(lines[g.line - 1]) - len(lines[g.line - 1].lstrip()) > indent
-            if not deeper:
-                end = g.line - 1
-                break
-        for j in range(f.line, end):
-            if lines[j].startswith("#"):
-                end = j
-                break
-        region = lines[f.line : end]
+        region = lines[f.line : field_region_end(lines, found, n)]
         blocks += ["\n".join(region[s:e]) for _, s, e in markdown.fence_spans(region)]
     return blocks
+
+
+def field_region_end(lines: list[str], found: list[FieldLine], n: int) -> int:
+    """The 0-based index of the line after the region of field FOUND[N] in
+    LINES (`str.splitlines` of the text `fields` parsed into FOUND): the
+    next field at the same depth or shallower, or the next heading, or the
+    end — what stands below a label, its blocks and their sentences
+    included. The one boundary the Prompt reader (`prompt_blocks`) and its
+    writer (`protocol_result.fill_prompts`) share. Pure."""
+    f = found[n]
+    indent = len(lines[f.line - 1]) - len(lines[f.line - 1].lstrip())
+    end = len(lines)
+    for g in found[n + 1 :]:
+        deeper = len(lines[g.line - 1]) - len(lines[g.line - 1].lstrip()) > indent
+        if not deeper:
+            end = g.line - 1
+            break
+    for j in range(f.line, end):
+        if lines[j].startswith("#"):
+            return j
+    return end
 
 
 def registered_prompt_blocks(protocol: Path) -> list[str]:

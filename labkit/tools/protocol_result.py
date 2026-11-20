@@ -12,6 +12,7 @@ from __future__ import annotations
 
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import markdown
@@ -26,13 +27,16 @@ from labkit.checks import recheck
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
     display_label,
+    PLACEHOLDER_IN_PROMPT,
     RECORDED_RESULTS_LABEL,
     BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
     field_lines,
     field_name,
+    field_region_end,
     fields,
     insert_line,
+    is_stamp_placeholder_block,
     replace_lines,
 )
 from labkit.tools.protocol_edit import fill
@@ -297,54 +301,157 @@ def limit_lines(
     return text, written
 
 
-def fill_prompts(text: str, constants: dict[str, str]) -> str:
-    """Return the protocol text with the Prompt field's code block written
-    from the scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT`
-    first, each under a `── NAME ──` line when there are several.
+#: what the Prompt field's line says once `fill_prompts` wrote its blocks
+#: below an empty one: the sentences above the blocks are not sent
+PROMPT_FIELD_NOTE = (
+    "The model receives exactly the text inside each block; the sentence above "
+    "a block names its constant and how its placeholders are filled, and is "
+    "not sent."
+)
+#: a sentence above a Prompt block: the constant it names, in backticks,
+#: then " — "
+PROMPT_SENTENCE = re.compile(r"^\s*`([A-Z][A-Z0-9_]*)` — ")
 
-    The block is what `code-check` holds the script to (prompt drift); the
-    label fill cannot reach a code block. Replaces the block that follows
-    the label (within three lines), or inserts one."""
+
+def prompt_sentence(name: str, prompt: str) -> str:
+    """The sentence `fill_prompts` writes above the block of constant NAME
+    until someone fills it: the name, then a placeholder for what the
+    prompt is for and how each `{placeholder}` of PROMPT is filled, in the
+    order of first use. Pure."""
+    slots = dict.fromkeys(PLACEHOLDER_IN_PROMPT.findall(prompt))
+    how = "".join(f"; `{slot}`: how it is filled" for slot in slots)
+    return f"`{name}` — <what it is for{how}>"
+
+
+def fill_prompts(text: str, constants: dict[str, str]) -> str:
+    """Return the protocol text with the Prompt field written from the
+    scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT` first: one
+    block per constant, holding exactly what the model receives, under a
+    sentence that names it (`` `NAME` — … ``) and is not sent. A sentence
+    written for a constant stays as written; for a new one the sentence is
+    `prompt_sentence`'s placeholder. An empty field line gets
+    PROMPT_FIELD_NOTE; a written one stays.
+
+    The blocks are what `code-check` holds the script to (prompt drift);
+    the label fill cannot reach a code block. What stands below the field
+    (`protocol_check.field_region_end`) is written anew, except a block
+    whose sentence names a constant the scripts do not hold as a PROMPT
+    (`EXTRA_CONTEXT`, a person's instruction): it stays. The blocks keep
+    the order they stand in; a constant not yet there is added after
+    them. Of the blocks no sentence names, the stamp's
+    placeholder is replaced, and so is one other while no block has a
+    sentence — the block an earlier fill wrote. Raises ValueError without a
+    constant, without exactly one Prompt field, for a block that never
+    closes, and — writing nothing — for any other unnamed block or prose
+    below the field that is no sentence: it would be lost."""
     if not constants:
         raise ValueError(
             "no PROMPT constant readable in the area's scripts (an f-string "
             "renders at run time and cannot be copied) — write the block by hand"
         )
-    hits = [f for f in fields(text) if f.name == "prompt"]
+    found = fields(text)
+    hits = [n for n, f in enumerate(found) if f.name == "prompt"]
     if len(hits) != 1:
-        where = ", ".join(str(f.line) for f in hits) or "none"
+        where = ", ".join(str(found[n].line) for n in hits) or "none"
         raise ValueError(f"expected one Prompt field, found {where}")
-    (f,) = hits
+    (n,) = hits
+    f = found[n]
     lines = text.splitlines()
-    names = sorted(constants, key=lambda n: (n != "PROMPT", n))
-    body: list[str] = []
-    for name in names:
-        if len(names) > 1:
-            body.append(f"── {name} ──")
-        body += constants[name].splitlines()
-    start = end = f.last  # 0-based index just after the field's value
-    for j in range(f.last, min(f.last + 3, len(lines))):
-        m = markdown.FENCE.match(lines[j])
-        if m:
-            # the one fence rule (markdown.closes): a line merely
-            # starting with the marker does not close it
-            k = next(
-                (
-                    k
-                    for k in range(j + 1, len(lines))
-                    if markdown.closes(lines[k], m.group(2))
-                ),
-                None,
-            )
-            if k is None:
-                raise ValueError(f"line {j + 1}: the Prompt block never closes")
-            start, end = j, k + 1
-            break
-    block = ["  ```text", *[f"  {ln}" if ln else "" for ln in body], "  ```"]
-    if start == end:  # no block yet: a blank line, then the block
-        block = ["", *block]
-    lines[start:end] = block
+    end = field_region_end(lines, found, n)
+    region = lines[f.last : end]  # below the field's value, to its end
+    kept = _prompt_segments(region, constants, first_line=f.last + 1)
+    new = sorted(
+        set(constants) - {s.name for s in kept}, key=lambda c: (c != "PROMPT", c)
+    )
+    below: list[str] = []
+    for s in [*kept, *[PromptSegment(name, "", ()) for name in new]]:
+        if s.name not in constants:  # another constant's block, as written
+            below += ["", *s.lines]
+            continue
+        below += [
+            "",
+            f"  {s.sentence or prompt_sentence(s.name, constants[s.name])}",
+            "",
+            "  ```text",
+            *[f"  {ln}" if ln else "" for ln in constants[s.name].splitlines()],
+            "  ```",
+        ]
+    if end < len(lines):  # a blank line before the next field or heading
+        below.append("")
+    head = lines[f.line - 1 : f.last]
+    if not f.value.strip():
+        head[-1] = f"{head[-1].rstrip()} {PROMPT_FIELD_NOTE}"
+    lines[f.line - 1 : end] = [*head, *below]
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+
+
+@dataclass(frozen=True)
+class PromptSegment:
+    """One block below the Prompt field as `fill_prompts` keeps it: the
+    constant its sentence NAMEs, that SENTENCE as written, and — for a
+    constant the scripts hold as no PROMPT — its LINES from sentence to
+    closing fence, kept as they stand (empty for a PROMPT constant, whose
+    block is written anew)."""
+
+    name: str
+    sentence: str
+    lines: tuple[str, ...]
+
+
+def _prompt_segments(
+    region: list[str], constants: dict[str, str], *, first_line: int
+) -> list[PromptSegment]:
+    """What `fill_prompts` keeps of REGION, the lines below the Prompt
+    field (FIRST_LINE the 1-based line of its first): each block a
+    sentence names, in the order they stand (`PromptSegment`; LINES only
+    for a constant not among CONSTANTS). Blank lines, the stamp's
+    placeholder block and — while no block has a sentence — one unnamed
+    block, an earlier fill's, are dropped. Raises ValueError for a block
+    that never closes, any other unnamed block, or a line that is none of
+    these. Pure."""
+    kept: list[PromptSegment] = []
+    unnamed: list[int] = []
+    used: set[int] = set()
+    for _, start, stop in markdown.fence_spans(region):
+        if stop >= len(region):
+            raise ValueError(
+                f"line {first_line + start - 1}: the Prompt block never closes"
+            )
+        used.update(range(start - 1, stop + 1))
+        above = next((j for j in range(start - 2, -1, -1) if region[j].strip()), None)
+        named = above is not None and above not in used
+        m = (
+            PROMPT_SENTENCE.match(region[above])
+            if above is not None and named
+            else None
+        )
+        if above is None or m is None:
+            if not is_stamp_placeholder_block("\n".join(region[start:stop])):
+                unnamed.append(first_line + start - 1)
+            continue
+        used.add(above)
+        name = m.group(1)
+        lines = () if name in constants else tuple(region[above : stop + 1])
+        kept.append(PromptSegment(name, region[above].strip(), lines))
+    # an unnamed block is the one an earlier fill wrote only where no block
+    # has a sentence yet; beside named blocks it is someone's own
+    allowed = 0 if kept else 1
+    if len(unnamed) > allowed:
+        raise ValueError(
+            f"line{'s' if len(unnamed) > 1 else ''} "
+            f"{', '.join(map(str, unnamed))}: {len(unnamed)} Prompt block(s) no "
+            f"sentence names — --prompts replaces only the block an earlier fill "
+            f"wrote, before any block had a sentence; name each with a sentence "
+            f"above it (`NAME` — what it is for), or remove it"
+        )
+    stray = [j for j, ln in enumerate(region) if ln.strip() and j not in used]
+    if stray:
+        raise ValueError(
+            f"line {first_line + stray[0]}: prose below the Prompt field that is "
+            f"no sentence above a block — --prompts would drop it; move it into "
+            f"the field's line or a sentence (`NAME` — …)"
+        )
+    return kept
 
 
 def without_result(text: str) -> str:

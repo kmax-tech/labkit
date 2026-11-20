@@ -526,10 +526,23 @@ class Prompts(unittest.TestCase):
                 prompt_check.check_prompt_drift(protocol.parent, protocol), []
             )
             text = protocol.read_text()
-        self.assertIn("  ── PROMPT ──\n  Does this text make a causal claim?", text)
-        self.assertIn("── PROMPT_NULL ──", text)
+        # one block per constant under its sentence, PROMPT first; nothing in
+        # a block the model does not receive
+        self.assertIn(
+            "  `PROMPT` — <what it is for; `{text}`: how it is filled>\n\n"
+            "  ```text\n  Does this text make a causal claim?",
+            text,
+        )
+        self.assertIn("  `PROMPT_NULL` — <what it is for; `{text}`", text)
+        self.assertLess(text.index("`PROMPT` —"), text.index("`PROMPT_NULL` —"))
         self.assertIn("  Answer with a single word, Yes or No.", text)
+        self.assertNotIn("──", text)
         self.assertNotIn("<the real prompt", text)
+        self.assertIn(
+            f"- **Prompt (verbatim, per variant):** {protocol_result.PROMPT_FIELD_NOTE}\n",
+            text,
+        )
+        self.assertIn("  ```\n\n- **Model I/O:**", text)
 
     def test_a_changed_constant_drifts_again(self):
         with tempfile.TemporaryDirectory() as d:
@@ -554,6 +567,92 @@ class Prompts(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             protocol_result.fill_prompts(TEMPLATE, {})
         self.assertIn("no PROMPT constant", str(cm.exception))
+
+    CONSTS = {"PROMPT": "Q {a} and {b} and {a}?", "PROMPT_NULL": "N?"}
+
+    def test_a_sentence_names_every_placeholder_once_in_order(self):
+        self.assertEqual(
+            protocol_result.prompt_sentence("PROMPT", self.CONSTS["PROMPT"]),
+            "`PROMPT` — <what it is for; `{a}`: how it is filled; "
+            "`{b}`: how it is filled>",
+        )
+        self.assertEqual(
+            protocol_result.prompt_sentence("PROMPT_NULL", "N?"),
+            "`PROMPT_NULL` — <what it is for>",
+        )
+
+    def test_a_written_sentence_and_another_constants_block_stay(self):
+        """argmining27 03: the sentences written by hand and the block of
+        `EXTRA_CONTEXT`, which no PROMPT constant holds, survive a refill
+        — the blocks of the constants are written again from the script."""
+        once = protocol_result.fill_prompts(TEMPLATE, self.CONSTS)
+        mine = "`PROMPT` — the judge's question; `{a}`, `{b}`: from the item."
+        extra = "  `EXTRA_CONTEXT` — inserted at `{a}`.\n\n  ```text\n  Context: {c}\n  ```\n"
+        edited = once.replace(
+            "`PROMPT` — <what it is for; `{a}`: how it is filled; `{b}`: how it is filled>",
+            mine,
+        ).replace("  N?\n  ```\n", "  N?\n  ```\n\n" + extra)
+        again = protocol_result.fill_prompts(
+            edited, {**self.CONSTS, "PROMPT": "Q2 {a} and {b}?"}
+        )
+        self.assertIn(f"  {mine}\n\n  ```text\n  Q2 {{a}} and {{b}}?\n  ```", again)
+        self.assertIn(extra, again)
+        # each block where it stood: EXTRA_CONTEXT after PROMPT_NULL, a new
+        # constant after both
+        self.assertLess(again.index("`PROMPT_NULL` —"), again.index("`EXTRA_CONTEXT`"))
+        grown = protocol_result.fill_prompts(again, {**self.CONSTS, "PROMPT_ALT": "A?"})
+        self.assertLess(grown.index("`EXTRA_CONTEXT`"), grown.index("`PROMPT_ALT` —"))
+        self.assertEqual(
+            protocol_result.fill_prompts(
+                again, {**self.CONSTS, "PROMPT": "Q2 {a} and {b}?"}
+            ),
+            again,
+        )
+
+    def test_an_earlier_fill_is_replaced(self):
+        """The one block an earlier fill wrote, its `── NAME ──` lines
+        inside, is replaced by the blocks with their sentences."""
+        old = TEMPLATE.replace(
+            "  <the real prompt",
+            "  ── PROMPT ──\n  Q old\n  ── PROMPT_NULL ──\n  N?\n  <x",
+        )
+        new = protocol_result.fill_prompts(old, self.CONSTS)
+        self.assertNotIn("──", new)
+        self.assertNotIn("Q old", new)
+        self.assertEqual(new, protocol_result.fill_prompts(TEMPLATE, self.CONSTS))
+
+    def test_what_a_refill_would_lose_is_refused(self):
+        """A second block no sentence names, or prose below the field that
+        is no sentence, would be dropped: refused with its line instead."""
+        once = protocol_result.fill_prompts(TEMPLATE, self.CONSTS)
+        for name, edited, said in (
+            (
+                "a second unnamed block",
+                once.replace(
+                    "  N?\n  ```\n", "  N?\n  ```\n\n  ```text\n  mine\n  ```\n"
+                ),
+                "Prompt block(s) no sentence names",
+            ),
+            (
+                "prose below the field",
+                once.replace("  N?\n  ```\n", "  N?\n  ```\n\n  A note of mine.\n"),
+                "prose below the Prompt field",
+            ),
+        ):
+            with self.subTest(name):
+                # the twin: the plain refill passes
+                protocol_result.fill_prompts(once, self.CONSTS)
+                with self.assertRaises(ValueError) as cm:
+                    protocol_result.fill_prompts(edited, self.CONSTS)
+                self.assertIn(said, str(cm.exception))
+                self.assertRegex(str(cm.exception), r"^lines? \d+")
+
+    def test_a_written_field_line_stays(self):
+        line = "- **Prompt (verbatim, per variant):**"
+        own = TEMPLATE.replace(line, f"{line} Two variants, one per arm.")
+        new = protocol_result.fill_prompts(own, self.CONSTS)
+        self.assertIn(f"{line} Two variants, one per arm.\n", new)
+        self.assertNotIn(protocol_result.PROMPT_FIELD_NOTE, new)
 
     def prompts_cli(self, protocol: Path) -> tuple[int, str, str]:
         """`protocol-fill PROTOCOL --prompts`: (exit code, stdout, stderr)."""
@@ -584,7 +683,7 @@ class Prompts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             protocol = self.area(d)
             rc, out, _ = self.prompts_cli(protocol)
-            self.assertIn("── PROMPT_NULL ──", protocol.read_text())
+            self.assertIn("`PROMPT_NULL` —", protocol.read_text())
         self.assertEqual(rc, 0)
         self.assertIn("filled: Prompt", out)
 

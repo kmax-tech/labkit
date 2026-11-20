@@ -56,7 +56,7 @@ Fill the before-run fields, including `type` and each promise's sentence:
 - For a fit or an apply, also fill the inference criterion, the quality check and a null condition in the same run. The criterion decides which conclusion the result supports. The quality check tests whether the measurement can carry that conclusion.
 - For a computation, name the kept number in the head's `[kept]` table: the metrics.json key the run must hold as a number, and its unit ("1" for a dimensionless number). `labkit-init exp --kind compute --kept KEY --unit UNIT` stamps it; else `protocol-fill <PROTOCOL> "kept.key=KEY" "kept.unit=UNIT"`. The skeleton reads the key from there; finalize refuses a run that does not hold it as a number.
 - If a computation is compared with a value the task states ("0.62 within 0.01"), run this before the first measurement: `labkit-init exp --kind compute --kept KEY --reference VALUE[±TOL]`, or write the head's `[reference]` table yourself. The value is compared with the `[kept]` key. Register no criterion. A miss is a result, and the run writes the verdict.
-- If the head contains a `[model]` table, also fill Data profile. Copy the skeleton's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
+- If the head contains a `[model]` table, also fill Data profile. Copy the skeleton's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`: one block per constant, with exactly what the model receives. Then fill the sentence above each block, which begins with the constant's name: say what the prompt is for and how each `{placeholder}` is filled. The sentence is not sent to the model.
 
 A promise id is its kind and a number:
 

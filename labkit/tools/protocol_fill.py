@@ -1110,7 +1110,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--prompts",
         action="store_true",
-        help="write the Prompt block from the area scripts' PROMPT constants",
+        help="write one Prompt block per PROMPT constant of the area scripts, each under a sentence that is not sent",
     )
     ap.add_argument(
         "--render",

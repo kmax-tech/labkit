@@ -47,7 +47,7 @@
 - **Prompt (verbatim, per variant):**
 
   ```text
-  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
+  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes one block per PROMPT constant of the script; the model receives exactly a block's text, and the sentence above it, which says what the prompt is for and how each {placeholder} is filled, is not sent>
   ```
 
 - **Model I/O:** <in…>

@@ -24,7 +24,7 @@
 - **Prompt (verbatim, per variant):**
 
   ```text
-  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
+  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes one block per PROMPT constant of the script; the model receives exactly a block's text, and the sentence above it, which says what the prompt is for and how each {placeholder} is filled, is not sent>
   ```
 
 - **Null condition / anchors (in the same run):** [quality-check-2] <the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within the permitted deviation null_band of chance, a reasoned value, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>
