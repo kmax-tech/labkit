@@ -280,20 +280,22 @@ def stamp_count(
     deliverables: tuple[str, ...] = (),
     report_file: str | None = None,
     protocol_type: str = "exploratory",
+    area_name: str = "lines",
 ) -> tuple[Path, Path]:
     """The counting skeleton at low repeat cost in LAB, filled and committed:
     lines per document over three documents (1, 2, 6 lines — mean 3.0).
+    AREA_NAME is the area's; a second area of one lab reads the same documents.
     With DELIVERABLES (stamped into the script) each is one row of the mean
     under the kept key (`[kept] key = "lines_mean"`, filled through
     protocol-fill); REPORT_FILE registers a report; PROTOCOL_TYPE is the
     head's type. Returns (area, protocol)."""
     root = lab.root
     docs = root / "data" / "raw" / "docs"
-    docs.mkdir(parents=True)
+    docs.mkdir(parents=True, exist_ok=True)
     for name, lines in (("a.txt", 1), ("b.txt", 2), ("c.txt", 6)):
         (docs / name).write_text("x\n" * lines, encoding="utf-8")
     area, protocol = lab.exp(
-        "lines",
+        area_name,
         repeat_cost="low",
         kind="compute",
         deliverables=deliverables,
@@ -605,6 +607,15 @@ def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
     return area, protocol
 
 
+def clean_answer(lab: Lab, area: Path) -> str:
+    """The answer of an analysis audit of the count AREA that names no
+    finding and lists the measuring script as read."""
+    rel = area.relative_to(lab.root).as_posix()
+    return (
+        f"verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n{rel}/scripts/01_measure.py"
+    )
+
+
 class CountCommands(unittest.TestCase):
     """The commands an agent runs on a fresh count area (`stamp_count`):
     measure, labkit-audit with the model's answer given, --decide,
@@ -619,11 +630,7 @@ class CountCommands(unittest.TestCase):
         self.area, self.protocol = stamp_count(
             self.lab, protocol_type=self.PROTOCOL_TYPE
         )
-        rel = self.area.relative_to(self.lab.root).as_posix()
-        self.clean = (
-            "verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n"
-            f"{rel}/scripts/01_measure.py"
-        )
+        self.clean = clean_answer(self.lab, self.area)
 
     # -- the commands, as an agent runs them
     def measure(self) -> str:

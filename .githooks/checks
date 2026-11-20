@@ -10,7 +10,7 @@
 #
 # Why two tiers: the scenario files hold most of the suite's time — measured
 # on 2026-11-10, when 13 files carried the mark: ~80 %, 383 s whole, 81 s
-# without them, on 11 cores; 20 files carry it on 2026-11-19, not timed again.
+# without them, on 11 cores; 22 files carry it on 2026-11-20, not timed again.
 # A commit that breaks a scenario is caught at the push, never on GitHub.
 set -u
 tier=${1:-}
