@@ -22,7 +22,11 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_block import CONFIRMATORY, COUNTS, EXPLORATORY
-from labkit.formats.protocol_then import as_measured, protocol_path_at
+from labkit.formats.protocol_then import (
+    FIRST_MEASUREMENT,
+    as_measured,
+    protocol_path_at,
+)
 from labkit.formats.protocol_check import (
     REGISTERED_FIELDS,
     field_name,
@@ -601,7 +605,11 @@ def _promise_differences(
 
 
 def registrations_as_first_measured(
-    protocol: Path, groups: Sequence[Sequence["RunDir"]], root: Path | None
+    protocol: Path,
+    groups: Sequence[Sequence["RunDir"]],
+    root: Path | None,
+    *,
+    role: str = FIRST_MEASUREMENT,
 ) -> tuple[list[tuple[str, str]], str]:
     """([(text, where)], "") — PROTOCOL's text as each of its first
     measurements saw it (`area_state.Measured.first_groups`, every run at
@@ -611,6 +619,8 @@ def registrations_as_first_measured(
     registrations: K3 holds that protocol, a replacement declares its
     changes against each (K1). ([], why) when one first measurement's
     registration cannot be read back. Never an invented earlier value.
+    ROLE names each run in its WHERE (`as_measured`): "run" where the
+    caller cannot tell that GROUPS hold the first measurement.
     Raises RuntimeError when git fails."""
     if not groups:
         return [
@@ -618,7 +628,7 @@ def registrations_as_first_measured(
         ], ""
     texts: dict[str, str] = {}
     for rd in (rd for group in groups for rd in group):
-        text, where = as_measured(protocol, rd, root)
+        text, where = as_measured(protocol, rd, root, role=role)
         if text is None:
             return [], where
         texts.setdefault(text, where)

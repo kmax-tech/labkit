@@ -345,7 +345,8 @@ def run_compared_with(flow: Workflow, run: Path | None) -> Path | None:
     workflow that binds is UNDECIDED and the station returns that one
     hold, comparing nothing; the prompt then asks this function with the
     workflow of the texts that read (`workflow_of_first_texts`), so the
-    run audited keeps its own text as the one shown."""
+    run audited keeps its own text as the one the change is taken
+    against."""
     return run if flow is Workflow.EXPLORATORY else None
 
 

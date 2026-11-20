@@ -1627,9 +1627,16 @@ class CorrectedDescription(CorrectionCommands):
             blocking, "resolved", "Data / scope says 3 documents, as the run read"
         )
         self.assertEqual(rc, 0, out)
-        # the auditor judged the change: the field as registered and as it reads now
+        # the auditor judged the change: the field as first registered, in
+        # the audited run's own text and as it reads now
         self.assertIn(
-            f"Data / scope registered (as its first measurement {self.run_a}", prompt
+            f"Data / scope as first registered (as its first measurement {self.run_a}",
+            prompt,
+        )
+        self.assertIn(
+            f"Data / scope in the audited run's own text (as the run audited "
+            f"{self.run_a}",
+            prompt,
         )
         self.assertIn(f"Data / scope now: {self.RIGHT}", prompt)
         rc, out = self.lab.finalize(self.area)

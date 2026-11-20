@@ -309,9 +309,9 @@ class CorrectionInExploration(e2e.CorrectionCommands):
     def test_a_correction_after_a_step_is_shown_against_the_audited_runs_text(self):
         """A step on A changes Data / scope to 2 documents, C is measured
         under it, and C's audit has the field corrected in place to 3. The
-        hold releases against C's own text, so the follow-up shows C's value
-        as the one corrected — not the first measurement A's — and its
-        `resolved` lets C be adopted."""
+        hold releases against C's own text, so the follow-up names C's value
+        as the one the change is judged from — the first measurement A's
+        stands beside it as context — and its `resolved` lets C be adopted."""
         two = "data/raw/docs, 2 documents, read directly"
         self.describe(two)
         self.lab.fill(
@@ -332,9 +332,15 @@ class CorrectionInExploration(e2e.CorrectionCommands):
         self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
         rc, out, prompt = self.follow_up(blocking, "resolved", "3 documents, as C read")
         self.assertEqual(rc, 0, out)
-        self.assertIn(f"Data / scope registered (as the run audited {run_c}", prompt)
-        self.assertIn(f"): {two}", prompt)
-        self.assertNotIn(f"): {self.WRONG}", prompt)
+        own = f"Data / scope in the audited run's own text (as the run audited {run_c}"
+        (own_line,) = [ln for ln in prompt.splitlines() if own in ln]
+        self.assertTrue(own_line.endswith(f"): {two}"), own_line)
+        self.assertIn(
+            "change to judge: from the value in the audited run's own text", prompt
+        )
+        # the first registration is there as context, under its own name only
+        (wrong,) = [ln for ln in prompt.splitlines() if ln.endswith(f"): {self.WRONG}")]
+        self.assertIn("Data / scope as first registered (", wrong)
         rc, out = self.lab.adopt(self.protocol, run_c)
         self.assertEqual(rc, 0, out)
 
