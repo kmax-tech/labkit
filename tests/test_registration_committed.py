@@ -1022,6 +1022,36 @@ class ScopeAsFirstMeasured(_Repository):
             line,
         )
         self.assertIn("register anew", line)
+        self.assertIn("a scope set after a result was seen", line)
+
+    def test_a_first_measurement_that_stopped_without_a_number_is_named_so(self):
+        """argmining27 experiment 02 (2026-11-17): the first start broke
+        off while building its requests, no row and no number; the
+        exclusions sharpened after it were held as "set after a result was
+        seen". The binding stays — a started measurement counts as the
+        first —, but the hold names the run as stopped without a number and
+        claims no result seen. The twin with a number is the test above."""
+        first = self._run(self._register(ALL_ROADS), self.FIRST)
+        (first / runs.COMPLETION_FILE).unlink()
+        runs.metrics_path(first).unlink()
+        (first / runs.FAILURE_FILE).write_text(
+            json.dumps({"error": "ValueError", "message": "no request built"}),
+            encoding="utf-8",
+        )
+        narrowed = ALL_ROADS.replace(
+            "areas outside the buffer",
+            "roads other than BR highways; areas outside the buffer",
+        )
+        self._run(self._register(narrowed), RUN)
+        (line,) = self._changes()
+        self.assertIn(
+            f"after the first measurement {self.FIRST} (stopped without a number: "
+            f"ValueError: no request built): Exclusions / filters",
+            line,
+        )
+        self.assertNotIn("after a result was seen", line)
+        self.assertIn("a started measurement counts as the first", line)
+        self.assertIn(f"Next: restore Exclusions / filters as {self.FIRST}", line)
 
     def test_a_reference_moved_after_the_first_measurement_is_held(self):
         self._run(self._register(ALL_ROADS), self.FIRST)

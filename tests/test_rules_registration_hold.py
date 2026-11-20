@@ -13,6 +13,7 @@ the commands: tests/test_end_to_end.py, `CorrectedDescription` and
 
 from __future__ import annotations
 
+import dataclasses
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest import mock
@@ -343,6 +344,14 @@ FIRST = FirstMeasurement(
     "2026-11-10T09-00-00_aaaa",
     " (`git show abc123:PROTOCOL-x.md`)",
     Command(RESTORE, "protocol-fill PROTOCOL-x.md --force …"),
+    stopped="",
+    result_written=True,
+)
+#: FIRST as a start that broke off before any row
+FIRST_STOPPED = dataclasses.replace(
+    FIRST,
+    stopped=" (stopped without a number: ValueError: no request built)",
+    result_written=False,
 )
 ANALYSIS = Command(AUDIT, "labkit-audit area --mode analysis")
 MEASURE_AGAIN = Command(MEASURE, "python area/scripts/01_measure.py")
@@ -646,6 +655,49 @@ class TheHoldAsTheProtocolStands(unittest.TestCase):
         withdraw = Command(WITHDRAW, "protocol-fill PROTOCOL-x.md --withdraw --why x")
         (f,) = self.hold([REF], measure=MEASURE_AGAIN, withdraw=withdraw)
         self.assertEqual(f.withdraw_first, withdraw)
+
+
+class AFirstMeasurementWithoutANumberClaimsNoResultSeen(unittest.TestCase):
+    """`set_after_first`: a hold may say a result was seen only where the
+    first measurement's number is here to read; a start that broke off is
+    named as such and still binds (argmining27 experiment 02, decided by
+    the author 2026-11-18)."""
+
+    def holds(self, first: FirstMeasurement) -> list[GateFinding]:
+        seen = pure_call(seen_hold, PID, "r2", first, SCOPE, [None], ANALYSIS)
+        now = pure_call(
+            now_hold,
+            PID,
+            "r1",
+            first,
+            SCOPE,
+            [None],
+            ANALYSIS,
+            measure=None,
+            withdraw=None,
+        )
+        return [*seen, *now]
+
+    def test_a_stopped_first_measurement_is_named_and_still_holds(self):
+        for f in self.holds(FIRST_STOPPED):
+            with self.subTest(f.text[:60]):
+                self.assertEqual(f.grade, BLOCKER)
+                self.assertIn(f"{FIRST.run_id}{FIRST_STOPPED.stopped}:", f.text)
+                self.assertNotIn("after a result was seen", f.text)
+                self.assertIn(
+                    "a started measurement counts as the first, a number or not",
+                    f.text,
+                )
+                assert f.fix is not None
+                self.assertIn("restore Data / scope", f.fix)
+
+    def test_the_twin_a_first_measurement_with_a_number_saw_a_result(self):
+        for f in self.holds(FIRST):
+            with self.subTest(f.text[:60]):
+                self.assertIn(
+                    "a scope set after a result was seen does not answer", f.text
+                )
+                self.assertNotIn("counts as the first", f.text)
 
 
 class AnAdditionIsToldWhereItBelongs(unittest.TestCase):

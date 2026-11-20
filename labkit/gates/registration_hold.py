@@ -256,10 +256,9 @@ def registration_changes(
     restore_from = shown_then(protocol, first, root)
     return scope + [
         blocker(
-            f"the registration changed after the first measurement {first.dir.name}: "
-            f"{'; '.join(changes)} (recorded by the answering run {run.name}) — a "
-            f"bar set after a result was seen does not answer the registered "
-            f"question",
+            f"the registration changed after the first measurement {first.dir.name}"
+            f"{stopped_note(first)}: {'; '.join(changes)} (recorded by the answering "
+            f"run {run.name}) — {set_after_first('a bar', result_written(first))}",
             fix=f"restore the [[promise]] tables as {first.dir.name} "
             f"registered them ({'; '.join(restores)}){restore_from}, "
             f"and measure again, then audit that run (the earlier runs stay); or, "
@@ -656,23 +655,58 @@ def _scope_held(
 @dataclass(frozen=True)
 class FirstMeasurement:
     """The first measurement a scope hold names: its RUN_ID, the clause
-    saying where its text can be read (`shown_then`) and the step that
-    restores it (`restore_step`)."""
+    saying where its text can be read (`shown_then`), the step that
+    restores it (`restore_step`), the note on a run without a number
+    (`stopped_note`, "" otherwise) and whether its number is here to read
+    (`result_written`) — what decides whether the hold may say a result
+    was seen (`set_after_first`)."""
 
     run_id: str
     shown: str
     step: Command | None
+    stopped: str
+    result_written: bool
 
 
 def first_measurement(
     protocol: Path, first: RunDir, root: Path | None
 ) -> FirstMeasurement:
     """FIRST as a scope hold on PROTOCOL names it (`FirstMeasurement`).
-    Reads git through `shown_then` and `restore_step`."""
+    Reads git through `shown_then` and `restore_step`, FIRST's directory
+    through `stopped_note` and `result_written`."""
     return FirstMeasurement(
         first.dir.name,
         shown_then(protocol, first, root),
         restore_step(protocol, first, root),
+        stopped=stopped_note(first),
+        result_written=result_written(first),
+    )
+
+
+def result_written(rd: RunDir) -> bool:
+    """Is the number of run RD here to read (`runs.number_written` "yes")?
+    False for a run that stopped or still runs without one, and for one
+    only a commit holds: then only its start is evidenced. A failure
+    record that does not read is no number either. Reads RD's directory."""
+    try:
+        return number_written(rd).answer == "yes"
+    except RunConfigError:  # metrics.json absent, its failure record unread
+        return False
+
+
+def set_after_first(what: str, written: bool) -> str:
+    """The closing clause of a hold on WHAT ("a scope", "a bar") changed
+    after the first measurement. Where its number was WRITTEN, a result
+    was seen. Where not, the hold must not claim that: a started
+    measurement counts as the first all the same — without its rows,
+    nothing shows that no result was seen —, so the binding stays and
+    only the reason differs. Pure."""
+    if written:
+        return f"{what} set after a result was seen does not answer the registered question"
+    return (
+        f"{what} set after it does not answer the registered question: a started "
+        f"measurement counts as the first, a number or not, since no rows show "
+        f"that no result was seen"
     )
 
 
@@ -736,9 +770,9 @@ def seen_hold(
         found.append(
             blocker(
                 f"what the number is about changed after the first measurement "
-                f"{first.run_id}: {quoted_changes(cause)} (as the answering "
-                f"run {run_id} saw the protocol) — a scope set after a "
-                f"result was seen does not answer the registered question",
+                f"{first.run_id}{first.stopped}: {quoted_changes(cause)} (as the "
+                f"answering run {run_id} saw the protocol) — "
+                f"{set_after_first('a scope', first.result_written)}",
                 fix=fix,
                 step=first.step,
                 rule=scope_rule(cause),
@@ -885,9 +919,9 @@ def now_hold(
         found.append(
             blocker(
                 f"what the number is about changed after the first measurement "
-                f"{first.run_id}: {quoted_changes(cause)} (as the protocol stands "
-                f"now; no run measured under it yet) — a scope set after a result "
-                f"was seen does not answer the registered question, and a new "
+                f"{first.run_id}{first.stopped}: {quoted_changes(cause)} (as the "
+                f"protocol stands now; no run measured under it yet) — "
+                f"{set_after_first('a scope', first.result_written)}, and a new "
                 f"measurement would carry the change",
                 fix=fix,
                 step=first.step,
