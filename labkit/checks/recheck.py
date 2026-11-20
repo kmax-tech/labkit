@@ -66,6 +66,13 @@ reads from them into a row file of its own inside the run and registers
 it (`Run.output`); handed a file that is no row file, the recheck refuses
 it, naming the output, and reads nothing in its place.
 
+The recomputation (`recompute`) is the area's own evaluation, and the
+check assumes of it what it cannot enforce of a Python function: that it
+reads the rows it is handed and writes nothing — no file, no run, no
+metrics. It is called before the last reads of the check (the `[kept]`
+key of the run's own text, `kept_keys`), so a check refused at that read
+has already called it.
+
 Any disagreement is a SystemExit with a sentence — the area's `--check`
 calls this with no main of labkit's around it (the rule by caller stands
 at `console.Refused`); the verdict names what was compared. Rules of the
@@ -227,10 +234,13 @@ def answering_run_dir(area: Path, protocol: Path) -> Path:
     own analysis reads: the adopted run (`[result] run`), else the newest
     completed run bound to the protocol's id — the newest that reports an
     intent key where one does —; never a repeat draw. A choice whose run
-    reports no intent key while the protocol registers ids is refused. The choice `--check`, finalize and intent-check
-    make (`run_dir`, `chosen_run`), no rule of its own: a newer run does
-    not replace an adopted one. Raises SystemExit with the reason where no
-    run answers, or the protocol carries no stamped id."""
+    reports no intent key while the protocol registers ids is refused. The
+    choice `--check`, finalize and intent-check make (`run_dir`,
+    `chosen_run`), no rule of its own: a newer run does not replace an
+    adopted one. It guarantees that choice, not that the run is fit to
+    answer the question — that is what finalize, the audits and
+    report-check hold. Raises SystemExit with the reason where no run
+    answers, or the protocol carries no stamped id."""
     return run_dir(area, protocol)
 
 
