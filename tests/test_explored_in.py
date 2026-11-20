@@ -12,7 +12,9 @@ confirming audit is shown (`audit_prompt.exploration_evidence`); the
 warning report-check gives for a run of the exploration that audit was not
 shown (`report_exploration.later_use_findings`); and the blocker it gives
 for a link whose id names no one protocol (`report_exploration.link_gaps`;
-the rule from data in memory: tests/test_rules_report_exploration.py)."""
+the rule from data in memory: tests/test_rules_report_exploration.py), with
+the restore of a protocol no file carries read from the history
+(`protocol_then.last_held_with_id`, `report_exploration.last_held`)."""
 
 from __future__ import annotations
 
@@ -25,6 +27,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 from command_fixture import run_main
 from protocol_fixture import head, scope_file
@@ -38,7 +41,7 @@ from labkit.formats.exploration_link import (
     adopted_link,
     linked_exploration,
 )
-from labkit.formats.area_state import state_of
+from labkit.formats.area_state import HistoryUnread, state_of
 from labkit.formats.attempts import Attempt
 from labkit.formats.exploration_state import (
     SharedInput,
@@ -57,11 +60,14 @@ from labkit.formats.gate import (
 )
 from labkit.formats.protocol_block import BlockError, ExploredIn
 from labkit.formats.protocol_history import scope_differences
-from labkit.gates import registration_hold, report_check
+from labkit.formats.protocol_then import last_held_with_id
+from labkit.gates import registration_hold, report_check, report_exploration
 from labkit.gates.audit_prompt import exploration_evidence
 from labkit.gates.report_exploration import (
     LAB_050,
+    LastHeld,
     audit_began,
+    last_held,
     later_use_findings,
     link_gaps,
     use_after_audit_findings,
@@ -738,6 +744,88 @@ class AuditBegan(unittest.TestCase):
         self.assertIsNone(audit_began([self.RECORD], journal))
 
 
+class WhereAGoneProtocolWasLastHeld(_TwoAreas):
+    """`protocol_then.last_held_with_id`: the file and the commit a
+    checkout brings a protocol back from, found by the id its head named
+    there; and `report_exploration.last_held`, which asks it for the
+    link's blocker and says why where the history was not read."""
+
+    def head_commit(self) -> str:
+        return _git(self.root, "rev-parse", "HEAD")
+
+    def test_a_file_deleted_in_the_tree_is_held_by_head(self) -> None:
+        self.theirs.unlink()
+        self.assertEqual(
+            last_held_with_id(self.root, EXPLORATION),
+            [(self.theirs, self.head_commit())],
+        )
+
+    def test_a_committed_deletion_names_its_parent_and_the_checkout_restores(
+        self,
+    ) -> None:
+        held = self.head_commit()
+        self.theirs.unlink()
+        self.commit("the exploratory protocol removed")
+        self.commit("a later commit")
+        self.assertEqual(
+            last_held_with_id(self.root, EXPLORATION), [(self.theirs, held)]
+        )
+        _git(self.root, "checkout", held, "--", str(self.theirs))
+        self.assertEqual(
+            protocol_block.repo_protocol_ids(self.root)[EXPLORATION], [self.theirs]
+        )
+        # the twin: a protocol that stands is not named
+        self.assertEqual(last_held_with_id(self.root, EXPLORATION), [])
+
+    def test_an_id_no_commit_held_gives_none(self) -> None:
+        self.assertEqual(last_held_with_id(self.root, OTHER), [])
+        self.theirs.unlink()
+        self.assertEqual(last_held_with_id(self.root, OTHER), [])
+
+    def test_an_id_changed_in_a_file_that_stands_is_not_looked_into(self) -> None:
+        self.theirs.write_text(protocol(OTHER, "exploratory"), encoding="utf-8")
+        self.assertEqual(last_held_with_id(self.root, EXPLORATION), [])
+
+    def test_only_a_gone_file_that_carried_the_id_and_no_copy_in_a_run(self) -> None:
+        """A protocol copied into a run directory is a record, not a
+        protocol of the repo (`repo.SKIP_DIRS`), and a gone protocol of
+        another id is not this one."""
+        in_run = self.explore / "runs" / self.a / self.theirs.name
+        shutil.copy(self.theirs, in_run)
+        self.commit("a copy in the run")
+        in_run.unlink()
+        self.theirs.unlink()
+        self.ours.unlink()
+        self.assertEqual(
+            last_held_with_id(self.root, EXPLORATION),
+            [(self.theirs, self.head_commit())],
+        )
+
+    def test_the_gate_asks_the_history_of_the_area_s_repository(self) -> None:
+        self.theirs.unlink()
+        self.assertEqual(
+            last_held(self.confirm, EXPLORATION),
+            LastHeld(((self.theirs, self.head_commit()),)),
+        )
+
+    def test_outside_a_repository_the_reason_is_told(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            area = Path(tmp).resolve() / "area"
+            area.mkdir()
+            told = last_held(area, EXPLORATION)
+        self.assertEqual(told, LastHeld(unknown=f"{area} lies in no git repository"))
+
+    def test_a_history_git_cannot_list_is_told_in_its_words_not_as_none(self) -> None:
+        words = (
+            "what git holds under the repository cannot be listed: fatal: bad object"
+        )
+        with mock.patch.object(
+            report_exploration, "last_held_with_id", side_effect=HistoryUnread(words)
+        ):
+            told = last_held(self.confirm, EXPLORATION)
+        self.assertEqual(told, LastHeld(unknown=words))
+
+
 class LaterUse(_WithSource):
     """report-check's warning for a run of the exploration that shares an
     input digest and that the covering audit was not shown, and its
@@ -821,6 +909,14 @@ class LaterUse(_WithSource):
             f.line,
         )
         assert f.fix is not None
+        # the restore as the history gives it: the file, and HEAD's commit
+        # while the deletion is not committed
+        held = _git(self.root, "rev-parse", "HEAD")
+        self.assertIn(
+            f"bring the exploratory protocol back from the last commit that "
+            f"held it (`git checkout {held} -- {self.theirs}`), then ",
+            f.fix,
+        )
         self.assertIn("the link itself is registered and stays as written", f.fix)
         self.assertEqual(self.found(None), [])
 

@@ -7,7 +7,9 @@ chain (`report_check.chain_gaps`).
   names no protocol of the repo, or several, is a BLOCKER — guaranteed, a
   check not executable. The link names the basis of the confirmation;
   while it resolves to no one protocol, nothing of that basis was read,
-  and the result that names it is not released.
+  and the result that names it is not released. Where no file carries
+  the id, the way out names the restore the history gives (`last_held`,
+  which asks it; `LastHeld`, the answer as data).
 - At the analysis station (5), under a covering audit: the runs of the
   exploration's area that recorded an input digest a run of the
   confirmation recorded too and that the audit was not shown, because
@@ -21,11 +23,17 @@ chain (`report_check.chain_gaps`).
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from labkit.formats import attempts, findings, protocol_block
-from labkit.formats.area_state import CLOCKS_ASSUMED, AreaState, state_of
+from labkit.formats.area_state import (
+    CLOCKS_ASSUMED,
+    AreaState,
+    HistoryUnread,
+    state_of,
+)
 from labkit.formats.commands import (
     audit_command,
     checkout_command,
@@ -49,6 +57,8 @@ from labkit.formats.gate import (
     cited_rule,
 )
 from labkit.formats.protocol_block import ExploredIn
+from labkit.formats.protocol_then import last_held_with_id
+from labkit.formats.repo import git_root, shown
 from labkit.checks.audit_binding import covering_analysis
 from labkit.gates import ways_out
 from labkit.gates.report_context import Checked
@@ -165,25 +175,60 @@ def later_use_findings(
     ]
 
 
+@dataclass(frozen=True)
+class LastHeld:
+    """What the history tells of an id no protocol of the repo carries
+    (`last_held` asks; `unresolved_link_hold` words the restore from it):
+    FILES, each protocol file the working tree lacks that carried the id
+    in the last commit that held it, with that commit; UNKNOWN, "" when
+    the history was read, else why it was not — no repository, or git's
+    words on a history it could not list. Empty FILES with UNKNOWN "" is
+    an answer: no commit holds a restore."""
+
+    files: tuple[tuple[Path, str], ...] = ()
+    unknown: str = ""
+
+
+def last_held(area: Path, pid: str) -> LastHeld:
+    """`LastHeld` for PID in the repository AREA lies in
+    (`protocol_then.last_held_with_id`). A history git cannot list is not
+    read as "no commit holds it": its words are the answer's UNKNOWN, told
+    in the blocker. Raises GitError when git cannot run."""
+    root = git_root(area)
+    if root is None:
+        return LastHeld(unknown=f"{shown(area, Path.cwd())} lies in no git repository")
+    try:
+        return LastHeld(tuple(last_held_with_id(root, pid)))
+    except HistoryUnread as exc:
+        return LastHeld(unknown=str(exc))
+
+
 def link_gaps(ctx: Checked) -> list[GateFinding]:
     """The hold on a link that names no one protocol, read from CTX: the
     rule `unresolved_link_hold` over CTX's `[explored_in]`, the protocol
     ids of the repository as the working tree holds them
-    (`protocol_block.repo_protocol_ids`) and whether the area holds a
-    measurement of the protocol (`Measured.has_measured`). Asked in every
-    lane, with or without an answering run or a covering audit. Raises
-    BlockError on an `[explored_in]` that does not read."""
+    (`protocol_block.repo_protocol_ids`), whether the area holds a
+    measurement of the protocol (`Measured.has_measured`) and, for an id
+    no file carries, what the history holds of it (`last_held`; not asked
+    otherwise). Asked in every lane, with or without an answering run or
+    a covering audit. Raises BlockError on an `[explored_in]` that does
+    not read, GitError when git cannot run."""
     link = protocol_block.explored_in(ctx.text)
     if link is None:
         return []
+    ids = protocol_block.repo_protocol_ids(ctx.area)
+    gone = LastHeld()
+    if not ids.get(link.protocol):
+        gone = last_held(ctx.area, link.protocol)
     return unresolved_link_hold(
         link,
-        protocol_block.repo_protocol_ids(ctx.area),
+        ids,
         ctx.area,
         ctx.protocol,
         ctx.head.id,
         ways_out.handover(ctx.protocol),
         has_measured=ctx.area_state.measured_of(ctx.head.id).has_measured,
+        gone=gone,
     )
 
 
@@ -196,6 +241,7 @@ def unresolved_link_hold(
     handover_way: str,
     *,
     has_measured: bool,
+    gone: LastHeld,
 ) -> list[GateFinding]:
     """The BLOCKER for a LINK (the `[explored_in]` of PROTOCOL in AREA,
     whose own stamped id is PID, the one a new registration replaces)
@@ -213,7 +259,11 @@ def unresolved_link_hold(
 
     The ways out make the id name exactly one protocol: the exploratory
     protocol restored where none carries the id, the copy re-stamped where
-    several do. The link itself is written anew only while HAS_MEASURED is
+    several do. The restore is worded from GONE (`LastHeld`, read only
+    where no file carries the id): the checkout of each file the history
+    holds under the id, from the last commit that held it; where the
+    history holds none, or was not read, a sentence saying what is not
+    known — never a command with open slots. The link itself is written anew only while HAS_MEASURED is
     False (`Measured.has_measured`: no run of PROTOCOL that measured or
     may have, a lost one included); with one, the link is a registration
     part and stays as registered, and the alternatives are a new
@@ -226,10 +276,34 @@ def unresolved_link_hold(
         return []
     if not hits:
         named = "no protocol of this repo"
-        resolve = (
-            f"bring the exploratory protocol back from the commit that holds "
-            f"it (`{checkout_command('<EXPLORATION_PROTOCOL>', '<commit>')}`)"
+        restores = ", ".join(
+            f"`{checkout_command(shown(path, Path.cwd()), commit)}`"
+            for path, commit in gone.files
         )
+        if gone.unknown:
+            resolve = (
+                f"bring the exploratory protocol back from the commit that "
+                f"holds it — which commit and which path is not known here: "
+                f"{gone.unknown}"
+            )
+        elif not gone.files:
+            resolve = (
+                "put the exploratory protocol back in its place — git names "
+                "no restore: no commit of this repository holds a protocol "
+                "file with that id that the working tree lacks (it was never "
+                "committed, or its id was changed in a file that still stands)"
+            )
+        elif len(gone.files) == 1:
+            resolve = (
+                f"bring the exploratory protocol back from the last commit "
+                f"that held it ({restores})"
+            )
+        else:
+            resolve = (
+                f"bring the exploratory protocol back — {len(gone.files)} files "
+                f"carried the id, each in the last commit that held it; restore "
+                f"the one the link means ({restores})"
+            )
     else:
         named = f"{len(hits)} protocols ({', '.join(str(h) for h in hits)})"
         checks = ", ".join(f"`{gate_command('protocol-check', h)}`" for h in hits)

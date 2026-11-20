@@ -23,7 +23,7 @@ from labkit.formats.gate import (
     GateFinding,
 )
 from labkit.formats.protocol_block import ExploredIn
-from labkit.gates.report_exploration import unresolved_link_hold
+from labkit.gates.report_exploration import LastHeld, unresolved_link_hold
 from state_fixture import AREA
 
 pytestmark = pytest.mark.rule
@@ -35,10 +35,17 @@ PROTOCOL = AREA / "PROTOCOL-confirm.md"
 THEIRS = Path("experiments") / "01-explore" / "PROTOCOL-explore.md"
 COPY = Path("experiments") / "03-copy" / "PROTOCOL-explore.md"
 HANDOVER = "hand over: `the handover command`"
+COMMIT = "1f" * 20
+#: the history holds the exploratory protocol's file under the id
+HELD_ONCE = LastHeld(((THEIRS, COMMIT),))
 
 
 def held(
-    link: ExploredIn | None, ids: dict[str, list[Path]], *, has_measured: bool = True
+    link: ExploredIn | None,
+    ids: dict[str, list[Path]],
+    *,
+    has_measured: bool = True,
+    gone: LastHeld = HELD_ONCE,
 ) -> list[GateFinding]:
     """`unresolved_link_hold` for LINK against IDS, with no file read."""
     return pure_call(
@@ -50,6 +57,7 @@ def held(
         CONFIRMATION,
         HANDOVER,
         has_measured=has_measured,
+        gone=gone,
     )
 
 
@@ -70,11 +78,11 @@ class ALinkThatNamesNoOneProtocolHoldsTheRelease(unittest.TestCase):
         self.assertIn("BLOCKER (check not executable): exploration link:", f.line)
         assert f.fix is not None
         self.assertIn(
-            "bring the exploratory protocol back from the commit that holds it "
-            "(`git checkout <commit> -- <EXPLORATION_PROTOCOL>`)",
+            f"make the id name exactly one protocol of the repo: bring the "
+            f"exploratory protocol back from the last commit that held it "
+            f"(`git checkout {COMMIT} -- {THEIRS}`), then `report-check area`",
             f.fix,
         )
-        self.assertIn("then `report-check area`", f.fix)
 
     def test_an_id_two_protocols_carry_is_a_check_that_did_not_run(self):
         (f,) = held(LINK, {EXPLORATION: [THEIRS, COPY]})
@@ -97,6 +105,69 @@ class ALinkThatNamesNoOneProtocolHoldsTheRelease(unittest.TestCase):
     def test_the_twin_a_protocol_without_the_link_holds_nothing(self):
         self.assertEqual(held(None, {}), [])
         self.assertEqual(held(None, {EXPLORATION: [THEIRS, COPY]}), [])
+
+
+class TheRestoreIsWordedFromWhatTheHistoryHolds(unittest.TestCase):
+    """An id no file carries: the restore is a command only where the
+    history names the file and the commit; else a sentence says what is
+    not known, and no line with open slots is printed."""
+
+    def restore(self, gone: LastHeld) -> str:
+        (f,) = held(LINK, {}, gone=gone)
+        assert f.fix is not None
+        self.assertNotIn("<commit>", f.fix)
+        self.assertNotIn("<EXPLORATION_PROTOCOL>", f.fix)
+        self.assertIn(", then `report-check area`; ", f.fix)
+        return f.fix.split(", then `report-check area`")[0]
+
+    def test_several_files_under_the_id_are_each_named_with_their_commit(self):
+        other = "2e" * 20
+        told = self.restore(LastHeld(((COPY, other), (THEIRS, COMMIT))))
+        self.assertTrue(
+            told.endswith(
+                f"bring the exploratory protocol back — 2 files carried the id, "
+                f"each in the last commit that held it; restore the one the link "
+                f"means (`git checkout {other} -- {COPY}`, "
+                f"`git checkout {COMMIT} -- {THEIRS}`)"
+            ),
+            told,
+        )
+
+    def test_a_path_with_a_space_is_one_word_of_the_command(self):
+        spaced = Path("experiments") / "01 explore" / "PROTOCOL-explore.md"
+        told = self.restore(LastHeld(((spaced, COMMIT),)))
+        self.assertIn(f"(`git checkout {COMMIT} -- '{spaced}'`)", told)
+
+    def test_no_commit_holding_the_id_is_said_and_no_command_is_printed(self):
+        told = self.restore(LastHeld())
+        self.assertTrue(
+            told.endswith(
+                "put the exploratory protocol back in its place — git names no "
+                "restore: no commit of this repository holds a protocol file "
+                "with that id that the working tree lacks (it was never "
+                "committed, or its id was changed in a file that still stands)"
+            ),
+            told,
+        )
+        self.assertNotIn("git checkout", told)
+
+    def test_a_history_that_was_not_read_is_named_with_its_reason(self):
+        for unknown in (
+            "area lies in no git repository",
+            "what git holds under the repository cannot be listed: fatal: bad "
+            "object HEAD (`git fsck` names the damaged object)",
+        ):
+            with self.subTest(unknown=unknown):
+                told = self.restore(LastHeld(unknown=unknown))
+                self.assertTrue(
+                    told.endswith(
+                        f"bring the exploratory protocol back from the commit "
+                        f"that holds it — which commit and which path is not "
+                        f"known here: {unknown}"
+                    ),
+                    told,
+                )
+                self.assertNotIn("git checkout", told)
 
 
 class TheWayOutFollowsWhetherTheProtocolMeasured(unittest.TestCase):

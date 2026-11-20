@@ -61,7 +61,6 @@ UNCOVERED = (
     "BLOCKER: analysis audit: no analysis audit covers the area as it is now, "
     "and none can until the exploration link resolves"
 )
-RESTORE = "git checkout <commit> -- <EXPLORATION_PROTOCOL>"
 RESTAMP = "labkit-init exp <name> --kind …"
 
 
@@ -276,20 +275,38 @@ class TheLinkResolves(_Confirmation):
 
 
 class TheLinkNamesNoProtocol(_Confirmation):
-    """The exploratory protocol's file is gone from the working tree."""
+    """The exploratory protocol's file is gone — from the working tree
+    only, or by a commit. The blocker prints the restore the history
+    gives: the file and the last commit that held it, no slot left open."""
+
+    def restore_as_printed(self, line: str, commit: str) -> None:
+        """Run the way out's first command as the blocker LINE prints it:
+        the checkout of the exploratory protocol's file from COMMIT."""
+        restore = f"git checkout {commit} -- {shlex.quote(self.rel(self.exploration))}"
+        self.assertIn(
+            f"{RESOLVE}bring the exploratory protocol back from the last "
+            f"commit that held it (`{restore}`), then ",
+            line,
+        )
+        self.assertNotIn("<commit>", line)
+        self.assertNotIn("<EXPLORATION_PROTOCOL>", line)
+        self.lab.git(*shlex.split(restore)[1:])
 
     def test_the_adoption_is_refused_nothing_is_written_and_the_restore_releases_it(
         self,
     ) -> None:
         self.exploration.unlink()
         line = self.refused_once("no protocol of this repo")
-        # the way out's first command, its two placeholders filled: the
-        # commit that holds the file and the file
-        self.assertIn(f"(`{RESTORE}`)", line)
-        restore = RESTORE.replace("<commit>", "HEAD").replace(
-            "<EXPLORATION_PROTOCOL>", shlex.quote(self.rel(self.exploration))
-        )
-        self.lab.git(*shlex.split(restore)[1:])
+        # the deletion is not committed: HEAD holds the file
+        self.restore_as_printed(line, self.lab.git("rev-parse", "HEAD"))
+        self.released(line)
+
+    def test_a_committed_deletion_is_restored_from_the_commit_before_it(self) -> None:
+        held = self.lab.git("rev-parse", "HEAD")
+        self.lab.git("rm", "-q", self.rel(self.exploration))
+        self.lab.commit("the exploratory protocol removed")
+        line = self.refused_once("no protocol of this repo")
+        self.restore_as_printed(line, held)
         self.released(line)
 
 

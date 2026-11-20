@@ -6,22 +6,30 @@ promise block the run recorded (`as_measured`), and the step it made is that tex
 (`step_then`); the file is found by the
 id the run is bound to, now (`bound_protocol_file`) and in that commit
 (`protocol_path_at`). Mechanics only — what a difference between two such
-texts means is `protocol_history`'s and the gates'. Read-only; git is
-asked through `repo`.
+texts means is `protocol_history`'s and the gates'. A protocol the
+working tree no longer holds is found by its id in the last commit that
+held its file (`last_held_with_id`). Read-only; git is asked through
+`repo`.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises, protocol_block, runs
+from labkit.formats.area_state import last_committed
 from labkit.formats.repo import (
+    PROTOCOL_GLOB,
+    SKIP_DIRS,
     GitError,
     blob_text,
     blobs_then,
     commit_known,
     git_run,
+    rel_posix,
+    repo_protocols,
     text_at,
 )
 from labkit.formats.runs import RunDir
@@ -54,15 +62,44 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     names = [n for n in listed.stdout.split("\0") if n]
     for rel in sorted(n for n in names if Path(n).name.startswith("PROTOCOL-")):
         text = text_at(root, root / rel, commit)
-        if text is None:
-            continue
-        try:
-            table = protocol_block.parse_toml_block(text).get("protocol", {})
-        except protocol_block.BlockError:
-            continue  # a block that does not parse names no id to bind
-        if isinstance(table, dict) and table.get("id") == pid:
+        if text is not None and _id_then(text) == pid:
             return root / rel
     return None
+
+
+def _id_then(text: str) -> object:
+    """The id the head of a committed protocol TEXT names; None where its
+    block names none or does not parse — no id to bind. The head is read
+    as TOML only, since an older commit holds an older standard
+    `protocol_block.head` refuses."""
+    try:
+        table = protocol_block.parse_toml_block(text).get("protocol", {})
+    except protocol_block.BlockError:
+        return None
+    return table.get("id") if isinstance(table, dict) else None
+
+
+def last_held_with_id(root: Path, pid: str) -> list[tuple[Path, str]]:
+    """(path, commit) for each protocol file the working tree under the
+    repository ROOT lacks whose head named PID in the last commit that
+    held the file — HEAD while its deletion is not committed, else the
+    deletion's parent (`area_state.last_committed`) —, sorted by path:
+    `git checkout COMMIT -- PATH` brings a protocol carrying PID back.
+    Among the files a repo-wide scan reads (`repo.repo_protocols`:
+    `PROTOCOL-*.md` outside SKIP_DIRS). [] when no commit held such a
+    file: the protocol was never committed, or its id was changed in a
+    file that still stands, which this does not look into. Raises
+    HistoryUnread (a RuntimeError) when git cannot list or read the
+    history, GitError when git cannot run."""
+    skipped = "|".join(re.escape(d) for d in sorted(SKIP_DIRS))
+    file_name = re.escape(PROTOCOL_GLOB).replace(re.escape("*"), "[^/]+")
+    name = rf"((?:(?!(?:{skipped})/)[^/]+/)*{file_name})"
+    standing = {rel_posix(p, root) for p in repo_protocols(root)}
+    return [
+        (root / rel, commit)
+        for rel, text, commit in last_committed(root, root, name, standing)
+        if _id_then(text) == pid
+    ]
 
 
 #: the role under which `as_measured` names a run unless the caller gives

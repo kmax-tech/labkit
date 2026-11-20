@@ -1150,7 +1150,8 @@ def last_committed(
     repo: Path, folder: Path, name: str, held: Collection[str]
 ) -> list[tuple[str, str, str]]:
     """(key, text, commit) for each file a commit under REPO once held in
-    FOLDER whose path below it matches the pattern NAME (a regular
+    FOLDER (REPO itself: anywhere in the repository) whose path below it
+    matches the pattern NAME (a regular
     expression with one group, the key) and whose key is not in HELD:
     its text as the last commit that held it has it — HEAD when HEAD still
     holds it (deleted in the file state, the deletion not committed), else
@@ -1159,13 +1160,16 @@ def last_committed(
     newest first), one `git show` per file read back; [] before the first
     commit. The one reading of what a commit held and the file state
     lacks: a deleted run's record (`committed_runs`), a deleted start file
-    (`committed_starts`). Raises HistoryUnread (a RuntimeError) with git's
+    (`committed_starts`), a deleted protocol
+    (`protocol_then.last_held_with_id`). Raises HistoryUnread (a RuntimeError) with git's
     words when git cannot read the history — an object the repository
     lacks —, or when a file the history names cannot be read from the
     commit it says holds it; GitError when git cannot run."""
     if not head_sha(repo):
         return []
     rel = rel_posix(folder, repo)
+    # git names a path from the repository's root: no prefix for REPO itself
+    below = "" if rel == "." else f"{rel}/"
     args = [
         "log",
         "--format=%x00%H",
@@ -1173,15 +1177,15 @@ def last_committed(
         "--diff-filter=AD",
         "--no-renames",
         "--",
-        f"{rel}/",
+        below or ".",
     ]
     r = git_run(args, repo)
     if r.returncode != 0:
         raise HistoryUnread(
-            f"what git holds under {rel}/ cannot be listed: "
+            f"what git holds under {below or 'the repository'} cannot be listed: "
             f"{' '.join(r.stderr.split())} (`git fsck` names the damaged object)"
         )
-    wanted = re.compile(re.escape(rel) + "/" + name)
+    wanted = re.compile(re.escape(below) + name)
     # key → (A or D, commit, path), the newest event of each
     newest: dict[str, tuple[str, str, str]] = {}
     for chunk in r.stdout.split("\0"):
