@@ -65,12 +65,17 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     return None
 
 
+#: the role under which `as_measured` names a run unless the caller gives
+#: another
+FIRST_MEASUREMENT = "its first measurement"
+
+
 def as_measured(
     protocol: Path,
     rd: "RunDir",
     root: Path | None,
     *,
-    role: str = "its first measurement",
+    role: str = FIRST_MEASUREMENT,
 ) -> tuple[str | None, str]:
     """(text, where): PROTOCOL as run RD saw it — its recorded commit's text
     with the part of the run's `uncommitted.patch` that touches the protocol

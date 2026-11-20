@@ -48,6 +48,8 @@ LATER = "2026-10-07T10-00-00_ab12"
 #: a run id before FIRST's, for a measurement that is lost
 LOST = "2026-10-06T08-00-00_0c0c"
 UNDECIDED_TYPE = "<exploratory | confirmatory>"
+#: the Data / scope values of the prompt tests
+FOUR, THREE, TWO = "4 documents", "3 documents", "2 documents"
 
 
 class _TwoRuns(unittest.TestCase):
@@ -190,9 +192,9 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
 
     def measured_twice(self, protocol_type: str) -> Path:
         """Both runs under PROTOCOL_TYPE and the corrected text; LATER's path."""
-        self.run_under(protocol_type, "4 documents", FIRST)
-        later = self.run_under(protocol_type, "2 documents", LATER)
-        self.write(protocol_type, "3 documents", result=LATER)
+        self.run_under(protocol_type, FOUR, FIRST)
+        later = self.run_under(protocol_type, TWO, LATER)
+        self.write(protocol_type, THREE, result=LATER)
         return later
 
     def shown(self, run: Path | None) -> audit_prompt.FieldChange:
@@ -200,7 +202,23 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         text = self.protocol.read_text(encoding="utf-8")
         return audit_prompt._field_change(self.protocol, text, self.CORRECTION, run)
 
+    def printed(self, change: audit_prompt.FieldChange) -> list[str]:
+        """The lines the follow-up prints for CHANGE, as the piece holds
+        them under the correction's entry."""
+        record = audit_record(
+            "r.toml", mode="analysis", run_id=LATER, found=[self.CORRECTION]
+        )
+        member = followup.Member(record, 1, self.CORRECTION)
+        shown = audit_prompt.Followup([member], None, {}, {member.ref: change})
+        ((_, text),) = audit_prompt.earlier_piece(shown)
+        lines = text.split("\n")
+        start = next(i for i, ln in enumerate(lines) if ln.startswith("  decided:"))
+        return [ln.removeprefix("  ") for ln in lines[start + 1 :]]
+
     def test_in_exploration_both_compare_with_the_answering_runs_own_text(self):
+        """The twin of the confirmatory case: the change is taken against
+        the own text of the run audited, as the hold compares; the first
+        registration is printed under its own name, as context."""
         later = self.measured_twice("exploratory")
         flow, lines, ctx = self.station()
         self.assertEqual(ctx.run, later)
@@ -209,12 +227,33 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         self.assertEqual(len(held), 1, lines)
         self.assertIn('Data / scope "2 documents" → "3 documents"', held[0])
         change = self.shown(later)
-        self.assertEqual(
-            (change.registered, change.now), ("2 documents", "3 documents")
+        assert change.run_audited is not None and change.first_measured is not None
+        self.assertEqual((change.run_audited.value, change.now), (TWO, THREE))
+        self.assertIn(f"the run audited {LATER}", change.run_audited.where)
+        self.assertEqual(change.first_measured.value, FOUR)
+        self.assertTrue(change.compared_with_run_audited)
+        first, own, now, judged = self.printed(change)
+        self.assertTrue(
+            first.startswith(
+                f"Data / scope as first registered (as its first measurement {FIRST} "
+            ),
+            first,
         )
-        self.assertIn(f"the run audited {LATER}", change.where)
+        self.assertTrue(first.endswith(f"): {FOUR}"), first)
+        self.assertTrue(own.endswith(f"): {TWO}"), own)
+        self.assertEqual(now, f"Data / scope now: {THREE}")
+        self.assertTrue(
+            judged.startswith(
+                "change to judge: from the value in the audited run's own text "
+                "to the value now"
+            ),
+            judged,
+        )
 
     def test_in_confirmation_both_compare_with_the_first_measurement(self):
+        """Confirmatory, first measurement told, a run audited: the first
+        registration is the benchmark, and the audited run's own text
+        stands beside it under its own name."""
         later = self.measured_twice("confirmatory")
         flow, lines, _ = self.station()
         self.assertIs(flow, Workflow.CONFIRMATORY)
@@ -222,19 +261,103 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         self.assertTrue(held, lines)
         self.assertTrue(all('Data / scope "4 documents"' in ln for ln in held), held)
         change = self.shown(later)
-        self.assertEqual(change.registered, "4 documents")
-        self.assertIn(f"first measurement {FIRST}", change.where)
+        assert change.run_audited is not None and change.first_measured is not None
+        self.assertEqual(change.first_measured.value, FOUR)
+        self.assertIn(f"first measurement {FIRST}", change.first_measured.where)
+        self.assertEqual(change.run_audited.value, TWO)
+        self.assertIn(f"the run audited {LATER}", change.run_audited.where)
+        self.assertEqual(change.first_untold, "")
+        self.assertFalse(change.compared_with_run_audited)
+        first, own, now, judged = self.printed(change)
+        self.assertTrue(
+            first.startswith(
+                f"Data / scope as first registered (as its first measurement {FIRST} "
+            ),
+            first,
+        )
+        self.assertTrue(first.endswith(f"): {FOUR}"), first)
+        self.assertTrue(
+            own.startswith(
+                f"Data / scope in the audited run's own text (as the run audited "
+                f"{LATER} "
+            ),
+            own,
+        )
+        self.assertTrue(own.endswith(f"): {TWO}"), own)
+        self.assertEqual(now, f"Data / scope now: {THREE}")
+        self.assertTrue(
+            judged.startswith(
+                "change to judge: from the value as first registered to the value now"
+            ),
+            judged,
+        )
+
+    def test_a_change_after_the_first_registration_shows_though_the_run_saw_it(
+        self,
+    ):
+        """The case the benchmark protects: the field was changed after
+        the first registration and the run audited already saw the new
+        value. Against that run's own text nothing changed; against the
+        first registration the change is there, and that is the one to
+        judge. Both lines are printed though two of the values are equal."""
+        self.run_under("confirmatory", FOUR, FIRST)
+        later = self.run_under("confirmatory", THREE, LATER)
+        self.write("confirmatory", THREE, result=LATER)
+        change = self.shown(later)
+        assert change.run_audited is not None and change.first_measured is not None
+        self.assertEqual(
+            (change.first_measured.value, change.run_audited.value, change.now),
+            (FOUR, THREE, THREE),
+        )
+        self.assertFalse(change.compared_with_run_audited)
+        first, own, now, judged = self.printed(change)
+        self.assertTrue(first.endswith(f"): {FOUR}"), first)
+        self.assertIn("as first registered", first)
+        self.assertTrue(own.endswith(f"): {THREE}"), own)
+        self.assertIn("in the audited run's own text", own)
+        self.assertEqual(now, f"Data / scope now: {THREE}")
+        self.assertIn("from the value as first registered", judged)
+
+    def test_an_audited_run_whose_text_cannot_be_read_back_says_so(self):
+        """The run audited recorded another promise block than its commit
+        gives: its line says that its text cannot be read back, with the
+        reason, and no other text stands in; the first registration is
+        shown as before."""
+        later = self.measured_twice("confirmatory")
+        cfg = later / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["promises"]["block_sha"] = "0" * 12
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        change = self.shown(later)
+        assert change.run_audited is not None and change.first_measured is not None
+        self.assertIsNone(change.run_audited.value)
+        self.assertEqual(change.first_measured.value, FOUR)
+        first, own, now, _ = self.printed(change)
+        self.assertTrue(first.endswith(f"): {FOUR}"), first)
+        self.assertTrue(
+            own.startswith(
+                f"Data / scope in the audited run's own text: cannot be read back — "
+                f"the run audited {LATER} "
+            ),
+            own,
+        )
+        self.assertIn("recorded block 000000000000", own)
+        self.assertNotIn(FOUR, own)
+        self.assertEqual(now, f"Data / scope now: {THREE}")
 
     def test_an_undecided_first_type_is_shown_against_the_first_measurement(self):
         """The prompt reads the station's decision, not the head as it
         stands: named exploratory after an undecided first measurement,
-        the field is still shown against the first measurement's text."""
-        self.run_under(UNDECIDED_TYPE, "4 documents", FIRST)
-        later = self.run_under("exploratory", "2 documents", LATER)
-        self.write("exploratory", "3 documents", result=LATER)
+        the change is still taken against the first measurement's text."""
+        self.run_under(UNDECIDED_TYPE, FOUR, FIRST)
+        later = self.run_under("exploratory", TWO, LATER)
+        self.write("exploratory", THREE, result=LATER)
         flow, _, _ = self.station()
         self.assertIs(flow, Workflow.UNDECIDED)
-        self.assertEqual(self.shown(later).registered, "4 documents")
+        change = self.shown(later)
+        assert change.first_measured is not None
+        self.assertEqual(change.first_measured.value, FOUR)
+        self.assertFalse(change.compared_with_run_audited)
 
     def lose_a_possible_first(self) -> None:
         """A measurement only the run index lists: measured, indexed and
@@ -246,11 +369,36 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
             self.assertEqual(runlog.reindex(self.area), 0)
         shutil.rmtree(lost)
 
+    def assert_first_only_as_evidence(self, lines: list[str]) -> None:
+        """LINES say that the first registration is undetermined, and show
+        FIRST's value only under the evidence name, FIRST named as a run."""
+        self.assertTrue(
+            lines[0].startswith("first registration: undetermined — "), lines[0]
+        )
+        self.assertIn("may have been the first measurement", lines[0])
+        self.assertIn(
+            "Which workflow binds this protocol's runs is undetermined", lines[0]
+        )
+        self.assertTrue(
+            lines[1].startswith(
+                f"Data / scope in the first measurement whose text can be read back "
+                f"— evidence, not "
+                f"established as the first registration (as run {FIRST} saw it ("
+            ),
+            lines[1],
+        )
+        self.assertTrue(lines[1].endswith(f"): {FOUR}"), lines[1])
+        text = "\n".join(lines)
+        self.assertNotIn("as first registered", text)
+        self.assertNotIn(f"first measurement {FIRST}", text)
+        self.assertEqual(text.count(FOUR), 1, text)
+
     def test_an_untold_first_keeps_the_audited_runs_own_text(self):
         """An exploration whose first measurement is untold: the station
-        returns the one hold and no workflow, as before — and the follow-up
-        still shows the corrected field against the own text of the run
-        audited, not against another run's, and says what is missing."""
+        returns the one hold and no workflow — and the follow-up still
+        takes the change against the own text of the run audited, says
+        what is missing, and shows the first measurement that reads only
+        as evidence."""
         later = self.measured_twice("exploratory")
         self.lose_a_possible_first()
         flow, lines, ctx = self.station()
@@ -260,55 +408,94 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         self.assertIn(f"{LOST}", lines[0])
         self.assertIn("may have been the first measurement", lines[0])
         change = self.shown(later)
-        self.assertEqual(
-            (change.registered, change.now), ("2 documents", "3 documents")
+        assert change.run_audited is not None
+        self.assertEqual((change.run_audited.value, change.now), (TWO, THREE))
+        self.assertIn(f"the run audited {LATER}", change.run_audited.where)
+        self.assertIn("may have been the first measurement", change.first_untold)
+        self.assertIn(LOST, change.first_untold)
+        self.assertTrue(change.compared_with_run_audited)
+        printed = self.printed(change)
+        self.assert_first_only_as_evidence(printed)
+        _, _, own, now, judged = printed
+        self.assertTrue(
+            own.startswith(
+                f"Data / scope in the audited run's own text (as the run audited "
+                f"{LATER} saw"
+            ),
+            own,
         )
-        self.assertIn(f"the run audited {LATER}", change.where)
-        self.assertIn("may have been the first measurement", change.untold)
-        self.assertIn(LOST, change.untold)
-        # what the prompt prints of it
-        record = audit_record(
-            "r.toml", mode="analysis", run_id=LATER, found=[self.CORRECTION]
-        )
-        member = followup.Member(record, 1, self.CORRECTION)
-        shown = audit_prompt.Followup([member], None, {}, {member.ref: change})
-        ((_, text),) = audit_prompt.earlier_piece(shown)
-        self.assertIn(f"Data / scope registered (as the run audited {LATER} saw", text)
-        self.assertIn("): 2 documents\n  Data / scope now: 3 documents", text)
-        self.assertIn("\n  first registration: undetermined — ", text)
-        self.assertIn("Which workflow binds this protocol's runs is undetermined", text)
-        self.assertNotIn("4 documents", text)
+        self.assertTrue(own.endswith(f"): {TWO}"), own)
+        self.assertEqual(now, f"Data / scope now: {THREE}")
+        self.assertIn("from the value in the audited run's own text", judged)
 
-    def test_the_twin_an_untold_first_in_confirmation_names_the_first_that_reads(
-        self,
-    ):
-        """The twin: the same loss in a confirmatory protocol. The field is
-        compared with the first measurement that reads, as without the
-        loss, and the change says that the first is not told."""
+    def test_the_twin_an_untold_first_in_confirmation_shows_evidence_only(self):
+        """The twin: the same loss in a confirmatory protocol. The change
+        is taken against the first registration, which is undetermined;
+        the first measurement that reads appears as evidence, never as
+        the registration, and the audited run keeps its own line."""
         later = self.measured_twice("confirmatory")
         self.lose_a_possible_first()
         flow, lines, _ = self.station()
         self.assertIs(flow, Workflow.UNDECIDED)
         self.assertEqual(len(lines), 1, lines)
         change = self.shown(later)
-        self.assertEqual(change.registered, "4 documents")
-        self.assertIn(f"first measurement {FIRST}", change.where)
-        self.assertIn("may have been the first measurement", change.untold)
+        assert change.run_audited is not None and change.first_measured is not None
+        self.assertEqual(change.first_measured.value, FOUR)
+        self.assertEqual(change.run_audited.value, TWO)
+        self.assertIn("may have been the first measurement", change.first_untold)
+        self.assertFalse(change.compared_with_run_audited)
+        printed = self.printed(change)
+        self.assert_first_only_as_evidence(printed)
+        _, _, own, now, judged = printed
+        self.assertTrue(own.endswith(f"): {TWO}"), own)
+        self.assertEqual(now, f"Data / scope now: {THREE}")
+        self.assertTrue(
+            judged.startswith(
+                "change to judge: from the first registration to the value now — "
+                "and the first registration is undetermined"
+            ),
+            judged,
+        )
+
+    def test_without_a_run_an_untold_first_is_undetermined_too(self):
+        """No run audited and the first measurement untold: the same
+        labelling — undetermined, the text that reads as evidence — and
+        no line of a run audited."""
+        self.measured_twice("confirmatory")
+        self.lose_a_possible_first()
+        change = self.shown(None)
+        self.assertIsNone(change.run_audited)
+        self.assertIn(LOST, change.first_untold)
+        printed = self.printed(change)
+        self.assert_first_only_as_evidence(printed)
+        self.assertEqual(len(printed), 4, printed)
+        self.assertNotIn("audited run's own text", "\n".join(printed))
 
     def test_a_told_first_names_nothing_missing(self):
         later = self.measured_twice("exploratory")
-        self.assertEqual(self.shown(later).untold, "")
+        change = self.shown(later)
+        self.assertEqual(change.first_untold, "")
+        self.assertNotIn("undetermined", "\n".join(self.printed(change)))
 
     def test_without_a_run_only_the_prompt_compares_and_names_the_first(self):
-        """The one case where the two part, kept as it was: with no run
-        audited an exploration has no run's own text, so the follow-up
-        shows the field against the first measurement's — and no hold
-        compares anything, since station 2 runs only with an answering
-        run (`registration_hold.run_compared_with`)."""
+        """The one case where the two part: with no run audited an
+        exploration has no run's own text, so the follow-up takes the
+        change against the first measurement's — and no hold compares
+        anything, since station 2 runs only with an answering run
+        (`registration_hold.run_compared_with`)."""
         self.measured_twice("exploratory")
         change = self.shown(None)
-        self.assertEqual(change.registered, "4 documents")
-        self.assertIn(f"first measurement {FIRST}", change.where)
+        assert change.first_measured is not None
+        self.assertEqual(change.first_measured.value, FOUR)
+        self.assertIn(f"first measurement {FIRST}", change.first_measured.where)
+        self.assertIsNone(change.run_audited)
+        self.assertFalse(change.compared_with_run_audited)
+        first, now, judged = self.printed(change)
+        self.assertIn("as first registered", first)
+        self.assertEqual(
+            judged,
+            "change to judge: from the value as first registered to the value now",
+        )
         ctx = report_context.checked(self.area, self.protocol)
         self.assertEqual(
             registration_hold.corrected_in_place(
@@ -321,4 +508,45 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
                 flow=Workflow.EXPLORATORY,
             ),
             [],
+        )
+
+
+class TheLinesOfAFieldChange(unittest.TestCase):
+    """`audit_prompt.field_change_lines` from a change in memory: what no
+    repository state above reaches."""
+
+    def test_no_measurement_listed_and_the_first_untold_shows_no_first_text(self):
+        """A contradicted binding with no measurement listed: nothing is
+        printed in the place of the first registration but that it is
+        undetermined."""
+        change = audit_prompt.FieldChange(
+            "Unit", None, None, "ms", "run r1: its record names p-1", False
+        )
+        self.assertEqual(
+            audit_prompt.field_change_lines(change),
+            [
+                "first registration: undetermined — run r1: its record names p-1. "
+                "Which workflow binds this protocol's runs is undetermined too. "
+                "No value below is established as the first registration",
+                "Unit now: ms",
+                "change to judge: from the first registration to the value now — "
+                "and the first registration is undetermined: no value shown here "
+                "is that benchmark, and a value marked as evidence does not stand "
+                "in for it",
+            ],
+        )
+
+    def test_a_first_registration_that_cannot_be_read_back_says_so(self):
+        change = audit_prompt.FieldChange(
+            "Unit",
+            audit_prompt.ValueThen(None, "its first measurement r1 recorded no commit"),
+            None,
+            "ms",
+            "",
+            False,
+        )
+        self.assertEqual(
+            audit_prompt.field_change_lines(change)[0],
+            "Unit as first registered: cannot be read back — its first "
+            "measurement r1 recorded no commit",
         )
