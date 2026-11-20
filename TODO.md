@@ -4,7 +4,7 @@ Stand: 2026-11-20. Diese Datei nennt den nächsten Auftrag, offene Entscheidunge
 
 ## Reihenfolge
 
-**Gebaut, noch nicht veröffentlicht: Nachrechnung über mehrere Ausgabedateien und gemeinsame Lauf-Auswahl** (Branch `feat/recheck-multi-output`). Als Nächstes: die konkrete Prompt-Anbindung entwerfen (Schritt 2 der [Zwei-Stufen-Notiz](docs/notes/2026-11-20-two-stage-model-measurement.md#steps)); dabei muss die spätere stagekit-Anbindung ihre Zeilendateien nachvollziehbar aus den JSON-Stufenausgaben erzeugen und im Lauf registrieren. Ein neuer Versuch in argmining27 bleibt separat freizugeben. Weder ein Modellversuch noch Änderungen an stagekit sind beauftragt.
+**Gebaut, noch nicht veröffentlicht: Nachrechnung über mehrere Ausgabedateien und gemeinsame Lauf-Auswahl** (Branch `feat/recheck-multi-output`). Als Nächstes: Entscheidungen zum [Entwurf der Prompt-Anbindung](docs/notes/2026-11-20-stagekit-prompt-binding-plan.md#decisions-for-the-author) (Prompt-Dateien, exakter Vergleich, gemeinsame Verweigerung vor dem Aufruf, Umwandlung in Zeilendateien); erst danach ein Bauauftrag. Dabei muss die spätere stagekit-Anbindung ihre Zeilendateien nachvollziehbar aus den JSON-Stufenausgaben erzeugen und im Lauf registrieren. Ein neuer Versuch in argmining27 bleibt separat freizugeben. Weder ein Modellversuch noch Änderungen an stagekit sind beauftragt.
 
 | Status               | Thema                                           | Nächste Handlung                                                                                              |
 |----------------------|-------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
