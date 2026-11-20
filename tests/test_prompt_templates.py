@@ -68,6 +68,10 @@ class NamedBlocks(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "two Prompt blocks are named `g`"):
             protocol_check.named_prompt_blocks(field(("g", "a"), ("g", "b")))
 
+    def test_a_blank_line_indented_less_than_its_fence_is_blank(self) -> None:
+        text = "- **Prompt:** x\n\n  `g` — it\n\n  ```text\n  a\n \n  b\n  ```\n"
+        self.assertEqual(protocol_check.named_prompt_blocks(text), {"g": "a\n\nb"})
+
     def test_an_unnamed_block_is_left_out(self) -> None:
         text = "- **Prompt:** x\n\n  ```text\n  a\n  ```\n"
         self.assertEqual(protocol_check.named_prompt_blocks(text), {})
@@ -113,6 +117,39 @@ class WriterAndReaderAgree(unittest.TestCase):
             "`generate_context` — <what it is for; `$claim`: how it is filled; "
             "`$finding`: how it is filled>",
             text,
+        )
+
+    def test_edge_templates_read_back_as_written(self) -> None:
+        """A trailing blank line, CRLF, leading spaces and a blank line kept
+        inside: each reads back and compares as written."""
+        for template in ("x\n\n", "a\r\nb\r\n", "  a\n\n  b", "a"):
+            with self.subTest(template=template):
+                text = protocol_result.fill_prompts(PROTOCOL, {}, {"t": template})
+                blocks = protocol_check.named_prompt_blocks(text)
+                self.assertEqual(
+                    protocol_check.template_drift({"t": template}, blocks), []
+                )
+
+    def test_a_block_with_one_blank_line_more_differs(self) -> None:
+        """Only the template's final line ending is dropped, never a line
+        of the block."""
+        self.assertNotEqual(
+            protocol_check.template_drift({"t": "x\n"}, {"t": "x\n"}), []
+        )
+
+    def test_a_line_separator_no_protocol_line_holds_is_refused(self) -> None:
+        with self.assertRaisesRegex(ValueError, "U\\+2028"):
+            protocol_result.fill_prompts(PROTOCOL, {}, {"t": "a\u2028b"})
+        (told,) = protocol_check.template_drift({"t": "a\u2028b"}, {"t": "a\u2028b"})
+        self.assertIn("U+2028", told)
+
+    def test_a_block_named_in_lower_case_and_no_template_stays(self) -> None:
+        """The sentence names a template the call does not pass: its block is
+        kept as written, as one naming another constant is."""
+        text = protocol_result.fill_prompts(PROTOCOL, {}, {"judge": "Q: $q"})
+        again = protocol_result.fill_prompts(text, {}, {"other": "R"})
+        self.assertEqual(
+            set(protocol_check.named_prompt_blocks(again)), {"judge", "other"}
         )
 
     def test_a_name_both_constant_and_template_is_refused(self) -> None:

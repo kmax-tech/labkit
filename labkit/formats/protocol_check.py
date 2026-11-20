@@ -1745,7 +1745,10 @@ def named_prompt_blocks(text: str) -> dict[str, str]:
             body: list[str] = []
             for k in range(start, stop):
                 ln = region[k]
-                if ln and not ln.startswith(indent):
+                if not ln.strip() and len(ln) <= len(indent):
+                    body.append("")  # a blank line, however indented
+                    continue
+                if not ln.startswith(indent):
                     raise ValueError(
                         f"line {f.line + k + 1}: a line of the Prompt block "
                         f"`{name}` stands left of its fence — its indentation "
@@ -1756,12 +1759,26 @@ def named_prompt_blocks(text: str) -> dict[str, str]:
     return out
 
 
+#: the line separators `str.splitlines` splits at besides LF and CR: a
+#: protocol line cannot hold one, so a template carrying one is refused
+#: rather than read as two lines
+OTHER_LINE_SEPARATORS = "\v\f\x1c\x1d\x1e\x85\u2028\u2029"
+
+
 def as_compared(text: str) -> str:
-    """TEXT as the exact template comparison reads it
-    (`template_drift`): CRLF and CR as LF, one final line ending dropped —
-    a fenced block cannot show it. Nothing else changes. Pure."""
+    """The template TEXT as the exact comparison reads it
+    (`template_drift`) and the Prompt block is written from it
+    (`protocol_result.fill_prompts`): CRLF and CR as LF, one final line
+    ending dropped — a fenced block cannot show it. Nothing else changes;
+    a block's own text is compared as it reads. Pure."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     return text[:-1] if text.endswith("\n") else text
+
+
+def other_line_separators(text: str) -> list[str]:
+    """The `OTHER_LINE_SEPARATORS` TEXT carries, as `U+XXXX`, in order of
+    the constant. Pure."""
+    return [f"U+{ord(c):04X}" for c in OTHER_LINE_SEPARATORS if c in text]
 
 
 def template_drift(
@@ -1771,10 +1788,20 @@ def template_drift(
     registered block's text, `named_prompt_blocks`) does not hold exactly,
     as a sentence: `<name>: not covered — …` where no block carries its
     name, `<name>: line N differs …` where the texts differ after
-    `as_compared`. In the order of TEMPLATES; empty when every template is
-    registered verbatim. Pure."""
+    `as_compared` (the block's text as it reads), `<name>: carries …` for
+    a template with a line separator no protocol line can hold. In the
+    order of TEMPLATES; empty when every template is registered verbatim.
+    Pure."""
     told: list[str] = []
     for name, text in templates.items():
+        others = other_line_separators(text)
+        if others:
+            told.append(
+                f"{name}: carries the line separator(s) {', '.join(others)}, which "
+                f"no protocol line can hold — the template cannot be registered "
+                f"verbatim; use a line feed"
+            )
+            continue
         if name not in blocks:
             told.append(
                 f"{name}: not covered — no Prompt block is named `{name}`, so the "
@@ -1783,7 +1810,7 @@ def template_drift(
             continue
         sent, held = (
             as_compared(text).split("\n"),
-            as_compared(blocks[name]).split("\n"),
+            blocks[name].split("\n"),
         )
         if sent == held:
             continue

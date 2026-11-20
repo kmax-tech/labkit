@@ -235,8 +235,8 @@ def require_registered_templates(protocol: Path, templates: Mapping[str, str]) -
     its text as the pipeline holds it (for stagekit, from its registry).
     A template no Prompt block is named after is not covered and refuses
     the start like one whose text differs from its block; the comparison is
-    exact up to line endings, the block's fence indentation and one final
-    line ending (`protocol_check.template_drift`, `named_prompt_blocks`).
+    exact up to line endings, the block's fence indentation and the
+    template's one final line ending (`protocol_check.template_drift`, `named_prompt_blocks`).
 
     What it holds is the template text, not the prompts sent: how the
     placeholders are filled is the area's test's to show, up to the model

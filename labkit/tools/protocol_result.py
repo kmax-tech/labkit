@@ -12,7 +12,7 @@ from __future__ import annotations
 
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from string import Template
 from pathlib import Path
@@ -40,6 +40,8 @@ from labkit.formats.protocol_check import (
     insert_line,
     is_stamp_placeholder_block,
     replace_lines,
+    as_compared,
+    other_line_separators,
     sentence_above,
 )
 from labkit.tools.protocol_edit import fill
@@ -335,6 +337,47 @@ def template_sentence(name: str, template: str) -> str:
     return _sentence(name, (f"${n}" for n in Template(template).get_identifiers()))
 
 
+@dataclass(frozen=True)
+class PromptSource:
+    """What `fill_prompts` writes for one name: the SENTENCE above its block
+    until someone fills it, and the LINES of the block."""
+
+    sentence: str
+    lines: list[str]
+
+
+def prompt_sources(
+    constants: Mapping[str, str], templates: Mapping[str, str]
+) -> dict[str, PromptSource]:
+    """Every PROMPT constant and template file by name, as `fill_prompts`
+    writes it: a constant's lines as `str.splitlines` gives them, a
+    template's as the exact comparison reads it (`as_compared`, split at
+    LF only), each with its placeholder sentence (`prompt_sentence`,
+    `template_sentence`). Raises ValueError for a name that is both, and
+    for a template carrying a line separator no protocol line can hold
+    (`other_line_separators`). Pure."""
+    both = sorted(set(constants) & set(templates))
+    if both:
+        raise ValueError(f"{both} named both as a PROMPT constant and as a template")
+    for name, template in templates.items():
+        others = other_line_separators(template)
+        if others:
+            raise ValueError(
+                f"template {name} carries the line separator(s) {', '.join(others)}, "
+                f"which no protocol line can hold — use a line feed"
+            )
+    return {
+        **{
+            k: PromptSource(prompt_sentence(k, v), v.splitlines())
+            for k, v in constants.items()
+        },
+        **{
+            k: PromptSource(template_sentence(k, v), as_compared(v).split("\n"))
+            for k, v in templates.items()
+        },
+    }
+
+
 def fill_prompts(
     text: str,
     constants: dict[str, str],
@@ -366,16 +409,8 @@ def fill_prompts(
     Raises ValueError, too, without a constant or template, for a name
     that is both, without exactly one Prompt field, for a block that never
     closes, and for prose below the field that is no sentence."""
-    templates = dict(templates or {})
-    both = sorted(set(constants) & set(templates))
-    if both:
-        raise ValueError(f"{both} named both as a PROMPT constant and as a template")
-    sentence_of = {
-        **{k: prompt_sentence(k, v) for k, v in constants.items()},
-        **{k: template_sentence(k, v) for k, v in templates.items()},
-    }
-    constants = {**constants, **templates}
-    if not constants:
+    sources = prompt_sources(constants, templates or {})
+    if not sources:
         raise ValueError(
             "no PROMPT constant readable in the area's scripts (an f-string "
             "renders at run time and cannot be copied) — write the block by hand"
@@ -390,21 +425,21 @@ def fill_prompts(
     lines = text.splitlines()
     end = field_region_end(lines, found, n)
     region = lines[f.last : end]  # below the field's value, to its end
-    kept = _prompt_segments(region, constants, first_line=f.last + 1)
+    kept = _prompt_segments(region, sources, first_line=f.last + 1)
     new = sorted(
-        set(constants) - {s.name for s in kept}, key=lambda c: (c != "PROMPT", c)
+        set(sources) - {s.name for s in kept}, key=lambda c: (c != "PROMPT", c)
     )
     below: list[str] = []
     for s in [*kept, *[PromptSegment(name, "", ()) for name in new]]:
-        if s.name not in constants:  # another constant's block, as written
+        if s.name not in sources:  # another constant's block, as written
             below += ["", *s.lines]
             continue
         below += [
             "",
-            f"  {s.sentence or sentence_of[s.name]}",
+            f"  {s.sentence or sources[s.name].sentence}",
             "",
             "  ```text",
-            *[f"  {ln}" if ln else "" for ln in constants[s.name].splitlines()],
+            *[f"  {ln}" if ln else "" for ln in sources[s.name].lines],
             "  ```",
         ]
     if end < len(lines):  # a blank line before the next field or heading
@@ -430,7 +465,7 @@ class PromptSegment:
 
 
 def _prompt_segments(
-    region: list[str], constants: dict[str, str], *, first_line: int
+    region: list[str], constants: Collection[str], *, first_line: int
 ) -> list[PromptSegment]:
     """What `fill_prompts` keeps of REGION, the lines below the Prompt
     field (FIRST_LINE the 1-based line of its first): each block a

@@ -15,7 +15,7 @@ argmining27 experiment 02 is a two-stage measurement (objections generated, then
    - no block carries its name (*not covered*: a template the run uses that cannot be held to a registration), or
    - its text is not exactly the block's text.
 
-   Before comparing, three things are normalized, and nothing else: line endings (CRLF and CR become LF), the indentation of the opening fence removed from each block line (what the markdown list puts there, not other leading whitespace — a block line without that indentation is refused as unreadable), and one final line ending, which a fenced block cannot show.
+   Before comparing, three things are normalized, and nothing else: line endings (CRLF and CR become LF), the indentation of the opening fence removed from each block line (what the markdown list puts there, not other leading whitespace — a block line without that indentation is refused as unreadable), and the template's one final line ending, which a fenced block cannot show; the block's own lines are compared as they read. A template carrying a line separator other than LF or CR (U+2028, form feed …) is refused: a protocol line cannot hold it.
 3. **A scenario test** with fixed stand-in answers: blocks written from two template files, the check passing, every prompt filled from the checked texts reaching the recording stand-in model; and the counter-case — one block changed by one character — refused before any call.
 
 For the first case each condition gets a complete template of its own (`generate_context`, `generate_no_context`), so every fixed text sent is a registered template. That is no rule for every area: data and how it is prepared stay the area's code and its tests.
