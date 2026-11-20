@@ -28,9 +28,12 @@ gitdir=$(git rev-parse --absolute-git-dir)
 # The state the checks read: the tree of every file not ignored, as the
 # working tree holds it (tracked and untracked, through an index of its own,
 # since the checks read the tree and not the commit), the interpreter and the
-# installed packages. labkit's own editable line is left out: it names HEAD,
-# which the release commit moves, and its code is in the tree. Empty when
-# git cannot build the tree; then nothing is reused or recorded.
+# installed packages. Editable installs are left out (labkit is the only
+# one): its line names HEAD, which the release commit moves, and its code is
+# in the tree. Not in the key, so a change there is not seen: ignored files
+# (`.gitignore`, `.git/info/exclude`, the global ignore), the content of a
+# nested repository (only its commit), tags and environment variables.
+# Empty when git cannot build the tree; then nothing is reused or recorded.
 state_key() {
     tmp=$(mktemp -d) || return 1
     tree=$(GIT_INDEX_FILE="$tmp/index" git read-tree HEAD 2>/dev/null &&
@@ -47,11 +50,16 @@ state_key() {
 # is part of it): the release's run before its commit is reused by the
 # commit hook and the push hook, where the same content ran again for about
 # twelve minutes (2026-11-20). Written only by a green full run whose state
-# did not change while it ran. Delete the file to run anyway.
+# did not change while it ran — a green fast run records nothing. Kept in
+# this worktree's git dir, so another worktree runs its own. Delete the file
+# to run anyway.
 record="$gitdir/labkit-checks-passed"
 key=$(state_key) || key=""
 if [ -n "$key" ] && [ -f "$record" ] && [ "$(cat "$record")" = "$key" ]; then
-    echo "checks ($tier): the whole checks passed on this state already, not run again (record: $record)"
+    said="checks ($tier): the whole checks passed on this state already, not run again (record: $record)"
+    # the tier's log says so too, never an earlier run's output under this one
+    printf '%s\n' "$said" > "$gitdir/labkit-checks-$tier.log"
+    echo "$said"
     exit 0
 fi
 fail=0

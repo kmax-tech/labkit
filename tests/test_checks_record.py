@@ -1,4 +1,6 @@
-""".githooks/checks: a whole run that passed is reused on the same state, and only there."""
+""".githooks/checks: a whole run that passed is reused on the same state; a
+changed file, other packages, a red or fast run and a state changed during
+the run are not."""
 
 import os
 import shutil
@@ -70,6 +72,8 @@ class Record(unittest.TestCase):
         again, fast = self.checks("full"), self.checks("fast")
         self.assertEqual((again.returncode, fast.returncode), (0, 0))
         self.assertIn("not run again", again.stdout)
+        log = self.repo / ".git" / "labkit-checks-fast.log"
+        self.assertIn("not run again", log.read_text())
         self.assertEqual(self.pytest_runs(), 1)
 
     def test_the_release_commit_of_the_checked_tree_reuses_the_record(self):
