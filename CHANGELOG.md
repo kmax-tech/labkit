@@ -4,6 +4,10 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ## Unreleased
 
+### Changed
+
+- **`labkit-next` reminds of a reading of the prose at two points.** Before the first measurement, `labkit-next` and `runlog` add a reading of the question, its terms and the criteria while they can still change (`standard_contract.REREAD_BEFORE_FIRST`); the step that offers `labkit-adopt` first asks to read the Summary once more, the Conclusion at most two short sentences, each number with what it is compared with (`next_step.REREAD_BEFORE_ADOPTION`). Each sentence says what to check, so an agent without the lab's own writing rules can do it. Neither blocks anything, and no gate checks the prose (argmining27, 2026-11-17: each Conclusion one sentence with up to twelve numbers and two run ids).
+
 ### Fixed
 
 - **A hold no longer says a result was seen when the first measurement wrote no number.** A first start that broke off before any row (argmining27 experiment 02, 2026-11-17: a `ValueError` while building the requests) bound the protocol as before, but a field sharpened after it was held as "a scope set after a result was seen". The holds on a changed registration and on a changed scope now name such a run "(stopped without a number: …)" — or still running, or whose liveness cannot be told — and say why it binds all the same: a started measurement counts as the first, a number or not, since no rows show that no result was seen. A run only a commit holds is not claimed to have shown a result either. The binding and the ways out are unchanged (`registration_hold.set_after_first`, `result_written`).

@@ -208,6 +208,13 @@ class TheChain(unittest.TestCase):
         step = self.step()
         self.assertIn(f"labkit-adopt experiments/01-lines {run_id}", step.next, step)
         self.assertIn("no run is adopted yet", step.where)
+        # the Summary read once more first, before the command — not a hold
+        self.assertTrue(
+            step.next.startswith(next_step.REREAD_BEFORE_ADOPTION + "; then `"), step
+        )
+        self.assertEqual(
+            step.held, "the number in any report: report only an adopted number"
+        )
         rc, out = self.lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)
         # adopted, nothing holds: nothing owed

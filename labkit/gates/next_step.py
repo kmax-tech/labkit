@@ -241,6 +241,18 @@ def next_step(
     return _closing_step(ctx, protocol, text, warned)
 
 
+#: the reading of the Summary the adoption step names before its command
+#: (`_closing_step`): what it checks, so an agent without the lab's own
+#: writing rules can do it; no gate checks the prose (argmining27,
+#: 2026-11-17: each Conclusion one sentence with up to twelve numbers)
+REREAD_BEFORE_ADOPTION = (
+    "read the Summary once more, sentence by sentence, before the adoption "
+    "carries it: the Conclusion answers the question in at most two short "
+    "sentences, each number with what it is compared with, a run named by its "
+    "id once, every term one the reader can resolve — blocks nothing"
+)
+
+
 def _closing_step(
     ctx: Checked, protocol: Path, text: str, warned: list[GateFinding]
 ) -> Step:
@@ -256,9 +268,9 @@ def _closing_step(
             return owed_then
         return Step(
             f"nothing holds the answering run {run}; no run is adopted yet",
-            f"`{adopt_command(protocol, run)}` adopts it: it writes "
-            "the result and the report's block and checks them — a refusal "
-            "names its step",
+            f"{REREAD_BEFORE_ADOPTION}; then `{adopt_command(protocol, run)}` "
+            "adopts it: it writes the result and the report's block and checks "
+            "them — a refusal names its step",
             "the number in any report: report only an adopted number",
         )
     from labkit.gates.report_hold import reports_without_block

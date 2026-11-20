@@ -20,7 +20,10 @@ from pathlib import Path
 from labkit.formats import protocol_block, runs
 from labkit.formats.area_state import TREE, AreaState, assemble
 from labkit.formats.run_starts import RunStart
-from labkit.formats.standard_contract import first_measurement_hint
+from labkit.formats.standard_contract import (
+    REREAD_BEFORE_FIRST,
+    first_measurement_hint,
+)
 from labkit.gates import next_step
 from labkit.run import start_check
 from protocol_fixture import PID, head, run_record  # noqa: E402
@@ -86,6 +89,25 @@ class TheColdReader(unittest.TestCase):
     def test_not_at_high_where_preflight_names_it(self):
         hint = first_measurement_hint(PROTOCOL, head(repeat_cost="high", kind="apply"))
         self.assertNotIn("--mode clarity", hint)
+
+
+class TheRereading(unittest.TestCase):
+    """The question, its terms and the criteria read once more before the
+    first measurement, for every kind and repeat cost, blocking nothing:
+    no gate checks the prose, and an agent without the lab's writing rules
+    is reminded too (argmining27, 2026-11-17). The sentence says what to
+    check, not only which tool to use."""
+
+    def test_named_for_every_kind_and_cost(self):
+        for kind in ("compute", "fit", "apply"):
+            for cost in ("low", "high"):
+                with self.subTest(kind=kind, cost=cost):
+                    hint = first_measurement_hint(
+                        PROTOCOL, head(repeat_cost=cost, kind=kind)
+                    )
+                    self.assertIn(REREAD_BEFORE_FIRST, hint)
+        self.assertIn("each coined term defined before its first use", hint)
+        self.assertIn("blocks nothing", hint)
 
 
 class WithoutAnId(unittest.TestCase):
