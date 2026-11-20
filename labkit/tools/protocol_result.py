@@ -338,12 +338,16 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
     whose sentence names a constant the scripts do not hold as a PROMPT
     (`EXTRA_CONTEXT`, a person's instruction): it stays. The blocks keep
     the order they stand in; a constant not yet there is added after
-    them. Of the blocks no sentence names, the stamp's
-    placeholder is replaced, and so is one other while no block has a
-    sentence — the block an earlier fill wrote. Raises ValueError without a
-    constant, without exactly one Prompt field, for a block that never
-    closes, and — writing nothing — for any other unnamed block or prose
-    below the field that is no sentence: it would be lost."""
+    them. A block no sentence names is:
+
+    - the stamp's placeholder: replaced;
+    - while no block has a sentence, the one block an earlier fill wrote:
+      replaced;
+    - any other: refused (ValueError, nothing written), as it would be lost.
+
+    Raises ValueError, too, without a constant, without exactly one Prompt
+    field, for a block that never closes, and for prose below the field
+    that is no sentence."""
     if not constants:
         raise ValueError(
             "no PROMPT constant readable in the area's scripts (an f-string "
@@ -419,10 +423,11 @@ def _prompt_segments(
             )
         used.update(range(start - 1, stop + 1))
         above = next((j for j in range(start - 2, -1, -1) if region[j].strip()), None)
-        named = above is not None and above not in used
+        # the nearest line above the block, unless it closes an earlier one
+        above_free = above is not None and above not in used
         m = (
             PROMPT_SENTENCE.match(region[above])
-            if above is not None and named
+            if above is not None and above_free
             else None
         )
         if above is None or m is None:

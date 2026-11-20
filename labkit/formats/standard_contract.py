@@ -482,9 +482,11 @@ def first_measurement_hint(protocol: Path, text: str) -> str:
     of the question, its terms and the criteria (REREAD_BEFORE_FIRST); at a
     repeat cost that freezes nothing (`Lane.freeze`), the cold reader
     (LAB-102 Cold reader before freezing), which preflight names only where
-    the freeze is owed. The first two are conditional, as not every task
-    asks for them; the third is not, as finalize runs the area test of every
-    computation, nor is the reading.
+    the freeze is owed. The report and the reference are worded "if the
+    task asks", as not every task does; the hand-checked case is named for
+    every computation, since finalize runs the area test of each; the
+    reading is named always; the cold reader at a repeat cost that freezes
+    nothing.
     "" without a stamped id. The caller says whether a first measurement
     exists; after one, none of this is to be added. Reads TEXT and lists
     the area's protocols (`commands.audit_command`), writes nothing."""

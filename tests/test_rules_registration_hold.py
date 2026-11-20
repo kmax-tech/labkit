@@ -345,13 +345,13 @@ FIRST = FirstMeasurement(
     " (`git show abc123:PROTOCOL-x.md`)",
     Command(RESTORE, "protocol-fill PROTOCOL-x.md --force …"),
     stopped="",
-    result_written=True,
+    number_here=True,
 )
 #: FIRST as a start that broke off before any row
 FIRST_STOPPED = dataclasses.replace(
     FIRST,
     stopped=" (stopped without a number: ValueError: no request built)",
-    result_written=False,
+    number_here=False,
 )
 ANALYSIS = Command(AUDIT, "labkit-audit area --mode analysis")
 MEASURE_AGAIN = Command(MEASURE, "python area/scripts/01_measure.py")

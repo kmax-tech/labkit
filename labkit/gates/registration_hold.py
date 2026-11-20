@@ -658,28 +658,28 @@ class FirstMeasurement:
     saying where its text can be read (`shown_then`), the step that
     restores it (`restore_step`), the note on a run without a number
     (`stopped_note`, "" otherwise) and whether its number is here to read
-    (`result_written`) — what decides whether the hold may say a result
+    (`number_here`, from `result_written`) — what decides whether the hold may say a result
     was seen (`set_after_first`)."""
 
     run_id: str
     shown: str
     step: Command | None
     stopped: str
-    result_written: bool
+    number_here: bool
 
 
 def first_measurement(
-    protocol: Path, first: RunDir, root: Path | None
+    protocol: Path, first_run: RunDir, root: Path | None
 ) -> FirstMeasurement:
-    """FIRST as a scope hold on PROTOCOL names it (`FirstMeasurement`).
-    Reads git through `shown_then` and `restore_step`, FIRST's directory
-    through `stopped_note` and `result_written`."""
+    """FIRST_RUN as a scope hold on PROTOCOL names it (`FirstMeasurement`).
+    Reads git through `shown_then` and `restore_step`, FIRST_RUN's
+    directory through `stopped_note` and `result_written`."""
     return FirstMeasurement(
-        first.dir.name,
-        shown_then(protocol, first, root),
-        restore_step(protocol, first, root),
-        stopped=stopped_note(first),
-        result_written=result_written(first),
+        first_run.dir.name,
+        shown_then(protocol, first_run, root),
+        restore_step(protocol, first_run, root),
+        stopped=stopped_note(first_run),
+        number_here=result_written(first_run),
     )
 
 
@@ -772,7 +772,7 @@ def seen_hold(
                 f"what the number is about changed after the first measurement "
                 f"{first.run_id}{first.stopped}: {quoted_changes(cause)} (as the "
                 f"answering run {run_id} saw the protocol) — "
-                f"{set_after_first('a scope', first.result_written)}",
+                f"{set_after_first('a scope', first.number_here)}",
                 fix=fix,
                 step=first.step,
                 rule=scope_rule(cause),
@@ -920,9 +920,9 @@ def now_hold(
             blocker(
                 f"what the number is about changed after the first measurement "
                 f"{first.run_id}{first.stopped}: {quoted_changes(cause)} (as the "
-                f"protocol stands now; no run measured under it yet) — "
-                f"{set_after_first('a scope', first.result_written)}, and a new "
-                f"measurement would carry the change",
+                f"protocol stands now; no run measured under it yet), and a new "
+                f"measurement would carry the change — "
+                f"{set_after_first('a scope', first.number_here)}",
                 fix=fix,
                 step=first.step,
                 rule=scope_rule(cause),
