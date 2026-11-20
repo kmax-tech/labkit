@@ -29,7 +29,9 @@ import ollama_fixture
 from models_fixture import serve, toml
 
 from labkit.run import batch, llm, llm_backends, llm_cache, llm_specs, runlog
+from labkit.checks import recheck
 from labkit.formats import runs
+from protocol_fixture import PID, head, run_record
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,10 +70,16 @@ def listed_keys() -> dict[str, frozenset[str]]:
     return {b: frozenset(re.findall(r"`(\w+)`", keys)) for b, keys in rows}
 
 
+#: the listed modules outside `labkit.run`, as the section's first sentence names them
+PACKAGE_OF = {"recheck": "labkit.checks"}
+
+
 def resolve_name(name: str) -> object:
-    """`llm.complete` → the object; the first part is a module of `labkit.run`."""
+    """`llm.complete` → the object; the first part is a module of `labkit.run`,
+    or of the package `PACKAGE_OF` names for it."""
     module, *attrs = name.split(".")
-    obj: object = importlib.import_module(f"labkit.run.{module}")
+    package = PACKAGE_OF.get(module, "labkit.run")
+    obj: object = importlib.import_module(f"{package}.{module}")
     for attr in attrs:
         obj = getattr(obj, attr)
     return obj
@@ -638,6 +646,45 @@ class CachedCalls(unittest.TestCase):
             self.ask()
         with self.assertRaises(KeyError):
             self.ask(alias="nope")
+
+
+class AnsweringRun(unittest.TestCase):
+    """`recheck.answering_run`: the adopted run stays chosen though a newer
+    run of the protocol completed; without the adoption the newer one
+    answers — the choice every gate makes, no rule of its own."""
+
+    OLDER = "2026-11-20T10-00-00_aaaa"
+    NEWER = "2026-11-20T11-00-00_bbbb"
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.area = Path(tmp.name)
+        self.protocol = self.area / "PROTOCOL-x.md"
+        for run_id in (self.OLDER, self.NEWER):
+            d = runs.run_path(self.area, run_id)
+            d.mkdir(parents=True)
+            cfg = run_record(protocol={"id": PID, "path": self.protocol.name})
+            (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+            (d / "metrics.json").write_text(json.dumps({"n": 1}), encoding="utf-8")
+            (d / "completion.json").write_text("{}", encoding="utf-8")
+
+    def chosen(self, adopted: str | None) -> str:
+        self.protocol.write_text(head(result=adopted), encoding="utf-8")
+        return recheck.answering_run(self.area, self.protocol).name
+
+    def test_a_newer_run_does_not_replace_the_adopted_one(self) -> None:
+        self.assertEqual(self.chosen(self.OLDER), self.OLDER)
+
+    def test_the_twin_without_an_adoption_the_newest_answers(self) -> None:
+        self.assertEqual(self.chosen(None), self.NEWER)
+
+    def test_no_run_that_answers_is_refused_with_the_reason(self) -> None:
+        for run_id in (self.OLDER, self.NEWER):
+            (runs.run_path(self.area, run_id) / "completion.json").unlink()
+        with self.assertRaises(SystemExit) as cm:
+            self.chosen(None)
+        self.assertIn("recheck:", str(cm.exception))
 
 
 if __name__ == "__main__":

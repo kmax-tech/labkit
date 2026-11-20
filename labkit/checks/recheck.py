@@ -222,6 +222,17 @@ def run_dir(
     return chosen_run(area, held.text_of(protocol), run_id, state=held)
 
 
+def answering_run(area: Path, protocol: Path) -> Path:
+    """The run directory PROTOCOL of AREA answers with — the run an area's
+    own analysis reads: the adopted run (`[result] run`), else the newest
+    completed run bound to the protocol's id that reports an intent key;
+    never a repeat draw. The choice `--check`, finalize and intent-check
+    make (`run_dir`, `chosen_run`), no rule of its own: a newer run does
+    not replace an adopted one. Raises SystemExit with the reason where no
+    run answers, or the protocol carries no stamped id."""
+    return run_dir(area, protocol)
+
+
 def protocol_named(area: Path, name: str | None) -> Path:
     """The protocol an area's `--check` holds: the one NAME names — a file
     name inside AREA, or a path —, else the area's only one
