@@ -111,13 +111,13 @@ class _Confirmation(e2e.CountCommands):
         with contextlib.chdir(self.lab.root):
             return run_main(main, list(argv))
 
-    def labkit_adopt(self) -> tuple[int, str]:
-        """`labkit-adopt AREA RUN_B`."""
-        return self.command(adopt.main, self.rel(self.area), self.run_b)
+    def labkit_adopt(self, *more: str) -> tuple[int, str]:
+        """`labkit-adopt AREA RUN_B MORE`."""
+        return self.command(adopt.main, self.rel(self.area), self.run_b, *more)
 
-    def report_check(self) -> tuple[int, str]:
-        """`report-check AREA`."""
-        return self.command(report_command.main, self.rel(self.area))
+    def report_check(self, *more: str) -> tuple[int, str]:
+        """`report-check AREA MORE`."""
+        return self.command(report_command.main, self.rel(self.area), *more)
 
     def labkit_next(self) -> str:
         """`labkit-next AREA`: what it prints."""
@@ -375,3 +375,50 @@ class TheLinkNamesTwoProtocols(_Confirmation):
         copy.unlink()
         copy.parent.rmdir()
         self.released(line)
+
+
+class TheCopyLiesInTheConfirmationsOwnArea(_Confirmation):
+    """The exploratory protocol copied into the confirmation's own area.
+    Before the link is read, the area holds two protocols: labkit-adopt
+    and report-check refuse with exit 2, name the two files and the way
+    out (`--protocol`), and write nothing. Named with `--protocol`, the
+    link's blocker follows, once — the refusal comes first and is not
+    moved behind the link."""
+
+    def test_two_protocols_are_refused_first_and_the_named_one_holds_the_link(
+        self,
+    ) -> None:
+        copy = self.area / "PROTOCOL-copy.md"
+        shutil.copy(self.exploration, copy)
+        before = self.state()
+        refusal = (
+            f"2 protocols in {self.rel(self.area)} — name one with --protocol FILE:"
+        )
+        rc, out = self.labkit_adopt()
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"labkit-adopt: {refusal}", out)
+        self.assertIn(f"  {self.rel(self.protocol)}\n", out)
+        self.assertIn(f"  {self.rel(copy)}\n", out)
+        self.assertNotIn("Traceback", out)
+        self.assertEqual(self.link_blockers(out), [])
+        self.assertEqual(self.state(), before)
+        rc, checked = self.report_check()
+        self.assertEqual(rc, 2, checked)
+        self.assertIn("report-check: 2 protocols in ", checked)
+        self.assertIn("name one with --protocol FILE:", checked)
+        # the way out the refusal names, taken: the link's blocker, once
+        named = ("--protocol", self.rel(self.protocol))
+        rc, out = self.labkit_adopt(*named)
+        self.assertEqual(rc, 1, out)
+        (line,) = self.link_blockers(out)
+        self.assertIn(
+            f"{NOT_EXECUTABLE} protocol = {self.exploration_id} names 2 protocols (",
+            line,
+        )
+        self.assertIn(str(copy), line)
+        self.assertIn("protocol-fill: not adopted", out)
+        self.assertEqual(self.state(), before)
+        self.assertIsNone(self.declared())
+        rc, checked = self.report_check(*named)
+        self.assertEqual(rc, 1, checked)
+        self.assertEqual(self.link_blockers(checked), [line])
