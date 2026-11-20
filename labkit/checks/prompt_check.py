@@ -9,16 +9,23 @@ the result is not checked;
 every line of a `PROMPT` constant without a `{placeholder}` appears in
 the protocol's prompt block (`check_prompt_drift`), read through
 `prompt_constants` and `protocol_check.registered_prompt_blocks`.
+
+A pipeline that loads its templates from files (stagekit) is held at run
+time instead: the area hands every template the run uses to
+`require_registered_templates` before the first model call, which
+refuses the start unless each stands verbatim in a Prompt block named
+after it. The static check above does not see those files.
 """
 
 from __future__ import annotations
 
 import shlex
+from collections.abc import Mapping
 import ast
 import re
 from pathlib import Path
 
-from labkit.formats.repo import shown
+from labkit.formats.repo import file_text, shown
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, cited_rule
@@ -37,7 +44,12 @@ from labkit.formats.gate import (
     GateFinding,
     coded,
 )
-from labkit.formats.protocol_check import registered_prompt_blocks, unheld_prompt_lines
+from labkit.formats.protocol_check import (
+    named_prompt_blocks,
+    registered_prompt_blocks,
+    template_drift,
+    unheld_prompt_lines,
+)
 
 
 PARSE_DEF = re.compile(r"^\s*def (parse_\w+)\s*\(", re.M)
@@ -214,6 +226,47 @@ def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
         out.update(found)
         unreadable += [f"{sp.name}:{n}" for n in bad]
     return out, unreadable
+
+
+def require_registered_templates(protocol: Path, templates: Mapping[str, str]) -> None:
+    """Refuse the start of a run, before its first model call, unless every
+    template it uses is registered verbatim in PROTOCOL: TEMPLATES maps
+    each template's name — the one its pipeline registers it under — to
+    its text as the pipeline holds it (for stagekit, from its registry).
+    A template no Prompt block is named after is not covered and refuses
+    the start like one whose text differs from its block; the comparison is
+    exact up to line endings, the block's fence indentation and one final
+    line ending (`protocol_check.template_drift`, `named_prompt_blocks`).
+
+    What it holds is the template text, not the prompts sent: how the
+    placeholders are filled is the area's test's to show, up to the model
+    call. Raises ValueError for an empty TEMPLATES, SystemExit naming each
+    template that fails, and for a Prompt field that does not read."""
+    if not templates:
+        raise ValueError(
+            "require_registered_templates: TEMPLATES is empty — pass every "
+            "template the run uses, by name"
+        )
+    text = file_text(protocol)
+    if text is None:
+        raise SystemExit(f"{protocol}: no such protocol — no template is held to it")
+    try:
+        blocks = named_prompt_blocks(text)
+    except ValueError as exc:
+        raise SystemExit(
+            f"{protocol.name}: the Prompt field does not read — {exc}"
+        ) from exc
+    drift = template_drift(templates, blocks)
+    if drift:
+        raise SystemExit(
+            f"{protocol.name}: {len(drift)} of {len(templates)} template(s) the run "
+            f"uses are not registered as they are — refused before any model "
+            f"call:\n  "
+            + "\n  ".join(drift)
+            + "\nNext: register each template verbatim under its name "
+            "(`protocol-fill PROTOCOL --prompts --prompt-file NAME=PATH`), or make "
+            "the template the registered text; the Prompt block is the registration"
+        )
 
 
 def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:

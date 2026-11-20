@@ -1686,3 +1686,114 @@ def unheld_prompt_lines(prompt: str, blocks: Sequence[str]) -> list[str]:
         and not PLACEHOLDER_IN_PROMPT.search(ln)
         and ln.strip() not in have
     ]
+
+
+#: a sentence above a Prompt block: the name of what the block holds, in
+#: backticks, then " — " — a script's constant (`PROMPT_NULL`) or a
+#: template's name as its pipeline registers it (`generate_context`)
+PROMPT_SENTENCE = re.compile(r"^\s*`([A-Za-z_][A-Za-z0-9_.-]*)` — ")
+
+
+def sentence_above(
+    region: list[str], start: int, used: set[int]
+) -> tuple[int, str] | None:
+    """(the 0-based index in REGION, the name) of the sentence naming the
+    block whose first body line is START (`markdown.fence_spans`): the
+    nearest non-blank line above its opening fence, when that line matches
+    `PROMPT_SENTENCE` and is not among USED (the lines of an earlier
+    block); None for an unnamed block. The one rule by which the Prompt
+    field's reader (`named_prompt_blocks`) and its writer
+    (`protocol_result.fill_prompts`) tell a block's name. Pure."""
+    above = next((j for j in range(start - 2, -1, -1) if region[j].strip()), None)
+    if above is None or above in used:
+        return None
+    m = PROMPT_SENTENCE.match(region[above])
+    return (above, m.group(1)) if m else None
+
+
+def named_prompt_blocks(text: str) -> dict[str, str]:
+    """Every block below the protocol TEXT's Prompt field that a sentence
+    names (`sentence_above`), by that name: its body with the indentation
+    of its opening fence removed from each line — what the markdown list
+    puts there, nothing more — and its lines joined by "\\n". Unnamed
+    blocks are left out. Raises ValueError for a body line that lacks the
+    fence's indentation, a block that never closes, and a name two blocks
+    carry. Pure."""
+    lines = text.splitlines()
+    found = fields(text)
+    out: dict[str, str] = {}
+    for n, f in enumerate(found):
+        if f.name != "prompt":
+            continue
+        region = lines[f.line : field_region_end(lines, found, n)]
+        used: set[int] = set()
+        for _, start, stop in markdown.fence_spans(region):
+            if stop >= len(region):
+                raise ValueError(
+                    f"line {f.line + start}: the Prompt block never closes"
+                )
+            named = sentence_above(region, start, used)
+            used.update(range(start - 1, stop + 1))
+            if named is None:
+                continue
+            name = named[1]
+            if name in out:
+                raise ValueError(f"two Prompt blocks are named `{name}`")
+            indent = region[start - 1][
+                : len(region[start - 1]) - len(region[start - 1].lstrip(" "))
+            ]
+            body: list[str] = []
+            for k in range(start, stop):
+                ln = region[k]
+                if ln and not ln.startswith(indent):
+                    raise ValueError(
+                        f"line {f.line + k + 1}: a line of the Prompt block "
+                        f"`{name}` stands left of its fence — its indentation "
+                        f"cannot be told from the prompt's own"
+                    )
+                body.append(ln[len(indent) :])
+            out[name] = "\n".join(body)
+    return out
+
+
+def as_compared(text: str) -> str:
+    """TEXT as the exact template comparison reads it
+    (`template_drift`): CRLF and CR as LF, one final line ending dropped —
+    a fenced block cannot show it. Nothing else changes. Pure."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return text[:-1] if text.endswith("\n") else text
+
+
+def template_drift(
+    templates: Mapping[str, str], blocks: Mapping[str, str]
+) -> list[str]:
+    """Each template of TEMPLATES (name → text) that BLOCKS (name → the
+    registered block's text, `named_prompt_blocks`) does not hold exactly,
+    as a sentence: `<name>: not covered — …` where no block carries its
+    name, `<name>: line N differs …` where the texts differ after
+    `as_compared`. In the order of TEMPLATES; empty when every template is
+    registered verbatim. Pure."""
+    told: list[str] = []
+    for name, text in templates.items():
+        if name not in blocks:
+            told.append(
+                f"{name}: not covered — no Prompt block is named `{name}`, so the "
+                f"template the run uses is held to no registration"
+            )
+            continue
+        sent, held = (
+            as_compared(text).split("\n"),
+            as_compared(blocks[name]).split("\n"),
+        )
+        if sent == held:
+            continue
+        k = next(
+            (i for i, (a, b) in enumerate(zip(sent, held)) if a != b),
+            min(len(sent), len(held)),
+        )
+        told.append(
+            f"{name}: line {k + 1} differs — the template has "
+            f"{sent[k] if k < len(sent) else '(no line)'!r}, the registered block "
+            f"{held[k] if k < len(held) else '(no line)'!r}"
+        )
+    return told

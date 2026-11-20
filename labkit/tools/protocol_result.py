@@ -12,7 +12,9 @@ from __future__ import annotations
 
 
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from string import Template
 from pathlib import Path
 
 from labkit.formats import markdown
@@ -38,6 +40,7 @@ from labkit.formats.protocol_check import (
     insert_line,
     is_stamp_placeholder_block,
     replace_lines,
+    sentence_above,
 )
 from labkit.tools.protocol_edit import fill
 
@@ -308,9 +311,13 @@ PROMPT_FIELD_NOTE = (
     "a block names its constant and how its placeholders are filled, and is "
     "not sent."
 )
-#: a sentence above a Prompt block: the constant it names, in backticks,
-#: then " — "
-PROMPT_SENTENCE = re.compile(r"^\s*`([A-Z][A-Z0-9_]*)` — ")
+
+
+def _sentence(name: str, slots: Iterable[str]) -> str:
+    """`` `NAME` — <what it is for; `slot`: how it is filled …> ``, each of
+    SLOTS once, in order. Pure."""
+    how = "".join(f"; `{slot}`: how it is filled" for slot in dict.fromkeys(slots))
+    return f"`{name}` — <what it is for{how}>"
 
 
 def prompt_sentence(name: str, prompt: str) -> str:
@@ -318,19 +325,30 @@ def prompt_sentence(name: str, prompt: str) -> str:
     until someone fills it: the name, then a placeholder for what the
     prompt is for and how each `{placeholder}` of PROMPT is filled, in the
     order of first use. Pure."""
-    slots = dict.fromkeys(PLACEHOLDER_IN_PROMPT.findall(prompt))
-    how = "".join(f"; `{slot}`: how it is filled" for slot in slots)
-    return f"`{name}` — <what it is for{how}>"
+    return _sentence(name, PLACEHOLDER_IN_PROMPT.findall(prompt))
 
 
-def fill_prompts(text: str, constants: dict[str, str]) -> str:
+def template_sentence(name: str, template: str) -> str:
+    """`prompt_sentence` for a template file a pipeline fills with
+    `string.Template` (stagekit): its placeholders are `$name`, each named
+    as `$name`. Pure."""
+    return _sentence(name, (f"${n}" for n in Template(template).get_identifiers()))
+
+
+def fill_prompts(
+    text: str,
+    constants: dict[str, str],
+    templates: Mapping[str, str] | None = None,
+) -> str:
     """Return the protocol text with the Prompt field written from the
-    scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT` first: one
-    block per constant, holding exactly what the model receives, under a
-    sentence that names it (`` `NAME` — … ``) and is not sent. A sentence
-    written for a constant stays as written; for a new one the sentence is
-    `prompt_sentence`'s placeholder. An empty field line gets
-    PROMPT_FIELD_NOTE; a written one stays.
+    scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT` first, and
+    from TEMPLATES, template files by the name their pipeline registers
+    them under (`protocol-fill --prompt-file`): one block per constant or
+    template, holding exactly what the model receives, under a sentence
+    that names it (`` `NAME` — … ``) and is not sent. A sentence written
+    for a name stays as written; for a new one the sentence is
+    `prompt_sentence`'s placeholder (`template_sentence`'s for a template).
+    An empty field line gets PROMPT_FIELD_NOTE; a written one stays.
 
     The blocks are what `code-check` holds the script to (prompt drift);
     the label fill cannot reach a code block. What stands below the field
@@ -345,9 +363,18 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
       replaced;
     - any other: refused (ValueError, nothing written), as it would be lost.
 
-    Raises ValueError, too, without a constant, without exactly one Prompt
-    field, for a block that never closes, and for prose below the field
-    that is no sentence."""
+    Raises ValueError, too, without a constant or template, for a name
+    that is both, without exactly one Prompt field, for a block that never
+    closes, and for prose below the field that is no sentence."""
+    templates = dict(templates or {})
+    both = sorted(set(constants) & set(templates))
+    if both:
+        raise ValueError(f"{both} named both as a PROMPT constant and as a template")
+    sentence_of = {
+        **{k: prompt_sentence(k, v) for k, v in constants.items()},
+        **{k: template_sentence(k, v) for k, v in templates.items()},
+    }
+    constants = {**constants, **templates}
     if not constants:
         raise ValueError(
             "no PROMPT constant readable in the area's scripts (an f-string "
@@ -374,7 +401,7 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
             continue
         below += [
             "",
-            f"  {s.sentence or prompt_sentence(s.name, constants[s.name])}",
+            f"  {s.sentence or sentence_of[s.name]}",
             "",
             "  ```text",
             *[f"  {ln}" if ln else "" for ln in constants[s.name].splitlines()],
@@ -421,21 +448,14 @@ def _prompt_segments(
             raise ValueError(
                 f"line {first_line + start - 1}: the Prompt block never closes"
             )
+        named = sentence_above(region, start, used)
         used.update(range(start - 1, stop + 1))
-        above = next((j for j in range(start - 2, -1, -1) if region[j].strip()), None)
-        # the nearest line above the block, unless it closes an earlier one
-        above_free = above is not None and above not in used
-        m = (
-            PROMPT_SENTENCE.match(region[above])
-            if above is not None and above_free
-            else None
-        )
-        if above is None or m is None:
+        if named is None:
             if not is_stamp_placeholder_block("\n".join(region[start:stop])):
                 unnamed.append(first_line + start - 1)
             continue
+        above, name = named
         used.add(above)
-        name = m.group(1)
         lines = () if name in constants else tuple(region[above : stop + 1])
         kept.append(PromptSegment(name, region[above].strip(), lines))
     # an unnamed block is the one an earlier fill wrote only where no block

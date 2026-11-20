@@ -152,6 +152,7 @@ protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: 
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL type=exploratory|confirmatory # the type; no measurement starts while it is a placeholder
 protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
+protocol-fill PROTOCOL --prompts --prompt-file NAME=PATH ... # also a block per template file, under the name its pipeline (stagekit) registers it under
 protocol-fill PROTOCOL --freeze [RECORD] # the freeze: frozen = true, preflight_audit naming the decided record (the area's newest without one); refused while a MUST field is open, the record covers other code or a preflight BLOCKER is undecided
 protocol-fill PROTOCOL --data-counts [RUN_ID] # the counts a preparation run recorded (the newest without RUN_ID), as the generated end of Data / scope
 protocol-fill PROTOCOL --builds-on RUN_ID --step-id STEP --occasion observation|planned|repair --why "…" # the step the next runs make: [builds_on] with RUN_ID as basis and every change of the registration against that run's text, computed

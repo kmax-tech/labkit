@@ -29,7 +29,7 @@ import ollama_fixture
 from models_fixture import serve, toml
 
 from labkit.run import batch, llm, llm_backends, llm_cache, llm_specs, runlog
-from labkit.checks import recheck
+from labkit.checks import prompt_check, recheck
 from labkit.formats import runs
 from protocol_fixture import PID, head, run_record
 
@@ -71,7 +71,7 @@ def listed_keys() -> dict[str, frozenset[str]]:
 
 
 #: the listed modules outside `labkit.run`, as the section's first sentence names them
-PACKAGE_OF = {"recheck": "labkit.checks"}
+PACKAGE_OF = {"recheck": "labkit.checks", "prompt_check": "labkit.checks"}
 
 
 def resolve_name(name: str) -> object:
@@ -691,6 +691,27 @@ class AnsweringRun(unittest.TestCase):
         told = str(cm.exception)
         self.assertIn("recheck:", told)
         self.assertIn("unfinalized", told)
+
+
+class RegisteredTemplates(unittest.TestCase):
+    """`prompt_check.require_registered_templates`: a template registered
+    verbatim passes; one that differs, and one no block is named after,
+    refuse the start (the cases in full: tests/test_prompt_templates.py)."""
+
+    def test_verbatim_passes_and_drift_or_no_block_refuses(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(
+                "- **Prompt:** x\n\n  `judge` — it\n\n  ```text\n  Q: $q\n  ```\n",
+                encoding="utf-8",
+            )
+            prompt_check.require_registered_templates(protocol, {"judge": "Q: $q\n"})
+            for templates in ({"judge": "Q: $x\n"}, {"other": "Q: $q\n"}):
+                with self.subTest(templates=templates):
+                    with self.assertRaises(SystemExit):
+                        prompt_check.require_registered_templates(protocol, templates)
+            with self.assertRaises(ValueError):
+                prompt_check.require_registered_templates(protocol, {})
 
 
 if __name__ == "__main__":

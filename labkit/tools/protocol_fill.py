@@ -20,6 +20,8 @@ command line.
                                                only (another file: --force); after it the
                                                registered report is bound
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
+    protocol-fill PROTOCOL-x.md --prompts --prompt-file generate=prompts/generate.txt
+                                               … and a template file under the name its pipeline registers
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
                                                Recorded results, Limitation lines (stray ones dropped), Prompt block
     protocol-fill PROTOCOL-x.md --into REPORT.md  the declared result as a generated block in a
@@ -364,12 +366,34 @@ def _list_open(text: str) -> int:
     return 0
 
 
-def _prompts_file(protocol: Path, text: str) -> int:
+def prompt_files(specs: list[str]) -> dict[str, str]:
+    """`--prompt-file NAME=PATH` values as {NAME: the file's text}: NAME is
+    the name the pipeline registers the template under, given explicitly —
+    a file name may differ from it. Raises ValueError for a value without
+    `=`, an empty name or path, a name given twice, and a file that cannot
+    be read."""
+    out: dict[str, str] = {}
+    for spec in specs:
+        name, sep, path = spec.partition("=")
+        name, path = name.strip(), path.strip()
+        if not sep or not name or not path:
+            raise ValueError(f"--prompt-file {spec!r}: expected NAME=PATH")
+        if name in out:
+            raise ValueError(f"--prompt-file names {name!r} twice")
+        try:
+            out[name] = Path(path).read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ValueError(f"--prompt-file {name}={path}: {exc.strerror}") from exc
+    return out
+
+
+def _prompts_file(protocol: Path, text: str, specs: list[str]) -> int:
     """`--prompts` on PROTOCOL: the Prompt block from the PROMPT constants
-    of the area's scripts that parse — all of them or none. A constant the
-    static reader cannot compute to a string (`unreadable_prompt_constants`)
-    is named and nothing is written (exit 2): a block with one variant of
-    two reads as filled to every gate."""
+    of the area's scripts that parse — all of them or none — and from the
+    template files SPECS names (`--prompt-file NAME=PATH`, `prompt_files`).
+    A constant the static reader cannot compute to a string
+    (`unreadable_prompt_constants`) is named and nothing is written (exit
+    2): a block with one variant of two reads as filled to every gate."""
     area = protocol.resolve().parent
     unreadable = unreadable_prompt_constants(area)
     if unreadable:
@@ -381,12 +405,14 @@ def _prompts_file(protocol: Path, text: str) -> int:
         )
         return 2
     try:
-        new = fill_prompts(text, prompt_constants(area))
+        templates = prompt_files(specs)
+        new = fill_prompts(text, prompt_constants(area), templates)
     except ValueError as exc:
         console.refuse("protocol-fill", str(exc))
         return 2
     files.write_atomic(protocol, new)
-    print("filled: Prompt (from the scripts' PROMPT constants)")
+    named = f" and the template(s) {', '.join(templates)}" if templates else ""
+    print(f"filled: Prompt (from the scripts' PROMPT constants{named})")
     return 0
 
 
@@ -610,7 +636,7 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     if args.list:
         return _list_file(text)
     if args.prompts:
-        return _prompts_file(args.protocol, text)
+        return _prompts_file(args.protocol, text, args.prompt_file)
     if args.render:
         return _render_file(args.protocol, text)
     if args.discuss is not None:
@@ -1113,6 +1139,14 @@ def main(argv: list[str]) -> int:
         help="write one Prompt block per PROMPT constant of the area scripts, each under a sentence that is not sent",
     )
     ap.add_argument(
+        "--prompt-file",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="with --prompts: also a block for the template file PATH, under NAME — the name its pipeline "
+        "(stagekit) registers it under; repeat per template",
+    )
+    ap.add_argument(
         "--render",
         action="store_true",
         help="write the result section again from its sources for the adopted run: "
@@ -1260,6 +1294,8 @@ def main(argv: list[str]) -> int:
     _check_through_args(ap, args)
     _check_report_mode_args(ap, args)
     _check_freeze_args(ap, args)
+    if args.prompt_file and not args.prompts:
+        ap.error("--prompt-file adds a template to --prompts")
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2
