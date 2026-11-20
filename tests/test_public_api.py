@@ -649,7 +649,7 @@ class CachedCalls(unittest.TestCase):
 
 
 class AnsweringRun(unittest.TestCase):
-    """`recheck.answering_run`: the adopted run stays chosen though a newer
+    """`recheck.answering_run_dir`: the adopted run stays chosen though a newer
     run of the protocol completed; without the adoption the newer one
     answers — the choice every gate makes, no rule of its own."""
 
@@ -666,12 +666,16 @@ class AnsweringRun(unittest.TestCase):
             d.mkdir(parents=True)
             cfg = run_record(protocol={"id": PID, "path": self.protocol.name})
             (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
-            (d / "metrics.json").write_text(json.dumps({"n": 1}), encoding="utf-8")
+            # both report an intent key: the choice is the main rule, not the
+            # fallback to the newest run when none does
+            (d / "metrics.json").write_text(
+                json.dumps({"criterion_1_pass": True}), encoding="utf-8"
+            )
             (d / "completion.json").write_text("{}", encoding="utf-8")
 
     def chosen(self, adopted: str | None) -> str:
         self.protocol.write_text(head(result=adopted), encoding="utf-8")
-        return recheck.answering_run(self.area, self.protocol).name
+        return recheck.answering_run_dir(self.area, self.protocol).name
 
     def test_a_newer_run_does_not_replace_the_adopted_one(self) -> None:
         self.assertEqual(self.chosen(self.OLDER), self.OLDER)
@@ -684,7 +688,9 @@ class AnsweringRun(unittest.TestCase):
             (runs.run_path(self.area, run_id) / "completion.json").unlink()
         with self.assertRaises(SystemExit) as cm:
             self.chosen(None)
-        self.assertIn("recheck:", str(cm.exception))
+        told = str(cm.exception)
+        self.assertIn("recheck:", told)
+        self.assertIn("unfinalized", told)
 
 
 if __name__ == "__main__":
