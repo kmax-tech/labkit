@@ -422,3 +422,62 @@ class TheCopyLiesInTheConfirmationsOwnArea(_Confirmation):
         rc, checked = self.report_check(*named)
         self.assertEqual(rc, 1, checked)
         self.assertEqual(self.link_blockers(checked), [line])
+
+
+class TheHooksHoldAnAdoptedResultWhoseLinkBreaks(_Confirmation):
+    """The confirmation adopted and committed while its link resolved;
+    then the link breaks. The stop hook (`claude-hook stop`), the commit
+    gate (the pre-commit's `report-check --if-reported --staged`) and
+    `labkit-next` each tell the link's blocker once, and neither hook
+    releases. The twin: before the link breaks, both hooks pass and none
+    tells a link finding."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        rc, out = self.labkit_adopt()
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("the confirmation adopted")
+
+    def held_by_every_entry_point(self, named: str) -> None:
+        """Each entry point tells the link's blocker, NAMED in it, once."""
+        for gate, (rc, out) in (
+            ("stop", self.lab.stop_hook()),
+            ("commit", self.lab.pre_commit(self.protocol)),
+        ):
+            with self.subTest(gate=gate):
+                self.assertNotEqual(rc, 0, out)
+                (line,) = self.link_blockers(out)
+                self.assertTrue(
+                    line.startswith(
+                        f"{NOT_EXECUTABLE} protocol = {self.exploration_id} "
+                        f"names {named}"
+                    ),
+                    line,
+                )
+        step = self.labkit_next()
+        self.assertIn(
+            f"  where: exploration link: [explored_in] protocol = "
+            f"{self.exploration_id} names {named}",
+            step,
+        )
+        self.assertIn(f"  next:  {RESOLVE}", step)
+
+    def test_the_twin_a_resolving_link_passes_both_hooks(self) -> None:
+        for gate, (rc, out) in (
+            ("stop", self.lab.stop_hook()),
+            ("commit", self.lab.pre_commit(self.protocol)),
+        ):
+            with self.subTest(gate=gate):
+                self.assertEqual(rc, 0, out)
+                self.assertNotIn("exploration link", out)
+
+    def test_a_committed_deletion_of_the_exploration_is_held(self) -> None:
+        self.lab.git("rm", "-q", self.rel(self.exploration))
+        self.lab.commit("the exploratory protocol removed")
+        self.held_by_every_entry_point("no protocol of this repo")
+
+    def test_a_second_file_carrying_the_id_is_held(self) -> None:
+        copy = self.lab.root / "experiments" / "03-lines-copy" / self.exploration.name
+        copy.parent.mkdir()
+        shutil.copy(self.exploration, copy)
+        self.held_by_every_entry_point("2 protocols (")
