@@ -339,7 +339,7 @@ class TwoProtocolsOfOneArea(CountCommands):
             self.area, _recount, note, run_id=c, protocol=computed
         )
         # held at all: C's script and modules are shown to be as it ran them
-        self.assertEqual((verdict.run_id, verdict.out), (c, None))
+        self.assertEqual((verdict.run_id, verdict.outs), (c, {}))
 
         # A0's patch lost: A0's protocol then cannot be read back — C held at
         # finalize and report-check, its auditor told why, the measurement

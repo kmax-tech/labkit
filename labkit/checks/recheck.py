@@ -2,12 +2,17 @@
 
     from labkit.checks import recheck
     recheck.holds(area=AREA, out=OUT, recompute=evaluate, note=PROTOCOL)
+    recheck.holds_outputs(area=AREA, outs={"generated": GEN, "judged": JUDGED},
+                          recompute=evaluate_both, note=PROTOCOL)
 
 Three mechanics every area's `--check` needs, held here once:
 
 1. **pin** — `out` is the file the chosen run recorded in `outputs.json`
    (runlog keeps a `runs.RECORD_SHA_CHARS`-hex sha256 prefix; the comparison
    is `startswith`, not equality — a full digest never matches a prefix).
+   A number computed from several output files — a stage that generates
+   and one that judges — names each by a key (`holds_outputs`): every one
+   is pinned before `recompute` sees the rows of all of them, by key.
 2. **agree** — `recompute(rows)` equals `metrics.json`: intent keys
    (`criterion_1_…`, `quality_check_1_…`, `interpretation_1_…`) present on both sides or neither,
    nothing the run reported vanishes (runlog's own keys excepted), every
@@ -51,6 +56,15 @@ holds with the recorded sha256, read into a temporary directory
 (`output_as_recorded`). Where no bytes with that sha256 are left, the run
 is not verifiable; the file as it stands is never read in their place.
 That check holds no note, changes no adoption and releases nothing.
+
+Every output compared is a row file: one JSON object per line, a leading
+`_meta` header skipped (`jsonl.data_rows_of`) — what `runlog` areas write
+and `batch.Store` appends. A pipeline's own outputs are not that: stagekit
+writes each stage artifact as one indented JSON document
+(`stage_outputs/<stage>/<key>.json`). The area writes the rows its number
+reads from them into a row file of its own inside the run and registers
+it (`Run.output`); handed a file that is no row file, the recheck refuses
+it, naming the output, and reads nothing in its place.
 
 Any disagreement is a SystemExit with a sentence — the area's `--check`
 calls this with no main of labkit's around it (the rule by caller stands
@@ -106,9 +120,10 @@ class Verdict:
     """What a recheck held: the run, the keys compared, what grew, the numbers the note was held to."""
 
     run_id: str
-    # the output file pinned; None: no output file compared, the run was
-    # recomputed from its inputs (`holds_from_inputs`)
-    out: Path | None
+    # the output files pinned, by the key the caller named each with; empty:
+    # no output file compared, the run was recomputed from its inputs
+    # (`holds_from_inputs`)
+    outs: Mapping[str, Path]
     keys_compared: int
     grown: list[str]  # keys the recomputation has and the run did not
     numbers: list[str]  # what the note was held to
@@ -493,6 +508,35 @@ def rows_of(out: Path) -> list[dict]:
     return jsonl.data_rows_of(out)
 
 
+def output_rows(run: Path, outs: Mapping[str, Path]) -> dict[str, list[dict]]:
+    """The rows of every output of OUTS, by its key (`rows_of`) — what a
+    recomputation over several output files is handed. Raises SystemExit,
+    naming RUN, the key and the file, for a file that is no row file (a
+    JSON document, such as a stagekit stage output, is one): nothing is
+    read in its place."""
+    rows: dict[str, list[dict]] = {}
+    for key, out in outs.items():
+        try:
+            rows[key] = rows_of(out)
+        except ValueError as exc:
+            raise SystemExit(
+                f"recheck: run {run.name}: output {key!r} ({out.name}) is no row "
+                f"file — {exc}. The recomputation reads row files: write the rows "
+                f"the number reads into one inside the run and register it"
+            ) from exc
+    return rows
+
+
+def _named_outputs(outs: Mapping[str, Path]) -> None:
+    """Refuse an OUTS that names no output file: a recomputation over
+    nothing compares nothing. Raises ValueError."""
+    if not outs:
+        raise ValueError(
+            "recheck: OUTS names no output file — pass each file the number "
+            "is computed from under a key of its own"
+        )
+
+
 def agree(
     metrics: dict,
     recomputed: dict,
@@ -616,6 +660,51 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
         raise SystemExit(f"recheck: {note.name} does not cite run {run_id}")
 
 
+def verified_outputs(
+    run: Path,
+    area: Path,
+    outs: Mapping[str, Path],
+    recompute: Callable[[Mapping[str, list[dict]]], dict],
+    ignore: frozenset[str] = LABKIT_KEYS,
+    *,
+    hold_block_now: bool = True,
+    state: AreaState | None = None,
+) -> tuple[dict, list[str]]:
+    """pin → scopes → code → block (if HOLD_BLOCK_NOW) → agree for one run
+    and the output files its number is computed from, no note: (its
+    metrics, the keys the recomputation grew). Every file of OUTS is
+    pinned first (`pin`: registered by RUN, its bytes the ones RUN
+    recorded); only then is RECOMPUTE handed the rows of all of them by
+    their key (`output_rows`) and compared with metrics.json (`agree`). What
+    `holds_outputs` checks before the note, and what `02_analyze.py
+    --draws` checks for every draw — a draw shown unchecked lets an edited
+    repeat file change the flipped items, an edited metrics.json the
+    range. The block step holds the protocol as it reads now to the block
+    the run recorded (`block_unchanged`) unless HOLD_BLOCK_NOW is False —
+    an older run rechecked after the protocol moved on; the kept key is
+    always the one of the run's own text (`kept_keys`). STATE is the
+    area's state the caller built (`holds_outputs`); with None the block
+    step builds it, for a run bound to a protocol only. Raises ValueError
+    for an empty OUTS, SystemExit on the first disagreement,
+    `NotVerifiable` where the code step finds no proof; a failed pin or
+    code step leaves RECOMPUTE uncalled."""
+    _named_outputs(outs)
+    for out in outs.values():
+        pin(run, out)
+    scopes_unchanged(run, area)
+    require_run_code(run, area)
+    if hold_block_now:
+        block_unchanged(run, area, state=state)
+    metrics = runs.read_metrics(runs.metrics_path(run))
+    grown = agree(
+        metrics,
+        recompute(output_rows(run, outs)),
+        ignore,
+        reported=kept_keys(run, area),
+    )
+    return metrics, grown
+
+
 def verified(
     run: Path,
     area: Path,
@@ -626,28 +715,55 @@ def verified(
     hold_block_now: bool = True,
     state: AreaState | None = None,
 ) -> tuple[dict, list[str]]:
-    """pin → scopes → code → block (if HOLD_BLOCK_NOW) → agree for one run, no note: (its metrics, the
-    keys the recomputation grew). What `holds` checks before the note, and
-    what `02_analyze.py --draws` checks for every draw — a draw shown
-    unchecked lets an edited repeat file change the flipped items, an edited
-    metrics.json the range. The block step holds the protocol as it reads
-    now to the block the run recorded (`block_unchanged`) unless
-    HOLD_BLOCK_NOW is False — an older run rechecked after the protocol moved on; the
-    kept key is always the one of the run's own text (`kept_keys`). STATE
-    is the area's state the caller built (`holds`); with None the block
-    step builds it, for a run bound to a protocol only. Raises
-    SystemExit on the first disagreement, `NotVerifiable` where the code
-    step finds no proof."""
-    pin(run, out)
-    scopes_unchanged(run, area)
-    require_run_code(run, area)
-    if hold_block_now:
-        block_unchanged(run, area, state=state)
-    metrics = runs.read_metrics(runs.metrics_path(run))
-    grown = agree(
-        metrics, recompute(rows_of(out)), ignore, reported=kept_keys(run, area)
+    """`verified_outputs` for a number computed from one output file OUT:
+    RECOMPUTE takes its rows."""
+    return verified_outputs(
+        run,
+        area,
+        {out.name: out},
+        lambda rows: recompute(rows[out.name]),
+        ignore,
+        hold_block_now=hold_block_now,
+        state=state,
     )
-    return metrics, grown
+
+
+def holds_outputs(
+    area: Path,
+    outs: Mapping[str, Path],
+    recompute: Callable[[Mapping[str, list[dict]]], dict],
+    note: Path,
+    run_id: str | None = None,
+    numbers: Callable[[dict], list[str]] = plain_numbers,
+    ignore: frozenset[str] = LABKIT_KEYS,
+    protocol: Path | None = None,
+) -> Verdict:
+    """pin → scopes → code → block → agree → cited, for the run that answers the
+    protocol (`chosen_run`; or `run_id`) and every output file of OUTS
+    (`verified_outputs`; RECOMPUTE takes their rows by key). The protocol
+    is `note` unless `protocol` names it — a results note under notes/
+    carries no head. The answering run (no RUN_ID) also holds the protocol
+    as it reads now to the block it recorded; a run named by RUN_ID is
+    rechecked under its own text — the block it recorded and the `[kept]`
+    key of the protocol as it started under it —, whatever the protocol
+    registers now. The code step (`require_run_code`) refuses a run whose
+    script or imported modules changed since it ran, and raises
+    `NotVerifiable` for a run whose code cannot be compared with the code
+    here.
+
+    `numbers(metrics)` formats what the note must carry — pass your own when
+    the note rounds. The area's state is built once, here, and the run
+    choice and the block step read that build. Raises ValueError for an
+    empty OUTS, SystemExit on the first disagreement, `NotVerifiable` where
+    the code step finds no proof."""
+    _named_outputs(outs)
+    state = state_of(area)
+    run = run_dir(area, protocol or note, run_id, state=state)
+    answering = run_id is None  # no run named: the one the protocol answers with
+    metrics, grown = verified_outputs(
+        run, area, outs, recompute, ignore, hold_block_now=answering, state=state
+    )
+    return _cited_verdict(run, outs, metrics, grown, note, numbers, ignore)
 
 
 def holds(
@@ -660,28 +776,18 @@ def holds(
     ignore: frozenset[str] = LABKIT_KEYS,
     protocol: Path | None = None,
 ) -> Verdict:
-    """pin → scopes → code → block → agree → cited, for the run that answers the
-    protocol (`chosen_run`; or `run_id`). The protocol is `note` unless
-    `protocol` names it — a results note under notes/ carries no head.
-    The answering run (no RUN_ID) also holds the protocol as it reads now
-    to the block it recorded; a run named by RUN_ID is rechecked under its
-    own text — the block it recorded and the `[kept]` key of the protocol
-    as it started under it —, whatever the protocol registers now.
-    The code step (`require_run_code`) refuses a run whose script or
-    imported modules changed since it ran, and raises `NotVerifiable` for
-    a run whose code cannot be compared with the code here.
-
-    `numbers(metrics)` formats what the note must carry — pass your own when
-    the note rounds. The area's state is built once, here, and the run
-    choice and the block step read that build. Raises SystemExit on the
-    first disagreement, `NotVerifiable` where the code step finds no proof."""
-    state = state_of(area)
-    run = run_dir(area, protocol or note, run_id, state=state)
-    answering = run_id is None  # no run named: the one the protocol answers with
-    metrics, grown = verified(
-        run, area, out, recompute, ignore, hold_block_now=answering, state=state
+    """`holds_outputs` for a number computed from one output file OUT:
+    RECOMPUTE takes its rows."""
+    return holds_outputs(
+        area,
+        {out.name: out},
+        lambda rows: recompute(rows[out.name]),
+        note,
+        run_id,
+        numbers,
+        ignore,
+        protocol,
     )
-    return _cited_verdict(run, out, metrics, grown, note, numbers, ignore)
 
 
 @dataclass(frozen=True)
@@ -690,15 +796,70 @@ class AsMeasured:
 
     Attributes:
         run_id: The run.
-        source: Where its rows were read (`RecordedOutput.source`).
+        sources: Where the rows of each output were read, by its key
+            (`RecordedOutput.source`).
         keys_compared: The keys of its metrics.json compared.
         grown: Keys the recomputation has and the run did not.
     """
 
     run_id: str
-    source: str
+    sources: Mapping[str, str]
     keys_compared: int
     grown: list[str]
+
+    @property
+    def source(self) -> str:
+        """Where the rows were read, as a check's line says it: the one
+        output's source, or each output's by its key."""
+        if len(self.sources) == 1:
+            return next(iter(self.sources.values()))
+        return "; ".join(f"{key} from {where}" for key, where in self.sources.items())
+
+
+def holds_as_measured_outputs(
+    area: Path,
+    outs: Mapping[str, Path],
+    recompute: Callable[[Mapping[str, list[dict]]], dict],
+    run_id: str,
+    protocol: Path,
+    ignore: frozenset[str] = LABKIT_KEYS,
+) -> AsMeasured:
+    """The separate check of an older run RUN_ID of PROTOCOL over every
+    output file of OUTS: rows → scopes → code → agree, under the text the
+    run started under. The rows of each output are the bytes the run
+    recorded (`output_as_recorded`: the file as it stands, else a commit's
+    copy in a temporary directory), handed to RECOMPUTE by key; the
+    `[kept]` key compared exactly is the one of its own text
+    (`kept_keys`), and the protocol as it reads now is not held to the
+    block the run recorded. No note is read: the check changes no adoption
+    and releases nothing — the protocol's number is held by
+    `holds_outputs` alone. RUN_ID must be a completed measurement bound to
+    PROTOCOL, no repeat (`chosen_run`). Raises ValueError for an empty
+    OUTS, SystemExit on the first disagreement, `NotVerifiable` where the
+    recorded rows of any output are nowhere left or the code step finds no
+    proof."""
+    _named_outputs(outs)
+    run = run_dir(area, protocol, run_id)
+    with contextlib.ExitStack() as stack:
+        kept = {
+            key: stack.enter_context(output_as_recorded(run, out, area))
+            for key, out in outs.items()
+        }
+        scopes_unchanged(run, area)
+        require_run_code(run, area)
+        metrics = runs.read_metrics(runs.metrics_path(run))
+        grown = agree(
+            metrics,
+            recompute(output_rows(run, {k: r.path for k, r in kept.items()})),
+            ignore,
+            reported=kept_keys(run, area),
+        )
+        return AsMeasured(
+            run.name,
+            {k: r.source for k, r in kept.items()},
+            len(set(metrics) - ignore),
+            grown,
+        )
 
 
 def holds_as_measured(
@@ -709,34 +870,21 @@ def holds_as_measured(
     protocol: Path,
     ignore: frozenset[str] = LABKIT_KEYS,
 ) -> AsMeasured:
-    """The separate check of an older run RUN_ID of PROTOCOL: rows →
-    scopes → code → agree, under the text the run started under. Its rows
-    are the bytes it recorded (`output_as_recorded`: the file as it
-    stands, else a commit's copy in a temporary directory); the `[kept]`
-    key compared exactly is the one of its own text (`kept_keys`), and the
-    protocol as it reads now is not held to the block the run recorded.
-    No note is read: the check changes no adoption and releases nothing —
-    the protocol's number is held by `holds` alone. RUN_ID must be a
-    completed measurement bound to PROTOCOL, no repeat (`chosen_run`).
-    Raises SystemExit on the first disagreement, `NotVerifiable` where the
-    recorded rows are nowhere left or the code step finds no proof."""
-    run = run_dir(area, protocol, run_id)
-    with output_as_recorded(run, out, area) as kept:
-        scopes_unchanged(run, area)
-        require_run_code(run, area)
-        metrics = runs.read_metrics(runs.metrics_path(run))
-        grown = agree(
-            metrics,
-            recompute(rows_of(kept.path)),
-            ignore,
-            reported=kept_keys(run, area),
-        )
-        return AsMeasured(run.name, kept.source, len(set(metrics) - ignore), grown)
+    """`holds_as_measured_outputs` for a number computed from one output
+    file OUT: RECOMPUTE takes its rows."""
+    return holds_as_measured_outputs(
+        area,
+        {out.name: out},
+        lambda rows: recompute(rows[out.name]),
+        run_id,
+        protocol,
+        ignore,
+    )
 
 
 def _cited_verdict(
     run: Path,
-    out: Path | None,
+    outs: Mapping[str, Path],
     metrics: dict,
     grown: list[str],
     note: Path,
@@ -750,7 +898,7 @@ def _cited_verdict(
     cited(note, wanted, run.name)
     return Verdict(
         run_id=run.name,
-        out=out,
+        outs=outs,
         grown=grown,
         numbers=wanted,
         keys_compared=len(set(metrics) - ignore),
@@ -859,4 +1007,4 @@ def holds_from_inputs(
     metrics, grown = verified_from_inputs(
         run, area, recompute, ignore, hold_block_now=answering
     )
-    return _cited_verdict(run, None, metrics, grown, note, numbers, ignore)
+    return _cited_verdict(run, {}, metrics, grown, note, numbers, ignore)

@@ -8,7 +8,7 @@ Stand: 2026-11-20. Diese Datei nennt den nächsten Auftrag, offene Entscheidunge
 
 | Status               | Thema                                           | Nächste Handlung                                                                                                   |
 |----------------------|-------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| Beauftragt           | Mehrere Ausgabedateien nachrechnen              | Zwei-Dateien-Fall und Fehlerfälle umsetzen; eigener Commit.                                                        |
+| Gebaut               | Mehrere Ausgabedateien nachrechnen              | `recheck.holds_outputs`; Szenario `tests/test_recheck_outputs_scenario.py`. Release beim Autor.                    |
 | Beauftragt           | Antwortenden Lauf auswählen                     | Bestehende Auswahl wiederverwenden; neuere Versuche dürfen einen übernommenen Lauf nicht ersetzen; eigener Commit. |
 | Entscheidung nötig   | argmining27 als zweiter stagekit-Anwendungsfall | Autor entscheidet; noch kein Versuchsstart.                                                                        |
 | Eigener Folgeauftrag | Globale Freigaberegel                           | Umsetzungsplan und Vertragsänderung erforderlich; noch nicht gebaut.                                               |
@@ -20,10 +20,10 @@ Stand: 2026-11-20. Diese Datei nennt den nächsten Auftrag, offene Entscheidunge
 
 Problem: Ein Modell erzeugt Einwände, ein zweites beurteilt sie. Die Ergebniszahl braucht beide Ausgabedateien; die bestehende Nachrechnung erwartet nur eine. Zusätzlich wurde die Auswahl des Messlaufs in den Anwendungsbereichen mehrfach von Hand geschrieben.
 
-1. **Nachrechnung erweitern.** `recheck` prüft die benötigten Ausgabedateien eines Laufs gemeinsam und berechnet daraus seine gespeicherten Ergebnisse nach. Szenariotest: zwei Dateien, korrekte Nachrechnung. Gegenfälle: zweite Datei fehlt, zweite Datei nach dem Lauf verändert, gespeichertes Ergebnis falsch. Jeder Gegenfall muss die Prüfung verweigern.
+1. **Nachrechnung erweitern — gebaut.** `recheck.holds_outputs` prüft die benötigten Ausgabedateien eines Laufs gemeinsam und berechnet daraus seine gespeicherten Ergebnisse nach. Szenariotest: zwei Dateien, korrekte Nachrechnung. Gegenfälle: zweite Datei fehlt, zweite Datei nach dem Lauf verändert, gespeichertes Ergebnis falsch. Jeder Gegenfall muss die Prüfung verweigern.
 2. **Gemeinsame Lauf-Auswahl anbieten.** Eine öffentliche Funktion verwendet die vorhandene Auswahl `recheck.chosen_run`: den übernommenen Lauf, sonst den gemäß bestehender Regel gewählten. Test: Ein neuerer Versuch ersetzt einen übernommenen Lauf nicht. Keine zweite Auswahlregel einführen. Name und öffentlicher Einstieg werden gegen die vorhandene Schnittstelle in [Architektur, Public API](docs/architecture.md#public-api) geprüft.
 
-Je Teil ein begrenzter Commit. Keine weitere allgemeine Planrunde. Die nötigen Formate der Ausgabedateien sind am konkreten Fall zu prüfen; stagekits JSON-Ausgaben und labkits Zeilendateien nicht ungeprüft gleichsetzen. Die Abnahme umfasst den Zwei-Dateien-Ablauf und die Gegenfälle. Bestehende historische Nachrechnung, Codevergleich und Freigabebindung erhalten.
+Je Teil ein begrenzter Commit. Keine weitere allgemeine Planrunde. Format am Code geklärt: `recheck` liest Zeilendateien (ein JSON-Objekt je Zeile); stagekit schreibt jede Stufenausgabe als ein eingerücktes JSON-Dokument. Der Bereich schreibt daraus eigene Zeilendateien im Lauf und registriert sie; ein JSON-Dokument verweigert `recheck` mit dem Namen der Ausgabe. Die Abnahme umfasst den Zwei-Dateien-Ablauf und die Gegenfälle. Bestehende historische Nachrechnung, Codevergleich und Freigabebindung erhalten.
 
 Hintergrund und Abgrenzung: [Zwei-Stufen-Plan](docs/notes/2026-11-20-two-stage-model-measurement.md). stagekit organisiert die Stufen; labkit sichert die Messung ab. labkit bleibt ohne Abhängigkeit von stagekit.
 

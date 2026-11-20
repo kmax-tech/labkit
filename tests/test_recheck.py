@@ -282,6 +282,63 @@ class Area(unittest.TestCase):
                 {"criterion_1_pass": True, "funnel": [3, 2]}, {"criterion_1_pass": True}
             )
 
+    def _second_output(self, text: str) -> Path:
+        """A second output file holding TEXT, registered by the run beside
+        the rows with its sha256."""
+        second = self.area / "output" / "judged.json"
+        second.write_text(text, encoding="utf-8")
+        (self.run_dir / "outputs.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "path": str(p),
+                        "sha256": hashlib.sha256(p.read_bytes()).hexdigest()[:16],
+                    }
+                    for p in (self.out, second)
+                ]
+            )
+        )
+        return second
+
+    def test_holds_outputs_hands_the_rows_of_each_file_by_its_key(self):
+        second = self._second_output('{"case": "a"}\n{"case": "b"}\n')
+        handed: list[dict] = []
+
+        def both(rows):
+            handed.append(dict(rows))
+            assert len(rows["judged"]) == len(rows["counted"])
+            return evaluate(rows["counted"])
+
+        outs = {"counted": self.out, "judged": second}
+        v = recheck.holds_outputs(self.area, outs, both, self.note)
+        self.assertEqual(v.outs, outs)
+        self.assertEqual(v.keys_compared, 2)
+        self.assertEqual(
+            handed, [{"counted": ROWS, "judged": [{"case": "a"}, {"case": "b"}]}]
+        )
+
+    def test_a_json_document_is_no_row_file_and_is_refused_by_its_key(self):
+        """A stagekit stage output is one indented JSON document
+        (`stage_outputs/<stage>/<key>.json`), not one row per line: the
+        recheck names the output and reads nothing in its place."""
+        second = self._second_output(json.dumps([{"case": "a"}], indent=2))
+        calls: list[int] = []
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds_outputs(
+                self.area,
+                {"counted": self.out, "judged": second},
+                lambda rows: calls.append(1) or {},
+                self.note,
+            )
+        told = str(cm.exception)
+        self.assertIn("output 'judged' (judged.json) is no row file", told)
+        self.assertIn("not JSON", told)
+        self.assertEqual(calls, [])
+
+    def test_no_output_named_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "names no output file"):
+            recheck.holds_outputs(self.area, {}, lambda rows: {}, self.note)
+
     def test_custom_number_format_for_a_rounding_note(self):
         self._record({"ratio": 0.857142857})
         self.note.write_text(

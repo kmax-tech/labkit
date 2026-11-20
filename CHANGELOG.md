@@ -4,6 +4,14 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ## Unreleased
 
+### Breaking
+
+- **`recheck.Verdict.out` is `Verdict.outs`, `recheck.AsMeasured.source` is built from `AsMeasured.sources`.** A verdict names every output file it pinned, by key (`{}` for a run recomputed from its inputs); the historical check names where each output's rows were read. `AsMeasured.source` stays as the line a check prints. `recheck` is not public API; a lab script that read `Verdict.out` reads `Verdict.outs`. 0.114.0 is the last release with the old fields.
+
+### Added
+
+- **A number computed from several output files is rechecked from all of them together: `recheck.holds_outputs`.** A two-stage measurement — one model generates, a second judges — needs the rows of both files for its number, and `recheck.holds` took one. `holds_outputs(area, outs, recompute, note, …)` takes the files by key (`{"generated": GEN, "judged": JUDGED}`): each is pinned to the run first (registered by it, its sha256 the recorded one), then the declared scopes, the code the run ran and the promise block are held as before, and only then is `recompute` handed the rows of every file by key and compared with metrics.json (`recheck.verified_outputs`). The older-run check takes several files too (`recheck.holds_as_measured_outputs`): each output's rows are the file as it stands or a commit's copy with the recorded sha256. `holds`, `verified` and `holds_as_measured` are the one-file form of the same steps. Each file must be a row file, one JSON object per line: stagekit writes each stage output as one indented JSON document (`stage_outputs/<stage>/<key>.json`), which is not one — the area writes the rows its number reads into a row file it registers in the run. A file that is no row file is refused naming its key, where before a single output's parse error was a `ValueError` traceback.
+
 ### Changed
 
 - **`labkit-next` reminds of a reading of the prose at two points.** Before the first measurement, `labkit-next` and `runlog` add a reading of the question, its terms and the criteria while they can still change (`standard_contract.REREAD_BEFORE_FIRST`); the step that offers `labkit-adopt` first asks to read the Summary once more, the Conclusion at most two short sentences, each number with what it is compared with (`next_step.REREAD_BEFORE_ADOPTION`). Each sentence says what to check, so an agent without the lab's own writing rules can do it. Neither blocks anything, and no gate checks the prose (argmining27, 2026-11-17: each Conclusion one sentence with up to twelve numbers and two run ids).
