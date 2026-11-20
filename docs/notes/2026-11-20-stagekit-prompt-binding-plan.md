@@ -1,6 +1,6 @@
 # Prompt binding for a stagekit area — design, explained at the two-stage example (2026-11-20)
 
-A plan, no code, no model call. Step 2 of the [two-stage note](2026-11-20-two-stage-model-measurement.md#steps): how a stagekit area holds the prompts it sends to the protocol's registration, as `lanes` does for a one-stage area. Asked by the author on 2026-11-20 in four questions; the conversion of stagekit's outputs into row files is a separate part at the end. Everything below is read at the code of labkit `main` (`5e5ecaa7`), stagekit and argmining27 experiment 02 on 2026-11-20; nothing of it is decided.
+A plan, no code, no model call. Step 2 of the [two-stage note](2026-11-20-two-stage-model-measurement.md#steps): how a stagekit area holds the prompts it sends to the protocol's registration, as `lanes` does for a one-stage area. Asked by the author on 2026-11-20 in four questions; the conversion of stagekit's outputs into row files is a separate part at the end. Everything below is read at the code of labkit `main` (`5e5ecaa7`), stagekit and argmining27 experiment 02 on 2026-11-20. The author decided its four points the same day, with additions; the last section states them and is the scope of the next build. Nothing is built.
 
 Terms: a *template* is a prompt's text with placeholders, before an item fills it. *Registered* means: the protocol's Prompt field holds the text in a fenced block. A *fixed line* is a template line without a placeholder.
 
@@ -86,11 +86,30 @@ Each row carries `_prov.run`, as experiment 02's rows and fallacy-detection 01 d
 
 What this shows and what not: the row files and the JSON documents are each pinned by their sha256. That the rows are the conversion of the documents is held by the conversion's test, not checked per run. A per-run check — convert the registered documents again and compare with the registered rows — would be a check of the area's `--check` of its own and is not proposed until the case shows it is needed.
 
-## Decisions for the author
+## Decided 2026-11-20 — the scope of the next build
 
-1. **Prompt files in `prompts/<name>.txt`, name = stagekit's prompt name = name in the block's sentence.** If yes: `protocol-fill --prompts`, the static check and the run-time check read this one directory; an area with its templates elsewhere is not read.
-2. **Exact comparison for templates read from files.** If yes: a changed placeholder line, a changed order or a block under the wrong name is refused for stagekit areas. The line-wise comparison stays for constants and `lanes` until a decision of its own.
-3. **Share the run-time refusal as one function in the run layer.** If yes: `lanes.require_registered_prompts` becomes a call of it, behaviour unchanged, tested by the existing lanes tests; one commit before the stagekit path uses it.
-4. **The conversion into row files stays the area's, with a test per stage, and the JSON documents are registered beside the rows.** If yes: labkit adds no reader of stagekit's format, and the link between documents and rows is held by a test, not per run.
+The author took the four points of the first draft with these additions. Where they differ from the sections above, this section holds.
+
+1. **Prompt files in `prompts/<name>.txt`.** The file's stem is stagekit's prompt name and the name in the block's sentence: one name, three places. A template the config uses that does not come from this directory (a topic's built-in prompt, a file elsewhere) is not left unchecked silently. The check names it as not covered and refuses the start, since a check that could not run blocks the step it guards; the way out is to move it into `prompts/` and register its block.
+2. **Exact comparison for templates read from files.** The text of template `<name>` must equal the block under the sentence naming `<name>`. That also catches a changed placeholder line, a changed order and a block under the wrong name. Normalized before the comparison, and nothing else:
+   - line endings: CRLF and CR become LF;
+   - the indentation the markdown list puts before every line of the block, as the block reader removes it;
+   - one final line ending, which a fenced block cannot show.
+
+   Every other character counts, trailing spaces and blank lines included.
+3. **One refusal function, its own step first.** `lanes.require_registered_prompts` becomes a call of a shared function in the run layer, its behaviour unchanged. That is shown by the existing lanes tests, run unchanged, in a commit before the stagekit path uses the function. `lanes` keeps the line-wise comparison; its limits are documented (below), not changed — a change of the `lanes` contract is outside this build.
+
+   **The checked templates are the ones the run uses.** The check runs after `register_prompt_dir` and before `runlog.run` opens, on the texts stagekit's registry holds. A file edited after that does not reach the run: `register_prompt_dir` reads each file once into the registry. The function returns the checked mapping with each text's sha256, and the run records it in its config. After `run_pipeline`, inside the run, the area holds stagekit's own record against it: each `prompt` version in `repro_hash` (sha256 of `template_str`, first 8 hex characters) must start the recorded sha256, and no name may stand there that was not checked. A mismatch raises, so the run ends as failed and does not answer.
+4. **The conversion into row files stays the area's, with a limited assurance.** Both forms are registered with the run: the stagekit JSON documents and the row files made from them. The conversion has a test per stage. The sha256 values show that neither file changed after the run, not that the rows are the right conversion of the documents. That relation rests on the tested conversion code; no per-run check exists by this, and none is built until a case shows it is needed.
+
+**The area test (question 3) shows the refusal too.** With one registered block changed by one character, the start is refused before any model call: the recording stand-in holds no call, and no run directory exists.
+
+**Known limits of the line-wise comparison**, kept as they are for constants and `lanes` (`protocol_check.unheld_prompt_lines`):
+
+- a line with a placeholder is never compared;
+- a fixed line need only stand in some block, so order and assignment to a template are not checked;
+- constants not named `PROMPT` / `PROMPT_<VARIANT>` are not read by the static check (experiment 02's three inserts).
+
+Outside this build: new model measurements, any change to stagekit, a run in argmining27, and the `lanes` contract.
 
 Not in this plan: resuming after a break, what a repeat draws, keeping the rendered prompt per call, any change to stagekit, any run in argmining27.
