@@ -40,6 +40,7 @@ from labkit.formats.commands import (
     explored_in_command,
     gate_command,
     register_anew,
+    stamp_command,
 )
 from labkit.formats.exploration_state import (
     SharedInput,
@@ -258,8 +259,9 @@ def unresolved_link_hold(
     a hint and warns. The condition is exact (guaranteed).
 
     The ways out make the id name exactly one protocol: the exploratory
-    protocol restored where none carries the id, the copy re-stamped where
-    several do. The restore is worded from GONE (`LastHeld`, read only
+    protocol restored where none carries the id; where several do, the
+    copy removed, or kept under a fresh id — a step by hand the sentence
+    names, since no command gives an existing protocol a new id. The restore is worded from GONE (`LastHeld`, read only
     where no file carries the id): the checkout of each file the history
     holds under the id, from the last commit that held it; where the
     history holds none, or was not read, a sentence saying what is not
@@ -307,9 +309,17 @@ def unresolved_link_hold(
     else:
         named = f"{len(hits)} protocols ({', '.join(str(h) for h in hits)})"
         checks = ", ".join(f"`{gate_command('protocol-check', h)}`" for h in hits)
+        # no command gives an existing protocol a fresh id: the step is by
+        # hand, and the sentence names it and the file it acts on
         resolve = (
-            f"re-stamp the copy, so that one protocol carries the id ({checks} "
-            f"name the duplicate id and the re-stamp)"
+            f"one of these files is the exploration the link means — the one "
+            f"whose area holds its run, runs/{link.run}/ —; each other file "
+            f"is a copy, and no command gives it a fresh id. Remove the copy "
+            f"from the repo; or, to keep it as a protocol of its own, stamp "
+            f"one (`{stamp_command()}` writes a fresh id), carry the copy's "
+            f"text into the new PROTOCOL-*.md by hand — every line but the "
+            f"`id` in its head —, and then remove the copy ({checks} name "
+            f"the duplicate id)"
         )
     if has_measured:
         other = (

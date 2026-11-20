@@ -486,6 +486,13 @@ def decide_command(
     )
 
 
+def stamp_command(name: str = "<new-name>", kind: str = "…") -> Command:
+    """The `labkit-init exp NAME --kind KIND` line that stamps a new area
+    and its protocol under a fresh id — the one way labkit writes an id;
+    no command gives an existing protocol a new one."""
+    return Command(INIT, f"labkit-init exp {name} --kind {kind}")
+
+
 def register_anew(pid: str = "<id>", per: str = "per change", kind: str = "…") -> str:
     """The way out of a registration that cannot be answered as written
     (K1): a new protocol of KIND naming the earlier one PID, exploratory
@@ -495,7 +502,7 @@ def register_anew(pid: str = "<id>", per: str = "per change", kind: str = "…")
     layer prints for it: the ways out, report-check's and finalize's holds,
     the reference and kept-number checks."""
     return (
-        f"register anew: a new protocol (`labkit-init exp <new-name> --kind {kind}`), "
+        f"register anew: a new protocol (`{stamp_command(kind=kind)}`), "
         '`type = "exploratory"` (`confirmatory` only on data not yet evaluated for '
         "the changed question), committed before its own first run, naming the "
         f'earlier one in `[replaces] protocol = "{pid}"` with one '

@@ -61,7 +61,7 @@ UNCOVERED = (
     "BLOCKER: analysis audit: no analysis audit covers the area as it is now, "
     "and none can until the exploration link resolves"
 )
-RESTAMP = "labkit-init exp <name> --kind …"
+RESTAMP = "labkit-init exp <new-name> --kind …"
 
 
 class _Confirmation(e2e.CountCommands):
@@ -311,15 +311,44 @@ class TheLinkNamesNoProtocol(_Confirmation):
 
 
 class TheLinkNamesTwoProtocols(_Confirmation):
-    """A second file of the repo carries the exploratory protocol's id."""
+    """A second file of the repo carries the exploratory protocol's id. No
+    command gives it a fresh id: the blocker names the step by hand — the
+    copy removed, or its text carried into a freshly stamped protocol —
+    and how to tell the copy from the exploration (the area that holds
+    the linked run)."""
 
-    def test_the_adoption_is_refused_nothing_is_written_and_the_restamp_releases_it(
-        self,
-    ) -> None:
+    def copied(self) -> tuple[Path, str]:
+        """The exploratory protocol copied into a third area: the copy and
+        the blocker line the refused adoption prints, which names the step
+        by hand."""
         copy = self.lab.root / "experiments" / "03-lines-copy" / self.exploration.name
         copy.parent.mkdir()
         shutil.copy(self.exploration, copy)
         line = self.refused_once("2 protocols (")
+        self.assertIn(
+            f"{RESOLVE}one of these files is the exploration the link means — "
+            f"the one whose area holds its run, runs/{self.run_a}/ —; each other "
+            f"file is a copy, and no command gives it a fresh id. Remove the "
+            f"copy from the repo; or, to keep it as a protocol of its own, stamp "
+            f"one (`{RESTAMP}` writes a fresh id), carry the copy's text into "
+            f"the new PROTOCOL-*.md by hand — every line but the `id` in its "
+            f"head —, and then remove the copy",
+            line,
+        )
+        self.assertTrue((self.exploration.parent / "runs" / self.run_a).is_dir())
+        self.assertFalse((copy.parent / "runs").exists())
+        return copy, line
+
+    def test_removing_the_copy_releases_it(self) -> None:
+        copy, line = self.copied()
+        copy.unlink()
+        copy.parent.rmdir()
+        self.released(line)
+
+    def test_the_adoption_is_refused_nothing_is_written_and_the_restamp_releases_it(
+        self,
+    ) -> None:
+        copy, line = self.copied()
         # the way out's first commands, run as printed: protocol-check on
         # each file that carries the id names the duplicate and the re-stamp
         checks = [
@@ -331,10 +360,9 @@ class TheLinkNamesTwoProtocols(_Confirmation):
             rc, told = self.command(protocol_report.main, *shlex.split(check)[1:])
             self.assertEqual(rc, 1, told)
             self.assertIn(f"DUPLICATE protocol id {self.exploration_id}", told)
-            self.assertIn(f"re-stamp the copy: `{RESTAMP}`", told)
-        # the re-stamp, its placeholders filled; the copy's text moves into
+        # the stamp, its placeholders filled; the copy's text moves into
         # the freshly stamped protocol by hand, under the fresh id
-        restamp = RESTAMP.replace("<name>", "lines-again").replace("…", "compute")
+        restamp = RESTAMP.replace("<new-name>", "lines-again").replace("…", "compute")
         rc, told = self.command(scaffold.main, *shlex.split(restamp)[1:])
         self.assertEqual(rc, 0, told)
         (fresh,) = (self.lab.root / "experiments").glob("*-lines-again/PROTOCOL-*.md")

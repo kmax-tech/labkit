@@ -96,8 +96,22 @@ class ALinkThatNamesNoOneProtocolHoldsTheRelease(unittest.TestCase):
             f.text,
         )
         assert f.fix is not None
-        self.assertIn("re-stamp the copy", f.fix)
-        self.assertIn(f"`protocol-check {THEIRS}`, `protocol-check {COPY}`", f.fix)
+        # no command gives a protocol a fresh id: the step by hand is named,
+        # with the file it acts on and how to tell it from the exploration
+        self.assertIn(
+            f"make the id name exactly one protocol of the repo: one of these "
+            f"files is the exploration the link means — the one whose area "
+            f"holds its run, runs/{LINK.run}/ —; each other file is a copy, and "
+            f"no command gives it a fresh id. Remove the copy from the repo; or, "
+            f"to keep it as a protocol of its own, stamp one (`labkit-init exp "
+            f"<new-name> --kind …` writes a fresh id), carry the copy's text "
+            f"into the new PROTOCOL-*.md by hand — every line but the `id` in "
+            f"its head —, and then remove the copy (`protocol-check {THEIRS}`, "
+            f"`protocol-check {COPY}` name the duplicate id), then "
+            f"`report-check area`",
+            f.fix,
+        )
+        self.assertNotIn("re-stamp", f.fix)
 
     def test_the_twin_an_id_exactly_one_protocol_carries_holds_nothing(self):
         self.assertEqual(held(LINK, {EXPLORATION: [THEIRS]}), [])
