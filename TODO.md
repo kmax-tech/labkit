@@ -61,6 +61,19 @@ Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingu
 
 Belege der ursprünglichen Funde: [argmining27-Fundliste](TODO-history-2026-11-20.md#nutzungsfunde-zu-wartung-und-lesbarkeit--argmining27-experimente-0204-2026-11-17). Bereits behoben sind Konstanten-Typprüfung, verständlichere statische Warnungen, Kaltleser-Hinweis bei niedrigen Kosten, die Meldung zum abgebrochenen ersten Start, Schreibhinweise und getrennte Prompt-Blöcke. Diese Reparaturen sind keine offenen Bauaufträge.
 
+### Protokolle verständlicher erklären — vorerst nur notiert
+
+Anlass: Im gelesenen [Protokoll von argmining27 Experiment 06](/Users/max/projects/argmining27/experiments/06-missci-objection-weighting/PROTOCOL-missci-objection-weighting.md:5) bündelt die Summary Ergebnis, Erklärung und Grenzen in zwei langen Sätzen; die Begriffsliste steht vor der Frage. Das Feedback nennt auch Experimente 04 und 05; sie sind für diesen Eintrag nicht geprüft.
+
+Begrenzter Folgeplan für Anleitung und Vorlagen, nach dem laufenden Prompt-Auftrag:
+
+1. **Frage zuerst.** Den Zweck in Alltagssprache erklären, dann ein Beispiel und die benötigten Begriffe. Leserführung: Frage → Beispiel und Vergleich → Messung und Kriterium → Ergebnis → Bedeutung und Grenzen.
+2. **Bedingungen vergleichbar machen.** Wenn mehrere Varianten vorkommen, eine kleine Tabelle mit Bedingung, Beispiel und Zweck anbieten; im Belegfall kein Zusatz, echter Einwand, irrelevanter Zusatz und Scheineinwand.
+3. **Ergebnis und Deutung trennen.** Die Summary beantwortet die Frage knapp; Einzelzahlen und Fallkennungen stehen in einer anschließenden Tabelle. Unterschiedliche Messverfahren getrennt beurteilen. Fehlender Messspielraum, verfehltes Kriterium und eine unklare Kontrollbedingung sind verschiedene Grenzen; keine pauschale Schlussfolgerung daraus machen.
+4. **An einem Beispiel prüfen.** Einen lesbaren Entwurf mit dem Original abgleichen: Aussagen, Vergleiche, Unsicherheit, Prompts und technische Prüfdetails bleiben erhalten. Pflichtfelder nicht ohne Prüfung ihrer Leser verschieben oder umbenennen. Erst danach über allgemeine Vorlagenänderungen entscheiden.
+
+Kein neuer Gate-Check, keine zusätzliche Erfolgspflicht und kein Auftrag, historische Protokolle in argmining27 umzuschreiben. Vollständige Prompts und technische Referenzangaben bleiben zugänglich; die kurze Erklärung soll ihnen vorausgehen. Der Eintrag ändert die aktuelle Baureihenfolge nicht.
+
 ### Audit und Wartbarkeit
 
 | Thema                                   | Wann wieder aufgreifen?                                                                                                                                                                                                                                                                                                           |
