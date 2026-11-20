@@ -833,11 +833,23 @@ def value_then_line(label: str, name: str, then: ValueThen) -> str:
     return f"{label} {name} ({then.where}): {then.value}"
 
 
+#: what the follow-up tells the auditor while the first registration is
+#: undetermined: the missing evidence is named as missing, no verdict is
+#: prescribed, and none lifts finalize's hold (`untold_first_holds`)
+NOT_ASSESSABLE_WITHOUT_FIRST = (
+    "Whether the first registration was kept cannot be assessed from this "
+    "evidence. A verdict does not replace the missing evidence and does not "
+    "lift the hold on the release. Judge what the evidence shown does support"
+)
+
+
 def field_change_lines(change: FieldChange) -> list[str]:
     """The lines the follow-up prints for a corrected field, in this order:
 
     1. first measurement untold (`first_untold`): that the first
-       registration is undetermined, and why;
+       registration is undetermined, and why — and that no verdict
+       stands in for it: whether the first registration was kept cannot
+       be assessed, and the hold stays (`NOT_ASSESSABLE_WITHOUT_FIRST`);
     2. the field in the first measurement's text — as first registered,
        or, first measurement untold, as evidence that is not established
        as the first registration (no line where no measurement is listed);
@@ -845,14 +857,15 @@ def field_change_lines(change: FieldChange) -> list[str]:
     4. the field now;
     5. which of these the change to judge is taken against.
 
-    Equal values are printed on their own lines all the same: the reader
-    sees that both texts were read."""
+    Equal values are printed on their own lines all the same: each line
+    names the text its value comes from."""
     lines = []
     if change.first_untold:  # 1
         lines.append(
             f"first registration: undetermined — {change.first_untold}. "
             f"Which workflow binds this protocol's runs is undetermined too. "
-            f"No value below is established as the first registration"
+            f"No value below is established as the first registration. "
+            f"{NOT_ASSESSABLE_WITHOUT_FIRST}"
         )
     if change.first_measured is not None:  # 2
         name = FIRST_THAT_READS if change.first_untold else AS_FIRST_REGISTERED

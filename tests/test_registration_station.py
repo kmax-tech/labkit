@@ -379,6 +379,12 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         self.assertIn(
             "Which workflow binds this protocol's runs is undetermined", lines[0]
         )
+        # no verdict is prescribed, and none stands in for the evidence
+        self.assertTrue(
+            lines[0].endswith(audit_prompt.NOT_ASSESSABLE_WITHOUT_FIRST), lines[0]
+        )
+        self.assertIn("cannot be assessed from this evidence", lines[0])
+        self.assertIn("does not lift the hold on the release", lines[0])
         self.assertTrue(
             lines[1].startswith(
                 f"Data / scope in the first measurement whose text can be read back "
@@ -475,7 +481,9 @@ class PromptAndHoldCompareTheSameText(_TwoRuns):
         later = self.measured_twice("exploratory")
         change = self.shown(later)
         self.assertEqual(change.first_untold, "")
-        self.assertNotIn("undetermined", "\n".join(self.printed(change)))
+        text = "\n".join(self.printed(change))
+        self.assertNotIn("undetermined", text)
+        self.assertNotIn(audit_prompt.NOT_ASSESSABLE_WITHOUT_FIRST, text)
 
     def test_without_a_run_only_the_prompt_compares_and_names_the_first(self):
         """The one case where the two part: with no run audited an
@@ -527,7 +535,11 @@ class TheLinesOfAFieldChange(unittest.TestCase):
             [
                 "first registration: undetermined — run r1: its record names p-1. "
                 "Which workflow binds this protocol's runs is undetermined too. "
-                "No value below is established as the first registration",
+                "No value below is established as the first registration. "
+                "Whether the first registration was kept cannot be assessed from "
+                "this evidence. A verdict does not replace the missing evidence "
+                "and does not lift the hold on the release. Judge what the "
+                "evidence shown does support",
                 "Unit now: ms",
                 "change to judge: from the first registration to the value now — "
                 "and the first registration is undetermined: no value shown here "
