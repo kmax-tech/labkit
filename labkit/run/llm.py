@@ -132,19 +132,44 @@ from labkit.run.llm_backends import (
 
 def find_models_toml() -> Path:
     """The lab's `models.toml`: `repo.lab_root` from the script's directory,
-    else from the working directory. Raises FileNotFoundError when neither
-    has one above it."""
-    seeds = [
-        Path(sys.argv[0]).resolve().parent if sys.argv[0] else Path.cwd(),
-        Path.cwd(),
-    ]
+    else from the working directory (`models_toml_from`). Raises
+    FileNotFoundError when neither has one above it."""
+    found = models_toml_from(
+        [
+            Path(sys.argv[0]).resolve().parent if sys.argv[0] else Path.cwd(),
+            Path.cwd(),
+        ]
+    )
+    if found is None:
+        raise FileNotFoundError(
+            "models.toml not found (searched upward from script dir and cwd)"
+        )
+    return found
+
+
+def models_toml_from(seeds: list[Path]) -> Path | None:
+    """The `models.toml` a run resolves from SEEDS, tried in order: the
+    nearest one above the first seed that has one (`repo.lab_root`); None
+    when none has. The one resolution of the file — the run's
+    (`find_models_toml`) and the audit's (`model_entry`) differ only in
+    their seeds."""
     for seed in seeds:
         root = lab_root(seed)
         if root is not None:
             return root / MODELS_TOML
-    raise FileNotFoundError(
-        "models.toml not found (searched upward from script dir and cwd)"
-    )
+    return None
+
+
+def models_toml_above(path: Path) -> list[Path]:
+    """Every other `models.toml` above PATH's directory, nearest first: a
+    script outside that directory resolves one of these instead of PATH
+    (`models_toml_from`)."""
+    above: list[Path] = []
+    root = lab_root(path.parent.parent)
+    while root is not None:
+        above.append(root / MODELS_TOML)
+        root = lab_root(root.parent) if root.parent != root else None
+    return above
 
 
 def _models_data() -> tuple[Path, dict[str, Any]]:
@@ -216,21 +241,21 @@ def _answering_model(used: BackendSpec) -> str:
 
 
 def model_entry(alias: str | None, start: Path) -> str:
-    """`[models.<alias>]` of the lab's `models.toml` (`lab_root` of START) as
-    TOML lines, or a sentence why not — what the audit is shown of a bound
-    validation's alias as today's setting (`audit_prompt.validity_evidence`; what
-    the validation ran with is its run record, `runs.recorded_models`).
-    Reads the file using the same alias lookup as `_load_spec`
-    (`alias_tables`); changes no files. Missing aliases, unreadable files
-    and invalid TOML return an explanatory sentence.
-
-    """
+    """`[models.<alias>]` of the `models.toml` a run resolves from START
+    (`models_toml_from`), as TOML lines under the file's path, or a
+    sentence why not — what the audit is shown of a bound validation's
+    alias as today's setting (`audit_prompt.validity_evidence`; what the
+    validation ran with is its run record, `runs.recorded_models`). Every
+    other `models.toml` above that file is named after it (`models_toml_above`):
+    a script outside START may resolve that one, and the run record does not
+    say which file a run read. Reads the file using the same alias lookup
+    as `_load_spec` (`alias_tables`); changes no files. Missing aliases,
+    unreadable files and invalid TOML return an explanatory sentence."""
     if alias is None:
         return "the bound protocol names no [model] alias"
-    root = lab_root(start)
-    if root is None:
+    path = models_toml_from([start])
+    if path is None:
         return f"alias = {alias!r}; no models.toml above {start}"
-    path = root / MODELS_TOML
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
@@ -239,9 +264,15 @@ def model_entry(alias: str | None, start: Path) -> str:
         table, _ = alias_tables(str(path), data, alias)
     except (KeyError, ValueError) as exc:
         return f"alias = {alias!r}; {exc.args[0]}"
-    return f"[models.{alias}]\n" + "\n".join(
-        f"{k} = {json.dumps(v)}" for k, v in table.items()
-    )
+    lines = [f"# from {path}", f"[models.{alias}]"]
+    lines += [f"{k} = {json.dumps(v)}" for k, v in table.items()]
+    lines += [
+        f"# another models.toml stands above, at {other}: a script outside "
+        f"{start} may resolve that one, and the run record does not say which "
+        f"file a run read"
+        for other in models_toml_above(path)
+    ]
+    return "\n".join(lines)
 
 
 def aliases() -> list[str]:

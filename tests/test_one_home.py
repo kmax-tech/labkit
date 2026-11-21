@@ -358,9 +358,10 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"/ \"01_measure\.py\"|\}/scripts/01_measure\.py",
         {"runs"},
     ),
-    # the lab's model file is named once, `repo.MODELS_TOML`, and its
-    # current state is read once, `llm._models_data` (the file found by
-    # `find_models_toml`, a "not TOML" ValueError)
+    # the lab's model file is named once, `repo.MODELS_TOML`, and found by
+    # one resolution, `llm.models_toml_from`; the run reads it in
+    # `llm._models_data` (a "not TOML" ValueError), the audit's display in
+    # `llm.model_entry` (a sentence instead of an error)
     ("the model file named by hand", r"\"models\.toml\"", {"repo"}),
     ("models.toml read by hand", r"= find_models_toml\(\)", set()),
     # every first measurement, flattened, is `area_state.Measured.every_first`
