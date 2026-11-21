@@ -213,40 +213,28 @@ class PreflightStations(unittest.TestCase):
 
 
 class ScopeStampStation(unittest.TestCase):
-    """Station 5 tells the stamp, or why it cannot stamp — a scope file a
-    promise declares that is missing is told here and blocked at station 4,
-    once; it does not end the gate."""
+    """Station 5 tells the stamp, or why it cannot stamp. A cause station 4
+    blocks (a missing declared scope file, a script that does not read) is
+    told here and blocked there, once; a cause station 4 does not read (a
+    sibling protocol, a module only a declared scope file imports) is
+    blocked here when no earlier blocker stands, and told beside one that
+    does (the exit stays 1). It does not end the gate."""
 
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.area = declared_scope_area(Path(tmp.name))
 
-    def stamp_station(self) -> tuple[list[str], list[str]]:
-        """(lines told, blockers) of station 5 alone."""
+    def stamp_station(self, held: bool = True) -> tuple[list[str], list[str]]:
+        """(lines told, blockers) of station 5 alone; HELD: an earlier
+        station's blocker already stands (left out of the result)."""
         told: list[str] = []
         found = Findings(tell=told.append)
+        if held:
+            found.block("an earlier station's blocker", fix="`x`", rule=TECHNICAL_RULE)
+            told.clear()
         preflight.check_scope_stamp(found, self.area)
-        return told, found.blocked
-
-    def test_a_missing_declared_scope_file_cannot_stamp(self):
-        (self.area / "helper.py").unlink()
-        (line,), blocked = self.stamp_station()
-        self.assertTrue(line.startswith("  cannot stamp: "), line)
-        self.assertIn("helper.py", line)
-        self.assertEqual(blocked, [])
-
-    def test_the_twin_a_present_declared_file_is_stamped(self):
-        sha = area_stamp(self.area)[0]
-        self.assertEqual(self.stamp_station(), ([f"  {sha}"], []))
-
-    def test_the_whole_gate_blocks_it_once_at_station_4(self):
-        (self.area / "helper.py").unlink()
-        found = Findings(tell=None)
-        self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
-        scope = [m for m in found.blocked if "helper.py" in m]
-        self.assertEqual(len(scope), 1, found.blocked)
-        self.assertIn("declared scope", scope[0])
+        return told, found.blocked[1:] if held else found.blocked
 
     def script(self, text: str) -> Path:
         """A script under the area's scripts/ holding TEXT."""
@@ -272,6 +260,49 @@ class ScopeStampStation(unittest.TestCase):
         named = [m for m in found.blocked if "measure.py" in m]
         self.assertEqual(len(named), 1, found.blocked)
         self.assertIn("cannot be read", named[0])
+
+    def test_with_no_blocker_standing_a_stamp_that_fails_blocks(self):
+        self.script("def broken(:\n")
+        _, blocked = self.stamp_station(held=False)
+        self.assertEqual(len(blocked), 1, blocked)
+        self.assertTrue(blocked[0].startswith("cannot stamp the area's scope: "))
+        self.assertIn("measure.py", blocked[0])
+
+    def test_the_twin_with_no_blocker_a_stamp_that_computes_passes(self):
+        sha = area_stamp(self.area)[0]
+        self.assertEqual(self.stamp_station(held=False), ([f"  {sha}"], []))
+
+    def test_a_module_only_a_declared_file_imports_is_blocked_here(self):
+        # station 4 does not read lib/deep.py: no earlier blocker names it
+        (self.area.parent.parent / "lib" / "deep.py").write_text("def x(:\n")
+        _, blocked = self.stamp_station(held=False)
+        self.assertEqual(len(blocked), 1, blocked)
+        self.assertIn("deep.py", blocked[0])
+
+    def test_a_sibling_protocols_missing_scope_file_is_blocked_here(self):
+        block = (
+            '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\n'
+            'sentence = "s"\nscope = ["nothere.py"]\n'
+        )
+        (self.area / "PROTOCOL-y.md").write_text("# y\n" + head(promises=block))
+        _, blocked = self.stamp_station(held=False)
+        self.assertEqual(len(blocked), 1, blocked)
+        self.assertIn("nothere.py", blocked[0])
+
+    def test_the_whole_gate_tells_it_beside_the_blockers_it_has(self):
+        # the fixture's head lacks required fields: the gate is blocked
+        # already, so the cause is told, and the exit stays 1
+        (self.area.parent.parent / "lib" / "deep.py").write_text("def x(:\n")
+        told: list[str] = []
+        found = Findings(tell=told.append)
+        self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
+        self.assertTrue(
+            any(
+                line.startswith("  cannot stamp: ") and "deep.py" in line
+                for line in told
+            ),
+            told,
+        )
 
 
 if __name__ == "__main__":
