@@ -47,7 +47,7 @@ from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
-    PROTOCOL_NAME,
+    is_protocol_name,
     REPORT_SUFFIX,
     file_text,
     git_root,
@@ -321,7 +321,7 @@ def registering_protocols(
     candidates = {
         own_path(p if p.is_absolute() else root / p)
         for p in paths
-        if p.suffix == REPORT_SUFFIX and not PROTOCOL_NAME.match(p.name)
+        if p.suffix == REPORT_SUFFIX and not is_protocol_name(p.name)
     }
     if not candidates:
         return []
@@ -412,7 +412,7 @@ def committed_reports(
     candidates = [
         p
         for p in indexed_files(repo)
-        if p.suffix == REPORT_SUFFIX and not PROTOCOL_NAME.match(p.name)
+        if p.suffix == REPORT_SUFFIX and not is_protocol_name(p.name)
     ]
     links = indexed_links(repo) if staged else None
     out: list[tuple[Path, str]] = []

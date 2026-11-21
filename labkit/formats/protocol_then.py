@@ -21,8 +21,9 @@ from pathlib import Path
 from labkit.formats import promises, protocol_block, runs
 from labkit.formats.area_state import last_committed
 from labkit.formats.repo import (
-    PROTOCOL_GLOB,
+    PROTOCOL_FILE,
     SKIP_DIRS,
+    protocol_file_name,
     GitError,
     blob_text,
     blobs_then,
@@ -46,7 +47,7 @@ def bound_protocol_file(area: Path, pid: str, recorded: str | None) -> Path:
     except protocol_block.BlockError:
         if recorded and not Path(recorded).is_absolute():
             return area / recorded
-        return area / f"PROTOCOL-{pid}.md"
+        return area / protocol_file_name(pid)
 
 
 def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
@@ -60,6 +61,8 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     if listed.returncode != 0:
         raise GitError(f"git ls-tree {commit[:12]} in {root}: {listed.stderr.strip()}")
     names = [n for n in listed.stdout.split("\0") if n]
+    # any file whose name opens with `PROTOCOL-` is read for the id, as it
+    # always was; home: wider than repo.is_protocol_name on purpose
     for rel in sorted(n for n in names if Path(n).name.startswith("PROTOCOL-")):
         text = text_at(root, root / rel, commit)
         if text is not None and _id_then(text) == pid:
@@ -92,8 +95,7 @@ def last_held_with_id(root: Path, pid: str) -> list[tuple[Path, str]]:
     HistoryUnread (a RuntimeError) when git cannot list or read the
     history, GitError when git cannot run."""
     skipped = "|".join(re.escape(d) for d in sorted(SKIP_DIRS))
-    file_name = re.escape(PROTOCOL_GLOB).replace(re.escape("*"), "[^/]+")
-    name = rf"((?:(?!(?:{skipped})/)[^/]+/)*{file_name})"
+    name = rf"((?:(?!(?:{skipped})/)[^/]+/)*{PROTOCOL_FILE})"
     standing = {rel_posix(p, root) for p in repo_protocols(root)}
     return [
         (root / rel, commit)

@@ -95,6 +95,7 @@ from labkit.tools.protocol_edit import fill, fill_head
 from labkit.formats.repo import (
     EXPERIMENTS,
     MODELS_TOML,
+    protocol_file_name,
     commit_of,
     files_at,
     first_added,
@@ -365,7 +366,7 @@ def area_readme(
         "**The one question.** <one sentence — the same question as in the protocol's\n"
         'Intent; if it needs an "and", it is two experiments>'
         if skeleton
-        else f"**The one question** is the protocol's Question field (`PROTOCOL-{slug}.md`);\n"
+        else f"**The one question** is the protocol's Question field (`{protocol_file_name(slug)}`);\n"
         "a computation asks one and reports one number."
     )
     returns = (
@@ -387,6 +388,7 @@ def area_readme(
     )
     recheck = "`02_analyze.py --check`"  # the one public recheck of every skeleton
     title = f"Experiment {nn}: {slug}" if nn else f"Experiment: {slug}"
+    protocol_name = protocol_file_name(slug)
     return f"""# {title}
 
 *Self-contained: data, scripts, output and this description live here.*
@@ -395,7 +397,7 @@ def area_readme(
 
 <!-- labkit:route -->
 **Trace it.**
-- Contract and reported answer: `PROTOCOL-{slug}.md`
+- Contract and reported answer: `{protocol_name}`
 - Runs and provenance: `runlog experiments/{area_name}` (from the repo root)
 - Effective values: `labkit-params experiments/{area_name}`
 - Where the ids are decided: `scripts/01_measure.py:evaluate_rows`
@@ -712,7 +714,7 @@ def stamp_area(
         (area / "explore").mkdir(exist_ok=True)
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
-    write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
+    write_if_absent(area / protocol_file_name(slug), stamped, log)
     log += stamp_scripts(
         root, area, nn, slug, skeleton, model, deliverables, deliverable_columns
     )
@@ -918,7 +920,7 @@ def restampable_area(root: Path, name: str, kind: str) -> Path:
             # home: no builder in commands — an area's name, not a path
             f"`labkit-init exp {slug} --kind {kind}` stamps a new one",
         )
-    protocol = area / f"PROTOCOL-{slug}.md"
+    protocol = area / protocol_file_name(slug)
     if area_protocols(area) != [protocol]:
         raise console.Refused(
             "labkit-init",
@@ -956,7 +958,7 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
     and git, writes nothing. Raises `console.Refused` for a protocol
     without kind or id, or already of KIND."""
     nn = split_area_name(area.name)[0] or ""
-    protocol = area / f"PROTOCOL-{slug}.md"
+    protocol = area / protocol_file_name(slug)
     old = protocol.read_text(encoding="utf-8")
     head = protocol_block.head(old)
     if head.kind is None or head.id is None:

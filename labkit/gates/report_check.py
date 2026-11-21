@@ -117,7 +117,7 @@ from labkit.formats.area_state import (
     gone_run_restore,
     state_of,
 )
-from labkit.formats.repo import PROTOCOL_NAME, pending_adoption
+from labkit.formats.repo import is_protocol_name, pending_adoption
 from labkit.formats import evidence
 from labkit.formats.protocol_history import (
     NO_COMMIT,
@@ -1428,7 +1428,7 @@ def hold_reported(
     touched_areas |= {
         (p if p.is_absolute() else root / p).parent.resolve()
         for p in paths
-        if PROTOCOL_NAME.match(p.name)
+        if is_protocol_name(p.name)
     }
     for area in sorted(touched_areas):
         if area in chained:

@@ -60,7 +60,7 @@ from labkit.formats.run_starts import START_FILES_DIR, start_path
 from labkit.formats.repo import (
     rel_posix,
     EXPERIMENTS,
-    PROTOCOL_NAME,
+    is_protocol_name,
     find_area,
     own_path,
     shown,
@@ -338,7 +338,7 @@ def run_reports(
 
 def wants_check(path: Path) -> str | None:
     """Which checker a path belongs to: 'protocol', 'note' or None."""
-    if PROTOCOL_NAME.match(path.name):
+    if is_protocol_name(path.name):
         return "protocol"
     parts = path.as_posix().split("/")
     # any `notes/messung/` pair on the way, not the first `notes`: a repo

@@ -83,7 +83,6 @@ traceback, exit 1, never swallowed.
 from __future__ import annotations
 
 import contextlib
-from fnmatch import fnmatch
 import os
 import subprocess
 import signal
@@ -117,7 +116,7 @@ from labkit.gates.undecided import undecided_state
 from labkit.formats.run_index import RunIndexError
 from labkit.formats.repo import (
     rel_posix,
-    PROTOCOL_GLOB,
+    is_protocol_name,
     git_root,
     indexed_changes,
     head_sha,
@@ -477,7 +476,7 @@ def commit_gates(argv: list[str]) -> int:
     protocols = [
         Path(p)
         for p in indexed_changes(repo, diff_filter="ACMR")
-        if fnmatch(Path(p).name, PROTOCOL_GLOB)
+        if is_protocol_name(Path(p).name)
     ]
     if protocols:
         template = protocol_report.template_lines(protocol_report.find_template(None))

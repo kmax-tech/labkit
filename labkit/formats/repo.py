@@ -227,9 +227,26 @@ def areas_named(experiments: Path, name: str) -> list[Path]:
     )
 
 
-#: the one name shape of a protocol file, as a glob and as a pattern
+#: the one name shape of a protocol file, as a glob, as a pattern for a
+#: file name inside a longer path pattern, and as a whole-name pattern
 PROTOCOL_GLOB = "PROTOCOL-*.md"
-PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
+PROTOCOL_FILE = r"PROTOCOL-[^/]+\.md"
+PROTOCOL_NAME = re.compile(rf"^{PROTOCOL_FILE}$")
+
+
+def is_protocol_name(name: str) -> bool:
+    """Is NAME, a file name without its directory, a protocol's —
+    `PROTOCOL-<name>.md` (`PROTOCOL_NAME`)? The one test of the shape; a
+    name with a `/` is none."""
+    return PROTOCOL_NAME.match(name) is not None
+
+
+def protocol_file_name(slug: str) -> str:
+    """The file name of the protocol stamped for SLUG, or found under an
+    id: `PROTOCOL-<SLUG>.md`."""
+    return f"PROTOCOL-{slug}.md"
+
+
 #: directories a repo-wide scan never reads: nothing under them is a living
 #: file of the lab — a protocol copied into `runs/<id>/` or shipped in
 #: `.venv/` is a record or a package, not a second protocol
@@ -322,7 +339,7 @@ def protocols_in(repo: Path, *, staged: bool) -> list[Path]:
 def indexed_protocols(repo: Path) -> list[Path]:
     """Every protocol git's index holds under REPO (`indexed_files`),
     sorted, as resolved paths — the commit's form of `repo_protocols`."""
-    return [p for p in indexed_files(repo) if PROTOCOL_NAME.match(p.name)]
+    return [p for p in indexed_files(repo) if is_protocol_name(p.name)]
 
 
 #: the suffix of a report the gates hold (`report_hold.report_files`) and
@@ -353,7 +370,7 @@ def report_place_problem(rel: PurePosixPath) -> str | None:
     (`report_hold.held_place`, `report_files`) and the reports a former
     registration named (`registered_report.formerly_registering`) and the
     handover's report (`handovers.report_destination`)."""
-    if PROTOCOL_NAME.match(rel.name):
+    if is_protocol_name(rel.name):
         return "a protocol is no report; the report is the file that carries this protocol's result block"
     if rel.suffix != REPORT_SUFFIX:
         return f"a Markdown file ({REPORT_SUFFIX}); only such a file takes a result or a handover block"

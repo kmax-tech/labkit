@@ -369,6 +369,15 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"for \w+ in [\w.]+\.first_groups for ",
         {"area_state"},
     ),
+    # "is this file a protocol" has one answer, `repo.is_protocol_name`, and
+    # a protocol's file name one builder, `repo.protocol_file_name`
+    (
+        "a protocol name tested by hand",
+        r"PROTOCOL_NAME\.match\(|startswith\(\"PROTOCOL-"
+        r"|fnmatch\([^\n]*PROTOCOL_GLOB|re\.escape\(PROTOCOL_GLOB",
+        {"repo"},
+    ),
+    ("a protocol file name built by hand", r"PROTOCOL-\{", {"repo"}),
     # a path relative to the repository root, as git names it, is
     # `repo.rel_posix`: it resolves the root and says where a path outside
     # it lies. The shape tells a repository from an area by the name of the
@@ -709,6 +718,8 @@ class OneHome(unittest.TestCase):
             "the model file named by hand": 'if (d / "models.toml").is_file():',
             "models.toml read by hand": "    path = find_models_toml()",
             "the first measurements flattened by hand": "firsts = [rd for group in measured.first_groups for rd in group]",
+            "a protocol name tested by hand": 'if name.startswith("PROTOCOL-") and name.endswith(".md"):',
+            "a protocol file name built by hand": 'protocol = area / f"PROTOCOL-{slug}.md"',
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
             "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
         }

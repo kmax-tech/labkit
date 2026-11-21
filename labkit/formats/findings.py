@@ -117,7 +117,7 @@ from labkit.formats.protocol_check import (
 from labkit.formats.repo import (
     EVIDENCE_DIR,
     INDEX_REV,
-    PROTOCOL_NAME,
+    is_protocol_name,
     files_at,
     git_root,
     shown,
@@ -1328,7 +1328,7 @@ def fixed_claim(f: Finding) -> bool:
         f.grade == BLOCKER
         and f.status == FIXED
         and at is not None
-        and PROTOCOL_NAME.match(at[0]) is not None
+        and is_protocol_name(at[0])
         and field_name(at[1]) == field_name(CONCLUSION_LABEL)
     )
 

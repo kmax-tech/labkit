@@ -27,6 +27,7 @@ from labkit.formats.repo import (
     ProtocolChoiceError,
     area_protocols,
     given_or_in,
+    is_protocol_name,
     shown,
     the_protocol,
 )
@@ -248,7 +249,7 @@ def _in_held_field(
     when a label names no one field of the protocol: none, or several
     begin with it."""
     name = Path(file).name
-    if not (name.startswith("PROTOCOL-") and name.endswith(".md")):
+    if not is_protocol_name(name):
         return False
     path = protocol if protocol is not None and protocol.name == name else area / name
     if name not in texts:
