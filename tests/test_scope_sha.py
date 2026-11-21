@@ -264,25 +264,12 @@ class TestDeclaredScopeIsStamped(unittest.TestCase):
     audited, then edited, leaves the old audit invalid."""
 
     def setUp(self):
-        from protocol_fixture import head
+        from protocol_fixture import declared_scope_area
 
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.repo = Path(self.tmp.name)
-        (self.repo / "tests").mkdir()
-        self.area = self.repo / "experiments" / "01"
-        (self.area / "scripts").mkdir(parents=True)
-        (self.area / "scripts" / "m.py").write_text("x = 1\n")
-        (self.repo / "lib").mkdir()
-        (self.repo / "lib" / "deep.py").write_text("D = 1\n")
-        (self.area / "helper.py").write_text(
-            "import deep\n\ndef score():\n    return 2\n"
-        )
-        block = (
-            '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "s"\n'
-            'scope = ["helper.py:score"]\n'
-        )
-        (self.area / "PROTOCOL-x.md").write_text("# x\n" + head(promises=block))
+        self.area = declared_scope_area(self.repo)
 
     def test_the_audit_reads_nothing_the_stamp_does_not_bind(self):
         from labkit.formats import scope_sha as packaged

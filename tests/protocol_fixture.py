@@ -125,6 +125,26 @@ def scope_file(area: Path) -> Path:
     return script
 
 
+def declared_scope_area(repo: Path) -> Path:
+    """An area `experiments/01` under REPO whose one promise declares
+    `helper.py:score` as scope: a script `scripts/m.py`, the declared
+    `helper.py` (it imports `lib/deep.py`, which no script imports) and
+    the protocol. Returns the area."""
+    (repo / "tests").mkdir()
+    area = repo / "experiments" / "01"
+    (area / "scripts").mkdir(parents=True)
+    (area / "scripts" / "m.py").write_text("x = 1\n")
+    (repo / "lib").mkdir()
+    (repo / "lib" / "deep.py").write_text("D = 1\n")
+    (area / "helper.py").write_text("import deep\n\ndef score():\n    return 2\n")
+    block = (
+        '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "s"\n'
+        'scope = ["helper.py:score"]\n'
+    )
+    (area / "PROTOCOL-x.md").write_text("# x\n" + head(promises=block))
+    return area
+
+
 def script_sha_of(script: Path) -> str:
     """The `script_sha` a run of SCRIPT records (`provenance.snapshot_script`):
     a fixture run that names the script it ran, so the code-since-run check

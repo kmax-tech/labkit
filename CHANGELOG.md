@@ -23,6 +23,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ### Fixed
 
+- **preflight's scope-sha station tells a missing declared scope file.** A scope file a promise declares that is missing printed a traceback and ended preflight before stations 6 to 9; the station now prints `cannot stamp: scope file(s) missing: …` and the later stations run.
+
 - **A hold no longer says a result was seen when the first measurement wrote no number.** A first start that broke off before any row (argmining27 experiment 02, 2026-11-17: a `ValueError` while building the requests) bound the protocol as before, but a field sharpened after it was held as "a scope set after a result was seen". The holds on a changed registration and on a changed scope now name such a run "(stopped without a number: …)" — or still running, or whose liveness cannot be told — and say why it binds all the same: a started measurement counts as the first, a number or not, since no rows show that no result was seen. A run only a commit holds is not claimed to have shown a result either. The binding and the ways out are unchanged (`registration_hold.set_after_first`, `result_written`).
 
 ## 0.114.0 — 2026-11-20

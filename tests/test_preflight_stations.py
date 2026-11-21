@@ -20,8 +20,9 @@ from labkit.formats.gate import (
     Findings,
     TECHNICAL_RULE,
 )
+from labkit.formats.scope_sha import area_stamp
 from labkit.gates import preflight
-from protocol_fixture import head
+from protocol_fixture import declared_scope_area, head
 from state_fixture import area_evidence, audit_record
 
 
@@ -193,6 +194,26 @@ class PreflightStations(unittest.TestCase):
                 (WARNING, TECHNICAL_RULE, "02-y/handovers.toml: not TOML"),
             ],
         )
+
+
+class ScopeStampStation(unittest.TestCase):
+    """Station 5 tells the stamp, or why it cannot stamp — a scope file a
+    promise declares that is missing is told, it does not end the gate."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.area = declared_scope_area(Path(tmp.name))
+
+    def test_a_missing_declared_scope_file_cannot_stamp(self):
+        (self.area / "helper.py").unlink()
+        line = preflight.scope_stamp_line(self.area)
+        self.assertTrue(line.startswith("  cannot stamp: "), line)
+        self.assertIn("helper.py", line)
+
+    def test_the_twin_a_present_declared_file_is_stamped(self):
+        sha = area_stamp(self.area)[0]
+        self.assertEqual(preflight.scope_stamp_line(self.area), f"  {sha}")
 
 
 if __name__ == "__main__":

@@ -590,11 +590,13 @@ def check_code(
 
 def scope_stamp_line(area: Path) -> str:
     """Station 5: the audit stamp of the area's input scope
-    (`scope_sha.area_stamp`), or that there is nothing to stamp — told,
-    never counted."""
+    (`scope_sha.area_stamp`), that there is nothing to stamp, or why it
+    cannot stamp (a promise block that does not read, a scope file a
+    promise declares that is missing) — told, never counted."""
     try:
         sha, _, _ = area_stamp(area)
-    except promises.PromiseError as exc:  # a ValueError too, but not "nothing to stamp"
+    # a PromiseError is a ValueError too, but not "nothing to stamp"
+    except (promises.PromiseError, FileNotFoundError) as exc:
         return f"  cannot stamp: {exc}"
     except ValueError:
         return f"  no scripts matching {AREA_GLOBS} in {area} (skipped)"
