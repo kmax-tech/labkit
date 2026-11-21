@@ -342,7 +342,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
     id (`Measured.told`), and a choice that carries a blocker is refused
     (exit 2) — unlike finalize, which tells the same blocker and goes on
     with the chosen run (`finalize.choose_answering_run`)."""
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         lines = [
             (__doc__ or "").strip().splitlines()[0],
             "usage: labkit-params <AREA> [--run RUN_ID] [--protocol PROTOCOL-*.md]",

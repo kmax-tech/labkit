@@ -34,7 +34,7 @@ USAGE = "usage: labkit-run-diff <AREA> <OLD_RUN> <NEW_RUN>"
 def main(argv: list[str]) -> int:
     """Command line: the difference of NEW_RUN's code from OLD_RUN's.
     Raises console.Refused on arguments, a run or a tree that do not read."""
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         text = f"{(__doc__ or '').strip().splitlines()[0]}\n{USAGE}"
         return console.usage(TOOL, text, asked=bool(argv))
     if len(argv) != 3:
