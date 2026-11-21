@@ -230,15 +230,15 @@ def areas_named(experiments: Path, name: str) -> list[Path]:
 #: the one name shape of a protocol file, as a glob, as a pattern for a
 #: file name inside a longer path pattern, and as a whole-name pattern
 PROTOCOL_GLOB = "PROTOCOL-*.md"
-PROTOCOL_FILE = r"PROTOCOL-[^/]+\.md"
-PROTOCOL_NAME = re.compile(rf"^{PROTOCOL_FILE}$")
+PROTOCOL_FILE = r"PROTOCOL-[^/]*\.md"  # `*` as in the glob: PROTOCOL-.md is one
+PROTOCOL_NAME = re.compile(PROTOCOL_FILE)
 
 
 def is_protocol_name(name: str) -> bool:
     """Is NAME, a file name without its directory, a protocol's —
     `PROTOCOL-<name>.md` (`PROTOCOL_NAME`)? The one test of the shape; a
     name with a `/` is none."""
-    return PROTOCOL_NAME.match(name) is not None
+    return PROTOCOL_NAME.fullmatch(name) is not None
 
 
 def protocol_file_name(slug: str) -> str:

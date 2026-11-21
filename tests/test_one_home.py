@@ -373,7 +373,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # a protocol's file name one builder, `repo.protocol_file_name`
     (
         "a protocol name tested by hand",
-        r"PROTOCOL_NAME\.match\(|startswith\(\"PROTOCOL-"
+        r"PROTOCOL_NAME\.(?:full)?match\(|startswith\(\"PROTOCOL-"
         r"|fnmatch\([^\n]*PROTOCOL_GLOB|re\.escape\(PROTOCOL_GLOB",
         {"repo"},
     ),

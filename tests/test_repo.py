@@ -8,6 +8,7 @@ answer goes through git_run.
 from __future__ import annotations
 
 import contextlib
+import fnmatch
 import io
 import os
 import re
@@ -112,8 +113,23 @@ class RepoWide(unittest.TestCase):
                 copy.parent.mkdir(parents=True)
                 copy.write_text("")
             self.assertEqual(repo.repo_protocols(root), [live])
-            self.assertTrue(repo.PROTOCOL_NAME.match("PROTOCOL-s2-foo.md"))
-            self.assertFalse(repo.PROTOCOL_NAME.match("PROTOCOL-x.md.bak"))
+            self.assertTrue(repo.is_protocol_name("PROTOCOL-s2-foo.md"))
+            self.assertFalse(repo.is_protocol_name("PROTOCOL-x.md.bak"))
+
+    def test_the_name_test_and_the_glob_agree(self):
+        for name in (
+            "PROTOCOL-x.md",
+            "PROTOCOL-.md",
+            "PROTOCOL-x.md\n",
+            "PROTOCOL-x.md.bak",
+            "protocol-x.md",
+            "PROTOCOL-x.txt",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    repo.is_protocol_name(name),
+                    fnmatch.fnmatchcase(name, repo.PROTOCOL_GLOB),
+                )
 
     def test_split_area_name(self):
         self.assertEqual(
