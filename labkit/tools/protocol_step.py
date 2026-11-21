@@ -1,4 +1,4 @@
-"""protocol_step — write the step the next runs make (`[builds_on]`).
+"""protocol_step — compute the step the next runs make (`[builds_on]`).
 
     protocol-fill PROTOCOL --builds-on RUN_ID --step-id STEP --occasion OCCASION --why "…"
 
@@ -10,7 +10,9 @@ written by this command, never by hand. The basis is held as the start
 holds it (`start_check.require_step_basis`): a completed run of this
 protocol, no repeat. One current step: an earlier `[builds_on]` is
 replaced, since each run keeps the step it ran under in its own text.
-Writes the protocol file and nothing else.
+Writes no file: `step_with_changes` reads the basis run and returns the
+step, `with_step` returns the protocol text holding it; `protocol-fill`
+writes that text.
 """
 
 from __future__ import annotations
