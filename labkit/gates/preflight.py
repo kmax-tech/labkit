@@ -42,7 +42,8 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      edits, dynamic loaders, imports outside lib/ and src/
                      — static evidence, warnings); each finding carries
                      its grade as data
-  5. scope-sha       audit stamp over the input scope; a covered file that does not read blocks
+  5. scope-sha       audit stamp over the input scope; a covered file that does not read blocks,
+                     a cause station 4 blocks (a script that does not read or parse) is told
   6. working tree    uncommitted changes (warning, not a blocker)
   7. hooks           the installed labkit hooks match this labkit (warning);
                      outside a git repo there is nothing to check
@@ -110,7 +111,7 @@ from labkit.formats.protocol_history import (
     repeat_cost_lowered,
 )
 from labkit.formats.protocol_block import repo_protocol_ids
-from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
+from labkit.formats.scope_sha import AREA_GLOBS, SourceError, area_stamp
 
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
@@ -231,7 +232,9 @@ def preflight_area(
        repo record, always, as a reminder.
     4. code-check — always.
     5. scope-sha — always; a covered file that does not read, or git
-       failing on a linked exploration, blocks; else told.
+       failing on a linked exploration, blocks; a cause station 4 blocks
+       (a script that does not read or parse, a missing declared scope
+       file) is told, so is the stamp.
     6. working tree — always.
     7. hooks — only inside a git repo.
     8. area tests — always; frozen = true grades a missing test a blocker.
@@ -600,13 +603,14 @@ def check_scope_stamp(findings: Findings, area: Path) -> None:
     audit can be bound to the area until it reads. Told only, since
     another station holds the cause: a promise block that does not read
     (stations 1 and 4), a scope file a promise declares that is missing
-    (station 4), no script to stamp."""
+    (station 4), a script or helper that does not read or parse (station
+    4), no script to stamp."""
     try:
         sha, _, _ = area_stamp(area)
-    # a PromiseError is a ValueError too, but not "nothing to stamp"
-    # a FileNotFoundError is the missing declared scope file station 4
-    # blocks: told here, so one cause stays one blocker
-    except (promises.PromiseError, FileNotFoundError) as exc:
+    # PromiseError and SourceError are ValueErrors too, but not "nothing to
+    # stamp"; they and a FileNotFoundError (the missing declared scope file)
+    # are causes station 4 blocks: told here, so one cause stays one blocker
+    except (promises.PromiseError, SourceError, FileNotFoundError) as exc:
         findings.note(f"  cannot stamp: {exc}")
     except (OSError, RuntimeError) as exc:  # a file that stands and does not read, git
         findings.block(

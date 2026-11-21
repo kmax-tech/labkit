@@ -255,6 +255,13 @@ class ScopeStampStation(unittest.TestCase):
         path.write_text(text)
         return path
 
+    def test_a_script_that_does_not_parse_cannot_stamp(self):
+        self.script("def broken(:\n")
+        (line,), blocked = self.stamp_station()
+        self.assertTrue(line.startswith("  cannot stamp: "), line)
+        self.assertIn("measure.py", line)
+        self.assertEqual(blocked, [])
+
     @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
     def test_the_whole_gate_blocks_a_script_that_does_not_read_once(self):
         script = self.script("print('criterion_1_pass')\n")

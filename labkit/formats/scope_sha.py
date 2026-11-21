@@ -516,9 +516,18 @@ def area_snapshot(
     these import, `extra` files, and the labkit pin — at least every file
     `labkit-audit` reads in full. The sha is a digest over (repo-relative
     path, content digest) per file plus the pin line, taken from the bytes
-    the snapshot holds. Raises FileNotFoundError naming a missing file,
-    ValueError when there is nothing to stamp or a promise block is
-    malformed."""
+    the snapshot holds.
+
+    Raises:
+        FileNotFoundError: A scope file is missing.
+        SourceError: A file the import walk reads (a script, a declared
+            scope file, a lib module) does not read or parse; a ValueError.
+        OSError: A file that stands does not read — a scope file's bytes,
+            a protocol, the pin file, a registered output of a linked
+            exploration (`exploration_basis`).
+        RuntimeError: git fails on a linked exploration.
+        ValueError: Nothing to stamp, or a promise block is malformed
+            (`promises.PromiseError`)."""
     root = layout_root(area)
     # the audit reads a declared file and its direct imports in full, so the
     # stamp walks from it too — every protocol's, so it needs no choice and
@@ -874,7 +883,13 @@ def area_stamp(
     use_pin: bool = True,
 ) -> tuple[str, list[Path], tuple[str, str] | None]:
     """(sha, files, pin) of `area_snapshot` — for a caller that needs the
-    stamp, not the bytes. Raises as `area_snapshot` does."""
+    stamp, not the bytes.
+
+    Raises:
+        FileNotFoundError, SourceError, OSError, RuntimeError, ValueError:
+            As `area_snapshot` does — a missing scope file, a file that
+            does not read or parse, a file that stands and does not read,
+            git failing, nothing to stamp or a malformed promise block."""
     snap = area_snapshot(area, extra, globs, use_pin)
     return snap.sha, list(snap.files), snap.pin
 
