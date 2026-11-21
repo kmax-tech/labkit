@@ -6,6 +6,7 @@ handover of another area that does not read warns."""
 from __future__ import annotations
 
 import dataclasses
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -246,6 +247,24 @@ class ScopeStampStation(unittest.TestCase):
         scope = [m for m in found.blocked if "helper.py" in m]
         self.assertEqual(len(scope), 1, found.blocked)
         self.assertIn("declared scope", scope[0])
+
+    def script(self, text: str) -> Path:
+        """A script under the area's scripts/ holding TEXT."""
+        path = self.area / "scripts" / "measure.py"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(text)
+        return path
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
+    def test_the_whole_gate_blocks_a_script_that_does_not_read_once(self):
+        script = self.script("print('criterion_1_pass')\n")
+        script.chmod(0)
+        self.addCleanup(script.chmod, 0o644)
+        found = Findings(tell=None)
+        self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
+        named = [m for m in found.blocked if "measure.py" in m]
+        self.assertEqual(len(named), 1, found.blocked)
+        self.assertIn("cannot be read", named[0])
 
 
 if __name__ == "__main__":

@@ -183,13 +183,20 @@ def code_findings(
     grade and evidence kind as data. BLOCK_TOLD: the caller's field report
     has told a promise block that does not read
     (`protocol_check.MustGap.block_unread`); that one finding is left to
-    it, every other finding stands."""
-    return (
+    it, every other finding stands. A finding two checks make alike — a
+    script that does not read, which each check reading it reports
+    (`unreadable_source`) — stands once: one cause, one finding."""
+    found = (
         check_intent_ids(area, protocol, text, block_told=block_told)
         + check_parser_fixtures(area, repo)
         + check_prompt_drift(area, protocol)
         + stamp_coverage_findings(area, repo)
     )
+    unique: list[GateFinding] = []
+    for finding in found:
+        if finding not in unique:
+            unique.append(finding)
+    return unique
 
 
 def _intent_id_findings(

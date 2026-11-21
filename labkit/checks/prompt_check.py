@@ -25,6 +25,7 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.checks.code_scan import unreadable_source
 from labkit.formats.repo import file_text, shown
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import TECHNICAL_RULE
@@ -66,16 +67,23 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     Whether the test asserts on the result is not checked. A test file that
     does not parse is a warning that this check could not run for it
     (`NOT_EXECUTABLE`): what it calls cannot be told, so no warning about a
-    parser then means "not checked" for the calls that file holds."""
+    parser then means "not checked" for the calls that file holds. A script
+    that does not read is one blocker (`unreadable_source`): which parsers
+    it defines cannot be told."""
     scripts = area_files(area, (SCRIPT_GLOB,))
     parsers: dict[str, Path] = {}
+    findings: list[GateFinding] = []
     for sp in scripts:
-        for m in PARSE_DEF.finditer(read_source(sp)):
+        try:
+            source = read_source(sp)
+        except SourceError as exc:
+            findings.append(unreadable_source(exc))
+            continue
+        for m in PARSE_DEF.finditer(source):
             parsers.setdefault(m.group(1), sp)
     if not parsers:
-        return []
+        return findings
     tests = test_files(repo)
-    findings: list[GateFinding] = []
     called: set[str] = set()
     for t in tests:
         try:
