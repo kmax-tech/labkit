@@ -235,6 +235,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     # JSONL lines become objects in one place, with one error sentence;
     # `jsonl.objects` / `data_rows`, `batch` keeps the torn-last-line loop
     # that is its own
+    # (a text cut by `splitlines()` and parsed after: the block rule "a
+    # JSONL text split by splitlines")
     ("a JSONL line parsed by hand", r"json\.loads\(line\)", {"jsonl", "batch"}),
     # which file is a measurement note has one answer for `notes-check` and
     # the post-change hook; `notes_check.is_measurement_note`
@@ -429,6 +431,16 @@ BLOCK_RULES: list[tuple[str, str, set[str]]] = [
     # "the adopted run, None where `[result]` does not read" has one
     # answer: `answering_run.adopted_run`. A reader that keeps the sentence
     # (`report_context.declaration`) or refuses with it is not this shape
+    # `splitlines()` also breaks at U+2028, U+2029 and U+0085, which a JSON
+    # string may hold raw; a JSONL text is split by `jsonl.record_lines`.
+    # The shape: a list kept from `splitlines()` (not one line taken from
+    # it) and a `json.loads(` within the next 25 lines, whatever the line
+    # variable is called — a parse in a function farther away is not seen
+    (
+        "a JSONL text split by splitlines",
+        r"\.splitlines\(\):?\n(?:[^\n]*\n){0,25}?[^\n]*json\.loads\(",
+        {"jsonl", "batch"},
+    ),
     (
         "an adopted run read by hand",
         r"try:\n[^\n]*declared_run\([^\n]*\n\s*except [^\n]*BlockError[^\n]*:"
@@ -641,6 +653,15 @@ class OneHome(unittest.TestCase):
             "a console command spelled by hand (split form)": (
                 '            fix=f"repair what the sentence names; `intent-check "\n'
                 '            f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",\n'
+            ),
+            "a JSONL text split by splitlines": (
+                '    lines = path.read_text(encoding="utf-8").splitlines()\n'
+                "    return [parse(raw, n) for n, raw in enumerate(lines, 1)]\n"
+                "\n"
+                "\n"
+                "def parse(raw: str, n: int) -> object:\n"
+                "    try:\n"
+                "        parsed: object = json.loads(raw)\n"
             ),
             "an adopted run read by hand": (
                 "    try:\n"

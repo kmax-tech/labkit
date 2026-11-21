@@ -30,7 +30,7 @@ from labkit.formats.files import (
     read_cause,
     write_atomic,
 )
-from labkit.formats.jsonl import data_rows_of
+from labkit.formats import jsonl
 from labkit.formats.repo import experiment_areas, lab_root, layout_root, rel_posix
 
 
@@ -252,6 +252,11 @@ def read_model_calls(run_dir: Path) -> list[ModelCall]:
     lines `llm_cache.Cache` writes; [] when the run has no such file (it
     opened no cache, or called nothing through it).
 
+    The lines are read by `jsonl.objects`: split at "\\n" only (a U+2028
+    inside a string stays in its line), numbered as an editor numbers them,
+    a blank line skipped as for every reader of `jsonl.objects` (the cache
+    writes none).
+
     Raises:
         ValueError: A line that is not one the cache writes — not JSON, or
             `alias`, `hit`, `origin` or `usage` missing or of another
@@ -260,18 +265,16 @@ def read_model_calls(run_dir: Path) -> list[ModelCall]:
     path = run_dir / LLM_CALLS_FILE
     if not path.exists():
         return []
-    lines = path.read_text(encoding="utf-8").splitlines()
-    return [_parse_model_call(raw, f"{path}:{n}") for n, raw in enumerate(lines, 1)]
+    return [
+        _parse_model_call(parsed, f"{path}:{n}")
+        for n, parsed in jsonl.objects(path.read_text(encoding="utf-8"), str(path))
+    ]
 
 
-def _parse_model_call(raw: str, where: str) -> ModelCall:
-    """One call-log line read at WHERE (`read_model_calls`); raises
-    ValueError naming WHERE and the field that is not what the cache
-    writes."""
-    try:
-        parsed: object = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"{where}: not JSON ({exc})") from exc
+def _parse_model_call(parsed: object, where: str) -> ModelCall:
+    """One call-log line, already parsed, read at WHERE
+    (`read_model_calls`); raises ValueError naming WHERE and the field that
+    is not what the cache writes."""
     if not isinstance(parsed, dict):
         raise ValueError(f"{where}: not a JSON object")
     line = cast(JsonObject, parsed)
@@ -989,7 +992,7 @@ def kept_jsonl_rows(run_dir: Path) -> list[KeptRows]:
     names it. Raises ArtefactError when outputs.json does not read, OSError
     or ValueError when a kept file does not."""
     return [
-        KeptRows(entry, data_rows_of(entry.path))
+        KeptRows(entry, jsonl.data_rows_of(entry.path))
         for entry in read_outputs(run_dir) or []
         if entry.path.suffix == ".jsonl" and output_file(entry) is not None
     ]

@@ -173,6 +173,16 @@ class CallLog(CacheCase):
         [hit] = runs.read_model_calls(self.area)
         self.assertEqual((hit.hit, hit.origin_run, hit.stand_in), (True, None, False))
 
+    def test_a_line_separator_inside_a_value_stays_in_its_line(self) -> None:
+        # `json.dumps(..., ensure_ascii=False)` leaves U+2028 raw; JSONL
+        # splits at "\n" only, so the line reads as one call
+        (self.area / LLM_CALLS_FILE).write_text(
+            '{"alias": "o\u2028x", "hit": false, "origin": null, "usage": {}}\n',
+            encoding="utf-8",
+        )
+        [call] = runs.read_model_calls(self.area)
+        self.assertEqual(call.alias, "o\u2028x")
+
     def test_a_run_without_a_call_log_made_no_call(self) -> None:
         self.assertEqual(runs.read_model_calls(self.area), [])
 
