@@ -23,6 +23,7 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ### Fixed
 
+- **`labkit-hooks install --help` installed instead of printing the usage.** It wrote `.githooks/pre-commit`, `.githooks/pre-merge-commit`, `.claude/settings.json` and `.codex/hooks.json` and set `core.hooksPath`, in the current repo, since `--help` was read as the repo path. Now `-h`/`--help` anywhere on the line prints the usage and writes nothing, and an unknown command, an option, a second argument or a REPO that is no directory is refused with exit 2 before anything is written.
 - **preflight's scope-sha station tells a missing declared scope file.** A scope file a promise declares that is missing printed a traceback and ended preflight before stations 6 to 9; the station now prints `cannot stamp: scope file(s) missing: …` and the later stations run.
 - **Two sentences no longer say more than is known.** preflight's audit-findings station no longer prints `none recorded` beside the blocker for an audit record that does not read; `run-diff` and the run list an analysis audit is shown say `no repository to read the commit from` where the area lies in no repository, instead of `recorded no commit`.
 

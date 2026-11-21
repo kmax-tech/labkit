@@ -46,6 +46,16 @@ def usage(tool: str, text: str, asked: bool) -> int:
     return 2
 
 
+def asks_help(argv: list[str]) -> bool:
+    """Whether ARGV asks for the usage: `-h` or `--help` anywhere on a
+    hand-read command line, not only first — `CMD SUB --help` and
+    `CMD AREA --help` print the usage and do nothing else, where reading
+    the flag as a value or a path made a command run (labkit-hooks
+    installed). Not for a command line that hands words after its target
+    to another command (labkit-calltree)."""
+    return "-h" in argv or "--help" in argv
+
+
 class Refused(Exception):
     """A command that cannot run, raised where the reason is known: TOOL is
     the command that refuses (named, not read off sys.argv, which `-m` and

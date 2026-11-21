@@ -1,5 +1,7 @@
 """labkit-hooks: the hooks come with the pinned labkit."""
 
+import contextlib
+import io
 import json
 import subprocess
 import sys
@@ -259,6 +261,88 @@ class Install(unittest.TestCase):
         install_hooks.install(repo)
         s = json.loads((repo / ".claude" / "settings.json").read_text())
         self.assertEqual(len(s["hooks"]["PreToolUse"]), 1)
+
+
+class CommandLine(unittest.TestCase):
+    """`--help` anywhere prints the usage and writes nothing; an argument
+    the command does not take is refused before anything is written.
+    `install --help` once installed (2026-11-21)."""
+
+    INSTALLED = [
+        ".githooks/pre-commit",
+        ".githooks/pre-merge-commit",
+        ".claude/settings.json",
+        ".codex/hooks.json",
+    ]
+
+    def run_main(self, argv: list[str]) -> tuple[int, str, str]:
+        out, err = io.StringIO(), io.StringIO()
+        # in a git repo of its own: a regression that falls back to the
+        # current directory installs there, not into the checkout under test
+        bystander = git_repo()
+        with (
+            contextlib.chdir(bystander),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            code = install_hooks.main(argv)
+        self.assert_untouched(bystander)
+        return code, out.getvalue(), err.getvalue()
+
+    def assert_untouched(self, repo: Path) -> None:
+        self.assertEqual([p.name for p in repo.iterdir()], [".git"])
+        hooks_path = subprocess.run(
+            ["git", "-C", str(repo), "config", "core.hooksPath"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(hooks_path.stdout, "")
+
+    def test_help_anywhere_prints_the_usage_and_writes_nothing(self):
+        for words in (
+            ["--help"],
+            ["install", "--help"],
+            ["install", "-h"],
+            ["install", "REPO", "--help"],
+            ["check", "--help"],
+            ["bogus", "-h"],
+        ):
+            with self.subTest(words=words):
+                repo = git_repo()
+                argv = [str(repo) if w == "REPO" else w for w in words]
+                code, out, _ = self.run_main(argv)
+                self.assertEqual(code, 0)
+                self.assertIn("usage: labkit-hooks install [REPO]", out)
+                self.assert_untouched(repo)
+
+    def test_an_argument_it_does_not_take_is_refused_and_writes_nothing(self):
+        for words in (
+            ["install", "--bogus"],
+            ["install", "REPO", "extra"],
+            ["install", "REPO/missing"],
+            ["bogus", "REPO"],
+        ):
+            with self.subTest(words=words):
+                repo = git_repo()
+                argv = [w.replace("REPO", str(repo)) for w in words]
+                code, _, err = self.run_main(argv)
+                self.assertEqual(code, 2)
+                self.assertIn("labkit-hooks:", err)
+                self.assert_untouched(repo)
+
+    def test_install_writes_the_hooks_and_check_finds_them(self):
+        repo = git_repo()
+        code, _, _ = self.run_main(["install", str(repo)])
+        self.assertEqual(code, 0)
+        for relative in self.INSTALLED:
+            self.assertTrue((repo / relative).is_file(), relative)
+        hooks_path = subprocess.run(
+            ["git", "-C", str(repo), "config", "core.hooksPath"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(hooks_path.stdout.strip(), ".githooks")
+        self.assertEqual(self.run_main(["check", str(repo)])[0], 0)
 
 
 class RepoOwnSteps(unittest.TestCase):

@@ -454,14 +454,28 @@ def check(repo: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `labkit-hooks`: install or check a repo's git hooks."""
-    if not argv or argv[0] in ("-h", "--help"):
-        lines = [
-            (__doc__ or "").strip().splitlines()[0],
-            "usage: labkit-hooks install [REPO] | check [REPO]",
-        ]
+    """Command line of `labkit-hooks`: install or check a repo's git hooks.
+
+    `-h`/`--help` anywhere prints the usage and writes nothing; an unknown
+    command, a second argument, an option or a REPO that is no directory
+    is refused with exit 2 before anything is read or written."""
+    usage = "usage: labkit-hooks install [REPO] | check [REPO]"
+    if not argv or console.asks_help(argv):
+        lines = [(__doc__ or "").strip().splitlines()[0], usage]
         return console.usage("labkit-hooks", "\n".join(lines), asked=bool(argv))
-    cmd, where = argv[0], Path(argv[1]) if len(argv) > 1 else Path(".")
+    cmd, rest = argv[0], argv[1:]
+    if cmd not in ("install", "check"):
+        console.refuse("labkit-hooks", f"unknown command {cmd!r}\n{usage}")
+        return 2
+    if len(rest) > 1 or (rest and rest[0].startswith("-")):
+        console.refuse("labkit-hooks", f"unexpected argument {rest[-1]!r}\n{usage}")
+        return 2
+    where = Path(rest[0]) if rest else Path(".")
+    # a path that is no directory would fall back to its parent's repo
+    # (`git_root`) and install there
+    if not where.is_dir():
+        console.refuse("labkit-hooks", f"{where} is not a directory")
+        return 2
     repo = git_root(where)
     if repo is None:
         console.refuse("labkit-hooks", f"{where} is not inside a git repo")
@@ -475,15 +489,12 @@ def main(argv: list[str]) -> int:
             "changed hooks with /hooks; install/check do not grant hook trust"
         )
         return 0
-    if cmd == "check":
-        gaps = check(repo)
-        for g in gaps:
-            print(f"labkit-hooks: {g}")
-        if gaps:
-            print("labkit-hooks: fix with  .venv/bin/labkit-hooks install")
-        return 1 if gaps else 0
-    console.refuse("labkit-hooks", f"unknown command {cmd!r}")
-    return 2
+    gaps = check(repo)  # cmd == "check"
+    for g in gaps:
+        print(f"labkit-hooks: {g}")
+    if gaps:
+        print("labkit-hooks: fix with  .venv/bin/labkit-hooks install")
+    return 1 if gaps else 0
 
 
 def cli() -> None:

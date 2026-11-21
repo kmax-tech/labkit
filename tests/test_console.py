@@ -152,5 +152,15 @@ class SplitCommand(unittest.TestCase):
         self.assertEqual(console.split_command(["a", "--"]), (["a"], []))
 
 
+class AsksHelp(unittest.TestCase):
+    def test_help_counts_anywhere_on_the_line(self):
+        from labkit.formats import console
+
+        for argv in (["--help"], ["-h"], ["install", "--help"], ["a", "b", "-h"]):
+            self.assertTrue(console.asks_help(argv), argv)
+        for argv in ([], ["install"], ["--helpful"], ["a", "--h"]):
+            self.assertFalse(console.asks_help(argv), argv)
+
+
 if __name__ == "__main__":
     unittest.main()
