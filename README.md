@@ -266,7 +266,7 @@ from labkit.run import runlog, llm, batch
 from labkit.checks import recheck
 ```
 
-Use the stamped scripts as integration examples. `recheck.holds` connects an analysis script's `--check` to recorded outputs, recomputed metrics and the cited result; `recheck.holds_outputs` does the same for a number computed from several output files (a generating and a judging stage), each a row file named by a key.
+Use the stamped scripts as integration examples. `recheck.holds` connects an analysis script's `--check` to recorded outputs, recomputed metrics and the cited result. Of `recheck`, only `recheck.answering_run_dir` is public API (`docs/architecture.md`, "Public API"); the stamped scripts use the rest as the package's own integration, which may change between releases.
 
 ## Develop labkit
 
