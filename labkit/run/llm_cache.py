@@ -480,8 +480,9 @@ def entry_text(
 
 def read_entry(path: Path, key: str) -> Answer | None:
     """The answer stored at PATH under KEY as a hit, None when PATH does
-    not exist. An entry without `stand_in` (written before 0.115.0) is not
-    a stand-in. Raises CacheCorruptionError naming the file for anything
+    not exist. An entry without `stand_in` (written before 0.115.0, or by
+    hand) is not marked as a stand-in — which shows no model gave it
+    either. Raises CacheCorruptionError naming the file for anything
     else than an entry of `CACHE_VERSION` under KEY, and for a stand-in
     that names a run."""
     if not path.exists():

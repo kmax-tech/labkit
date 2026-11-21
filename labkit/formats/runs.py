@@ -312,7 +312,8 @@ def _origin_run(hit: bool, origin: object, where: str) -> str | None:
 
 def _stand_in(hit: bool, origin: object, where: str) -> bool:
     """Whether a hit's answer is a stand-in: its origin's `stand_in`, which
-    a line written before 0.115.0 lacks (not a stand-in). A stand-in has no
+    a line written before 0.115.0 lacks (not marked as a stand-in — no
+    evidence that a model gave the answer). A stand-in has no
     run (`origin.run` null); one naming a run, or a `stand_in` that is not
     true or false, raises ValueError naming WHERE. False for a call that
     asked the model. Call after `_origin_run`, which checks the shape."""

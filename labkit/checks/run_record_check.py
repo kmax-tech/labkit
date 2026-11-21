@@ -1023,7 +1023,11 @@ def call_log_model_findings(
     (`runs.read_model_calls`), so the comparison is exact. What it proves
     is that every line the log holds is backed by a record naming its
     alias; not that every answer the run used was logged (a framework that
-    replays past labkit's cache leaves no line).
+    replays past labkit's cache leaves no line), and not that a model gave
+    the answer: a record that names the alias backs any line of it, also
+    an answer stored outside any run without the stand-in mark (a
+    hand-written entry), of which nothing shows that a model gave it. Only
+    marked stand-ins are told apart (`stand_in_findings`).
 
     A line is backed by a record that names its alias, a key of a
     `models_resolved`, tried in this order:

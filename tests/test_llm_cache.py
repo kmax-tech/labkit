@@ -163,7 +163,7 @@ class CallLog(CacheCase):
         [hit] = runs.read_model_calls(replayed.dir)
         self.assertEqual((hit.hit, hit.origin_run), (True, first.run_id))
 
-    def test_a_hit_line_without_stand_in_is_not_a_stand_in(self) -> None:
+    def test_a_hit_line_without_stand_in_is_not_marked_as_a_stand_in(self) -> None:
         # a line written before 0.115.0 carries no `stand_in`
         (self.area / LLM_CALLS_FILE).write_text(
             '{"alias": "o", "hit": true, "origin": {"run": null, "written": "t"}, '
@@ -410,7 +410,7 @@ class StandIns(CacheCase):
         self.assertFalse(self.root.exists())
 
     def test_entries_read_with_their_mark(self) -> None:
-        # an entry written before 0.115.0 has no `stand_in`: not a stand-in;
+        # an entry written before 0.115.0 has no `stand_in`: not marked as one;
         # a stand-in that names a run is no entry labkit writes
         path = self.store()
         entry = json.loads(path.read_text(encoding="utf-8"))
