@@ -104,8 +104,10 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from collections.abc import Callable
 
 from labkit.formats.area_state import state_of
 from labkit.formats import area_state
@@ -611,54 +613,36 @@ def _freeze_file(protocol: Path, text: str, named: str) -> int:
     return 0
 
 
-def _evidence_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the mode ARGS name among those that bind evidence
-    (--freeze, --withdraw, --data-counts, --handover), or None."""
-    if args.freeze is not None:
-        return _freeze_file(args.protocol, text, args.freeze)
-    if args.withdraw:
-        return _withdraw_file(args, text)
-    if args.data_counts is not None:
-        return _data_counts_file(args, text)
-    if args.handover:
-        return _handover_file(args, text)
-    return None
-
-
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the mode ARGS name (--withdraw, --data-counts,
-    --handover, --list, --prompts, --render, --discuss, --reported-through,
-    --into, --from-run, --builds-on, --explored-in), or None when they name
-    none: a field fill."""
-    evidence = _evidence_mode(args, text)
-    if evidence is not None:
-        return evidence
-    if args.list:
-        return _list_file(text)
-    if args.prompts:
-        return _prompts_file(args.protocol, text, args.prompt_file)
-    if args.render:
-        return _render_file(args.protocol, text)
-    if args.discuss is not None:
-        return _discuss_file(args.protocol, text, args.into, args.discuss, args.why)
-    if args.reported_through is not None:
-        return _through_file(args.protocol, args.into, args.reported_through)
-    if args.into is not None:
-        return _into_file(args.protocol, text, args.into)
-    if args.from_run is not None:
-        return _write_back(args, text)
-    return _basis_mode(args, text)
-
-
-def _basis_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the mode that names what the protocol builds on —
-    --builds-on (a step on an earlier run of it) or --explored-in (a
-    confirmation's exploration) —, or None when ARGS name neither."""
-    if args.builds_on is not None:
-        return _step_file(args, text)
-    if args.explored_in is not None:
-        return _link_file(args.protocol, text, args.explored_in)
-    return None
+    """The exit code of the operation ARGS name (--freeze, --withdraw,
+    --data-counts, --handover, --list, --prompts, --render, --discuss,
+    --reported-through, --into, --from-run, --builds-on, --explored-in), or
+    None when they name none or a field fill. At most one operation reaches
+    it — `operation_refusal` refuses two before the file is read — and it
+    is looked up by name (`given_operations`), so no order decides which
+    runs; `--into` beside --discuss, --reported-through, --withdraw or
+    --handover is that operation's report, not an operation."""
+    handlers: dict[str, Callable[[argparse.Namespace, str], int]] = {
+        "freeze": lambda a, t: _freeze_file(a.protocol, t, a.freeze),
+        "withdraw": _withdraw_file,
+        "data_counts": _data_counts_file,
+        "handover": _handover_file,
+        "list": lambda a, t: _list_file(t),
+        "prompts": lambda a, t: _prompts_file(a.protocol, t, a.prompt_file),
+        "render": lambda a, t: _render_file(a.protocol, t),
+        "discuss": lambda a, t: _discuss_file(a.protocol, t, a.into, a.discuss, a.why),
+        "reported_through": lambda a, t: _through_file(
+            a.protocol, a.into, a.reported_through
+        ),
+        "into": lambda a, t: _into_file(a.protocol, t, a.into),
+        "from_run": _write_back,
+        "builds_on": _step_file,
+        "explored_in": lambda a, t: _link_file(a.protocol, t, a.explored_in),
+    }
+    named = given_operations(args)
+    if not named or named[0].attr == "field":
+        return None
+    return handlers[named[0].attr](args, text)
 
 
 def _link_file(protocol: Path, text: str, exploration: Path) -> int:
@@ -950,167 +934,164 @@ def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
         print(f"  {shown(path, here)}: {command}")
 
 
-def _check_data_counts_args(
-    ap: argparse.ArgumentParser, args: argparse.Namespace
-) -> None:
-    """Refuse --data-counts beside another operation: it writes the end of
-    Data / scope and nothing else."""
-    if args.data_counts is not None and (
-        args.withdraw
-        or args.handover
-        or args.discuss is not None
-        or args.from_run is not None
-        or args.list
-        or args.prompts
-        or args.render
-        or args.into is not None
-        or args.builds_on is not None
-        or args.field is not None
-    ):
-        ap.error("--data-counts goes alone: it writes the end of Data / scope")
+# The flags that accompany an operation, by their attribute on the parsed
+# arguments; `into` is also an operation of its own when nothing else is given.
+COMPANION_FLAGS: dict[str, str] = {
+    "into": "--into",
+    "why": "--why",
+    "tried": "--tried",
+    "step_id": "--step-id",
+    "occasion": "--occasion",
+    "force": "--force",
+    "line": "--line",
+    "prompt_file": "--prompt-file",
+}
 
 
-def _check_freeze_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Refuse --freeze beside another operation, before file access: the
-    dispatch runs the freeze first and would leave the other out."""
-    if args.freeze is not None and (
-        args.withdraw
-        or args.handover
-        or args.discuss is not None
-        or args.from_run is not None
-        or args.data_counts is not None
-        or args.builds_on is not None
-        or args.explored_in is not None
-        or args.reported_through is not None
-        or args.list
-        or args.prompts
-        or args.render
-        or args.into is not None
-        or args.field is not None
-    ):
-        ap.error("--freeze goes alone: it writes frozen and preflight_audit")
+@dataclass(frozen=True)
+class Operation:
+    """One thing a protocol-fill call does, and what may accompany it.
+
+    `attr` is the parsed argument that selects it; `takes` the companion
+    attributes it accepts (keys of COMPANION_FLAGS), `needs` those of them it
+    cannot do without; `usage` is the sentence a missing or refused
+    companion is answered with."""
+
+    flag: str
+    attr: str
+    takes: frozenset[str]
+    needs: frozenset[str]
+    usage: str
 
 
-def _check_step_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Refuse an incomplete or combined --builds-on, and --step-id or --occasion
-    without it, before file access."""
-    if args.builds_on is None:
-        if args.step_id is not None or args.occasion is not None:
-            ap.error("--step-id and --occasion go with --builds-on")
-        return
-    if not args.step_id or not args.occasion or not args.why:
-        ap.error(
-            "--builds-on RUN_ID requires --step-id STEP, --occasion and --why TEXT"
+def _op(
+    flag: str, attr: str, usage: str, takes: str = "", needs: str = ""
+) -> Operation:
+    """An Operation from space-separated companion attributes."""
+    return Operation(
+        flag, attr, frozenset(takes.split()), frozenset(needs.split()), usage
+    )
+
+
+# The one list of operations: a call names at most one of them
+# (`operation_refusal`); `--into` alone is one, beside an operation whose
+# `takes` names it, it is that operation's report.
+OPERATIONS: tuple[Operation, ...] = (
+    _op(
+        "FIELD", "field", "a field fill goes with --force and --line only", "force line"
+    ),
+    _op("--list", "list", "--list goes alone: it lists the open fields"),
+    _op(
+        "--prompts",
+        "prompts",
+        "--prompts goes with --prompt-file NAME=PATH only: it writes the Prompt block",
+        "prompt_file",
+    ),
+    _op("--render", "render", "--render goes alone: it writes the result section"),
+    _op(
+        "--into",
+        "into",
+        "--into REPORT alone writes the adopted result's block and goes alone",
+    ),
+    _op(
+        "--discuss",
+        "discuss",
+        "--discuss RUN_ID goes with --why TEXT and --into REPORT",
+        takes="why into",
+        needs="why into",
+    ),
+    _op(
+        "--reported-through",
+        "reported_through",
+        "--reported-through RUN_ID goes with --into REPORT only",
+        takes="into",
+        needs="into",
+    ),
+    _op(
+        "--handover",
+        "handover",
+        "--handover requires --why TEXT, --tried TEXT and --into REPORT, nothing "
+        "else; it writes its block in place and keeps the rest of the report, so "
+        "--force does not go with it",
+        takes="why tried into",
+        needs="why tried into",
+    ),
+    _op(
+        "--withdraw",
+        "withdraw",
+        "--withdraw requires --why TEXT (why the run is no longer the result) and "
+        "goes with an optional --into REPORT only",
+        takes="why into",
+        needs="why",
+    ),
+    _op(
+        "--data-counts",
+        "data_counts",
+        "--data-counts goes alone: it writes the end of Data / scope",
+    ),
+    _op("--from-run", "from_run", "--from-run goes with --force only", "force"),
+    _op(
+        "--builds-on",
+        "builds_on",
+        "--builds-on RUN_ID requires --step-id STEP, --occasion and --why TEXT, "
+        "nothing else",
+        takes="step_id occasion why",
+        needs="step_id occasion why",
+    ),
+    _op(
+        "--explored-in", "explored_in", "--explored-in EXPLORATION_PROTOCOL goes alone"
+    ),
+    _op(
+        "--freeze",
+        "freeze",
+        "--freeze goes alone: it writes frozen and preflight_audit",
+    ),
+)
+
+
+def _given(value: object) -> bool:
+    """Whether a parsed argument was given: None, an unset store_true
+    (False) and an empty append list ([]) are not; `--freeze` without
+    RECORD ("") is."""
+    return value is not None and value is not False and value != []
+
+
+def given_operations(args: argparse.Namespace) -> list[Operation]:
+    """The operations ARGS name, in OPERATIONS order; `--into` counts as one
+    only when no other operation is named (else it is a companion)."""
+    named = [op for op in OPERATIONS if _given(getattr(args, op.attr))]
+    others = [op for op in named if op.attr != "into"]
+    return others or named
+
+
+def operation_refusal(args: argparse.Namespace) -> str | None:
+    """The sentence refusing ARGS' combination of operations and companion
+    flags, or None when it is one operation with what it takes and needs.
+
+    Refused: two operations (both named); an operation missing a companion
+    it needs, or given one it does not take (its `usage`); a companion with
+    no operation (the operations that take it). Pure: reads no file."""
+    named = given_operations(args)
+    if len(named) > 1:
+        return (
+            f"{named[0].flag} cannot be combined with {named[1].flag}: "
+            "one operation per call"
         )
-    if (
-        args.discuss is not None
-        or args.from_run is not None
-        or args.into is not None
-        or args.withdraw
-        or args.handover
-        or args.force
-        or args.list
-        or args.prompts
-        or args.render
-        or args.field is not None
-    ):
-        ap.error("--builds-on cannot be combined with another operation")
-
-
-def _check_link_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Refuse --explored-in beside another operation, before file access."""
-    if args.explored_in is None:
-        return
-    if (
-        args.discuss is not None
-        or args.why is not None
-        or args.from_run is not None
-        or args.data_counts is not None
-        or args.builds_on is not None
-        or args.reported_through is not None
-        or args.into is not None
-        or args.freeze is not None
-        or args.withdraw
-        or args.handover
-        or args.force
-        or args.list
-        or args.prompts
-        or args.render
-        or args.field is not None
-    ):
-        ap.error("--explored-in EXPLORATION_PROTOCOL goes alone")
-
-
-def _check_through_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Refuse --reported-through without --into or beside another
-    operation, before file access."""
-    if args.reported_through is None:
-        return
-    if args.into is None:
-        ap.error("--reported-through RUN_ID goes with --into REPORT")
-    if (
-        args.discuss is not None
-        or args.why is not None
-        or args.from_run is not None
-        or args.data_counts is not None
-        or args.builds_on is not None
-        or args.freeze is not None
-        or args.withdraw
-        or args.handover
-        or args.force
-        or args.list
-        or args.prompts
-        or args.render
-        or args.field is not None
-    ):
-        ap.error("--reported-through goes with --into REPORT only")
-
-
-def _check_report_mode_args(
-    ap: argparse.ArgumentParser, args: argparse.Namespace
-) -> None:
-    """Refuse incomplete or conflicting report operations before file access."""
-    if args.withdraw:
-        if not args.why:
-            ap.error(
-                "--withdraw requires --why TEXT: why the run is no longer the result"
+    companions = [a for a in COMPANION_FLAGS if _given(getattr(args, a))]
+    if not named and companions:
+        takers = [op.flag for op in OPERATIONS if companions[0] in op.takes]
+        return f"{COMPANION_FLAGS[companions[0]]} goes with {' or '.join(takers)}"
+    if not named:
+        return None
+    (op,) = named
+    if any(not getattr(args, attr) for attr in op.needs):
+        return op.usage
+    for attr in companions:
+        if attr not in op.takes and attr != op.attr:
+            return (
+                f"{op.flag} cannot be combined with {COMPANION_FLAGS[attr]}: {op.usage}"
             )
-        if (
-            args.handover
-            or args.discuss is not None
-            or args.from_run is not None
-            or args.tried is not None
-            or args.force
-            or args.list
-            or args.prompts
-            or args.render
-            or args.field is not None
-        ):
-            ap.error("--withdraw goes with --why and an optional --into REPORT only")
-    elif args.handover:
-        if not args.why or not args.tried or args.into is None:
-            ap.error("--handover requires --why TEXT, --tried TEXT and --into REPORT")
-        if args.force:
-            ap.error(
-                "--handover writes its block in place and keeps the rest of the "
-                "report; --force does not go with it"
-            )
-        if (
-            args.discuss is not None
-            or args.from_run is not None
-            or args.list
-            or args.prompts
-            or args.render
-            or args.field is not None
-        ):
-            ap.error("--handover cannot be combined with another operation")
-    elif args.tried is not None:
-        ap.error("--tried goes with --handover")
-    elif args.builds_on is None and (
-        (args.discuss is None) != (args.why is None)
-        or (args.discuss is not None and args.into is None)
-    ):
-        ap.error("--discuss RUN_ID goes with --why TEXT and --into REPORT")
+    return None
 
 
 def main(argv: list[str]) -> int:
@@ -1288,14 +1269,9 @@ def main(argv: list[str]) -> int:
         "run is withdrawn first (--withdraw), never replaced",
     )
     args = ap.parse_args(argv)
-    _check_data_counts_args(ap, args)
-    _check_step_args(ap, args)
-    _check_link_args(ap, args)
-    _check_through_args(ap, args)
-    _check_report_mode_args(ap, args)
-    _check_freeze_args(ap, args)
-    if args.prompt_file and not args.prompts:
-        ap.error("--prompt-file adds a template to --prompts")
+    refusal = operation_refusal(args)
+    if refusal is not None:
+        ap.error(refusal)
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2

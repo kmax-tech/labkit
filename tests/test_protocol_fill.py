@@ -11,6 +11,7 @@ from labkit.formats.runs import RunKind
 
 import contextlib
 import io
+import itertools
 import json
 import sys
 import tempfile
@@ -1604,3 +1605,103 @@ class ReportSetter(unittest.TestCase):
         self.assertEqual(code, 2, out)
         self.assertIn("runs.tsv:2", out)
         self.assertEqual(proto.read_text(encoding="utf-8"), before)
+
+
+class OneOperationPerCall(unittest.TestCase):
+    """A call names one operation (`protocol_fill.OPERATIONS`): two are
+    refused before the file is read, naming both. Before, the dispatch ran
+    the first and dropped the other with exit 0 (`--list --prompts` listed
+    and wrote no Prompt block)."""
+
+    # each operation with the companions it needs, so that alone it passes
+    # the argument check
+    ALONE = {
+        "field": ["Question", "v"],
+        "list": ["--list"],
+        "prompts": ["--prompts"],
+        "render": ["--render"],
+        "into": ["--into", "R.md"],
+        "discuss": ["--discuss", "r1", "--why", "w", "--into", "R.md"],
+        "reported_through": ["--reported-through", "r1", "--into", "R.md"],
+        "handover": ["--handover", "--why", "w", "--tried", "t", "--into", "R.md"],
+        "withdraw": ["--withdraw", "--why", "w"],
+        "data_counts": ["--data-counts"],
+        "from_run": ["--from-run"],
+        "builds_on": [
+            *("--builds-on", "r1", "--step-id", "s", "--occasion", "planned"),
+            *("--why", "w"),
+        ],
+        "explored_in": ["--explored-in", "E.md"],
+        "freeze": ["--freeze"],
+    }
+    MISSING = "/nonexistent/PROTOCOL-x.md"
+
+    def refused(self, argv: list[str]) -> str:
+        """The argparse refusal of ARGV (exit 2), its stderr."""
+        err = io.StringIO()
+        with self.assertRaises(SystemExit) as cm, contextlib.redirect_stderr(err):
+            protocol_fill.main(argv)
+        self.assertEqual(cm.exception.code, 2)
+        return err.getvalue()
+
+    def test_list_and_prompts_together_are_refused_naming_both(self):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(TEMPLATE, encoding="utf-8")
+            said = self.refused([str(protocol), "--list", "--prompts"])
+            self.assertIn("--list cannot be combined with --prompts", said)
+            self.assertEqual(protocol.read_text(encoding="utf-8"), TEMPLATE)
+
+    def test_the_twin_list_alone_and_prompts_alone_run(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "scripts").mkdir()
+            (Path(d) / "scripts" / "01_measure.py").write_text(SCRIPT)
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(TEMPLATE, encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(protocol_fill.main([str(protocol), "--list"]), 0)
+                self.assertEqual(protocol_fill.main([str(protocol), "--prompts"]), 0)
+            self.assertIn("`PROMPT` —", protocol.read_text(encoding="utf-8"))
+
+    def test_every_operation_of_the_table_has_an_argv_here(self):
+        """A new operation in the table is held by the pair test below."""
+        self.assertEqual(
+            sorted(op.attr for op in protocol_fill.OPERATIONS), sorted(self.ALONE)
+        )
+
+    def test_every_pair_of_operations_is_refused_before_the_file_is_read(self):
+        """The protocol does not exist: an argv past the argument check
+        would end in "no such file" (exit 2 returned, no SystemExit).
+        `--into` beside an operation that takes it is that operation's
+        report, not a second operation."""
+        for a, b in itertools.combinations(protocol_fill.OPERATIONS, 2):
+            if "into" in {a.attr, b.attr} and "into" in a.takes | b.takes:
+                continue
+            with self.subTest(a=a.flag, b=b.flag):
+                said = self.refused(
+                    [self.MISSING, *self.ALONE[a.attr], *self.ALONE[b.attr]]
+                )
+                self.assertIn("cannot be combined with", said)
+                self.assertIn(a.flag, said)
+                self.assertIn(b.flag, said)
+
+    def test_the_twin_each_operation_alone_passes_the_argument_check(self):
+        for attr, argv in self.ALONE.items():
+            err = io.StringIO()
+            with self.subTest(attr=attr), contextlib.redirect_stderr(err):
+                self.assertEqual(protocol_fill.main([self.MISSING, *argv]), 2)
+                self.assertIn("no such file", err.getvalue())
+
+    def test_a_companion_the_operation_does_not_take_is_refused(self):
+        """`--force` beside `--list` did nothing and said nothing; `--tried`
+        without `--handover` names the operation that takes it."""
+        said = self.refused([self.MISSING, "--list", "--force"])
+        self.assertIn("--list cannot be combined with --force", said)
+        said = self.refused([self.MISSING, "--tried", "t"])
+        self.assertIn("--tried goes with --handover", said)
+        # the twin: a field fill takes --force
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rc = protocol_fill.main([self.MISSING, "Question", "v", "--force"])
+        self.assertEqual(rc, 2)
+        self.assertIn("no such file", err.getvalue())

@@ -1875,7 +1875,9 @@ class DataCounts(unittest.TestCase):
                 [str(self.protocol), "--data-counts", *step, "--why", "w"]
             )
         self.assertEqual(cm.exception.code, 2)
-        self.assertIn("--data-counts goes alone", err.getvalue())
+        self.assertIn(
+            "--data-counts cannot be combined with --builds-on", err.getvalue()
+        )
         self.assertEqual(self.protocol.read_text(encoding="utf-8"), before)
 
     def test_no_preparation_run_is_refused(self):
