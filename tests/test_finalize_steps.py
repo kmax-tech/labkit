@@ -327,6 +327,119 @@ class ModelProvenanceFindings(unittest.TestCase):
             self.assertIn(f"{LLM_CALLS_FILE}:1", gap.text)
 
 
+class ModelRecordsByRunKind(unittest.TestCase):
+    """The call log against the model records, read from run directories,
+    for each way a run builds on another: a repeat (`repeat_of`, its own
+    record), a derived run (`derived_from`, no record of its own), an
+    exploratory step (`[builds_on]` lives in the protocol; its run record
+    is a fresh run's), and a hit stored by a run of another area of the lab."""
+
+    BASIS = "2026-11-20T09-00-00_bb22"
+    RUN = "2026-11-21T10-00-00_cc33"
+    NAMED = {"standin": {"backend": "openai"}}
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.lab = Path(tmp.name)
+        (self.lab / "models.toml").write_text("", encoding="utf-8")
+        self.area = self.lab / "experiments" / "01-a"
+
+    def _run(
+        self,
+        run_id: str,
+        models_resolved: dict,
+        calls: list[dict] | None = None,
+        *,
+        area: Path | None = None,
+        **record: object,
+    ) -> Path:
+        run = (area or self.area) / "runs" / run_id
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(
+            json.dumps(run_record({"models_resolved": models_resolved, **record})),
+            encoding="utf-8",
+        )
+        (run / "metrics.json").write_text("{}", encoding="utf-8")
+        if calls is not None:
+            (run / LLM_CALLS_FILE).write_text(
+                "".join(json.dumps(c) + "\n" for c in calls), encoding="utf-8"
+            )
+        return run
+
+    @staticmethod
+    def _line(*, hit: bool, origin_run: str | None = None) -> dict:
+        return {
+            "key": "ab" * 32,
+            "alias": "standin",
+            "hit": hit,
+            "origin": {"run": origin_run, "written": "2026-11-20T09:00:00"}
+            if hit
+            else None,
+            "usage": dict.fromkeys(
+                ("prompt_tokens", "output_tokens", "cached_tokens", "cost_usd")
+            ),
+            "uncached": None,
+        }
+
+    def _found(self, run: Path):
+        return run_record_check.model_provenance_findings(self.area, run)
+
+    def test_a_repeat_records_its_own_model_and_is_held_to_it(self):
+        self._run(self.BASIS, self.NAMED)
+        asked = [self._line(hit=False)]
+        named = self._run(self.RUN, self.NAMED, asked, repeat_of=self.BASIS, draw=2)
+        self.assertEqual(self._found(named), [])
+        unnamed = self._run(
+            "2026-11-21T11-00-00_dd44", {}, asked, repeat_of=self.BASIS, draw=2
+        )
+        (f,) = self._found(unnamed)
+        self.assertEqual(f.grade, BLOCKER)
+
+    def test_a_derived_run_replaying_its_parent_s_answers_is_held_by_the_parent(self):
+        replayed = [self._line(hit=True, origin_run=self.BASIS)]
+        self._run(self.BASIS, self.NAMED)
+        run = self._run(self.RUN, {}, replayed, derived_from=self.BASIS)
+        self.assertEqual(self._found(run), [])
+
+    def test_a_derived_run_whose_parent_names_no_model_blocks(self):
+        replayed = [self._line(hit=True, origin_run=self.BASIS)]
+        self._run(self.BASIS, {})
+        run = self._run(self.RUN, {}, replayed, derived_from=self.BASIS)
+        (f,) = self._found(run)
+        self.assertEqual(f.grade, BLOCKER)
+        self.assertIn(f"stored by run {self.BASIS}", f.text)
+
+    def test_a_derived_run_asking_the_model_is_a_warning_not_a_blocker(self):
+        # runlog writes no models_resolved for a derived run: no blocker may
+        # demand one; which model answered stays unrecorded and is said
+        self._run(self.BASIS, self.NAMED)
+        run = self._run(self.RUN, {}, [self._line(hit=False)], derived_from=self.BASIS)
+        (f,) = self._found(run)
+        self.assertEqual((f.grade, f.evidence_kind), (WARNING, GUARANTEED))
+
+    def test_an_exploratory_step_is_held_like_a_fresh_run(self):
+        # a step's basis stands in the protocol's [builds_on]; its run record
+        # carries no link and its own models_resolved, as a fresh run's
+        self._run(self.BASIS, self.NAMED)
+        stored = [self._line(hit=True, origin_run=self.BASIS)]
+        self.assertEqual(self._found(self._run(self.RUN, {}, stored)), [])
+        asked = self._run("2026-11-21T11-00-00_dd44", {}, [self._line(hit=False)])
+        (f,) = self._found(asked)
+        self.assertEqual(f.grade, BLOCKER)
+
+    def test_an_answer_stored_by_a_run_of_another_area_is_found_there(self):
+        other = self.lab / "experiments" / "02-b"
+        self._run(self.BASIS, self.NAMED, area=other)
+        stored = [self._line(hit=True, origin_run=self.BASIS)]
+        self.assertEqual(self._found(self._run(self.RUN, {}, stored)), [])
+
+    def test_an_answer_whose_storing_run_is_nowhere_blocks(self):
+        stored = [self._line(hit=True, origin_run=self.BASIS)]
+        (f,) = self._found(self._run(self.RUN, {}, stored))
+        self.assertIn(f"no run {self.BASIS} in this area or another area", f.text)
+
+
 class ReadmePlaceholders(unittest.TestCase):
     def test_a_stamped_blank_is_named_and_a_filled_readme_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:

@@ -31,7 +31,7 @@ from labkit.formats.files import (
     write_atomic,
 )
 from labkit.formats.jsonl import data_rows_of
-from labkit.formats.repo import layout_root, rel_posix
+from labkit.formats.repo import experiment_areas, lab_root, layout_root, rel_posix
 
 
 def _command_of(pid: int) -> str | None:
@@ -317,6 +317,27 @@ def _usage_counts(usage: object, where: str) -> dict[str, int | float | None]:
 def runs_path(area: Path) -> Path:
     """AREA's `runs/` — every run directory lies directly in it."""
     return area / RUNS_DIR
+
+
+def run_dir_in_lab(area: Path, run_id: str) -> Path | None:
+    """The directory of run RUN_ID: AREA's `runs/<RUN_ID>` when it is
+    there, else the first experiment area of AREA's lab (`repo.lab_root`,
+    the directory holding `models.toml`) that holds one; None when no
+    area does, or AREA has no lab root and not the run. The lab's cache of
+    model answers (`llm_cache`) is shared by its areas, so the run that
+    stored an answer may sit in another area. Looks only at directories;
+    whether the record reads is the caller's."""
+    own = run_path(area, run_id)
+    if own.is_dir():
+        return own
+    root = lab_root(area)
+    if root is None:
+        return None
+    for other in experiment_areas(root):
+        found = run_path(other, run_id)
+        if found.is_dir():
+            return found
+    return None
 
 
 def run_path(area: Path, run_id: str) -> Path:

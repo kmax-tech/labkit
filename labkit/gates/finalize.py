@@ -17,11 +17,14 @@ each step's condition):
                     the head's `[result] run` names this one or none yet
                     (blocker / note with the command), its
                     JSONL rows come from this run, the runs it continues or
-                    its derived_from lineage (blocker), every alias whose
-                    answers its call log shows and no other run vouches for
-                    is in its models_resolved (blocker), else a model record
-                    stands in its lineage where its metrics show calls
-                    (warning), the arm lines match (warning),
+                    its derived_from lineage (blocker), each line of its
+                    call log has a record naming its alias — its own, or
+                    the storing run's for a stored answer (blocker; a
+                    derived run, which records no model, warns instead
+                    only for asked calls and answers stored outside any
+                    run), else
+                    a model record stands in its lineage where its metrics
+                    show calls (warning), the arm lines match (warning),
                     it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
                     (warning here, `runs.unreportable`; report-check blocks)
   2. registration   the answering run's promise block is the one the first
@@ -352,7 +355,7 @@ def check_answering_run(
     answering_run = choose_answering_run(findings, protocol, pid, text, state)
     _hold_declaration(findings, protocol, text, answering_run)
     if answering_run is not None:
-        # blockers from the call log first; the metrics-based warning only
+        # findings from the call log first; the metrics-based warning only
         # when the call log gives none (`model_provenance_findings`)
         findings.take_all(model_provenance_findings(area, answering_run))
         for warning in (

@@ -7,6 +7,7 @@ data in memory, its violation and its valid twin (docs/architecture.md,
 from __future__ import annotations
 
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,8 @@ import pytest
 from check_guards import pure_call
 from labkit.checks.run_record_check import (
     LAB_027,
-    call_log_model_blockers,
+    StoringRun,
+    call_log_model_findings,
     criterion_n_input_mismatches,
     criterion_ns,
     null_lane_findings,
@@ -302,16 +304,38 @@ def _call(alias: str, *, hit: bool, origin_run: str | None = None) -> ModelCall:
     return ModelCall(alias=alias, hit=hit, origin_run=origin_run, usage={})
 
 
-class AModelThatAnsweredIsNamedInTheRecord(unittest.TestCase):
-    """LAB-027 Model discipline: an answer the run used that no other run's
-    record vouches for — a call that asked the model, or a stored answer
-    written outside any run — has its alias in the run's `models_resolved`; a
-    blocker, guaranteed (`call_log_model_blockers`)."""
+class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
+    """LAB-027 Model discipline: every line of a run's call log has a record
+    naming its alias — the run's own, or for an answer a run stored, that
+    run's; else a blocker, guaranteed (`call_log_model_findings`). A
+    derived run, whose record runlog never fills, gets a warning instead."""
 
     RUN = "2026-11-21T10-55-52_a997"
+    PARENT = "2026-11-20T09-00-00_bb22"
+    NAMED: Mapping[str, object] = {"standin": {"backend": "openai"}}
 
-    def _held(self, calls: list[ModelCall], models_resolved: dict[str, object]):
-        return pure_call(call_log_model_blockers, self.RUN, calls, models_resolved)
+    def _held(
+        self,
+        calls: list[ModelCall],
+        models_resolved: Mapping[str, object],
+        *,
+        derived_from: str | None = None,
+        storing_runs: dict[str, StoringRun] | None = None,
+    ):
+        return pure_call(
+            call_log_model_findings,
+            self.RUN,
+            calls,
+            models_resolved,
+            derived_from=derived_from,
+            storing_runs=storing_runs or {},
+        )
+
+    def _stored(self, n: int = 1) -> list[ModelCall]:
+        return [_call("standin", hit=True, origin_run=self.PARENT)] * n
+
+    # -- a fresh run (also a repeat, also an exploratory step: neither
+    # -- carries derived_from, and runlog records their models) ------------
 
     def test_stand_in_answers_stored_outside_a_run_block_without_the_alias(self):
         # the a997 case: two replayed stand-in answers, models_resolved empty
@@ -321,15 +345,16 @@ class AModelThatAnsweredIsNamedInTheRecord(unittest.TestCase):
             (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, LAB_027)
         )
         self.assertIn(
-            f"{self.RUN} used 2 answers of alias `standin` (2 stored outside any "
-            f"run) — its models_resolved does not name `standin`",
+            f"{self.RUN}'s call log holds 2 answers of alias `standin` (2 stored "
+            f"outside any run), but its models_resolved does not name `standin`",
             f.text,
         )
         self.assertIn("`model`", f.fix or "")
 
     def test_a_call_that_asked_the_model_blocks_without_the_alias(self):
+        # a repeat asks anew: its lines are all of this kind
         (f,) = self._held([_call("haiku", hit=False)], {})
-        self.assertIn("used 1 answer of alias `haiku` (1 asked the model)", f.text)
+        self.assertIn("holds 1 answer of alias `haiku` (1 asked the model)", f.text)
 
     def test_another_alias_named_does_not_cover_the_one_that_answered(self):
         calls = [_call("haiku", hit=False), _call("judge", hit=False)]
@@ -338,15 +363,71 @@ class AModelThatAnsweredIsNamedInTheRecord(unittest.TestCase):
 
     def test_the_twin_a_named_alias_passes(self):
         calls = [_call("standin", hit=True), _call("standin", hit=False)]
-        self.assertEqual(self._held(calls, {"standin": {"backend": "ollama"}}), [])
+        self.assertEqual(self._held(calls, self.NAMED), [])
 
     def test_the_twin_a_run_without_calls_passes(self):
         self.assertEqual(self._held([], {}), [])
 
-    def test_an_answer_another_run_stored_is_held_by_that_run(self):
-        # a hit with its origin run: that run's record names the model
-        calls = [_call("haiku", hit=True, origin_run="2026-11-20T09-00-00_bb22")]
-        self.assertEqual(self._held(calls, {}), [])
+    # -- an answer a run stored ---------------------------------------------
+
+    def test_an_answer_whose_storing_run_names_the_alias_passes(self):
+        stored = {self.PARENT: StoringRun(self.NAMED, None)}
+        self.assertEqual(self._held(self._stored(2), {}, storing_runs=stored), [])
+
+    def test_an_answer_whose_storing_run_does_not_name_the_alias_blocks(self):
+        stored = {self.PARENT: StoringRun({"haiku": {}}, None)}
+        (f,) = self._held(self._stored(2), {}, storing_runs=stored)
+        self.assertEqual((f.grade, f.rule), (BLOCKER, LAB_027))
+        self.assertIn(
+            f"holds 2 answers of alias `standin` stored by run {self.PARENT}, but "
+            f"its models_resolved does not name `standin`",
+            f.text,
+        )
+
+    def test_an_answer_whose_storing_run_cannot_be_read_blocks(self):
+        gone = f"no run {self.PARENT} in this area or another area of the lab"
+        stored = {self.PARENT: StoringRun(None, gone)}
+        (f,) = self._held(self._stored(), {}, storing_runs=stored)
+        self.assertIn(f"that run's record cannot be read: {gone}", f.text)
+
+    def test_the_run_s_own_record_vouches_for_a_stored_answer_too(self):
+        stored = {self.PARENT: StoringRun(None, "gone")}
+        self.assertEqual(
+            self._held(self._stored(), self.NAMED, storing_runs=stored), []
+        )
+
+    def test_an_origin_run_without_its_record_given_is_the_caller_s_error(self):
+        with self.assertRaisesRegex(ValueError, "no record given for origin run"):
+            self._held(self._stored(), {})
+
+    # -- a derived run: runlog records no model for it ----------------------
+
+    def test_a_derived_run_asking_the_model_warns_instead_of_blocking(self):
+        calls = [_call("standin", hit=False), _call("standin", hit=True)]
+        (f,) = self._held(calls, {}, derived_from=self.PARENT)
+        self.assertEqual((f.grade, f.evidence_kind), (WARNING, GUARANTEED))
+        self.assertIn(
+            f"but {self.RUN} derives from {self.PARENT} and runlog records no "
+            f"model for a derived run",
+            f.text,
+        )
+
+    def test_a_derived_run_replaying_its_parent_s_named_answers_passes(self):
+        stored = {self.PARENT: StoringRun(self.NAMED, None)}
+        self.assertEqual(
+            self._held(
+                self._stored(2), {}, derived_from=self.PARENT, storing_runs=stored
+            ),
+            [],
+        )
+
+    def test_a_derived_run_replaying_answers_no_record_names_blocks(self):
+        stored = {self.PARENT: StoringRun({}, None)}
+        (f,) = self._held(
+            self._stored(), {}, derived_from=self.PARENT, storing_runs=stored
+        )
+        self.assertEqual(f.grade, BLOCKER)
+        self.assertNotIn("`model`", f.fix or "", "a derived run cannot name it")
 
 
 if __name__ == "__main__":
