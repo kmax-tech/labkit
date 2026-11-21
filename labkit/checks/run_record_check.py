@@ -1388,8 +1388,9 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
          does not read is the technical contract, a warning too;
       3. stand-ins in the call logs of the run and of the runs it rests
          on (`stand_in_calls`), a warning after those of 1 or 2
-         (`stand_in_findings`); call logs on the way that do not read
-         block — the technical contract.
+         (`stand_in_findings`); a record on the way that does not read is
+         a warning — its own station holds it, and the result line is not
+         rendered without the count.
     Its limit: only what the call log and the metrics hold is compared; a
     run that called a model past labkit's cache and writes neither metrics
     key is not seen."""
@@ -1433,13 +1434,20 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
     try:
         read = stand_in_calls(answering_run)
     except (OSError, ValueError) as exc:
+        # a warning, not a blocker: the record that does not read is held
+        # by the station of its own path (input origins, the lineage, the
+        # call log above), and report-check's rendering of the result line
+        # refuses without the count (`result_render.stand_in_label`)
         stand_ins = [
-            blocker(
+            GateFinding(
+                WARNING,
                 f"model provenance: the stand-ins behind {answering_run.name} "
-                f"cannot be counted — {exc}",
+                f"cannot be counted — {exc}; the result line cannot be rendered "
+                f"until this record reads",
                 fix=f"restore the named record as runlog wrote it, or "
                 f"{measure_anew(area)}",
                 rule=TECHNICAL_RULE,
+                evidence_kind=GUARANTEED,
             )
         ]
     else:

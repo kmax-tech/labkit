@@ -341,6 +341,19 @@ class ModelProvenanceFindings(unittest.TestCase):
             self.assertEqual((blocked.grade, named.grade), (BLOCKER, WARNING))
             self.assertIn("(1 stand-in)", blocked.text)  # own record: counted by kind
 
+    def test_stand_ins_that_cannot_be_counted_are_a_warning(self):
+        # a parent named by derived_from that is gone: the lineage station
+        # holds it; this station says the count is missing, and only warns
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(d, {"n_rows": 4}, {})
+            cfg = json.loads((run / "config.json").read_text(encoding="utf-8"))
+            cfg["derived_from"] = "2026-10-07T10-00-00_bbbb"
+            (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            self.assertEqual((gap.grade, gap.rule), (WARNING, TECHNICAL_RULE))
+            self.assertIn("the stand-ins behind", gap.text)
+            self.assertIn("cannot be counted", gap.text)
+
     def test_a_run_without_its_config_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"n_rows": 4}, {}, [self._stand_in_hit()])
