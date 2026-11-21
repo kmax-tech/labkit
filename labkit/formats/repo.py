@@ -144,7 +144,7 @@ def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
     carry (`area_path`), another argument, or an area that is no directory
     — each refused with its sentence. The one reading of preflight's and
     finalize's command line."""
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         return console.usage(tool, "\n".join(usage), asked=bool(argv))
     try:
         area = area_path(argv[0])
