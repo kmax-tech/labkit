@@ -53,6 +53,7 @@ from labkit.formats.gate import (
     BLOCKER,
     GUARANTEED,
     NOT_EXECUTABLE,
+    Findings,
     STATIC_EVIDENCE,
     SUSPECTED,
     TECHNICAL_RULE,
@@ -567,20 +568,35 @@ class Stamp(_WithSource):
 
 
 class PreflightStamp(_WithSource):
-    """preflight's scope-sha station tells a stamp it cannot compute from
-    the named exploration; it does not end the gate."""
+    """preflight blocks a stamp it cannot compute from the named
+    exploration, at station 5, and runs every later station."""
+
+    def preflight(self) -> tuple[int, list[str], list[str]]:
+        """(exit, lines told, blockers) of the whole preflight on the
+        confirmation."""
+        told: list[str] = []
+        found = Findings(tell=told.append)
+        return (
+            preflight.preflight_area(self.confirm, findings=found),
+            told,
+            found.blocked,
+        )
 
     @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
-    def test_an_output_of_the_closure_that_does_not_read_cannot_stamp(self) -> None:
+    def test_an_output_of_the_closure_that_does_not_read_blocks(self) -> None:
         rows = self.explore / "rows.jsonl"
         rows.chmod(0)
         self.addCleanup(rows.chmod, 0o644)
-        line = preflight.scope_stamp_line(self.confirm)
-        self.assertTrue(line.startswith("  cannot stamp: "), line)
-        self.assertIn("rows.jsonl", line)
+        code, told, blocked = self.preflight()
+        self.assertEqual(code, 1)
+        (stamp,) = [m for m in blocked if m.startswith("cannot stamp")]
+        self.assertIn("rows.jsonl", stamp)
+        self.assertIn("── tests ──", told)  # the stations after it ran
 
-    def test_the_twin_a_readable_closure_is_stamped(self) -> None:
-        self.assertEqual(preflight.scope_stamp_line(self.confirm), f"  {self.stamp()}")
+    def test_the_twin_a_readable_closure_is_stamped_and_not_blocked(self) -> None:
+        _, told, blocked = self.preflight()
+        self.assertEqual([m for m in blocked if m.startswith("cannot stamp")], [])
+        self.assertIn(f"  {self.stamp()}", told)
 
 
 class Evidence(_WithSource):

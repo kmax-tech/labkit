@@ -42,7 +42,7 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      edits, dynamic loaders, imports outside lib/ and src/
                      — static evidence, warnings); each finding carries
                      its grade as data
-  5. scope-sha       audit stamp over the input scope; told
+  5. scope-sha       audit stamp over the input scope; a covered file that does not read blocks
   6. working tree    uncommitted changes (warning, not a blocker)
   7. hooks           the installed labkit hooks match this labkit (warning);
                      outside a git repo there is nothing to check
@@ -230,7 +230,8 @@ def preflight_area(
        carries the line; the open findings handovers elsewhere in the
        repo record, always, as a reminder.
     4. code-check — always.
-    5. scope-sha — always; told.
+    5. scope-sha — always; a covered file that does not read, or git
+       failing on a linked exploration, blocks; else told.
     6. working tree — always.
     7. hooks — only inside a git repo.
     8. area tests — always; frozen = true grades a missing test a blocker.
@@ -298,9 +299,10 @@ def preflight_area(
         block_told=any(gap.block_unread for gap in report.must_gaps),
     )
 
-    # 5. scope-sha — always; told
+    # 5. scope-sha — always; a stamp that cannot be computed from what it
+    #    covers blocks, a cause another station holds is told
     findings.header("scope-sha")
-    findings.note(scope_stamp_line(area))
+    check_scope_stamp(findings, area)
 
     # 6. working tree — always
     findings.header("working tree")
@@ -590,22 +592,31 @@ def check_code(
         findings.note("  ok")
 
 
-def scope_stamp_line(area: Path) -> str:
+def check_scope_stamp(findings: Findings, area: Path) -> None:
     """Station 5: the audit stamp of the area's input scope
-    (`scope_sha.area_stamp`), that there is nothing to stamp, or why it
-    cannot stamp (a promise block that does not read, a scope file a
-    promise declares that is missing, a registered output of a linked
-    exploration's runs that does not read, git failing on that
-    exploration) — told, never counted; station 4 blocks a missing
-    declared scope file."""
+    (`scope_sha.area_stamp`), or why there is none. A file the stamp
+    covers that stands and does not read — a registered output of a linked
+    exploration's runs — or git failing on that exploration blocks: no
+    audit can be bound to the area until it reads. Told only, since
+    another station holds the cause: a promise block that does not read
+    (stations 1 and 4), a scope file a promise declares that is missing
+    (station 4), no script to stamp."""
     try:
         sha, _, _ = area_stamp(area)
     # a PromiseError is a ValueError too, but not "nothing to stamp"
-    except (promises.PromiseError, OSError, RuntimeError) as exc:
-        return f"  cannot stamp: {exc}"
+    except (promises.PromiseError, FileNotFoundError) as exc:
+        findings.note(f"  cannot stamp: {exc}")
+    except (OSError, RuntimeError) as exc:
+        findings.block(
+            f"cannot stamp the area's scope: {exc}",
+            fix="make the file readable (or git work on the repository), then "
+            f"`{gate_command('preflight', area)}`",
+            rule=TECHNICAL_RULE,
+        )
     except ValueError:
-        return f"  no scripts matching {AREA_GLOBS} in {area} (skipped)"
-    return f"  {sha}"
+        findings.note(f"  no scripts matching {AREA_GLOBS} in {area} (skipped)")
+    else:
+        findings.note(f"  {sha}")
 
 
 def check_working_tree(findings: Findings, repo: Path) -> None:

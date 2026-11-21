@@ -213,22 +213,39 @@ class PreflightStations(unittest.TestCase):
 
 class ScopeStampStation(unittest.TestCase):
     """Station 5 tells the stamp, or why it cannot stamp — a scope file a
-    promise declares that is missing is told, it does not end the gate."""
+    promise declares that is missing is told here and blocked at station 4,
+    once; it does not end the gate."""
 
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.area = declared_scope_area(Path(tmp.name))
 
+    def stamp_station(self) -> tuple[list[str], list[str]]:
+        """(lines told, blockers) of station 5 alone."""
+        told: list[str] = []
+        found = Findings(tell=told.append)
+        preflight.check_scope_stamp(found, self.area)
+        return told, found.blocked
+
     def test_a_missing_declared_scope_file_cannot_stamp(self):
         (self.area / "helper.py").unlink()
-        line = preflight.scope_stamp_line(self.area)
+        (line,), blocked = self.stamp_station()
         self.assertTrue(line.startswith("  cannot stamp: "), line)
         self.assertIn("helper.py", line)
+        self.assertEqual(blocked, [])
 
     def test_the_twin_a_present_declared_file_is_stamped(self):
         sha = area_stamp(self.area)[0]
-        self.assertEqual(preflight.scope_stamp_line(self.area), f"  {sha}")
+        self.assertEqual(self.stamp_station(), ([f"  {sha}"], []))
+
+    def test_the_whole_gate_blocks_it_once_at_station_4(self):
+        (self.area / "helper.py").unlink()
+        found = Findings(tell=None)
+        self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
+        scope = [m for m in found.blocked if "helper.py" in m]
+        self.assertEqual(len(scope), 1, found.blocked)
+        self.assertIn("declared scope", scope[0])
 
 
 if __name__ == "__main__":
