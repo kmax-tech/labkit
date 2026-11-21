@@ -227,9 +227,9 @@ def _main(argv: list[str]) -> int:
             (__doc__ or "").strip().splitlines()[0],
             "usage: intent-check <PROTOCOL-*.md> [--metrics FILE]",
             "  --metrics FILE  metrics.json to check against. Default: "
-            "the newest COMPLETED run bound to this protocol's id that "
-            "reports intent keys; required while the protocol's id is "
-            "unstamped.",
+            "the run the protocol adopted ([result] run), else the newest "
+            "COMPLETED run bound to this protocol's id that reports intent "
+            "keys; required while the protocol's id is unstamped.",
             EXIT_CONTRACT,
         ]
         return console.usage("intent-check", "\n".join(lines), asked=bool(argv))
@@ -250,7 +250,8 @@ def hold(
     protocol: Path, metrics_arg: Path | None, state: AreaState | None = None
 ) -> Held:
     """Hold PROTOCOL's registered ids to a metrics.json: METRICS_ARG when
-    named, else the newest completed run bound to the stamped id; STATE the
+    named, else the run that answers for the stamped id (`choose_bound`:
+    the adopted one, else the newest completed bound one); STATE the
     area's state, the caller's when it built one. Reads only. The prose and
     the promise block disagreeing is the first finding and the last; an
     unregistered protocol is a clean check with its reason as summary.

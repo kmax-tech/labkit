@@ -11,9 +11,11 @@ What it runs, in order (the same numbers as `finalize_area`, which shows
 each step's condition):
   0. protocol       the named PROTOCOL-*.md or the area's only one, and its
                     settings block — the only early end (exit 2)
-  1. answering run  the run that answers — the newest completed bound run
-                    reporting an intent key, the same choice as intent-check
-                    — and every later step checks THAT run. Then its record:
+  1. answering run  the run that answers — the adopted run once the head's
+                    `[result] run` names one, else the newest completed bound
+                    run reporting an intent key, the same choice as
+                    intent-check — and every later step checks THAT run.
+                    Then its record:
                     the head's `[result] run` names this one or none yet
                     (blocker / note with the command), its
                     JSONL rows come from this run, the runs it continues or
@@ -23,7 +25,9 @@ each step's condition):
                     run asked no model and read no answer stored outside
                     any run (blocker), else
                     a model record stands in its lineage where its metrics
-                    show calls (warning), the arm lines match (warning),
+                    show calls (warning), stand-in answers in its call log
+                    (warning, `stand_in_findings`), the arm lines match
+                    (warning),
                     it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
                     (warning here, `runs.unreportable`; report-check blocks)
   2. registration   the answering run's promise block is the one the first
@@ -44,7 +48,11 @@ each step's condition):
   3. intent-check   every registered promise has a metrics key (and vice
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id
-  4. declared scopes  every declared promise scope unchanged since the run
+  4. run code and declared scopes  the script and the helpers it imports,
+                    the run's and its lineage's, are the code here now
+                    (blocker, `check_run_code`; a module in another
+                    repository warns), and every declared promise scope is
+                    unchanged since the run
   5. open fields    protocol fields still holding a placeholder — a
                     warning, a must field's too (preflight blocks that
                     before the freeze); a bound field written twice and
@@ -74,7 +82,10 @@ each step's condition):
   8. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
                     its resolution check), a missing one no finding here
-  9. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
+  9. registered outputs  every output the run registered is the file it
+                    recorded — path and sha256 from outputs.json; gone or
+                    other bytes is a blocker (`check_registered_outputs`)
+     criterion n    every `criterion_<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known
@@ -99,10 +110,12 @@ each step's condition):
                     without a registered reference, and a reference changed
                     after the run, block too (`reference.comparison_gaps`);
                     `not met` is a valid outcome, a note
- 10. audit findings every finding still `open` in `audits/` (any mode), with
-                    its file: a BLOCKER is a blocker, a WARNING a warning — a
-                    finding nobody decided is an ignored finding
-                    (LAB-015 Preflight audit before freezing). And every
+ 10. audit findings every finding still `open` in an audit record of this
+                    protocol (any mode), with its file: a BLOCKER is a
+                    blocker, a WARNING a warning — a finding nobody decided
+                    is an ignored finding (LAB-015 Preflight audit before
+                    freezing); a finding on another protocol of the area
+                    holds nothing here. And every
                     analysis record names a run the area still holds: a
                     deleted run directory behind a record is a blocker
 

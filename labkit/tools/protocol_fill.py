@@ -19,7 +19,8 @@ command line.
     protocol-fill PROTOCOL-x.md report=REPORT.md   the head's [protocol] report, before the first measurement
                                                only (another file: --force); after it the
                                                registered report is bound
-    protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
+    protocol-fill PROTOCOL-x.md --prompts      under the Prompt field, one block per `PROMPT` /
+                                               `PROMPT_<VARIANT>` constant of the scripts
     protocol-fill PROTOCOL-x.md --prompts --prompt-file generate=prompts/generate.txt
                                                … and a template file under the name its pipeline registers
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
