@@ -351,7 +351,8 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
         )
         self.assertIn(
             f"{self.RUN}'s call log holds 2 answers of alias `standin` (2 stored "
-            f"outside any run), but its models_resolved does not name `standin`",
+            f"outside any run, not marked as stand-ins), but its models_resolved "
+            f"does not name `standin`",
             f.text,
         )
         self.assertIn("`model`", f.fix or "")
@@ -366,7 +367,8 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
         (f,) = self._held(calls, {})
         self.assertIn(
             "holds 4 answers of alias `standin` (1 asked the model, 2 stand-ins, "
-            "1 stored outside any run), but its models_resolved does not name "
+            "1 stored outside any run, not marked as a stand-in), but its "
+            "models_resolved does not name "
             "`standin` — no record says which model the alias stood for",
             f.text,
         )
@@ -455,7 +457,9 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
         (f,) = self._held(calls, {}, derived_from=self.PARENT)
         self.assertEqual(f.grade, BLOCKER)
         self.assertIn(
-            "2 answers of alias `standin` stored outside any run (1 stand-in)", f.text
+            "2 answers of alias `standin` stored outside any run (1 of them "
+            "a stand-in)",
+            f.text,
         )
 
     def test_a_derived_run_replaying_its_parent_s_named_answers_passes(self):

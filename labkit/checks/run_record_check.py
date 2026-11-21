@@ -1114,9 +1114,9 @@ def _fresh_run_fix(alias: str, parent: str | None) -> str:
 
 
 def _kinds_of_lines(lines: list[ModelCall]) -> str:
-    """How many of LINES — calls without a storing run — asked the model,
-    are stand-ins, and are other answers stored outside any run:
-    `1 asked the model, 2 stand-ins`."""
+    """LINES counted by kind, three disjoint counts: asked the model,
+    stand-ins, and hits stored outside any run without the stand-in mark —
+    `1 asked the model, 2 stand-ins, 1 not marked as a stand-in`."""
     asked = sum(not c.hit for c in lines)
     stand_ins = sum(c.hit and c.stand_in for c in lines)
     other = len(lines) - asked - stand_ins
@@ -1124,14 +1124,21 @@ def _kinds_of_lines(lines: list[ModelCall]) -> str:
     if stand_ins:
         parts.append(f"{stand_ins} stand-in{'s' if stand_ins != 1 else ''}")
     if other:
-        parts.append(f"{other} stored outside any run")
+        parts.append(
+            f"{other} stored outside any run, not marked as "
+            f"{'a stand-in' if other == 1 else 'stand-ins'}"
+        )
     return ", ".join(parts)
 
 
 def _stand_ins_among(stored: list[ModelCall]) -> str:
-    """` (2 stand-ins)` for the stand-ins among STORED, "" for none."""
+    """` (2 of them stand-ins)` for the stand-ins among STORED, "" for none."""
     n = sum(c.stand_in for c in stored)
-    return f" ({n} stand-in{'s' if n != 1 else ''})" if n else ""
+    if not n:
+        return ""
+    if len(stored) == 1:
+        return " (a stand-in)"
+    return f" ({n} of them {'a stand-in' if n == 1 else 'stand-ins'})"
 
 
 def _own_record_unbacked(run: str, alias: str, lines: list[ModelCall]) -> GateFinding:
@@ -1268,8 +1275,9 @@ def stand_in_findings(run: str, calls: Sequence[ModelCall]) -> list[GateFinding]
 
 
 def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFinding]:
-    """Where the run's model record and its calls disagree, each a finding;
-    [] when they agree or nothing is owed. Read in this order:
+    """Where the run's model record and its calls disagree, each a finding,
+    and a warning when the run read stand-ins; [] when they agree or nothing
+    is owed, and no stand-in was read. Read in this order:
 
       1. the call log (`runs.read_model_calls`) against the model records
          that can vouch for each line — the run's own `models_resolved`

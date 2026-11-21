@@ -297,7 +297,10 @@ class ModelProvenanceFindings(unittest.TestCase):
             run = self._run(d, {"unique_rank_share": 0.6}, {}, calls)
             (gap,) = run_record_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.evidence_kind), (BLOCKER, GUARANTEED))
-            self.assertIn("alias `standin` (2 stored outside any run)", gap.text)
+            self.assertIn(
+                "alias `standin` (2 stored outside any run, not marked as stand-ins)",
+                gap.text,
+            )
 
     def test_the_twin_a_call_log_whose_alias_the_record_names_passes(self):
         with tempfile.TemporaryDirectory() as d:
@@ -334,7 +337,7 @@ class ModelProvenanceFindings(unittest.TestCase):
             )
             blocked, named = run_record_check.model_provenance_findings(Path(d), other)
             self.assertEqual((blocked.grade, named.grade), (BLOCKER, WARNING))
-            self.assertIn("(1 stand-in)", blocked.text)
+            self.assertIn("(1 stand-in)", blocked.text)  # own record: counted by kind
 
     def test_a_run_without_its_config_blocks(self):
         with tempfile.TemporaryDirectory() as d:

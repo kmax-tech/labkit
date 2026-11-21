@@ -91,7 +91,7 @@ Keep the area test (`tests/test_<NN>_<name>.py`) to checks from memory: finalize
 
 ## Stand-in answers for a trial without a model
 
-To run the pipeline without a model, store a fixed answer for each prompt the run will send, then replay:
+To run the pipeline without a model, store a fixed answer for each prompt the run will send, then open the cache with `replay=True`. A cache in normal mode reads the stand-ins too, but a call that misses there goes to the model; in replay it ends with `CacheMiss`.
 
 ```python
 from labkit.run import llm_cache
@@ -103,7 +103,7 @@ for prompt, answer in cases:  # prompt = registered block + final line ending, f
     )
 ```
 
-Pass the call exactly as stagekit's `labkit` backend will make it: the alias, the filled prompt and the temperature, both taken from the composed config (`cfg.model`) rather than typed again — the key is built from the values as sent, so `0` and `0.0` are different keys; no system prompt, no token cap. `store_stand_in` builds the key with the same functions `Cache.complete` uses. A real call that differs in anything — one line ending, the temperature — finds no entry, and the replay ends with `CacheMiss` before any model is asked. It never hits silently. A completed replay therefore shows that the pipeline sent exactly these prompts.
+Pass the call exactly as stagekit's `labkit` backend will make it: the alias, the filled prompt and the temperature, both taken from the composed config (`cfg.model`) rather than typed again — the key is built from the values as sent, so `0` and `0.0` are different keys; no system prompt, no `max_tokens` argument (the key then holds labkit's default cap, in both paths). `store_stand_in` builds the key with the same functions `Cache.complete` uses. A real call that differs in anything — one line ending, the temperature — finds no entry, and the replay ends with `CacheMiss` before any model is asked. It never hits silently. A completed replay therefore shows that every prompt the pipeline sent was one of the stored ones; it does not show that every stored one was sent.
 
 The entries are marked as stand-ins. The call log says so, and finalize warns that the run read stand-ins: its numbers show what the processing does with fixed answers, not what a model answers. `store_stand_in` also writes the cache directory's `.gitignore`, so the entries stay out of git. The lab must declare the cache in `models.toml` (`[llm_cache] enabled = true`).
 
