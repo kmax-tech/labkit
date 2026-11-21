@@ -100,7 +100,7 @@ from pathlib import Path
 from typing import Any
 
 from labkit.run import endpoint_lease
-from labkit.formats.repo import lab_root
+from labkit.formats.repo import MODELS_TOML, lab_root
 from labkit.formats.runs import JsonObject
 from labkit.run.llm_specs import (
     BackendSpec,
@@ -141,10 +141,23 @@ def find_models_toml() -> Path:
     for seed in seeds:
         root = lab_root(seed)
         if root is not None:
-            return root / "models.toml"
+            return root / MODELS_TOML
     raise FileNotFoundError(
         "models.toml not found (searched upward from script dir and cwd)"
     )
+
+
+def _models_data() -> tuple[Path, dict[str, Any]]:
+    """The lab's `models.toml` (`find_models_toml`) and its parsed tables —
+    what every reader of the file's current state starts from. Reads the
+    file; raises FileNotFoundError without it, ValueError when it is not
+    TOML."""
+    path = find_models_toml()  # home: this is the one reader
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    return path, data
 
 
 _FROZEN: dict[str, BackendSpec] = {}  # alias -> spec, fixed at first use per process
@@ -217,7 +230,7 @@ def model_entry(alias: str | None, start: Path) -> str:
     root = lab_root(start)
     if root is None:
         return f"alias = {alias!r}; no models.toml above {start}"
-    path = root / "models.toml"
+    path = root / MODELS_TOML
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
@@ -235,11 +248,7 @@ def aliases() -> list[str]:
     """The aliases the lab's `models.toml` defines, in file order — what a
     way out names when one alias cannot serve (`audit_decisions.other_alias_way`).
     FileNotFoundError without the file, ValueError when it is not TOML."""
-    path = find_models_toml()
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    _, data = _models_data()
     models = data.get("models", {})
     return list(models) if isinstance(models, dict) else []
 
@@ -264,11 +273,7 @@ def exclusive_slots() -> frozenset[str]:
 
 def _read_slots() -> frozenset[str]:
     """`exclusive_slots` as `models.toml` states it now."""
-    path = find_models_toml()
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    path, data = _models_data()
     table = data.get("model_slots")
     if table is None:
         return frozenset()
@@ -300,11 +305,7 @@ def cache_declared() -> bool:
     unless the lab declares one)? False without the table. Raises
     ValueError for an `[llm_cache]` that is no table, holds another key, or
     whose `enabled` is no boolean; FileNotFoundError without the file."""
-    path = find_models_toml()
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    path, data = _models_data()
     table = data.get("llm_cache")
     if table is None:
         return False
@@ -326,11 +327,7 @@ def audit_alias(fallback: str) -> str:
     `opus` alias at another model would record "opus" for it. Raises
     ValueError for an `[audit]` that is no table, a model that is no string, or an alias `[models]` lacks;
     FileNotFoundError without the file."""
-    path = find_models_toml()
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    path, data = _models_data()
     audit = data.get("audit")
     if audit is None:
         return fallback
@@ -348,11 +345,7 @@ def audit_alias(fallback: str) -> str:
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
     freezes. For ollama the weights' digest is probed on every endpoint."""
-    path = find_models_toml()
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    path, data = _models_data()
     table, names = alias_tables(str(path), data, alias)
     parsed = parse_spec(alias, table, names, str(path))
     # The model NAME is not the model.

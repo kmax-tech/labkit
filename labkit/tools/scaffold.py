@@ -94,6 +94,7 @@ from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_edit import fill, fill_head
 from labkit.formats.repo import (
     EXPERIMENTS,
+    MODELS_TOML,
     commit_of,
     files_at,
     first_added,
@@ -155,7 +156,7 @@ pytest
 
 #: (template, destination) of the files `lab` copies verbatim
 LAB_FILES = (
-    ("models.toml.template", "models.toml"),
+    ("models.toml.template", MODELS_TOML),
     ("pyrightconfig.json.template", "pyrightconfig.json"),
     ("vscode-settings.json.template", ".vscode/settings.json"),
     ("vscode-launch.json.template", ".vscode/launch.json"),
@@ -650,7 +651,7 @@ def stamp_area(
             report_file = protocol_block.report_field(report_file)
         except protocol_block.BlockError as exc:
             raise console.Refused("labkit-init", f"--report-file: {exc}") from exc
-    if not (root / "models.toml").is_file() or not experiments.is_dir():
+    if not (root / MODELS_TOML).is_file() or not experiments.is_dir():
         raise console.Refused(
             "labkit-init",
             f"{root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first",

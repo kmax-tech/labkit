@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal, TypeAlias, cast
 
+from labkit.formats.repo import MODELS_TOML
 from labkit.formats.runs import JsonObject
 
 
@@ -131,7 +132,7 @@ def parse_spec(
     alias: str,
     table: Mapping[str, object],
     endpoint_names: Mapping[str, object],
-    source: str = "models.toml",
+    source: str = MODELS_TOML,
 ) -> BackendSpec:
     """The spec of `[models.<ALIAS>]` (TABLE), endpoint names resolved
     against `[endpoints]` (ENDPOINT_NAMES), literal URLs passed through.

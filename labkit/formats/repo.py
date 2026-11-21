@@ -253,13 +253,17 @@ def repo_protocols(root: Path) -> list[Path]:
     )
 
 
+#: the lab's model file at its repository root: aliases, endpoints, slots
+MODELS_TOML = "models.toml"
+
+
 def lab_root(start: Path) -> Path | None:
     """The nearest directory, START or above, holding `models.toml` — where
     a lab repo's layout starts for the scaffolder and the model backend;
     None when none does. One rule for both."""
     here = start.resolve()
     for d in (here, *here.parents):
-        if (d / "models.toml").is_file():
+        if (d / MODELS_TOML).is_file():
             return d
     return None
 

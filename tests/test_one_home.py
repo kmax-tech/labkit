@@ -358,6 +358,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"/ \"01_measure\.py\"|\}/scripts/01_measure\.py",
         {"runs"},
     ),
+    # the lab's model file is named once, `repo.MODELS_TOML`, and its
+    # current state is read once, `llm._models_data` (the file found by
+    # `find_models_toml`, a "not TOML" ValueError)
+    ("the model file named by hand", r"\"models\.toml\"", {"repo"}),
+    ("models.toml read by hand", r"= find_models_toml\(\)", set()),
     # a path relative to the repository root, as git names it, is
     # `repo.rel_posix`: it resolves the root and says where a path outside
     # it lies. The shape tells a repository from an area by the name of the
@@ -695,6 +700,8 @@ class OneHome(unittest.TestCase):
             "a protocol's word spelled by hand": "named = shlex.quote(shown(protocol, Path.cwd()))",
             "a discuss command spelled by hand": 'f"`protocol-fill {name} --discuss {run_id} --why …`"',
             "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
+            "the model file named by hand": 'if (d / "models.toml").is_file():',
+            "models.toml read by hand": "    path = find_models_toml()",
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
             "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
         }
