@@ -994,14 +994,22 @@ def single_draw(area: Path, answering_run: Path) -> GateFinding | None:
 class StoringRun:
     """The record of a run that stored a cached answer another run read,
     as the station found it: its MODELS_RESOLVED, or — None there — the
-    sentence UNREAD saying why it could not be read (no such run, no
-    config.json, a record that does not read)."""
+    clause UNREAD saying why it could not be read, worded to follow "but"
+    in a finding (`no run … is in this area or another area of the lab`,
+    `run … has no config.json`, `the record of run … does not read (…)`)."""
 
     models_resolved: Mapping[str, object] | None
     unread: str | None
 
 
-def call_log_model_findings(  # noqa: C901 — one branch per way a line is vouched for
+#: what a derived run is, as the README defines the term: it re-reads a
+#: completed run's rows and makes no new model calls
+DERIVED_RUN_CONTRACT = (
+    "a derived run re-reads its parent's rows and makes no model calls"
+)
+
+
+def call_log_model_findings(
     run: str,
     calls: Sequence[ModelCall],
     models_resolved: Mapping[str, object],
@@ -1012,11 +1020,11 @@ def call_log_model_findings(  # noqa: C901 — one branch per way a line is vouc
     """Whether RUN's call-log lines agree with the model records — LAB-027
     Model discipline, guaranteed: the call log is labkit's own record
     (`runs.read_model_calls`), so the comparison is exact. What it proves
-    is that every line the log holds has a record naming its alias; not
-    that every answer the run used was logged (a framework that replays
-    past labkit's cache leaves no line).
+    is that every line the log holds is backed by a record naming its
+    alias; not that every answer the run used was logged (a framework that
+    replays past labkit's cache leaves no line).
 
-    A line is vouched for by a record that names its alias, a key of a
+    A line is backed by a record that names its alias, a key of a
     `models_resolved`, tried in this order:
       1. RUN's own (MODELS_RESOLVED; not its lineage's — the calls were
          made in this run), for any line;
@@ -1024,28 +1032,27 @@ def call_log_model_findings(  # noqa: C901 — one branch per way a line is vouc
          run's record (STORING_RUNS by run id, built by the caller for
          every origin run of CALLS): it says which model gave the stored
          answer.
-    A line no record vouches for blocks, one blocker per alias and origin:
-    a call that asked the model or an answer stored outside any run
-    without the alias in RUN's record; a stored answer whose run cannot be
-    read, or whose record does not name the alias. One exception, for the
-    lines only RUN's own record could vouch for (asked calls, answers
-    stored outside any run): a run with DERIVED_FROM set gets a warning
-    for them, not a blocker — runlog records no model for a derived run
-    (`provenance.record_provenance`), and which model gave them stays
-    unrecorded. A stored answer whose run does not vouch blocks a derived
-    run too. [] for a run
-    without calls and for one whose every line is vouched for. A record's
-    value, a resolved spec or an `unresolved: …` string, is not judged.
+    A line nothing backs blocks, one blocker per alias and origin: a call
+    that asked the model or an answer stored outside any run without the
+    alias in RUN's record; a stored answer whose run is not found, does
+    not read, or names other aliases. A run with DERIVED_FROM set has no
+    record of its own (runlog writes none, `provenance.record_provenance`)
+    and by its contract makes no model calls (DERIVED_RUN_CONTRACT, the
+    README's "derived run"): its calls that asked the model block, and so
+    do answers stored outside any run; only replayed answers whose storing
+    run names the alias pass. [] for a run without calls and for one whose
+    every line is backed. A record's value, a resolved spec or an
+    `unresolved: …` string, is not judged.
 
     Raises:
         ValueError: An origin run of CALLS missing from STORING_RUNS — the
             caller's contract.
     """
     # by alias and the run that stored the answers: None for the lines only
-    # RUN's own record can vouch for (asked, or stored outside any run)
-    unvouched: dict[tuple[str, str | None], list[ModelCall]] = {}
+    # RUN's own record can back (asked, or stored outside any run)
+    unbacked: dict[tuple[str, str | None], list[ModelCall]] = {}
     for call in calls:
-        if call.alias in models_resolved:
+        if call.alias in models_resolved and derived_from is None:
             continue
         if call.hit and call.origin_run is not None:
             if call.origin_run not in storing_runs:
@@ -1059,64 +1066,128 @@ def call_log_model_findings(  # noqa: C901 — one branch per way a line is vouc
                 and call.alias in stored_by.models_resolved
             ):
                 continue
-            unvouched.setdefault((call.alias, call.origin_run), []).append(call)
+            unbacked.setdefault((call.alias, call.origin_run), []).append(call)
         else:
-            unvouched.setdefault((call.alias, None), []).append(call)
-    findings = []
-    for (alias, origin), lines in unvouched.items():
-        n = f"{len(lines)} answer{'s' if len(lines) != 1 else ''}"
-        rename = (
-            f"put the alias in the run's config under `model` or `<name>_model` "
-            f"(`runlog.run(config={{'model': '{alias}'}})`; runlog resolves it "
-            f"into models_resolved) and run again"
-        )
-        if origin is None:
-            asked = sum(not c.hit for c in lines)
-            parts = [f"{asked} asked the model"] if asked else []
-            if len(lines) - asked:
-                parts.append(f"{len(lines) - asked} stored outside any run")
-            what = f"{run}'s call log holds {n} of alias `{alias}` ({', '.join(parts)})"
-            if derived_from is not None:
-                findings.append(
-                    GateFinding(
-                        WARNING,
-                        f"{what}, but {run} derives from {derived_from} and runlog "
-                        f"records no model for a derived run — which model gave "
-                        f"them is not recorded",
-                        rule=LAB_027,
-                        evidence_kind=GUARANTEED,
-                    )
-                )
-                continue
+            unbacked.setdefault((call.alias, None), []).append(call)
+    findings: list[GateFinding] = []
+    for (alias, origin), lines in unbacked.items():
+        if origin is not None:
             findings.append(
-                blocker(
-                    f"{what}, but its models_resolved does not name `{alias}` — "
-                    f"no record says which model gave them",
-                    fix=rename,
-                    rule=LAB_027,
+                _stored_answer_unbacked(
+                    run, alias, origin, storing_runs[origin], len(lines), derived_from
                 )
             )
-            continue
-        stored_by = storing_runs[origin]
-        why = (
-            f"that run's record cannot be read: {stored_by.unread}"
-            if stored_by.models_resolved is None
-            else f"its models_resolved does not name `{alias}`"
-        )
-        findings.append(
+        elif derived_from is not None:
+            findings += _derived_run_calls(run, alias, derived_from, lines)
+        else:
+            findings.append(_own_record_unbacked(run, alias, lines))
+    return findings
+
+
+def _answers(n: int) -> str:
+    """`1 answer`, `N answers`."""
+    return f"{n} answer{'s' if n != 1 else ''}"
+
+
+def _name_alias_fix(alias: str) -> str:
+    """The way out where the run's own record must name ALIAS."""
+    return (
+        f"put the alias in this run's config under `model` or `<name>_model` "
+        f"(`runlog.run(config={{'model': '{alias}'}})`; runlog resolves it into "
+        f"models_resolved) and run again"
+    )
+
+
+def _fresh_run_fix(alias: str, parent: str | None) -> str:
+    """The way out for a derived run that needed a model: a fresh run, or —
+    with PARENT — replaying only what the parent stored."""
+    fresh = (
+        f"ask the model in a fresh run — `runlog.run(config={{'model': "
+        f"'{alias}'}})` without `derived_from`"
+    )
+    return (
+        fresh
+        if parent is None
+        else f"{fresh} — or let this run only replay answers its parent {parent} stored"
+    )
+
+
+def _own_record_unbacked(run: str, alias: str, lines: list[ModelCall]) -> GateFinding:
+    """RUN's asked calls and answers stored outside any run of ALIAS that
+    its own models_resolved does not name (`call_log_model_findings`)."""
+    asked = sum(not c.hit for c in lines)
+    parts = [f"{asked} asked the model"] if asked else []
+    if len(lines) - asked:
+        parts.append(f"{len(lines) - asked} stored outside any run")
+    return blocker(
+        f"{run}'s call log holds {_answers(len(lines))} of alias `{alias}` "
+        f"({', '.join(parts)}), but its models_resolved does not name `{alias}` — "
+        f"no record says which model gave {'it' if len(lines) == 1 else 'them'}",
+        fix=_name_alias_fix(alias),
+        rule=LAB_027,
+    )
+
+
+def _derived_run_calls(
+    run: str, alias: str, parent: str, lines: list[ModelCall]
+) -> list[GateFinding]:
+    """A derived RUN's calls of ALIAS that asked the model, and its answers
+    stored outside any run: a blocker each (`call_log_model_findings`)."""
+    asked = sum(not c.hit for c in lines)
+    stand_ins = len(lines) - asked
+    head = f"{run} is a derived run (derived_from {parent}), and {DERIVED_RUN_CONTRACT}"
+    out = []
+    if asked:
+        out.append(
             blocker(
-                f"{run}'s call log holds {n} of alias `{alias}` stored by run "
-                f"{origin}, but {why} — no record says which model gave them",
-                fix=(
-                    f"replay answers stored by a run whose record names `{alias}`"
-                    if derived_from is not None
-                    else f"{rename}, or replay answers stored by a run whose "
-                    f"record names `{alias}`"
-                ),
+                f"{head} — yet its call log holds {asked} call"
+                f"{'s' if asked != 1 else ''} of alias `{alias}` that asked the model",
+                fix=_fresh_run_fix(alias, parent),
                 rule=LAB_027,
             )
         )
-    return findings
+    if stand_ins:
+        out.append(
+            blocker(
+                f"{head} — yet its call log holds {_answers(stand_ins)} of alias "
+                f"`{alias}` stored outside any run, which no record names a model for",
+                fix=_fresh_run_fix(alias, parent),
+                rule=LAB_027,
+            )
+        )
+    return out
+
+
+def _stored_answer_unbacked(
+    run: str,
+    alias: str,
+    origin: str,
+    stored_by: StoringRun,
+    n: int,
+    derived_from: str | None,
+) -> GateFinding:
+    """RUN's answers of ALIAS stored by run ORIGIN that ORIGIN's record does
+    not back — not found, unreadable, or naming other aliases
+    (`call_log_model_findings`)."""
+    if stored_by.models_resolved is None:
+        why = stored_by.unread
+        repair = f"restore the record of run {origin} if it was lost, or "
+    else:
+        named = ", ".join(f"`{a}`" for a in sorted(stored_by.models_resolved))
+        why = f"the models_resolved of run {origin} names {named or 'no alias'}, not `{alias}`"
+        repair = f"replay answers of a run whose record names `{alias}`, or "
+    return blocker(
+        f"{run}'s call log holds {_answers(n)} of alias `{alias}` stored by run "
+        f"{origin}, but {why} — no record says which model gave "
+        f"{'it' if n == 1 else 'them'}",
+        fix=repair
+        + (
+            _fresh_run_fix(alias, None)
+            if derived_from is not None
+            else _name_alias_fix(alias)
+        ),
+        rule=LAB_027,
+    )
 
 
 def storing_runs_of(area: Path, calls: Sequence[ModelCall]) -> dict[str, StoringRun]:
@@ -1129,16 +1200,18 @@ def storing_runs_of(area: Path, calls: Sequence[ModelCall]) -> dict[str, Storing
         found = run_dir_in_lab(area, run_id)
         if found is None:
             out[run_id] = StoringRun(
-                None, f"no run {run_id} in this area or another area of the lab"
+                None, f"no run {run_id} is in this area or another area of the lab"
             )
             continue
         try:
             cfg = read_run_config(found)
         except RunConfigError as exc:
-            out[run_id] = StoringRun(None, str(exc))
+            out[run_id] = StoringRun(
+                None, f"the record of run {run_id} does not read ({exc})"
+            )
             continue
         out[run_id] = (
-            StoringRun(None, f"{found} has no config.json")
+            StoringRun(None, f"run {run_id} has no config.json ({found})")
             if cfg is None
             else StoringRun(cfg.models_resolved, None)
         )
@@ -1153,7 +1226,7 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
          that can vouch for each line — the run's own `models_resolved`
          (not its lineage's) and, for a stored answer, the record of the
          run that stored it, looked up in AREA's lab (`storing_runs_of`):
-         `call_log_model_findings`, blockers, a warning for a derived run.
+         `call_log_model_findings`, blockers.
          A log that does not read, or a run without config.json, blocks:
          the check could not run — technical contract;
       2. only without a finding from 1, the metrics: `llm_retries`

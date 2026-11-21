@@ -410,13 +410,15 @@ class ModelRecordsByRunKind(unittest.TestCase):
         self.assertEqual(f.grade, BLOCKER)
         self.assertIn(f"stored by run {self.BASIS}", f.text)
 
-    def test_a_derived_run_asking_the_model_is_a_warning_not_a_blocker(self):
-        # runlog writes no models_resolved for a derived run: no blocker may
-        # demand one; which model answered stays unrecorded and is said
+    def test_a_derived_run_asking_the_model_blocks(self):
+        # README, "derived run": no new model calls; the blocker asks for a
+        # fresh run, not for a record runlog never writes for a derived run
         self._run(self.BASIS, self.NAMED)
         run = self._run(self.RUN, {}, [self._line(hit=False)], derived_from=self.BASIS)
         (f,) = self._found(run)
-        self.assertEqual((f.grade, f.evidence_kind), (WARNING, GUARANTEED))
+        self.assertEqual((f.grade, f.evidence_kind), (BLOCKER, GUARANTEED))
+        self.assertIn("makes no model calls", f.text)
+        self.assertIn("fresh run", f.fix or "")
 
     def test_an_exploratory_step_is_held_like_a_fresh_run(self):
         # a step's basis stands in the protocol's [builds_on]; its run record
@@ -437,7 +439,7 @@ class ModelRecordsByRunKind(unittest.TestCase):
     def test_an_answer_whose_storing_run_is_nowhere_blocks(self):
         stored = [self._line(hit=True, origin_run=self.BASIS)]
         (f,) = self._found(self._run(self.RUN, {}, stored))
-        self.assertIn(f"no run {self.BASIS} in this area or another area", f.text)
+        self.assertIn(f"no run {self.BASIS} is in this area or another area", f.text)
 
 
 class ReadmePlaceholders(unittest.TestCase):

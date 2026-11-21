@@ -380,15 +380,16 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
         self.assertEqual((f.grade, f.rule), (BLOCKER, LAB_027))
         self.assertIn(
             f"holds 2 answers of alias `standin` stored by run {self.PARENT}, but "
-            f"its models_resolved does not name `standin`",
+            f"the models_resolved of run {self.PARENT} names `haiku`, not `standin`",
             f.text,
         )
 
     def test_an_answer_whose_storing_run_cannot_be_read_blocks(self):
-        gone = f"no run {self.PARENT} in this area or another area of the lab"
+        gone = f"no run {self.PARENT} is in this area or another area of the lab"
         stored = {self.PARENT: StoringRun(None, gone)}
         (f,) = self._held(self._stored(), {}, storing_runs=stored)
-        self.assertIn(f"that run's record cannot be read: {gone}", f.text)
+        self.assertIn(f"stored by run {self.PARENT}, but {gone}", f.text)
+        self.assertIn(f"restore the record of run {self.PARENT}", f.fix or "")
 
     def test_the_run_s_own_record_vouches_for_a_stored_answer_too(self):
         stored = {self.PARENT: StoringRun(None, "gone")}
@@ -400,17 +401,25 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no record given for origin run"):
             self._held(self._stored(), {})
 
-    # -- a derived run: runlog records no model for it ----------------------
+    # -- a derived run: no record of its own, and no model calls ----------
 
-    def test_a_derived_run_asking_the_model_warns_instead_of_blocking(self):
-        calls = [_call("standin", hit=False), _call("standin", hit=True)]
-        (f,) = self._held(calls, {}, derived_from=self.PARENT)
-        self.assertEqual((f.grade, f.evidence_kind), (WARNING, GUARANTEED))
+    def test_a_derived_run_asking_the_model_blocks(self):
+        (f,) = self._held([_call("standin", hit=False)], {}, derived_from=self.PARENT)
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, LAB_027)
+        )
         self.assertIn(
-            f"but {self.RUN} derives from {self.PARENT} and runlog records no "
-            f"model for a derived run",
+            f"{self.RUN} is a derived run (derived_from {self.PARENT}), and a "
+            f"derived run re-reads its parent's rows and makes no model calls — "
+            f"yet its call log holds 1 call of alias `standin` that asked the model",
             f.text,
         )
+        self.assertIn("fresh run", f.fix or "")
+
+    def test_a_derived_run_reading_answers_stored_outside_any_run_blocks(self):
+        (f,) = self._held([_call("standin", hit=True)], {}, derived_from=self.PARENT)
+        self.assertEqual(f.grade, BLOCKER)
+        self.assertIn("1 answer of alias `standin` stored outside any run", f.text)
 
     def test_a_derived_run_replaying_its_parent_s_named_answers_passes(self):
         stored = {self.PARENT: StoringRun(self.NAMED, None)}

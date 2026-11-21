@@ -19,10 +19,9 @@ each step's condition):
                     JSONL rows come from this run, the runs it continues or
                     its derived_from lineage (blocker), each line of its
                     call log has a record naming its alias — its own, or
-                    the storing run's for a stored answer (blocker; a
-                    derived run, which records no model, warns instead
-                    only for asked calls and answers stored outside any
-                    run), else
+                    the storing run's for a stored answer — and a derived
+                    run asked no model and read no answer stored outside
+                    any run (blocker), else
                     a model record stands in its lineage where its metrics
                     show calls (warning), the arm lines match (warning),
                     it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
