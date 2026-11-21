@@ -79,7 +79,7 @@ from labkit.formats.runs import (
     resolve_recorded,
 )
 from labkit.formats.answering_run import repeats_of
-from labkit.formats.runs import lineage, model_provenance_run
+from labkit.formats.runs import lineage, model_provenance_run, source_runs
 from labkit.formats.repo import (
     GitError,
     blobs_now,
@@ -1282,28 +1282,86 @@ def stand_in_uses(calls: Sequence[ModelCall]) -> list[StandInUse]:
     return [StandInUse(a, n, lines[a]) for a, n in sorted(stand_ins.items())]
 
 
-def stand_in_findings(run: str, calls: Sequence[ModelCall]) -> list[GateFinding]:
-    """A warning when RUN's call log (CALLS, `runs.read_model_calls`) holds
-    stand-ins — fixed answers stored with `llm_cache.store_stand_in`, not
-    answers of a model: the run's numbers show what its processing does
-    with those answers, not what a model answers (LAB-027 Model
-    discipline). Guaranteed: the mark is in labkit's own call log. One
-    warning naming each alias and its count (`stand_in_uses`); [] without
-    stand-ins. Sees only marked stand-ins: an entry written by hand without
-    the mark reads as an answer stored outside any run
-    (`call_log_model_findings`). Reads RUN's own call log only; the runs
-    it rests on are counted by the result line's label
-    (`result_render.stand_in_label`)."""
-    uses = stand_in_uses(calls)
-    if not uses:
+@dataclass(frozen=True)
+class StandInCalls:
+    """The call-log lines the stand-in warning and the result label count:
+    OWN, the run's own; SOURCES, those of every run it rests on
+    (`runs.source_runs` past the run itself: `derived_from`, continued
+    rows, the origin runs of its inputs)."""
+
+    own: list[ModelCall]
+    sources: list[ModelCall]
+
+
+def stand_in_calls(run_dir: Path) -> StandInCalls:
+    """RUN_DIR's StandInCalls, read from the call logs
+    (`runs.read_model_calls`) of RUN_DIR and of `runs.source_runs`. The one
+    provenance read behind finalize's warning (`stand_in_findings`) and the
+    result label (`result_render.stand_in_label`).
+
+    Raises:
+        ValueError: From `runs.source_runs` or `runs.read_model_calls` — a
+            record on the way that does not read, a source run missing.
+        OSError: A call log that cannot be opened.
+    """
+    own, *rest = source_runs(run_dir)
+    return StandInCalls(
+        read_model_calls(own), [c for run in rest for c in read_model_calls(run)]
+    )
+
+
+def logged_uses(n: int) -> str:
+    """`1 logged use`, `N logged uses` — the count of call-log lines marked
+    as stand-ins, which need not be distinct answers: a stand-in two runs
+    read is logged twice."""
+    return f"{n} logged use{'s' if n != 1 else ''}"
+
+
+#: how the warning names the runs a run rests on (`runs.source_runs`)
+SOURCE_RUNS = "the runs it rests on (derived_from, continued rows, input origins)"
+
+
+def stand_in_findings(
+    run: str, own: Sequence[ModelCall], sources: Sequence[ModelCall]
+) -> list[GateFinding]:
+    """A warning when the call-log lines OWN (RUN's) or SOURCES (the runs
+    it rests on; both as `stand_in_calls` reads them) hold stand-ins —
+    fixed answers stored with `llm_cache.store_stand_in`, not answers of a
+    model: the run's numbers show what its processing does with those
+    answers, not what a model answers (LAB-027 Model discipline).
+    Guaranteed: the mark is in labkit's own call logs. One warning naming
+    each alias with its logged uses (`stand_in_uses`, `logged_uses`), RUN's
+    own apart from those of the runs it rests on, so the latter do not read
+    as calls of RUN; [] without stand-ins. The same lines, counted
+    together, make the result label (`result_render.stand_in_label`).
+    Sees only marked stand-ins: an entry written by hand without the mark
+    reads as an answer stored outside any run (`call_log_model_findings`)."""
+    mine, theirs = stand_in_uses(own), stand_in_uses(sources)
+    if not mine and not theirs:
         return []
-    named = ", ".join(f"{u.stand_ins} of alias `{u.alias}`" for u in uses)
+
+    def named(uses: list[StandInUse]) -> str:
+        return ", ".join(
+            f"{logged_uses(u.stand_ins)} of alias `{u.alias}`" for u in uses
+        )
+
+    head = (
+        f"{run} read stand-in answers ({named(mine)})"
+        if mine
+        else (f"{run} read no stand-in itself")
+    )
+    if theirs:
+        logged = "logged more" if mine else "logged stand-in answers"
+        head += (
+            f"; {SOURCE_RUNS} {logged} ({named(theirs)}) — uses those runs "
+            f"logged, not calls of {run}"
+        )
     return [
         GateFinding(
             WARNING,
-            f"{run} read stand-in answers ({named}): fixed answers stored with "
-            f"`llm_cache.store_stand_in`, not answers of a model — its numbers "
-            f"show what the processing does with them, not what a model answers",
+            f"{head}: fixed answers stored with `llm_cache.store_stand_in`, not "
+            f"answers of a model — its numbers show what the processing does "
+            f"with them, not what a model answers",
             rule=LAB_027,
             evidence_kind=GUARANTEED,
         )
@@ -1328,8 +1386,10 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
          the alias was not under `model`/`*_model`, the keys runlog
          resolves (one recorded as `judge` is not resolved). A lineage that
          does not read is the technical contract, a warning too;
-      3. stand-ins in the call log, a warning after those of 1 or 2
-         (`stand_in_findings`).
+      3. stand-ins in the call logs of the run and of the runs it rests
+         on (`stand_in_calls`), a warning after those of 1 or 2
+         (`stand_in_findings`); call logs on the way that do not read
+         block — the technical contract.
     Its limit: only what the call log and the metrics hold is compared; a
     run that called a model past labkit's cache and writes neither metrics
     key is not seen."""
@@ -1370,7 +1430,20 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
         derived_from=cfg.derived_from,
         storing_runs=storing_runs_of(area, calls),
     )
-    stand_ins = stand_in_findings(answering_run.name, calls)
+    try:
+        read = stand_in_calls(answering_run)
+    except (OSError, ValueError) as exc:
+        stand_ins = [
+            blocker(
+                f"model provenance: the stand-ins behind {answering_run.name} "
+                f"cannot be counted — {exc}",
+                fix=f"restore the named record as runlog wrote it, or "
+                f"{measure_anew(area)}",
+                rule=TECHNICAL_RULE,
+            )
+        ]
+    else:
+        stand_ins = stand_in_findings(answering_run.name, read.own, read.sources)
     if gaps:
         return gaps + stand_ins
     return _metrics_model_findings(answering_run) + stand_ins

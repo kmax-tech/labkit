@@ -330,7 +330,9 @@ class ModelProvenanceFindings(unittest.TestCase):
             )
             (gap,) = run_record_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.evidence_kind), (WARNING, GUARANTEED))
-            self.assertIn("read stand-in answers (2 of alias `standin`)", gap.text)
+            self.assertIn(
+                "read stand-in answers (2 logged uses of alias `standin`)", gap.text
+            )
             # without the alias in the record: the blocker first, the warning after
             other = self._run(
                 tempfile.mkdtemp(dir=d), {"unique_rank_share": 0.6}, {}, [marked]

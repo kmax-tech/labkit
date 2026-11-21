@@ -176,7 +176,7 @@ class StandInLabel(unittest.TestCase):
         write_calls(area / "runs" / RUN, [stand_in_line(), stand_in_line()])
         self.assertEqual(
             self.render(area, protocol),
-            "fixed stand-in answers: 2 of alias standin; not a measurement of "
+            "fixed stand-in answers: 2 logged uses of alias standin; not a measurement of "
             f"standin · {self.BARE}",
         )
 
@@ -188,8 +188,8 @@ class StandInLabel(unittest.TestCase):
         )
         self.assertEqual(
             self.render(area, protocol),
-            "fixed stand-in answers: 1 of alias judge; not a measurement of judge · "
-            "includes fixed stand-in answers: 1 of alias standin; not a pure model "
+            "fixed stand-in answers: 1 logged use of alias judge; not a measurement of judge · "
+            "includes fixed stand-in answers: 1 logged use of alias standin; not a pure model "
             f"measurement · {self.BARE}",
         )
 
@@ -215,7 +215,7 @@ class StandInLabel(unittest.TestCase):
         write_calls(area / "runs" / RUN, [stand_in_line(), stand_in_line()])
         self.assertTrue(
             self.render(area, protocol).startswith(
-                "fixed stand-in answers: 2 of alias standin; not a measurement of "
+                "fixed stand-in answers: 2 logged uses of alias standin; not a measurement of "
                 "standin · "
             )
         )
@@ -230,9 +230,7 @@ class StandInLabel(unittest.TestCase):
         cfg = json.loads(path.read_text(encoding="utf-8"))
         path.write_text(json.dumps({**cfg, **fields}), encoding="utf-8")
 
-    LABEL = (
-        "fixed stand-in answers: 2 of alias standin; not a measurement of standin · "
-    )
+    LABEL = "fixed stand-in answers: 2 logged uses of alias standin; not a measurement of standin · "
 
     def test_a_derived_runs_label_counts_its_parents_stand_ins(self):
         area, protocol = area_with_record(limit_reason=None)
@@ -293,10 +291,12 @@ class StandInLabel(unittest.TestCase):
         line = next(
             ln for ln in text.splitlines() if result_render.RECORDED_RESULTS_LABEL in ln
         )
-        mixed = "includes fixed stand-in answers: 2 of alias standin; not a pure model measurement"
+        mixed = "includes fixed stand-in answers: 2 logged uses of alias standin; not a pure model measurement"
         for edited in (
             line.replace(self.LABEL, ""),  # missing
-            line.replace("2 of alias", "1 of alias"),  # wrong count
+            line.replace(
+                "2 logged uses of alias", "1 logged use of alias"
+            ),  # wrong count
             line.replace("alias standin", "alias other"),  # wrong alias
             line.replace(self.LABEL.removesuffix(" · "), mixed),  # pure read as mixed
         ):

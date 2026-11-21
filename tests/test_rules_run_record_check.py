@@ -495,15 +495,39 @@ class StandInsAreNamed(unittest.TestCase):
             _call("judge", hit=True, stand_in=True),
             _call("haiku", hit=False),
         ]
-        (f,) = pure_call(stand_in_findings, self.RUN, calls)
+        (f,) = pure_call(stand_in_findings, self.RUN, calls, [])
         self.assertEqual(
             (f.grade, f.evidence_kind, f.rule), (WARNING, GUARANTEED, LAB_027)
         )
         self.assertIn(
-            f"{self.RUN} read stand-in answers (1 of alias `judge`, 2 of alias "
-            f"`standin`): fixed answers stored with `llm_cache.store_stand_in`, "
-            f"not answers of a model",
+            f"{self.RUN} read stand-in answers (1 logged use of alias `judge`, "
+            f"2 logged uses of alias `standin`): fixed answers stored with "
+            f"`llm_cache.store_stand_in`, not answers of a model",
             f.text,
+        )
+        self.assertNotIn("source runs", f.text)
+
+    def test_stand_ins_of_source_runs_are_named_apart_from_its_own(self):
+        """The runs it rests on (derived_from, continued rows, input
+        origins) count as in the result label; the warning names their
+        uses apart, so they do not read as calls of this run."""
+        own = [_call("standin", hit=True, stand_in=True)]
+        sources = [_call("standin", hit=True, stand_in=True)] * 2
+        (f,) = pure_call(stand_in_findings, self.RUN, own, sources)
+        self.assertIn(
+            f"{self.RUN} read stand-in answers (1 logged use of alias `standin`); "
+            f"the runs it rests on (derived_from, continued rows, input origins) "
+            f"logged more (2 logged uses of alias `standin`) — uses those runs "
+            f"logged, not calls of {self.RUN}: fixed answers stored with ",
+            f.text,
+        )
+        (only,) = pure_call(stand_in_findings, self.RUN, [], sources)
+        self.assertIn(
+            f"{self.RUN} read no stand-in itself; the runs it rests on "
+            f"(derived_from, continued rows, input origins) logged stand-in "
+            f"answers (2 logged uses of alias `standin`) — uses those runs "
+            f"logged, not calls of {self.RUN}: fixed answers",
+            only.text,
         )
 
     def test_the_twin_model_answers_and_unmarked_stored_answers_get_none(self):
@@ -512,7 +536,7 @@ class StandInsAreNamed(unittest.TestCase):
             _call("standin", hit=True),
             _call("haiku", hit=True, origin_run="2026-11-20T09-00-00_bb22"),
         ]
-        self.assertEqual(pure_call(stand_in_findings, self.RUN, calls), [])
+        self.assertEqual(pure_call(stand_in_findings, self.RUN, calls, calls), [])
 
 
 if __name__ == "__main__":

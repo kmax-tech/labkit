@@ -3,7 +3,7 @@
 The Recorded results line and the Limitation lines are generated. Where the
 run or a run it rests on read stand-in answers (`llm_cache.store_stand_in`,
 marked in the call logs), Recorded results opens with one label per alias
-(`stand_in_label`): `fixed stand-in answers: 2 of alias X; not a
+(`stand_in_label`): `fixed stand-in answers: 2 logged uses of alias X; not a
 measurement of X`, or `includes fixed stand-in answers: …; not a pure
 model measurement` beside other answers of X; a run without stand-ins gets
 no label. Recorded results then gives the reportable verdict of every registered promise
@@ -48,7 +48,12 @@ from labkit.checks.audit_binding import (
     source_protocol_then,
 )
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.checks.run_record_check import StandInUse, stand_in_uses
+from labkit.checks.run_record_check import (
+    StandInUse,
+    logged_uses,
+    stand_in_calls,
+    stand_in_uses,
+)
 from labkit.formats import (
     evidence,
     findings,
@@ -316,12 +321,12 @@ def rendering(
 
 def stand_in_clause(use: StandInUse) -> str:
     """The label of one alias's stand-ins, chosen by USE's logged lines:
-    `includes fixed stand-in answers: N of alias X; not a pure model
-    measurement` when any logged line of X is not a marked stand-in (asked,
-    or replayed without the mark), else `fixed stand-in answers: N of alias
-    X; not a measurement of X`. Only logged lines are seen
-    (`StandInUse`)."""
-    named = f"fixed stand-in answers: {use.stand_ins} of alias {use.alias}"
+    `includes fixed stand-in answers: N logged uses of alias X; not a pure
+    model measurement` when any logged line of X is not a marked stand-in
+    (asked, or replayed without the mark), else `fixed stand-in answers: N
+    logged uses of alias X; not a measurement of X` (`logged_uses`). Only
+    logged lines are seen (`StandInUse`)."""
+    named = f"fixed stand-in answers: {logged_uses(use.stand_ins)} of alias {use.alias}"
     if use.only_stand_ins:
         return f"{named}; not a measurement of {use.alias}"
     return f"includes {named}; not a pure model measurement"
@@ -331,10 +336,12 @@ def stand_in_label(run: Path) -> str:
     """One clause per alias (`stand_in_clause`, joined by ` · `) for the
     stand-ins in the call logs of RUN and of every run it rests on
     (`runs.source_runs`: `derived_from`, continued rows, the origin runs of
-    its inputs), counted together (`stand_in_uses`); "" without stand-ins.
-    N counts call-log lines marked as stand-ins, not distinct answers: a
-    stand-in read by two of those runs counts twice. An entry without the mark counts as an answer
-    not marked as a stand-in — no evidence that a model gave it.
+    its inputs; read by `run_record_check.stand_in_calls`, as finalize's
+    warning reads them), counted together (`stand_in_uses`); "" without
+    stand-ins. N counts logged uses — call-log lines marked as stand-ins,
+    not distinct answers: a stand-in read by two of those runs counts
+    twice. An entry without the mark counts as an answer not marked as a
+    stand-in — no evidence that a model gave it.
 
     Raises:
         ValueError: A record on the way does not read — a config.json,
@@ -343,16 +350,13 @@ def stand_in_label(run: Path) -> str:
             line is rendered.
     """
     try:
-        calls = [
-            call
-            for source in runs.source_runs(run)
-            for call in runs.read_model_calls(source)
-        ]
+        read = stand_in_calls(run)
     except (OSError, ValueError) as exc:
         raise ValueError(
             f"the stand-in answers behind run {run.name} cannot be counted — {exc}"
         ) from exc
-    return " · ".join(stand_in_clause(u) for u in stand_in_uses(calls))
+    uses = stand_in_uses([*read.own, *read.sources])
+    return " · ".join(stand_in_clause(u) for u in uses)
 
 
 def _verdicts_and_values(
