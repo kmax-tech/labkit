@@ -613,38 +613,6 @@ def _freeze_file(protocol: Path, text: str, named: str) -> int:
     return 0
 
 
-def _run_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the operation ARGS name (--freeze, --withdraw,
-    --data-counts, --handover, --list, --prompts, --render, --discuss,
-    --reported-through, --into, --from-run, --builds-on, --explored-in), or
-    None when they name none or a field fill. At most one operation reaches
-    it — `operation_refusal` refuses two before the file is read — and it
-    is looked up by name (`given_operations`), so no order decides which
-    runs; `--into` beside --discuss, --reported-through, --withdraw or
-    --handover is that operation's report, not an operation."""
-    handlers: dict[str, Callable[[argparse.Namespace, str], int]] = {
-        "freeze": lambda a, t: _freeze_file(a.protocol, t, a.freeze),
-        "withdraw": _withdraw_file,
-        "data_counts": _data_counts_file,
-        "handover": _handover_file,
-        "list": lambda a, t: _list_file(t),
-        "prompts": lambda a, t: _prompts_file(a.protocol, t, a.prompt_file),
-        "render": lambda a, t: _render_file(a.protocol, t),
-        "discuss": lambda a, t: _discuss_file(a.protocol, t, a.into, a.discuss, a.why),
-        "reported_through": lambda a, t: _through_file(
-            a.protocol, a.into, a.reported_through
-        ),
-        "into": lambda a, t: _into_file(a.protocol, t, a.into),
-        "from_run": _write_back,
-        "builds_on": _step_file,
-        "explored_in": lambda a, t: _link_file(a.protocol, t, a.explored_in),
-    }
-    named = given_operations(args)
-    if not named or named[0].attr == "field":
-        return None
-    return handlers[named[0].attr](args, text)
-
-
 def _link_file(protocol: Path, text: str, exploration: Path) -> int:
     """`--explored-in`: PROTOCOL's one `[explored_in]` written, naming the
     protocol file EXPLORATION by its id and the run it has adopted
@@ -954,8 +922,10 @@ class Operation:
 
     `attr` is the parsed argument that selects it; `takes` the companion
     attributes it accepts (keys of COMPANION_FLAGS), `needs` those of them it
-    cannot do without; `usage` is the sentence a missing or refused
-    companion is answered with."""
+    cannot do without (needs is part of takes; the rest of takes is
+    optional, as `--into` for `--withdraw`); `usage` is the sentence a
+    missing or refused companion is answered with. FIELD, the field fill,
+    is a row like the others; main runs it after the operations."""
 
     flag: str
     attr: str
@@ -1092,6 +1062,43 @@ def operation_refusal(args: argparse.Namespace) -> str | None:
                 f"{op.flag} cannot be combined with {COMPANION_FLAGS[attr]}: {op.usage}"
             )
     return None
+
+
+# What each operation of OPERATIONS runs, by its `attr`; the field fill has
+# no entry — main fills the fields itself after the operations.
+OPERATION_HANDLERS: dict[str, Callable[[argparse.Namespace, str], int]] = {
+    "freeze": lambda a, t: _freeze_file(a.protocol, t, a.freeze),
+    "withdraw": _withdraw_file,
+    "data_counts": _data_counts_file,
+    "handover": _handover_file,
+    "list": lambda a, t: _list_file(t),
+    "prompts": lambda a, t: _prompts_file(a.protocol, t, a.prompt_file),
+    "render": lambda a, t: _render_file(a.protocol, t),
+    "discuss": lambda a, t: _discuss_file(a.protocol, t, a.into, a.discuss, a.why),
+    "reported_through": lambda a, t: _through_file(
+        a.protocol, a.into, a.reported_through
+    ),
+    "into": lambda a, t: _into_file(a.protocol, t, a.into),
+    "from_run": _write_back,
+    "builds_on": _step_file,
+    "explored_in": lambda a, t: _link_file(a.protocol, t, a.explored_in),
+}
+
+
+def _run_operation(args: argparse.Namespace, text: str) -> int | None:
+    """The exit code of the operation ARGS name (--freeze, --withdraw,
+    --data-counts, --handover, --list, --prompts, --render, --discuss,
+    --reported-through, --into, --from-run, --builds-on, --explored-in), or
+    None when they name none or a field fill (FIELD), which main does. At
+    most one operation reaches it — `operation_refusal` refuses two before
+    the file is read — and it is looked up by name in OPERATION_HANDLERS,
+    so no order decides which runs; `--into` beside --discuss,
+    --reported-through, --withdraw or --handover is that operation's report,
+    not an operation."""
+    named = given_operations(args)
+    if not named or named[0].attr == "field":
+        return None
+    return OPERATION_HANDLERS[named[0].attr](args, text)
 
 
 def main(argv: list[str]) -> int:
@@ -1276,7 +1283,7 @@ def main(argv: list[str]) -> int:
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2
     text = args.protocol.read_text(encoding="utf-8")
-    moded = _run_mode(args, text)
+    moded = _run_operation(args, text)
     if moded is not None:
         return moded
     assignments = assignments_of(args.field, args.value)

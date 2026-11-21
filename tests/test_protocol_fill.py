@@ -1609,9 +1609,8 @@ class ReportSetter(unittest.TestCase):
 
 class OneOperationPerCall(unittest.TestCase):
     """A call names one operation (`protocol_fill.OPERATIONS`): two are
-    refused before the file is read, naming both. Before, the dispatch ran
-    the first and dropped the other with exit 0 (`--list --prompts` listed
-    and wrote no Prompt block)."""
+    refused before the file is read, naming both — else one would run and
+    the other be dropped without a word."""
 
     # each operation with the companions it needs, so that alone it passes
     # the argument check
@@ -1667,6 +1666,14 @@ class OneOperationPerCall(unittest.TestCase):
         """A new operation in the table is held by the pair test below."""
         self.assertEqual(
             sorted(op.attr for op in protocol_fill.OPERATIONS), sorted(self.ALONE)
+        )
+
+    def test_every_operation_but_the_field_fill_has_a_handler(self):
+        """A row without a handler would pass the argument check and end
+        in a KeyError."""
+        self.assertEqual(
+            sorted(protocol_fill.OPERATION_HANDLERS),
+            sorted(op.attr for op in protocol_fill.OPERATIONS if op.attr != "field"),
         )
 
     def test_every_pair_of_operations_is_refused_before_the_file_is_read(self):
