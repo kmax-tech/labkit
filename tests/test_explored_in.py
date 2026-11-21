@@ -61,7 +61,7 @@ from labkit.formats.gate import (
 from labkit.formats.protocol_block import BlockError, ExploredIn
 from labkit.formats.protocol_history import scope_differences
 from labkit.formats.protocol_then import last_held_with_id
-from labkit.gates import registration_hold, report_check, report_exploration
+from labkit.gates import preflight, registration_hold, report_check, report_exploration
 from labkit.gates.audit_prompt import exploration_evidence
 from labkit.gates.report_exploration import (
     LAB_050,
@@ -564,6 +564,23 @@ class Stamp(_WithSource):
 
     def test_an_area_without_a_link_keeps_its_stamp(self) -> None:
         self.assertEqual(scope_sha.exploration_basis(self.explore), ([], ()))
+
+
+class PreflightStamp(_WithSource):
+    """preflight's scope-sha station tells a stamp it cannot compute from
+    the named exploration; it does not end the gate."""
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
+    def test_an_output_of_the_closure_that_does_not_read_cannot_stamp(self) -> None:
+        rows = self.explore / "rows.jsonl"
+        rows.chmod(0)
+        self.addCleanup(rows.chmod, 0o644)
+        line = preflight.scope_stamp_line(self.confirm)
+        self.assertTrue(line.startswith("  cannot stamp: "), line)
+        self.assertIn("rows.jsonl", line)
+
+    def test_the_twin_a_readable_closure_is_stamped(self) -> None:
+        self.assertEqual(preflight.scope_stamp_line(self.confirm), f"  {self.stamp()}")
 
 
 class Evidence(_WithSource):
