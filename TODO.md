@@ -74,6 +74,18 @@ Begrenzter Folgeplan für Anleitung und Vorlagen, nach dem laufenden Prompt-Auft
 
 Kein neuer Gate-Check, keine zusätzliche Erfolgspflicht und kein Auftrag, historische Protokolle in argmining27 umzuschreiben. Vollständige Prompts und technische Referenzangaben bleiben zugänglich; die kurze Erklärung soll ihnen vorausgehen. Der Eintrag ändert die aktuelle Baureihenfolge nicht.
 
+### Explorative Modellwechsel verständlich prüfen — begrenzter Folgeauftrag
+
+Anlass: In argmining27 Experiment 07 wurde nach einer Spielraumprüfung mit Haiku ein gpt-oss-Zweig untersucht. Der berichtete Audit-Einwand vermischte die Wahl nach einer Spielraumprüfung mit der Wahl nach Kenntnis der Kriterienwerte. Experiment 07 verwendet laut Rückmeldung labkit 0.112.0; der explorative Schrittmechanismus ist dagegen bereits im lokalen Tag `v0.114.0` mit Standard 0.33 enthalten. Historische Läufe nicht nachträglich auf diesen Vertrag umstellen.
+
+1. **Audit-Anweisung präzisieren.** Erst den tatsächlich geltenden Vertrag und die damaligen Laufstände lesen. Benennen, welche Beobachtungen vor einer Änderung bekannt waren, welche Wahl danach getroffen wurde und welche konkrete Aussage dadurch nicht gedeckt ist. Spielraumprüfung und Kriterienergebnis unterscheiden; eine datenabhängige explorative Wahl nicht pauschal als unerlaubte Bestätigung behandeln. Fehlende Modellherkunft bleibt eine eigene Frage.
+2. **Versionskontext prüfen.** Feststellen, ob die vorhandenen Audit-Unterlagen Paket-/Standardversion und den geltenden Ablauf eindeutig zeigen. Vor Änderungen erst die konkrete Informationslücke belegen; keinen neuen automatischen Versionsmechanismus voraussetzen.
+3. **Modellwechsel als Anleitungsbeispiel.** Im neuen explorativen Ablauf darf „Haiku lässt keinen Spielraum → gpt-oss ausprobieren“ eine begründete Weiterentwicklung im selben Protokoll sein: Schritt und angepasste Frage vor dem neuen Lauf festhalten, jeder Lauf bleibt unter seinem damaligen Text. gpt-oss beantwortet keine Haiku-Frage und liefert dadurch keine unabhängige Bestätigung.
+
+**Nachmessen wechselt den Typ nicht automatisch.** Eine Wiederholung unter unveränderten registrierten Bedingungen bleibt im bisherigen Ablauf. Eine ergebnisgeleitete neue Variante ist explorative Weiterarbeit: in einem bereits explorativen Protokoll als erklärter Schritt; nach einer bestätigenden Untersuchung in einem eigenen explorativen Protokoll mit offengelegter Vorgeschichte. Ein Protokolltyp wird nach der ersten Messung weder automatisch noch rückwirkend gewechselt. Eine spätere Bestätigung beginnt gesondert und nennt ihre explorative Grundlage.
+
+Umfang: begrenzte Verbesserungen von Audit-Anweisung und Anleitung nach Abgleich mit den bestehenden Texten, keine neue Sperre und kein Forschungsversuch. Keine Änderung oder Migration historischer Protokolle in argmining27 und keine Umstellung der aktuellen Baureihenfolge durch diesen Eintrag.
+
 ### Audit und Wartbarkeit
 
 | Thema                                   | Wann wieder aufgreifen?                                                                                                                                                                                                                                                                                                                 |
