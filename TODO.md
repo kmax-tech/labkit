@@ -154,11 +154,11 @@ Geltende Verträge stehen in [Architektur](docs/architecture.md), [Ablauf](docs/
 
 **Audit-Reste 21.11.**, nach Auswirkung getrennt (Einordnung nach externer Einschätzung, 21.11.). Gebaut am 21.11.: preflight-Station 5 bricht auch bei einer unlesbaren Ausgabe der verlinkten Exploration oder einem git-Fehler nicht mehr ab (nachgestellt: `PermissionError`); `PROTOCOL-.md` ist wieder überall ein Protokollname, Namenstest und Glob stimmen überein (die Zusammenführung hatte den Index-Weg strenger gemacht als den Baum-Weg). Unabhängig gelesen sind jetzt auch die Diffs von A und D (`code-clarity`, Bericht nur im Sitzungs-Scratchpad).
 
-Erst nachstellen, dann entscheiden — möglicher falscher Ablauf:
+Nachgestellt am 21.11. (begrenzte Prüfung, keine Audit-Runde):
 
-1. `llm.model_entry` findet `models.toml` über `lab_root`, `find_models_toml` auf anderem Weg (`labkit/run/llm.py:230`); der Kommentar in `tests/test_one_home.py:362` sagt „einmal gelesen“. Gibt es ein Repo, in dem beide verschiedene Dateien finden?
-2. `protocol_then.py:55`, `:66` nimmt jeden Namen, der mit `PROTOCOL-` beginnt (`.bak`, `.txt`, Kopien unter `runs/`), als Protokoll der Geschichte; Docstring sagt `PROTOCOL-*.md`, der Kommentar nennt keinen Grund. Kann eine Sicherungskopie einer Lauf-Kennung zugeordnet werden?
-3. Branch `fix/model-calls-vs-run-record` (Worktree `/private/tmp/labkit-model-calls`, 4 Commits auf 399df0b4): finalize blockt einen Lauf, dessen Aufrufprotokoll Antworten ohne Modell im Laufdatensatz hält. Nicht auf `main`; vor dem Zusammenführen Einzelprüfung und unabhängiger Leser.
+1. `models.toml` auf zwei Wegen — **Wirkung nur außerhalb des üblichen Aufbaus, nicht gebaut.** Lauf (`llm.find_models_toml`: vom Skriptordner, sonst vom Arbeitsverzeichnis) und Audit-Anzeige (`llm.model_entry`: von der Area) finden dieselbe Datei, solange nur die Wurzel eine `models.toml` hat (Skript in der Area und gemeinsames Skript in `lib/` geprüft). Mit einer zweiten `models.toml` in der Area und dem Skript in `lib/` liest der Lauf die der Wurzel, das Audit sieht die der Area als „heutige Einstellung“. Nur Anzeige; was der Lauf nutzte, steht im Laufdatensatz. Entscheidung offen: zweite `models.toml` unterhalb der Wurzel ablehnen, oder lassen.
+2. Protokoll in der Geschichte über die Kennung — **falsche Wirkung gezeigt, repariert.** Nach Umbenennen las `protocol_then.protocol_path_at` eine mitcommittete Kopie gleicher Kennung (`PROTOCOL-a.txt` vor `PROTOCOL-x.md`) als den Text, unter dem der Lauf startete. Jetzt nur `PROTOCOL-*.md` außerhalb `SKIP_DIRS`; Test `tests/test_protocol_then.py`.
+3. Modellaufzeichnung: von einer anderen Sitzung auf `main` gebracht (04462fc7..4c4792ca), samt „abgeleiteter Lauf mit Modellaufruf blockt“.
 
 Zurückgestellt, solange sie keinen falschen Ablauf auslösen (beim Anfassen):
 
