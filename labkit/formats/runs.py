@@ -1637,6 +1637,53 @@ def lineage(run_dir: Path) -> list[Path]:
             )
 
 
+def source_runs(run_dir: Path) -> list[Path]:
+    """RUN_DIR and every run its rows and inputs rest on, each once,
+    RUN_DIR first, then in the order found: the parent along
+    `derived_from` (config.json), the runs whose rows its JSONL outputs
+    continued (outputs.json `continues`), the origin runs of its inputs
+    (config.json `data`) — each followed the same way. All are looked up
+    beside RUN_DIR, in the same `runs/` directory.
+
+    Not followed: the run that stored an answer RUN_DIR replayed from the
+    cache — the entry holds that run's model answer, and a stand-in is
+    never stored under a run (`llm_cache.store_stand_in`); and `repeat_of`
+    — a repeat asks the model anew.
+
+    Raises:
+        ValueError: A run on the way without config.json, a source run that
+            is not a directory beside RUN_DIR; RunConfigError and
+            ArtefactError (both ValueError) for a config.json, input record
+            or outputs.json that does not read.
+    """
+    found: list[Path] = [run_dir]
+    i = 0
+    while i < len(found):
+        here = found[i]
+        i += 1
+        cfg = read_run_config(here)
+        if cfg is None:
+            raise ValueError(f"{here}: no config.json — its source runs are not known")
+        outputs = read_outputs(here) or []
+        named = [
+            *([cfg.derived_from] if cfg.derived_from is not None else []),
+            *(r for entry in outputs for r in entry.continues),
+            *(e.origin_run for e in data_entries(cfg.data, str(here / CONFIG_FILE))),
+        ]
+        for run_id in named:
+            if run_id is None:
+                continue
+            source = run_dir.parent / run_id
+            if not source.is_dir():
+                raise ValueError(
+                    f"{here.name} rests on run {run_id}, which is not under "
+                    f"{run_dir.parent}"
+                )
+            if source not in found:
+                found.append(source)
+    return found
+
+
 def model_provenance_run(run_dir: Path) -> Path | None:
     """The run whose `models_resolved` says which model answered the rows
     `run_dir` reads: the run itself when it recorded one, else the nearest

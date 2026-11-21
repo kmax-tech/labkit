@@ -7,7 +7,9 @@ a line that differs from the rendering is a blocker whatever it says.
 
 from __future__ import annotations
 
+import json
 import sys
+from dataclasses import replace
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,9 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.checks import result_render  # noqa: E402
+from labkit.checks import report_blocks, result_render  # noqa: E402
 from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
-from labkit.formats import findings, promises, protocol_block, scope_sha  # noqa: E402
+from labkit.formats import findings, promises, protocol_block, runs, scope_sha  # noqa: E402
 from labkit.tools import protocol_result
 from protocol_fixture import (
     protocol_id_of,
@@ -29,6 +31,8 @@ from protocol_fixture import (
 )  # noqa: E402
 
 RUN = "2026-10-21T10-00-00_abcd"
+#: an earlier run of the area a test lets RUN rest on
+SOURCE = "2026-10-20T10-00-00_0a0a"
 BODY = "\n## Result\n\n- **Recorded results:** <per registered id its verdict…>\n- **Raw output:** r\n\n## Runs\n\n- <run_id> — <one sentence>\n"
 
 
@@ -118,6 +122,212 @@ class Rendering(unittest.TestCase):
             f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1; also recorded: criterion_1_accuracy = 0.83 (run {RUN})",
         )
         self.assertEqual(r.limits, ())
+
+
+def stand_in_line(alias: str = "standin") -> dict:
+    """A call-log line of a stand-in answer, as `llm_cache.store_stand_in`
+    and a replay through the cache leave it."""
+    return {
+        "key": "70" * 32,
+        "alias": alias,
+        "hit": True,
+        "origin": {"run": None, "written": "2026-11-21T10:48:16", "stand_in": True},
+        "usage": {},
+        "uncached": None,
+    }
+
+
+def asked_line(alias: str) -> dict:
+    """A call-log line of a call that asked the model."""
+    return {
+        "key": "71" * 32,
+        "alias": alias,
+        "hit": False,
+        "origin": None,
+        "usage": {},
+        "uncached": None,
+    }
+
+
+def write_calls(run: Path, calls: list[dict]) -> None:
+    """RUN's `llm-calls.jsonl` holding CALLS, one line each."""
+    (run / runs.LLM_CALLS_FILE).write_text(
+        "".join(json.dumps(c) + "\n" for c in calls), encoding="utf-8"
+    )
+
+
+class StandInLabel(unittest.TestCase):
+    """A result resting on stand-in answers says so in the generated line,
+    before the recorded results; the label is counted from the call logs."""
+
+    BARE = (
+        "criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: "
+        f"kept number: n = 1; also recorded: criterion_1_accuracy = 0.83 (run {RUN})"
+    )
+
+    def render(self, area: Path, protocol: Path) -> str:
+        text = protocol.read_text(encoding="utf-8")
+        return result_render.rendering(
+            area, text, area / "runs" / RUN, found=()
+        ).recorded_results
+
+    def test_a_run_of_stand_ins_only_is_labelled_no_measurement(self):
+        area, protocol = area_with_record(limit_reason=None)
+        write_calls(area / "runs" / RUN, [stand_in_line(), stand_in_line()])
+        self.assertEqual(
+            self.render(area, protocol),
+            "fixed stand-in answers: 2 of alias standin; not a measurement of "
+            f"standin · {self.BARE}",
+        )
+
+    def test_stand_ins_beside_other_answers_are_labelled_not_pure(self):
+        area, protocol = area_with_record(limit_reason=None)
+        write_calls(
+            area / "runs" / RUN,
+            [stand_in_line(), asked_line("standin"), stand_in_line("judge")],
+        )
+        self.assertEqual(
+            self.render(area, protocol),
+            "fixed stand-in answers: 1 of alias judge; not a measurement of judge · "
+            "includes fixed stand-in answers: 1 of alias standin; not a pure model "
+            f"measurement · {self.BARE}",
+        )
+
+    def test_the_twin_a_run_without_stand_ins_renders_unchanged(self):
+        area, protocol = area_with_record(limit_reason=None)
+        bare = self.render(area, protocol)  # no call log at all
+        stored = {**stand_in_line(), "origin": {"run": SOURCE, "written": "x"}}
+        unmarked = {**stand_in_line(), "origin": {"run": None, "written": "x"}}
+        write_calls(area / "runs" / RUN, [asked_line("standin"), stored, unmarked])
+        earlier = completed_run(
+            area, SOURCE
+        )  # stored the replayed answer; read stand-ins
+        write_calls(earlier, [stand_in_line()])
+        self.assertEqual((bare, self.render(area, protocol)), (self.BARE, self.BARE))
+
+    def test_stand_ins_a_replay_reads_again_are_in_its_own_call_log(self):
+        """A replay of an earlier run that read stand-ins hits the same
+        stand-in entries: its own call log carries the mark, so it is
+        labelled whether or not the earlier run is a source."""
+        area, protocol = area_with_record(limit_reason=None)
+        earlier = completed_run(area, SOURCE)
+        write_calls(earlier, [stand_in_line(), stand_in_line()])
+        write_calls(area / "runs" / RUN, [stand_in_line(), stand_in_line()])
+        self.assertTrue(
+            self.render(area, protocol).startswith(
+                "fixed stand-in answers: 2 of alias standin; not a measurement of "
+                "standin · "
+            )
+        )
+
+    def source_with_stand_ins(self, area: Path) -> None:
+        """Run SOURCE of AREA, whose call log holds two stand-ins."""
+        write_calls(completed_run(area, SOURCE), [stand_in_line(), stand_in_line()])
+
+    def edit_record(self, area: Path, **fields: object) -> None:
+        """RUN's config.json with FIELDS replaced."""
+        path = area / "runs" / RUN / "config.json"
+        cfg = json.loads(path.read_text(encoding="utf-8"))
+        path.write_text(json.dumps({**cfg, **fields}), encoding="utf-8")
+
+    LABEL = (
+        "fixed stand-in answers: 2 of alias standin; not a measurement of standin · "
+    )
+
+    def test_a_derived_runs_label_counts_its_parents_stand_ins(self):
+        area, protocol = area_with_record(limit_reason=None)
+        self.source_with_stand_ins(area)
+        self.edit_record(area, derived_from=SOURCE)
+        self.assertTrue(self.render(area, protocol).startswith(self.LABEL))
+
+    def test_continued_rows_bring_the_stand_ins_of_the_run_they_came_from(self):
+        area, protocol = area_with_record(limit_reason=None)
+        self.source_with_stand_ins(area)
+        (area / "runs" / RUN / "outputs.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "path": "rows.jsonl",
+                        "sha256": None,
+                        "lines": None,
+                        "continues": [SOURCE],
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        self.assertTrue(self.render(area, protocol).startswith(self.LABEL))
+
+    def test_an_input_written_by_another_run_brings_that_runs_stand_ins(self):
+        area, protocol = area_with_record(limit_reason=None)
+        self.source_with_stand_ins(area)
+        entry = {
+            "path": "x.jsonl",
+            "sha256": "0" * 16,
+            "rows": 2,
+            runs.ORIGIN_RUN_KEY: SOURCE,
+            runs.ORIGIN_CHOSEN_KEY: True,
+            runs.ORIGIN_UNREADABLE_KEY: [],
+        }
+        self.edit_record(area, data={"rows": entry})
+        line = self.render(area, protocol)
+        self.assertTrue(line.startswith(self.LABEL), line)
+        self.assertIn(" · sources: ", line)  # the source's own values, unlabelled
+
+    def test_a_source_run_that_does_not_read_stops_the_rendering(self):
+        area, protocol = area_with_record(limit_reason=None)
+        self.edit_record(area, derived_from="2026-10-19T10-00-00_9999")  # no such run
+        with self.assertRaisesRegex(
+            ValueError, f"the stand-in answers behind run {RUN} cannot be counted"
+        ):
+            self.render(area, protocol)
+
+    def test_a_line_or_block_whose_label_differs_from_the_call_logs_is_refused(self):
+        area, protocol = area_with_record(limit_reason=None)
+        write_calls(area / "runs" / RUN, [stand_in_line(), stand_in_line()])
+        text, _, _ = protocol_result.from_run(
+            protocol.read_text(encoding="utf-8"), area
+        )
+        expected = result_render.rendering(area, text, area / "runs" / RUN, found=())
+        self.assertEqual(result_render.render_gaps(text, expected), [])
+        line = next(
+            ln for ln in text.splitlines() if result_render.RECORDED_RESULTS_LABEL in ln
+        )
+        mixed = "includes fixed stand-in answers: 2 of alias standin; not a pure model measurement"
+        for edited in (
+            line.replace(self.LABEL, ""),  # missing
+            line.replace("2 of alias", "1 of alias"),  # wrong count
+            line.replace("alias standin", "alias other"),  # wrong alias
+            line.replace(self.LABEL.removesuffix(" · "), mixed),  # pure read as mixed
+        ):
+            (gap,) = result_render.render_gaps(text.replace(line, edited), expected)
+            self.assertIn("Recorded results line differs from its rendering", gap.text)
+        # the fixture's protocol writes no question or Conclusion; a block needs both
+        body = report_blocks.block_body(replace(expected, question="q", conclusion="a"))
+        self.assertIn(self.LABEL, body)
+        report = area / "REPORT.md"
+        found = [
+            report_blocks.Block(
+                "PROTOCOL-x.md", RUN, 1, 5, body.replace(self.LABEL, "")
+            )
+        ]
+        (gap,) = report_blocks.block_gaps(
+            found, {"PROTOCOL-x.md": report_blocks.BlockSource(RUN, body)}, report
+        )
+        self.assertIn("differs from the protocol's rendering", gap.text)
+
+    def test_a_label_without_stand_ins_behind_it_is_refused(self):
+        area, protocol = area_with_record(limit_reason=None)
+        text, _, _ = protocol_result.from_run(
+            protocol.read_text(encoding="utf-8"), area
+        )
+        expected = result_render.rendering(area, text, area / "runs" / RUN, found=())
+        line = next(
+            ln for ln in text.splitlines() if result_render.RECORDED_RESULTS_LABEL in ln
+        )
+        typed = line.replace("** ", "** " + self.LABEL, 1)
+        (gap,) = result_render.render_gaps(text.replace(line, typed), expected)
+        self.assertIn("Recorded results line differs from its rendering", gap.text)
 
 
 class ReportableVerdicts(unittest.TestCase):

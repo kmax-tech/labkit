@@ -1,7 +1,12 @@
 """result_render — the result section as its bound sources render it.
 
-The Recorded results line and the Limitation lines are generated. Recorded
-results opens with the reportable verdict of every registered promise
+The Recorded results line and the Limitation lines are generated. Where the
+run or a run it rests on read stand-in answers (`llm_cache.store_stand_in`,
+marked in the call logs), Recorded results opens with one label per alias
+(`stand_in_label`): `fixed stand-in answers: 2 of alias X; not a
+measurement of X`, or `includes fixed stand-in answers: …; not a pure
+model measurement` beside other answers of X; a run without stand-ins gets
+no label. Recorded results then gives the reportable verdict of every registered promise
 (`verdicts`, one derivation for every reader): a quality check recorded
 as not met leaves every criterion not assessable, so a criterion's own
 `True` never reads as a pass beside it; a limitation leaves not
@@ -43,6 +48,7 @@ from labkit.checks.audit_binding import (
     source_protocol_then,
 )
 from labkit.checks.recheck import LABKIT_KEYS
+from labkit.checks.run_record_check import StandInUse, stand_in_uses
 from labkit.formats import (
     evidence,
     findings,
@@ -281,15 +287,20 @@ def rendering(
     protocol that replaces another (`[replaces]`)
     opens with the predecessor's verdict as its own sources give it, then
     `this question:` (`predecessor_verdict`): the new answer never reads as
-    the earlier question's. Raises what `runs.read_metrics` raises on a run
-    without readable metrics."""
+    the earlier question's. Where RUN or a run it rests on read stand-in
+    answers, the label (`stand_in_label`) stands before the verdicts and
+    values; without stand-ins nothing is added. Raises what
+    `runs.read_metrics` raises on a run without readable metrics, and
+    ValueError when the stand-ins cannot be counted (`stand_in_label`)."""
     limits = limits_of(area, text, run, found=found)
     note = findings.answer_note([(label, effect) for label, _, effect in limits])
     said, recorded = _verdicts_and_values(area, text, run, limits)
     before = predecessor_verdict(area, text, set())
     drawn = source_phrases(area, run)
+    stand_ins = stand_in_label(run)
     recorded_results = (
         (f"{before} · this question: " if before else "")
+        + (f"{stand_ins} · " if stand_ins else "")
         + (f"{said} · recorded: " if said else "")
         + recorded
         + note
@@ -301,6 +312,46 @@ def rendering(
         written_line(text, QUESTION_LABEL),
         written_line(text, CONCLUSION_LABEL),
     )
+
+
+def stand_in_clause(use: StandInUse) -> str:
+    """The label of one alias's stand-ins: `fixed stand-in answers: N of
+    alias X; not a measurement of X` when every answer of X was a stand-in,
+    `includes fixed stand-in answers: N of alias X; not a pure model
+    measurement` when other answers of X — asked, or replayed and not
+    marked as stand-ins — stand beside them."""
+    named = f"fixed stand-in answers: {use.stand_ins} of alias {use.alias}"
+    if use.only_stand_ins:
+        return f"{named}; not a measurement of {use.alias}"
+    return f"includes {named}; not a pure model measurement"
+
+
+def stand_in_label(run: Path) -> str:
+    """One clause per alias (`stand_in_clause`, joined by ` · `) for the
+    stand-ins in the call logs of RUN and of every run it rests on
+    (`runs.source_runs`: `derived_from`, continued rows, the origin runs of
+    its inputs), counted together (`stand_in_uses`); "" without stand-ins.
+    N counts call-log lines marked as stand-ins: a stand-in read by two of
+    those runs counts twice. An entry without the mark counts as an answer
+    not marked as a stand-in — no evidence that a model gave it.
+
+    Raises:
+        ValueError: A record on the way does not read — a config.json,
+            outputs.json, input record or call log — or a source run is
+            missing: then whether a stand-in was read is not known, and no
+            line is rendered.
+    """
+    try:
+        calls = [
+            call
+            for source in runs.source_runs(run)
+            for call in runs.read_model_calls(source)
+        ]
+    except (OSError, ValueError) as exc:
+        raise ValueError(
+            f"the stand-in answers behind run {run.name} cannot be counted — {exc}"
+        ) from exc
+    return " · ".join(stand_in_clause(u) for u in stand_in_uses(calls))
 
 
 def _verdicts_and_values(
@@ -495,11 +546,13 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
         gaps.append(
             blocker(
                 "the Recorded results line differs from its rendering (the run's "
-                "metrics.json and the records' limits)",
+                "metrics.json, the stand-ins in the call logs and the records' "
+                "limits)",
                 fix=f"`{RENDER}` writes it again",
                 step=RENDER,
-                # one equality over the whole generated line — verdicts,
-                # values, run id, limits note —, whichever part differs
+                # one equality over the whole generated line — stand-in
+                # label, verdicts, values, run id, limits note —, whichever
+                # part differs
                 rule=TECHNICAL_RULE,
             )
         )

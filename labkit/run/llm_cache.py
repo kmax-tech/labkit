@@ -42,8 +42,10 @@ and says why on stderr; a replay refuses it.
 Stand-in answers: `store_stand_in` writes a fixed answer, not a model's,
 under the key a call with the same arguments gets — for a trial without a
 model, replayed through `Cache`. Its entry says `stand_in: true`, a hit on
-it says so in the call log, and finalize names a run that read one
-(`run_record_check.stand_in_findings`).
+it says so in the call log, finalize names a run that read one
+(`run_record_check.stand_in_findings`), and the generated result line of
+a run resting on one opens with a stand-in label
+(`result_render.stand_in_label`).
 
 Where: `<lab root>/cache/llm/` unless given (the lab root holds
 `models.toml`), one file per key, `<key[:2]>/<key>.json`, written once — the
@@ -382,7 +384,8 @@ def store_stand_in(
     no model's answer, so its response has no finish reason, no usage, no
     endpoint and no reply body. A hit on it carries `Origin.stand_in`, and
     the run's call log says so; finalize names a run that read stand-ins
-    (`run_record_check.stand_in_findings`).
+    (`run_record_check.stand_in_findings`), and the generated result line
+    labels a result resting on them (`result_render.stand_in_label`).
 
     Side effects: creates ROOT with its `.gitignore` of `*`, as `Cache`
     does, and writes the entry once (`files.write_once`). A stand-in with

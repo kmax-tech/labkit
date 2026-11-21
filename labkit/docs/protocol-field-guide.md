@@ -310,8 +310,12 @@ result is only a plan.
 - **Recorded results:** `labkit-adopt <area> <run_id>` writes this field.
   Never retype or reword it. `report-check` holds it exactly to the
   rendering. It gives the verdict of each registered promise, every other
-  reported key and value, the run_id and one note on the recorded limits. A
-  quality check recorded as not met leaves each criterion not assessable; a
+  reported key and value, the run_id and one note on the recorded limits.
+  When the run, or a run it rests on, read stand-in answers, the line
+  opens with `fixed stand-in answers: N of alias X; not a measurement of
+  X` (only stand-ins for X) or `includes fixed stand-in answers: N of
+  alias X; not a pure model measurement` (other answers of X beside them).
+  A quality check recorded as not met leaves each criterion not assessable; a
   limitation leaves not assessable only the promises it names. After a changed decision, `protocol-fill --render` writes it
   again. The Limitation lines below it are rendered from the audit records.
   Write what the number means in the Conclusion. Example (the rendered form

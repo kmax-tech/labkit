@@ -1246,22 +1246,50 @@ def storing_runs_of(area: Path, calls: Sequence[ModelCall]) -> dict[str, Storing
     return out
 
 
+@dataclass(frozen=True)
+class StandInUse:
+    """How many of the call-log lines of one ALIAS are stand-ins: STAND_INS
+    lines marked as stand-ins, of ANSWERS lines of that alias in all —
+    asked, replayed or stand-in."""
+
+    alias: str
+    stand_ins: int
+    answers: int
+
+    @property
+    def only_stand_ins(self) -> bool:
+        """Every answer of the alias was a stand-in."""
+        return self.stand_ins == self.answers
+
+
+def stand_in_uses(calls: Sequence[ModelCall]) -> list[StandInUse]:
+    """One StandInUse per alias of CALLS with at least one marked stand-in
+    (`ModelCall.stand_in`), aliases sorted; [] without stand-ins. Sees only
+    marked stand-ins: an entry written by hand without the mark counts as
+    an answer not marked as a stand-in, which shows no more than that. Pure."""
+    stand_ins: dict[str, int] = {}
+    answers: dict[str, int] = {}
+    for call in calls:
+        answers[call.alias] = answers.get(call.alias, 0) + 1
+        if call.hit and call.stand_in:
+            stand_ins[call.alias] = stand_ins.get(call.alias, 0) + 1
+    return [StandInUse(a, n, answers[a]) for a, n in sorted(stand_ins.items())]
+
+
 def stand_in_findings(run: str, calls: Sequence[ModelCall]) -> list[GateFinding]:
     """A warning when RUN's call log (CALLS, `runs.read_model_calls`) holds
     stand-ins — fixed answers stored with `llm_cache.store_stand_in`, not
     answers of a model: the run's numbers show what its processing does
     with those answers, not what a model answers (LAB-027 Model
     discipline). Guaranteed: the mark is in labkit's own call log. One
-    warning naming each alias and its count; [] without stand-ins. Sees
-    only marked stand-ins: an entry written by hand without the mark reads
-    as an answer stored outside any run (`call_log_model_findings`)."""
-    counts: dict[str, int] = {}
-    for call in calls:
-        if call.hit and call.stand_in:
-            counts[call.alias] = counts.get(call.alias, 0) + 1
-    if not counts:
+    warning naming each alias and its count (`stand_in_uses`); [] without
+    stand-ins. Sees only marked stand-ins: an entry written by hand without
+    the mark reads as an answer stored outside any run
+    (`call_log_model_findings`)."""
+    uses = stand_in_uses(calls)
+    if not uses:
         return []
-    named = ", ".join(f"{n} of alias `{a}`" for a, n in sorted(counts.items()))
+    named = ", ".join(f"{u.stand_ins} of alias `{u.alias}`" for u in uses)
     return [
         GateFinding(
             WARNING,
