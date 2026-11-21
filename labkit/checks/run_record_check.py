@@ -1105,7 +1105,9 @@ def _name_alias_fix(alias: str) -> str:
 
 def _fresh_run_fix(alias: str, parent: str | None) -> str:
     """The way out for a derived run that needed a model: a fresh run, or —
-    with PARENT — replaying only what the parent stored."""
+    with PARENT — replaying only answers stored by a run whose record names
+    ALIAS (what `call_log_model_findings` passes), the parent among them
+    when its record names it."""
     fresh = (
         f"ask the model in a fresh run — `runlog.run(config={{'model': "
         f"'{alias}'}})` without `derived_from`"
@@ -1113,7 +1115,9 @@ def _fresh_run_fix(alias: str, parent: str | None) -> str:
     return (
         fresh
         if parent is None
-        else f"{fresh} — or let this run only replay answers its parent {parent} stored"
+        else f"{fresh} — or let this run only replay answers stored by a run "
+        f"whose record names `{alias}`, such as its parent {parent} if its "
+        f"record names it"
     )
 
 
