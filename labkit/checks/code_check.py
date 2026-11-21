@@ -184,8 +184,9 @@ def code_findings(
     has told a promise block that does not read
     (`protocol_check.MustGap.block_unread`); that one finding is left to
     it, every other finding stands. A finding two checks make alike — a
-    script that does not read, which each check reading it reports
-    (`unreadable_source`) — stands once: one cause, one finding."""
+    script that does not read, which the intent-id and parser-fixture
+    checks both report (`unreadable_source`) — stands once: one cause, one
+    finding."""
     found = (
         check_intent_ids(area, protocol, text, block_told=block_told)
         + check_parser_fixtures(area, repo)

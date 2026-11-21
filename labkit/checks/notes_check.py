@@ -142,7 +142,8 @@ def is_measurement_note(path: Path) -> bool:
 def collect_notes(paths: list[str]) -> list[Path]:
     """The measurement notes the arguments name: for a directory, the files
     `is_measurement_note` accepts in its `notes/messung/` (or in itself,
-    when it is that directory); a file given is taken as named."""
+    when it is that directory — a `messung/` outside `notes/` gives none);
+    a file given is taken as named."""
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():

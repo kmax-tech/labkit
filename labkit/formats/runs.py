@@ -260,7 +260,9 @@ def read_model_calls(run_dir: Path) -> list[ModelCall]:
     Raises:
         ValueError: A line that is not one the cache writes — not JSON, or
             `alias`, `hit`, `origin` or `usage` missing or of another
-            type — naming the file, the line and the field.
+            type — naming the file, the line and the field; a file that is
+            not UTF-8 (UnicodeDecodeError).
+        OSError: The file stands and does not read.
     """
     path = run_dir / LLM_CALLS_FILE
     if not path.exists():

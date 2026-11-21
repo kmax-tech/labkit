@@ -57,8 +57,9 @@ each step's condition):
                     warning, a must field's too (preflight blocks that
                     before the freeze); a bound field written twice and
                     generated data counts typed by hand or stale block;
-                    README placeholders and route block findings warn, a
-                    `scripts/01_measure.py` that does not parse blocks
+                    README placeholders and route block findings warn; with
+                    a route block, a `scripts/01_measure.py` that does not
+                    parse blocks
   6. provenance     at protocol `repeat_cost = "low"` only: the run froze its source
                     (`data=` in config.json), each source matches its recorded
                     checksum and is tracked or ignored by a rule (a directory
