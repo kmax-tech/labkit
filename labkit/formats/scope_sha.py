@@ -82,6 +82,11 @@ class SourceError(ReadError):
     MISSING, ACCESS, or MALFORMED (not UTF-8, not Python) — the default."""
 
 
+class NothingToStamp(ValueError):
+    """No scope file to stamp: no script under the globs and none declared
+    or given (`area_snapshot`); the message names the area."""
+
+
 SCRIPT_GLOB = "scripts/*.py"
 ANALYSIS_GLOB = "analysis/*.py"
 AREA_GLOBS = (SCRIPT_GLOB, ANALYSIS_GLOB)
@@ -526,8 +531,9 @@ def area_snapshot(
             a protocol, the pin file, a registered output of a linked
             exploration (`exploration_basis`).
         RuntimeError: git fails on a linked exploration.
-        ValueError: Nothing to stamp, or a promise block is malformed
-            (`promises.PromiseError`)."""
+        NothingToStamp: Nothing to stamp; a ValueError.
+        ValueError: A promise block is malformed (`promises.PromiseError`),
+            or another record the stamp reads does not read."""
     root = layout_root(area)
     # the audit reads a declared file and its direct imports in full, so the
     # stamp walks from it too — every protocol's, so it needs no choice and
@@ -545,7 +551,7 @@ def area_snapshot(
     if missing:
         raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")
     if not listed:
-        raise ValueError(
+        raise NothingToStamp(
             f"no scope files under {area} ({', '.join(globs)}) and none named"
         )
     files: list[Path] = []

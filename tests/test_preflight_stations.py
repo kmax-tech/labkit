@@ -21,7 +21,7 @@ from labkit.formats.gate import (
     Findings,
     TECHNICAL_RULE,
 )
-from labkit.formats.scope_sha import area_stamp
+from labkit.formats.scope_sha import NothingToStamp, area_stamp
 from labkit.gates import preflight
 from protocol_fixture import declared_scope_area, head
 from state_fixture import area_evidence, audit_record
@@ -213,12 +213,13 @@ class PreflightStations(unittest.TestCase):
 
 
 class ScopeStampStation(unittest.TestCase):
-    """Station 5 tells the stamp, or why it cannot stamp. A cause station 4
-    blocks (a missing declared scope file, a script that does not read) is
-    told here and blocked there, once; a cause station 4 does not read (a
-    sibling protocol, a module only a declared scope file imports) is
-    blocked here when no earlier blocker stands, and told beside one that
-    does (the exit stays 1). It does not end the gate."""
+    """Station 5 tells the stamp, or why it cannot stamp. A file that stands
+    and does not open blocks always; a cause station 4 blocks (a missing
+    declared scope file, a script that does not read) is told here while
+    any earlier blocker stands, once; with none standing — a cause station
+    4 does not read (a sibling protocol, a module only a declared scope
+    file imports) — it blocks here. Nothing to stamp is told. It does not
+    end the gate."""
 
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
@@ -288,6 +289,30 @@ class ScopeStampStation(unittest.TestCase):
         _, blocked = self.stamp_station(held=False)
         self.assertEqual(len(blocked), 1, blocked)
         self.assertIn("nothere.py", blocked[0])
+
+    def raising(self, exc: Exception, held: bool) -> tuple[list[str], list[str]]:
+        """Station 5 when the stamp raises EXC (see `stamp_station`)."""
+        with mock.patch.object(preflight, "area_stamp", side_effect=exc):
+            return self.stamp_station(held=held)
+
+    def test_a_file_that_does_not_open_blocks_beside_any_blocker(self):
+        _, blocked = self.raising(PermissionError("rows.jsonl: denied"), held=True)
+        self.assertEqual(len(blocked), 1, blocked)
+        self.assertIn("rows.jsonl", blocked[0])
+
+    def test_any_other_unread_record_blocks_when_nothing_else_does(self):
+        _, blocked = self.raising(ValueError("x.toml: not TOML"), held=False)
+        self.assertEqual(len(blocked), 1, blocked)
+        self.assertIn("x.toml", blocked[0])
+
+    def test_the_twin_beside_a_blocker_it_is_told(self):
+        told, blocked = self.raising(ValueError("x.toml: not TOML"), held=True)
+        self.assertEqual((told, blocked), (["  cannot stamp: x.toml: not TOML"], []))
+
+    def test_nothing_to_stamp_is_told_not_blocked(self):
+        told, blocked = self.raising(NothingToStamp("no scope files"), held=False)
+        self.assertEqual(blocked, [])
+        self.assertTrue(told[0].startswith("  no scripts matching"), told)
 
     def test_the_whole_gate_tells_it_beside_the_blockers_it_has(self):
         # the fixture's head lacks required fields: the gate is blocked

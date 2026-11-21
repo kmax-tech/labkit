@@ -43,9 +43,9 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      — static evidence, warnings); each finding carries
                      its grade as data
   5. scope-sha       audit stamp over the input scope; a stamp that cannot be computed
-                     blocks, told only while an earlier station already blocks
-                     for a cause station 4 holds (a script that does not read
-                     or parse, a declared scope file missing)
+                     blocks — a file that stands and does not open, or git, always;
+                     a missing scope file, a script or promise block that does not
+                     read only while no earlier blocker stands, else it is told
   6. working tree    uncommitted changes (warning, not a blocker)
   7. hooks           the installed labkit hooks match this labkit (warning);
                      outside a git repo there is nothing to check
@@ -113,7 +113,7 @@ from labkit.formats.protocol_history import (
     repeat_cost_lowered,
 )
 from labkit.formats.protocol_block import repo_protocol_ids
-from labkit.formats.scope_sha import AREA_GLOBS, SourceError, area_stamp
+from labkit.formats.scope_sha import AREA_GLOBS, NothingToStamp, area_stamp
 
 LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 LAB_010 = cited_rule("LAB-010 Commit before the run")
@@ -234,10 +234,9 @@ def preflight_area(
        repo record, always, as a reminder.
     4. code-check — always.
     5. scope-sha — always; a stamp that cannot be computed blocks — a
-       script that does not read or parse, a missing declared scope file
-       or a promise block that does not read only while no earlier
-       blocker stands (station 4's, as a rule), else it is told; the
-       stamp is told.
+       file that stands and does not open, or git, always; a missing scope
+       file, a script or promise block that does not read only while no
+       earlier blocker stands, else it is told; the stamp is told.
     6. working tree — always.
     7. hooks — only inside a git repo.
     8. area tests — always; frozen = true grades a missing test a blocker.
@@ -601,23 +600,27 @@ def check_code(
 def check_scope_stamp(findings: Findings, area: Path) -> None:
     """Station 5: the audit stamp of the area's input scope
     (`scope_sha.area_stamp`), or why there is none. A stamp that cannot be
-    computed blocks: no audit can be bound to the area until it can. A
-    file that stands and does not read — a registered output of a linked
-    exploration's runs — or git failing on that exploration blocks always.
-    A promise block that does not read, a declared scope file that is
-    missing, or a script or helper that does not read or parse is told
-    only while an earlier station already blocks the gate, since the
-    common cause (the protocol's own block, scope or scripts) is station
-    4's blocker and one cause stays one blocker; with no blocker standing
-    — the cause lies where station 4 does not read, a sibling protocol or
-    a module only a declared scope file imports — it blocks here, so the
-    gate never passes on a stamp it could not compute."""
+    computed blocks: no audit can be bound to the area until it can.
+    - An OSError other than a missing file (a file that stands and does not
+      open, such as a registered output of a linked exploration's runs) or
+      a RuntimeError (git failing on that exploration) blocks always.
+    - A missing scope file (FileNotFoundError) or any ValueError — a script
+      or helper that does not read or parse (`SourceError`), a promise
+      block that does not read (`PromiseError`) — is told only while any
+      earlier station's blocker stands, whatever its cause, and blocks
+      otherwise. The common cause (the protocol's own block, scope or
+      scripts) is station 4's blocker, and one cause stays one blocker; a
+      cause station 4 does not read (a sibling protocol, a module only a
+      declared scope file imports) blocks here unless the gate is blocked
+      already. Either way the gate does not pass.
+    - Nothing to stamp (`NothingToStamp`) is told."""
     try:
         sha, _, _ = area_stamp(area)
-    # PromiseError and SourceError are ValueErrors too, but not "nothing to
-    # stamp"; with a FileNotFoundError (the missing declared scope file)
-    # they are usually station 4's blocker already: told then, else blocked
-    except (promises.PromiseError, SourceError, FileNotFoundError) as exc:
+    except NothingToStamp:
+        findings.note(f"  no scripts matching {AREA_GLOBS} in {area} (skipped)")
+    # FileNotFoundError is an OSError, caught here before the clause that
+    # blocks always
+    except (FileNotFoundError, ValueError) as exc:
         if findings.blocked:
             findings.note(f"  cannot stamp: {exc}")
         else:
@@ -627,15 +630,13 @@ def check_scope_stamp(findings: Findings, area: Path) -> None:
                 f"`{gate_command('preflight', area)}`",
                 rule=TECHNICAL_RULE,
             )
-    except (OSError, RuntimeError) as exc:  # a file that stands and does not read, git
+    except (OSError, RuntimeError) as exc:
         findings.block(
             f"cannot stamp the area's scope: {exc}",
             fix="make the file readable (or git work on the repository), then "
             f"`{gate_command('preflight', area)}`",
             rule=TECHNICAL_RULE,
         )
-    except ValueError:
-        findings.note(f"  no scripts matching {AREA_GLOBS} in {area} (skipped)")
     else:
         findings.note(f"  {sha}")
 
