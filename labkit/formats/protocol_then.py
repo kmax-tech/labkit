@@ -53,9 +53,11 @@ def bound_protocol_file(area: Path, pid: str, recorded: str | None) -> Path:
 
 def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     """Where the protocol carrying id PID stood in COMMIT of the repository
-    ROOT — the `PROTOCOL-*.md` outside SKIP_DIRS whose head names PID —,
-    or None when no file there does. The id is the binding and survives a rename or a move
-    (docs/protocol-run-binding.md); the head is read as TOML only, since an
+    ROOT — the `PROTOCOL-*.md` whose head names PID, outside SKIP_DIRS
+    (`runs/`, `data/`, `.venv/` …), as `repo.repo_protocols` reads —, or
+    None when no file there does. The id is the binding and survives a
+    rename or a move (docs/protocol-run-binding.md); the head is read as
+    TOML only, since an
     older commit holds an older standard `protocol_block.head` refuses.
     Raises GitError when git cannot run."""
     listed = git_run(["ls-tree", "-r", "-z", "--name-only", commit], root)

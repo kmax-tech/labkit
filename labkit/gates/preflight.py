@@ -604,9 +604,11 @@ def check_scope_stamp(findings: Findings, area: Path) -> None:
     try:
         sha, _, _ = area_stamp(area)
     # a PromiseError is a ValueError too, but not "nothing to stamp"
+    # a FileNotFoundError is the missing declared scope file station 4
+    # blocks: told here, so one cause stays one blocker
     except (promises.PromiseError, FileNotFoundError) as exc:
         findings.note(f"  cannot stamp: {exc}")
-    except (OSError, RuntimeError) as exc:
+    except (OSError, RuntimeError) as exc:  # a file that stands and does not read, git
         findings.block(
             f"cannot stamp the area's scope: {exc}",
             fix="make the file readable (or git work on the repository), then "
