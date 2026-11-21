@@ -453,18 +453,46 @@ def check(repo: Path) -> list[str]:
     return out
 
 
+def _tell_install(repo: Path) -> int:
+    """`labkit-hooks install`: write the hooks into REPO and tell each step; 0."""
+    for line in install(repo):
+        print(f"labkit-hooks: {line}")
+    print(f"labkit-hooks: {START_IN_ROOT.format(root=repo)}")
+    print(
+        "labkit-hooks: in Codex, trust the project and review the new or "
+        "changed hooks with /hooks; install/check do not grant hook trust"
+    )
+    return 0
+
+
+def _tell_check(repo: Path) -> int:
+    """`labkit-hooks check`: tell each hook REPO lacks; 1 if any, else 0."""
+    gaps = check(repo)
+    for g in gaps:
+        print(f"labkit-hooks: {g}")
+    if gaps:
+        print("labkit-hooks: fix with  .venv/bin/labkit-hooks install")
+    return 1 if gaps else 0
+
+
+#: the commands of `labkit-hooks` and what each runs on the repo
+COMMANDS = {"install": _tell_install, "check": _tell_check}
+
+
 def main(argv: list[str]) -> int:
     """Command line of `labkit-hooks`: install or check a repo's git hooks.
 
-    `-h`/`--help` anywhere prints the usage and writes nothing; an unknown
-    command, a second argument, an option or a REPO that is no directory
-    is refused with exit 2 before anything is read or written."""
+    `-h`/`--help` anywhere prints the usage, exits 0 and writes nothing —
+    also beside an argument that would be refused (`bogus -h`). Otherwise
+    a command not in `COMMANDS`, a second argument, an option or a REPO
+    that is no directory is refused with exit 2 before anything is read
+    or written."""
     usage = "usage: labkit-hooks install [REPO] | check [REPO]"
     if not argv or console.asks_help(argv):
         lines = [(__doc__ or "").strip().splitlines()[0], usage]
         return console.usage("labkit-hooks", "\n".join(lines), asked=bool(argv))
     cmd, rest = argv[0], argv[1:]
-    if cmd not in ("install", "check"):
+    if cmd not in COMMANDS:
         console.refuse("labkit-hooks", f"unknown command {cmd!r}\n{usage}")
         return 2
     if len(rest) > 1 or (rest and rest[0].startswith("-")):
@@ -480,21 +508,7 @@ def main(argv: list[str]) -> int:
     if repo is None:
         console.refuse("labkit-hooks", f"{where} is not inside a git repo")
         return 2
-    if cmd == "install":
-        for line in install(repo):
-            print(f"labkit-hooks: {line}")
-        print(f"labkit-hooks: {START_IN_ROOT.format(root=repo)}")
-        print(
-            "labkit-hooks: in Codex, trust the project and review the new or "
-            "changed hooks with /hooks; install/check do not grant hook trust"
-        )
-        return 0
-    gaps = check(repo)  # cmd == "check"
-    for g in gaps:
-        print(f"labkit-hooks: {g}")
-    if gaps:
-        print("labkit-hooks: fix with  .venv/bin/labkit-hooks install")
-    return 1 if gaps else 0
+    return COMMANDS[cmd](repo)  # install: 0; check: 1 if a hook is missing, else 0
 
 
 def cli() -> None:
