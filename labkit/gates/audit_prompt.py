@@ -26,7 +26,7 @@ from labkit import PACKAGE_DIR
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
 from labkit.formats.area_state import state_of
 from labkit.checks.prompt_check import prompt_constants
-from labkit.formats.protocol_check import prompt_blocks
+from labkit.formats.protocol_check import prompt_blocks, unread_prompt_field
 from labkit.formats import (
     findings,
     followup,
@@ -635,7 +635,11 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
             f"{CURRENT_ONLY}\n{model_entry(alias, area)}",
         )
     )
-    prompts = prompt_blocks(bound.protocol) + [
+    try:
+        registered = prompt_blocks(bound.protocol)
+    except ValueError as exc:  # shown to the auditor, not a crash of the bundle
+        registered = [f"UNREADABLE: {unread_prompt_field(bound.protocol.name, exc)}"]
+    prompts = registered + [
         f"{name} = {value!r}" for name, value in sorted(prompt_constants(area).items())
     ]
     pieces.append(

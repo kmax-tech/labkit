@@ -340,8 +340,13 @@ class Lanes:
         `<lane>: <line>` — the prompts as this object sends them, not as the
         source reads, so a prompt built by a call is held too. Empty when
         every line is registered, and when the protocol registers no prompt
-        block (`unregistered_prompt` says so)."""
-        blocks = protocol_check.registered_prompt_blocks(self.protocol)
+        block (`unregistered_prompt` says so). Raises ValueError for a
+        Prompt block that never closes."""
+        return self._drift_from(protocol_check.registered_prompt_blocks(self.protocol))
+
+    def _drift_from(self, blocks: list[str]) -> list[str]:
+        """`prompt_drift` against BLOCKS, the registered Prompt blocks
+        already read. Pure."""
         if not blocks:
             return []
         return [
@@ -352,7 +357,8 @@ class Lanes:
 
     def unregistered_prompt(self) -> bool:
         """Does the protocol hold no Prompt block (or only the stamp's
-        unfilled placeholder fence)? Then no prompt line can be held to it."""
+        unfilled placeholder fence)? Then no prompt line can be held to it.
+        Raises ValueError for a Prompt block that never closes."""
         return not protocol_check.registered_prompt_blocks(self.protocol)
 
     def require_registered_prompts(self) -> None:
@@ -360,15 +366,24 @@ class Lanes:
         protocol's Prompt block does not hold (`prompt_drift`) — the
         registration is the protocol, so the way is the code. A protocol
         without a Prompt block is said aloud and passes: there is nothing to
-        hold the prompt to. Raises SystemExit naming each line."""
-        if self.unregistered_prompt():
+        hold the prompt to. Raises SystemExit naming each line, and for a
+        Prompt field whose blocks do not read (`protocol_check.
+        unread_prompt_field`: a block that never closes). The blocks are
+        read once, here."""
+        try:
+            blocks = protocol_check.registered_prompt_blocks(self.protocol)
+        except ValueError as exc:
+            raise SystemExit(
+                protocol_check.unread_prompt_field(self.protocol.name, exc)
+            ) from exc
+        if not blocks:
             print(
                 f"{self.protocol.name}: no registered Prompt block — the prompts "
                 f"are not held to the protocol",
                 flush=True,
             )
             return
-        drift = self.prompt_drift()
+        drift = self._drift_from(blocks)
         if drift:
             raise SystemExit(
                 f"{self.protocol.name}: the prompt this script sends is not the "

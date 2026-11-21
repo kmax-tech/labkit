@@ -49,6 +49,7 @@ from labkit.formats.protocol_check import (
     registered_prompt_blocks,
     template_drift,
     unheld_prompt_lines,
+    unread_prompt_field,
 )
 
 
@@ -253,9 +254,7 @@ def require_registered_templates(protocol: Path, templates: Mapping[str, str]) -
     try:
         blocks = named_prompt_blocks(text)
     except ValueError as exc:
-        raise SystemExit(
-            f"{protocol.name}: the Prompt field does not read — {exc}"
-        ) from exc
+        raise SystemExit(unread_prompt_field(protocol.name, exc)) from exc
     drift = template_drift(templates, blocks)
     if drift:
         raise SystemExit(
@@ -280,7 +279,23 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
     transcript that drifted does not. No registered block, or no readable
     constant: nothing to hold, only the unreadable-constant warnings — each
     a check that could not run for that constant (`NOT_EXECUTABLE`), not a
-    breach by it."""
+    breach by it. A Prompt field whose blocks do not read (a block that
+    never closes) is one blocker instead, constants or not: the run start
+    refuses that protocol with the same sentence (`unread_prompt_field`)."""
+    try:
+        blocks = registered_prompt_blocks(protocol)
+    except ValueError as exc:
+        return [
+            coded(
+                BLOCKER,
+                protocol.name,
+                unread_prompt_field(protocol.name, exc),
+                rule=cited_rule("LAB-067 A prompt has one home, which the run freezes"),
+                fix=f"close the block with a fence line like its opening one, "
+                f"then `{gate_command('code-check', area)}`",
+                evidence_kind=GUARANTEED,
+            )
+        ]
     consts, unreadable = _prompts(area)
     # A prompt this reader cannot compute is unchecked — said aloud, never a
     # silent pass.
@@ -296,7 +311,6 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
         )
         for name in unreadable
     ]
-    blocks = registered_prompt_blocks(protocol)
     if not consts or not blocks:
         return warnings
     findings: list[GateFinding] = []

@@ -461,6 +461,22 @@ class PromptIsTheRegisteredOne(Case):
             self.assertTrue(run.unregistered_prompt())
             self.assertEqual(run.prompt_drift(), [])
 
+    def test_a_prompt_block_that_never_closes_is_refused_before_any_call(self):
+        """Not read to the end as one block: refused with the sentence the
+        static check and the template start give (`unread_prompt_field`)."""
+        with tempfile.TemporaryDirectory() as d:
+            run = self.with_block(Path(d), "Q: {text}", "Q: {text}")
+            protocol = Path(d) / "PROTOCOL-x.md"
+            text = protocol.read_text(encoding="utf-8")
+            protocol.write_text(text.removesuffix("  ```\n"), encoding="utf-8")
+            with mock.patch.object(llm, "complete_many") as asked:
+                with self.assertRaises(SystemExit) as cm:
+                    run.main(Cfg(), [])
+            asked.assert_not_called()
+            told = str(cm.exception.code)
+            self.assertTrue(told.startswith("PROTOCOL-x.md: the Prompt field"), told)
+            self.assertIn("the Prompt block never closes", told)
+
 
 class EvaluateKeptRows(Case):
     def test_eval_only_gives_the_numbers_of_the_rows_as_they_stand(self):

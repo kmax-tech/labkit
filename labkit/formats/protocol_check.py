@@ -1629,18 +1629,18 @@ def prompt_blocks(protocol: Path) -> list[str]:
     """Every fenced block under a `Prompt` field, up to the next field at the
     same depth or the next heading — one block per variant is a written
     form, and reading only the first would make a null prompt in a second
-    block look missing. The field is the one label parser's (`fields`), the
-    blocks the one fence walker's (`markdown.fence_spans`)."""
+    block look missing. Each block's lines between its fences, as written,
+    joined by "\\n"; the blocks the one walker's (`field_prompt_blocks`).
+    Raises ValueError for a block that never closes."""
     text = protocol.read_text(encoding="utf-8")
     lines = text.splitlines()
     found = fields(text)
-    blocks: list[str] = []
-    for n, f in enumerate(found):
-        if f.name != "prompt":
-            continue
-        region = lines[f.line : field_region_end(lines, found, n)]
-        blocks += ["\n".join(region[s:e]) for _, s, e in markdown.fence_spans(region)]
-    return blocks
+    return [
+        "\n".join(b.body)
+        for n, f in enumerate(found)
+        if f.name == "prompt"
+        for b in field_prompt_blocks(lines, found, n)
+    ]
 
 
 def field_region_end(lines: list[str], found: list[FieldLine], n: int) -> int:
@@ -1701,9 +1701,8 @@ def sentence_above(
     block whose first body line is START (`markdown.fence_spans`): the
     nearest non-blank line above its opening fence, when that line matches
     `PROMPT_SENTENCE` and is not among USED (the lines of an earlier
-    block); None for an unnamed block. The one rule by which the Prompt
-    field's reader (`named_prompt_blocks`) and its writer
-    (`protocol_result.fill_prompts`) tell a block's name. Pure."""
+    block); None for an unnamed block. The one rule by which a Prompt
+    block's name is told (`field_prompt_blocks`). Pure."""
     above = next((j for j in range(start - 2, -1, -1) if region[j].strip()), None)
     if above is None or above in used:
         return None
@@ -1711,48 +1710,98 @@ def sentence_above(
     return (above, m.group(1)) if m else None
 
 
+@dataclass(frozen=True)
+class PromptBlock:
+    """One fenced block below a Prompt field (`field_prompt_blocks`); each
+    line a 0-based index into the protocol's lines (`str.splitlines`)."""
+
+    opening: int  # the opening fence
+    closing: int  # the closing fence
+    sentence: int | None  # the sentence that names it; None for an unnamed block
+    name: str | None  # the name that sentence gives (`sentence_above`)
+    body: tuple[str, ...]  # the lines between the fences, as written
+
+
+def field_prompt_blocks(
+    lines: list[str], found: list[FieldLine], n: int
+) -> list[PromptBlock]:
+    """Every fenced block below the value of the Prompt field FOUND[N] in
+    LINES (`str.splitlines` of the text `fields` parsed into FOUND), to the
+    end of its region (`field_region_end`), in order, each with its name
+    sentence (`sentence_above`). The one walker over the Prompt blocks: the
+    static drift check (`prompt_blocks`), the run start
+    (`named_prompt_blocks`) and the writer (`protocol_result.fill_prompts`)
+    read the same blocks. Raises ValueError for a block that never closes
+    — it would swallow everything below it, and a reader that let it run
+    to the end would hold the prompt to text the run start refuses. Pure."""
+    # FieldLine.last is 1-based, so it is the 0-based index of the line below
+    # the value; the walk runs in REGION indexes, each block is told in
+    # indexes into LINES (BELOW_VALUE + region index)
+    below_value = found[n].last
+    region = lines[below_value : field_region_end(lines, found, n)]
+    out: list[PromptBlock] = []
+    region_taken: set[int] = set()
+    for _, start, stop in markdown.fence_spans(region):
+        if stop >= len(region):
+            raise ValueError(
+                f"line {below_value + start}: the Prompt block never closes"
+            )
+        named = sentence_above(region, start, region_taken)
+        region_taken.update(range(start - 1, stop + 1))
+        if named is not None:
+            region_taken.add(named[0])
+        out.append(
+            PromptBlock(
+                opening=below_value + start - 1,
+                closing=below_value + stop,
+                sentence=None if named is None else below_value + named[0],
+                name=None if named is None else named[1],
+                body=tuple(region[start:stop]),
+            )
+        )
+    return out
+
+
+def unread_prompt_field(protocol: str, exc: ValueError) -> str:
+    """The sentence for a Prompt field of the protocol named PROTOCOL whose
+    blocks do not read (EXC, from `field_prompt_blocks` or
+    `named_prompt_blocks`): the one wording of the static check, the run
+    start and the audit's evidence. Pure."""
+    return f"{protocol}: the Prompt field does not read — {exc}"
+
+
 def named_prompt_blocks(text: str) -> dict[str, str]:
     """Every block below the protocol TEXT's Prompt field that a sentence
-    names (`sentence_above`), by that name: its body with the indentation
-    of its opening fence removed from each line — what the markdown list
-    puts there, nothing more — and its lines joined by "\\n". Unnamed
-    blocks are left out. Raises ValueError for a body line that lacks the
-    fence's indentation, a block that never closes, and a name two blocks
-    carry. Pure."""
+    names (`field_prompt_blocks`), by that name: its body with the
+    indentation of its opening fence removed from each line — what the
+    markdown list puts there, nothing more — and its lines joined by "\\n".
+    Unnamed blocks are left out. Raises ValueError for a body line that
+    lacks the fence's indentation, a block that never closes, and a name
+    two blocks carry. Pure."""
     lines = text.splitlines()
     found = fields(text)
     out: dict[str, str] = {}
     for n, f in enumerate(found):
         if f.name != "prompt":
             continue
-        region = lines[f.line : field_region_end(lines, found, n)]
-        used: set[int] = set()
-        for _, start, stop in markdown.fence_spans(region):
-            if stop >= len(region):
-                raise ValueError(
-                    f"line {f.line + start}: the Prompt block never closes"
-                )
-            named = sentence_above(region, start, used)
-            used.update(range(start - 1, stop + 1))
-            if named is None:
+        for block in field_prompt_blocks(lines, found, n):
+            name = block.name
+            if name is None:
                 continue
-            name = named[1]
             if name in out:
                 raise ValueError(f"two Prompt blocks are named `{name}`")
-            indent = region[start - 1][
-                : len(region[start - 1]) - len(region[start - 1].lstrip(" "))
-            ]
+            fence = lines[block.opening]
+            indent = fence[: len(fence) - len(fence.lstrip(" "))]
             body: list[str] = []
-            for k in range(start, stop):
-                ln = region[k]
+            for k, ln in enumerate(block.body):
                 if not ln.strip() and len(ln) <= len(indent):
                     body.append("")  # a blank line, however indented
                     continue
                 if not ln.startswith(indent):
                     raise ValueError(
-                        f"line {f.line + k + 1}: a line of the Prompt block "
-                        f"`{name}` stands left of its fence — its indentation "
-                        f"cannot be told from the prompt's own"
+                        f"line {block.opening + k + 2}: a line of the Prompt "
+                        f"block `{name}` stands left of its fence — its "
+                        f"indentation cannot be told from the prompt's own"
                     )
                 body.append(ln[len(indent) :])
             out[name] = "\n".join(body)
@@ -1781,6 +1830,21 @@ def other_line_separators(text: str) -> list[str]:
     return [f"U+{ord(c):04X}" for c in OTHER_LINE_SEPARATORS if c in text]
 
 
+def odd_separator_refusal(name: str, text: str) -> str | None:
+    """The refusal of the template NAME when its TEXT carries a line
+    separator no protocol line can hold (`other_line_separators`), else
+    None: the one wording of the exact comparison (`template_drift`) and
+    the writer (`protocol_result.prompt_sources`). Pure."""
+    others = other_line_separators(text)
+    if not others:
+        return None
+    return (
+        f"template {name} carries the line separator(s) {', '.join(others)}, "
+        f"which no protocol line can hold — it cannot be registered verbatim; "
+        f"use a line feed"
+    )
+
+
 def template_drift(
     templates: Mapping[str, str], blocks: Mapping[str, str]
 ) -> list[str]:
@@ -1788,19 +1852,15 @@ def template_drift(
     registered block's text, `named_prompt_blocks`) does not hold exactly,
     as a sentence: `<name>: not covered — …` where no block carries its
     name, `<name>: line N differs …` where the texts differ after
-    `as_compared` (the block's text as it reads), `<name>: carries …` for
-    a template with a line separator no protocol line can hold. In the
+    `as_compared` (the block's text as it reads), `odd_separator_refusal`'s
+    sentence for a template with a line separator no protocol line can hold. In the
     order of TEMPLATES; empty when every template is registered verbatim.
     Pure."""
     told: list[str] = []
     for name, text in templates.items():
-        others = other_line_separators(text)
-        if others:
-            told.append(
-                f"{name}: carries the line separator(s) {', '.join(others)}, which "
-                f"no protocol line can hold — the template cannot be registered "
-                f"verbatim; use a line feed"
-            )
+        refusal = odd_separator_refusal(name, text)
+        if refusal is not None:
+            told.append(refusal)
             continue
         if name not in blocks:
             told.append(

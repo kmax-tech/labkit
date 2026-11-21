@@ -157,6 +157,97 @@ class WriterAndReaderAgree(unittest.TestCase):
             protocol_result.fill_prompts(PROTOCOL, {"PROMPT": "x"}, {"PROMPT": "y"})
 
 
+#: a Prompt field whose second block has no closing fence: it swallows the
+#: field below it
+UNCLOSED = (
+    "- **Prompt (verbatim, per variant):** x\n"
+    "\n"
+    "  `PROMPT` — what it is for\n"
+    "\n"
+    "  ```text\n"
+    "  Q: {text}\n"
+    "  ```\n"
+    "\n"
+    "  ```text\n"
+    "  N: {text}\n"
+    "\n"
+    "- **Unit:** one item\n"
+)
+NEVER_CLOSES = "line 9: the Prompt block never closes"
+
+
+class OneWalker(unittest.TestCase):
+    """The static drift check, the run start and the writer read the blocks
+    below the Prompt field through one walker: a block that never closes
+    is refused by each with one sentence, and closed blocks, named and
+    unnamed, read as before."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.area = Path(tmp.name)
+        self.protocol = self.area / "PROTOCOL-x.md"
+
+    def static(self, text: str) -> list[str]:
+        """The static check's finding lines for TEXT (`check_prompt_drift`,
+        as `code-check` runs it); the area holds no script."""
+        self.protocol.write_text(text, encoding="utf-8")
+        return [
+            f.line for f in prompt_check.check_prompt_drift(self.area, self.protocol)
+        ]
+
+    def run_start(self, text: str) -> None:
+        self.protocol.write_text(text, encoding="utf-8")
+        prompt_check.require_registered_templates(
+            self.protocol, {"PROMPT": "Q: {text}"}
+        )
+
+    def test_an_unclosed_block_is_refused_by_all_three_with_one_sentence(self) -> None:
+        refusal = protocol_check.unread_prompt_field(
+            "PROTOCOL-x.md", ValueError(NEVER_CLOSES)
+        )
+        (finding,) = self.static(UNCLOSED)
+        self.assertTrue(finding.startswith("BLOCKER"), finding)
+        self.assertIn(refusal, finding)
+        with self.assertRaises(SystemExit) as cm:
+            self.run_start(UNCLOSED)
+        self.assertEqual(cm.exception.code, refusal)
+        with self.assertRaisesRegex(ValueError, f"^{NEVER_CLOSES}$"):
+            protocol_result.fill_prompts(UNCLOSED, {"PROMPT": "Q: {text}"})
+
+    def test_closed_blocks_named_and_unnamed_read_as_before(self) -> None:
+        closed = UNCLOSED.replace("  N: {text}\n", "  N: {text}\n  ```\n")
+        self.assertEqual(self.static(closed), [])
+        self.assertEqual(
+            protocol_check.prompt_blocks(self.protocol), ["  Q: {text}", "  N: {text}"]
+        )
+        self.assertEqual(
+            protocol_check.named_prompt_blocks(closed), {"PROMPT": "Q: {text}"}
+        )
+        self.run_start(closed)  # the named block holds the template: no refusal
+        # beside a named block, the writer keeps refusing an unnamed one
+        with self.assertRaisesRegex(ValueError, "line 9: 1 Prompt block"):
+            protocol_result.fill_prompts(closed, {"PROMPT": "Q: {text}"})
+        only_named = closed.replace("  ```text\n  N: {text}\n  ```\n\n", "")
+        self.assertEqual(
+            protocol_result.fill_prompts(only_named, {"PROMPT": "Q: {text}"}),
+            only_named,
+        )
+
+    def test_a_value_on_two_lines_moves_the_blocks_not_their_reading(self) -> None:
+        """The walk starts below the field's value: a value continued on a
+        second line shifts each line number by one and nothing else."""
+        two = UNCLOSED.replace(" x\n", " x\n  and more of the value\n", 1)
+        with self.assertRaisesRegex(ValueError, "^line 10: the Prompt block never"):
+            protocol_check.named_prompt_blocks(two)
+        closed = two.replace("  N: {text}\n", "  N: {text}\n  ```\n")
+        self.assertEqual(
+            protocol_check.named_prompt_blocks(closed), {"PROMPT": "Q: {text}"}
+        )
+        with self.assertRaisesRegex(ValueError, "line 10: 1 Prompt block"):
+            protocol_result.fill_prompts(closed, {"PROMPT": "Q: {text}"})
+
+
 class Scenario(unittest.TestCase):
     """A two-stage area: generate, then judge from the generated answers."""
 

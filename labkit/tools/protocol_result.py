@@ -41,8 +41,9 @@ from labkit.formats.protocol_check import (
     is_stamp_placeholder_block,
     replace_lines,
     as_compared,
-    other_line_separators,
-    sentence_above,
+    odd_separator_refusal,
+    PromptBlock,
+    field_prompt_blocks,
 )
 from labkit.tools.protocol_edit import fill
 
@@ -355,17 +356,14 @@ def prompt_sources(
     LF only), each with its placeholder sentence (`prompt_sentence`,
     `template_sentence`). Raises ValueError for a name that is both, and
     for a template carrying a line separator no protocol line can hold
-    (`other_line_separators`). Pure."""
+    (`odd_separator_refusal`). Pure."""
     both = sorted(set(constants) & set(templates))
     if both:
         raise ValueError(f"{both} named both as a PROMPT constant and as a template")
     for name, template in templates.items():
-        others = other_line_separators(template)
-        if others:
-            raise ValueError(
-                f"template {name} carries the line separator(s) {', '.join(others)}, "
-                f"which no protocol line can hold — use a line feed"
-            )
+        refusal = odd_separator_refusal(name, template)
+        if refusal is not None:
+            raise ValueError(refusal)
     return {
         **{
             k: PromptSource(prompt_sentence(k, v), v.splitlines())
@@ -424,8 +422,9 @@ def fill_prompts(
     f = found[n]
     lines = text.splitlines()
     end = field_region_end(lines, found, n)
-    region = lines[f.last : end]  # below the field's value, to its end
-    kept = _prompt_segments(region, sources, first_line=f.last + 1)
+    kept = _prompt_segments(
+        lines, range(f.last, end), field_prompt_blocks(lines, found, n), sources
+    )
     new = sorted(
         set(sources) - {s.name for s in kept}, key=lambda c: (c != "PROMPT", c)
     )
@@ -465,34 +464,31 @@ class PromptSegment:
 
 
 def _prompt_segments(
-    region: list[str], constants: Collection[str], *, first_line: int
+    lines: list[str],
+    below: range,
+    blocks: list[PromptBlock],
+    constants: Collection[str],
 ) -> list[PromptSegment]:
-    """What `fill_prompts` keeps of REGION, the lines below the Prompt
-    field (FIRST_LINE the 1-based line of its first): each block a
-    sentence names, in the order they stand (`PromptSegment`; LINES only
-    for a constant not among CONSTANTS). Blank lines, the stamp's
-    placeholder block and — while no block has a sentence — one unnamed
-    block, an earlier fill's, are dropped. Raises ValueError for a block
-    that never closes, any other unnamed block, or a line that is none of
-    these. Pure."""
+    """What `fill_prompts` keeps of the lines BELOW the Prompt field's value
+    (0-based indexes into LINES), whose blocks are BLOCKS
+    (`protocol_check.field_prompt_blocks`): each block a sentence names, in
+    the order they stand (`PromptSegment`; LINES only for a constant not
+    among CONSTANTS). Blank lines, the stamp's placeholder block and —
+    while no block has a sentence — one unnamed block, an earlier fill's,
+    are dropped. Raises ValueError for any other unnamed block, or a line
+    that is none of these. Pure."""
     kept: list[PromptSegment] = []
     unnamed: list[int] = []
-    used: set[int] = set()
-    for _, start, stop in markdown.fence_spans(region):
-        if stop >= len(region):
-            raise ValueError(
-                f"line {first_line + start - 1}: the Prompt block never closes"
-            )
-        named = sentence_above(region, start, used)
-        used.update(range(start - 1, stop + 1))
-        if named is None:
-            if not is_stamp_placeholder_block("\n".join(region[start:stop])):
-                unnamed.append(first_line + start - 1)
+    covered: set[int] = set()
+    for b in blocks:
+        covered.update(range(b.opening, b.closing + 1))
+        if b.sentence is None or b.name is None:
+            if not is_stamp_placeholder_block("\n".join(b.body)):
+                unnamed.append(b.opening + 1)
             continue
-        above, name = named
-        used.add(above)
-        lines = () if name in constants else tuple(region[above : stop + 1])
-        kept.append(PromptSegment(name, region[above].strip(), lines))
+        covered.add(b.sentence)
+        own = () if b.name in constants else tuple(lines[b.sentence : b.closing + 1])
+        kept.append(PromptSegment(b.name, lines[b.sentence].strip(), own))
     # an unnamed block is the one an earlier fill wrote only where no block
     # has a sentence yet; beside named blocks it is someone's own
     allowed = 0 if kept else 1
@@ -504,10 +500,10 @@ def _prompt_segments(
             f"wrote, before any block had a sentence; name each with a sentence "
             f"above it (`NAME` — what it is for), or remove it"
         )
-    stray = [j for j, ln in enumerate(region) if ln.strip() and j not in used]
+    stray = [j for j in below if lines[j].strip() and j not in covered]
     if stray:
         raise ValueError(
-            f"line {first_line + stray[0]}: prose below the Prompt field that is "
+            f"line {stray[0] + 1}: prose below the Prompt field that is "
             f"no sentence above a block — --prompts would drop it; move it into "
             f"the field's line or a sentence (`NAME` — …)"
         )
