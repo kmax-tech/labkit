@@ -337,7 +337,11 @@ def render_table(rows: list[ParamRow]) -> str:
 
 
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
-    """Command line: the table for one area's answering run, or a named run."""
+    """Command line: the table for one area's answering run, or a named run.
+    Without --run the run is the one that answers for the stamped protocol
+    id (`Measured.told`), and a choice that carries a blocker is refused
+    (exit 2) — unlike finalize, which tells the same blocker and goes on
+    with the chosen run (`finalize.choose_answering_run`)."""
     if not argv or argv[0] in ("-h", "--help"):
         lines = [
             (__doc__ or "").strip().splitlines()[0],

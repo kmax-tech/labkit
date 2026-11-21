@@ -12,10 +12,16 @@ found — at least what `labkit-audit` reads in full — and, where a protocol
 of the area names `[model] annotation_validity`, the evidence the audit is
 shown of it (`validation_basis`: the bound apply protocol, its result, its
 scripts and its `models.toml` entry; of a DOI only its string — the cited
-content is bound by nothing). NOT covered otherwise: data files, prompt
-files, models.toml, the protocol — an unchanged stamp says the CODE is the
-same, not the inputs. Sibling: `promises.declared_scope_sha` is the same idea per
-promise, over its declared scope.
+content is bound by nothing). Where a protocol of the area replaces another
+and calls itself confirmatory, the stamp also covers the predecessor's
+evidence (`predecessor_basis`: its id and the records of its runs); where a
+protocol names `[explored_in]`, the exploration it builds on
+(`exploration_basis`: the records and outputs of the runs the link names,
+the run that exploration adopts and its Conclusion). NOT covered otherwise:
+data files, prompt files, models.toml, the protocol — an unchanged stamp
+says the CODE is the same, not the inputs. Sibling:
+`promises.declared_scope_sha` is the same idea per promise, over its
+declared scope.
 
 Why a command and not a shell one-liner: a one-liner can hash no file
 content at all (BSD xargs has no `-a`) and still print a stable-looking

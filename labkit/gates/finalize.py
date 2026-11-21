@@ -40,7 +40,12 @@ each step's condition):
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id
   4. declared scopes  every declared promise scope unchanged since the run
-  5. open fields    protocol fields still holding a placeholder
+  5. open fields    protocol fields still holding a placeholder — a
+                    warning, a must field's too (preflight blocks that
+                    before the freeze); a bound field written twice and
+                    generated data counts typed by hand or stale block;
+                    README placeholders and route block findings warn, a
+                    `scripts/01_measure.py` that does not parse blocks
   6. provenance     at protocol `repeat_cost = "low"` only: the run froze its source
                     (`data=` in config.json), each source matches its recorded
                     checksum and is tracked or ignored by a rule (a directory
@@ -245,7 +250,9 @@ def choose_answering_run(
     come from the measurement). A blocker here is the
     finding, and it carries the runs that were looked at and why none
     answers: a note beside it reaches no caller that collects the findings
-    as data. Bound runs newer by name than the
+    as data. A blocker beside a chosen run is told and the run returned:
+    the later stations go on with it (`labkit-params` refuses such a
+    choice instead). Bound runs newer by name than the
     adopted one are a static-evidence warning, never a blocker: a run id is
     local time without a zone, so the name orders the runs of one machine
     only — yet on one machine a newer run left out is what choosing among

@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import recheck  # noqa: E402
 from labkit.checks.run_record_check import code_since_run  # noqa: E402
 from labkit.formats import gate, repo, runs  # noqa: E402
+from labkit.formats.run_code import code_then  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from protocol_fixture import (  # noqa: E402
     completed_run,
@@ -351,6 +352,20 @@ class CodeSinceRun(unittest.TestCase):
         self.script.write_text("import features\nfrom lib import (\n", encoding="utf-8")
         lines = self.held(run)
         self.assertTrue(any("cannot be read now" in ln for ln in lines), lines)
+
+    def test_the_tree_then_names_which_part_is_missing(self) -> None:
+        """`run_code.code_then`: no repository to read from is not a run
+        that recorded no commit; the twin, both present, reads the tree."""
+        run = self.run_now()
+        read = runs.read_run_dir
+        self.assertIsNotNone(code_then(read(run), self.repo).tree)
+        where = code_then(read(run), None).where
+        self.assertIn("no repository to read the commit from", where)
+        self.assertNotIn("recorded no commit", where)
+        self._record(run, git=runs.NO_GIT, git_full="")
+        self.assertEqual(
+            code_then(read(run), self.repo).where, f"run {run.name} recorded no commit"
+        )
 
     def test_an_area_outside_a_repository_is_the_cause_named(self) -> None:
         """The run recorded its commit and the area's repository is gone

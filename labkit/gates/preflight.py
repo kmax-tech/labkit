@@ -474,20 +474,20 @@ def _owed(
 
 def check_audit_records(
     findings: Findings, area: Path, *, frozen: bool
-) -> list[audit_findings.Record]:
+) -> list[audit_findings.Record] | None:
     """Station 3, the records: every finding still `open` in the area's
     audit records, each with its file — a warning before the freeze, a
     blocker once FROZEN (frozen = true owes every decision,
     LAB-015 Preflight audit before freezing). A record nobody can read is
-    a blocker. Returns the records read (none after an unreadable one), for
-    the station's closing line."""
+    a blocker. Returns the records read, for the station's closing line —
+    None when they could not be read (the blocker says why)."""
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
         findings.block(
             str(exc), fix=audit_findings.record_way(area), rule=TECHNICAL_RULE
         )
-        return []
+        return None
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
         _owed(findings, frozen, LAB_015)(
@@ -521,7 +521,7 @@ def check_audit_coverage(
 
 
 def check_handed_over_elsewhere(
-    findings: Findings, area: Path, records: list[audit_findings.Record]
+    findings: Findings, area: Path, records: list[audit_findings.Record] | None
 ) -> None:
     """Station 3, the reminder: every open finding of another area of the
     repo that a handover of that area records (`handovers.handed_over`) —
@@ -530,7 +530,7 @@ def check_handed_over_elsewhere(
     no handover records is that area's work in progress and not told; a
     record or a handover elsewhere nobody can read warns.
     Closes the station with what RECORDS (this area's) say when nothing is
-    open."""
+    open; RECORDS None (they could not be read) closes it with nothing."""
     experiments = area.resolve().parent
     try:
         elsewhere = audit_findings.open_elsewhere(area, experiments)
@@ -559,6 +559,8 @@ def check_handed_over_elsewhere(
             f"  {told} open finding(s) handed over elsewhere in the repo — a "
             "reminder, not counted"
         )
+    if records is None:  # did not read: "none recorded" would contradict the blocker
+        return
     undecided = bool(audit_findings.open_findings(records))
     if not records and not told:
         findings.note("  none recorded")

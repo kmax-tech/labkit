@@ -108,12 +108,27 @@ class PreflightStations(unittest.TestCase):
             "no = [toml\n"
         )
         found = Findings(tell=None)
-        self.assertEqual(
-            preflight.check_audit_records(found, self.area, frozen=False), []
-        )
+        self.assertIsNone(preflight.check_audit_records(found, self.area, frozen=False))
         (f,) = found.found
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertIn("not TOML", f.text)
+
+    def _closing_lines(self, records: list[audit_findings.Record] | None) -> list[str]:
+        """Station 3's closing lines for RECORDS, nothing open elsewhere."""
+        told: list[str] = []
+        with mock.patch.object(
+            preflight.audit_findings, "open_elsewhere", return_value=[]
+        ):
+            preflight.check_handed_over_elsewhere(
+                Findings(tell=told.append), self.area, records
+            )
+        return told
+
+    def test_records_that_did_not_read_are_not_told_as_none(self):
+        self.assertEqual(self._closing_lines(None), [])
+
+    def test_the_twin_no_records_are_told_as_none(self):
+        self.assertEqual(self._closing_lines([]), ["  none recorded"])
 
     RECORD = "2026-11-10T10-00-preflight.toml"
 

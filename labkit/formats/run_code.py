@@ -58,8 +58,12 @@ def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
     if rd.config is None:
         return CodeThen(name, None, f"run {name} has no readable record")
     commit = runs.recorded_commit(rd.config)
-    if commit is None or root is None:
+    if commit is None:
         return CodeThen(name, None, f"run {name} recorded no commit")
+    if root is None:
+        return CodeThen(
+            name, None, f"run {name}: no repository to read the commit from"
+        )
     dirty = rd.config.git.endswith(runs.DIRTY_MARK)
     if rd.from_commit is not None and dirty:
         return CodeThen(
