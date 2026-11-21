@@ -5,7 +5,7 @@ The code that produced the number unchanged since the run
 count (`criterion_n_input_mismatches`), each source's bytes equal to the
 sha256 the run recorded, and the source tracked in git or ignored by a
 rule (`provenance_findings`), a model that answered named in
-the record (`model_provenance_gap`), a single draw where a model was
+the record (`call_log_model_blockers`, `model_provenance_findings`), a single draw where a model was
 asked (`single_draw`), every JSONL row held to the runs that wrote it
 (`row_provenance_findings`), every arm the protocol names present
 (`arm_findings`), a null lane that moved in the kept rows
@@ -58,6 +58,8 @@ from labkit.formats.gate import (
 )
 from labkit.formats.runs import (
     CONFIG_FILE,
+    LLM_CALLS_FILE,
+    ModelCall,
     ArtefactError,
     DataEntry,
     KeptRows,
@@ -70,6 +72,7 @@ from labkit.formats.runs import (
     read_metrics,
     read_outputs,
     next_output_name,
+    read_model_calls,
     read_run_config,
     resolve_recorded,
 )
@@ -986,35 +989,135 @@ def single_draw(area: Path, answering_run: Path) -> GateFinding | None:
     )
 
 
-def model_provenance_gap(answering_run: Path) -> GateFinding | None:
-    """Why the run's model cannot be named from its record, a warning, or
-    None: its metrics show model calls (`llm_retries` recorded, or
-    `model_calls` > 0) while no run in its lineage recorded
-    `models_resolved` — the alias was not under `model`/`*_model`, the keys
-    runlog resolves (one recorded as `judge` is not resolved): LAB-027
-    Model discipline. A lineage that does not read is the technical
-    contract. Its limit: a run without those metrics keys may still have
-    called a model."""
+def call_log_model_blockers(
+    run: str,
+    calls: Sequence[ModelCall],
+    models_resolved: Mapping[str, object],
+) -> list[GateFinding]:
+    """A blocker per alias whose answers RUN used without its record naming
+    the model: LAB-027 Model discipline, guaranteed — the call log is
+    labkit's own record (`runs.read_model_calls`), so the check is exact.
+
+    Which calls owe a name in RUN's own `models_resolved` (MODELS_RESOLVED,
+    the aliases runlog resolved for this run — not its lineage's: the calls
+    were made in this run), by the call log's own fields:
+      * a call that asked the model (`hit` false — a miss, a repeat, an
+        uncacheable model): the model answered in this run;
+      * a stored answer written outside any run (`hit`, `origin.run`
+        null — a stand-in seeded into the cache, a hand-written entry): no
+        run record names the model the answer stands for, so this run's is
+        the only one;
+    Exempt: a stored answer with its origin run (`hit`, `origin.run` set):
+    the run that stored it named its model, as a derived run's parent does
+    — whether it did is not checked here.
+    The rule is not written down elsewhere; it is the narrowest that holds
+    a run reading answers no record vouches for. [] for a run without calls
+    and for one whose every owing alias is a key of MODELS_RESOLVED (its
+    value, a resolved spec or an `unresolved: …` string, is not judged).
+    Its limit: a run that reads answers past labkit's cache (another
+    framework's own replay) leaves no call line and is not seen."""
+    owing: dict[str, list[ModelCall]] = {}
+    for call in calls:
+        if call.hit and call.origin_run is not None:
+            continue  # the run that stored it holds the model
+        owing.setdefault(call.alias, []).append(call)
+    findings = []
+    for alias, used in owing.items():
+        if alias in models_resolved:
+            continue
+        asked = sum(not c.hit for c in used)
+        parts = [f"{asked} asked the model"] if asked else []
+        if len(used) - asked:
+            parts.append(f"{len(used) - asked} stored outside any run")
+        findings.append(
+            blocker(
+                f"{run} used {len(used)} answer{'s' if len(used) != 1 else ''} of "
+                f"alias `{alias}` ({', '.join(parts)}) — its models_resolved does "
+                f"not name `{alias}`, so the record does not say which model "
+                f"answered",
+                fix=f"put the alias in the run's config under `model` or "
+                f"`<name>_model` (`runlog.run(config={{'model': '{alias}'}})`; "
+                f"runlog resolves it into models_resolved) and run again",
+                rule=LAB_027,
+            )
+        )
+    return findings
+
+
+def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFinding]:
+    """Why the run's model cannot be named from its record, each a finding;
+    [] when nothing is owed or it is named. Read in this order:
+
+      1. the call log (`runs.read_model_calls`): answers no record vouches
+         for whose alias the run's own `models_resolved` (not its
+         lineage's) lacks block
+         (`call_log_model_blockers`); a log that does not read blocks, since the
+         check could not run — technical contract;
+      2. only without such a blocker, the metrics: `llm_retries` recorded,
+         or `model_calls` > 0, while no run in the lineage recorded
+         `models_resolved` — a warning (LAB-027 Model discipline): the alias
+         was not under `model`/`*_model`, the keys runlog resolves (one
+         recorded as `judge` is not resolved). A lineage that does not read
+         is the technical contract, a warning too.
+    Its limit: a run that called a model past labkit's cache and writes
+    neither metrics key is not seen."""
+    try:
+        calls = read_model_calls(answering_run)
+    except (OSError, ValueError) as exc:
+        return [
+            blocker(
+                f"model provenance: the call log of {answering_run.name} does not "
+                f"read — {exc}",
+                fix=f"restore the file as the cache wrote it (`"
+                f"{checkout_command(answering_run / LLM_CALLS_FILE)}` where git holds "
+                f"it), or {measure_anew(area)}",
+                stated_outcome=outcome_of_failed_read(exc),
+                rule=TECHNICAL_RULE,
+            )
+        ]
+    cfg = read_run_config(answering_run)
+    if cfg is None:
+        # the answering run is a completed run, so this is a damaged run
+        # directory, not a run that named no model
+        return [
+            blocker(
+                f"model provenance: {answering_run.name} has no config.json — "
+                f"which model it recorded cannot be read",
+                fix=f"restore the run record as runlog wrote it (`"
+                f"{checkout_command(answering_run / CONFIG_FILE)}` where git holds "
+                f"it), or {measure_anew(area)}",
+                rule=TECHNICAL_RULE,
+            )
+        ]
+    # this run's own models_resolved, not its lineage's: the calls in its
+    # call log were made in this run
+    gaps = call_log_model_blockers(answering_run.name, calls, cfg.models_resolved)
+    if gaps:
+        return gaps
     if not called_a_model(answering_run):
-        return None
+        return []
     try:
         if model_provenance_run(answering_run) is not None:
-            return None
+            return []
     except ValueError as exc:
-        return GateFinding(
+        return [
+            GateFinding(
+                WARNING,
+                f"model provenance: the lineage of {answering_run.name} is broken — {exc}",
+                rule=TECHNICAL_RULE,
+                evidence_kind=GUARANTEED,
+            )
+        ]
+    return [
+        GateFinding(
             WARNING,
-            f"model provenance: the lineage of {answering_run.name} is broken — {exc}",
-            rule=TECHNICAL_RULE,
+            f"{answering_run.name} called a model, but no run in its lineage recorded "
+            f"models_resolved — record the alias under `model` (runlog resolves it); "
+            f"a spec under another key is not provenance labkit can hold",
+            rule=LAB_027,
             evidence_kind=GUARANTEED,
         )
-    return GateFinding(
-        WARNING,
-        f"{answering_run.name} called a model, but no run in its lineage recorded "
-        f"models_resolved — record the alias under `model` (runlog resolves it); "
-        f"a spec under another key is not provenance labkit can hold",
-        rule=LAB_027,
-        evidence_kind=GUARANTEED,
-    )
+    ]
 
 
 def row_provenance_findings(

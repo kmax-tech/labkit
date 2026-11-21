@@ -13,6 +13,8 @@ import pytest
 
 from check_guards import pure_call
 from labkit.checks.run_record_check import (
+    LAB_027,
+    call_log_model_blockers,
     criterion_n_input_mismatches,
     criterion_ns,
     null_lane_findings,
@@ -33,7 +35,13 @@ from labkit.formats.gate import (
     WARNING,
     RuleAssignment,
 )
-from labkit.formats.runs import DataEntry, KeptRows, OutputEntry, OutputNow
+from labkit.formats.runs import (
+    DataEntry,
+    KeptRows,
+    ModelCall,
+    OutputEntry,
+    OutputNow,
+)
 
 pytestmark = pytest.mark.rule
 
@@ -287,6 +295,58 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
 
     def test_the_twin_a_tracked_source_with_its_bytes_passes(self):
         self.assertEqual(self._decided(kind="file"), (None, None))
+
+
+def _call(alias: str, *, hit: bool, origin_run: str | None = None) -> ModelCall:
+    """One line of a run's `llm-calls.jsonl` as the reader returns it."""
+    return ModelCall(alias=alias, hit=hit, origin_run=origin_run, usage={})
+
+
+class AModelThatAnsweredIsNamedInTheRecord(unittest.TestCase):
+    """LAB-027 Model discipline: an answer the run used that no other run's
+    record vouches for — a call that asked the model, or a stored answer
+    written outside any run — has its alias in the run's `models_resolved`; a
+    blocker, guaranteed (`call_log_model_blockers`)."""
+
+    RUN = "2026-11-21T10-55-52_a997"
+
+    def _held(self, calls: list[ModelCall], models_resolved: dict[str, object]):
+        return pure_call(call_log_model_blockers, self.RUN, calls, models_resolved)
+
+    def test_stand_in_answers_stored_outside_a_run_block_without_the_alias(self):
+        # the a997 case: two replayed stand-in answers, models_resolved empty
+        calls = [_call("standin", hit=True), _call("standin", hit=True)]
+        (f,) = self._held(calls, {})
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.rule), (BLOCKER, GUARANTEED, LAB_027)
+        )
+        self.assertIn(
+            f"{self.RUN} used 2 answers of alias `standin` (2 stored outside any "
+            f"run) — its models_resolved does not name `standin`",
+            f.text,
+        )
+        self.assertIn("`model`", f.fix or "")
+
+    def test_a_call_that_asked_the_model_blocks_without_the_alias(self):
+        (f,) = self._held([_call("haiku", hit=False)], {})
+        self.assertIn("used 1 answer of alias `haiku` (1 asked the model)", f.text)
+
+    def test_another_alias_named_does_not_cover_the_one_that_answered(self):
+        calls = [_call("haiku", hit=False), _call("judge", hit=False)]
+        (f,) = self._held(calls, {"haiku": {"backend": "claude-cli"}})
+        self.assertIn("alias `judge`", f.text)
+
+    def test_the_twin_a_named_alias_passes(self):
+        calls = [_call("standin", hit=True), _call("standin", hit=False)]
+        self.assertEqual(self._held(calls, {"standin": {"backend": "ollama"}}), [])
+
+    def test_the_twin_a_run_without_calls_passes(self):
+        self.assertEqual(self._held([], {}), [])
+
+    def test_an_answer_another_run_stored_is_held_by_that_run(self):
+        # a hit with its origin run: that run's record names the model
+        calls = [_call("haiku", hit=True, origin_run="2026-11-20T09-00-00_bb22")]
+        self.assertEqual(self._held(calls, {}), [])
 
 
 if __name__ == "__main__":

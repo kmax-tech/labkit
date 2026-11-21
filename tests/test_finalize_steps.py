@@ -15,6 +15,7 @@ from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
 from labkit.formats import protocol_block, repo
 from labkit.formats.gate import (
+    BLOCKER,
     GUARANTEED,
     NOT_EXECUTABLE,
     OPEN_RULE,
@@ -27,6 +28,7 @@ from labkit.formats.gate import (
     GateFinding,
 )
 from labkit.gates.preflight import AreaTests, tell_test_run
+from labkit.formats.runs import LLM_CALLS_FILE
 from labkit.formats.scope_sha import SourceError
 
 
@@ -211,8 +213,18 @@ class DeclaredRunHint(unittest.TestCase):
         )
 
 
-class ModelProvenanceGap(unittest.TestCase):
-    def _run(self, d: str, metrics: dict, models_resolved: dict) -> Path:
+class ModelProvenanceFindings(unittest.TestCase):
+    """The station's reading of the model a run's record names: the call
+    log first (a blocker, its condition in the rule test), the metrics keys
+    after it (a warning)."""
+
+    def _run(
+        self,
+        d: str,
+        metrics: dict,
+        models_resolved: dict,
+        calls: list[dict] | None = None,
+    ) -> Path:
         run = Path(d) / "runs" / "2026-10-08T10-00-00_aaaa"
         run.mkdir(parents=True)
         (run / "config.json").write_text(
@@ -229,13 +241,32 @@ class ModelProvenanceGap(unittest.TestCase):
             encoding="utf-8",
         )
         (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+        if calls is not None:
+            (run / LLM_CALLS_FILE).write_text(
+                "".join(json.dumps(c) + "\n" for c in calls), encoding="utf-8"
+            )
         return run
+
+    @staticmethod
+    def _stand_in_hit() -> dict:
+        """A call-log line of a replayed answer stored outside any run, as
+        the a997 run of the two-stage demo holds it."""
+        return {
+            "key": "70" * 32,
+            "alias": "standin",
+            "hit": True,
+            "origin": {"run": None, "written": "2026-11-21T10:48:16"},
+            "usage": dict.fromkeys(
+                ("prompt_tokens", "output_tokens", "cached_tokens", "cost_usd")
+            ),
+            "uncached": None,
+        }
 
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"criterion_1_pass": True, "llm_retries": 0}, {})
-            gap = run_record_check.model_provenance_gap(run)
-            assert gap is not None
+            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            self.assertEqual(gap.grade, WARNING)
             self.assertIn(
                 "called a model, but no run in its lineage recorded models_resolved",
                 gap.text,
@@ -247,12 +278,53 @@ class ModelProvenanceGap(unittest.TestCase):
             run = self._run(
                 d, {"criterion_1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
             )
-            self.assertIsNone(run_record_check.model_provenance_gap(run))
+            self.assertEqual(
+                run_record_check.model_provenance_findings(Path(d), run), []
+            )
 
     def test_a_run_without_model_calls_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"criterion_1_pass": True, "n_rows": 4}, {})
-            self.assertIsNone(run_record_check.model_provenance_gap(run))
+            self.assertEqual(
+                run_record_check.model_provenance_findings(Path(d), run), []
+            )
+
+    def test_a_call_log_without_its_alias_in_the_record_blocks(self):
+        # the a997 case: no call count in metrics.json, two replayed stand-in
+        # answers in the call log, models_resolved empty — finalize said clear
+        with tempfile.TemporaryDirectory() as d:
+            calls = [self._stand_in_hit(), self._stand_in_hit()]
+            run = self._run(d, {"unique_rank_share": 0.6}, {}, calls)
+            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            self.assertEqual((gap.grade, gap.evidence_kind), (BLOCKER, GUARANTEED))
+            self.assertIn("alias `standin` (2 stored outside any run)", gap.text)
+
+    def test_the_twin_a_call_log_whose_alias_the_record_names_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(
+                d,
+                {"unique_rank_share": 0.6, "model_calls": 2},
+                {"standin": {"backend": "ollama"}},
+                [self._stand_in_hit(), self._stand_in_hit()],
+            )
+            self.assertEqual(
+                run_record_check.model_provenance_findings(Path(d), run), []
+            )
+
+    def test_a_run_without_its_config_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(d, {"n_rows": 4}, {}, [self._stand_in_hit()])
+            (run / "config.json").unlink()
+            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            self.assertEqual((gap.grade, gap.rule), (BLOCKER, TECHNICAL_RULE))
+            self.assertIn("has no config.json", gap.text)
+
+    def test_a_call_log_that_does_not_read_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(d, {"n_rows": 4}, {}, [{"alias": "standin"}])
+            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            self.assertEqual((gap.grade, gap.rule), (BLOCKER, TECHNICAL_RULE))
+            self.assertIn(f"{LLM_CALLS_FILE}:1", gap.text)
 
 
 class ReadmePlaceholders(unittest.TestCase):
