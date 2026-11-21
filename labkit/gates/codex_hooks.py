@@ -68,7 +68,7 @@ def main(argv: list[str]) -> int:
     bases and session logs (`hook_session`) and content caches
     (`hook_post_change`).
     """
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         return console.usage(
             "codex-hook",
             "usage: codex-hook pre-run | post-change | stop (hook JSON on stdin)",

@@ -17,7 +17,7 @@ from labkit.gates import agent_hooks
 
 def main(argv: list[str]) -> int:
     """Command line of `claude-hook`: dispatch the hook named in argv, the event JSON on stdin."""
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         text = (
             (__doc__ or "").strip().splitlines()[0] + "\n"
             "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)\n"
