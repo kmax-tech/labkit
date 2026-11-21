@@ -1253,17 +1253,19 @@ def storing_runs_of(area: Path, calls: Sequence[ModelCall]) -> dict[str, Storing
 @dataclass(frozen=True)
 class StandInUse:
     """How many of the call-log lines of one ALIAS are stand-ins: STAND_INS
-    lines marked as stand-ins, of ANSWERS lines of that alias in all —
-    asked, replayed or stand-in."""
+    lines marked as stand-ins, of LINES lines of that alias in all —
+    asked, replayed or stand-in. Lines, not distinct answers: what a
+    framework replays past labkit's cache leaves no line and is not
+    counted."""
 
     alias: str
     stand_ins: int
-    answers: int
+    lines: int
 
     @property
     def only_stand_ins(self) -> bool:
-        """Every answer of the alias was a stand-in."""
-        return self.stand_ins == self.answers
+        """Every logged line of the alias is a marked stand-in."""
+        return self.stand_ins == self.lines
 
 
 def stand_in_uses(calls: Sequence[ModelCall]) -> list[StandInUse]:
@@ -1272,12 +1274,12 @@ def stand_in_uses(calls: Sequence[ModelCall]) -> list[StandInUse]:
     marked stand-ins: an entry written by hand without the mark counts as
     an answer not marked as a stand-in, which shows no more than that. Pure."""
     stand_ins: dict[str, int] = {}
-    answers: dict[str, int] = {}
+    lines: dict[str, int] = {}
     for call in calls:
-        answers[call.alias] = answers.get(call.alias, 0) + 1
+        lines[call.alias] = lines.get(call.alias, 0) + 1
         if call.hit and call.stand_in:
             stand_ins[call.alias] = stand_ins.get(call.alias, 0) + 1
-    return [StandInUse(a, n, answers[a]) for a, n in sorted(stand_ins.items())]
+    return [StandInUse(a, n, lines[a]) for a, n in sorted(stand_ins.items())]
 
 
 def stand_in_findings(run: str, calls: Sequence[ModelCall]) -> list[GateFinding]:
@@ -1289,7 +1291,9 @@ def stand_in_findings(run: str, calls: Sequence[ModelCall]) -> list[GateFinding]
     warning naming each alias and its count (`stand_in_uses`); [] without
     stand-ins. Sees only marked stand-ins: an entry written by hand without
     the mark reads as an answer stored outside any run
-    (`call_log_model_findings`)."""
+    (`call_log_model_findings`). Reads RUN's own call log only; the runs
+    it rests on are counted by the result line's label
+    (`result_render.stand_in_label`)."""
     uses = stand_in_uses(calls)
     if not uses:
         return []

@@ -315,11 +315,12 @@ def rendering(
 
 
 def stand_in_clause(use: StandInUse) -> str:
-    """The label of one alias's stand-ins: `fixed stand-in answers: N of
-    alias X; not a measurement of X` when every answer of X was a stand-in,
+    """The label of one alias's stand-ins, chosen by USE's logged lines:
     `includes fixed stand-in answers: N of alias X; not a pure model
-    measurement` when other answers of X — asked, or replayed and not
-    marked as stand-ins — stand beside them."""
+    measurement` when any logged line of X is not a marked stand-in (asked,
+    or replayed without the mark), else `fixed stand-in answers: N of alias
+    X; not a measurement of X`. Only logged lines are seen
+    (`StandInUse`)."""
     named = f"fixed stand-in answers: {use.stand_ins} of alias {use.alias}"
     if use.only_stand_ins:
         return f"{named}; not a measurement of {use.alias}"
@@ -331,8 +332,8 @@ def stand_in_label(run: Path) -> str:
     stand-ins in the call logs of RUN and of every run it rests on
     (`runs.source_runs`: `derived_from`, continued rows, the origin runs of
     its inputs), counted together (`stand_in_uses`); "" without stand-ins.
-    N counts call-log lines marked as stand-ins: a stand-in read by two of
-    those runs counts twice. An entry without the mark counts as an answer
+    N counts call-log lines marked as stand-ins, not distinct answers: a
+    stand-in read by two of those runs counts twice. An entry without the mark counts as an answer
     not marked as a stand-in — no evidence that a model gave it.
 
     Raises:

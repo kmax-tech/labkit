@@ -1680,7 +1680,8 @@ def source_runs(run_dir: Path) -> list[Path]:
                     f"{here.name} rests on run {run_id}, which is not under "
                     f"{run_dir.parent}"
                 )
-            if source not in found:
+            # compared as resolved paths, as `lineage` does: one run once
+            if source.resolve() not in (r.resolve() for r in found):
                 found.append(source)
     return found
 
