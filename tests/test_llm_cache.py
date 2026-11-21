@@ -5,7 +5,10 @@ why, a re-pointed alias misses, a hit is marked in the run record with its
 origin and the original usage and adds no new usage, and the cache version
 and mode stand in the run record. Beside them: the stored answer is the raw
 response, the endpoint is not in the key, the first answer under a key
-stays, and a damaged entry stops the call.
+stays, and a damaged entry stops the call. Stand-ins (`store_stand_in`):
+stored under the key the real call path builds, so a replay of exactly
+that call hits and any other misses; marked as stand-ins in the entry and
+the call log; the cache directory keeps itself out of git.
 
 The model is a stand-in ollama server (`ollama_fixture`): its request count
 says whether a call reached a model.
@@ -14,6 +17,7 @@ says whether a call reached a model.
 from __future__ import annotations
 
 import contextlib
+import inspect
 import io
 import json
 import tempfile
@@ -159,6 +163,16 @@ class CallLog(CacheCase):
         [hit] = runs.read_model_calls(replayed.dir)
         self.assertEqual((hit.hit, hit.origin_run), (True, first.run_id))
 
+    def test_a_hit_line_without_stand_in_is_not_a_stand_in(self) -> None:
+        # a line written before 0.115.0 carries no `stand_in`
+        (self.area / LLM_CALLS_FILE).write_text(
+            '{"alias": "o", "hit": true, "origin": {"run": null, "written": "t"}, '
+            '"usage": {}}\n',
+            encoding="utf-8",
+        )
+        [hit] = runs.read_model_calls(self.area)
+        self.assertEqual((hit.hit, hit.origin_run, hit.stand_in), (True, None, False))
+
     def test_a_run_without_a_call_log_made_no_call(self) -> None:
         self.assertEqual(runs.read_model_calls(self.area), [])
 
@@ -170,6 +184,16 @@ class CallLog(CacheCase):
             ('{"alias": "o", "hit": "yes", "origin": null, "usage": {}}', "hit"),
             ('{"alias": "o", "hit": true, "origin": null, "usage": {}}', "origin"),
             ('{"alias": "o", "hit": false, "origin": null, "usage": 3}', "usage"),
+            (
+                '{"alias": "o", "hit": true, "origin": {"run": null, "written": "t", '
+                '"stand_in": "yes"}, "usage": {}}',
+                "stand_in",
+            ),
+            (
+                '{"alias": "o", "hit": true, "origin": {"run": "r", "written": "t", '
+                '"stand_in": true}, "usage": {}}',
+                "stand-in names a run",
+            ),
         ):
             with self.subTest(bad):
                 path.write_text(bad + "\n", encoding="utf-8")
@@ -279,6 +303,127 @@ class Entries(CacheCase):
     def test_the_cache_directory_keeps_itself_out_of_git(self) -> None:
         self.run_once()
         self.assertEqual((self.root / ".gitignore").read_text(), "*\n")
+
+
+class StandIns(CacheCase):
+    """`store_stand_in`: a fixed answer under the key the real call path
+    builds (`key_inputs`, `cache_key`), marked as a stand-in."""
+
+    PROMPT = "Rank these arguments.\n"
+
+    def store(self, prompt: str = PROMPT, answer: str = '["A1"]', **kw) -> Path:
+        return llm_cache.store_stand_in(self.root, "o", prompt, answer, **kw)
+
+    def replay(self, prompt: str = PROMPT, **kw) -> tuple[runlog.Run, llm_cache.Answer]:
+        answers: list[llm_cache.Answer] = []
+        with runlog.run("e", {"model": "o"}, self.area) as run:
+            cache = llm_cache.Cache(run, root=self.root, replay=True)
+            answers.append(cache.complete("o", prompt, **kw))
+        return run, answers[0]
+
+    def test_a_replay_of_the_same_call_answers_from_the_stand_in(self) -> None:
+        path = self.store(temperature=0.0)
+        run, answer = self.replay(temperature=0.0)
+        self.assertEqual(answer.response.text, '["A1"]')
+        assert answer.origin is not None
+        self.assertEqual((answer.origin.run, answer.origin.stand_in), (None, True))
+        [line] = self.calls(run)
+        self.assertEqual(line["origin"]["stand_in"], True)
+        [call] = runs.read_model_calls(run.dir)
+        self.assertEqual((call.hit, call.origin_run, call.stand_in), (True, None, True))
+        entry = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual((entry["stand_in"], entry["run"]), (True, None))
+        self.assertEqual(entry["inputs"]["prompt"], self.PROMPT)
+        self.assertEqual(
+            (entry["response"]["finish_reason"], entry["response"]["usage"]),
+            (None, llm.NO_USAGE._asdict()),
+        )
+        self.assertEqual(self.server.chats, 0)
+
+    def test_the_twin_a_call_that_differs_misses_and_never_hits(self) -> None:
+        self.store(temperature=0.0)
+        for prompt, kw in (
+            ("Rank these arguments.", {"temperature": 0.0}),  # one line end fewer
+            ("Rank these arguments!\n", {"temperature": 0.0}),
+            (self.PROMPT, {"temperature": 0.7}),
+            (self.PROMPT, {"temperature": 0.0, "system": "Be brief."}),
+        ):
+            with self.subTest(prompt=prompt, kw=kw):
+                with self.assertRaisesRegex(llm_cache.CacheMiss, "no stored answer"):
+                    self.replay(prompt, **kw)
+        self.assertEqual(self.server.chats, 0)
+
+    def test_the_key_is_the_one_the_real_call_path_builds(self) -> None:
+        path = self.store(temperature=0.0)
+        inputs = llm_cache.key_inputs(
+            "o",
+            self.PROMPT,
+            system=None,
+            temperature=0.0,
+            max_tokens=None,
+            raw=False,
+            stop=None,
+        )
+        key = llm_cache.cache_key(inputs)
+        self.assertEqual(path, llm_cache.entry_path(self.root.resolve(), key))
+
+    def test_its_defaults_are_those_of_the_real_call(self) -> None:
+        # a default that drifted would store under a key no default call gets
+        stored = inspect.signature(llm_cache.store_stand_in).parameters
+        called = inspect.signature(llm_cache.Cache.complete).parameters
+        for name in ("system", "temperature", "max_tokens", "raw", "stop"):
+            with self.subTest(name):
+                self.assertEqual(stored[name].default, called[name].default)
+
+    def test_the_cache_directory_keeps_itself_out_of_git(self) -> None:
+        self.store()
+        self.assertEqual((self.root / ".gitignore").read_text(), "*\n")
+
+    def test_the_same_stand_in_again_is_left_as_it_is(self) -> None:
+        path = self.store()
+        before = path.read_text(encoding="utf-8")
+        self.assertEqual(self.store(), path)
+        self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    def test_another_entry_under_the_key_is_refused(self) -> None:
+        self.store()
+        with self.assertRaisesRegex(ValueError, "a stand-in with another answer"):
+            self.store(answer="other")
+        with runlog.run("e", {"model": "o"}, self.area) as run:
+            llm_cache.Cache(run, root=self.root).complete("o", "asked", temperature=0)
+        with self.assertRaisesRegex(
+            ValueError, f"a model's answer stored by run {run.run_id}"
+        ):
+            self.store("asked", temperature=0)
+
+    def test_an_undeclared_cache_refuses_before_it_writes(self) -> None:
+        self.toml.write_text(ollama_toml(self.url, declared=False), encoding="utf-8")
+        with self.assertRaisesRegex(SystemExit, r"\[llm_cache\] enabled = true"):
+            self.store()
+        self.assertFalse(self.root.exists())
+
+    def test_an_uncacheable_alias_is_refused(self) -> None:
+        self.server.digest = None
+        llm._FROZEN.clear()
+        with self.assertRaisesRegex(ValueError, "no single weights digest"):
+            self.store()
+        self.assertFalse(self.root.exists())
+
+    def test_entries_read_with_their_mark(self) -> None:
+        # an entry written before 0.115.0 has no `stand_in`: not a stand-in;
+        # a stand-in that names a run is no entry labkit writes
+        path = self.store()
+        entry = json.loads(path.read_text(encoding="utf-8"))
+        key = entry["key"]
+        del entry["stand_in"]
+        path.write_text(json.dumps(entry), encoding="utf-8")
+        old = llm_cache.read_entry(path, key)
+        assert old is not None and old.origin is not None
+        self.assertFalse(old.origin.stand_in)
+        entry.update(stand_in=True, run="2026-11-21T10-55-52_a997")
+        path.write_text(json.dumps(entry), encoding="utf-8")
+        with self.assertRaisesRegex(llm_cache.CacheCorruptionError, "names run"):
+            llm_cache.read_entry(path, key)
 
 
 if __name__ == "__main__":

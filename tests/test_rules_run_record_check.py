@@ -18,6 +18,7 @@ from labkit.checks.run_record_check import (
     StoringRun,
     call_log_model_findings,
     criterion_n_input_mismatches,
+    stand_in_findings,
     criterion_ns,
     null_lane_findings,
     output_record_findings,
@@ -299,9 +300,13 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
         self.assertEqual(self._decided(kind="file"), (None, None))
 
 
-def _call(alias: str, *, hit: bool, origin_run: str | None = None) -> ModelCall:
+def _call(
+    alias: str, *, hit: bool, origin_run: str | None = None, stand_in: bool = False
+) -> ModelCall:
     """One line of a run's `llm-calls.jsonl` as the reader returns it."""
-    return ModelCall(alias=alias, hit=hit, origin_run=origin_run, usage={})
+    return ModelCall(
+        alias=alias, hit=hit, origin_run=origin_run, stand_in=stand_in, usage={}
+    )
 
 
 class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
@@ -350,6 +355,25 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
             f.text,
         )
         self.assertIn("`model`", f.fix or "")
+
+    def test_marked_stand_ins_are_counted_apart_from_other_stored_answers(self):
+        calls = [
+            _call("standin", hit=True, stand_in=True),
+            _call("standin", hit=True, stand_in=True),
+            _call("standin", hit=True),
+            _call("standin", hit=False),
+        ]
+        (f,) = self._held(calls, {})
+        self.assertIn(
+            "holds 4 answers of alias `standin` (1 asked the model, 2 stand-ins, "
+            "1 stored outside any run), but its models_resolved does not name "
+            "`standin` — no record says which model the alias stood for",
+            f.text,
+        )
+
+    def test_the_twin_stand_ins_whose_alias_the_record_names_pass(self):
+        calls = [_call("standin", hit=True, stand_in=True)] * 2
+        self.assertEqual(self._held(calls, self.NAMED), [])
 
     def test_a_call_that_asked_the_model_blocks_without_the_alias(self):
         # a repeat asks anew: its lines are all of this kind
@@ -419,7 +443,20 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
     def test_a_derived_run_reading_answers_stored_outside_any_run_blocks(self):
         (f,) = self._held([_call("standin", hit=True)], {}, derived_from=self.PARENT)
         self.assertEqual(f.grade, BLOCKER)
-        self.assertIn("1 answer of alias `standin` stored outside any run", f.text)
+        self.assertIn(
+            "1 answer of alias `standin` stored outside any run, which", f.text
+        )
+
+    def test_a_derived_run_reading_stand_ins_blocks_naming_them(self):
+        calls = [
+            _call("standin", hit=True, stand_in=True),
+            _call("standin", hit=True),
+        ]
+        (f,) = self._held(calls, {}, derived_from=self.PARENT)
+        self.assertEqual(f.grade, BLOCKER)
+        self.assertIn(
+            "2 answers of alias `standin` stored outside any run (1 stand-in)", f.text
+        )
 
     def test_a_derived_run_replaying_its_parent_s_named_answers_passes(self):
         stored = {self.PARENT: StoringRun(self.NAMED, None)}
@@ -437,6 +474,41 @@ class TheCallLogAgreesWithTheModelRecords(unittest.TestCase):
         )
         self.assertEqual(f.grade, BLOCKER)
         self.assertNotIn("`model`", f.fix or "", "a derived run cannot name it")
+
+
+class StandInsAreNamed(unittest.TestCase):
+    """LAB-027 Model discipline: a run whose call log holds stand-ins —
+    fixed answers `llm_cache.store_stand_in` stored, no model's — gets one
+    warning naming them, guaranteed (`stand_in_findings`); an answer stored
+    outside any run without the mark is not taken for one."""
+
+    RUN = "2026-11-21T10-55-52_a997"
+
+    def test_stand_ins_get_one_warning_naming_alias_and_count(self):
+        calls = [
+            _call("standin", hit=True, stand_in=True),
+            _call("standin", hit=True, stand_in=True),
+            _call("judge", hit=True, stand_in=True),
+            _call("haiku", hit=False),
+        ]
+        (f,) = pure_call(stand_in_findings, self.RUN, calls)
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.rule), (WARNING, GUARANTEED, LAB_027)
+        )
+        self.assertIn(
+            f"{self.RUN} read stand-in answers (1 of alias `judge`, 2 of alias "
+            f"`standin`): fixed answers stored with `llm_cache.store_stand_in`, "
+            f"not answers of a model",
+            f.text,
+        )
+
+    def test_the_twin_model_answers_and_unmarked_stored_answers_get_none(self):
+        calls = [
+            _call("haiku", hit=False),
+            _call("standin", hit=True),
+            _call("haiku", hit=True, origin_run="2026-11-20T09-00-00_bb22"),
+        ]
+        self.assertEqual(pure_call(stand_in_findings, self.RUN, calls), [])
 
 
 if __name__ == "__main__":

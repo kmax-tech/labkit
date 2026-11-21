@@ -509,7 +509,8 @@ class Runs(unittest.TestCase):
 
 
 class CachedCalls(unittest.TestCase):
-    """`llm_cache.Cache`, `Cache.complete`, `Answer` and `Origin`: runs in
+    """`llm_cache.Cache`, `Cache.complete`, `Answer`, `Origin` and
+    `store_stand_in`: runs in
     an area of a lab whose `models.toml` the cache finds, asking one
     stand-in server through the cache."""
 
@@ -639,6 +640,22 @@ class CachedCalls(unittest.TestCase):
             self.ask()
         self.assertIsInstance(cm.exception, llm_cache.CacheCorruptionError)
         self.assertEqual(self.handler.chats, 1)
+
+    def test_a_stand_in_answers_a_replay_of_exactly_its_call(self) -> None:
+        """`llm_cache.store_stand_in` and `Origin.stand_in`: the stand-in is
+        stored under the key the real call gets, marked, the directory kept
+        out of git; a replay of another prompt misses, never hits."""
+        path = llm_cache.store_stand_in(self.root, "o", "q", "fixed", temperature=0)
+        self.assertTrue(path.is_file())
+        self.assertEqual((self.root / ".gitignore").read_text(), "*\n")
+        replayed, hit = self.ask("q", replay=True)
+        self.assertEqual(hit.response.text, "fixed")
+        assert hit.origin is not None
+        self.assertEqual(hit.origin, llm_cache.Origin(None, hit.origin.written, True))
+        self.assertTrue(self.record(replayed)[1][0]["origin"]["stand_in"])
+        with self.assertRaises(llm_cache.CacheMiss):
+            self.ask("q ", replay=True)
+        self.assertEqual(self.handler.chats, 0)
 
     def test_complete_fails_as_llm_complete_does(self) -> None:
         self.handler.status = 404

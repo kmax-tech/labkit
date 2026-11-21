@@ -229,17 +229,21 @@ LLM_CALLS_FILE = "llm-calls.jsonl"
 class ModelCall:
     """One line of a run's `llm-calls.jsonl` as `read_model_calls` returns
     it: the ALIAS the run called, HIT whether the answer came from the
-    cache, ORIGIN_RUN the run that stored a hit's answer, and the USAGE by
-    field (for a hit the original call's; `llm_backends.Usage` names the
-    fields).
+    cache, ORIGIN_RUN the run that stored a hit's answer, STAND_IN whether
+    a hit's answer is a stand-in (`llm_cache.store_stand_in`), and the
+    USAGE by field (for a hit the original call's; `llm_backends.Usage`
+    names the fields).
 
-    ORIGIN_RUN None means two things, told apart only by HIT: with HIT, an
-    answer stored outside any run (a stand-in or a hand-written entry);
-    without, a call that asked the model."""
+    ORIGIN_RUN None means three things: without HIT, a call that asked the
+    model; with HIT and STAND_IN, a stand-in, a fixed answer that is no
+    model's; with HIT alone, an answer stored outside any run and not
+    marked as a stand-in (a hand-written entry, or a stand-in stored before
+    0.115.0)."""
 
     alias: str
     hit: bool
     origin_run: str | None
+    stand_in: bool
     usage: dict[str, int | float | None]
 
 
@@ -279,7 +283,11 @@ def _parse_model_call(raw: str, where: str) -> ModelCall:
     if not isinstance(hit, bool):
         raise ValueError(f"{where}: `hit` is not true or false")
     return ModelCall(
-        alias, hit, _origin_run(hit, origin, where), _usage_counts(usage, where)
+        alias,
+        hit,
+        _origin_run(hit, origin, where),
+        _stand_in(hit, origin, where),
+        _usage_counts(usage, where),
     )
 
 
@@ -300,6 +308,23 @@ def _origin_run(hit: bool, origin: object, where: str) -> str | None:
     if stored_by is not None and not isinstance(stored_by, str):
         raise ValueError(f"{where}: `origin.run` is not a run id or null")
     return stored_by
+
+
+def _stand_in(hit: bool, origin: object, where: str) -> bool:
+    """Whether a hit's answer is a stand-in: its origin's `stand_in`, which
+    a line written before 0.115.0 lacks (not a stand-in). A stand-in has no
+    run (`origin.run` null); one naming a run, or a `stand_in` that is not
+    true or false, raises ValueError naming WHERE. False for a call that
+    asked the model. Call after `_origin_run`, which checks the shape."""
+    if not hit:
+        return False
+    fields = cast(JsonObject, origin)
+    stand_in: object = fields.get("stand_in", False)
+    if not isinstance(stand_in, bool):
+        raise ValueError(f"{where}: `origin.stand_in` is not true or false")
+    if stand_in and fields["run"] is not None:
+        raise ValueError(f"{where}: `origin` of a stand-in names a run")
+    return stand_in
 
 
 def _usage_counts(usage: object, where: str) -> dict[str, int | float | None]:

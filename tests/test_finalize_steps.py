@@ -311,6 +311,31 @@ class ModelProvenanceFindings(unittest.TestCase):
                 run_record_check.model_provenance_findings(Path(d), run), []
             )
 
+    def test_marked_stand_ins_are_named_beside_a_record_that_names_the_alias(self):
+        # what `llm_cache.store_stand_in` leaves in the call log: the
+        # station passes the record and still says the answers are no model's
+        marked = {
+            **self._stand_in_hit(),
+            "origin": {**self._stand_in_hit()["origin"], "stand_in": True},
+        }
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(
+                d,
+                {"unique_rank_share": 0.6},
+                {"standin": {"backend": "openai"}},
+                [marked, marked],
+            )
+            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            self.assertEqual((gap.grade, gap.evidence_kind), (WARNING, GUARANTEED))
+            self.assertIn("read stand-in answers (2 of alias `standin`)", gap.text)
+            # without the alias in the record: the blocker first, the warning after
+            other = self._run(
+                tempfile.mkdtemp(dir=d), {"unique_rank_share": 0.6}, {}, [marked]
+            )
+            blocked, named = run_record_check.model_provenance_findings(Path(d), other)
+            self.assertEqual((blocked.grade, named.grade), (BLOCKER, WARNING))
+            self.assertIn("(1 stand-in)", blocked.text)
+
     def test_a_run_without_its_config_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"n_rows": 4}, {}, [self._stand_in_hit()])

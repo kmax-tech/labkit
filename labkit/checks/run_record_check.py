@@ -5,7 +5,8 @@ The code that produced the number unchanged since the run
 count (`criterion_n_input_mismatches`), each source's bytes equal to the
 sha256 the run recorded, and the source tracked in git or ignored by a
 rule (`provenance_findings`), a model that answered named in
-the record (`call_log_model_findings`, `model_provenance_findings`), a single draw where a model was
+the record (`call_log_model_findings`, `model_provenance_findings`), answers
+that are stand-ins, not a model's, named (`stand_in_findings`), a single draw where a model was
 asked (`single_draw`), every JSONL row held to the runs that wrote it
 (`row_provenance_findings`), every arm the protocol names present
 (`arm_findings`), a null lane that moved in the kept rows
@@ -1112,17 +1113,35 @@ def _fresh_run_fix(alias: str, parent: str | None) -> str:
     )
 
 
-def _own_record_unbacked(run: str, alias: str, lines: list[ModelCall]) -> GateFinding:
-    """RUN's asked calls and answers stored outside any run of ALIAS that
-    its own models_resolved does not name (`call_log_model_findings`)."""
+def _kinds_of_lines(lines: list[ModelCall]) -> str:
+    """How many of LINES — calls without a storing run — asked the model,
+    are stand-ins, and are other answers stored outside any run:
+    `1 asked the model, 2 stand-ins`."""
     asked = sum(not c.hit for c in lines)
+    stand_ins = sum(c.hit and c.stand_in for c in lines)
+    other = len(lines) - asked - stand_ins
     parts = [f"{asked} asked the model"] if asked else []
-    if len(lines) - asked:
-        parts.append(f"{len(lines) - asked} stored outside any run")
+    if stand_ins:
+        parts.append(f"{stand_ins} stand-in{'s' if stand_ins != 1 else ''}")
+    if other:
+        parts.append(f"{other} stored outside any run")
+    return ", ".join(parts)
+
+
+def _stand_ins_among(stored: list[ModelCall]) -> str:
+    """` (2 stand-ins)` for the stand-ins among STORED, "" for none."""
+    n = sum(c.stand_in for c in stored)
+    return f" ({n} stand-in{'s' if n != 1 else ''})" if n else ""
+
+
+def _own_record_unbacked(run: str, alias: str, lines: list[ModelCall]) -> GateFinding:
+    """RUN's asked calls, stand-ins and other answers stored outside any
+    run of ALIAS that its own models_resolved does not name
+    (`call_log_model_findings`)."""
     return blocker(
         f"{run}'s call log holds {_answers(len(lines))} of alias `{alias}` "
-        f"({', '.join(parts)}), but its models_resolved does not name `{alias}` — "
-        f"no record says which model gave {'it' if len(lines) == 1 else 'them'}",
+        f"({_kinds_of_lines(lines)}), but its models_resolved does not name "
+        f"`{alias}` — no record says which model the alias stood for",
         fix=_name_alias_fix(alias),
         rule=LAB_027,
     )
@@ -1132,9 +1151,10 @@ def _derived_run_calls(
     run: str, alias: str, parent: str, lines: list[ModelCall]
 ) -> list[GateFinding]:
     """A derived RUN's calls of ALIAS that asked the model, and its answers
-    stored outside any run: a blocker each (`call_log_model_findings`)."""
+    stored outside any run (stand-ins among them): a blocker each
+    (`call_log_model_findings`)."""
     asked = sum(not c.hit for c in lines)
-    stand_ins = len(lines) - asked
+    stored = [c for c in lines if c.hit]
     head = f"{run} is a derived run (derived_from {parent}), and {DERIVED_RUN_CONTRACT}"
     out = []
     if asked:
@@ -1146,11 +1166,12 @@ def _derived_run_calls(
                 rule=LAB_027,
             )
         )
-    if stand_ins:
+    if stored:
         out.append(
             blocker(
-                f"{head} — yet its call log holds {_answers(stand_ins)} of alias "
-                f"`{alias}` stored outside any run, which no record names a model for",
+                f"{head} — yet its call log holds {_answers(len(stored))} of alias "
+                f"`{alias}` stored outside any run{_stand_ins_among(stored)}, "
+                f"which no record names a model for",
                 fix=_fresh_run_fix(alias, parent),
                 rule=LAB_027,
             )
@@ -1218,6 +1239,34 @@ def storing_runs_of(area: Path, calls: Sequence[ModelCall]) -> dict[str, Storing
     return out
 
 
+def stand_in_findings(run: str, calls: Sequence[ModelCall]) -> list[GateFinding]:
+    """A warning when RUN's call log (CALLS, `runs.read_model_calls`) holds
+    stand-ins — fixed answers stored with `llm_cache.store_stand_in`, not
+    answers of a model: the run's numbers show what its processing does
+    with those answers, not what a model answers (LAB-027 Model
+    discipline). Guaranteed: the mark is in labkit's own call log. One
+    warning naming each alias and its count; [] without stand-ins. Sees
+    only marked stand-ins: an entry written by hand without the mark reads
+    as an answer stored outside any run (`call_log_model_findings`)."""
+    counts: dict[str, int] = {}
+    for call in calls:
+        if call.hit and call.stand_in:
+            counts[call.alias] = counts.get(call.alias, 0) + 1
+    if not counts:
+        return []
+    named = ", ".join(f"{n} of alias `{a}`" for a, n in sorted(counts.items()))
+    return [
+        GateFinding(
+            WARNING,
+            f"{run} read stand-in answers ({named}): fixed answers stored with "
+            f"`llm_cache.store_stand_in`, not answers of a model — its numbers "
+            f"show what the processing does with them, not what a model answers",
+            rule=LAB_027,
+            evidence_kind=GUARANTEED,
+        )
+    ]
+
+
 def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFinding]:
     """Where the run's model record and its calls disagree, each a finding;
     [] when they agree or nothing is owed. Read in this order:
@@ -1234,7 +1283,9 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
          recorded `models_resolved` — a warning (LAB-027 Model discipline):
          the alias was not under `model`/`*_model`, the keys runlog
          resolves (one recorded as `judge` is not resolved). A lineage that
-         does not read is the technical contract, a warning too.
+         does not read is the technical contract, a warning too;
+      3. stand-ins in the call log, a warning after those of 1 or 2
+         (`stand_in_findings`).
     Its limit: only what the call log and the metrics hold is compared; a
     run that called a model past labkit's cache and writes neither metrics
     key is not seen."""
@@ -1275,8 +1326,16 @@ def model_provenance_findings(area: Path, answering_run: Path) -> list[GateFindi
         derived_from=cfg.derived_from,
         storing_runs=storing_runs_of(area, calls),
     )
+    stand_ins = stand_in_findings(answering_run.name, calls)
     if gaps:
-        return gaps
+        return gaps + stand_ins
+    return _metrics_model_findings(answering_run) + stand_ins
+
+
+def _metrics_model_findings(answering_run: Path) -> list[GateFinding]:
+    """Step 2 of `model_provenance_findings`: a warning when the metrics
+    show model calls (`called_a_model`) and no run in the lineage recorded
+    models_resolved, or when the lineage does not read; [] otherwise."""
     if not called_a_model(answering_run):
         return []
     try:

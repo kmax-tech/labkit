@@ -39,6 +39,12 @@ Not cacheable: an ollama model whose weights digest is unknown
 name no weights. Such a call goes to the model in normal and repeat mode
 and says why on stderr; a replay refuses it.
 
+Stand-in answers: `store_stand_in` writes a fixed answer, not a model's,
+under the key a call with the same arguments gets — for a trial without a
+model, replayed through `Cache`. Its entry says `stand_in: true`, a hit on
+it says so in the call log, and finalize names a run that read one
+(`run_record_check.stand_in_findings`).
+
 Where: `<lab root>/cache/llm/` unless given (the lab root holds
 `models.toml`), one file per key, `<key[:2]>/<key>.json`, written once — the
 first answer under a key is the one every later read gets
@@ -47,7 +53,8 @@ answers live beside the experiment, not in git.
 
 The run record: `llm-cache.json` (cache version, mode, directory), written
 when the run opens the cache, and `llm-calls.jsonl`, one line per call —
-key, alias, `hit`, for a hit its origin (the run that stored it, and when),
+key, alias, `hit`, for a hit its origin (the run that stored it, and when,
+and whether it is a stand-in),
 the usage (of the original call for a hit), and why a call was not cached.
 `runs.read_model_calls` reads it back; `fresh_usage` sums the calls that asked the
 model: a hit adds no cost.
@@ -74,7 +81,7 @@ from labkit.formats.runs import (
     read_model_calls,
 )
 from labkit.run import llm
-from labkit.run.llm_backends import Response, Usage
+from labkit.run.llm_backends import NO_USAGE, Response, Usage
 from labkit.run.llm_specs import ClaudeCliSpec, OllamaSpec, OpenAISpec
 from labkit.run.runlog import Run
 
@@ -103,10 +110,12 @@ class CacheCorruptionError(ValueError):
 @dataclass(frozen=True)
 class Origin:
     """Where a cached answer came from: the run that stored it (None when
-    it was stored outside a run) and when."""
+    it was stored outside a run), when, and whether it is a stand-in — a
+    fixed answer `store_stand_in` wrote, not a model's (its run is None)."""
 
     run: str | None
     written: str
+    stand_in: bool = False
 
 
 @dataclass(frozen=True)
@@ -172,6 +181,33 @@ def cache_key(inputs: JsonObject) -> str:
     return digest(canonical.encode("utf-8"), chars=None)
 
 
+def entry_path(root: Path, key: str) -> Path:
+    """Where the entry under KEY lies in the cache directory ROOT:
+    `<key[:2]>/<key>.json`."""
+    return root / key[:2] / f"{key}.json"
+
+
+def _require_declared() -> None:
+    """Ends with SystemExit and the sentence when the lab has not declared
+    the cache (`llm.cache_declared`) — before anything is written."""
+    if not llm.cache_declared():
+        raise SystemExit(
+            "llm_cache: the lab has not declared a cache — a cached answer "
+            "repeats instead of measuring; set [llm_cache] enabled = true in "
+            "models.toml to allow it (LAB-069 No LLM cache unless the lab "
+            "declares one)"
+        )
+
+
+def _make_root(root: Path) -> None:
+    """Create the cache directory ROOT with its `.gitignore` of `*`, so its
+    entries stay out of git, unless they are there."""
+    root.mkdir(parents=True, exist_ok=True)
+    ignore = root / ".gitignore"
+    if not ignore.exists():
+        write_atomic(ignore, "*\n")
+
+
 def default_root(start: Path) -> Path:
     """`cache/llm/` under the lab root of START (the directory holding
     `models.toml`). Raises FileNotFoundError when no lab root is above."""
@@ -200,13 +236,7 @@ class Cache:
     def __init__(
         self, run: Run, *, replay: bool = False, root: Path | None = None
     ) -> None:
-        if not llm.cache_declared():
-            raise SystemExit(
-                "llm_cache: the lab has not declared a cache — a cached answer "
-                "repeats instead of measuring; set [llm_cache] enabled = true in "
-                "models.toml to allow it (LAB-069 No LLM cache unless the lab "
-                "declares one)"
-            )
+        _require_declared()
         if run.draw is not None and replay:
             raise ValueError(
                 f"run {run.run_id} repeats another run: a repeat asks the model "
@@ -234,10 +264,7 @@ class Cache:
                 )
         else:
             write_atomic(path, json.dumps(record, ensure_ascii=False, indent=2))
-        self.root.mkdir(parents=True, exist_ok=True)
-        ignore = self.root / ".gitignore"
-        if not ignore.exists():
-            write_atomic(ignore, "*\n")
+        _make_root(self.root)
 
     def complete(
         self,
@@ -272,7 +299,7 @@ class Cache:
             stop=stop,
         )
         key = cache_key(inputs)
-        path = self.root / key[:2] / f"{key}.json"
+        path = entry_path(self.root, key)
         if why_not is None and self.mode != "repeat":
             stored = read_entry(path, key)
             if stored is not None:
@@ -296,7 +323,9 @@ class Cache:
         )
         if why_not is None and self.mode == "normal":
             path.parent.mkdir(parents=True, exist_ok=True)
-            write_once(path, entry_text(key, inputs, response, self.run_id))
+            write_once(
+                path, entry_text(key, inputs, response, self.run_id, stand_in=False)
+            )
         answer = Answer(response, None)
         self._log(key, alias, answer, why_not)
         return answer
@@ -312,7 +341,11 @@ class Cache:
             "hit": origin is not None,
             "origin": None
             if origin is None
-            else {"run": origin.run, "written": origin.written},
+            else {
+                "run": origin.run,
+                "written": origin.written,
+                "stand_in": origin.stand_in,
+            },
             "usage": answer.response.usage._asdict(),
             "uncached": uncached,
         }
@@ -320,11 +353,106 @@ class Cache:
             fh.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
+def store_stand_in(
+    root: Path,
+    alias: str,
+    prompt: str,
+    answer: str,
+    *,
+    system: str | None = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    raw: bool = False,
+    stop: list[str] | None = None,
+) -> Path:
+    """Store ANSWER as a stand-in for what ALIAS would answer to PROMPT, in
+    the cache directory ROOT (`default_root` of the lab), so that a replay
+    (`Cache(run, replay=True)`) answers that call from it — a trial of a
+    pipeline without a model. Returns the entry's path.
+
+    The key comes from `key_inputs` and `cache_key`, the functions
+    `Cache.complete` builds its key with, given the same arguments with
+    the same defaults; no second construction of the key exists. The
+    arguments are the call as the caller declares it will be made. Where
+    the real call sends anything else — another prompt, one more line
+    ending, another temperature, a system prompt — its key differs, and
+    the replay raises `CacheMiss`: a mismatch is a miss, never a silent hit.
+
+    The entry is marked as a stand-in (`stand_in: true`, no run): it holds
+    no model's answer, so its response has no finish reason, no usage, no
+    endpoint and no reply body. A hit on it carries `Origin.stand_in`, and
+    the run's call log says so; finalize names a run that read stand-ins
+    (`run_record_check.stand_in_findings`).
+
+    Side effects: creates ROOT with its `.gitignore` of `*`, as `Cache`
+    does, and writes the entry once (`files.write_once`). A stand-in with
+    the same answer already under the key is left as it is.
+
+    Raises:
+        SystemExit: The lab has not declared the cache (`llm.cache_declared`),
+            before anything is written; a replay would refuse to open.
+        ValueError: ALIAS cannot be cached (`uncacheable`), or another
+            entry stands under the key — a model's answer, or a stand-in
+            with another answer; the cache keeps the first answer under a
+            key, so that entry must be moved aside first.
+        CacheCorruptionError: The entry under the key is not one.
+    """
+    _require_declared()
+    why_not = uncacheable(alias)
+    if why_not is not None:
+        raise ValueError(f"{why_not}; a replay could not answer from a stand-in")
+    inputs = key_inputs(
+        alias,
+        prompt,
+        system=system,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        raw=raw,
+        stop=stop,
+    )
+    key = cache_key(inputs)
+    root = root.resolve()
+    _make_root(root)
+    path = entry_path(root, key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    response = Response(
+        text=answer,
+        thinking="",
+        finish_reason=None,
+        usage=NO_USAGE,
+        endpoint="",
+        body=None,
+    )
+    if write_once(path, entry_text(key, inputs, response, None, stand_in=True)):
+        return path
+    stored = read_entry(path, key)
+    assert stored is not None and stored.origin is not None, "write_once found a file"
+    if stored.origin.stand_in and stored.response.text == answer:
+        return path
+    held = (
+        "a stand-in with another answer"
+        if stored.origin.stand_in
+        else f"a model's answer stored by run {stored.origin.run}"
+        if stored.origin.run is not None
+        else "an answer stored outside any run, not marked as a stand-in"
+    )
+    raise ValueError(
+        f"{path}: {held} stands under this key — the cache keeps the first "
+        f"answer under a key; move that file aside to store this stand-in"
+    )
+
+
 def entry_text(
-    key: str, inputs: JsonObject, response: Response, run: str | None
+    key: str,
+    inputs: JsonObject,
+    response: Response,
+    run: str | None,
+    *,
+    stand_in: bool,
 ) -> str:
     """The stored entry of one answer: version, key, the key's inputs, the
-    raw response, and the run that stored it, with the time."""
+    raw response, the run that stored it, with the time, and whether it is
+    a stand-in (`store_stand_in`) rather than a model's answer."""
     return json.dumps(
         {
             "cache_version": CACHE_VERSION,
@@ -340,6 +468,7 @@ def entry_text(
             },
             "run": run,
             "written": now_stamp(),
+            "stand_in": stand_in,
         },
         ensure_ascii=False,
         indent=2,
@@ -348,8 +477,10 @@ def entry_text(
 
 def read_entry(path: Path, key: str) -> Answer | None:
     """The answer stored at PATH under KEY as a hit, None when PATH does
-    not exist. Raises CacheCorruptionError naming the file for anything
-    else than an entry of `CACHE_VERSION` under KEY."""
+    not exist. An entry without `stand_in` (written before 0.115.0) is not
+    a stand-in. Raises CacheCorruptionError naming the file for anything
+    else than an entry of `CACHE_VERSION` under KEY, and for a stand-in
+    that names a run."""
     if not path.exists():
         return None
     try:
@@ -367,7 +498,12 @@ def read_entry(path: Path, key: str) -> Answer | None:
             endpoint=stored["endpoint"],
             body=stored["body"],
         )
-        return Answer(response, Origin(entry["run"], entry["written"]))
+        stand_in = entry.get("stand_in", False)
+        if not isinstance(stand_in, bool):
+            raise ValueError("`stand_in` is not true or false")
+        if stand_in and entry["run"] is not None:
+            raise ValueError(f"a stand-in names run {entry['run']}")
+        return Answer(response, Origin(entry["run"], entry["written"], stand_in))
     except (ValueError, KeyError, TypeError) as exc:
         raise CacheCorruptionError(
             f"{path}: not a cache entry of version {CACHE_VERSION} under its key "
