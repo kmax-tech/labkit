@@ -23,6 +23,7 @@ from labkit.formats.area_state import last_committed
 from labkit.formats.repo import (
     PROTOCOL_FILE,
     SKIP_DIRS,
+    is_protocol_name,
     protocol_file_name,
     GitError,
     blob_text,
@@ -52,8 +53,8 @@ def bound_protocol_file(area: Path, pid: str, recorded: str | None) -> Path:
 
 def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     """Where the protocol carrying id PID stood in COMMIT of the repository
-    ROOT — the `PROTOCOL-*.md` whose head names PID —, or None when no file
-    there does. The id is the binding and survives a rename or a move
+    ROOT — the `PROTOCOL-*.md` outside SKIP_DIRS whose head names PID —,
+    or None when no file there does. The id is the binding and survives a rename or a move
     (docs/protocol-run-binding.md); the head is read as TOML only, since an
     older commit holds an older standard `protocol_block.head` refuses.
     Raises GitError when git cannot run."""
@@ -61,9 +62,15 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     if listed.returncode != 0:
         raise GitError(f"git ls-tree {commit[:12]} in {root}: {listed.stderr.strip()}")
     names = [n for n in listed.stdout.split("\0") if n]
-    # any file whose name opens with `PROTOCOL-` is read for the id, as it
-    # always was; home: wider than repo.is_protocol_name on purpose
-    for rel in sorted(n for n in names if Path(n).name.startswith("PROTOCOL-")):
+    # the files a repo-wide scan reads (`repo.repo_protocols`): a copy such
+    # as PROTOCOL-a.txt or one under runs/ with the same id would sort
+    # first and be read as the protocol
+    candidates = (
+        n
+        for n in names
+        if is_protocol_name(Path(n).name) and not SKIP_DIRS & set(Path(n).parts[:-1])
+    )
+    for rel in sorted(candidates):
         text = text_at(root, root / rel, commit)
         if text is not None and _id_then(text) == pid:
             return root / rel
