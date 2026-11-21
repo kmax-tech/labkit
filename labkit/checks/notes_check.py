@@ -32,8 +32,9 @@ Every finding is a warning: a note convention no number depends on
 Usage:
     notes-check <repo-root | notes-dir | note.md> ...
 
-Directories are searched for notes/messung/*.md (a path already ending in
-messung/ is taken as the notes dir itself; 00-*.md index files are skipped).
+Directories are searched for notes/messung/*.md, one level (a path already
+ending in notes/messung/ is taken as the notes dir itself; 00-*.md index
+files are skipped; `is_measurement_note`). A file given is checked as named.
 Exit 0 with or without warnings; 2 when no note is found. Patterns follow
 the protocol-check contract doctrine: extend, never move.
 """
@@ -124,16 +125,29 @@ def unresolved_scripts(text: str, root: Path | None) -> list[str]:
     return missing
 
 
+def is_measurement_note(path: Path) -> bool:
+    """Whether PATH is a measurement note: a `.md` file directly in a
+    `notes/messung/` directory, not an `00-*` index. One level only — a
+    file in a subdirectory of `notes/messung/` is not one, nor a file in a
+    `messung/` directory outside `notes/`. The one answer for
+    `collect_notes` and the post-change hook (`hook_post_change.wants_check`)."""
+    return (
+        path.suffix == ".md"
+        and not path.name.startswith("00-")
+        and path.parent.name == "messung"
+        and path.parent.parent.name == "notes"
+    )
+
+
 def collect_notes(paths: list[str]) -> list[Path]:
-    """The measurement notes the arguments name: notes under `notes/messung/`
-    of a repo or directory, or the files given."""
+    """The measurement notes the arguments name: for a directory, the files
+    `is_measurement_note` accepts in its `notes/messung/` (or in itself,
+    when it is that directory); a file given is taken as named."""
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
             base = p if p.name == "messung" else p / "notes" / "messung"
-            files.extend(
-                f for f in sorted(base.glob("*.md")) if not f.name.startswith("00-")
-            )
+            files.extend(f for f in sorted(base.glob("*.md")) if is_measurement_note(f))
         else:
             files.append(p)
     return files

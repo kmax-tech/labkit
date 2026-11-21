@@ -236,6 +236,9 @@ RULES: list[tuple[str, str, set[str]]] = [
     # `jsonl.objects` / `data_rows`, `batch` keeps the torn-last-line loop
     # that is its own
     ("a JSONL line parsed by hand", r"json\.loads\(line\)", {"jsonl", "batch"}),
+    # which file is a measurement note has one answer for `notes-check` and
+    # the post-change hook; `notes_check.is_measurement_note`
+    ("a measurement note told by hand", r"[\"']messung[\"']", {"notes_check"}),
     # `scope_sha.area_files` is where an area's code is
     (
         "an area's code globbed by hand",
@@ -702,6 +705,7 @@ class OneHome(unittest.TestCase):
             "a run kind compared as a word": 'and cfg.run_kind == "preparation"',
             "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
+            "a measurement note told by hand": 'if p.parent.name == "messung":',
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
             "a section heading found by hand": 'if line.startswith("## "):',
             "a refusal or progress line printed by hand": 'print(f"labkit-audit: {exc}", file=sys.stderr)',

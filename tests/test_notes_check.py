@@ -215,5 +215,40 @@ class TestMain(unittest.TestCase):
             self.assertEqual(rc, 0)
 
 
+class WhichFileIsANote(unittest.TestCase):
+    """`notes-check <dir>` and the post-change hook take the same files as
+    measurement notes (`notes_check.is_measurement_note`): a note directly
+    in `notes/messung/`, not one nested below it, not one in a `messung/`
+    directory outside `notes/`."""
+
+    def test_the_checker_and_the_hook_agree(self):
+        import tempfile
+
+        from labkit.gates import hook_post_change
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            note = root / "notes" / "messung" / "a.md"
+            nested = root / "notes" / "messung" / "sub" / "x.md"
+            outside = root / "other" / "messung" / "y.md"
+            index = root / "notes" / "messung" / "00-index.md"
+            for f in (note, nested, outside, index):
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(STAMPED_DRAFT, encoding="utf-8")
+            collected = set(
+                notes_check.collect_notes([d, str(root / "notes" / "messung")])
+                + notes_check.collect_notes([str(outside.parent)])
+            )
+            for f, is_note in (
+                (note, True),
+                (nested, False),
+                (outside, False),
+                (index, False),
+            ):
+                with self.subTest(f.relative_to(root).as_posix()):
+                    self.assertEqual(f in collected, is_note)
+                    self.assertEqual(hook_post_change.wants_check(f) == "note", is_note)
+
+
 if __name__ == "__main__":
     unittest.main()

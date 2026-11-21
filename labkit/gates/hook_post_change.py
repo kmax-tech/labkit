@@ -5,8 +5,8 @@ that discusses a run, and what an area's evidence lost (`post_change`).
 
 Every file the repo now reports as changed (git status, untracked
 included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
-notes/messung/*.md (not 00-*), is checked with protocol-check or
-notes-check. A changed Markdown report that discusses a run (a
+notes/messung/*.md (one level, not 00-*; `notes_check.is_measurement_note`),
+is checked with protocol-check or notes-check. A changed Markdown report that discusses a run (a
 discussion block, `report_blocks.discussions`) gets the report review it owes
 while no review of this state names no claim
 (`report_hold.report_review_owed`, the gate's own finding) — a hint;
@@ -340,13 +340,7 @@ def wants_check(path: Path) -> str | None:
     """Which checker a path belongs to: 'protocol', 'note' or None."""
     if is_protocol_name(path.name):
         return "protocol"
-    parts = path.as_posix().split("/")
-    # any `notes/messung/` pair on the way, not the first `notes`: a repo
-    # under an ancestor directory named notes would go unchecked
-    under_messung = any(
-        a == "notes" and b == "messung" for a, b in zip(parts, parts[1:])
-    )
-    if under_messung and path.suffix == ".md" and not path.name.startswith("00-"):
+    if notes_check.is_measurement_note(path):
         return "note"
     return None
 
