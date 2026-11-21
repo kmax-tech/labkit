@@ -594,9 +594,10 @@ def scope_stamp_line(area: Path) -> str:
     """Station 5: the audit stamp of the area's input scope
     (`scope_sha.area_stamp`), that there is nothing to stamp, or why it
     cannot stamp (a promise block that does not read, a scope file a
-    promise declares that is missing or a file the stamp covers that does
-    not read, git failing on the exploration a protocol names) — told,
-    never counted; station 4 blocks a missing declared scope file."""
+    promise declares that is missing, a registered output of a linked
+    exploration's runs that does not read, git failing on that
+    exploration) — told, never counted; station 4 blocks a missing
+    declared scope file."""
     try:
         sha, _, _ = area_stamp(area)
     # a PromiseError is a ValueError too, but not "nothing to stamp"

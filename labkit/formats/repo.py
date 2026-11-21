@@ -228,9 +228,11 @@ def areas_named(experiments: Path, name: str) -> list[Path]:
 
 
 #: the one name shape of a protocol file, as a glob, as a pattern for a
-#: file name inside a longer path pattern, and as a whole-name pattern
+#: file name inside a longer path pattern, and compiled, unanchored — a
+#: whole name is tested with `.fullmatch` (`is_protocol_name`); `[^/]*`
+#: as the glob's `*`, so `PROTOCOL-.md` is one on every route
 PROTOCOL_GLOB = "PROTOCOL-*.md"
-PROTOCOL_FILE = r"PROTOCOL-[^/]*\.md"  # `*` as in the glob: PROTOCOL-.md is one
+PROTOCOL_FILE = r"PROTOCOL-[^/]*\.md"
 PROTOCOL_NAME = re.compile(PROTOCOL_FILE)
 
 
