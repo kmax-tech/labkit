@@ -320,7 +320,7 @@ def workflow(
     )
     if untold:
         return WorkflowRead(workflow_registered((), first_untold=True), untold, [])
-    firsts = [rd for group in measured.first_groups for rd in group]
+    firsts = measured.every_first
     seen, _ = protocol_history.first_texts(protocol, firsts, root)
     types = [type_of(text) for _, text in seen]
     return WorkflowRead(workflow_registered(types), [], seen)
@@ -362,7 +362,7 @@ def workflow_of_first_texts(
     undecided workflow holds the release and does not exchange the text of
     the run audited for another one's. Raises RuntimeError when git
     fails."""
-    firsts = [rd for group in measured.first_groups for rd in group]
+    firsts = measured.every_first
     seen, _ = protocol_history.first_texts(protocol, firsts, root)
     return workflow_registered([type_of(text) for _, text in seen])
 
@@ -535,7 +535,7 @@ def scope_changes(
     restore among its ways out — only a new registration or a handover
     (`split_hold`).
     Raises RuntimeError when git fails."""
-    firsts = [rd for group in measured.first_groups for rd in group]
+    firsts = list(measured.every_first)
     others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
     if root is not None:
         needed = [*firsts, *([read_run_dir(run)] if others else [])]
@@ -1305,11 +1305,7 @@ def scope_now(
     compared with instead of the first measurements (an exploration's
     answering run, `exploration_hold.live_holds`). None without a
     difference. Raises RuntimeError when git fails."""
-    firsts = (
-        [rd for group in measured.first_groups for rd in group]
-        if against is None
-        else list(against)
-    )
+    firsts = measured.every_first if against is None else list(against)
     text = state.text_of(protocol)
     found = protocol_history.first_measured_differences(
         protocol, firsts, text, root, protocol_history.scope_differences

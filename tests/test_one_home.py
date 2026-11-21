@@ -363,6 +363,12 @@ RULES: list[tuple[str, str, set[str]]] = [
     # `find_models_toml`, a "not TOML" ValueError)
     ("the model file named by hand", r"\"models\.toml\"", {"repo"}),
     ("models.toml read by hand", r"= find_models_toml\(\)", set()),
+    # every first measurement, flattened, is `area_state.Measured.every_first`
+    (
+        "the first measurements flattened by hand",
+        r"for \w+ in [\w.]+\.first_groups for ",
+        {"area_state"},
+    ),
     # a path relative to the repository root, as git names it, is
     # `repo.rel_posix`: it resolves the root and says where a path outside
     # it lies. The shape tells a repository from an area by the name of the
@@ -702,6 +708,7 @@ class OneHome(unittest.TestCase):
             "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
             "the model file named by hand": 'if (d / "models.toml").is_file():',
             "models.toml read by hand": "    path = find_models_toml()",
+            "the first measurements flattened by hand": "firsts = [rd for group in measured.first_groups for rd in group]",
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
             "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
         }

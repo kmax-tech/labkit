@@ -150,7 +150,7 @@ def linked_exploration(
     except ValueError as exc:
         return NotLinked(str(exc), TECHNICAL_RULE)
     measured = state.measured_of(link.protocol)
-    firsts = [rd for group in measured.first_groups for rd in group]
+    firsts = measured.every_first
     if not firsts:
         return NotLinked(f"{protocol.name} has measured nothing yet", LAB_003)
     seen, unread = protocol_history.first_texts(protocol, firsts, git_root(area))

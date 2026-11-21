@@ -249,6 +249,14 @@ class Measured:
         return self.started_as.get(rd.dir.name, MEASUREMENT) == MEASUREMENT
 
     @property
+    def every_first(self) -> tuple[RunDir, ...]:
+        """Every run at each first position, FIRST_GROUPS flattened in
+        their order — what the texts of the first measurements are read
+        from; `firsts` keeps one run per position. () when PID has no
+        measurement whose record reads."""
+        return tuple(rd for group in self.first_groups for rd in group)
+
+    @property
     def firsts(self) -> tuple[RunDir, ...]:
         """One run per first position — the first by name of each group —
         sorted by name; () when PID has no measurement whose record reads."""

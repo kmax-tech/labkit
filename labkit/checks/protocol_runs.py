@@ -516,7 +516,7 @@ def protocol_piece(
     base_step = step_then(protocol, base, root)
     base_code = code_then(base, root) if root is not None else None
     scope = code_scope(area, root) if root is not None else []
-    firsts = {rd.dir.name for group in measured.first_groups for rd in group}
+    firsts = {rd.dir.name for rd in measured.every_first}
     states = {f.dir.name: f.state for f in measured.run_facts}
     seen = [_seen(protocol, rd, root, states) for rd in measured.runs]
     lines = [

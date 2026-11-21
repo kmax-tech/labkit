@@ -216,7 +216,7 @@ def unstepped_holds(
     first with the way to declare it. A first measurement whose text or
     step cannot be read back holds that comparison (`unread_hold`).
     Raises RuntimeError when git fails."""
-    firsts = [rd for group in measured.first_groups for rd in group]
+    firsts = measured.every_first
     if any(rd.dir.name == origin.run_id for rd in firsts):
         return []
     registered: list[tuple[RunDir, str]] = []
