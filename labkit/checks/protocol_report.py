@@ -964,7 +964,7 @@ def _contract(named: list[str]) -> int:
 
 def main(argv: list[str]) -> int:
     """Command line of `protocol-check`: check protocols against the template and their own head."""
-    if argv and argv[0] in ("-h", "--help"):
+    if console.asks_help(argv):
         print((__doc__ or "").strip().splitlines()[0])
         print(
             "usage: protocol-check [--template PATH] [--staged] <PROTOCOL-*.md | dir> ..."

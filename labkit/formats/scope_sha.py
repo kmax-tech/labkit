@@ -881,7 +881,7 @@ def area_stamp(
 
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `scope-sha`: the stamp over an area's code, as a record's `scope_sha` names it."""
-    if argv and argv[0] in ("-h", "--help"):
+    if console.asks_help(argv):
         print((__doc__ or "").strip().splitlines()[0])
         print(
             "usage: scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]"

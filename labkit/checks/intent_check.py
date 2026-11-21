@@ -222,7 +222,7 @@ def _read(
 
 
 def _main(argv: list[str]) -> int:
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         lines = [
             (__doc__ or "").strip().splitlines()[0],
             "usage: intent-check <PROTOCOL-*.md> [--metrics FILE]",

@@ -730,7 +730,7 @@ def _not_checked(
 
 def main(argv: list[str]) -> int:
     """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
-    if not argv or argv[0] in ("-h", "--help"):
+    if not argv or console.asks_help(argv):
         lines = [
             (__doc__ or "").strip().splitlines()[0],
             "usage: code-check <AREA> [--protocol FILE] [--bundle FILE]",
