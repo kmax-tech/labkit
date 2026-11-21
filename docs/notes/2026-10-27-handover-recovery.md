@@ -65,7 +65,7 @@ upheld audit or provenance proof. Restoring evidence actually repairs the
 gap; a handover does not. Free prose is still not mechanically proven true.
 
 Same day, after the second audit
-([register](../audit-2026-10-27-handover.md), H3): the first form wrote a
+([register](audit-2026-10-27-handover.md), H3): the first form wrote a
 whole report and compared it byte for byte, and every printed command
 named the same `REPORT.md`. A second area handed over there, or a
 discussion block added later, voided the first acknowledgement, and the

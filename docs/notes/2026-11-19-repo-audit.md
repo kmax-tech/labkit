@@ -1,6 +1,6 @@
 # Repo audit: clarity, drift, doubled homes after the start files and the exploratory merge (a3951e92, 2026-11-19)
 
-The author's question: after many changes, is the code clear and maintainable, is the logic clear, is there drift, are there very long lines, and are there duplications in how fields, holds and gates get built in? This follows the [audit of 2026-11-18](../audit-2026-11-18.md) (9a9fb89e), whose ten points are all worked; nothing it lists as done or knowingly open is repeated here. Four readers: clarity of the start-file and lost-measurement code, clarity of the exploratory merge, prose against code, one home per logic. **V** marks a finding the main session opened at the lines named, **R** one that stands on the reader alone. Line numbers are those of a3951e92. The audit reports; nothing was changed.
+The author's question: after many changes, is the code clear and maintainable, is the logic clear, is there drift, are there very long lines, and are there duplications in how fields, holds and gates get built in? This follows the [audit of 2026-11-18](audit-2026-11-18.md) (9a9fb89e), whose ten points are all worked; nothing it lists as done or knowingly open is repeated here. Four readers: clarity of the start-file and lost-measurement code, clarity of the exploratory merge, prose against code, one home per logic. **V** marks a finding the main session opened at the lines named, **R** one that stands on the reader alone. Line numbers are those of a3951e92. The audit reports; nothing was changed.
 
 ## State audited
 

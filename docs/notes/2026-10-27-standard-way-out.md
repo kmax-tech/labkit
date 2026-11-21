@@ -8,7 +8,7 @@
 *2026-10-27, proposal, not decided. Sources: the round reports of areas
 09 rounds 6–9 (`docs/usability/`), the check-and-exit matrix
 (`2026-10-26-escape-routes-checks-and-exits.md`), the audit register
-(`docs/audit-2026-10-27.md`), `labkit/templates/AGENTS.md.template`.*
+(`docs/notes/audit-2026-10-27.md`), `labkit/templates/AGENTS.md.template`.*
 
 > Superseded in two points by the plan in `TODO.md` (2026-10-27,
 > "Konsolidierter Plan"): tripwires warn and never hold — a heuristic on

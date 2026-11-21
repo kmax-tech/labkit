@@ -89,7 +89,7 @@ outside contract: which names lab repos may use. Candidates: `llm.complete`,
 `docs/architecture.md`, a test that holds it, and a rule: a public name
 breaks only after a release in which the old name still works and warns;
 internals change freely. Reason: eleven releases with a Breaking section
-since 2026-10-12 ([audit](../audit-2026-10-23.md)), and every lab repo pays
+since 2026-10-12 ([audit](audit-2026-10-23.md)), and every lab repo pays
 for each.
 
 ### Part 2 — the response cache moves into labkit

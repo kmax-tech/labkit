@@ -1,7 +1,7 @@
 # Which measurement is first: git's history, not the clock
 
 *2026-10-27, decided (plan step 2.2, audit row A11). Sources: the audit
-register (`docs/audit-2026-10-27.md`, A11), the reproduction below, the
+register (`docs/notes/audit-2026-10-27.md`, A11), the reproduction below, the
 code as cited.*
 
 ## The fault

@@ -1,7 +1,7 @@
 # Repo audit 2026-10-23, follow-up
 
 Question: did the 28 commits that worked off the morning's register
-(`docs/audit-2026-10-23.md`, state `b4cd032`) leave errors or drift, and
+(`docs/notes/audit-2026-10-23.md`, state `b4cd032`) leave errors or drift, and
 what is still worth improving. State at the audit: `main` at `e5f0438`,
 tree clean, `.githooks/pre-commit` green (ruff, format, pyright, 1756
 tests and 6328 subtests, 77 s). Three readers (clarity, drift, homes) ran
