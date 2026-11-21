@@ -26,6 +26,7 @@ from llm_fixture import cli_reply, spec_of
 from models_fixture import serve
 
 from labkit.formats.files import write_once
+from labkit.formats import runs
 from labkit.formats.runs import LLM_CACHE_FILE, LLM_CALLS_FILE
 from labkit.run import llm, llm_backends, llm_cache, runlog
 
@@ -142,6 +143,40 @@ class Rules(CacheCase):
                     "root": str(self.root),
                 },
             )
+
+
+class CallLog(CacheCase):
+    """The reader of a run's `llm-calls.jsonl` (`runs.read_model_calls`): what the
+    cache wrote reads back, no file is no calls, a line that is not one
+    raises naming the file, the line and the field."""
+
+    def test_the_lines_the_cache_wrote_read_back(self) -> None:
+        first, _ = self.run_once()
+        replayed, _ = self.run_once(replay=True)
+        [asked] = runs.read_model_calls(first.dir)
+        self.assertEqual((asked.alias, asked.hit, asked.origin_run), ("o", False, None))
+        self.assertEqual(asked.usage["prompt_tokens"], 7)
+        [hit] = runs.read_model_calls(replayed.dir)
+        self.assertEqual((hit.hit, hit.origin_run), (True, first.run_id))
+
+    def test_a_run_without_a_call_log_made_no_call(self) -> None:
+        self.assertEqual(runs.read_model_calls(self.area), [])
+
+    def test_a_line_that_is_not_one_names_its_place(self) -> None:
+        path = self.area / LLM_CALLS_FILE
+        for bad, field in (
+            ("not json", "not JSON"),
+            ('{"alias": "o"}', "hit"),
+            ('{"alias": "o", "hit": "yes", "origin": null, "usage": {}}', "hit"),
+            ('{"alias": "o", "hit": true, "origin": null, "usage": {}}', "origin"),
+            ('{"alias": "o", "hit": false, "origin": null, "usage": 3}', "usage"),
+        ):
+            with self.subTest(bad):
+                path.write_text(bad + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(
+                    ValueError, f"{LLM_CALLS_FILE}:1: .*{field}"
+                ):
+                    runs.read_model_calls(self.area)
 
 
 class Declaration(CacheCase):

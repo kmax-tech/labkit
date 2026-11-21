@@ -225,6 +225,95 @@ LLM_CACHE_FILE = "llm-cache.json"
 LLM_CALLS_FILE = "llm-calls.jsonl"
 
 
+@dataclass(frozen=True)
+class ModelCall:
+    """One line of a run's `llm-calls.jsonl` as `read_model_calls` returns
+    it: the ALIAS the run called, HIT whether the answer came from the
+    cache, ORIGIN_RUN the run that stored a hit's answer, and the USAGE by
+    field (for a hit the original call's; `llm_backends.Usage` names the
+    fields).
+
+    ORIGIN_RUN None means two things, told apart only by HIT: with HIT, an
+    answer stored outside any run (a stand-in or a hand-written entry);
+    without, a call that asked the model."""
+
+    alias: str
+    hit: bool
+    origin_run: str | None
+    usage: dict[str, int | float | None]
+
+
+def read_model_calls(run_dir: Path) -> list[ModelCall]:
+    """The model calls RUN_DIR's `llm-calls.jsonl` records, in order — the
+    lines `llm_cache.Cache` writes; [] when the run has no such file (it
+    opened no cache, or called nothing through it).
+
+    Raises:
+        ValueError: A line that is not one the cache writes — not JSON, or
+            `alias`, `hit`, `origin` or `usage` missing or of another
+            type — naming the file, the line and the field.
+    """
+    path = run_dir / LLM_CALLS_FILE
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [_parse_model_call(raw, f"{path}:{n}") for n, raw in enumerate(lines, 1)]
+
+
+def _parse_model_call(raw: str, where: str) -> ModelCall:
+    """One call-log line read at WHERE (`read_model_calls`); raises
+    ValueError naming WHERE and the field that is not what the cache
+    writes."""
+    try:
+        parsed: object = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{where}: not JSON ({exc})") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{where}: not a JSON object")
+    line = cast(JsonObject, parsed)
+    alias, hit, origin, usage = (
+        line.get(k) for k in ("alias", "hit", "origin", "usage")
+    )
+    if not isinstance(alias, str):
+        raise ValueError(f"{where}: `alias` is not a string")
+    if not isinstance(hit, bool):
+        raise ValueError(f"{where}: `hit` is not true or false")
+    return ModelCall(
+        alias, hit, _origin_run(hit, origin, where), _usage_counts(usage, where)
+    )
+
+
+def _origin_run(hit: bool, origin: object, where: str) -> str | None:
+    """The run that stored a hit's answer, None when it was stored outside
+    any run or the call asked the model. A hit carries its origin (the run
+    may be null), a call that asked the model none — the shape the cache
+    writes; anything else raises ValueError naming WHERE."""
+    if not hit:
+        if origin is not None:
+            raise ValueError(
+                f"{where}: `origin` of a call that asked the model is not null"
+            )
+        return None
+    if not (isinstance(origin, dict) and "run" in origin):
+        raise ValueError(f"{where}: `origin` of a hit is not an object with `run`")
+    stored_by: object = cast(JsonObject, origin)["run"]
+    if stored_by is not None and not isinstance(stored_by, str):
+        raise ValueError(f"{where}: `origin.run` is not a run id or null")
+    return stored_by
+
+
+def _usage_counts(usage: object, where: str) -> dict[str, int | float | None]:
+    """A call-log line's `usage`: an object of counts or nulls, else
+    ValueError naming WHERE."""
+    if not isinstance(usage, dict):
+        raise ValueError(f"{where}: `usage` is not an object of counts or nulls")
+    counts = cast(dict[str, object], usage)
+    for value in counts.values():
+        if isinstance(value, bool) or not isinstance(value, (int, float, type(None))):
+            raise ValueError(f"{where}: `usage` is not an object of counts or nulls")
+    return cast(dict[str, int | float | None], counts)
+
+
 def runs_path(area: Path) -> Path:
     """AREA's `runs/` — every run directory lies directly in it."""
     return area / RUNS_DIR

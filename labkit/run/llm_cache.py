@@ -49,7 +49,8 @@ The run record: `llm-cache.json` (cache version, mode, directory), written
 when the run opens the cache, and `llm-calls.jsonl`, one line per call —
 key, alias, `hit`, for a hit its origin (the run that stored it, and when),
 the usage (of the original call for a hit), and why a call was not cached.
-`fresh_usage` sums the calls that asked the model: a hit adds no cost.
+`runs.read_model_calls` reads it back; `fresh_usage` sums the calls that asked the
+model: a hit adds no cost.
 """
 
 from __future__ import annotations
@@ -70,6 +71,7 @@ from labkit.formats.runs import (
     LLM_CALLS_FILE,
     JsonObject,
     now_stamp,
+    read_model_calls,
 )
 from labkit.run import llm
 from labkit.run.llm_backends import Response, Usage
@@ -375,16 +377,14 @@ def read_entry(path: Path, key: str) -> Answer | None:
 
 def fresh_usage(run_dir: Path) -> Usage:
     """The usage of RUN_DIR's calls that asked the model — its
-    `llm-calls.jsonl` without the hits, summed per field; a field no such
-    call reported stays None. NO_USAGE-shaped (all None) without calls."""
-    path = run_dir / LLM_CALLS_FILE
-    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    `llm-calls.jsonl` (`runs.read_model_calls`) without the hits, summed per
+    field; a field no such call reported stays None. NO_USAGE-shaped (all
+    None) without calls. Raises ValueError as `read_model_calls` does."""
     totals: dict[str, int | float | None] = dict.fromkeys(Usage._fields)
-    for raw in lines:
-        call = json.loads(raw)
-        if call["hit"]:
+    for call in read_model_calls(run_dir):
+        if call.hit:
             continue
-        for name, value in call["usage"].items():
+        for name, value in call.usage.items():
             if value is not None:
                 totals[name] = (totals[name] or 0) + value
     return Usage(**totals)  # type: ignore[arg-type]  # each field keeps its type
