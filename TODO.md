@@ -150,14 +150,24 @@ Geltende Verträge stehen in [Architektur](docs/architecture.md), [Ablauf](docs/
 | Audit 21.11. — repariert, nicht veröffentlicht                               | [Audit 21.11.](docs/notes/2026-11-21-repo-audit.md): alle sieben Punkte und `labkit-hooks install --help` (installierte statt Hilfe) auf `main`, 144eee70..8d868e98. `.githooks/checks full` auf 8d868e98: Exit 0, 4390 passed, 1 skipped (Tree vor/nach gleich). Reste unter „Audit-Reste 21.11.“. |
 | Formulare und Terminologie                                                   | [Feldauswahl](docs/notes/2026-11-13-protocol-field-selection-plan.md), [Begriffe](docs/notes/2026-11-14-null-band-wording-plan.md).                                                                                                                                                                 |
 
-**Audit-Reste 21.11.** (aus den Berichten der Reparatur, nicht gebaut):
+**Audit-Reste 21.11.**, nach Auswirkung getrennt (Einordnung nach externer Einschätzung, 21.11.). Gebaut am 21.11.: preflight-Station 5 bricht auch bei einer unlesbaren Ausgabe der verlinkten Exploration oder einem git-Fehler nicht mehr ab (nachgestellt: `PermissionError`); `PROTOCOL-.md` ist wieder überall ein Protokollname, Namenstest und Glob stimmen überein (die Zusammenführung hatte den Index-Weg strenger gemacht als den Baum-Weg). Unabhängig gelesen sind jetzt auch die Diffs von A und D (`code-clarity`, Bericht nur im Sitzungs-Scratchpad).
 
-1. preflight-Station 5 kann noch an `RuntimeError`/`OSError` aus `scope_sha.exploration_basis` abbrechen.
-2. `console.asks_help` greift auch, wenn `--help` als Wert einer Option steht (`labkit-params AREA --run --help` zeigt die Hilfe); Docstring und CHANGELOG sagen es nicht.
-3. `repo.py`: `PROTOCOL_GLOB`, `PROTOCOL_FILE`, `PROTOCOL_NAME` sind drei Formen eines Namens, nur per Kommentar unterschieden; `protocol_file_name`-Docstring klingt nach Nachschlagen.
-4. `claude-hook EVENT EXTRA` ignoriert das Zusatzwort weiter (Ablehnen würde jeden Bash-Aufruf blockieren); `labkit-calltree` reicht Wörter nach dem Ziel absichtlich durch.
-5. Verhaltensänderungen zum Ansagen im Release: `protocol-fill` lehnt jetzt auch eine Option ab, die die Operation nicht nimmt (`--list --force`); `PROTOCOL-.md` gilt nicht mehr als Protokollname; ein ungeschlossener Prompt-Block blockiert jetzt auch `code-check`.
-6. Prüferabdeckung: der unabhängige Leser (`code-clarity`) las am Ende nur `params.py`, `repo.py`, `console.py` und das CHANGELOG; jeder Agent ließ seinen eigenen Diff lesen (A und D nicht).
+Erst nachstellen, dann entscheiden — möglicher falscher Ablauf:
+
+1. `llm.model_entry` findet `models.toml` über `lab_root`, `find_models_toml` auf anderem Weg (`labkit/run/llm.py:230`); der Kommentar in `tests/test_one_home.py:362` sagt „einmal gelesen“. Gibt es ein Repo, in dem beide verschiedene Dateien finden?
+2. `protocol_then.py:55`, `:66` nimmt jeden Namen, der mit `PROTOCOL-` beginnt (`.bak`, `.txt`, Kopien unter `runs/`), als Protokoll der Geschichte; Docstring sagt `PROTOCOL-*.md`, der Kommentar nennt keinen Grund. Kann eine Sicherungskopie einer Lauf-Kennung zugeordnet werden?
+3. Branch `fix/model-calls-vs-run-record` (Worktree `/private/tmp/labkit-model-calls`, 4 Commits auf 399df0b4): finalize blockt einen Lauf, dessen Aufrufprotokoll Antworten ohne Modell im Laufdatensatz hält. Nicht auf `main`; vor dem Zusammenführen Einzelprüfung und unabhängiger Leser.
+
+Zurückgestellt, solange sie keinen falschen Ablauf auslösen (beim Anfassen):
+
+4. preflight-Station 5 meldet ein nicht parsebares Skript (`SourceError`, ein `ValueError`) als „no scripts matching … (skipped)“ (`labkit/gates/preflight.py:603`); Station 4 meldet es ohnehin.
+5. `console.asks_help` greift auch bei `--help` als Optionswert (`labkit-params AREA --run --help` zeigt die Hilfe); Docstring und CHANGELOG sagen es nicht.
+6. `repo.py`: `PROTOCOL_GLOB`, `PROTOCOL_FILE`, `PROTOCOL_NAME` nur per Kommentar unterschieden; `protocol_file_name`-Docstring klingt nach Nachschlagen.
+7. Lokaler Name `firsts = measured.every_first` (`registration_hold.py:323`, `:365`, `:538`; `exploration_link.py:153`) kollidiert mit `Measured.firsts` (ein Lauf je Position).
+8. preflight `check_audit_records` / `check_audit_coverage` heißen beide „Station 3, the record(s)“ (`preflight.py:478`, `:508`); `scope_sha`-Modul-Docstring nennt drei von sechs Aufrufern von `area_stamp`.
+9. `claude-hook EVENT EXTRA` ignoriert das Zusatzwort (Ablehnen würde jeden Bash-Aufruf blockieren); `labkit-calltree` reicht Wörter absichtlich durch.
+
+Arbeitsweise bei parallelen Agenten: je Agent nur die berührten Tests mit `-n 2`; die ganze Suite einmal allein auf dem zusammengeführten Stand; einen zeitabhängigen Test nicht wegen Überlast abschwächen. Danach wieder der stagekit-Anschluss (Abschnitt oben), keine weitere allgemeine Audit-Runde.
 
 ### 6b. Die Einzelprüfung der Blocker umsetzen — abgeschlossen 2026-11-12, mit drei Grenzen
 
