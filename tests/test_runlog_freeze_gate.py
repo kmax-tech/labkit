@@ -527,10 +527,11 @@ class FreezeGate(unittest.TestCase):
 
 
 class AuditCommandFilled(unittest.TestCase):
-    """The audit command runlog's freeze refusal and preflight's cold-reader
-    note name is the area's own, as the reader copies it: the area path
-    shell-quoted, `--protocol` where the area holds several, no `<area>`
-    slot left (`gate.fill_slots`, `commands.audit_command`)."""
+    """The commands runlog's freeze refusal and preflight's cold-reader note
+    name are the area's own, as the reader copies them: the area path
+    shell-quoted, `--protocol` where the area holds several, no `<area>` or
+    `<PROTOCOL>` slot left (`gate.fill_slots`, `commands.audit_command`,
+    `commands.preflight_command`, `commands.freeze_command`)."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
@@ -569,7 +570,12 @@ class AuditCommandFilled(unittest.TestCase):
         area, protocol = self._area("01-count", PLACEHOLDER)
         refusal = self._refusal(area, protocol)
         self.assertIn("`labkit-audit experiments/01-count --mode preflight`", refusal)
-        self.assertNotIn("<area>", refusal)
+        self.assertIn("Freeze first: `preflight experiments/01-count` clean", refusal)
+        self.assertIn(
+            "`protocol-fill experiments/01-count/PROTOCOL-x.md --freeze`", refusal
+        )
+        self.assertNotIn("<area>", refusal.lower())
+        self.assertNotIn("<PROTOCOL>", refusal)
         area, protocol = self._area("02-count", UNFROZEN)
         note = self._preflight(area, protocol)
         self.assertIn("`labkit-audit experiments/02-count --mode clarity`", note)
@@ -579,7 +585,12 @@ class AuditCommandFilled(unittest.TestCase):
         area, protocol = self._area("01 count", PLACEHOLDER)
         refusal = self._refusal(area, protocol)
         self.assertIn("`labkit-audit 'experiments/01 count' --mode preflight`", refusal)
-        self.assertNotIn("<area>", refusal)
+        self.assertIn("`preflight 'experiments/01 count'` clean", refusal)
+        self.assertIn(
+            "`protocol-fill 'experiments/01 count/PROTOCOL-x.md' --freeze`", refusal
+        )
+        self.assertNotIn("<area>", refusal.lower())
+        self.assertNotIn("<PROTOCOL>", refusal)
         note = self._preflight(area, protocol)
         self.assertIn("`labkit-audit 'experiments/01 count' --mode clarity`", note)
 
@@ -591,7 +602,13 @@ class AuditCommandFilled(unittest.TestCase):
             "--protocol experiments/01-count/PROTOCOL-x.md --mode preflight`",
             refusal,
         )
-        self.assertNotIn("<area>", refusal)
+        self.assertIn(
+            "`preflight experiments/01-count "
+            "--protocol experiments/01-count/PROTOCOL-x.md` clean",
+            refusal,
+        )
+        self.assertNotIn("<area>", refusal.lower())
+        self.assertNotIn("<PROTOCOL>", refusal)
         note = self._preflight(area, protocol)
         self.assertIn(
             "`labkit-audit experiments/01-count --mode clarity "

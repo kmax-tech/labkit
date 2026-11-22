@@ -321,6 +321,10 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
     head = bound.head
     hint = ""
     rel = bound.binding.get("path")
+    # the area's own commands, as the reader copies them
+    protocol = base_dir / bound.name if bound.text is not None else None
+    preflight = commands.preflight_command(base_dir, protocol)
+    freeze = commands.freeze_command(protocol)
     if (
         bound.text is not None
         and head is not None
@@ -334,8 +338,8 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
         after = (
             "commit the protocol, then start the run again"
             if head is None or lane(head.repeat_cost).registration
-            else "then `preflight <AREA>` clean, the preflight audit run anew on "
-            "the changed registration, and `protocol-fill <PROTOCOL> --freeze` again"
+            else f"then `{preflight}` clean, the preflight audit run anew on "
+            f"the changed registration, and `{freeze}` again"
         )
         step = (
             f"For each field named above: {protocol_check.REPEATED_WAY_OUT}; " + after
@@ -352,8 +356,8 @@ def _first_step(base_dir: Path, bound: _Bound, state: AreaState) -> str:
         )
     else:
         step = (
-            "Freeze first: `preflight <AREA>` clean, the preflight audit decided, then "
-            "`protocol-fill <PROTOCOL> --freeze`"
+            f"Freeze first: `{preflight}` clean, the preflight audit decided, then "
+            f"`{freeze}`"
         )
     return step + hint + "."
 

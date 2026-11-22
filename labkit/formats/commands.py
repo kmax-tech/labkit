@@ -462,6 +462,20 @@ def audit_command(
     return Command(AUDIT, shlex.join(words))
 
 
+def preflight_command(
+    area: Path, protocol: Path | None = None, base: Path | None = None
+) -> Command:
+    """The `preflight AREA` line, paths as BASE (the working directory by
+    default) reaches them, shell-quoted, and `--protocol PROTOCOL` when the
+    area holds more than one protocol — the gate refuses to choose there
+    (`choose_protocol`), as `audit_command` does. Its kind is CHECK."""
+    here = base or Path.cwd()
+    words = ["preflight", shown(area, here)]
+    if protocol is not None and len(area_protocols(area)) > 1:
+        words += ["--protocol", shown(protocol, here)]
+    return Command(CHECK, shlex.join(words))
+
+
 def decide_command(
     area: Path,
     n: int,

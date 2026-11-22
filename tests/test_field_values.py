@@ -15,7 +15,7 @@ from pathlib import Path
 
 from labkit.gates import hook_pre_run
 from labkit.checks import protocol_report
-from labkit.formats import protocol_block, protocol_check, protocol_history
+from labkit.formats import commands, protocol_block, protocol_check, protocol_history
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import Findings
 from labkit.gates import finalize, preflight
@@ -330,8 +330,10 @@ class HighCostWayOut(unittest.TestCase):
         )
         _, way = start_check.measurement_refusal(area, proto)
         self.assertIn(WAY_OUT, way)
-        self.assertIn("preflight", way)
-        self.assertIn("protocol-fill <PROTOCOL> --freeze", way)
+        # the area's own commands, filled (`commands.preflight_command`)
+        self.assertIn(f"`{commands.preflight_command(area, proto)}` clean", way)
+        self.assertIn(f"`{commands.freeze_command(proto)}` again", way)
+        self.assertNotIn("<PROTOCOL>", way)
 
 
 if __name__ == "__main__":
