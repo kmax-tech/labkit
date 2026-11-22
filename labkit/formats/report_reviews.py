@@ -112,6 +112,7 @@ from labkit.formats import findings
 from labkit.formats.files import write_atomic
 from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.findings import create_file, written_order
+from labkit.formats import protocol_block
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.digests import digest
 from labkit.formats.reviews import (
@@ -135,7 +136,7 @@ RESULT, CONTRADICTION = CLAIM_KINDS
 OPEN, FALSE_POSITIVE = findings.OPEN, findings.FALSE_POSITIVE
 CLAIM_STATUSES = (OPEN, FALSE_POSITIVE)
 #: the line that opens a claim's table, for the decision lines' rewrite
-CLAIM_HEADER = findings.array_header("claim")
+CLAIM_HEADER = protocol_block.array_header("claim")
 #: the last release that reads a record whose claims carry no decision
 LAST_UNDECIDED_RELEASE = "0.112.0"
 #: the folder under FOLDER that keeps such a record once moved there

@@ -1900,15 +1900,9 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
     return tuple(out)
 
 
-def array_header(name: str) -> re.Pattern[str]:
-    """The line that opens one `[[NAME]]` table of a record: what tells the
-    tables whose decision lines are rewritten (`[[finding]]` here,
-    `[[claim]]` in a report review, `report_reviews`)."""
-    return re.compile(rf"^\s*\[\[\s*{re.escape(name)}\s*\]\]\s*(?:#.*)?$")
-
-
-_FINDING_HEADER = array_header("finding")
-_TABLE_HEADER = re.compile(r"^\s*\[")
+#: the line that opens a `[[finding]]` table: what tells the tables whose
+#: decision lines are rewritten (`[[claim]]` in a report review)
+_FINDING_HEADER = protocol_block.array_header("finding")
 #: a one-line `status = …`, `reason = …` or `effect = …` — the lines a
 #: decision rewrites
 _DECISION_LINE = re.compile(
@@ -1959,7 +1953,7 @@ def _decision_lines(
         if header.match(line):
             seen += 1
             inside = seen == n
-        elif _TABLE_HEADER.match(line):
+        elif protocol_block.TABLE_HEADER.match(line):
             inside = False
         elif inside and line.strip():
             first = line.splitlines()[0]

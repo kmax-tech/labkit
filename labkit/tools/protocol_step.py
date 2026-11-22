@@ -17,7 +17,6 @@ writes that text.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from labkit.formats import protocol_block, runs
@@ -29,7 +28,7 @@ from labkit.run.start_check import require_step_basis
 
 #: the header lines of a step in the TOML block: its table and its changes
 _STEP_HEADER = protocol_block.table_header("builds_on")
-_CHANGE_HEADER = re.compile(r"^\s*\[\[\s*builds_on\.change\s*\]\]\s*(?:#.*)?$")
+_CHANGE_HEADER = protocol_block.array_header("builds_on.change")
 
 
 def step_with_changes(

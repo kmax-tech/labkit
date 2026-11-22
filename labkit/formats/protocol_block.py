@@ -179,10 +179,18 @@ class Head:
         ]
 
 
-#: a `[[promise]]` table header line, spaces and a comment allowed — where
-#: an editor of the block finds a promise table
-PROMISE_HEADER = re.compile(r"^\s*\[\[\s*promise\s*\]\]\s*(?:#.*)?$")
-#: any table header line (`[protocol]`, `[[promise]]`, `[promise.constants]`)
+def array_header(name: str) -> re.Pattern[str]:
+    """The line that opens one `[[NAME]]` table of a TOML text, spaces and a
+    trailing comment allowed: `[[promise]]` and `[[builds_on.change]]` in the
+    block, `[[finding]]` in an audit record, `[[claim]]` in a report review."""
+    return re.compile(rf"^\s*\[\[\s*{re.escape(name)}\s*\]\]\s*(?:#.*)?$")
+
+
+#: a `[[promise]]` table header line — where an editor of the block finds a
+#: promise table
+PROMISE_HEADER = array_header("promise")
+#: any table header line of a TOML text (`[protocol]`, `[[promise]]`,
+#: `[promise.constants]`; `[[finding]]` in an audit record)
 TABLE_HEADER = re.compile(r"^\s*\[")
 
 
