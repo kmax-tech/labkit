@@ -111,9 +111,11 @@ def before_run(
     other case is a note. Without a blocker the note carries every
     warning as the station told it, then the summary: the summary alone
     counts the warnings, and an open audit finding (`undecided in …`) is
-    one of them. Each line opens with the preflight command as the
-    agent's shell in CWD (the working directory by default) runs it. One
-    script per call."""
+    one of them. Each line opens with the preflight command, paths as the
+    agent's shell in CWD (the working directory by default) reaches them;
+    in an area with several protocols and none named by the script it
+    names no `--protocol`, and preflight cannot run there — the line says
+    so. One script per call."""
     area = find_area(script, stop)
     if area is None:
         return False, with_way_out(

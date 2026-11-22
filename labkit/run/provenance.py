@@ -279,8 +279,8 @@ def env_state(cwd: Path) -> str:
         return f"{exe} | {lock_name}:{h} | drift:{drift}"
     console.progress(
         "runlog",
-        "WARNING — no requirements.lock found; env recorded as "
-        "'unpinned'. `pip freeze > requirements.lock` to pin, or this run "
+        f"WARNING — no {lock_name} found; env recorded as "
+        f"'unpinned'. `pip freeze > {lock_name}` to pin, or this run "
         "cannot claim the environment it ran in.",
     )
     return f"{exe} | unpinned"

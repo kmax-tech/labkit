@@ -331,8 +331,9 @@ class TheStagedHoldReadsTheAreaTests(unittest.TestCase):
     """`staged_area_gap` with `tests=True` — the stations, which run the
     area's tests from the tree — also compares the area's tests under
     `tests/` with the index; the report review (`tests=False`) does not
-    run them and is not held by them. A test of another area holds
-    neither."""
+    run them and is not held by them. A test file the station does not
+    run holds neither; one it runs does, also that of an area whose name
+    extends this one's (`01-x-y`), which the split glob takes too."""
 
     def setUp(self):
         from repo_fixture import git, init_repo
@@ -381,3 +382,18 @@ class TheStagedHoldReadsTheAreaTests(unittest.TestCase):
         (self.root / "tests" / "test_02_y.py").write_text("def test_a():\n    1 / 0\n")
         with self.subTest("another area's test changed"):
             self.assertIsNone(self.gap(tests=True))
+        sub = self.root / "tests" / "test_01_x_sub"
+        sub.mkdir()
+        (sub / "deep.py").write_text("x = 1\n")
+        with self.subTest("a file below tests/, which the station never runs"):
+            self.assertIsNone(self.gap(tests=True))
+
+    def test_the_hold_takes_what_the_station_runs(self):
+        from labkit.formats.scope_sha import area_test_files
+
+        (self.root / "tests" / "test_01_x_y.py").write_text("x = 1\n")
+        runs = [p.name for p in area_test_files(self.root, "test_01_x")]
+        self.assertIn("test_01_x_y.py", runs)  # the station's own glob
+        found = self.gap(tests=True)
+        assert found is not None
+        self.assertIn("tests/test_01_x_y.py", found.text)

@@ -155,7 +155,9 @@ AREA_TEST_TIMEOUT_S = 300.0
 
 
 def area_tests(area: Path, repo: Path) -> AreaTests:
-    """Run the area's tests (`tests/test_*<slug>*.py`) — the resolution
+    """Run the area's tests (`tests/<stem>.py` and `tests/<stem>_*.py`,
+    `scope_sha.area_test_globs`; the split glob also takes the tests of an
+    area whose name extends this one's, `01-x-y` beside `01-x`) — the resolution
     check and the parser cases in their permanent form. One home for
     preflight (before the freeze) and finalize (before a number is
     reported)."""

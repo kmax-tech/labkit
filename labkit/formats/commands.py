@@ -468,7 +468,9 @@ def preflight_command(
     """The `preflight AREA` line, paths as BASE (the working directory by
     default) reaches them, shell-quoted, and `--protocol PROTOCOL` when the
     area holds more than one protocol — the gate refuses to choose there
-    (`choose_protocol`), as `audit_command` does. Its kind is CHECK."""
+    (`choose_protocol`), as `audit_command` does. Without PROTOCOL in such
+    an area the line names none, and the gate as printed refuses with the
+    choice it needs. Its kind is CHECK."""
     here = base or Path.cwd()
     words = ["preflight", shown(area, here)]
     if protocol is not None and len(area_protocols(area)) > 1:

@@ -159,7 +159,8 @@ def tree_differs(repo: Path, area: Path, *, tests: bool = False) -> list[str]:
     specs = [rel_posix(area, repo)]
     if tests:
         stem = area_test_stem(*split_area_name(area.resolve().name))
-        specs += [f"tests/{g}" for g in area_test_globs(stem)]
+        # :(glob): `*` stops at `/`, as the station's Path.glob does
+        specs += [f":(glob)tests/{g}" for g in area_test_globs(stem)]
     return [path for xy, path in status_entries(repo, tuple(specs)) if xy[1] != " "]
 
 
