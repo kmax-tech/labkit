@@ -95,7 +95,8 @@ def version_tuple(version: str) -> tuple[int, ...]:
 
 def read_pins(repo: Path) -> list[Pin]:
     """The labkit pin of every requirements file in REPO (its root only, no
-    search upwards) that has one: the declared list first, then the lock.
+    search upwards) that has one: the declared list first, then the lock —
+    the reverse of `requirements.PIN_FILES`, so pins[0] is the tag pin.
 
     A `labkit` line that is neither `labkit @ git+…@ref` nor `labkit==X.Y.Z`
     raises, naming the file: a pin nobody can read is not "no pin".

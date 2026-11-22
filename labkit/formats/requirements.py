@@ -7,7 +7,8 @@ package name as pip normalises it — and which files of a repository
 say it (`PIN_FILES`, `requirements_files`). Read by provenance (the run's
 environment), the repo check and the stamp (the labkit pin), the
 declared-scope hash and the usability probe. The grammar is pure: lines
-in, matches out; `requirements_files` reads only whether files exist.
+in, matches out; `requirements_files` reads only whether files exist
+and where the git root is.
 """
 
 from __future__ import annotations
