@@ -246,7 +246,11 @@ def env_state(cwd: Path) -> str:
 
     Ties a run to an *environment*, not just a Python version: a changed lock
     changes the hash, so runs from different environments stay distinguishable
-    in the run index. Records "unpinned" when no lock exists — visible, not silent.
+    in the run index. The lock is searched from CWD upwards to the root of
+    its git repository (`requirements.requirements_files`; outside a
+    repository to the filesystem root): a lock above the repository is not
+    the repository's. Records "unpinned" when no lock is found — visible,
+    not silent.
 
     `drift:n` says how far the live environment has moved away from the lock.
     Only `drift:0` makes the hash a truthful description of what ran.
@@ -256,23 +260,23 @@ def env_state(cwd: Path) -> str:
     # records — every venv on the same pyenv base would look identical.
     # Use sys.prefix if you need to *test* for a venv.
     exe = sys.executable
-    for d in [cwd.resolve(), *cwd.resolve().parents]:
-        lock = d / "requirements.lock"
-        if lock.exists():
-            h = file_digest(lock)[:DIGEST_CHARS]
-            try:
-                drift = lock_drift(lock)
-            except Exception:  # never let bookkeeping break a run
-                return f"{exe} | requirements.lock:{h} | drift:unknown"
-            if drift:
-                print(
-                    f"runlog: WARNING — {drift} package(s) deviate from "
-                    f"requirements.lock. `pip freeze > requirements.lock`, "
-                    f"or this run's lock hash describes an environment "
-                    f"that does not exist.",
-                    file=sys.stderr,
-                )
-            return f"{exe} | requirements.lock:{h} | drift:{drift}"
+    lock_name = requirements.REQUIREMENTS_LOCK
+    lock = next(requirements.requirements_files(cwd.resolve(), (lock_name,)), None)
+    if lock is not None:
+        h = file_digest(lock)[:DIGEST_CHARS]
+        try:
+            drift = lock_drift(lock)
+        except Exception:  # never let bookkeeping break a run
+            return f"{exe} | {lock_name}:{h} | drift:unknown"
+        if drift:
+            print(
+                f"runlog: WARNING — {drift} package(s) deviate from "
+                f"{lock_name}. `pip freeze > {lock_name}`, "
+                f"or this run's lock hash describes an environment "
+                f"that does not exist.",
+                file=sys.stderr,
+            )
+        return f"{exe} | {lock_name}:{h} | drift:{drift}"
     print(
         "runlog: WARNING — no requirements.lock found; env recorded as "
         "'unpinned'. `pip freeze > requirements.lock` to pin, or this run "

@@ -15,6 +15,8 @@ Run:  .venv/bin/python -m unittest discover -s tests -v
 
 from __future__ import annotations
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -22,6 +24,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
+from labkit.formats.digests import DIGEST_CHARS, file_digest  # noqa: E402
 from labkit.run import provenance  # noqa: E402
 
 
@@ -100,6 +103,39 @@ class EnvState(unittest.TestCase):
         # one at root, which it does not
         got = provenance.env_state(empty)
         self.assertTrue(got.endswith("unpinned") or "requirements.lock:" in got)
+
+
+class EnvStateLockOfTheRepository(unittest.TestCase):
+    """The lock is the repository's: searched up to its git root, not
+    above it — a lock above would describe another project's environment."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.outside = Path(tmp.name).resolve()
+        self.repo = self.outside / "lab"
+        self.area = self.repo / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+        (self.repo / ".git").mkdir()
+        (self.outside / "requirements.lock").write_text("numpy==1.0.0\n")
+
+    def env_state(self) -> str:
+        with contextlib.redirect_stderr(io.StringIO()):
+            return provenance.env_state(self.area)
+
+    def test_a_lock_above_the_repository_is_not_taken(self):
+        self.assertEqual(self.env_state(), f"{sys.executable} | unpinned")
+
+    def test_the_twin_a_lock_at_the_repository_root_is_taken(self):
+        lock = self.repo / "requirements.lock"
+        lock.write_text("pandas==2.0.0\n")
+        # the string the search up to the filesystem root recorded for it
+        h = file_digest(lock)[:DIGEST_CHARS]
+        drift = provenance.lock_drift(lock)
+        self.assertEqual(
+            self.env_state(),
+            f"{sys.executable} | requirements.lock:{h} | drift:{drift}",
+        )
 
 
 if __name__ == "__main__":
