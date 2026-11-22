@@ -20,7 +20,7 @@ from labkit.formats.gate import (
     GateFinding,
     cited_rule,
 )
-from labkit.formats.runs import MEASURE_SCRIPT
+from labkit.formats.runs import CONFIG_FILE, MEASURE_SCRIPT
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files, readme_text, parse_source
 
 
@@ -53,6 +53,8 @@ def readme_placeholders(area: Path) -> list[str]:
     return out
 
 
+#: The markers around the README's route block; the stamp
+#: (`scaffold.area_readme`) writes them from here.
 ROUTE_START = "<!-- labkit:route -->"
 
 
@@ -67,11 +69,13 @@ ROUTE_END = "<!-- /labkit:route -->"
 #: these names are a format convention the stamp writes
 #: (`scaffold`; stated in labkit/docs/agent-guide.md, step 1): a README
 #: without them breaks the technical contract, no rule of the standard.
+#: The stamp's prose names each station; a test holds the stamped README
+#: to this check.
 ROUTE_STATIONS = (
     "runlog",
     "labkit-params",
-    "scripts/01_measure.py:evaluate_rows",
-    "config.json",
+    f"{MEASURE_SCRIPT.as_posix()}:evaluate_rows",
+    CONFIG_FILE,
 )
 
 

@@ -13,7 +13,7 @@ from state_fixture import AREA, area_state
 from labkit.formats.area_state import state_of
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
-from labkit.formats import protocol_block, repo
+from labkit.formats import protocol_block, repo, standard_contract
 from labkit.formats.gate import (
     BLOCKER,
     GUARANTEED,
@@ -30,6 +30,7 @@ from labkit.formats.gate import (
 from labkit.gates.preflight import AreaTests, tell_test_run
 from labkit.formats.runs import LLM_CALLS_FILE
 from labkit.formats.scope_sha import SourceError
+from labkit.tools import scaffold
 
 
 class Steps(unittest.TestCase):
@@ -569,15 +570,8 @@ class ReadmePlaceholders(unittest.TestCase):
             )  # the twin: a real blank
 
 
-ROUTE = (
-    "<!-- labkit:route -->\n**Nachvollziehen.**\n"
-    "- Vertrag und berichtete Antwort: `PROTOCOL-a.md`\n"
-    "- Läufe und Herkunft: `runlog .`\n"
-    "- Wirksame Werte: `labkit-params .`\n"
-    "- Entscheidung der Kennungen: `scripts/01_measure.py:evaluate_rows`\n"
-    "- Unveränderlicher Beleg: `config.json` des gewählten Laufs unter `runs/`\n"
-    "<!-- /labkit:route -->\n"
-)
+# the README the stamp writes, so the writer is held to the checker
+ROUTE = scaffold.area_readme("01-a", "a", standard_contract.COMPUTE, probe=False)
 
 
 class ReadmeRoute(unittest.TestCase):
@@ -594,10 +588,18 @@ class ReadmeRoute(unittest.TestCase):
         return area
 
     def test_the_stamped_route_is_quiet(self):
+        for sk in standard_contract.SKELETONS:
+            readme = scaffold.area_readme("01-a", "a", sk, probe=True)
+            with (
+                self.subTest(skeleton=sk.instrument),
+                tempfile.TemporaryDirectory() as d,
+            ):
+                area = self._area(d, readme)
+                self.assertEqual(readme_check.readme_route(area, "PROTOCOL-a.md"), [])
         with tempfile.TemporaryDirectory() as d:
-            area = self._area(d, "# x\n\n" + ROUTE)
-            self.assertEqual(readme_check.readme_route(area, "PROTOCOL-a.md"), [])
-            # the markers are HTML comments, not stamped blanks
+            area = self._area(d, ROUTE)
+            # the markers are HTML comments, not stamped blanks; the compute
+            # README carries no blank at all
             self.assertEqual(readme_check.readme_placeholders(area), [])
 
     def test_no_block_is_one_warning(self):
@@ -610,7 +612,9 @@ class ReadmeRoute(unittest.TestCase):
 
     def test_a_missing_station_or_wrong_protocol_is_named(self):
         with tempfile.TemporaryDirectory() as d:
-            area = self._area(d, ROUTE.replace("`labkit-params .`", "`params`"))
+            area = self._area(
+                d, ROUTE.replace("`labkit-params experiments/01-a`", "`params`")
+            )
             got = readme_check.readme_route(area, "PROTOCOL-b.md")
             self.assertEqual(
                 [g.text for g in got],

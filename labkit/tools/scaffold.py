@@ -75,6 +75,7 @@ import re
 from labkit.formats import markdown
 from labkit.formats.commands import fill_command, report_fields_command, step_command
 from labkit.formats import runs
+from labkit.checks.readme_check import ROUTE_END, ROUTE_START
 from labkit.formats import console
 from pathlib import Path
 
@@ -395,14 +396,14 @@ def area_readme(
 
 {question}
 
-<!-- labkit:route -->
+{ROUTE_START}
 **Trace it.**
 - Contract and reported answer: `{protocol_name}`
 - Runs and provenance: `runlog experiments/{area_name}` (from the repo root)
 - Effective values: `labkit-params experiments/{area_name}`
 - Where the ids are decided: `scripts/01_measure.py:evaluate_rows`
-- Immutable record: `config.json` of the chosen run under `runs/`
-<!-- /labkit:route -->
+- Immutable record: `{runs.CONFIG_FILE}` of the chosen run under `{runs.RUNS_DIR}/`
+{ROUTE_END}
 
 ## Contract
 
