@@ -41,6 +41,7 @@ from labkit.formats.scope_sha import SourceError, read_source
 from labkit.gates.hook_session import session_repo
 from labkit.gates.hook_session import tell_context
 from labkit.formats import (
+    commands,
     protocol_block,
     protocol_check,
     standard_contract,
@@ -97,7 +98,9 @@ class UnresolvedScriptError(ValueError):
     """A relative Python script cannot be located for the pre-run check."""
 
 
-def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
+def before_run(
+    script: Path, stop: Path | None, cwd: Path | None = None
+) -> tuple[bool, str]:
     """What stands before SCRIPT opens a full run, as (blocks, line): the
     area above it (searched up to STOP), its protocol's head, then the
     lane's gate — the registration at low repeat cost
@@ -108,7 +111,9 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     other case is a note. Without a blocker the note carries every
     warning as the station told it, then the summary: the summary alone
     counts the warnings, and an open audit finding (`undecided in …`) is
-    one of them. One script per call."""
+    one of them. Each line opens with the preflight command as the
+    agent's shell in CWD (the working directory by default) runs it. One
+    script per call."""
     area = find_area(script, stop)
     if area is None:
         return False, with_way_out(
@@ -120,9 +125,9 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     protocol = protocol_named_in(script, area)
     state = state_of(area)
     texts = [state.text_of(p) for p in ([protocol] if protocol else state.protocols)]
-    head = f"preflight {area.name}" + (
-        f" --protocol {protocol.name}" if protocol else ""
-    )
+    # the gate's command as the reader runs it: the area's path,
+    # shell-quoted, `--protocol` where the area holds several
+    head = str(commands.preflight_command(area, protocol, base=cwd))
     try:
         heads = [protocol_block.head(t) for t in texts]
     except protocol_block.BlockError as exc:
@@ -314,7 +319,7 @@ def pre_run(event: dict, *, require_resolved_scripts: bool = False) -> int:
     blocked: list[str] = []
     notes: list[str] = []
     for script in scripts:
-        blocks, line = before_run(script, stop)
+        blocks, line = before_run(script, stop, cwd)
         (blocked if blocks else notes).append(line)
     if blocked:
         sys.stderr.write("\n\n".join(blocked) + "\n")

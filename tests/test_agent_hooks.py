@@ -293,7 +293,8 @@ class PreRun(unittest.TestCase):
         self.assertEqual((rc, err), (0, ""))
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         lines = ctx.splitlines()
-        self.assertEqual(lines[0], "preflight 01-x --protocol PROTOCOL-x.md:")
+        # the command as the agent's shell runs it, from the event's cwd
+        self.assertEqual(lines[0], "preflight experiments/01-x:")
         undecided = [ln for ln in lines if ln.startswith("  WARNING: undecided in ")]
         self.assertEqual(len(undecided), 1, ctx)
         self.assertIn("the seed is not recorded", undecided[0])
@@ -472,7 +473,7 @@ class PreRun(unittest.TestCase):
             scaffold.stamp_area(root, "count", "low", kind="compute")
         _git(root, "init", "-q", ".")
         measure = "python experiments/01-judge/scripts/01_measure.py"
-        head = "preflight 01-judge --protocol PROTOCOL-judge.md"  # the script names it
+        head = "preflight experiments/01-judge"  # one protocol: no --protocol needed
         for cmd in (
             measure,
             f"{measure} --repeat-of 2026-01-01T00-00-00_0001",
@@ -503,9 +504,7 @@ class PreRun(unittest.TestCase):
         )
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn(
-            "preflight 02-count --protocol PROTOCOL-count.md: repeat cost low", ctx
-        )
+        self.assertIn("preflight experiments/02-count: repeat cost low", ctx)
 
     def test_relative_to_cwd_inside_area(self):
         # unfrozen: the fixture's should-gaps stay warnings (graduation
@@ -514,8 +513,9 @@ class PreRun(unittest.TestCase):
         ev = _bash(root / "experiments/01-x", "python scripts/01_measure.py")
         rc, out, err = _run(hook_pre_run.pre_run, ev)
         self.assertEqual(rc, 0, err)
+        # inside the area the command names it as `.`
         self.assertIn(
-            "preflight 01-x", json.loads(out)["hookSpecificOutput"]["additionalContext"]
+            "preflight .: ", json.loads(out)["hookSpecificOutput"]["additionalContext"]
         )
 
 
