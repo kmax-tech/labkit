@@ -171,7 +171,7 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.run import batch, provenance, runlog
+from labkit.run import batch, lanes, provenance, runlog
 from labkit.formats import criterion_bar, deliverable, digests, promises, protocol_block, scope_sha, standard_contract, timebox
 from labkit.formats.commands import next_after_run
 
@@ -345,9 +345,9 @@ CONFIG = promises.constants_into(MeasureConfig, _BLOCK,
 KEPT_KEY = protocol_block.kept_key(PROTOCOL.read_text(encoding="utf-8"))
 
 
-def read_jsonl(path: Path) -> list[dict]:
-    """Input records; the `_meta` header line is documentation, not data."""
-    return batch.Store(path).records()
+# input and output records, the `_meta` header line skipped — the name
+# 02_analyze.py reads
+read_jsonl = lanes.read_jsonl
 
 
 def labelled(items: list[dict]) -> list[dict]:
