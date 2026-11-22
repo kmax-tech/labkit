@@ -71,7 +71,6 @@ Stamped by `labkit-init exp <name>`.
 """
 from __future__ import annotations
 
-import hashlib
 import re
 from collections import Counter
 import sys
@@ -87,7 +86,7 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.formats import criterion_bar, promises, protocol_block
+from labkit.formats import criterion_bar, digests, promises, protocol_block
 from labkit.run import lanes
 
 # ===== What this measurement asks — fill every TODO of this block ==========
@@ -170,7 +169,7 @@ class MeasureConfig:
     model: str = MODEL          # alias from models.toml; runlog resolves it into models_resolved
     # the instrument's version: both prompts, so a reworded prompt is a
     # different config even when every threshold stays
-    prompt_sha: str = hashlib.sha256((PROMPT + PROMPT_NULL).encode()).hexdigest()[:12]
+    prompt_sha: str = digests.digest((PROMPT + PROMPT_NULL).encode())
 
     def __post_init__(self) -> None:
         criterion_bar.require_form_if_registered(self.bar_criterion, self.at_least, self.margin)

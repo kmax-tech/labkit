@@ -155,7 +155,6 @@ Stamped by `labkit-init exp <name>` (no --model); fill the TODOs, keep the struc
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import random
@@ -173,7 +172,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
-from labkit.formats import criterion_bar, deliverable, promises, protocol_block, scope_sha, standard_contract, timebox
+from labkit.formats import criterion_bar, deliverable, digests, promises, protocol_block, scope_sha, standard_contract, timebox
 from labkit.formats.commands import next_after_run
 
 HEAD = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
@@ -319,7 +318,7 @@ class MeasureConfig:
     score: str = SCORE
     # the instrument's version: the estimator line, so a changed parameter is
     # a different config even when every threshold stays
-    estimator_sha: str = hashlib.sha256(ESTIMATOR.encode()).hexdigest()[:12]
+    estimator_sha: str = digests.digest(ESTIMATOR.encode())
     # the declared predictor files' digests, set by main() from the files as
     # they are then — never at import: the area's test imports this file
     predictor_sha: dict[str, str] = field(default_factory=dict)
