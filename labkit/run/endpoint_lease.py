@@ -72,7 +72,7 @@ import uuid
 from pathlib import Path
 
 from labkit.formats import digests
-from labkit.formats import files, runs
+from labkit.formats import console, files, runs
 
 _HELD: set[tuple[str, str]] = set()  # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}
@@ -151,10 +151,9 @@ def holders(endpoint: str) -> list[dict]:
                     }
                 )
             else:
-                print(
-                    f"endpoint_lease: removing unreadable lease record {f} "
-                    f"({exc}; {age:.0f}s old)",
-                    file=sys.stderr,
+                console.progress(
+                    "endpoint_lease",
+                    f"removing unreadable lease record {f} ({exc}; {age:.0f}s old)",
                 )
                 f.unlink(missing_ok=True)
             continue

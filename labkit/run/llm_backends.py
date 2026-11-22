@@ -17,13 +17,13 @@ import json
 import os
 import subprocess
 import tempfile
-import sys
 import threading
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, NamedTuple, cast
 
+from labkit.formats import console
 from labkit.formats.runs import JsonObject
 from labkit.run.llm_specs import ClaudeCliSpec, OllamaSpec, OpenAISpec, ServedSpec
 
@@ -534,10 +534,10 @@ def _warn_empty(alias: str, detail: str) -> None:
     nothing — a MISSING measurement that would come back as an empty string
     and look like a model answer to the parser. Silently lost items are the
     most expensive error type."""
-    print(
-        f"llm: {alias} returned EMPTY content ({detail}) — count as unreadable, "
+    console.progress(
+        "llm",
+        f"{alias} returned EMPTY content ({detail}) — count as unreadable, "
         f"not as an answer",
-        file=sys.stderr,
     )
 
 

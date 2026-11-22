@@ -38,7 +38,7 @@ from pathlib import Path
 from typing import Iterable, Iterator, Mapping
 
 from labkit.formats import digests
-from labkit.formats import files, jsonl, runs
+from labkit.formats import console, files, jsonl, runs
 
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
@@ -443,10 +443,10 @@ class Store:
             return
         kept = jsonl.record_lines(text)[: torn - 1]
         self.path.write_text("".join(ln + "\n" for ln in kept), encoding="utf-8")
-        print(
-            f"batch: cut the torn last line {torn} of {self.path} (interrupted "
+        console.progress(
+            "batch",
+            f"cut the torn last line {torn} of {self.path} (interrupted "
             f"write) — its item will be redone",
-            file=sys.stderr,
         )
 
     def __exit__(self, exc_type: type[BaseException] | None, *exc: object) -> None:
@@ -459,10 +459,10 @@ class Store:
                 # home: a file streamed for a whole run, replaced whole (files.write_atomic writes one text)
                 os.replace(self._tmp, self.path)
             else:
-                print(
-                    f"batch: produce aborted — {self.path} left unchanged, "
+                console.progress(
+                    "batch",
+                    f"produce aborted — {self.path} left unchanged, "
                     f"partial output in {self._tmp}",
-                    file=sys.stderr,
                 )
         self._release_lock()
 
@@ -478,10 +478,10 @@ class Store:
             return []
         objs, torn = _parse(src.read_text(encoding="utf-8"), src)
         if torn is not None:
-            print(
-                f"batch: skipping the torn last line {torn} of {src} "
+            console.progress(
+                "batch",
+                f"skipping the torn last line {torn} of {src} "
                 f"(interrupted write) — it will be redone",
-                file=sys.stderr,
             )
         return [o for o in objs if not jsonl.is_meta(o)]
 

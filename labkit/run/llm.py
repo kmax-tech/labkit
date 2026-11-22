@@ -100,6 +100,7 @@ from pathlib import Path
 from typing import Any
 
 from labkit.run import endpoint_lease
+from labkit.formats import console
 from labkit.formats.repo import MODELS_TOML, lab_root
 from labkit.formats.runs import JsonObject
 from labkit.run.llm_specs import (
@@ -640,10 +641,10 @@ def complete_response(
             # hiccup: a 13 GB model takes ~90 s into VRAM, and 5/15 s pauses
             # all fizzle before that.
             wait = _BACKOFF[min(attempt - 1, len(_BACKOFF) - 1)]
-            print(
-                f"llm: {type(exc).__name__} on attempt {attempt}/{attempts} "
+            console.progress(
+                "llm",
+                f"{type(exc).__name__} on attempt {attempt}/{attempts} "
                 f"({str(exc)[:300]}) — retrying in {wait}s",
-                file=sys.stderr,
             )
             time.sleep(wait)
     raise AssertionError("unreachable")

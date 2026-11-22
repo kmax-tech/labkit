@@ -924,9 +924,8 @@ class run:
         try:
             write_failure(self._run.dir, exc_type, exc)  # the reason stays with the run
         except OSError as err:  # never mask the exception that ended the run
-            print(
-                f"runlog: could not record why {self._run.run_id} broke off: {err}",
-                file=sys.stderr,
+            console.progress(
+                "runlog", f"could not record why {self._run.run_id} broke off: {err}"
             )
         return False
 

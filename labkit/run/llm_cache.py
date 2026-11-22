@@ -66,12 +66,12 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from labkit.formats import console
 from labkit.formats.files import write_atomic, write_once
 from labkit.formats.repo import lab_root
 from labkit.formats.digests import digest
@@ -290,7 +290,7 @@ class Cache:
         if why_not is not None:
             if self.mode == "replay":
                 raise CacheMiss(f"{why_not}; a replay asks no model")
-            print(f"llm_cache: not cached — {why_not}", file=sys.stderr)
+            console.progress("llm_cache", f"not cached — {why_not}")
         inputs = key_inputs(
             alias,
             prompt,

@@ -263,7 +263,7 @@ def supervise(
     try:
         child = subprocess.Popen(command, pass_fds=(fd,))
     except OSError as exc:
-        print(f"runlog start: cannot run {shlex.join(command)}: {exc}", file=sys.stderr)
+        console.refuse("runlog start", f"cannot run {shlex.join(command)}: {exc}")
         unstarted.unlink()
         return CANNOT_START
     data = {

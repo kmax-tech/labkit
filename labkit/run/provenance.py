@@ -21,7 +21,7 @@ from typing import cast
 
 from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats import requirements
-from labkit.formats import jsonl, repo
+from labkit.formats import console, jsonl, repo
 from labkit.formats.files import write_atomic_bytes
 from labkit.formats.gate import with_way_out
 from labkit.formats.digests import DIGEST_CHARS, digest, file_digest, tree_digest
@@ -269,19 +269,19 @@ def env_state(cwd: Path) -> str:
         except Exception:  # never let bookkeeping break a run
             return f"{exe} | {lock_name}:{h} | drift:unknown"
         if drift:
-            print(
-                f"runlog: WARNING — {drift} package(s) deviate from "
+            console.progress(
+                "runlog",
+                f"WARNING — {drift} package(s) deviate from "
                 f"{lock_name}. `pip freeze > {lock_name}`, "
                 f"or this run's lock hash describes an environment "
                 f"that does not exist.",
-                file=sys.stderr,
             )
         return f"{exe} | {lock_name}:{h} | drift:{drift}"
-    print(
-        "runlog: WARNING — no requirements.lock found; env recorded as "
+    console.progress(
+        "runlog",
+        "WARNING — no requirements.lock found; env recorded as "
         "'unpinned'. `pip freeze > requirements.lock` to pin, or this run "
         "cannot claim the environment it ran in.",
-        file=sys.stderr,
     )
     return f"{exe} | unpinned"
 
