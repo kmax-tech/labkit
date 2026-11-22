@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import hashlib
 import importlib
 import inspect
 import io
@@ -22,6 +23,7 @@ import re
 import tempfile
 import threading
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
 from unittest import mock
 
@@ -31,7 +33,7 @@ from models_fixture import serve, toml
 from labkit.run import batch, llm, llm_backends, llm_cache, llm_specs, runlog
 from labkit.checks import prompt_check, recheck
 from labkit.formats import runs
-from protocol_fixture import PID, head, run_record
+from protocol_fixture import PID, head, recheck_without_git, run_record
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -708,6 +710,85 @@ class AnsweringRun(unittest.TestCase):
         told = str(cm.exception)
         self.assertIn("recheck:", told)
         self.assertIn("unfinalized", told)
+
+
+class HoldsOutputs(unittest.TestCase):
+    """`recheck.holds_outputs`: the rows of every registered file reach
+    RECOMPUTE by their key and the recorded metrics hold; a file whose
+    bytes are not the ones the run recorded ends the check (the cases in
+    full: tests/test_recheck.py)."""
+
+    ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
+    LABELS = [{"case": "a", "label": "x"}, {"case": "b", "label": "y"}]
+
+    def setUp(self) -> None:
+        recheck_without_git(self)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.area = Path(tmp.name)
+        self.outs = {
+            "counted": self.area / "output" / "counted.jsonl",
+            "labels": self.area / "output" / "labels.jsonl",
+        }
+        self.outs["counted"].parent.mkdir()
+        for key, rows in (("counted", self.ROWS), ("labels", self.LABELS)):
+            self.outs[key].write_text(
+                "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+            )
+        run = runs.run_path(self.area, "2026-10-05T19-00-00_ab12")
+        run.mkdir(parents=True)
+        cfg = run_record(
+            {
+                "schema_version": 5,
+                "run_kind": "measurement",
+                "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+            }
+        )
+        (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        (run / "completion.json").write_text(
+            json.dumps({"status": "completed"}), encoding="utf-8"
+        )
+        (run / "metrics.json").write_text(
+            json.dumps({"mean_n": 3.5, "n_labels": 2, "duration_s": 0.1}),
+            encoding="utf-8",
+        )
+        (run / "outputs.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "path": str(p),
+                        "sha256": hashlib.sha256(p.read_bytes()).hexdigest()[:16],
+                    }
+                    for p in self.outs.values()
+                ]
+            ),
+            encoding="utf-8",
+        )
+        self.note = self.area / "PROTOCOL-x.md"
+        self.note.write_text(
+            "- **Conclusion:** 3.5 over 2 labelled cases, run 2026-10-05T19-00-00_ab12\n\n"
+            + head(),
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def recompute(rows: Mapping[str, list[dict]]) -> dict:
+        counted = rows["counted"]
+        return {
+            "mean_n": sum(r["n"] for r in counted) / len(counted),
+            "n_labels": len(rows["labels"]),
+        }
+
+    def test_the_rows_of_each_file_reach_recompute_and_hold(self) -> None:
+        verdict = recheck.holds_outputs(self.area, self.outs, self.recompute, self.note)
+        self.assertEqual(verdict.outs, self.outs)
+
+    def test_the_twin_a_file_changed_since_the_run_ends_the_check(self) -> None:
+        self.outs["labels"].write_text(
+            json.dumps({"case": "a", "label": "x"}) + "\n", encoding="utf-8"
+        )
+        with self.assertRaises(SystemExit):
+            recheck.holds_outputs(self.area, self.outs, self.recompute, self.note)
 
 
 class RegisteredTemplates(unittest.TestCase):

@@ -756,8 +756,8 @@ def holds_outputs(
     recompute: Callable[[Mapping[str, list[dict]]], dict],
     note: Path,
     run_id: str | None = None,
-    numbers: Callable[[dict], list[str]] = plain_numbers,
-    ignore: frozenset[str] = LABKIT_KEYS,
+    numbers: Callable[[dict], list[str]] | None = None,
+    ignore: frozenset[str] | None = None,
     protocol: Path | None = None,
 ) -> Verdict:
     """pin → scopes → code → block → agree → cited, for the run that answers the
@@ -774,11 +774,15 @@ def holds_outputs(
     here.
 
     `numbers(metrics)` formats what the note must carry — pass your own when
-    the note rounds. The area's state is built once, here, and the run
+    the note rounds; None is `plain_numbers`. IGNORE names the metrics keys
+    not compared; None is the keys labkit writes itself (`LABKIT_KEYS`:
+    `duration_s`, `llm_retries`). The area's state is built once, here, and the run
     choice and the block step read that build. Raises ValueError for an
     empty OUTS, SystemExit on the first disagreement, `NotVerifiable` where
     the code step finds no proof."""
     _named_outputs(outs)
+    numbers = plain_numbers if numbers is None else numbers
+    ignore = LABKIT_KEYS if ignore is None else ignore
     state = state_of(area)
     run = run_dir(area, protocol or note, run_id, state=state)
     answering = run_id is None  # no run named: the one the protocol answers with

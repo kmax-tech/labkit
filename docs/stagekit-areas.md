@@ -85,7 +85,7 @@ stagekit repairs malformed JSON answers before its parser reads them (`json_repa
 
 ### 7–8. Finalize and recheck
 
-`finalize AREA` checks the run as for any area. `02_analyze.py` must accept `--check --protocol FILE`: `report-check` runs exactly that command. With two or more row files, its check calls `recheck.holds_outputs(area, {"arguments": ARGS, "ranking": RANKING}, recompute, note, protocol=…)`: each file is pinned to the run (registered, recorded sha256), then the scopes, the code and the promise block are held, and the metrics are recomputed from the rows of all files together. `recheck.answering_run_dir(area, protocol)` gives the run to read; of `recheck`, only that name is public API, the rest may change between releases.
+`finalize AREA` checks the run as for any area. `02_analyze.py` must accept `--check --protocol FILE`: `report-check` runs exactly that command. With two or more row files, its check calls `recheck.holds_outputs(area, {"arguments": ARGS, "ranking": RANKING}, recompute, note, protocol=…)`: each file is pinned to the run (registered, recorded sha256), then the scopes, the code and the promise block are held, and the metrics are recomputed from the rows of all files together. `recheck.answering_run_dir(area, protocol)` gives the run to read; of `recheck`, these two names are public API (`docs/architecture.md`, "Public API"), the rest may change between releases.
 
 Keep the area test (`tests/test_<NN>_<name>.py`) to checks from memory: finalize runs it, so an area test that itself starts `labkit-adopt` runs finalize again inside finalize. Put end-to-end scenarios in a separate test file.
 
