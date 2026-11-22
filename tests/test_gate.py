@@ -514,6 +514,28 @@ class AreaSlot(unittest.TestCase):
         )
         self.assertIn("`finalize 'my lab/x'`", line)
 
+    def test_the_audit_commands_callers_name_are_filled(self):
+        # the callers spell the slot through gate.AUDIT_SLOT, so a changed
+        # slot cannot leave their commands unfilled
+        from labkit.formats import followup
+        from labkit.gates import ways_out
+
+        head = "labkit-audit x --protocol x/PROTOCOL-b.md"
+        for step in (followup.STEP_AUDIT, ways_out.HANDOVER_WAY):
+            with self.subTest(step=step[:30]):
+                f = gate.Findings(tell=None, area="x", audit=head)
+                f.take(
+                    gate.GateFinding(
+                        "BLOCKER",
+                        "x",
+                        fix=step,
+                        evidence_kind=gate.GUARANTEED,
+                        rule=BREACH,
+                    )
+                )
+                self.assertIn(f"`{head} --", f.blocked[0])
+                self.assertNotIn(gate.AREA_SLOT, f.blocked[0])
+
     def test_the_twin_without_an_audit_head_the_area_alone_stands(self):
         f = gate.Findings(tell=None, area="experiments/01-x")
         f.take(

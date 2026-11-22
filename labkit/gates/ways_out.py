@@ -14,6 +14,7 @@ from pathlib import Path
 
 from labkit.formats import findings, promises
 from labkit.formats.commands import handover_command, register_anew
+from labkit.formats.gate import AUDIT_SLOT
 from labkit.checks.audit_binding import AuditError
 
 
@@ -28,7 +29,7 @@ def handover(protocol: Path | None) -> str:
     # names the protocol (tests/test_counter_cases.py)
     return (
         f"hand over: `{handover_command(protocol)}` (no model call; where an "
-        "audit ran, `labkit-audit <area> --findings` first prints the --decide "
+        f"audit ran, `{AUDIT_SLOT} --findings` first prints the --decide "
         "commands for its open BLOCKERs, which stay open in the handover) — the "
         "handover leaves no [result] table in the protocol's head, and its block "
         "in the report names the protocol, not its runs (a cited run id reads as "

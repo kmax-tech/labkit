@@ -43,7 +43,7 @@ from labkit.formats import audit_gaps
 from labkit.formats.exploration_link import NotLinked, linked_exploration
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
-from labkit.formats.gate import BLOCKER, with_rule, with_way_out
+from labkit.formats.gate import AUDIT_SLOT, BLOCKER, with_rule, with_way_out
 from labkit.formats.standard_contract import (
     PREFLIGHT_AUDIT,
     first_measurement_hint,
@@ -531,7 +531,7 @@ def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> li
     if not line:
         return [
             f"{path.name}: `preflight_audit` is empty — run `preflight`, then the "
-            f"preflight audit (`labkit-audit <area> --mode preflight`), decide its "
+            f"preflight audit (`{AUDIT_SLOT} --mode preflight`), decide its "
             f"findings and name its record here (LAB-015 Preflight audit before freezing)"
         ]
     gap = audit_gaps.audit_record_gap(base_dir, line, text)

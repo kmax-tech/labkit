@@ -17,6 +17,7 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.gate import (
+    AUDIT_SLOT,
     BLOCKER,
     TECHNICAL_RULE,
     RuleAssignment,
@@ -133,7 +134,7 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
             return (
                 f"no {mode} audit saw the area as it is now"
                 f"{registration_note(same_state, now.registration)} — "
-                f"`labkit-audit <area> --mode {mode}`"
+                f"`{AUDIT_SLOT} --mode {mode}`"
             )
         seen = "; ".join(sorted({r.state.words() for r in records})) or "none"
         stopped = unproven_attempts(area, mode, now.scope_sha, now.block_sha)
@@ -144,7 +145,7 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
                 f"{len(stopped)} attempt(s) unproven — {models} did not write the "
                 f"answer whole (a safety stop or another model; "
                 f"{stopped[-1].path.name}); the same model is not tried again on "
-                f"this state: `labkit-audit <area> --mode {mode} --model <alias>`"
+                f"this state: `{AUDIT_SLOT} --mode {mode} --model <alias>`"
             )
         try:
             under_way = running(area, mode)
@@ -162,7 +163,7 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
         return (
             f"no {mode} audit saw the area as it is now "
             f"({now.words()}; audited: {seen}) — {why}: "
-            f"`labkit-audit <area> --mode {mode}`"
+            f"`{AUDIT_SLOT} --mode {mode}`"
             f"{validation_note(area)}"
         )
     still_open = open_findings(covering)
@@ -225,7 +226,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
         return RecordGap(
             "`preflight_audit` names no record — the field is the file name of the "
             "decided preflight record under audits/ (`<minute>-preflight.toml`, "
-            "printed by `labkit-audit <area> --mode preflight` when it writes one); "
+            f"printed by `{AUDIT_SLOT} --mode preflight` when it writes one); "
             "at high repeat cost a full run owes that audit, and nobody waives their "
             "own: run it and name its record; when the backend does not answer, "
             "labkit-audit records the failed attempt and a full run acknowledges "
@@ -240,7 +241,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
     if not path.is_file():
         return RecordGap(
             f"`preflight_audit` names {DIR}/{name}, and there is no such record in "
-            f"this area — name the one `labkit-audit <area> --mode preflight` wrote",
+            f"this area — name the one `{AUDIT_SLOT} --mode preflight` wrote",
             audit,
             LAB_015,
         )
@@ -265,7 +266,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
         return RecordGap(
             f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
             f"{now} — it changed after the audit, so the change owes a new audit "
-            f"(`labkit-audit <area> --mode preflight`); naming another record "
+            f"(`{AUDIT_SLOT} --mode preflight`); naming another record "
             f"without one is refused too{validation_note(area)}",
             audit,
             LAB_015,

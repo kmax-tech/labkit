@@ -96,7 +96,7 @@ from labkit.formats import findings as audit_findings
 from labkit.formats import evidence
 from labkit.formats.area_state import state_of
 from labkit.formats.scope_sha import area_test_files
-from labkit.formats.gate import EXIT_CONTRACT, Findings
+from labkit.formats.gate import AUDIT_SLOT, EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     choose_protocol,
     git_root,
@@ -505,7 +505,7 @@ def check_audit_records(
     if undecided:
         findings.note(
             f"  {len(undecided)} finding(s) still `open` — decide each ({audit_findings.DECIDED_LIST}) "
-            f"with `labkit-audit <area> --decide` before freezing (LAB-015 Preflight audit before freezing)"
+            f"with `{AUDIT_SLOT} --decide` before freezing (LAB-015 Preflight audit before freezing)"
             + (" — frozen = true owes it" if frozen else "")
         )
     return records
