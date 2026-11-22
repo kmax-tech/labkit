@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -253,6 +254,20 @@ class ScopeStampStation(unittest.TestCase):
 
     @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
     def test_the_whole_gate_blocks_a_script_that_does_not_read_once(self):
+        script = self.script("print('criterion_1_pass')\n")
+        script.chmod(0)
+        self.addCleanup(script.chmod, 0o644)
+        found = Findings(tell=None)
+        self.assertEqual(preflight.preflight_area(self.area, findings=found), 1)
+        named = [m for m in found.blocked if "measure.py" in m]
+        self.assertEqual(len(named), 1, found.blocked)
+        self.assertIn("cannot be read", named[0])
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file of mode 0")
+    def test_without_lib_a_script_that_does_not_read_blocks_once(self):
+        # no lib/ or src/: the stamp parses nothing and meets the script in
+        # its byte read, which must tell it like station 4's parse does
+        shutil.rmtree(self.area.parent.parent / "lib")
         script = self.script("print('criterion_1_pass')\n")
         script.chmod(0)
         self.addCleanup(script.chmod, 0o644)

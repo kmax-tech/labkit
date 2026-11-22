@@ -525,10 +525,10 @@ def area_snapshot(
 
     Raises:
         FileNotFoundError: A scope file is missing.
-        SourceError: A file the import walk reads (a script, a declared
-            scope file, a lib module) does not read or parse; a ValueError.
-        OSError: A file that stands does not read — a scope file's bytes,
-            a protocol, the pin file, a registered output of a linked
+        SourceError: A scope file (a script, a declared scope file, a lib
+            module) does not read or parse; a ValueError.
+        OSError: A file outside the scope that stands does not read — a
+            protocol, the pin file, a registered output of a linked
             exploration (`exploration_basis`).
         RuntimeError: git fails on a linked exploration.
         NothingToStamp: Nothing to stamp; a ValueError.
@@ -559,7 +559,15 @@ def area_snapshot(
     for f in listed:
         if f.resolve() not in contents:
             files.append(f)
-            contents[f.resolve()] = f.read_bytes()
+            # a scope file that stands and does not open is a source that
+            # does not read, as `read_source` says it: without lib/ or src/
+            # the walk parses nothing, and this read meets the script first
+            try:
+                contents[f.resolve()] = f.read_bytes()
+            except OSError as exc:
+                raise SourceError(
+                    f"{f}: cannot be read ({exc})", cause=read_cause(exc)
+                ) from exc
     pin = find_pin(area.resolve()) if use_pin else None
     entries = sorted((_key(f, root), contents[f]) for f in contents)
     basis, told = validation_basis(area)
