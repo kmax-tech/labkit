@@ -3,17 +3,19 @@
 The formats know their own records (`runs`, `findings`, `promises`); how a
 file is put on disk so that no reader sees half of it is one technique
 they share, and it lives here rather than with one of them — as does
-asking whether a file's `flock` is held (`lock_held`: a detached start,
-an output lock).
+holding a file's `flock` and asking whether it is held (`exclusive_lock`:
+an area's attempt start, an endpoint's lease; `lock_held`: a detached
+start, an output lock).
 """
 
 from __future__ import annotations
 
+import contextlib
 import fcntl
 import os
 import stat
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 #: why a reader could not give its file, carried with the error so that the
@@ -145,6 +147,20 @@ def write_once(path: Path, text: str) -> bool:
     finally:
         tmp.unlink(missing_ok=True)
     return True
+
+
+@contextlib.contextmanager
+def exclusive_lock(path: Path) -> Iterator[None]:
+    """Hold the exclusive `fcntl.flock` lock on PATH for the `with` block,
+    waiting until no other holder has it; PATH is created empty when
+    missing and never written. Released at the block's end, an exception
+    included, and by the kernel when the process dies."""
+    with path.open("a", encoding="utf-8") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 def lock_held(path: Path) -> bool:

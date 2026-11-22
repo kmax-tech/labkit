@@ -94,7 +94,12 @@ from labkit.formats.commands import checkout_command, stage_command
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats import report_reviews
-from labkit.formats.files import lock_held, write_atomic, write_atomic_bytes
+from labkit.formats.files import (
+    exclusive_lock,
+    lock_held,
+    write_atomic,
+    write_atomic_bytes,
+)
 from labkit.formats.findings import ANSWERS, DIR, JOURNAL
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
@@ -1092,17 +1097,6 @@ def copy_gaps(
     return out
 
 
-@contextlib.contextmanager
-def _area_lock(area: Path) -> Generator[None]:
-    """Hold AREA's lock: the check and the start of an attempt, an end."""
-    with _lock_file(area, "area").open("a") as fh:
-        fcntl.flock(fh, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(fh, fcntl.LOCK_UN)
-
-
 class Running:
     """An attempt begun by this process: holds its lock until `end`. The
     lock lives with this object — dropped unended, it is collected and
@@ -1150,7 +1144,7 @@ class Running:
             event["error"] = error
         if self.answer:
             event["answer"] = self.answer
-        with _area_lock(self.area):
+        with exclusive_lock(_lock_file(self.area, "area")):
             # the files before the line that names them: a journal line
             # whose file the copy lacks could not be restored from it
             _keep(self.area, [rel for rel in (file, self.answer) if rel])
@@ -1191,7 +1185,7 @@ def begin(
     a refusal or a journal that does not read, RuntimeError when git fails.
     Invalid bindings are refused before any journal or lock is written."""
     validate_audit_binding(mode, block_sha, protocol, str(journal_path(area)))
-    with _area_lock(area):
+    with exclusive_lock(_lock_file(area, "area")):
         found = area_gaps(area)
         attempts = read_journal(area)
         alive = alive_of(area, attempts)

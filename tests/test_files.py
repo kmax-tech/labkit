@@ -74,3 +74,46 @@ class WriteAtomic(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExclusiveLock(unittest.TestCase):
+    """`exclusive_lock` holds the flock for its block and gives it back."""
+
+    def test_held_inside_the_block_and_free_after(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".lock"
+            with files.exclusive_lock(path):
+                # a second open file description cannot take the lock
+                self.assertTrue(files.lock_held(path))
+            self.assertFalse(files.lock_held(path))
+            self.assertEqual(path.read_text(encoding="utf-8"), "")
+
+    def test_released_when_the_block_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".lock"
+            with self.assertRaises(RuntimeError):
+                with files.exclusive_lock(path):
+                    raise RuntimeError("boom")
+            self.assertFalse(files.lock_held(path))
+
+    def test_a_second_holder_waits_until_the_first_releases(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".lock"
+            order: list[str] = []
+            entered = threading.Event()
+
+            def second() -> None:
+                entered.set()
+                with files.exclusive_lock(path):
+                    order.append("second")
+
+            with files.exclusive_lock(path):
+                t = threading.Thread(target=second)
+                t.start()
+                entered.wait()
+                t.join(timeout=0.2)
+                self.assertTrue(t.is_alive())
+                order.append("first")
+            t.join(timeout=5)
+            self.assertFalse(t.is_alive())
+            self.assertEqual(order, ["first", "second"])

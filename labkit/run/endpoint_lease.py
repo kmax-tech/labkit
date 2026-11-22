@@ -61,8 +61,6 @@ Deliberate exception, like `--no-verify`: `LABKIT_NO_ENDPOINT_LEASE=1`.
 from __future__ import annotations
 
 import atexit
-import contextlib
-import fcntl
 import json
 import os
 import re
@@ -72,7 +70,6 @@ import time
 import urllib.parse
 import uuid
 from pathlib import Path
-from collections.abc import Iterator
 
 from labkit.formats import digests
 from labkit.formats import files, runs
@@ -171,17 +168,6 @@ def holders(endpoint: str) -> list[dict]:
     return out
 
 
-@contextlib.contextmanager
-def _locked(d: Path) -> Iterator[None]:
-    """Exclusive flock on the endpoint directory for check-and-write."""
-    with open(d / ".lock", "a", encoding="utf-8") as fh:
-        fcntl.flock(fh, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(fh, fcntl.LOCK_UN)
-
-
 def _order(rec: dict) -> tuple[str, str]:
     """Who came first: the start time, then the record's random token — a
     total order. On the second alone two writers in the same second would
@@ -234,7 +220,7 @@ def acquire(
                 continue
             d = lease_dir() / endpoint_dir(endpoint)
             d.mkdir(parents=True, exist_ok=True)
-            with _locked(d):
+            with files.exclusive_lock(d / ".lock"):
                 _lease_one(
                     d, endpoint, alias, refuse=canonical_endpoint(endpoint) in exclusive
                 )
