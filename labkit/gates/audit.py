@@ -346,7 +346,7 @@ def main(argv: list[str]) -> int:
         "--why",
         default="",
         metavar="REASON",
-        help="with --decide: why — the change for fixed, the limit for limit, the "
+        help="with --decide: why — the change for fixed, the limit for limitation, the "
         "counter-evidence (file, line, value) for false-positive",
     )
     ap.add_argument(

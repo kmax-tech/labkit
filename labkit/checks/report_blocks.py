@@ -31,8 +31,11 @@ here states, and no more:
   report shows of it is the generated one, not a retyped one. A cited run
   no protocol declares owes no block (the gate warns: nothing is declared
   there).
-- `cited_gaps` (guaranteed): every token that reads as a run id
-  (`runs.RUN_ID_LIKE`) names a run directory of the repo.
+- `cited_gaps`: every token that reads as a run id (`runs.RUN_ID_LIKE`)
+  names a run directory of the repo — guaranteed inside a generated block
+  (a blocker: the block names the run its number comes from), static
+  evidence in prose (a warning: a pattern over free text also reads an
+  italic `_<id>_`).
 - `discussions`, `discussion_gaps` (guaranteed): a run the report looks
   at without reporting it stands in a discussion block, written by
   `protocol-fill <PROTOCOL> --discuss RUN --why "…" --into <FILE>` — its

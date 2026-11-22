@@ -643,7 +643,7 @@ def registers_promises(text: str) -> bool:
 def table_ids(text: str) -> set[str]:
     """The ids the protocol's [[promise]] tables declare (`criterion-1`):
     the ids an audit decision's effect may leave not assessable
-    (`labkit-audit --decide N limitationation --not-assessable <ID>`). Empty for a
+    (`labkit-audit --decide N limitation --not-assessable <ID>`). Empty for a
     protocol without tables — a computation registers none. Unlike
     `registered_ids`, an id named only in the prose does not count. Raises
     PromiseError on a malformed block."""

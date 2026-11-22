@@ -304,8 +304,10 @@ def preflight_area(
         block_told=any(gap.block_unread for gap in report.must_gaps),
     )
 
-    # 5. scope-sha — always; a stamp that cannot be computed blocks,
-    #    told only while an earlier blocker holds the gate
+    # 5. scope-sha — always; a stamp that cannot be computed blocks: a scope
+    #    file or promise block that is missing or does not read only while
+    #    no earlier blocker holds the gate (told beside it), git or another
+    #    file always
     findings.header("scope-sha")
     check_scope_stamp(findings, area)
 
@@ -601,11 +603,13 @@ def check_scope_stamp(findings: Findings, area: Path) -> None:
     """Station 5: the audit stamp of the area's input scope
     (`scope_sha.area_stamp`), or why there is none. A stamp that cannot be
     computed blocks: no audit can be bound to the area until it can.
-    - An OSError other than a missing file (a file that stands and does not
-      open, such as a registered output of a linked exploration's runs) or
-      a RuntimeError (git failing on that exploration) blocks always.
-    - A missing scope file (FileNotFoundError) or any ValueError — a script
-      or helper that does not read or parse (`SourceError`), a promise
+    - An OSError other than a missing file (a file outside the scope that
+      stands and does not open, such as a registered output of a linked
+      exploration's runs) or a RuntimeError (git failing on that
+      exploration) blocks always.
+    - A missing scope file (FileNotFoundError) or any ValueError — a script,
+      helper or other scope file that does not open, read or parse
+      (`scope_sha` raises `SourceError` for it), a promise
       block that does not read (`PromiseError`) — is told only while any
       earlier station's blocker stands, whatever its cause, and blocks
       otherwise. The common cause (the protocol's own block, scope or
