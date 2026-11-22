@@ -325,3 +325,59 @@ class TheRuleAReviewHoldRecords(unittest.TestCase):
         f = self._hold([self._review(self.CLAIM)], gaps=("audits/a.toml is gone",))
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertIn("none can run", f.text)
+
+
+class TheStagedHoldReadsTheAreaTests(unittest.TestCase):
+    """`staged_area_gap` with `tests=True` — the stations, which run the
+    area's tests from the tree — also compares the area's tests under
+    `tests/` with the index; the report review (`tests=False`) does not
+    run them and is not held by them. A test of another area holds
+    neither."""
+
+    def setUp(self):
+        from repo_fixture import git, init_repo
+
+        self.git = git
+        self.root = Path(tempfile.mkdtemp())
+        init_repo(self.root)
+        self.area = self.root / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+        (self.area / "PROTOCOL-x.md").write_text("# x\n")
+        (self.root / "tests").mkdir()
+        for name in ("test_01_x.py", "test_02_y.py"):
+            (self.root / "tests" / name).write_text("def test_a():\n    pass\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "start")
+
+    def gap(self, tests: bool):
+        return report_hold.staged_area_gap(
+            self.root, self.area, "the stations read", tests=tests
+        )
+
+    def test_an_unstaged_area_test_holds_the_stations(self):
+        (self.root / "tests" / "test_01_x.py").write_text("def test_a():\n    1 / 0\n")
+        found = self.gap(tests=True)
+        assert found is not None
+        self.assertEqual(found.grade, BLOCKER)
+        self.assertIn("tests/test_01_x.py", found.text)
+        self.assertIn("tests/test_01_x.py", str(found.step))
+        self.assertIn("experiments/01-x", str(found.step))
+        self.assertIsNone(self.gap(tests=False))  # the review runs no test
+
+    def test_a_new_split_test_file_holds_the_stations(self):
+        (self.root / "tests" / "test_01_x_more.py").write_text(
+            "def test_b():\n    pass\n"
+        )
+        found = self.gap(tests=True)
+        assert found is not None
+        self.assertIn("tests/test_01_x_more.py", found.text)
+
+    def test_the_twins_nothing_held(self):
+        test = self.root / "tests" / "test_01_x.py"
+        test.write_text("def test_a():\n    assert True\n")
+        self.git(self.root, "add", "tests/test_01_x.py")
+        with self.subTest("the same change, staged"):
+            self.assertIsNone(self.gap(tests=True))
+        (self.root / "tests" / "test_02_y.py").write_text("def test_a():\n    1 / 0\n")
+        with self.subTest("another area's test changed"):
+            self.assertIsNone(self.gap(tests=True))

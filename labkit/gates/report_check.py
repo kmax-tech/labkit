@@ -1492,7 +1492,7 @@ def hold_declared(
     area = protocol.parent.resolve()
     if staged:
         # the one hold of this state, `next --staged`'s row too
-        gap = staged_area_gap(repo, area, "the stations read")
+        gap = staged_area_gap(repo, area, "the stations read", tests=True)
         if gap is not None:
             tell(f"  {gap.line}")
             return ProtocolVerdict(1, None)

@@ -406,7 +406,7 @@ def _staged_area_step(
     tree_only_result = result_outside_index(repo, area, protocol)
     if not (index_declares or tree_only_result):
         return None
-    gap = staged_area_gap(repo, area, "the stations read")
+    gap = staged_area_gap(repo, area, "the stations read", tests=True)
     if gap is None:
         return None
     return Step(

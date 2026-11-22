@@ -47,7 +47,9 @@ from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
+    area_test_stem,
     is_protocol_name,
+    split_area_name,
     REPORT_SUFFIX,
     file_text,
     git_root,
@@ -83,7 +85,7 @@ from labkit.formats.commands import (
     stage_command,
 )
 from labkit.formats.runs import read_run_config, unreportable
-from labkit.formats.scope_sha import areas_touched
+from labkit.formats.scope_sha import area_test_globs, areas_touched
 
 LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
@@ -147,13 +149,18 @@ def report_entry(
     return link_target, text_at(repo, end)
 
 
-def tree_differs(repo: Path, area: Path) -> list[str]:
-    """The paths under AREA whose working tree differs from the index — a
-    tracked file modified or deleted and not staged, an untracked file —
-    relative to REPO. Empty when the tree under AREA is what the commit
-    would hold."""
-    rel = rel_posix(area, repo)
-    return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
+def tree_differs(repo: Path, area: Path, *, tests: bool = False) -> list[str]:
+    """The paths under AREA — with TESTS also the area's tests under
+    REPO's `tests/` (`scope_sha.area_test_globs`), which the area-test
+    station runs from the tree — whose working tree differs from the
+    index: a tracked file modified or deleted and not staged, an
+    untracked file; relative to REPO. Empty when those files are what the
+    commit would hold."""
+    specs = [rel_posix(area, repo)]
+    if tests:
+        stem = area_test_stem(*split_area_name(area.resolve().name))
+        specs += [f"tests/{g}" for g in area_test_globs(stem)]
+    return [path for xy, path in status_entries(repo, tuple(specs)) if xy[1] != " "]
 
 
 def runs_outside_index(repo: Path, area: Path) -> dict[str, Path]:
@@ -217,26 +224,34 @@ def result_outside_index(repo: Path, area: Path, protocol: Path) -> bool:
     )
 
 
-def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
+def staged_area_gap(
+    repo: Path, area: Path, reads: str, *, tests: bool = False
+) -> GateFinding | None:
     """The pre-commit's BLOCKER while AREA's working tree differs from the
-    index (`tree_differs`): the commit holds the index, and READS (who
-    reads the tree: "the stations read", "the report review of REPORT.md
-    reads") would judge bytes the commit does not hold. None when the tree
-    is what the commit would hold. The one home of this hold for
-    report-check's declared branch (`report_check.hold_declared`), the
+    index (`tree_differs`; with TESTS the area's tests under `tests/` too,
+    for a reader that runs them): the commit holds the index, and READS
+    (who reads the tree: "the stations read", "the report review of
+    REPORT.md reads") would judge bytes the commit does not hold. None
+    when the tree is what the commit would hold. The one home of this hold
+    for report-check's declared branch (`report_check.hold_declared`), the
     report review (`review_gap`) and `next --staged`'s row
     (`next_step._staged_area_step`), so the hold and the step agree; its
-    step stages the whole area (`commands.stage_command`) — a partial staging
-    takes more than the one file a reader has in mind."""
-    differs = tree_differs(repo, area)
+    step stages the whole area and each differing test file
+    (`commands.stage_command`) — a partial staging takes more than the one
+    file a reader has in mind."""
+    differs = tree_differs(repo, area, tests=tests)
     if not differs:
         return None
-    step = stage_command(area)
+    area_rel = rel_posix(area, repo)
+    outside = [repo / p for p in differs if not p.startswith(f"{area_rel}/")]
+    step = stage_command(area, *outside)
     return blocker(
         f"{shown(area, repo)}: the working tree differs from the index "
         f"({', '.join(differs)}) — {reads} the tree, the commit holds the index",
-        fix=f"`{step}` stages the whole area ({len(differs)} file(s), listed "
-        "above); stash what the commit must not hold",
+        fix=f"`{step}` stages the whole area"
+        + (" and its tests" if outside else "")
+        + f" ({len(differs)} file(s), listed above); stash what the commit "
+        "must not hold",
         step=step,
         rule=TECHNICAL_RULE,
     )

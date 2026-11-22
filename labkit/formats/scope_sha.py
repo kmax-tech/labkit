@@ -191,13 +191,21 @@ def scripts_named(area: Path, script: str) -> list[Path]:
     ]
 
 
+def area_test_globs(stem: str) -> tuple[str, str]:
+    """The names of one area's tests under `tests/`: `<stem>.py` and the
+    split files `<stem>_<part>.py` — the one spelling of which files the
+    area-test station runs (`area_test_files`) and the commit's hold
+    compares (`report_hold.tree_differs`)."""
+    return f"{stem}.py", f"{stem}_*.py"
+
+
 def area_test_files(repo: Path, stem: str) -> list[Path]:
-    """The repo's tests of one area: `tests/<stem>.py` and the split files
-    `tests/<stem>_<part>.py`, sorted; [] without a tests directory."""
+    """The repo's tests of one area (`area_test_globs`), sorted; [] without
+    a tests directory."""
     tests_dir = repo / "tests"
     if not tests_dir.is_dir():
         return []
-    return sorted({*tests_dir.glob(f"{stem}.py"), *tests_dir.glob(f"{stem}_*.py")})
+    return sorted({p for g in area_test_globs(stem) for p in tests_dir.glob(g)})
 
 
 def test_files(repo: Path) -> list[Path]:
