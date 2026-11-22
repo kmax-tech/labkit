@@ -19,6 +19,9 @@ VENV=${2:-$(dirname "$(dirname "$(command -v usability)")")}
 LAB=$DIR/lab
 AREA=experiments/01-docs-per-case
 P=$AREA/PROTOCOL-docs-per-case.md
+# the area's own test lies outside the area; step 2 fills its hand-checked
+# case, and step 3 commits it with the area, or the committed test stays red
+T=tests/test_01_docs_per_case.py
 
 say() { printf '\n== %s\n' "$*"; }
 run() { printf '$ %s\n' "$*"; "$@"; }
@@ -44,8 +47,8 @@ run "$V/protocol-fill" "$P" type=exploratory \
     "Unit=one document = one visible regular file directly in a case's directory"
 run "$V/protocol-check" "$P"
 echo "   (every commit below runs the probe's pre-commit hook: protocol-check on staged protocols, report-check on declared results)"
-run git add "$AREA"
-run git commit -q -m "Register docs-per-case: the question, scope and unit; the count filled" -- "$AREA"
+run git add "$AREA" "$T"
+run git commit -q -m "Register docs-per-case: the question, scope and unit; the count and its test filled" -- "$AREA" "$T"
 
 say "4. the run — runlog refuses it unless the registration is written; at low repeat cost it is the instrument check too"
 run "$V/python" "$AREA/scripts/01_measure.py"

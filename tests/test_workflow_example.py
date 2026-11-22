@@ -72,6 +72,17 @@ class CountWalkthrough(unittest.TestCase):
         self.assertEqual(len(list((area / "runs").iterdir())), 1)
         self.assertEqual(len(list((area / "audits").glob("*-analysis.toml"))), 1)
         self.assertIn("<!-- /labkit result -->", (lab / "REPORT.md").read_text())
+        # everything the walk wrote is committed: a fill left in the tree
+        # (the area test's hand-checked case) is lost on the next checkout,
+        # and the committed area test then fails finalize's test station
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=lab,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(status.stdout, "", status.stdout)
 
 
 if __name__ == "__main__":
