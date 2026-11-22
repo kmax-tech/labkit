@@ -3,14 +3,28 @@
 What a `requirements.txt`, a `requirements.lock` or `pip freeze` says
 about a package: a VCS pin (`name @ git+<url>@<ref>`), an editable VCS or
 path install as pip freezes it, a version pin (`name==X.Y.Z`), and the
-package name as pip normalises it. Read by provenance (the run's
+package name as pip normalises it — and which files of a repository
+say it (`PIN_FILES`, `requirements_files`). Read by provenance (the run's
 environment), the repo check and the stamp (the labkit pin), the
-declared-scope hash and the usability probe. Pure: lines in, matches out.
+declared-scope hash and the usability probe. The grammar is pure: lines
+in, matches out; `requirements_files` reads only whether files exist.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from pathlib import Path
 import re
+
+from labkit.formats.repo import git_root
+
+#: what pip froze: the environment a run records
+REQUIREMENTS_LOCK = "requirements.lock"
+#: what the repository declares: the stamped pin of labkit at its tag
+REQUIREMENTS_TXT = "requirements.txt"
+#: the files that pin a repository's environment, the lock first: in one
+#: directory, a search takes the lock before the declared list
+PIN_FILES = (REQUIREMENTS_LOCK, REQUIREMENTS_TXT)
 
 _PKG = r"(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)"
 #: `name @ git+<url>@<ref>` — a VCS pin; the ref is optional, a trailing `# comment` allowed
@@ -52,3 +66,27 @@ def requirement_name(line: str) -> str | None:
 def requirement_lines(text: str, name: str) -> list[str]:
     """The lines of a requirements file (or `pip freeze` output) that name `name`."""
     return [ln.strip() for ln in text.splitlines() if requirement_name(ln) == name]
+
+
+def requirements_files(
+    start: Path, names: tuple[str, ...] = PIN_FILES
+) -> Iterator[Path]:
+    """Every file named in NAMES that exists in START or above it, nearest
+    directory first and, within one directory, in the order of NAMES.
+
+    The search stops at the root of START's git repository
+    (`repo.git_root`), that root included: a requirements file above the
+    repository is not the repository's, and taking it would record one
+    commit differently on two machines. Outside a repository it goes on to
+    the filesystem root. START is made absolute, not resolved: a yielded
+    path keeps the spelling the caller gave. Lazy — a caller that takes
+    the first match looks into no further directory.
+    """
+    start = start.absolute()
+    top = git_root(start)
+    for d in [start, *start.parents]:
+        for name in names:
+            if (d / name).exists():
+                yield d / name
+        if top is not None and d.resolve() == top:
+            return

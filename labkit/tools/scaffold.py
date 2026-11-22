@@ -108,8 +108,8 @@ from labkit.formats.repo import (
     split_area_name,
     text_at,
 )
-from labkit.formats.requirements import requirement_lines
-from labkit.tools.repo_check import PIN_FILES, PYPROJECT_VERSION_RE
+from labkit.formats.requirements import PIN_FILES, requirement_lines
+from labkit.tools.repo_check import PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
     ProtocolBlocks,
     count_placeholders,
@@ -1083,7 +1083,7 @@ def _never_committed(root: Path, path: Path) -> bool:
 def earlier_pin_text(root: Path, path: Path) -> tuple[str, str] | None:
     """(commit, text): PATH as the commit that first added it holds it
     (`repo.first_added`, renames followed), when a pin file under ROOT
-    (`repo_check.PIN_FILES`) pins another labkit then than now (its
+    (`requirements.PIN_FILES`) pins another labkit then than now (its
     `labkit` lines, a trailing comment aside): the evidence that this
     labkit's templates are not the ones PATH was stamped from, so a
     difference from today's stamp shows no edit. None without that

@@ -250,6 +250,17 @@ class TestThePinIsTheRepositorys(unittest.TestCase):
         self.assertEqual(scope_sha.find_pin(self.area), found)
         self.assertEqual(scope_sha.area_stamp(self.area)[2], found)
 
+    def test_the_first_file_that_names_labkit_holds_the_pin(self):
+        (self.repo / ".git").mkdir()
+        (self.area / "requirements.lock").write_text("numpy==2.1\n")
+        (self.repo / "requirements.txt").write_text("labkit==0.1.0\n")
+        (self.repo / "requirements.lock").write_text(self.PIN)
+        # a lock without labkit is passed; in one directory the lock wins
+        self.assertEqual(
+            scope_sha.find_pin(self.area),
+            (str(self.repo / "requirements.lock"), self.PIN.strip()),
+        )
+
     def test_outside_a_repository_the_search_goes_on_upwards(self):
         (self.outside / "requirements.txt").write_text(self.PIN)
         self.assertEqual(

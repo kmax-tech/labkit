@@ -66,14 +66,13 @@ from labkit.formats.repo import (
     SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
-    git_root,
     layout_root,
     no_such_area,
     protocols_in,
     rel_posix,
     repo_protocols,
 )
-from labkit.formats.requirements import requirement_lines
+from labkit.formats.requirements import requirement_lines, requirements_files
 
 
 class SourceError(ReadError):
@@ -444,23 +443,15 @@ def repo_imports(files: list[Path], repo: Path) -> list[Path]:
 
 
 def find_pin(start: Path, name: str = "labkit") -> tuple[str, str] | None:
-    """(file, line) of the pin of `name`, searched upwards from the area
-    START to the root of its git repository (`repo.git_root`), that root
-    included: a requirements file above the repository is not the
-    repository's pin, and taking it would stamp one commit differently on
-    two machines. Outside a repository the search goes on to the
-    filesystem root."""
-    top = git_root(start)
-    for d in [start, *start.parents]:
-        for fn in ("requirements.lock", "requirements.txt"):
-            p = d / fn
-            if not p.exists():
-                continue
-            lines = requirement_lines(p.read_text(encoding="utf-8"), name)
-            if lines:
-                return str(p), lines[0]
-        if top is not None and d.resolve() == top:
-            break
+    """(file, line) of the pin of `name`: the first line naming it in the
+    first requirements file that has one, searched upwards from the area
+    START to the root of its git repository, the lock before the declared
+    list (`requirements.requirements_files`, which gives the stop rule and
+    its reason)."""
+    for p in requirements_files(start):
+        lines = requirement_lines(p.read_text(encoding="utf-8"), name)
+        if lines:
+            return str(p), lines[0]
     return None
 
 

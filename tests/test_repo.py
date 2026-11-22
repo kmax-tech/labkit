@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import fnmatch
 import io
+import itertools
 import os
 import re
 import shlex
@@ -316,6 +317,57 @@ class RequirementLines(unittest.TestCase):
         self.assertIsNone(
             unpinned["ref"]
         )  # a VCS line without a ref is read, not a pin
+
+
+class RequirementsFiles(unittest.TestCase):
+    """One search for a repository's requirements files: nearest directory
+    first, the lock before the declared list, up to the git root and not
+    above it; outside a repository on upwards."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        # not resolved: on macOS the temp dir is reached through a symlink,
+        # and a yielded path keeps the caller's spelling
+        self.outside = Path(tmp.name)
+        self.repo = self.outside / "lab"
+        self.area = self.repo / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+        for d in (self.outside, self.repo, self.area):
+            for name in requirements.PIN_FILES:
+                (d / name).write_text("labkit==0.1.0\n")
+
+    def test_in_a_repository_the_search_stops_at_its_root(self):
+        (self.repo / ".git").mkdir()
+        self.assertEqual(
+            list(requirements.requirements_files(self.area)),
+            [
+                self.area / "requirements.lock",
+                self.area / "requirements.txt",
+                self.repo / "requirements.lock",
+                self.repo / "requirements.txt",
+            ],
+        )
+
+    def test_the_names_choose_the_files(self):
+        (self.repo / ".git").mkdir()
+        (self.area / "requirements.lock").unlink()
+        got = requirements.requirements_files(
+            self.area, (requirements.REQUIREMENTS_LOCK,)
+        )
+        self.assertEqual(list(got), [self.repo / "requirements.lock"])
+
+    def test_outside_a_repository_the_search_goes_on_upwards(self):
+        # the first six only: the directories above the temp dir are not ours
+        got = list(itertools.islice(requirements.requirements_files(self.area), 6))
+        self.assertEqual(
+            got,
+            [
+                d / name
+                for d in (self.area, self.repo, self.outside)
+                for name in requirements.PIN_FILES
+            ],
+        )
 
 
 class Git(unittest.TestCase):

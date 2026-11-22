@@ -51,12 +51,13 @@ from labkit.formats.repo import (
     repo_protocols,
 )
 from labkit.formats.requirements import (
+    REQUIREMENTS_LOCK,
+    REQUIREMENTS_TXT,
     VCS_REQUIREMENT,
     VERSION_REQUIREMENT,
     requirement_lines,
 )
 
-PIN_FILES = ("requirements.txt", "requirements.lock")
 TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 PYPROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
 REMOTE_TIMEOUT_S = 15.0
@@ -93,13 +94,16 @@ def version_tuple(version: str) -> tuple[int, ...]:
 
 
 def read_pins(repo: Path) -> list[Pin]:
-    """The labkit pin of every requirements file in REPO that has one.
+    """The labkit pin of every requirements file in REPO (its root only, no
+    search upwards) that has one: the declared list first, then the lock.
 
     A `labkit` line that is neither `labkit @ git+…@ref` nor `labkit==X.Y.Z`
     raises, naming the file: a pin nobody can read is not "no pin".
     """
     pins = []
-    for name in PIN_FILES:
+    # the declared list first: `check_repo` reads the version from pins[0],
+    # and its tag names it where the lock (pip freeze) names a commit
+    for name in (REQUIREMENTS_TXT, REQUIREMENTS_LOCK):
         path = repo / name
         if not path.is_file():
             continue
