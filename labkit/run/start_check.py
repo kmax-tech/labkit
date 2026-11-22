@@ -43,7 +43,13 @@ from labkit.formats import audit_gaps
 from labkit.formats.exploration_link import NotLinked, linked_exploration
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
-from labkit.formats.gate import AUDIT_SLOT, BLOCKER, with_rule, with_way_out
+from labkit.formats.gate import (
+    AUDIT_SLOT,
+    BLOCKER,
+    fill_slots,
+    with_rule,
+    with_way_out,
+)
 from labkit.formats.standard_contract import (
     PREFLIGHT_AUDIT,
     first_measurement_hint,
@@ -406,7 +412,9 @@ def _freeze_findings(base_dir: Path, bound: _Bound, state: AreaState) -> list[st
         )
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")
-    out += _audit_line_findings(base_dir, path, head.preflight_audit, text)
+    out += _audit_line_findings(
+        base_dir, base_dir / bound.name, head.preflight_audit, text
+    )
     return out
 
 
@@ -522,23 +530,35 @@ def _audit_unavailable(
     return failed
 
 
-def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
-    """Why the head's `preflight_audit` does not cover a full run: empty, or
-    what `audit_gaps.audit_record_gap` says of the record it names — none
-    named (`n/a` is none), no such record, one of other code
+def _audit_line_findings(
+    base_dir: Path, protocol: Path, line: str, text: str
+) -> list[str]:
+    """Why the head's `preflight_audit` of PROTOCOL does not cover a full
+    run: empty, or what `audit_gaps.audit_record_gap` says of the record it
+    names — none named (`n/a` is none), no such record, one of other code
     or another promise block than the area carries now, a finding open —
-    each with its way out (`RecordGap.fix`)."""
+    each with its way out (`RecordGap.fix`). Every audit command named is
+    filled for BASE_DIR (`gate.fill_slots`): runlog tells these outside a
+    gate, and its reader copies the command as printed."""
+    audit = commands.audit_command(base_dir, protocol=protocol).line
+
+    def filled(s: str) -> str:
+        return fill_slots(s, repo.shown(base_dir, Path.cwd()), audit)
+
     if not line:
         return [
-            f"{path.name}: `preflight_audit` is empty — run `preflight`, then the "
-            f"preflight audit (`{AUDIT_SLOT} --mode preflight`), decide its "
-            f"findings and name its record here (LAB-015 Preflight audit before freezing)"
+            filled(
+                f"{protocol.name}: `preflight_audit` is empty — run `preflight`, then "
+                f"the preflight audit (`{AUDIT_SLOT} --mode preflight`), decide its "
+                f"findings and name its record here (LAB-015 Preflight audit before "
+                f"freezing)"
+            )
         ]
     gap = audit_gaps.audit_record_gap(base_dir, line, text)
     if gap is None:
         return []
-    why = with_rule(f"{path.name}: preflight_audit: {gap.why}", gap.rule)
-    return [with_way_out(why, gap.fix)]
+    why = with_rule(f"{protocol.name}: preflight_audit: {gap.why}", gap.rule)
+    return [filled(with_way_out(why, gap.fix))]
 
 
 def _promise_snapshot(

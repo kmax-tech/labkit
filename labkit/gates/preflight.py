@@ -70,7 +70,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from labkit.formats.commands import contract_command, fill_command, gate_command
+from labkit.formats.commands import (
+    audit_command,
+    contract_command,
+    fill_command,
+    gate_command,
+)
 from labkit.formats.repo import area_args
 from labkit.formats.gate import (
     GUARANTEED,
@@ -282,7 +287,8 @@ def preflight_area(
 
     # 2. repeat cost — told, never counted
     findings.header("repeat cost")
-    for line in repeat_cost_lines(head.repeat_cost, lane):
+    clarity = audit_command(area, "--mode", "clarity", protocol=protocol).line
+    for line in repeat_cost_lines(head.repeat_cost, lane, clarity):
         findings.note(line)
 
     # 3. audit findings — the records always; the line's coverage where the
@@ -432,11 +438,12 @@ def check_promise_sentences(
 
 
 def repeat_cost_lines(
-    repeat_cost: str | None, lane: "standard_contract.Lane"
+    repeat_cost: str | None, lane: "standard_contract.Lane", clarity: str
 ) -> list[str]:
     """Station 2: what the lane owes before the freeze, in sentences — the
     audit where LANE owes the freeze (an unfilled REPEAT_COST reads as high), the
-    cold reader always. Told by the caller, counted by nobody."""
+    cold reader always, named by CLARITY, the area's clarity audit command
+    (`commands.audit_command`). Told by the caller, counted by nobody."""
     if not lane.freeze:
         audit = (
             f"  {lane.repeat_cost} — rerunnable at will: the agent audit is OPTIONAL before "
@@ -458,7 +465,7 @@ def repeat_cost_lines(
     return [
         audit,
         "  a cold reader is due while the prose can still change "
-        "(LAB-102 Cold reader before freezing): `labkit-audit <AREA> --mode clarity` — static "
+        f"(LAB-102 Cold reader before freezing): `{clarity}` — static "
         "evidence, never blocks",
     ]
 

@@ -281,7 +281,9 @@ class FreezeGate(unittest.TestCase):
             self._start(text, run_kind="measurement")
         msg = str(cm.exception)
         self.assertIn("nobody waives their own", msg)
-        self.assertIn("labkit-audit <area> --mode preflight", msg)
+        # the way out names this area's command, filled (`gate.fill_slots`)
+        self.assertIn(f"labkit-audit {self.tmp.resolve()} --mode preflight", msg)
+        self.assertNotIn("<area>", msg)
         self.assertIn("the repeat cost is wrong, not the field", msg)
         self.assertFalse((self.tmp / "runs").exists())
 
@@ -522,6 +524,80 @@ class FreezeGate(unittest.TestCase):
         self.assertEqual(cfg["run_kind"], "probe")
         self.assertFalse(cfg["unfrozen_ack"])
         self.assertIsNone(cfg["audit_failed"])
+
+
+class AuditCommandFilled(unittest.TestCase):
+    """The audit command runlog's freeze refusal and preflight's cold-reader
+    note name is the area's own, as the reader copies it: the area path
+    shell-quoted, `--protocol` where the area holds several, no `<area>`
+    slot left (`gate.fill_slots`, `commands.audit_command`)."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self._cwd = Path.cwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, self._cwd)
+        os.environ.pop("LABKIT_UNFROZEN", None)
+        os.environ.pop("CLAUDECODE", None)
+        os.environ.pop(start_check.FOREGROUND_TIMEOUT_ENV, None)
+
+    def _area(self, name: str, text: str, *more: str) -> tuple[Path, Path]:
+        area = self.root / "experiments" / name
+        area.mkdir(parents=True)
+        protocol = area / "PROTOCOL-x.md"
+        protocol.write_text(text, encoding="utf-8")
+        for other in more:
+            (area / other).write_text(UNFROZEN, encoding="utf-8")
+        scope_file(area)
+        return area, protocol
+
+    def _refusal(self, area: Path, protocol: Path) -> str:
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, run_kind="measurement", protocol=protocol)
+        return str(cm.exception)
+
+    def _preflight(self, area: Path, protocol: Path) -> str:
+        from labkit.gates import preflight
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            preflight.preflight_area(area, protocol)
+        return buf.getvalue()
+
+    def test_plain_area(self):
+        area, protocol = self._area("01-count", PLACEHOLDER)
+        refusal = self._refusal(area, protocol)
+        self.assertIn("`labkit-audit experiments/01-count --mode preflight`", refusal)
+        self.assertNotIn("<area>", refusal)
+        area, protocol = self._area("02-count", UNFROZEN)
+        note = self._preflight(area, protocol)
+        self.assertIn("`labkit-audit experiments/02-count --mode clarity`", note)
+        self.assertNotIn("<AREA>", note)
+
+    def test_area_with_a_space(self):
+        area, protocol = self._area("01 count", PLACEHOLDER)
+        refusal = self._refusal(area, protocol)
+        self.assertIn("`labkit-audit 'experiments/01 count' --mode preflight`", refusal)
+        self.assertNotIn("<area>", refusal)
+        note = self._preflight(area, protocol)
+        self.assertIn("`labkit-audit 'experiments/01 count' --mode clarity`", note)
+
+    def test_area_with_two_protocols(self):
+        area, protocol = self._area("01-count", PLACEHOLDER, "PROTOCOL-y.md")
+        refusal = self._refusal(area, protocol)
+        self.assertIn(
+            "`labkit-audit experiments/01-count "
+            "--protocol experiments/01-count/PROTOCOL-x.md --mode preflight`",
+            refusal,
+        )
+        self.assertNotIn("<area>", refusal)
+        note = self._preflight(area, protocol)
+        self.assertIn(
+            "`labkit-audit experiments/01-count --mode clarity "
+            "--protocol experiments/01-count/PROTOCOL-x.md`",
+            note,
+        )
 
 
 if __name__ == "__main__":

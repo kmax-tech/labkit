@@ -553,6 +553,17 @@ AREA_SLOT = "<area>"
 AUDIT_SLOT = f"labkit-audit {AREA_SLOT}"
 
 
+def fill_slots(text: str, area: str, audit: str | None) -> str:
+    """TEXT with every `AUDIT_SLOT` replaced by AUDIT, the audit command's
+    head for the area (`commands.audit_command` with no step), then every
+    `AREA_SLOT` by AREA as the reader types it, shell-quoted. Without AUDIT
+    the plain area stands in both. The one filler of both slots: a gate's
+    findings (`Findings`) and a refusal told outside a gate (runlog)."""
+    if audit is not None:
+        text = text.replace(AUDIT_SLOT, audit)
+    return text.replace(AREA_SLOT, shlex.quote(area))
+
+
 class Findings:
     """What the stations found, as data, and the channel they are told through.
 
@@ -624,16 +635,11 @@ class Findings:
     def take(self, finding: GateFinding) -> None:
         """Keep a finding, its area slot filled, and tell it."""
         if self._area is not None and AREA_SLOT in finding.line:
-            area, audit = shlex.quote(self._area), self._audit
-
-            def filled(s: str) -> str:
-                s = s.replace(AUDIT_SLOT, audit) if audit is not None else s
-                return s.replace(AREA_SLOT, area)
-
+            area, audit = self._area, self._audit
             finding = replace(
                 finding,
-                text=filled(finding.text),
-                fix=filled(finding.fix) if finding.fix else None,
+                text=fill_slots(finding.text, area, audit),
+                fix=fill_slots(finding.fix, area, audit) if finding.fix else None,
             )
         self.found.append(finding)
         self.note(f"  {finding.line}")
