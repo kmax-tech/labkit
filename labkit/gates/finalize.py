@@ -803,11 +803,10 @@ def is_preparation(area: Path, run_id: str) -> bool:
     preparation cannot supply a reported result (README, run kinds), so it
     owes no promise of the protocol it was bound to — a run without
     `protocol=` binds to the area's only protocol at its start
-    (`start_check.protocol_binding`). The standard's origin sentence
-    (`labkit/docs/standard.md`, "An input's origin run is recorded and
-    held") holds a bound origin to "what that text registered" and names a
-    preparation only as unbound; this reading follows its example, pending
-    the author's clarification of the sentence. The auditor's piece still
+    (`start_check.protocol_binding`). The standard states it (LAB-043 Runs
+    go through `runlog`, "An input's origin run is recorded and held"): a
+    preparation origin owes none of its text's promises, bound or not,
+    while its output's bytes and the read-back of its text stay held. The auditor's piece still
     shows a bound preparation's text as what its origin was measured
     under (`audit_binding.SOURCE_THEN`). Raises RunConfigError when the
     record does not read — in the station `source_protocol_then` has read
