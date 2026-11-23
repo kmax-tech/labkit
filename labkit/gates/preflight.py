@@ -75,6 +75,7 @@ from labkit.formats.commands import (
     contract_command,
     fill_command,
     gate_command,
+    preflight_command,
 )
 from labkit.formats.repo import area_args
 from labkit.formats.gate import (
@@ -317,7 +318,7 @@ def preflight_area(
     #    no earlier blocker holds the gate (told beside it), git or another
     #    file always
     findings.header("scope-sha")
-    check_scope_stamp(findings, area)
+    check_scope_stamp(findings, area, protocol)
 
     # 6. working tree — always
     findings.header("working tree")
@@ -608,9 +609,10 @@ def check_code(
         findings.note("  ok")
 
 
-def check_scope_stamp(findings: Findings, area: Path) -> None:
+def check_scope_stamp(findings: Findings, area: Path, protocol: Path) -> None:
     """Station 5: the audit stamp of the area's input scope
-    (`scope_sha.area_stamp`), or why there is none. A stamp that cannot be
+    (`scope_sha.area_stamp`), or why there is none; a way out reruns
+    preflight for PROTOCOL (`commands.preflight_command`). A stamp that cannot be
     computed blocks: no audit can be bound to the area until it can.
     - An OSError other than a missing file (a file outside the scope that
       stands and does not open, such as a registered output of a linked
@@ -640,14 +642,14 @@ def check_scope_stamp(findings: Findings, area: Path) -> None:
             findings.block(
                 f"cannot stamp the area's scope: {exc}",
                 fix="repair the file or promise block the sentence names, then "
-                f"`{gate_command('preflight', area)}`",
+                f"`{preflight_command(area, protocol)}`",
                 rule=TECHNICAL_RULE,
             )
     except (OSError, RuntimeError) as exc:
         findings.block(
             f"cannot stamp the area's scope: {exc}",
             fix="make the file readable (or git work on the repository), then "
-            f"`{gate_command('preflight', area)}`",
+            f"`{preflight_command(area, protocol)}`",
             rule=TECHNICAL_RULE,
         )
     else:

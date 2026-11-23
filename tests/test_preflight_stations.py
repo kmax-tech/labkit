@@ -235,7 +235,7 @@ class ScopeStampStation(unittest.TestCase):
         if held:
             found.block("an earlier station's blocker", fix="`x`", rule=TECHNICAL_RULE)
             told.clear()
-        preflight.check_scope_stamp(found, self.area)
+        preflight.check_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
         return told, found.blocked[1:] if held else found.blocked
 
     def script(self, text: str) -> Path:
@@ -244,6 +244,24 @@ class ScopeStampStation(unittest.TestCase):
         path.parent.mkdir(exist_ok=True)
         path.write_text(text)
         return path
+
+    def test_its_way_out_names_the_protocol_where_the_area_holds_several(self):
+        # preflight refuses to choose there: a line without it would refuse
+        self.script("def broken(:\n")
+        (self.area / "PROTOCOL-y.md").write_text("# y\n")
+        found = Findings(tell=None)
+        preflight.check_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
+        (fix,) = [f.fix for f in found.found if f.fix]
+        self.assertIn("--protocol", fix)
+        self.assertIn("PROTOCOL-x.md", fix)
+
+    def test_the_twin_with_one_protocol_its_way_out_names_none(self):
+        self.script("def broken(:\n")
+        found = Findings(tell=None)
+        preflight.check_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
+        (fix,) = [f.fix for f in found.found if f.fix]
+        self.assertIn("`preflight ", fix)
+        self.assertNotIn("--protocol", fix)
 
     def test_a_script_that_does_not_parse_cannot_stamp(self):
         self.script("def broken(:\n")

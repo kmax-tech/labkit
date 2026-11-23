@@ -366,6 +366,30 @@ class AReportedNumberOwesTheFreeze(unittest.TestCase):
     def test_the_twin_a_frozen_head_is_not_held_for_the_flag(self):
         self.assertEqual(self._unfrozen(True), [])
 
+    def _fix_in(self, protocols: tuple[str, ...]) -> str:
+        # the way out of an unfrozen head, in an area holding PROTOCOLS
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            for name in protocols:
+                (area / name).write_text("# x\n", encoding="utf-8")
+            ctx = checked(head(repeat_cost="high", frozen=False), run=None, area=area)
+            (gap,) = [
+                g
+                for g in report_check.freeze_gaps(ctx, repeated=False)
+                if "not `frozen = true`" in g.text
+            ]
+            return gap.fix or ""
+
+    def test_in_an_area_of_several_protocols_the_preflight_line_names_it(self):
+        # the gate refuses to choose there, so a line without it would refuse
+        fix = self._fix_in(("PROTOCOL-x.md", "PROTOCOL-y.md"))
+        self.assertRegex(fix, r"`preflight \S+ --protocol \S*PROTOCOL-x\.md` clean")
+
+    def test_the_twin_with_one_protocol_the_preflight_line_names_none(self):
+        fix = self._fix_in(("PROTOCOL-x.md",))
+        self.assertIn("`preflight ", fix)
+        self.assertNotIn("--protocol", fix.split("` clean")[0])
+
 
 if __name__ == "__main__":
     unittest.main()

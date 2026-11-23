@@ -190,6 +190,7 @@ from labkit.formats.commands import (
     freeze_command,
     gate_command,
     measure_command,
+    preflight_command,
     withdraw_command,
 )
 from labkit.formats.runs import read_run_config, unreportable
@@ -280,7 +281,7 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
         else [
             blocker(
                 f"{name}: not `frozen = true` — a reported number owes the freeze",
-                fix=f"freeze it: `{gate_command('preflight', ctx.area)}` "
+                fix=f"freeze it: `{preflight_command(ctx.area, ctx.protocol)}` "
                 f"clean, the preflight audit run and decided "
                 f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
                 f"then `{freeze_command(ctx.protocol)}`",
