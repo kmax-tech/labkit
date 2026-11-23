@@ -866,9 +866,16 @@ def owed_blocks(
     every run it cites that a protocol declares as its result, that
     protocol's block (`report_blocks.blocks_owed`), named as the report
     names it (`path_from_report`) so the sentence carries the command. A
-    source cited in the block it is a source of owes none (`drawn_citations`)."""
+    source cited in the block it is a source of owes none (`drawn_citations`),
+    nor a run named in an example code block that shows a block
+    (`report_blocks.shown_block_lines`)."""
     drawn = drawn_citations(report, text, found)
-    cited = [c for c in report_blocks.cited_run_ids(text) if c not in drawn]
+    shown = report_blocks.shown_block_lines(text)
+    cited = [
+        c
+        for c in report_blocks.cited_run_ids(text)
+        if c not in drawn and c[0] not in shown
+    ]
     named: dict[str, Path] = {}
     declaring: dict[str, list[str]] = {}
     for run_id in {r for _, r in cited}:

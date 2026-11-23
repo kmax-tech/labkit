@@ -12,8 +12,11 @@ from __future__ import annotations
 import re
 
 #: the opening line of a fenced block: indent, the marker (``` or ~~~, at
-#: least three), the info string
-FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
+#: least three), the info string. A ``` line with another backtick after
+#: the marker opens nothing — by Markdown's rule it is an inline code span
+#: (```x``` text), and taken as a fence it would turn the prose up to the
+#: next ``` into code.
+FENCE = re.compile(r"^(\s*)(`{3,}(?!.*`)|~{3,})\s*([\w+-]*)")
 
 
 def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
@@ -32,14 +35,23 @@ def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
         if not m:
             i += 1
             continue
-        marker, info = m.group(2), m.group(3).lower()
-        start = i + 1
-        i = start
-        while i < len(lines) and not closes(lines[i], marker):
-            i += 1
-        out.append((info, start, i))
-        i += 1
+        end = fence_end(lines, i)
+        stop = len(lines) if end is None else end
+        out.append((m.group(3).lower(), i + 1, stop))
+        i = stop + 1
     return out
+
+
+def fence_end(lines: list[str], i: int) -> int | None:
+    """The index of the line closing the fence LINES[I] opens, or None when
+    LINES[I] opens no fence or the fence is never closed (`closes`)."""
+    m = FENCE.match(lines[i])
+    if not m:
+        return None
+    j = i + 1
+    while j < len(lines) and not closes(lines[j], m.group(2)):
+        j += 1
+    return j if j < len(lines) else None
 
 
 def closes(line: str, marker: str) -> bool:
@@ -76,19 +88,6 @@ def fenced_lines(lines: list[str]) -> set[int]:
     out: set[int] = set()
     for _, start, end in fence_spans(lines):
         out.update(range(start - 1, min(end + 1, len(lines))))
-    return out
-
-
-def closed_fenced_lines(lines: list[str]) -> set[int]:
-    """The 0-based indexes of every line a closed fence takes, its markers
-    included (`fence_spans`) — where a document shows an example. An
-    unclosed fence is left out: by Markdown's rule it runs to the end, and
-    a reader that skips its lines would lose every line after it, a real
-    generated block among them."""
-    out: set[int] = set()
-    for _, start, end in fence_spans(lines):
-        if end < len(lines):
-            out.update(range(start - 1, end + 1))
     return out
 
 

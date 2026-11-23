@@ -84,13 +84,15 @@ from pathlib import Path
 
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
-from labkit.formats.markdown import closed_fenced_lines
 from labkit.formats.protocol_check import CONCLUSION_LABEL, QUESTION_LABEL
 from labkit.formats.comment_blocks import (
+    BLOCK_OPEN,
     HEAD_END,
     CommentBlockError,
     closer,
     comment_blocks,
+    example_fences,
+    example_lines,
     opener,
     with_comment_block,
 )
@@ -216,18 +218,18 @@ def block_lines(protocol: str, run_id: str, body: str) -> list[str]:
 
 
 def blocks(text: str) -> list[Block]:
-    """Every generated block of TEXT in order. Between blocks, a block inside
-    a closed fenced code block is an example the document shows and is not
-    read (`markdown.closed_fenced_lines`); an unclosed fence hides nothing,
-    so a block appended after it is read, and inside a block every marker
-    counts. Raises ReportBlockError on a block that does not read."""
+    """Every generated block of TEXT in order. A block inside a closed fenced
+    code block outside every block is an example the document shows and is
+    not read (`comment_blocks.example_lines`); an unclosed fence hides
+    nothing, so a block appended after it is read. Raises ReportBlockError
+    on a block that does not read."""
     out: list[Block] = []
     opened: tuple[str, str, int] | None = None
     body: list[str] = []
     lines = text.split("\n")
-    fenced = closed_fenced_lines(lines)
+    shown = example_lines(lines)
     for n, line in enumerate(lines, 1):
-        if n - 1 in fenced and opened is None:
+        if n - 1 in shown:
             continue
         m = OPEN.match(line.strip())
         if m:
@@ -432,6 +434,22 @@ def cited_run_ids(text: str) -> list[tuple[int, str]]:
         for n, line in enumerate(text.split("\n"), 1)
         for m in runs.RUN_ID_LIKE.finditer(line)
     ]
+
+
+def shown_block_lines(text: str) -> set[int]:
+    """The lines (1-based) of every example code block in TEXT that shows a
+    labkit block — a closed fence outside every block
+    (`comment_blocks.example_fences`) holding a block's opening line. A run
+    id there names the run of an example: it owes no generated block
+    (`blocks_owed`), though it is still a citation checked as prose. Other
+    fenced text, such as quoted console output, is not exempted."""
+    lines = text.split("\n")
+    return {
+        i + 1
+        for first, last in example_fences(lines)
+        if any(BLOCK_OPEN.match(line.strip()) for line in lines[first : last + 1])
+        for i in range(first, last + 1)
+    }
 
 
 def structured_lines(

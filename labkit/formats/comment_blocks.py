@@ -15,19 +15,24 @@ KIND -->`:
 The discussion block (`checks.report_blocks`) and the handover block
 (`handovers`) are its kinds; each reads and checks its own head. One
 scanner and one in-place writer for both, so the two kinds cannot drift
-apart. A block inside a closed fenced code block
-(`markdown.closed_fenced_lines`) is an example the document shows and is
-not read; an unclosed fence hides nothing.
+apart. A block inside a closed fenced code block outside every block
+(`example_lines`) is an example the document shows and is not read; an
+unclosed fence hides nothing.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from labkit.formats.markdown import closed_fenced_lines
+from labkit.formats.markdown import fence_end
 
 HEAD_END = "-->"
+
+#: the opening line of any labkit block — a result block
+#: (`<!-- labkit result: …`) as well as a comment block of every KIND
+BLOCK_OPEN = re.compile(r"^<!-- labkit (?P<kind>[\w-]+)")
 
 
 class CommentBlockError(ValueError):
@@ -42,6 +47,44 @@ def opener(kind: str) -> str:
 def closer(kind: str) -> str:
     """The line that closes a block of KIND."""
     return f"<!-- /labkit {kind} -->"
+
+
+def example_fences(lines: list[str]) -> list[tuple[int, int]]:
+    """(opening, closing) line, 0-based, of every closed fenced code block
+    of LINES that stands outside every labkit block — where a document
+    shows an example. The one walk that tells an example from a block, for
+    every block reader. Inside a block a fence line is body: a ``` left
+    open in a block's body opens no fence that would run past its closing
+    line and hide the real blocks after it. An unclosed fence hides
+    nothing: by Markdown's rule it runs to the end, and a reader that
+    skipped it would lose every block after it."""
+    out: list[tuple[int, int]] = []
+    inside: str | None = None  # the closing line of the block we are in
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if inside is not None:
+            if line == inside:
+                inside = None
+            i += 1
+            continue
+        m = BLOCK_OPEN.match(line)
+        if m:
+            inside = closer(m.group("kind"))
+            i += 1
+            continue
+        end = fence_end(lines, i)
+        if end is not None:
+            out.append((i, end))
+            i = end
+        i += 1
+    return out
+
+
+def example_lines(lines: list[str]) -> set[int]:
+    """The 0-based indexes of every line of an example code block of LINES
+    (`example_fences`), its fence lines included."""
+    return {i for first, last in example_fences(lines) for i in range(first, last + 1)}
 
 
 @dataclass(frozen=True)
@@ -65,9 +108,9 @@ def comment_blocks(
     check_head: Callable[[list[str], int], object] | None = None,
 ) -> list[CommentBlock]:
     """Every block of KIND in TEXT, in order; NAME is how a sentence calls
-    it ("discussion block"). Between blocks, an opening or closing line
-    inside a closed fenced code block is no marker (an example shown,
-    `markdown.closed_fenced_lines`); inside a block every marker counts.
+    it ("discussion block"). An opening or closing line inside a closed
+    fenced code block outside every block is no marker (an example shown,
+    `example_lines`).
     CHECK_HEAD(head lines, opening line) runs on each head as soon as it is
     read, before the body — its own error then comes first.
 
@@ -77,12 +120,12 @@ def comment_blocks(
     open_, close = opener(kind), closer(kind)
     out: list[CommentBlock] = []
     lines = text.split("\n")
-    fenced = closed_fenced_lines(lines)
+    shown = example_lines(lines)
     n = 0
     while n < len(lines):
         line = lines[n].strip()
         n += 1
-        if n - 1 in fenced or line not in (open_, close):
+        if n - 1 in shown or line not in (open_, close):
             continue
         if line == close:
             raise CommentBlockError(f"line {n}: {close} closes no {name}")

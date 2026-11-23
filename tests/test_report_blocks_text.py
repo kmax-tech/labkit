@@ -13,6 +13,8 @@ from pathlib import Path
 
 
 from labkit.checks import report_blocks
+from labkit.formats import handovers
+from labkit.formats.comment_blocks import HEAD_END
 from labkit.formats.gate import TECHNICAL_RULE
 
 RUN = "2026-10-07T10-00-00_ab12"
@@ -261,6 +263,75 @@ class ExamplesInCodeFences(unittest.TestCase):
         # written again, it is replaced, not doubled
         again = report_blocks.with_block(written, P, RUN, "a = 3")
         self.assertEqual([b.body for b in report_blocks.blocks(again)], ["a = 3"])
+
+    def test_a_longer_fence_shows_a_shorter_one_and_hides_its_block(self):
+        # a ```` fence holds a ``` line as body; the block it shows is an
+        # example, the twin after it is read
+        text = (
+            f"````markdown\n```\n{self._result()}\n```\n````\n\n{self._discussed()}\n"
+        )
+        self.assertEqual(report_blocks.blocks(text), [])
+        (found,) = report_blocks.discussions(text)
+        self.assertEqual(found.run_id, RUN)
+
+    def test_a_tilde_line_does_not_close_a_backtick_fence(self):
+        # ``` closed by nothing but ~~~ stays open: it hides no block
+        text = f"```\nlog\n~~~\n\n{self._result()}\n"
+        (block,) = report_blocks.blocks(text)
+        self.assertEqual(block.run_id, RUN)
+
+    def test_an_inline_code_span_opens_no_fence(self):
+        # ```x``` at a line's start is a code span; paired with a later ```
+        # it would hide the real block between them
+        text = f"```x``` is a span\n\n{self._result()}\n\n```\nlog\n```\n"
+        (block,) = report_blocks.blocks(text)
+        self.assertEqual(block.run_id, RUN)
+
+    def test_a_fence_line_inside_a_block_hides_no_later_block(self):
+        # a ``` left open in a real block's body is body, not a fence that
+        # pairs with the next ``` and hides the blocks up to it
+        for body in ("a = 1\n```", "```python"):
+            first = report_blocks.with_block("# Report\n", P, RUN, body)
+            other = "experiments/02-y/PROTOCOL-y.md"
+            text = report_blocks.with_block(first, other, RUN, "b = 1")
+            text += f"\n{self._discussed()}\n\n```\nlog\n```\n"
+            self.assertEqual(
+                [b.protocol for b in report_blocks.blocks(text)], [P, other], body
+            )
+            (found,) = report_blocks.discussions(text)
+            self.assertEqual(found.run_id, RUN, body)
+
+    def test_a_reported_through_block_in_a_fence_is_not_read(self):
+        stated = ReportedThrough().stated()
+        block = "\n".join(report_blocks.through_lines(stated))
+        self.assertEqual(report_blocks.through_blocks(f"```\n{block}\n```\n"), [])
+        (found,) = report_blocks.through_blocks(f"# Report\n\n{block}\n")
+        self.assertEqual(found.protocol, P)  # the twin, outside the fence
+
+    def test_a_handover_block_in_a_fence_is_not_read(self):
+        block = "\n".join(
+            [
+                handovers.OPEN,
+                f'protocol = "{P}"',
+                'record = "handover.md"',
+                HEAD_END,
+                "Unresolved: …",
+                handovers.CLOSE,
+            ]
+        )
+        self.assertEqual(handovers.handover_blocks(f"~~~\n{block}\n~~~\n"), [])
+        (found,) = handovers.handover_blocks(f"# Report\n\n{block}\n")
+        self.assertEqual(found.protocol, P)  # the twin, outside the fence
+
+    def test_a_run_in_an_example_that_shows_a_block_is_marked_shown(self):
+        example = f"# Note\n\n```\n{self._result()}\n```\n"
+        cited = {n for n, _ in report_blocks.cited_run_ids(example)}
+        self.assertTrue(cited)
+        self.assertLessEqual(cited, report_blocks.shown_block_lines(example))
+        # the twins: the run cited in prose, or in fenced console output
+        # that shows no block, is no example of a block
+        for text in (f"the result (run {RUN})\n", f"```\nrun {RUN} done\n```\n"):
+            self.assertEqual(report_blocks.shown_block_lines(text), set(), text)
 
     def test_a_write_leaves_the_example_and_adds_the_real_block(self):
         example = f"# Note\n\n```\n{self._result()}\n```\n"
