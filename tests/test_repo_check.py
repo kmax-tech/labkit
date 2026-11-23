@@ -160,6 +160,11 @@ class Report(unittest.TestCase):
         lines, code = repo_check.check_repo(repo)
         self.assertEqual(code, repo_check.OK, "\n".join(lines))
         self.assertEqual(len(lines), 6)
+        with (repo / "AGENTS.md").open("a") as f:
+            f.write("\n## Thesis rules\n\nOwn lines below the stamp.\n")
+        line = repo_check.agents_line(repo, installed)
+        self.assertEqual(line.state, repo_check.OK, str(line))
+        self.assertIn("own lines", str(line))
         self.assertTrue(
             all(ln.rstrip().endswith("OK") for ln in lines), "\n".join(lines)
         )
@@ -226,14 +231,16 @@ class Report(unittest.TestCase):
             repo_check.tag_commit(gone, master)
 
     def test_agents_md_other_than_the_stamp_is_stale(self):
-        """The twin of the OK case above: an edited line, an AGENTS.md
-        without the stamped head, and none at all are STALE, each with the
-        command that writes the stamp."""
+        """The twin of the OK case above: an edited line (also with own lines
+        below), an AGENTS.md without the stamped head, and none at all are
+        STALE, each with the command that writes the stamp."""
         repo = lab_repo("pytest")
         installed = install_hooks.labkit_version()
         stamped = repo_check.agents_text("lab")
         cases = {
             "edited": stamped.replace("labkit-next", "labkit-nxt", 1),
+            "edited, own lines below": stamped.replace("labkit-next", "labkit-nxt", 1)
+            + "\n## Own\n",
             "no head": stamped.partition("\n")[2],
         }
         for case, text in cases.items():

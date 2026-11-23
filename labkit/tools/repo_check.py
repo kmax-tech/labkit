@@ -29,8 +29,9 @@ identifiers they were written with; the line says how many areas it left out.
 `agents` compares the repo's `AGENTS.md` with the one this labkit stamps
 (`labkit-init lab`, under the project name its first line carries): the
 lab's instructions describe the commands of the labkit that runs them.
-The repo's own instructions belong in `CLAUDE.md` or a file it imports,
-so a new `AGENTS.md` replaces the old one whole.
+The file must begin with the stamp; the repo's own instructions may follow
+below it (a thesis repo appends its rules there), so an update replaces
+the stamped part and keeps the rest.
 
 The three checks it bundles exist on their own (`labkit-hooks check`,
 `python -m labkit.formats.rules refs`, the pin line in `requirements.txt`); this
@@ -391,14 +392,16 @@ def agents_line(repo: Path, installed: str) -> Line:
         )
     text = path.read_text(encoding="utf-8")
     head = AGENTS_HEAD_RE.match(text.partition("\n")[0])
-    if head is not None and text == agents_text(head.group(1)):
-        return Line("agents", f"AGENTS.md as labkit {installed} stamps it", OK)
+    stamp = agents_text(head.group(1)) if head is not None else None
+    if stamp is not None and text.startswith(stamp):
+        own = " and the repo's own lines below it" if text != stamp else ""
+        return Line("agents", f"AGENTS.md as labkit {installed} stamps it{own}", OK)
     return Line(
         "agents",
         f"AGENTS.md differs from the one labkit {installed} stamps",
         STALE,
-        "mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab ., then move "
-        "the repo's own lines into CLAUDE.md",
+        "mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab ., then "
+        "append the repo's own lines from AGENTS.md.old below the stamp",
     )
 
 
