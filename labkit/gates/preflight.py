@@ -43,7 +43,8 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      — static evidence, warnings); each finding carries
                      its grade as data
   5. scope-sha       audit stamp over the input scope; a stamp that cannot be computed
-                     blocks — a file that stands and does not open, or git, always;
+                     blocks — a file outside the scope that stands and does not
+                     open, or git, always;
                      a missing scope file, a script or promise block that does not
                      read only while no earlier blocker stands, else it is told
   6. working tree    uncommitted changes (warning, not a blocker)
@@ -243,7 +244,8 @@ def preflight_area(
        repo record, always, as a reminder.
     4. code-check — always.
     5. scope-sha — always; a stamp that cannot be computed blocks — a
-       file that stands and does not open, or git, always; a missing scope
+       file outside the scope that stands and does not open (a linked
+       exploration's registered output), or git, always; a missing scope
        file, a script or promise block that does not read only while no
        earlier blocker stands, else it is told; the stamp is told.
     6. working tree — always.

@@ -244,8 +244,8 @@ class TheGateFillsTheAreaSlots(unittest.TestCase):
 
 
 class ScopeStampStation(unittest.TestCase):
-    """Station 5 tells the stamp, or why it cannot stamp. A file that stands
-    and does not open blocks always; a cause station 4 blocks (a missing
+    """Station 5 tells the stamp, or why it cannot stamp. A file outside the
+    scope that stands and does not open blocks always; a cause station 4 blocks (a missing
     declared scope file, a script that does not read) is told here while
     any earlier blocker stands, once; with none standing — a cause station
     4 does not read (a sibling protocol, a module only a declared scope
