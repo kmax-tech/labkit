@@ -579,10 +579,6 @@ class TwoProtocolsOfOneArea(_OriginStation):
         self.assertIn("carries neither", told)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class PreparationOfTheOnlyProtocol(_OriginStation):
     """A preparation started without `protocol=` in an area of one protocol
     binds to it (`start_check.protocol_binding`); the measurement reads its
@@ -641,3 +637,7 @@ class PreparationOfTheOnlyProtocol(_OriginStation):
         # this station names them
         self.assertEqual(rc, 1, told)
         self.assertIn(f"is not the output of its origin run {prep} any more", told)
+
+
+if __name__ == "__main__":
+    unittest.main()

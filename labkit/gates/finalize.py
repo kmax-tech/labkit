@@ -77,9 +77,9 @@ each step's condition):
                     skipped are notes. An origin run bound to a protocol
                     whose text as it started (commit and patch) cannot be
                     read back blocks; one bound to none owes none and is
-                    a note. A bound origin reports the promises of that
-                    text, but a preparation, which reports no result: its
-                    text is still read back. At low repeat cost
+                    a note. A bound origin is held to the promises of
+                    that text, except a preparation, which reports no
+                    result; its text is still read back. At low repeat cost
                     changed bytes are station 6's blocker, told here as a
                     note
   8. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
@@ -714,8 +714,9 @@ def check_input_origins(
     it saw it when it started (`audit_binding.source_protocol_then`): when
     the run was bound to a protocol and that text cannot be read back, a
     blocker (`source_protocol_finding`) — the audit of this run cannot be
-    shown what its source was measured for; a run bound to no protocol (a
-    preparation run) owes none and is a note. PROVENANCE_HOLDS_BYTES:
+    shown what its source was measured for; a run bound to no protocol
+    owes none and is a note (`check_source_protocols` holds a bound one to
+    its text's promises, a preparation to none). PROVENANCE_HOLDS_BYTES:
     station 6 ran and holds every input's bytes, so changed bytes and a
     record that does not read are its blockers, told here as a note — one
     cause, one blocker."""
@@ -806,8 +807,11 @@ def is_preparation(area: Path, run_id: str) -> bool:
     (`labkit/docs/standard.md`, "An input's origin run is recorded and
     held") holds a bound origin to "what that text registered" and names a
     preparation only as unbound; this reading follows its example, pending
-    the author's clarification of the sentence. Raises RunConfigError when
-    the record does not read; None (no record) is no preparation."""
+    the author's clarification of the sentence. The auditor's piece still
+    shows a bound preparation's text as what its origin was measured
+    under (`audit_binding.SOURCE_THEN`). Raises RunConfigError when the
+    record does not read — in the station `source_protocol_then` has read
+    it already; None (no record) is no preparation."""
     cfg = read_run_config(runs_path(area) / run_id)
     return cfg is not None and cfg.run_kind == PREPARATION
 
