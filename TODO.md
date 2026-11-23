@@ -90,6 +90,10 @@ Umfang: begrenzte Verbesserungen von Audit-Anweisung und Anleitung nach Abgleich
 
 Ergebnis-, Diskussions- und Übergabeblöcke in einem Markdown-Codeblock gelten als Beispiel und werden nicht gelesen; dieselben Blöcke außerhalb bleiben geprüft. Laufkennungen im Codeblock prüft report-check weiter, als Fließtext (Warnung). Die zwei auslösenden Notizen blieben unverändert; ihre sechs Blocker sind weg. Grenze: nur eingezäunte Codeblöcke (``` / ~~~), kein eingerückter Code.
 
+### Ungeklärt: ein Szenario-Test einmal rot (23.11.)
+
+`tests/test_end_to_end.py::FirstMeasurementLost::test_the_twin_a_later_run_lost_is_named_and_holds_nothing` war in einem parallelen Lauf (`-n 4`, 105 Testdateien, 17 min) rot: die erwartete Zeile „are the ones the first measurement registered“ fehlte. Einzeln grün, mit und ohne die Codeblock-Änderung (92f19ec1); die ganze Suite danach grün. Ursache nicht belegt — Last ist eine Vermutung. Bei erneutem Auftreten vollständige Ausgabe sichern und nachstellen.
+
 ### Audit und Wartbarkeit
 
 | Thema                                   | Wann wieder aufgreifen?                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
