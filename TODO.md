@@ -90,7 +90,12 @@ Umfang: begrenzte Verbesserungen von Audit-Anweisung und Anleitung nach Abgleich
 
 Ergebnis-, Diskussions- und Übergabeblöcke in einem Markdown-Codeblock gelten als Beispiel und werden nicht gelesen; dieselben Blöcke außerhalb bleiben geprüft. Laufkennungen im Codeblock prüft report-check weiter, als Fließtext (Warnung). Die zwei auslösenden Notizen blieben unverändert; ihre sechs Blocker sind weg. Grenze: nur eingezäunte Codeblöcke (``` / ~~~), kein eingerückter Code.
 
-**Nächster Schritt (offen):** Den finalen Diff der Reparatur (`016b527c..fb4e1d3d`: `92f19ec1` und die Korrektur `fb4e1d3d`) unabhängig lesen lassen, einschließlich der Behandlung offener Codeblöcke und des Schreibens mit `protocol-fill --into`. Konkrete Befunde melden; zunächst nichts ändern. Gelesen wurde bisher nur `92f19ec1`; dessen Befund (ein offener Codeblock versteckt echte Blöcke) behebt `fb4e1d3d`.
+**Unabhängig gelesen am 23.11.** (`code-clarity`, nur lesend, ganzer Diff `016b527c..fb4e1d3d`): Das Verhalten hält für die geprüften Fälle; `protocol-fill --into` stimmt mit report-check überein. Vier Befunde, nichts geändert, Entscheidung beim Autor:
+
+1. **Mittel:** Ein Beispielblock im Codeblock, dessen Kopfzeile einen übernommenen Lauf nennt, erzeugt jetzt einen Blocker „Block fehlt“: die Laufkennung wird weiter als Fließtext gelesen (`report_blocks.cited_run_ids`), der Block zählt aber nicht mehr als vorhanden (`report_hold.owed_blocks`). Vorher zählte das Beispiel als vorhanden. Ungetestet, im CHANGELOG nicht erwähnt. Am Code bestätigt.
+2. **Niedrig:** `markdown.fence_spans` paart Zäune über den ganzen Text; eine Zaunzeile im Rumpf eines echten Blocks öffnet einen Schein-Codeblock, der echte Blöcke bis zum nächsten ``` still versteckt.
+3. **Niedrig:** Ungetestet sind ```` mit innerem ```, ``` geschlossen durch ~~~, Übergabe- und Berichtsstand-Blöcke, Zaunzeile im Blockrumpf.
+4. **Niedrig:** Zahlen in einem Beispiel-Codeblock erscheinen jetzt als Hinweis „Zahl ohne Quelle“ (nur Warnung).
 
 ### Ungeklärt: ein Szenario-Test einmal rot (23.11.)
 
