@@ -100,11 +100,13 @@ Ergebnis-, Diskussions- und Übergabeblöcke in einem Markdown-Codeblock gelten 
 
 **Behoben am 23.11. (`425f1ee4`):** Befunde 1–3 — ein Beispiel des übernommenen Laufs verlangt keinen Block mehr; eine Zaunzeile im Blockrumpf oder ```` ```x``` ```` am Zeilenanfang öffnet keinen Codeblock mehr; Tests für die Zaungrenzen und alle Blockarten. Ganze Suite auf `425f1ee4`: Exit 0. Befund 4 bleibt offen (Warnung, eigener Punkt).
 
-**Zweites unabhängiges Lesen (`code-clarity`, 23.11., nur lesend):** kein Fall, in dem ein echter Block still verschwindet. Offen, Entscheidung beim Autor:
+**Zweites unabhängiges Lesen, behoben am 23.11. (`506924c3`):** Eine kaputte Öffnungszeile wird mit Zeilennummer abgelehnt; eine Öffnungszeile ohne Schlusszeile versteckt kein späteres Beispiel; ausgenommen sind nur die Zeilen des gezeigten Blocks, nicht der ganze Codeblock. Codeblock im Zitat: kein Fehler — die Zeilen tragen `> ` und werden nicht als Block gelesen (getestet, dokumentiert).
 
-1. **Mittel:** Eine kaputte Öffnungszeile (`<!-- labkit result: …`, die `report_blocks.OPEN` nicht liest) ohne Schlusszeile: die Codeblock-Erkennung (`comment_blocks.example_fences`) hält alles danach für Blockinhalt, `report_blocks.blocks` übergeht die Zeile — ein späteres Beispiel wird als echter Block gelesen (nachgestellt). Folge: falsche, aber laute Sperre. Möglicher Weg: `blocks` verweigert eine solche Zeile mit Zeilennummer.
-2. **Niedrig:** Ein Codeblock im Zitat (`> ````) gilt nicht als Codeblock; ein Beispiel darin wird gelesen.
-3. **Niedrig:** Zeigt ein Codeblock einen Block und zitiert zugleich Zahlen des übernommenen Laufs, verlangt der Lauf keinen Block; ungetestet.
+**Drittes unabhängiges Lesen (`code-clarity`, 23.11., nur lesend):** kein Beispiel als echter Block gelesen. Drei niedrige Befunde, nicht behoben, Entscheidung beim Autor:
+
+1. **Verirrte Zaunzeile:** Eine einzelne ```` ``` ```` vor einem echten Block, die ein späteres ```` ``` ```` schließt, macht den echten Block zum Beispiel — so rendert Markdown es auch, aber ohne Meldung; `with_block` hängt dann einen zweiten Block an. Die Aussage „ein offener Codeblock versteckt nichts“ ist in Docstrings und CHANGELOG darauf eingeschränkt. Möglicher Weg: eine Warnung, wenn ein Beispiel-Codeblock einen Block zeigt, dessen Lauf und Protokoll zu einem echten passen würden.
+2. **Ablehnung im Blockrumpf:** Eine Zeile im Rumpf eines echten Blocks, die mit `<!-- labkit result`/`discussed …` beginnt, wird jetzt abgelehnt; vorher gelesen. Im Repo kein solcher Fall gefunden.
+3. **Nur eigene Blockart abgelehnt:** Eine kaputte `<!-- labkit handover extra` mit späterer Schlusszeile verdeckt ein Beispiel dazwischen; nur `discussions` allein läse es dann als echt, `handover_blocks` lehnt das Dokument ab.
 
 ### Ungeklärt: ein Szenario-Test einmal rot (23.11.)
 
