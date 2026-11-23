@@ -49,36 +49,61 @@ def closer(kind: str) -> str:
     return f"<!-- /labkit {kind} -->"
 
 
+def block_end(lines: list[str], i: int) -> int | None:
+    """The index of the line closing the labkit block LINES[I] opens
+    (`BLOCK_OPEN`, closed by `closer` of its kind), or None when LINES[I]
+    opens none or no closing line follows. A block reader decides whether
+    an opening line reads; this walk only needs where a block ends."""
+    m = BLOCK_OPEN.match(lines[i].strip())
+    if not m:
+        return None
+    close = closer(m.group("kind"))
+    j = i + 1
+    while j < len(lines) and lines[j].strip() != close:
+        j += 1
+    return j if j < len(lines) else None
+
+
 def example_fences(lines: list[str]) -> list[tuple[int, int]]:
     """(opening, closing) line, 0-based, of every closed fenced code block
     of LINES that stands outside every labkit block — where a document
     shows an example. The one walk that tells an example from a block, for
     every block reader. Inside a block a fence line is body: a ``` left
     open in a block's body opens no fence that would run past its closing
-    line and hide the real blocks after it. An unclosed fence hides
-    nothing: by Markdown's rule it runs to the end, and a reader that
-    skipped it would lose every block after it."""
+    line and hide the real blocks after it. An opening line no closing
+    line follows starts no block here, so it hides no example after it
+    (the block readers refuse it). An unclosed fence hides nothing: by
+    Markdown's rule it runs to the end, and a reader that skipped it would
+    lose every block after it. A fence inside a blockquote (`> ````) is
+    not seen; the lines shown in it carry `> ` too, so no block reader
+    takes one of them for a block line."""
     out: list[tuple[int, int]] = []
-    inside: str | None = None  # the closing line of the block we are in
     i = 0
     while i < len(lines):
-        line = lines[i].strip()
-        if inside is not None:
-            if line == inside:
-                inside = None
-            i += 1
-            continue
-        m = BLOCK_OPEN.match(line)
-        if m:
-            inside = closer(m.group("kind"))
-            i += 1
-            continue
-        end = fence_end(lines, i)
-        if end is not None:
-            out.append((i, end))
-            i = end
-        i += 1
+        end = block_end(lines, i)
+        if end is None:
+            end = fence_end(lines, i)
+            if end is not None:
+                out.append((i, end))
+        i = (end if end is not None else i) + 1
     return out
+
+
+def refuse_misread_openers(
+    lines: list[str], shown: set[int], kind: str, name: str
+) -> None:
+    """Raise CommentBlockError at the first line of LINES outside the
+    examples SHOWN (`example_lines`) that starts a block of KIND
+    (`BLOCK_OPEN`) but is not its opening line alone: the walk for
+    examples takes it for a block, the reader would pass it by. NAME is
+    how the sentence calls the block."""
+    for i, raw in enumerate(lines):
+        line = raw.strip()
+        m = BLOCK_OPEN.match(line)
+        if i not in shown and m and m.group("kind") == kind and line != opener(kind):
+            raise CommentBlockError(
+                f"line {i + 1}: a {name} opens with {opener(kind)} alone on its line"
+            )
 
 
 def example_lines(lines: list[str]) -> set[int]:
@@ -114,13 +139,14 @@ def comment_blocks(
     CHECK_HEAD(head lines, opening line) runs on each head as soon as it is
     read, before the body — its own error then comes first.
 
-    Raises CommentBlockError naming the line on a closing line
-    without an opening one, a head never closed by `-->` on a line of its
+    Raises CommentBlockError naming the line on an opening line of KIND
+    with more on it, a closing line without an opening one, a head never closed by `-->` on a line of its
     own, a block opening inside another, a block never closed."""
     open_, close = opener(kind), closer(kind)
     out: list[CommentBlock] = []
     lines = text.split("\n")
     shown = example_lines(lines)
+    refuse_misread_openers(lines, shown, kind, name)
     n = 0
     while n < len(lines):
         line = lines[n].strip()

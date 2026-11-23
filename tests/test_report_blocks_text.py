@@ -328,10 +328,48 @@ class ExamplesInCodeFences(unittest.TestCase):
         cited = {n for n, _ in report_blocks.cited_run_ids(example)}
         self.assertTrue(cited)
         self.assertLessEqual(cited, report_blocks.shown_block_lines(example))
-        # the twins: the run cited in prose, or in fenced console output
-        # that shows no block, is no example of a block
+        # the twins: the run cited in prose, in fenced console output that
+        # shows no block, or beside a shown block in the same fence, is no
+        # example of a block
         for text in (f"the result (run {RUN})\n", f"```\nrun {RUN} done\n```\n"):
             self.assertEqual(report_blocks.shown_block_lines(text), set(), text)
+        mixed = f"```\n{self._result()}\nkept: a = 1 (run {RUN})\n```\n"
+        shown = report_blocks.shown_block_lines(mixed)
+        self.assertEqual(shown, {2, 3, 4})  # the block's lines, not line 5
+
+    def test_an_opening_line_that_does_not_read_is_refused_by_its_line(self):
+        # a result or discussion opener with more on it would start a block
+        # for the example walk and none for the reader: refused, not passed by
+        example = f"```\n{self._result()}\n```\n"
+        for text, read in (
+            (f"<!-- labkit result: broken\n\n{example}", report_blocks.blocks),
+            (
+                f"# R\n\n<!-- labkit discussed extra\n\n{example}",
+                report_blocks.discussions,
+            ),
+        ):
+            with self.assertRaises(report_blocks.ReportBlockError) as caught:
+                read(text)
+            self.assertRegex(str(caught.exception), r"^line [13]: ", text)
+
+    def test_the_twin_a_broken_opening_line_shown_in_a_fence_is_an_example(self):
+        text = "```\n<!-- labkit result: broken\n<!-- labkit discussed extra\n```\n"
+        self.assertEqual(report_blocks.blocks(text), [])
+        self.assertEqual(report_blocks.discussions(text), [])
+
+    def test_an_opening_line_without_its_closing_line_hides_no_example(self):
+        # an unknown kind no reader refuses: it starts no block, so the
+        # example after it stays an example
+        text = f"<!-- labkit resutl\n\n```\n{self._result()}\n```\n"
+        self.assertEqual(report_blocks.blocks(text), [])
+
+    def test_a_block_shown_in_a_quoted_fence_is_not_read(self):
+        # `> ```` is no fence to the walk, but every quoted line carries
+        # `> `, so no quoted line is a block line either
+        shown = "\n".join(["```", self._result(), self._discussed(), "```"])
+        text = "\n".join(f"> {line}" for line in shown.split("\n"))
+        self.assertEqual(report_blocks.blocks(text), [])
+        self.assertEqual(report_blocks.discussions(text), [])
 
     def test_a_write_leaves_the_example_and_adds_the_real_block(self):
         example = f"# Note\n\n```\n{self._result()}\n```\n"

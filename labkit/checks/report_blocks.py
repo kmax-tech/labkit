@@ -89,6 +89,7 @@ from labkit.formats.comment_blocks import (
     BLOCK_OPEN,
     HEAD_END,
     CommentBlockError,
+    block_end,
     closer,
     comment_blocks,
     example_fences,
@@ -222,7 +223,7 @@ def blocks(text: str) -> list[Block]:
     code block outside every block is an example the document shows and is
     not read (`comment_blocks.example_lines`); an unclosed fence hides
     nothing, so a block appended after it is read. Raises ReportBlockError
-    on a block that does not read."""
+    on a block that does not read, its opening line among them."""
     out: list[Block] = []
     opened: tuple[str, str, int] | None = None
     body: list[str] = []
@@ -232,6 +233,13 @@ def blocks(text: str) -> list[Block]:
         if n - 1 in shown:
             continue
         m = OPEN.match(line.strip())
+        start = BLOCK_OPEN.match(line.strip())
+        if not m and start and start.group("kind") == "result":
+            raise ReportBlockError(
+                f"line {n}: a result block's opening line does not read — "
+                f"protocol-fill --into writes <!-- labkit result: PROTOCOL "
+                f"run RUN ({OPEN_NOTE}) -->"
+            )
         if m:
             if opened is not None:
                 raise ReportBlockError(
@@ -437,21 +445,29 @@ def cited_run_ids(text: str) -> list[tuple[int, str]]:
 
 
 def shown_block_lines(text: str) -> set[int]:
-    """The lines (1-based) of every example code block in TEXT that shows a
-    labkit block — a closed fence outside every block
-    (`comment_blocks.example_fences`) holding a block's opening line. A run
-    id there names the run of an example: the gate leaves it out of the
+    """The lines (1-based) of every labkit block an example code block of
+    TEXT shows — from its opening to its closing line, inside a closed
+    fence outside every block (`comment_blocks.example_fences`). A run id
+    there names the run of an example: the gate leaves it out of the
     citations it passes to `blocks_owed` (`report_hold.owed_blocks`), so it
     owes no generated block, though it is still a citation checked as
-    prose. Other fenced text, such as quoted console output, is not
-    exempted."""
+    prose. The rest of that fence, and other fenced text such as quoted
+    console output, is not exempted. A shown block without its closing
+    line runs to the fence's end."""
     lines = text.split("\n")
-    return {
-        i + 1
-        for first, last in example_fences(lines)
-        if any(BLOCK_OPEN.match(line.strip()) for line in lines[first : last + 1])
-        for i in range(first, last + 1)
-    }
+    out: set[int] = set()
+    for first, last in example_fences(lines):
+        body = lines[first + 1 : last]
+        i = 0
+        while i < len(body):
+            if not BLOCK_OPEN.match(body[i].strip()):
+                i += 1
+                continue
+            end = block_end(body, i)
+            stop = len(body) - 1 if end is None else end
+            out.update(first + 2 + k for k in range(i, stop + 1))
+            i = stop + 1
+    return out
 
 
 def structured_lines(

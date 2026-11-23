@@ -282,6 +282,14 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
         self.assertNotIn("without its generated block", out)
+        # the twin: the same fence also states the run's number beside the
+        # example — that line owes the block
+        report.write_text(
+            f"# Note\n\n```\n{example}\nn = 1 (run {self.RUN})\n```\n", encoding="utf-8"
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("line 7: cites run", out)
 
     def test_a_block_naming_its_protocol_by_another_path_is_that_block(self):
         """A block written from a scratch file names its protocol as
