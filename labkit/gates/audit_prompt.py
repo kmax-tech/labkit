@@ -100,7 +100,7 @@ INLINE_NOTE = (
     "in an assignment to have it supplied), and in MODE analysis the answering "
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`, the origin run of each input under one `===== INPUT "
-    "ORIGINS =====` line and the protocol each origin run was measured under, "
+    "ORIGINS =====` line and the protocol each origin run was bound to, "
     "as it stood when that run started, under `===== SOURCE PROTOCOL <run> "
     "=====` lines, every run of the protocol audited and of each source's "
     "protocol, with its state, result, registration and code then, under "

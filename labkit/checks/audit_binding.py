@@ -132,7 +132,7 @@ def run_rows(
     output the run registered, numbered as `<n>: <row>`, its metrics.json,
     its declared dependencies (`dependency_pieces`), its input origins
     with their state now (`origin_check.origin_piece`) and the protocol each
-    origin run was measured under as it saw it then
+    origin run was bound to as it saw it then
     (`source_protocol_pieces`), and every run of those protocols with the
     diffs REQUESTS asks for (`protocol_runs_pieces`). The dependency, origin and source protocol
     pieces are absent when RUN_DIR's input record does not read: the record
@@ -200,14 +200,16 @@ NO_TEXT_IN_ITS_PLACE = (
 
 def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     """What MODE analysis shows of the protocol each origin run of RUN_DIR's
-    inputs was measured under: one `(label, text)` piece per origin run, in
+    inputs was bound to: one `(label, text)` piece per origin run, in
     the inputs' order — the protocol as that run saw it when it started,
     its recorded commit with its uncommitted.patch (`source_protocol_then`),
     marked as the origin run's then (SOURCE_THEN; for a preparation
     PREPARATION_THEN, context it owes nothing of), never the protocol as it
     reads now and never a newer run's; the text once, a later origin run
     that saw the same text pointing to it. Where it cannot be read back the
-    piece says why (NOT_RECONSTRUCTED) and shows no other text — the same
+    piece says why (NOT_RECONSTRUCTED) and shows no other text — a
+    preparation still named one (`SourceProtocolThen.role`), so a missing
+    text never turns it into a measured source —, the same
     diagnosis whether finalize holds the run for it
     (`source_protocol_finding`) or not. [] for a run without an input from
     an origin run, or whose input record does not read (the record checks
@@ -246,7 +248,7 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
 
 @dataclass(frozen=True)
 class SourceProtocolThen:
-    """The protocol an origin run was measured under, as it saw it when it
+    """The protocol an origin run was bound to, as it saw it when it
     started (`source_protocol_then`).
 
     Attributes:
@@ -263,7 +265,8 @@ class SourceProtocolThen:
             `runlog`); its text is still read back. False when the record
             names another kind or does not stand or read.
         text: The protocol's text then; None when it cannot be read back.
-        where: Where TEXT was read from, or why it cannot be.
+        where: Where TEXT was read from, or why it cannot be; it names the
+            run by its `role`.
     """
 
     run_id: str
@@ -271,6 +274,29 @@ class SourceProtocolThen:
     preparation: bool
     text: str | None
     where: str
+
+    @property
+    def role(self) -> str:
+        """How every sentence names the run (`origin_role`)."""
+        return origin_role(self.preparation)
+
+    @property
+    def basis(self) -> str:
+        """What the text is to the run (`origin_basis`)."""
+        return origin_basis(self.preparation)
+
+
+def origin_role(preparation: bool) -> str:
+    """How every sentence about an origin run names it: "preparation run"
+    for a PREPARATION, else "origin run" — a preparation stays recognisable
+    where its text is missing."""
+    return "preparation run" if preparation else "origin run"
+
+
+def origin_basis(preparation: bool) -> str:
+    """What its bound text is to an origin run: "bound to" for a
+    PREPARATION, which was measured under nothing; else "measured under"."""
+    return "bound to" if preparation else "measured under"
 
 
 def source_protocol_then(
@@ -311,13 +337,14 @@ def source_protocol_then(
         )
     binding = rd.config.protocol
     preparation = rd.config.run_kind == runs.PREPARATION
+    role = origin_role(preparation)
     if binding.id is None:
         return SourceProtocolThen(
             run_id,
             False,
             preparation,
             None,
-            f"origin run {run_id} was started bound to no protocol: no question, "
+            f"{role} {run_id} was started bound to no protocol: no question, "
             f"criteria or method was registered for it",
         )
     if root is None:
@@ -326,16 +353,16 @@ def source_protocol_then(
             True,
             preparation,
             None,
-            f"origin run {run_id}: the area lies in no git repository, so no "
-            f"commit holds what it was measured under",
+            f"{role} {run_id}: the area lies in no git repository, so no "
+            f"commit holds what it was {origin_basis(preparation)}",
         )
     protocol = bound_protocol_file(area, binding.id, binding.path)
-    text, where = as_measured(protocol, rd, root, role="origin run")
+    text, where = as_measured(protocol, rd, root, role=role)
     return SourceProtocolThen(run_id, True, preparation, text, where)
 
 
 def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding | None:
-    """The blocker when the protocol a bound origin run was measured under
+    """The blocker when the protocol a bound origin run was bound to
     cannot be read back (THEN, `source_protocol_then`): the audit of a run
     of AREA computed from it cannot be shown what the source was measured
     for, and today's text does not stand in. None when the text reads, and
@@ -349,7 +376,7 @@ def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding
     if then.text is not None or then.bound is False:
         return None
     return blocker(
-        f"the protocol origin run {then.run_id} was measured under cannot be "
+        f"the protocol {then.role} {then.run_id} was {then.basis} cannot be "
         f"read back — {then.where}",
         fix=f"restore what holds it — the commit (`git fetch`), the run's "
         f"uncommitted.patch or the protocol's history, from git or a backup — "

@@ -138,7 +138,7 @@ def as_measured(
     it saw). A comparison that needs the text holds on None
     (`unread_measurements`), never reads it as no change. ROLE opens each
     WHERE sentence before RD's id: "its first measurement" (the default),
-    "run" or "origin run"."""
+    "run", "origin run" or "preparation run"."""
     commit = runs.recorded_commit(rd.config) if rd.config is not None else None
     if commit is None or root is None:
         return None, f"{role} {rd.dir.name} recorded no commit"

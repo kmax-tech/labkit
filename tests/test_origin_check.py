@@ -166,6 +166,19 @@ class SourceProtocolHeld(unittest.TestCase):
         self.assertIn("never show or write today's text in its place", f.fix)
         self.assertIn("measure anew", f.fix)
 
+    def test_a_bound_preparation_without_its_text_blocks_as_a_preparation(
+        self,
+    ) -> None:
+        # missing evidence is its own blocker; the run stays a preparation in it
+        then = SourceProtocolThen(
+            A, True, True, None, f"preparation run {A} recorded no commit"
+        )
+        f = source_protocol_finding(then, Path("/lab/area"))
+        assert f is not None
+        self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
+        self.assertIn(f"the protocol preparation run {A} was bound to", f.text)
+        self.assertNotIn("measured under", f.text)
+
     def test_the_twin_a_bound_origin_whose_text_reads_passes(self) -> None:
         then = SourceProtocolThen(
             A, True, False, "# protocol", "as origin run … saw it"
@@ -414,6 +427,24 @@ class SourceProtocol(_Area):
         self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
         self.assertIn("bound to no protocol", text)
         self.assertIn(NO_TEXT_IN_ITS_PLACE, text)
+
+    def test_a_preparation_source_without_text_is_told_as_a_preparation(
+        self,
+    ) -> None:
+        prepared = self.area / "prepared.jsonl"
+        with runlog.run(
+            "p", {}, self.area, data=runlog.NO_INPUTS, run_kind="preparation"
+        ) as p:
+            p.output(prepared)
+            prepared.write_text('{"id": 2}\n', encoding="utf-8")
+            p.metrics(n=1)
+        with runlog.run("r", {}, self.area, data={"prepared": prepared}) as r:
+            r.metrics(n=1)
+        text = dict(source_protocol_pieces(self.area, r.dir))[
+            f"{SOURCE_PROTOCOL_LABEL}{p.run_id}"
+        ]
+        self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
+        self.assertIn(f"preparation run {p.run_id} was started bound to no", text)
 
     def test_a_gone_source_run_is_told_not_replaced(self) -> None:
         shutil.move(self.writer.dir, self.aside)

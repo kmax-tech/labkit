@@ -632,11 +632,13 @@ class PreparationOfTheOnlyProtocol(_OriginStation):
         _, told = self.station(self.protocol)
         self.assertNotIn(f"origin run {prep}, held to the protocol", told)
         self.assertIn(f"{prep} is a preparation: it reports no result", told)
-        self.assertIn("its protocol then:", told)  # its text is still read back
+        # its text is still read back, the run named as what it is
+        self.assertIn(f"its protocol then: as preparation run {prep} saw it", told)
         # the auditor is shown that text as context the preparation owes nothing of
         pieces = dict(run_rows(self.area, self.area / "runs" / measured, ""))
         source = pieces[f"{SOURCE_PROTOCOL_LABEL}{prep}"]
         self.assertIn(PREPARATION_THEN, source)
+        self.assertIn(f"as preparation run {prep} saw it", source)
         self.assertNotIn(SOURCE_THEN, source)
 
     def test_the_twin_the_bytes_a_preparation_wrote_are_still_held(self):

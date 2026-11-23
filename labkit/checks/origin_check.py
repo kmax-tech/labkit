@@ -19,7 +19,7 @@ A stored origin is never decided again: a later run that writes the same
 file does not change it. A plain input (no origin) and the runs the lookup
 skipped are facts for the auditor, not findings (`origin_notes`). The
 facts are read once (`origin_now`); the decision opens no file. The
-protocol each origin run was measured under is the audit's evidence
+protocol each origin run was bound to is the audit's evidence
 (`audit_binding.source_protocol_pieces`), not this check's. Read-only.
 """
 
