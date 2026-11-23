@@ -68,3 +68,17 @@ The author decided both on 2026-11-23.
 | argmining27 `experiments/08-missci-repair-weighting`      | `2026-11-23T13-36-52_9e1a`    | two measurements of the same protocol           | none                      | none (not a preparation) |
 
 No other run in `~/projects/*` records an origin. No stored audit record or prompt in this repo or in labkit-evidence shows a source protocol piece (a grep for `SOURCE PROTOCOL` finds only instructions and the changelog). So no audit record is invalidated; experiment 12's first analysis audit will be made under the new text. The survey covered records on this machine only, not clones elsewhere.
+
+## Why 0.34 would refuse every 0.33 protocol (2026-11-23, follow-up)
+
+**Cause.** One constant, `protocol_block.STANDARD` (`labkit/formats/protocol_block.py:51`), names both the head format this labkit parses and the rule version the standard states. `protocol_block.head` refuses any head whose `standard` is not that string (`labkit/formats/protocol_block.py:1144`), and its refusal says a protocol with runs is reproduced with its own labkit release, never converted; only a protocol not yet run takes the migration. The 0.34 change touches no head field and no prose field: a 0.33 head would parse unchanged. The refusal comes from the equality check alone, not from anything a 0.34 labkit could not read.
+
+**Consequence for the case.** Experiment 12 has runs. A release stamped 0.34 would refuse its protocol in every gate, and the policy forbids restamping it. The release built to let experiment 12's measurement finish could not read experiment 12 at all; argmining27's five other 0.33 protocols would be refused the same way.
+
+**What the author decides.** Three ways, none taken:
+
+1. Keep 0.33 and move the entry to the dated changes that alter no rule ("the version stays"), as on 2026-11-14 for LAB-035 Thresholds belong to the run, not to the measure, where the rule had already asked for what the stamp then did. The 0.33 clause already said that "an origin run bound to no protocol, such as a preparation, owes no text"; it assumed a preparation is unbound, and the automatic binding made it bound. Changes: the entry's sentence "belongs to the next version, 0.34" and the matching sentences in the CHANGELOG and in this note. Experiment 12 then finishes after a pin change, nothing restamped.
+2. Stamp 0.34 with the equality check as it is: experiment 12 cannot be finished with the release that fixes it.
+3. Let one labkit read 0.33 and 0.34: a second accepted version is a legacy path, which the repo's rules exclude, and a contract change of its own.
+
+Recommended: the first; it is the only one that reaches the case without a legacy path.
