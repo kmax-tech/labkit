@@ -398,8 +398,8 @@ def source_phrases(area: Path, run: Path) -> list[str]:
     today's text; `recorded_results_line` with that text's `[kept]` and
     `[reference]`) and no verdict derived — a source is evidence of C's
     number, not a result reported beside it. A preparation is named
-    `preparation run <id>` (`audit_binding.origin_role`): it reports no
-    result, its values are what it wrote. A run bound to no protocol
+    `preparation run <id>`: it reports no result, its values are what it
+    wrote. A run bound to no protocol
     reads `no protocol, run <id>: …`; a run gone or whose record does not
     read, a text or metrics that do not read back say so in place of the
     values (finalize holds them, `origin_check`,

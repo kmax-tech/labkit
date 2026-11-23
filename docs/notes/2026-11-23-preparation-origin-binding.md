@@ -54,7 +54,7 @@ The stamped prepare script (`labkit/templates/prepare-script.py.template`) start
 
 ## The standard's clause and the auditor's text (2026-11-23)
 
-The author decided both on 2026-11-23.
+The author decided both on 2026-11-23 (the version decision changed on 2026-11-24, below).
 
 **The standard.** LAB-043 Runs go through `runlog`, "An input's origin run is recorded and held", now says that a preparation reports no result: as an origin it owes none of its text's promises, bound or not, while its output's bytes and, where it was bound, the read-back of its text stay held. First recorded as a rule change for a version 0.34; the author decided on 2026-11-24 to keep 0.33 (next section).
 

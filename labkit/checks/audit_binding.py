@@ -366,8 +366,8 @@ def source_protocol_then(
 def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding | None:
     """The blocker when the protocol a bound origin run was bound to
     cannot be read back (THEN, `source_protocol_then`): the audit of a run
-    of AREA computed from it cannot be shown what the source was measured
-    for, and today's text does not stand in. None when the text reads, and
+    of AREA computed from it cannot be shown the source's text, and
+    today's text does not stand in. None when the text reads, and
     for a run that recorded no protocol (`bound` False) — nothing was
     registered to read back, so it owes none; a run whose
     record does not stand (`bound` None) is held, since whether a text is
