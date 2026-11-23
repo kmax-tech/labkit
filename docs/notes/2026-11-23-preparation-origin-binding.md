@@ -1,6 +1,6 @@
 # A preparation run held to the measurement's promises
 
-Investigation and proposed change, 2026-11-23. Nothing is built yet; the change waits for the author's decision (TODO, open decision 8).
+Investigation and change, 2026-11-23. Part 1 of the proposal is built (`finalize.is_preparation`, scenario `tests/test_origin_scenario.py`, `PreparationOfTheOnlyProtocol`); part 2 and the standard's clarification wait for the author (TODO, open decision 8).
 
 ## The case
 
@@ -45,3 +45,9 @@ The standard's sentence needs one clause for part 1, which makes it a versioned 
 ## Not covered
 
 The investigation read the code and reproduced finalize on a copy. It did not run `report-check` or `labkit-adopt` on the case; both run finalize as a station, so they are expected to hold the same four blockers and release with part 1, unchecked. Whether other areas carry the same pattern was not surveyed.
+
+## After part 1 (2026-11-23)
+
+On the same copy, with labkit `main` and part 1: `finalize` exits 0; the station notes the preparation, reads its text back, and holds the scenario file's bytes. `report-check` exits 1 with two blockers, both ordinary next steps — the analysis audit has not run, and the protocol has no adopted answer (`labkit-adopt` after that audit). With 0.114.0 it held the same two and the four preparation blockers. The audit and the adoption were not run here (the audit calls a model). argmining27 pins 0.114.0: it reaches the change only with a release and a raised pin.
+
+The stamped prepare script (`labkit/templates/prepare-script.py.template`) starts without `protocol=`, so every stamped area with one protocol, a preparation and a registered promise met this. The scenario test was red on the old finalize for that reason: the preparation held to `[criterion-1]`.

@@ -35,6 +35,7 @@ from labkit.formats import standard_contract as sc
 from labkit.formats import protocol_block
 from labkit.tools import protocol_fill
 from command_fixture import run_main
+from protocol_fixture import C1_BLOCK, C1_PROSE
 from test_end_to_end import CountCommands, Lab, stamp_count
 
 # an end-to-end scenario file: the full suite before a push runs it, the
@@ -224,17 +225,9 @@ def _recount(inputs: Mapping[str, Path]) -> dict:
     return {"lines_mean": sum(counts) / len(counts)}
 
 
-class TwoProtocolsOfOneArea(CountCommands):
-    """The target layout: the measurement protocol (the count, runs A0 and
-    A1 by `01_measure.py`) and a computation protocol C in the same area,
-    its own stamped id and script (`03_compare.py`), reading A0's rows.
-    The station finds the origin in the other protocol's run, keeps it when
-    the measurement is run again (A1), and holds C when that origin is gone; the measurement protocol's own result gets no
-    finding from it. The measurement protocol changes between A0 and A1:
-    C's auditor is shown it as A0 started under it (commit and patch), and
-    told it cannot be read back once A0 is gone. Existing area or repository checks may hold too —
-    asserted here is only the input-origins station's part of each gate's
-    output."""
+class _OriginStation(CountCommands):
+    """A count area whose scripts run in turn, and finalize's input-origins
+    station read off its output. A base without tests of its own."""
 
     def run_script(self, script: str) -> str:
         """SCRIPT of the area run in a later second than every run it holds
@@ -255,6 +248,19 @@ class TwoProtocolsOfOneArea(CountCommands):
         text = out.getvalue()
         start = text.index("── input origins ──")
         return rc, text[start : text.index("── area tests ──", start)]
+
+
+class TwoProtocolsOfOneArea(_OriginStation):
+    """The target layout: the measurement protocol (the count, runs A0 and
+    A1 by `01_measure.py`) and a computation protocol C in the same area,
+    its own stamped id and script (`03_compare.py`), reading A0's rows.
+    The station finds the origin in the other protocol's run, keeps it when
+    the measurement is run again (A1), and holds C when that origin is gone; the measurement protocol's own result gets no
+    finding from it. The measurement protocol changes between A0 and A1:
+    C's auditor is shown it as A0 started under it (commit and patch), and
+    told it cannot be read back once A0 is gone. Existing area or repository checks may hold too —
+    asserted here is only the input-origins station's part of each gate's
+    output."""
 
     def verdict(self, protocol: Path) -> tuple[int, str]:
         """report-check on PROTOCOL: (exit, everything it told)."""
@@ -575,3 +581,63 @@ class TwoProtocolsOfOneArea(CountCommands):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PreparationOfTheOnlyProtocol(_OriginStation):
+    """A preparation started without `protocol=` in an area of one protocol
+    binds to it (`start_check.protocol_binding`); the measurement reads its
+    output, the preparation recorded as the input's origin. A preparation
+    reports no result: finalize holds it to none of the protocol's promises,
+    while the bytes it wrote are still held. Found in a lab on 2026-11-23
+    (docs/notes/2026-11-23-preparation-origin-binding.md)."""
+
+    MEASURED = 'run_kind="measurement", protocol=PROTOCOL.name'
+    METRICS = "run.metrics(**metrics)"
+
+    def prepared_and_measured(self) -> tuple[str, Path]:
+        """The preparation's run id and the file it wrote, the measurement
+        reading it run after it."""
+        # the protocol registers a criterion, as experiment 12 registered its
+        # quality checks; whether the measurement reports it is not asked here
+        text = self.protocol.read_text(encoding="utf-8")
+        assert text.count("\n[kept]\n") == 1 and "\n## Result" in text
+        text = text.replace("\n[kept]\n", f"\n{C1_BLOCK}\n[kept]\n", 1)
+        self.protocol.write_text(
+            text.replace("\n## Result", f"{C1_PROSE}\n## Result", 1), encoding="utf-8"
+        )
+        measure = self.area / "scripts" / "01_measure.py"
+        script = measure.read_text(encoding="utf-8")
+        assert self.MEASURED in script
+        # the preparation reports none of the protocol's keys, as a run that
+        # writes scenarios reports none of the rating's
+        assert self.METRICS in script
+        prepare = script.replace(self.MEASURED, 'run_kind="preparation"')
+        (self.area / "scripts" / "00_prepare.py").write_text(
+            prepare.replace(self.METRICS, "run.metrics(rows_written=len(items))"),
+            encoding="utf-8",
+        )
+        self.lab.commit("a preparation that names no protocol")
+        prep = self.run_script("00_prepare.py")
+        config = runs.read_run_config(self.area / "runs" / prep)
+        assert config is not None and config.protocol.id is not None  # bound
+        (written,) = runs.read_outputs(self.area / "runs" / prep) or []
+        _point_script_at(measure, written.path)
+        self.lab.commit("the measurement reads the preparation's rows")
+        self.run_script("01_measure.py")
+        return prep, written.path
+
+    def test_a_bound_preparation_owes_none_of_the_measurements_promises(self):
+        prep, _ = self.prepared_and_measured()
+        _, told = self.station(self.protocol)
+        self.assertNotIn(f"origin run {prep}, held to the protocol", told)
+        self.assertIn(f"{prep} is a preparation: it reports no result", told)
+        self.assertIn("its protocol then:", told)  # its text is still read back
+
+    def test_the_twin_the_bytes_a_preparation_wrote_are_still_held(self):
+        prep, written = self.prepared_and_measured()
+        written.write_text(written.read_text(encoding="utf-8") + "\n", "utf-8")
+        rc, told = self.station(self.protocol)
+        # at low repeat cost the provenance station blocks on changed bytes;
+        # this station names them
+        self.assertEqual(rc, 1, told)
+        self.assertIn(f"is not the output of its origin run {prep} any more", told)
