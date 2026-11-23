@@ -110,7 +110,7 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.requirements import PIN_FILES, requirement_lines
-from labkit.tools.repo_check import PYPROJECT_VERSION_RE
+from labkit.tools.repo_check import PYPROJECT_VERSION_RE, agents_text
 from labkit.tools.protocol_cuts import (
     ProtocolBlocks,
     count_placeholders,
@@ -303,11 +303,7 @@ def check_lab_pin(ref: str | None) -> None:
 def stamp_lab(root: Path, name: str, ref: str | None = None) -> list[str]:
     """Lay out a lab repo in ROOT (see the module docstring); returns the log."""
     log: list[str] = []
-    write_if_absent(
-        root / "AGENTS.md",
-        template("AGENTS.md.template").replace("<project>", name),
-        log,
-    )
+    write_if_absent(root / "AGENTS.md", agents_text(name), log)
     claude = root / "CLAUDE.md"
     if not (claude.exists() or claude.is_symlink()):
         os.symlink("AGENTS.md", claude)  # one entry file for every agent

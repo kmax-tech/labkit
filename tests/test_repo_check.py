@@ -156,9 +156,10 @@ class Report(unittest.TestCase):
         master = master_repo(installed, (f"v{installed}",))
         repo = lab_repo(f"labkit @ git+file://{master}@v{installed}")
         install_hooks.install(repo)
+        (repo / "AGENTS.md").write_text(repo_check.agents_text("Some lab: a long name"))
         lines, code = repo_check.check_repo(repo)
         self.assertEqual(code, repo_check.OK, "\n".join(lines))
-        self.assertEqual(len(lines), 5)
+        self.assertEqual(len(lines), 6)
         self.assertTrue(
             all(ln.rstrip().endswith("OK") for ln in lines), "\n".join(lines)
         )
@@ -223,6 +224,28 @@ class Report(unittest.TestCase):
         gone = repo_check.Pin("requirements.txt", f"git+{master}", "v9.9.9")
         with self.assertRaises(RuntimeError):
             repo_check.tag_commit(gone, master)
+
+    def test_agents_md_other_than_the_stamp_is_stale(self):
+        """The twin of the OK case above: an edited line, an AGENTS.md
+        without the stamped head, and none at all are STALE, each with the
+        command that writes the stamp."""
+        repo = lab_repo("pytest")
+        installed = install_hooks.labkit_version()
+        stamped = repo_check.agents_text("lab")
+        cases = {
+            "edited": stamped.replace("labkit-next", "labkit-nxt", 1),
+            "no head": stamped.partition("\n")[2],
+        }
+        for case, text in cases.items():
+            with self.subTest(case):
+                (repo / "AGENTS.md").write_text(text)
+                line = repo_check.agents_line(repo, installed)
+                self.assertEqual(line.state, repo_check.STALE, str(line))
+                self.assertIn("labkit-init lab .", line.hint)
+        (repo / "AGENTS.md").unlink()
+        line = repo_check.agents_line(repo, installed)
+        self.assertEqual(line.state, repo_check.STALE, str(line))
+        self.assertIn("no AGENTS.md", str(line))
 
     def test_main_prints_and_exits(self):
         self.assertEqual(

@@ -186,7 +186,7 @@ claude-hook pre-run|post-change|stop # live Claude Code hook adapter
 codex-hook pre-run|post-change|stop  # live Codex hook adapter
 claude-hook pre-commit             # the commit's gates on the index, run by .githooks/pre-commit
 claude-hook sessions [--run RUN_ID] # session records
-labkit-check [REPO] [--offline]     # report pin, installation and hook drift
+labkit-check [REPO] [--offline]     # report pin, installation, hook and AGENTS.md drift
 notes-check PATH                   # check measurement-note declarations
 labkit-calltree [--depth N] [--out FILE] COMMAND [-- ARGS] # inspect calls
 usability stage|log|score|trace     # prepare and measure an agent's workflow (--task count|judge|fit|compute-hrv|fit-assay|apply-screen, fit with --data)

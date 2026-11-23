@@ -40,13 +40,13 @@ The supervisor works from a clone of the student's repo. PDFs and data the work 
 
 ## Moving to a newer version
 
-Never automatic — the pin exists so nothing shifts under a running experiment. `labkit-check` says when the installed labkit lags the pin or the source has a newer tag; it reports and changes nothing.
+Never automatic — the pin exists so nothing shifts under a running experiment. `labkit-check` says when the installed labkit lags the pin, the source has a newer tag, or the repo's `AGENTS.md` is not the one the installed labkit stamps; it reports and changes nothing.
 
 1. Change the pin line in `requirements.txt` to the new tag.
 2. `.venv/bin/pip install -r requirements.txt`.
 3. `.venv/bin/pip freeze > requirements.lock` — until then the lock names the old version, and `labkit-check` reports the pin as stale.
 4. `.venv/bin/labkit-hooks install` — the hooks the repo carries come from the installed version; `labkit-hooks check` names them stale until then.
-5. Where the release changed the stamped `AGENTS.md` (its `CHANGELOG.md` entry says so): `mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab .` writes the new one (it writes only files that are absent); carry the repo's own additions over from `AGENTS.md.old`, then delete it.
+5. Where `labkit-check` reports `agents` STALE (the release changed the stamped `AGENTS.md`): `mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab .` writes the new one (it writes only files that are absent); move the repo's own additions from `AGENTS.md.old` into `CLAUDE.md`, then delete it. `AGENTS.md` stays as labkit stamps it, so the next release replaces it whole.
 6. Run the tests, commit `requirements.txt`, `requirements.lock`, the reinstalled hooks and `AGENTS.md`. The commit history then says which labkit produced which run.
 
 The student or the supervisor (a commit in the student's repo) can do it. A breaking release names in `CHANGELOG.md` the last version that reads the old formats; a repo with frozen protocols in an old format stays on its pin until new work starts there. Since 0.71.0 `frozen = true` owes the `[[promise]]` tables and a run records every registered constant unchanged; an area frozen under 0.70.0 or earlier is checked and reproduced with that version — its tables are not added afterwards, that would be a new registration.

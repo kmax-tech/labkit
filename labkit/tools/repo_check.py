@@ -2,7 +2,7 @@
 
     .venv/bin/labkit-check [REPO] [--offline]
 
-Five lines, one question each, every line ending in OK, STALE or what could
+Six lines, one question each, every line ending in OK, STALE or what could
 not be decided; the reference problems follow, one per line. Exit 0 when
 every line is OK, 1 when any is STALE, 2 when a line could not be decided
 (no pin, a source that cannot be read).
@@ -11,6 +11,7 @@ every line is OK, 1 when any is STALE, 2 when a line could not be decided
     installed  0.84.0                                                                        OK
     latest     v0.84.0 at /…/labkit                                                          OK
     hook       .githooks/pre-commit from labkit 0.79.0, this labkit is 0.84.0                STALE — .venv/bin/labkit-hooks install
+    agents     AGENTS.md as labkit 0.84.0 stamps it                                          OK
     refs       0 problem(s) in 212 file(s)                                                   OK
 
 It reports and changes nothing: the pin is raised on purpose (the
@@ -25,11 +26,17 @@ a remote with `git ls-remote --tags` (network; `--offline` skips it).
 areas that are records: a frozen protocol is a registration, a protocol this
 labkit cannot read was written under an older pin, and both keep the
 identifiers they were written with; the line says how many areas it left out.
+`agents` compares the repo's `AGENTS.md` with the one this labkit stamps
+(`labkit-init lab`, under the project name its first line carries): the
+lab's instructions describe the commands of the labkit that runs them.
+The repo's own instructions belong in `CLAUDE.md` or a file it imports,
+so a new `AGENTS.md` replaces the old one whole.
 
 The three checks it bundles exist on their own (`labkit-hooks check`,
 `python -m labkit.formats.rules refs`, the pin line in `requirements.txt`); this
-one command asks all of them, plus the two none of them asks: installed
-against pinned, pinned against the newest tag.
+one command asks all of them, plus the three none of them asks: installed
+against pinned, pinned against the newest tag, the instructions against
+the installed labkit.
 """  # noqa: E501 a sample output table
 
 from __future__ import annotations
@@ -39,6 +46,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit import PACKAGE_DIR
 from labkit.formats import console, protocol_block, rules
 from labkit.gates import install_hooks
 from labkit.formats.repo import (
@@ -59,6 +67,7 @@ from labkit.formats.requirements import (
 )
 
 TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+AGENTS_HEAD_RE = re.compile(r"# AGENTS\.md — (.+)")
 PYPROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
 REMOTE_TIMEOUT_S = 15.0
 
@@ -363,6 +372,36 @@ def hook_line(repo: Path, installed: str) -> Line:
     )
 
 
+def agents_text(name: str) -> str:
+    """The `AGENTS.md` this labkit stamps for the lab named NAME
+    (`labkit-init lab` writes it, `agents_line` compares with it)."""
+    template = PACKAGE_DIR / "templates" / "AGENTS.md.template"
+    return template.read_text(encoding="utf-8").replace("<project>", name)
+
+
+def agents_line(repo: Path, installed: str) -> Line:
+    """`agents`: the repo's AGENTS.md against the one this labkit stamps."""
+    path = repo / "AGENTS.md"
+    if not path.is_file():
+        return Line(
+            "agents",
+            "no AGENTS.md",
+            STALE,
+            ".venv/bin/labkit-init lab . (writes only the files that are absent)",
+        )
+    text = path.read_text(encoding="utf-8")
+    head = AGENTS_HEAD_RE.match(text.partition("\n")[0])
+    if head is not None and text == agents_text(head.group(1)):
+        return Line("agents", f"AGENTS.md as labkit {installed} stamps it", OK)
+    return Line(
+        "agents",
+        f"AGENTS.md differs from the one labkit {installed} stamps",
+        STALE,
+        "mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab ., then move "
+        "the repo's own lines into CLAUDE.md",
+    )
+
+
 def refs_line(repo: Path) -> Line:
     """`refs`: every rule reference in the repo's living files, the problems under it."""
     n_files, n_records, problems = ref_problems(repo)
@@ -379,7 +418,7 @@ def refs_line(repo: Path) -> Line:
 
 
 def check_repo(repo: Path, offline: bool = False) -> tuple[list[str], int]:
-    """The five lines (plus reference problems) and the exit code — see the module docstring."""
+    """The six lines (plus reference problems) and the exit code — see the module docstring."""
     pins = read_pins(repo)
     pin = pins[0] if pins else None
     want = pinned_version(pin, repo) if pin is not None else None
@@ -389,6 +428,7 @@ def check_repo(repo: Path, offline: bool = False) -> tuple[list[str], int]:
         installed_line(pin, want, installed),
         latest_line(pin, want, repo, offline),
         hook_line(repo, installed),
+        agents_line(repo, installed),
         refs_line(repo),
     ]
     lines = [s for a in answers for s in (str(a), *a.extra)]
