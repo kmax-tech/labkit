@@ -221,8 +221,8 @@ def block_lines(protocol: str, run_id: str, body: str) -> list[str]:
 def blocks(text: str) -> list[Block]:
     """Every generated block of TEXT in order. A block inside a closed fenced
     code block outside every block is an example the document shows and is
-    not read (`comment_blocks.example_lines`); an unclosed fence hides
-    nothing, so a block appended after it is read. Raises ReportBlockError
+    not read (`comment_blocks.example_lines`); a fence no closing line
+    follows hides nothing, so a block appended after it is read. Raises ReportBlockError
     on a block that does not read, its opening line among them."""
     out: list[Block] = []
     opened: tuple[str, str, int] | None = None

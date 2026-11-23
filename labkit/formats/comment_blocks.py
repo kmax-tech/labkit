@@ -16,8 +16,8 @@ The discussion block (`checks.report_blocks`) and the handover block
 (`handovers`) are its kinds; each reads and checks its own head. One
 scanner and one in-place writer for both, so the two kinds cannot drift
 apart. A block inside a closed fenced code block outside every block
-(`example_lines`) is an example the document shows and is not read; an
-unclosed fence hides nothing.
+(`example_lines`) is an example the document shows and is not read; a
+fence no closing line follows hides nothing.
 """
 
 from __future__ import annotations
@@ -72,9 +72,11 @@ def example_fences(lines: list[str]) -> list[tuple[int, int]]:
     open in a block's body opens no fence that would run past its closing
     line and hide the real blocks after it. An opening line no closing
     line follows starts no block here, so it hides no example after it
-    (the block readers refuse it). An unclosed fence hides nothing: by
-    Markdown's rule it runs to the end, and a reader that skipped it would
-    lose every block after it. A fence inside a blockquote (`> ````) is
+    (the block readers refuse it). A fence no closing line follows hides
+    nothing: by Markdown's rule it runs to the end, and a reader that
+    skipped it would lose every block after it. A stray fence line that a
+    later bare fence line closes does make what lies between an example,
+    real blocks too, as Markdown renders it — without a message. A fence inside a blockquote (`> ````) is
     not seen; the lines shown in it carry `> ` too, so no block reader
     takes one of them for a block line."""
     out: list[tuple[int, int]] = []
