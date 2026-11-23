@@ -86,6 +86,10 @@ Anlass: In argmining27 Experiment 07 wurde nach einer Spielraumprüfung mit Haik
 
 Umfang: begrenzte Verbesserungen von Audit-Anweisung und Anleitung nach Abgleich mit den bestehenden Texten, keine neue Sperre und kein Forschungsversuch. Keine Änderung oder Migration historischer Protokolle in argmining27 und keine Umstellung der aktuellen Baureihenfolge durch diesen Eintrag.
 
+### report-check verwechselt Beispiel und Bericht — begrenzter Folgeauftrag
+
+Anlass (23.11.): Der Stop-Hook hält, weil report-check Beispiele in Markdown-Codeblöcken als berichtete Ergebnisse liest: `docs/notes/2026-11-06-answer-block.md:23` (Ergebnisblock) und `docs/notes/2026-10-26-report-run-citations.md:14` (discussed-Block), zusammen sechs Blocker. Vorschlag: Ergebnis- und discussed-Blöcke innerhalb eines Codeblocks gelten als Beispiel und werden nicht gehalten (`protocol-fill --into` schreibt echte Blöcke nie in einen Codeblock). Offen und vor dem Bau zu entscheiden: ob auch einzelne Laufkennungen in Codeblöcken ausgenommen werden — ein echter Bericht kann dort Konsolenausgabe zitieren. Kein pauschales Ausnehmen von `docs/notes/`; keine historische Notiz umschreiben. Zwillingstest: derselbe Block außerhalb des Codeblocks hält weiter.
+
 ### Audit und Wartbarkeit
 
 | Thema                                   | Wann wieder aufgreifen?                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
