@@ -29,6 +29,18 @@ Je Teil ein begrenzter Commit. Keine weitere allgemeine Planrunde. Format am Cod
 
 Hintergrund und Abgrenzung: [Zwei-Stufen-Plan](docs/notes/2026-11-20-two-stage-model-measurement.md). stagekit organisiert die Stufen; labkit sichert die Messung ab. labkit bleibt ohne Abhängigkeit von stagekit.
 
+## Übergabe 23.11.: Vorbereitung als Herkunft — Reste vor einem Release
+
+Gebaut und auf `main` (unveröffentlicht): `finalize` hält eine Vorbereitung als Herkunft an kein Versprechen (`49698fe7`, `7da4fb16`); Standard-Absatz LAB-043 „An input's origin run is recorded and held“ klargestellt (`0c6db26f`); Prüfertext `PREPARATION_THEN` (`d062d8a4`, `1f65c0d3`). Ganze Suite auf `a14ec06a`: Exit 0. Bericht: [Notiz](docs/notes/2026-11-23-preparation-origin-binding.md). Noch nicht release-bereit:
+
+1. **Standardversion entscheiden.** Der Kopf sagt 0.33, die Änderung steht unter „Changes“ für 0.34 (`labkit/docs/standard.md:600`). Die eigene Regel (`labkit/docs/standard.md:3`: „A change to a rule or a field is the next version“) verlangt 0.34. Der Stempel berührt 45 Dateien (Vorlage, Feldführer, 30 gestempelte Formulare, Fixtures); ein labkit, das nur 0.34 liest, lehnt jedes 0.33-Protokoll ab (argmining27: sechs, Experiment 12 darunter). Vor dem Stempeln klären, warum ein unverändertes 0.33-Protokoll neu gestempelt werden muss — eigene Folge, nicht beiläufig.
+2. **Wortlaut „measured under“ für Vorbereitungen** (drittes Lesen, niedrig): `labkit/checks/audit_binding.py:135`, `:249`, `:330` und der Blocker bei `:352` sagen für jede Herkunft „measured under“; `PREPARATION_THEN` sagt, dass das für eine Vorbereitung falsch ist.
+3. **Prüferanweisung** (drittes Lesen, niedrig): `experiment-preflight.agent.md:55` deckt nur ein Stück, das „preparation run“ sagt; eine Vorbereitung mit „not reconstructable“ oder „same text as under“ kann weiter als Quellmessung gelesen werden.
+4. **Nur notiert** (zweites Lesen, Befund 4): Ist der Text einer gebundenen Vorbereitung nicht rücklesbar, blockiert sie wie jede gebundene Herkunft — so verlangt es der Standard; keine Änderung.
+5. **Ein Test der Abschlussprüfung einmal rot** unter `-n 2`, danach grün; Ursache ungeklärt, ein späteres Grün erklärt nichts. Bei erneutem Auftreten volle Ausgabe sichern.
+
+Getrennt, kein Teil dieser Reparatur: Teil 2 (Vorbereitung ohne `protocol=` startet ungebunden), Probeläufe als Herkunft (eigener Untersuchungsauftrag an einem Fall).
+
 ## Offene Entscheidungen — noch kein Bauauftrag
 
 1. **Zweiter stagekit-Anwendungsfall.** Soll argmining27 den bisher vorgesehenen Fall counterfactual-worlds ersetzen oder ergänzen? Nach Freigabe prüft der erste Auftrag nur die Übertragung mit vorhandenen Antworten beziehungsweise kontrollierten Daten. Bei identischen Eingaben und gleicher Auswertung müssen die Zahlen exakt stimmen. Neue bezahlte Modellmessungen brauchen einen weiteren Forschungsauftrag. [Plan und offene Fragen](docs/notes/2026-11-20-two-stage-model-measurement.md#questions-for-the-author).
