@@ -50,10 +50,12 @@ from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_review_inputs import review_keys
 from labkit.formats import attempts, console, evidence, report_reviews
 from labkit.formats.commands import (
+    area_slots,
     claim_decide_command,
     claim_review_command,
     report_review_command,
 )
+from labkit.formats.gate import fill_slots
 from labkit.formats.prompts import prompt_body
 from labkit.formats.repo import given_or_in, layout_root, shown, the_protocol
 from labkit.formats.report_reviews import (
@@ -216,7 +218,9 @@ def decide_claim(
         )
         after = report_reviews.write_claim_decision(path, int(n_text), status, reason)
     except audit_call.REFUSAL_ERRORS as exc:
-        console.refuse("labkit-audit", str(exc).strip(chr(39)))
+        # a refusal of the status names the audit command for this area
+        told = fill_slots(str(exc).strip(chr(39)), **area_slots(area, protocol))
+        console.refuse("labkit-audit", told)
         return 2
     still_open = sum(1 for c in after.claims if c.status == report_reviews.OPEN)
     print(

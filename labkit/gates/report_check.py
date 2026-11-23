@@ -186,6 +186,7 @@ from labkit.formats.commands import (
     ADOPT_TOOL,
     RENDER,
     adopt_command,
+    area_slots,
     audit_command,
     freeze_command,
     gate_command,
@@ -669,11 +670,7 @@ def protocol_verdict(
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     ln = lane(ctx.head.repeat_cost)
-    findings = Findings(
-        tell,
-        area=shown(ctx.area, Path.cwd()),
-        audit=audit_command(ctx.area, protocol=ctx.protocol).line,
-    )
+    findings = Findings(tell, **area_slots(ctx.area, ctx.protocol))
     if not ln.freeze:
         tell(
             f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '

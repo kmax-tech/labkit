@@ -90,6 +90,7 @@ from labkit.formats.commands import (
     MEASURE,
     RESTORE,
     adopt_command,
+    area_slots,
     audit_command,
     decide_command,
     fill_command,
@@ -224,11 +225,7 @@ def next_step(
     if chain is None or pending:
         chain = report_check.chain_gaps(ctx, undeclared=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
-    filled = Findings(
-        None,
-        area=shown(area, Path.cwd()),
-        audit=audit_command(area, protocol=protocol).line,
-    )
+    filled = Findings(None, **area_slots(area, protocol))
     filled.take_all(chain.found)
     blocking = [f for f in filled.found if f.grade == BLOCKER]
     if blocking:

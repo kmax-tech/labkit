@@ -110,6 +110,7 @@ from pathlib import Path
 
 from labkit.formats import findings
 from labkit.formats.files import write_atomic
+from labkit.formats.gate import AUDIT_SLOT
 from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.findings import create_file, written_order
 from labkit.formats import protocol_block
@@ -186,7 +187,7 @@ def claim_refusal(kind: str, status: str) -> str | None:
         return (
             "a claim is not decided `fixed`: a repair changes the report or a "
             "source the reader read, so this record no longer covers the state "
-            "— review the repaired state (`labkit-audit <AREA> --report-review "
+            f"— review the repaired state (`{AUDIT_SLOT} --report-review "
             "<REPORT>`), which judges the repair"
         )
     if status != findings.LIMITATION:

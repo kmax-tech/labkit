@@ -89,7 +89,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from labkit.formats.commands import gate_command
+from labkit.formats.commands import audit_command, gate_command, list_command
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -725,12 +725,13 @@ def _not_checked(
             "schema, gate labels: not checked — the agent's review is not owed "
             "at repeat cost low, the measurement checks the instrument (--bundle "
             "extracts them anyway, for an agent you run; labkit ships none); the "
-            "protocol's open fields are owed: protocol-fill <PROTOCOL> --list"
+            f"protocol's open fields are owed: `{list_command(protocol)}`"
         )
     else:
         findings.note(
             "schema, gate labels: not checked — the preflight audit "
-            "(labkit-audit <AREA> --mode preflight) reads the code before the "
+            f"(`{audit_command(protocol.parent, '--mode', 'preflight', protocol=protocol)}`) "
+            "reads the code before the "
             "freeze; --bundle extracts them for an agent you run (labkit ships "
             "none); the protocol's open fields: protocol-check"
         )

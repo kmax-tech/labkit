@@ -544,10 +544,10 @@ def _audit_line_findings(
     each with its way out (`RecordGap.fix`). Every audit command named is
     filled for BASE_DIR (`gate.fill_slots`): runlog tells these outside a
     gate, and its reader copies the command as printed."""
-    audit = commands.audit_command(base_dir, protocol=protocol).line
+    slots = commands.area_slots(base_dir, protocol)
 
     def filled(s: str) -> str:
-        return fill_slots(s, repo.shown(base_dir, Path.cwd()), audit)
+        return fill_slots(s, **slots)
 
     if not line:
         return [

@@ -5,7 +5,9 @@ handover of another area that does not read warns."""
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
+import io
 import os
 import shutil
 import tempfile
@@ -211,6 +213,34 @@ class PreflightStations(unittest.TestCase):
                 (WARNING, TECHNICAL_RULE, "02-y/handovers.toml: not TOML"),
             ],
         )
+
+
+class TheGateFillsTheAreaSlots(unittest.TestCase):
+    """`preflight_area` without a caller's `Findings` fills the slots a
+    station leaves (`gate.AUDIT_SLOT`) with the area and its audit head, so
+    every audit command it prints runs as printed."""
+
+    def test_a_stations_audit_slot_is_told_filled(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = declared_scope_area(Path(d))
+
+            def slot_blocker(findings, *_args, **_kw):
+                findings.block(
+                    "an open finding",
+                    fix="`labkit-audit <area> --decide`",
+                    rule=TECHNICAL_RULE,
+                )
+
+            out = io.StringIO()
+            with (
+                mock.patch.object(preflight, "check_scope_stamp", slot_blocker),
+                contextlib.redirect_stdout(out),
+            ):
+                self.assertEqual(preflight.preflight_area(area), 1)
+            said = out.getvalue()
+            self.assertIn("an open finding", said)
+            self.assertNotIn("<area>", said)
+            self.assertRegex(said, r"`labkit-audit \S+/experiments/01 --decide`")
 
 
 class ScopeStampStation(unittest.TestCase):

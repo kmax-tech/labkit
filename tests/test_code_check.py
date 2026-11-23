@@ -403,7 +403,8 @@ class TestSummaryLine(unittest.TestCase):
         out = self._out("low")
         self.assertNotIn("placeholders: not checked", out)
         self.assertIn("schema, gate labels: not checked", out)
-        self.assertIn("protocol-fill <PROTOCOL> --list", out)
+        # the command for this protocol, no slot left to fill
+        self.assertRegex(out, r"`protocol-fill \S*PROTOCOL\S*\.md --list`")
         # the summary is the gate's, like every gate's, and comes after the
         # note; with blockers it ends on their list
         note_at, summary_at = (
@@ -416,7 +417,8 @@ class TestSummaryLine(unittest.TestCase):
         """labkit ships no agent for the bundle: the note names the preflight audit it does ship, and the bundle as one
         for an agent of the lab's own."""
         out = self._out("high")
-        self.assertIn("labkit-audit <AREA> --mode preflight", out)
+        self.assertRegex(out, r"`labkit-audit \S+ --mode preflight`")
+        self.assertNotIn("<AREA>", out)
         self.assertIn("labkit ships none", out)
         self.assertNotIn("code-check agent", out)
 

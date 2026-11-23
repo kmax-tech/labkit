@@ -145,7 +145,7 @@ def before_run(
     # the stations' findings as data, not the printed report read back:
     # tell=None collects only and prints nothing, and preflight_area tells
     # every line through it (`SilentCollectors` in tests/test_next_step.py)
-    found = Findings(tell=None)
+    found = Findings(tell=None, **commands.area_slots(area, protocol, base=cwd))
     rc = preflight.preflight_area(area, protocol, found)
     said = "\n".join(found.summary("preflight", "freezing"))
     if rc == 1 and any(h.frozen for h in heads):

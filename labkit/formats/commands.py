@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import shlex
 from dataclasses import dataclass
+from typing import TypedDict
 from pathlib import Path
 
 from labkit.formats import protocol_block
@@ -476,6 +477,28 @@ def preflight_command(
     if protocol is not None and len(area_protocols(area)) > 1:
         words += ["--protocol", shown(protocol, here)]
     return Command(CHECK, shlex.join(words))
+
+
+class AreaSlots(TypedDict):
+    """The two slot values of `area_slots`."""
+
+    area: str
+    audit: str
+
+
+def area_slots(
+    area: Path, protocol: Path | None = None, base: Path | None = None
+) -> AreaSlots:
+    """The values that fill the slots a check leaves for AREA
+    (`gate.AREA_SLOT`, `gate.AUDIT_SLOT`), as `gate.Findings(area=…, audit=…)`
+    and `gate.fill_slots` take them: AREA as BASE (the working directory by
+    default) reaches it, and the audit command's head, `--protocol PROTOCOL`
+    where the area holds several (`audit_command`)."""
+    here = base or Path.cwd()
+    return {
+        "area": shown(area, here),
+        "audit": audit_command(area, protocol=protocol, base=here).line,
+    }
 
 
 def decide_command(

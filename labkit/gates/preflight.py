@@ -71,6 +71,7 @@ import sys
 from pathlib import Path
 
 from labkit.formats.commands import (
+    area_slots,
     audit_command,
     contract_command,
     fill_command,
@@ -254,12 +255,12 @@ def preflight_area(
     runs, then the summary names every blocker again. Warnings alone end
     with 0.
     """
-    findings = findings if findings is not None else Findings()
-
     # 0. protocol — the only exit 2
     protocol = choose_protocol(area, protocol, "preflight")
     if protocol is None:
         return 2
+    if findings is None:
+        findings = Findings(**area_slots(area, protocol))
     state = state_of(area)
     text = state.text_of(protocol)
 

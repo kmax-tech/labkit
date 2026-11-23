@@ -20,7 +20,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.formats import attempts, evidence, handovers, report_reviews  # noqa: E402
+from labkit.formats import attempts, commands, evidence, handovers, report_reviews  # noqa: E402
 from labkit.gates import audit, claim_review, report_hold, report_review  # noqa: E402
 from test_report_review import MARKED, Area  # noqa: E402
 from repo_fixture import git
@@ -273,6 +273,8 @@ class ARealClaimStaysHeld(unittest.TestCase):
         for status, said in (
             ("limitation", "a `result` claim is no limitation"),
             ("fixed", "a claim is not decided `fixed`"),
+            # the way out names this area's audit command, no slot left
+            ("fixed", f"`{commands.audit_command(self.lab.area)} --report-review"),
             ("settled", "one of open, false-positive"),
         ):
             rc, _, err, _ = self.lab.decide(status)

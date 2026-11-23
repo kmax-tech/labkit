@@ -714,6 +714,22 @@ class AuditCommand(unittest.TestCase):
         words = shlex.split(two.line)
         self.assertTrue((root / words[1]).is_dir() and (root / words[-1]).is_file())
 
+    def test_the_slot_values_are_the_area_and_the_audit_head(self):
+        # `area_slots` fills `gate.Findings` and `gate.fill_slots` alike
+        root = Path(tempfile.mkdtemp())
+        area = root / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        (area / "PROTOCOL-a.md").write_text("# a\n")
+        self.assertEqual(
+            commands.area_slots(area, area / "PROTOCOL-a.md", base=root),
+            {"area": "experiments/01-x", "audit": "labkit-audit experiments/01-x"},
+        )
+        (area / "PROTOCOL-b.md").write_text("# b\n")
+        self.assertEqual(
+            commands.area_slots(area, area / "PROTOCOL-a.md", base=root)["audit"],
+            "labkit-audit experiments/01-x --protocol experiments/01-x/PROTOCOL-a.md",
+        )
+
 
 class RunlogGitState(unittest.TestCase):
     def test_unborn_head_is_a_state_not_an_error(self):
