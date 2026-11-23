@@ -192,6 +192,66 @@ class Blocks(unittest.TestCase):
         self.assertEqual(report_blocks.unsourced_numbers(text), [(1, ["28", "0.449"])])
 
 
+class ExamplesInCodeFences(unittest.TestCase):
+    """A block inside a fenced code block is an example the document shows
+    (a note proposing the block, a guide showing it), not a block a tool
+    wrote: no reader takes it, so no gate holds it to a protocol or a run.
+    The run ids it names stay citations a gate checks, as prose. The twin of
+    each: the same block outside the fence is read and held."""
+
+    def _result(self) -> str:
+        return report_blocks.with_block("", P, RUN, f"a = 1 (run {RUN})").strip()
+
+    def _discussed(self) -> str:
+        return report_blocks.with_discussion("", P, RUN, "refused").strip()
+
+    def test_a_result_block_in_a_fence_is_not_read(self):
+        for fence in ("```", "~~~", "```markdown"):
+            marker = fence[:3]
+            text = f"# Note\n\n{fence}\n{self._result()}\n{marker}\n"
+            self.assertEqual(report_blocks.blocks(text), [], fence)
+            self.assertEqual(report_blocks.generated_lines(text), set(), fence)
+
+    def test_the_twin_the_same_result_block_outside_a_fence_is_read(self):
+        text = f"# Report\n\n{self._result()}\n"
+        (block,) = report_blocks.blocks(text)
+        self.assertEqual((block.protocol, block.run_id), (P, RUN))
+
+    def test_a_discussion_block_in_a_fence_is_not_read(self):
+        text = f"# Note\n\n```\n{self._discussed()}\n```\n"
+        self.assertEqual(report_blocks.discussions(text), [])
+
+    def test_the_twin_the_same_discussion_outside_a_fence_is_read(self):
+        text = f"# Report\n\n{self._discussed()}\n"
+        (found,) = report_blocks.discussions(text)
+        self.assertEqual((found.protocol, found.run_id), (P, RUN))
+
+    def test_a_marker_in_a_fence_breaks_no_real_block(self):
+        # a closing line shown in a fence is no "closes no block" error
+        text = f"```\n{report_blocks.CLOSE}\n{report_blocks.DISCUSS_CLOSE}\n```\n"
+        self.assertEqual(report_blocks.blocks(text), [])
+        self.assertEqual(report_blocks.discussions(text), [])
+
+    def test_a_run_id_in_a_fence_is_still_a_citation_the_gate_checks(self):
+        text = f"# Note\n\n```\n{self._result()}\n```\n"
+        cited = report_blocks.cited_run_ids(text)
+        self.assertTrue(cited)
+        structured = report_blocks.structured_lines(
+            report_blocks.blocks(text), report_blocks.discussions(text)
+        )
+        gaps = report_blocks.cited_gaps(cited, set(), structured)
+        # a run the repo does not hold, cited as prose: told, not dropped
+        self.assertTrue(gaps)
+        self.assertEqual({g.grade for g in gaps}, {"WARNING"})
+
+    def test_a_write_leaves_the_example_and_adds_the_real_block(self):
+        example = f"# Note\n\n```\n{self._result()}\n```\n"
+        written = report_blocks.with_block(example, P, RUN, "a = 2")
+        self.assertTrue(written.startswith(example.rstrip("\n")), written)
+        (block,) = report_blocks.blocks(written)
+        self.assertEqual(block.body, "a = 2")
+
+
 class Discussions(unittest.TestCase):
     def test_the_discussion_line_reads_back_under_a_path_with_a_space(self):
         """`discuss_command` quotes the protocol and the report like every

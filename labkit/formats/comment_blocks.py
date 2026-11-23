@@ -15,13 +15,16 @@ KIND -->`:
 The discussion block (`checks.report_blocks`) and the handover block
 (`handovers`) are its kinds; each reads and checks its own head. One
 scanner and one in-place writer for both, so the two kinds cannot drift
-apart.
+apart. A block inside a fenced code block (`markdown.fenced_lines`) is an
+example the document shows, not a block a tool wrote, and is not read.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+
+from labkit.formats.markdown import fenced_lines
 
 HEAD_END = "-->"
 
@@ -61,22 +64,24 @@ def comment_blocks(
     check_head: Callable[[list[str], int], object] | None = None,
 ) -> list[CommentBlock]:
     """Every block of KIND in TEXT, in order; NAME is how a sentence calls
-    it ("discussion block"). CHECK_HEAD(head lines, opening line) runs on
-    each head as soon as it is read, before the body — its own error then
-    comes first. Raises CommentBlockError naming the line on a closing line
+    it ("discussion block"). An opening or closing line inside a fenced code
+    block is no marker (an example shown, `markdown.fenced_lines`).
+    CHECK_HEAD(head lines, opening line) runs on each head as soon as it is
+    read, before the body — its own error then comes first. Raises CommentBlockError naming the line on a closing line
     without an opening one, a head never closed by `-->` on a line of its
     own, a block opening inside another, a block never closed."""
     open_, close = opener(kind), closer(kind)
     out: list[CommentBlock] = []
     lines = text.split("\n")
+    fenced = fenced_lines(lines)
     n = 0
     while n < len(lines):
         line = lines[n].strip()
         n += 1
+        if n - 1 in fenced or line not in (open_, close):
+            continue
         if line == close:
             raise CommentBlockError(f"line {n}: {close} closes no {name}")
-        if line != open_:
-            continue
         first = n
         while n < len(lines) and lines[n].strip() not in (HEAD_END, open_, close):
             n += 1
