@@ -4,7 +4,7 @@
 
 ## Problem
 
-Six of the seven failed attempts of labkit-paper area 23 delivered a report without the number or without the verdict ([One explainer](2026-11-04-one-explainer-plan.md), "Reading of the repeated usage round"): three sts512 handovers ("no result is reported"), task 34 r1 (two columns and the RMSSD statement missing) and r3 (the demand never answered), assay r2 (0.8665 < 0.90 called "cannot be assessed").
+Six of the seven failed attempts of labkit-paper area 23 delivered a report without the number or without the verdict ([One explainer](2026-11-04-one-explainer-plan.md), "Reading of the repeated usage round"): three handovers on the sentence-similarity task ("no result is reported"), the first repetition of task 34 (two columns and the RMSSD statement missing) and its third (the demand never answered), the second repetition of the assay task (0.8665 < 0.90 called "cannot be assessed").
 
 What a report carries today, for a protocol that declares a result (`report_blocks`):
 
@@ -13,7 +13,7 @@ What a report carries today, for a protocol that declares a result (`report_bloc
 
 So the number and the verdict on each promise are already in the report whenever a result is declared. What no gate requires is the **answer to the question**: the protocol's Conclusion ("the answer in at most two plain sentences: whether the bar set before the run was met, or why no verdict was possible", template Summary) stays in the protocol, and the report may never say it.
 
-**Reach of this change, narrower than the problem:** it secures the visible answer in a report of an adopted result. Of the seven failures it can reach task 34 r3 (the demand never answered) and the form of assay r2 (an answer line the review can hold against the verdict); it does not reach the three sts512 handovers, which end without an adopted result (the pin route and the finding's kind are aimed there), nor task 34 r1's missing columns, a demand of the task sheet, not of the protocol. "Six of seven" motivates the package, not this part of it.
+**Reach of this change, narrower than the problem:** it secures the visible answer in a report of an adopted result. Of the seven failures it can reach the third repetition of task 34 (the demand never answered) and the form of the second assay repetition (an answer line the review can hold against the verdict); it does not reach the three sentence-similarity handovers, which end without an adopted result (the pin route and the finding's kind are aimed there), nor the missing columns of task 34's first repetition, a demand of the task sheet, not of the protocol. "Six of seven" motivates the package, not this part of it.
 
 ## Proposal
 
@@ -29,7 +29,7 @@ auc = 0.69, n = 12 (run 2026-10-22T09-13-08_0dc3)
 
 - **No new block.** The result block already has a writer (`--into`), an exact check (`block_gaps`), a duty (`blocks_owed`: a report citing a declared run carries its block) and a stale rule (a protocol change makes the block stale, `--into` rewrites it). Two more rendered lines inherit all four. A separate answer block would be a second opener, parser, writer and check for the same protocol and run.
 - **Guaranteed tier:** a report showing a declared result shows, verbatim, the question it answers and the protocol's answer; a changed Conclusion makes the block stale. An empty or placeholder Conclusion has no rendering: the one function that renders the block refuses it, so `--into` refuses to write the block and `block_gaps` holds a block already in the report — a hand-written block with an empty Answer line passes neither. One validation, read by the writer and the check.
-- **"Generated" means carried over, not confirmed.** The Answer line is the author's statement, copied from the protocol so the report cannot drop or retype it; it is no recorded verdict. The report review reads it as a claim of the author's — a `contradiction` when the recorded verdict below says otherwise (assay r2's pattern) —, and the brief says so in words; the decision review already binds the Conclusion (`protocol_check.reported_claim`).
+- **"Generated" means carried over, not confirmed.** The Answer line is the author's statement, copied from the protocol so the report cannot drop or retype it; it is no recorded verdict. The report review reads it as a claim of the author's — a `contradiction` when the recorded verdict below says otherwise (the second assay repetition's pattern) —, and the brief says so in words; the decision review already binds the Conclusion (`protocol_check.reported_claim`).
 - **Not guaranteed:** that the answer is right, or that it agrees with the verdict line below it.
 - **A handover owes no answer.** Its block states why no result is reported (`handovers`); that is the honest end without an answer, unchanged.
 

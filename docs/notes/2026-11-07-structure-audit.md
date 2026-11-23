@@ -27,7 +27,7 @@ HEAD 8894a146 runs: ruff, format, pyright clean, 3072 passed, 1 skipped. The pac
 
 ## Follow-up — recovery after a rejected decision review
 
-2026-11-07. The same drift as S1 also affected `decision_review.rejected_way`: after a reviewer rejected `false-positive` on an implementation finding, the hint offered `--decide N limitation --not-assessable <ID>`, which the decision writer refuses. `contested_gap`, the refusal of another review on the same state, offered the same unavailable effect. Both hints considered whether the protocol registered promises but ignored the finding's subject.
+2026-11-07. The same drift as in the first finding above (the decision list offers a `limitation` route whatever the subject) also affected `decision_review.rejected_way`: after a reviewer rejected `false-positive` on an implementation finding, the hint offered `--decide N limitation --not-assessable <ID>`, which the decision writer refuses. `contested_gap`, the refusal of another review on the same state, offered the same unavailable effect. Both hints considered whether the protocol registered promises but ignored the finding's subject.
 
 Both now use `rejected_way` per finding, which consults `findings.allowed_decisions`. A rejected implementation or undetermined finding names repair or the required check, counter-evidence, and handover; a permitted limitation keeps its route only where the protocol registers a promise to leave unassessed. Tests exercise all three subjects through the review command and its repeated-call refusal, retain the statement/no-promise twin, and keep the routes separate when one review rejects findings of different subjects.
 
