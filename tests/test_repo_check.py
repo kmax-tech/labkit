@@ -156,11 +156,13 @@ class Report(unittest.TestCase):
         master = master_repo(installed, (f"v{installed}",))
         repo = lab_repo(f"labkit @ git+file://{master}@v{installed}")
         install_hooks.install(repo)
-        (repo / "AGENTS.md").write_text(repo_check.agents_text("Some lab: a long name"))
+        (repo / "AGENTS.md").write_text(
+            repo_check.agents_text("Some lab: a long name"), encoding="utf-8"
+        )
         lines, code = repo_check.check_repo(repo)
         self.assertEqual(code, repo_check.OK, "\n".join(lines))
         self.assertEqual(len(lines), 6)
-        with (repo / "AGENTS.md").open("a") as f:
+        with (repo / "AGENTS.md").open("a", encoding="utf-8") as f:
             f.write("\n## Thesis rules\n\nOwn lines below the stamp.\n")
         line = repo_check.agents_line(repo, installed)
         self.assertEqual(line.state, repo_check.OK, str(line))
@@ -245,10 +247,13 @@ class Report(unittest.TestCase):
         }
         for case, text in cases.items():
             with self.subTest(case):
-                (repo / "AGENTS.md").write_text(text)
+                (repo / "AGENTS.md").write_text(text, encoding="utf-8")
                 line = repo_check.agents_line(repo, installed)
                 self.assertEqual(line.state, repo_check.STALE, str(line))
                 self.assertIn("labkit-init lab .", line.hint)
+                # the stamped head keeps its name through the rewrite
+                if case != "no head":
+                    self.assertIn("--name lab,", line.hint)
         (repo / "AGENTS.md").unlink()
         line = repo_check.agents_line(repo, installed)
         self.assertEqual(line.state, repo_check.STALE, str(line))

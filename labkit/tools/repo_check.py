@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -396,11 +397,13 @@ def agents_line(repo: Path, installed: str) -> Line:
     if stamp is not None and text.startswith(stamp):
         own = " and the repo's own lines below it" if text != stamp else ""
         return Line("agents", f"AGENTS.md as labkit {installed} stamps it{own}", OK)
+    # Without --name the stamp's head would name the directory instead.
+    name = f" --name {shlex.quote(head.group(1))}" if head is not None else ""
     return Line(
         "agents",
         f"AGENTS.md differs from the one labkit {installed} stamps",
         STALE,
-        "mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab ., then "
+        f"mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab .{name}, then "
         "append the repo's own lines from AGENTS.md.old below the stamp",
     )
 
