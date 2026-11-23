@@ -97,6 +97,14 @@ Ergebnis-, Diskussions- und Übergabeblöcke in einem Markdown-Codeblock gelten 
 3. **Niedrig:** Ungetestet sind ```` mit innerem ```, ``` geschlossen durch ~~~, Übergabe- und Berichtsstand-Blöcke, Zaunzeile im Blockrumpf.
 4. **Niedrig:** Zahlen in einem Beispiel-Codeblock erscheinen jetzt als Hinweis „Zahl ohne Quelle“ (nur Warnung).
 
+**Behoben am 23.11. (`425f1ee4`):** Befunde 1–3 — ein Beispiel des übernommenen Laufs verlangt keinen Block mehr; eine Zaunzeile im Blockrumpf oder ```` ```x``` ```` am Zeilenanfang öffnet keinen Codeblock mehr; Tests für die Zaungrenzen und alle Blockarten. Ganze Suite auf `425f1ee4`: Exit 0. Befund 4 bleibt offen (Warnung, eigener Punkt).
+
+**Zweites unabhängiges Lesen (`code-clarity`, 23.11., nur lesend):** kein Fall, in dem ein echter Block still verschwindet. Offen, Entscheidung beim Autor:
+
+1. **Mittel:** Eine kaputte Öffnungszeile (`<!-- labkit result: …`, die `report_blocks.OPEN` nicht liest) ohne Schlusszeile: die Codeblock-Erkennung (`comment_blocks.example_fences`) hält alles danach für Blockinhalt, `report_blocks.blocks` übergeht die Zeile — ein späteres Beispiel wird als echter Block gelesen (nachgestellt). Folge: falsche, aber laute Sperre. Möglicher Weg: `blocks` verweigert eine solche Zeile mit Zeilennummer.
+2. **Niedrig:** Ein Codeblock im Zitat (`> ````) gilt nicht als Codeblock; ein Beispiel darin wird gelesen.
+3. **Niedrig:** Zeigt ein Codeblock einen Block und zitiert zugleich Zahlen des übernommenen Laufs, verlangt der Lauf keinen Block; ungetestet.
+
 ### Ungeklärt: ein Szenario-Test einmal rot (23.11.)
 
 `tests/test_end_to_end.py::FirstMeasurementLost::test_the_twin_a_later_run_lost_is_named_and_holds_nothing` war in einem parallelen Lauf (`-n 4`, 105 Testdateien, 17 min) rot: die erwartete Zeile „are the ones the first measurement registered“ fehlte. Einzeln grün, mit und ohne die Codeblock-Änderung (92f19ec1); die ganze Suite danach grün. Ursache nicht belegt — Last ist eine Vermutung. Bei erneutem Auftreten vollständige Ausgabe sichern und nachstellen.
