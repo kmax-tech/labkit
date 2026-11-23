@@ -79,6 +79,19 @@ def fenced_lines(lines: list[str]) -> set[int]:
     return out
 
 
+def closed_fenced_lines(lines: list[str]) -> set[int]:
+    """The 0-based indexes of every line a closed fence takes, its markers
+    included (`fence_spans`) — where a document shows an example. An
+    unclosed fence is left out: by Markdown's rule it runs to the end, and
+    a reader that skips its lines would lose every line after it, a real
+    generated block among them."""
+    out: set[int] = set()
+    for _, start, end in fence_spans(lines):
+        if end < len(lines):
+            out.update(range(start - 1, end + 1))
+    return out
+
+
 def fenced_blocks(text: str) -> list[tuple[str, str]]:
     """(info string, body) of every top-level fenced block (`fence_spans`)."""
     lines = text.splitlines()

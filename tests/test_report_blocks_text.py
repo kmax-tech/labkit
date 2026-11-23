@@ -244,6 +244,24 @@ class ExamplesInCodeFences(unittest.TestCase):
         self.assertTrue(gaps)
         self.assertEqual({g.grade for g in gaps}, {"WARNING"})
 
+    def test_an_unclosed_fence_hides_no_real_block(self):
+        # an unclosed fence runs to the end by Markdown's rule; a block after
+        # it is no example, and the gate still reads and holds it
+        text = f"# Report\n\n```\nsome output\n\n{self._result()}\n"
+        (block,) = report_blocks.blocks(text)
+        self.assertEqual((block.protocol, block.run_id), (P, RUN))
+        discussed = f"# Report\n\n~~~\n{self._discussed()}\n"
+        (found,) = report_blocks.discussions(discussed)
+        self.assertEqual(found.run_id, RUN)
+
+    def test_a_block_written_after_an_unclosed_fence_is_read(self):
+        written = report_blocks.with_block("# Report\n\n```\nlog\n", P, RUN, "a = 2")
+        (block,) = report_blocks.blocks(written)
+        self.assertEqual(block.body, "a = 2")
+        # written again, it is replaced, not doubled
+        again = report_blocks.with_block(written, P, RUN, "a = 3")
+        self.assertEqual([b.body for b in report_blocks.blocks(again)], ["a = 3"])
+
     def test_a_write_leaves_the_example_and_adds_the_real_block(self):
         example = f"# Note\n\n```\n{self._result()}\n```\n"
         written = report_blocks.with_block(example, P, RUN, "a = 2")

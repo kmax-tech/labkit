@@ -84,7 +84,7 @@ from pathlib import Path
 
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
-from labkit.formats.markdown import fenced_lines
+from labkit.formats.markdown import closed_fenced_lines
 from labkit.formats.protocol_check import CONCLUSION_LABEL, QUESTION_LABEL
 from labkit.formats.comment_blocks import (
     HEAD_END,
@@ -216,15 +216,16 @@ def block_lines(protocol: str, run_id: str, body: str) -> list[str]:
 
 
 def blocks(text: str) -> list[Block]:
-    """Every generated block of TEXT in order; a block inside a fenced code
-    block is an example the document shows, not one `protocol-fill --into`
-    wrote, and is not read (`markdown.fenced_lines`). Raises
-    ReportBlockError on a block that does not read."""
+    """Every generated block of TEXT in order. Between blocks, a block inside
+    a closed fenced code block is an example the document shows and is not
+    read (`markdown.closed_fenced_lines`); an unclosed fence hides nothing,
+    so a block appended after it is read, and inside a block every marker
+    counts. Raises ReportBlockError on a block that does not read."""
     out: list[Block] = []
     opened: tuple[str, str, int] | None = None
     body: list[str] = []
     lines = text.split("\n")
-    fenced = fenced_lines(lines)
+    fenced = closed_fenced_lines(lines)
     for n, line in enumerate(lines, 1):
         if n - 1 in fenced and opened is None:
             continue

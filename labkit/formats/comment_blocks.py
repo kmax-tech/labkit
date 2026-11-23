@@ -15,8 +15,9 @@ KIND -->`:
 The discussion block (`checks.report_blocks`) and the handover block
 (`handovers`) are its kinds; each reads and checks its own head. One
 scanner and one in-place writer for both, so the two kinds cannot drift
-apart. A block inside a fenced code block (`markdown.fenced_lines`) is an
-example the document shows, not a block a tool wrote, and is not read.
+apart. A block inside a closed fenced code block
+(`markdown.closed_fenced_lines`) is an example the document shows and is
+not read; an unclosed fence hides nothing.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from labkit.formats.markdown import fenced_lines
+from labkit.formats.markdown import closed_fenced_lines
 
 HEAD_END = "-->"
 
@@ -64,16 +65,19 @@ def comment_blocks(
     check_head: Callable[[list[str], int], object] | None = None,
 ) -> list[CommentBlock]:
     """Every block of KIND in TEXT, in order; NAME is how a sentence calls
-    it ("discussion block"). An opening or closing line inside a fenced code
-    block is no marker (an example shown, `markdown.fenced_lines`).
+    it ("discussion block"). Between blocks, an opening or closing line
+    inside a closed fenced code block is no marker (an example shown,
+    `markdown.closed_fenced_lines`); inside a block every marker counts.
     CHECK_HEAD(head lines, opening line) runs on each head as soon as it is
-    read, before the body — its own error then comes first. Raises CommentBlockError naming the line on a closing line
+    read, before the body — its own error then comes first.
+
+    Raises CommentBlockError naming the line on a closing line
     without an opening one, a head never closed by `-->` on a line of its
     own, a block opening inside another, a block never closed."""
     open_, close = opener(kind), closer(kind)
     out: list[CommentBlock] = []
     lines = text.split("\n")
-    fenced = fenced_lines(lines)
+    fenced = closed_fenced_lines(lines)
     n = 0
     while n < len(lines):
         line = lines[n].strip()
