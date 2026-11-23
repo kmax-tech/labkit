@@ -218,7 +218,7 @@ def decide_claim(
         )
         after = report_reviews.write_claim_decision(path, int(n_text), status, reason)
     except audit_call.REFUSAL_ERRORS as exc:
-        # a refusal of the status names the audit command for this area
+        # any refusal here names the audit command for this area
         told = fill_slots(str(exc).strip(chr(39)), **area_slots(area, protocol))
         console.refuse("labkit-audit", told)
         return 2

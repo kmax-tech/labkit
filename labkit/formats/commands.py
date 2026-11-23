@@ -493,7 +493,8 @@ def area_slots(
     (`gate.AREA_SLOT`, `gate.AUDIT_SLOT`), as `gate.Findings(area=…, audit=…)`
     and `gate.fill_slots` take them: AREA as BASE (the working directory by
     default) reaches it, and the audit command's head, `--protocol PROTOCOL`
-    where the area holds several (`audit_command`)."""
+    where the area holds several (`audit_command`); without PROTOCOL the head
+    names none, also in such an area."""
     here = base or Path.cwd()
     return {
         "area": shown(area, here),

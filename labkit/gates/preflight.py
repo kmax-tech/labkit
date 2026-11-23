@@ -221,7 +221,8 @@ def preflight_area(
     when given, collects what the stations found and is the channel every
     line goes through (`gate.Findings`), as for `finalize_area`: the pre-run
     hook hands over a silent one and reads the blockers as data instead of
-    the printed report.
+    the printed report. A given FINDINGS fills the area slots only when it
+    was built with `commands.area_slots`; the gate's own always is.
 
     The flow — every condition that decides whether a station runs is in
     this function; one level down is how a station checks, not whether it
