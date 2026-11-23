@@ -158,7 +158,6 @@ from labkit.formats.gate import (
     withdrawn_first,
 )
 from labkit.formats.runs import (
-    PREPARATION,
     metrics_path,
     metrics_text,
     read_data,
@@ -769,9 +768,14 @@ def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> N
     it reports every promise that text registered, as intent-check holds
     an answering run (`intent_check.origin_intent_findings`) — a blocker
     each where its metrics and that text disagree; the protocol as it reads now is not asked.
-    A preparation origin (`run_kind` "preparation") reports no result and is
-    held to none of its text's promises, bound or not; its text is still
-    read back, and its bytes held in the first part."""
+    A preparation origin (`run_kind` "preparation",
+    `SourceProtocolThen.preparation`) reports no result and is held to none
+    of its text's promises, bound or not — a run without `protocol=` binds
+    to the area's only protocol at its start
+    (`start_check.protocol_binding`), and the standard states the exception
+    (LAB-043 Runs go through `runlog`, "An input's origin run is recorded
+    and held"); its text is still read back, and its bytes held in the
+    first part."""
     root = git_root(area)
     for run_id in dict.fromkeys(held):
         then = source_protocol_then(area, run_id, root)
@@ -784,7 +788,7 @@ def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> N
             # no finding and bound: `source_protocol_finding` left only a text that reads
             assert then.text is not None
             findings.note(f"  its protocol then: {then.where}")
-            if is_preparation(area, run_id):
+            if then.preparation:
                 findings.note(
                     f"  {run_id} is a preparation: it reports no result, so it "
                     f"owes none of that text's promises"
@@ -796,23 +800,6 @@ def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> N
             findings.take_all(origin_blockers)
             if not origin_blockers:
                 findings.note(f"  {run_id}, held to that text: no mismatch")
-
-
-def is_preparation(area: Path, run_id: str) -> bool:
-    """Does origin run RUN_ID of AREA record `run_kind = "preparation"`? A
-    preparation cannot supply a reported result (README, run kinds), so it
-    owes no promise of the protocol it was bound to — a run without
-    `protocol=` binds to the area's only protocol at its start
-    (`start_check.protocol_binding`). The standard states it (LAB-043 Runs
-    go through `runlog`, "An input's origin run is recorded and held"): a
-    preparation origin owes none of its text's promises, bound or not,
-    while its output's bytes and the read-back of its text stay held. The auditor's piece still
-    shows a bound preparation's text as what its origin was measured
-    under (`audit_binding.SOURCE_THEN`). Raises RunConfigError when the
-    record does not read — in the station `source_protocol_then` has read
-    it already; None (no record) is no preparation."""
-    cfg = read_run_config(runs_path(area) / run_id)
-    return cfg is not None and cfg.run_kind == PREPARATION
 
 
 def check_area_tests(findings: Findings, area: Path) -> None:

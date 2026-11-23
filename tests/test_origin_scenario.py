@@ -26,7 +26,9 @@ from labkit.formats.runs import RUN_ID_TIME
 from labkit.checks import recheck
 from labkit.checks.audit_binding import (
     NOT_RECONSTRUCTED,
+    PREPARATION_THEN,
     SOURCE_PROTOCOL_LABEL,
+    SOURCE_THEN,
     run_rows,
 )
 from labkit.gates import audit, report_check
@@ -335,6 +337,9 @@ class TwoProtocolsOfOneArea(_OriginStation):
         self.assertIn(f"as origin run {a0} saw it", source)
         self.assertIn("with its uncommitted.patch", source)
         self.assertIn(THEN, source)
+        # a measurement source: what it was measured under, not context
+        self.assertIn(SOURCE_THEN, source)
+        self.assertNotIn(PREPARATION_THEN, source)
         self.assertNotIn(NOW, prompt_c)
         self.assertNotIn(THEN, computed.read_text(encoding="utf-8"))
 
@@ -590,9 +595,9 @@ class PreparationOfTheOnlyProtocol(_OriginStation):
     MEASURED = 'run_kind="measurement", protocol=PROTOCOL.name'
     METRICS = "run.metrics(**metrics)"
 
-    def prepared_and_measured(self) -> tuple[str, Path]:
-        """The preparation's run id and the file it wrote, the measurement
-        reading it run after it."""
+    def prepared_and_measured(self) -> tuple[str, Path, str]:
+        """The preparation's run id, the file it wrote, and the run id of
+        the measurement reading it, run after it."""
         # the protocol registers a criterion, as experiment 12 registered its
         # quality checks; whether the measurement reports it is not asked here
         text = self.protocol.read_text(encoding="utf-8")
@@ -619,18 +624,23 @@ class PreparationOfTheOnlyProtocol(_OriginStation):
         (written,) = runs.read_outputs(self.area / "runs" / prep) or []
         _point_script_at(measure, written.path)
         self.lab.commit("the measurement reads the preparation's rows")
-        self.run_script("01_measure.py")
-        return prep, written.path
+        measured = self.run_script("01_measure.py")
+        return prep, written.path, measured
 
     def test_a_bound_preparation_owes_none_of_the_measurements_promises(self):
-        prep, _ = self.prepared_and_measured()
+        prep, _, measured = self.prepared_and_measured()
         _, told = self.station(self.protocol)
         self.assertNotIn(f"origin run {prep}, held to the protocol", told)
         self.assertIn(f"{prep} is a preparation: it reports no result", told)
         self.assertIn("its protocol then:", told)  # its text is still read back
+        # the auditor is shown that text as context the preparation owes nothing of
+        pieces = dict(run_rows(self.area, self.area / "runs" / measured, ""))
+        source = pieces[f"{SOURCE_PROTOCOL_LABEL}{prep}"]
+        self.assertIn(PREPARATION_THEN, source)
+        self.assertNotIn(SOURCE_THEN, source)
 
     def test_the_twin_the_bytes_a_preparation_wrote_are_still_held(self):
-        prep, written = self.prepared_and_measured()
+        prep, written, _ = self.prepared_and_measured()
         written.write_text(written.read_text(encoding="utf-8") + "\n", "utf-8")
         rc, told = self.station(self.protocol)
         # at low repeat cost the provenance station blocks on changed bytes;

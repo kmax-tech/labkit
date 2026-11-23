@@ -180,6 +180,15 @@ SOURCE_THEN = (
     "conclusion of the run audited here (its own protocol states that), and "
     "not the origin run's protocol as it reads today"
 )
+#: what a source protocol shown for a preparation origin is: context, not
+#: what the preparation was measured under — it reports no result and owes
+#: none of the text's promises (LAB-043 Runs go through `runlog`)
+PREPARATION_THEN = (
+    "the text this preparation run was bound to, as it stood when it started — "
+    "context only: a preparation reports no result and is held to none of its "
+    "promises; not the conclusion of the run audited here (its own protocol "
+    "states that), and not the protocol as it reads today"
+)
 
 #: how a source protocol that cannot be read back is told
 NOT_RECONSTRUCTED = "not reconstructable:"
@@ -194,7 +203,8 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     inputs was measured under: one `(label, text)` piece per origin run, in
     the inputs' order — the protocol as that run saw it when it started,
     its recorded commit with its uncommitted.patch (`source_protocol_then`),
-    marked as the origin run's then (SOURCE_THEN), never the protocol as it
+    marked as the origin run's then (SOURCE_THEN; for a preparation
+    PREPARATION_THEN, context it owes nothing of), never the protocol as it
     reads now and never a newer run's; the text once, a later origin run
     that saw the same text pointing to it. Where it cannot be read back the
     piece says why (NOT_RECONSTRUCTED) and shows no other text — the same
@@ -213,16 +223,19 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     for run_id in origins:
         then = source_protocol_then(area, run_id, root)
         label = f"{SOURCE_PROTOCOL_LABEL}{run_id}"
+        what = PREPARATION_THEN if then.preparation else SOURCE_THEN
         if then.text is None:
             out.append(
                 (label, f"{NOT_RECONSTRUCTED} {then.where} — {NO_TEXT_IN_ITS_PLACE}")
             )
         elif then.text in first_with:
             shown_as = f"{SOURCE_PROTOCOL_LABEL}{first_with[then.text]}"
-            out.append((label, f"{then.where}: the same text as under {shown_as}"))
+            same = f"{then.where}: the same text as under {shown_as}"
+            # the first piece's sentence names that run's role, not this one's
+            out.append((label, f"{same} — {what}" if then.preparation else same))
         else:
             first_with[then.text] = run_id
-            out.append((label, f"{then.where} — {SOURCE_THEN}\n\n{then.text}"))
+            out.append((label, f"{then.where} — {what}\n\n{then.text}"))
     return out
 
 
@@ -239,12 +252,18 @@ class SourceProtocolThen:
             for it (a preparation run, say); None when its record does not
             stand or read, so whether one is owed is unknown (the origin
             check names that record, `origin_check.origin_gap`).
+        preparation: True when the run's record says `run_kind =
+            "preparation"`: it reports no result and owes none of its
+            text's promises, bound or not (LAB-043 Runs go through
+            `runlog`); its text is still read back. False when the record
+            names another kind or does not stand or read.
         text: The protocol's text then; None when it cannot be read back.
         where: Where TEXT was read from, or why it cannot be.
     """
 
     run_id: str
     bound: bool | None
+    preparation: bool
     text: str | None
     where: str
 
@@ -268,26 +287,30 @@ def source_protocol_then(
         return SourceProtocolThen(
             run_id,
             None,
+            False,
             None,
             f"origin run {run_id} is gone (no run of that id under runs/)",
         )
     rd = runs.read_run_dir(run_dir)
     if rd.error is not None:
         return SourceProtocolThen(
-            run_id, None, None, f"origin run {run_id} does not read: {rd.error}"
+            run_id, None, False, None, f"origin run {run_id} does not read: {rd.error}"
         )
     if rd.config is None:  # the directory stands, its config.json does not
         return SourceProtocolThen(
             run_id,
             None,
+            False,
             None,
             f"origin run {run_id} has no record (no config.json in runs/{run_id}/)",
         )
     binding = rd.config.protocol
+    preparation = rd.config.run_kind == runs.PREPARATION
     if binding.id is None:
         return SourceProtocolThen(
             run_id,
             False,
+            preparation,
             None,
             f"origin run {run_id} was started bound to no protocol: no question, "
             f"criteria or method was registered for it",
@@ -296,13 +319,14 @@ def source_protocol_then(
         return SourceProtocolThen(
             run_id,
             True,
+            preparation,
             None,
             f"origin run {run_id}: the area lies in no git repository, so no "
             f"commit holds what it was measured under",
         )
     protocol = bound_protocol_file(area, binding.id, binding.path)
     text, where = as_measured(protocol, rd, root, role="origin run")
-    return SourceProtocolThen(run_id, True, text, where)
+    return SourceProtocolThen(run_id, True, preparation, text, where)
 
 
 def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding | None:

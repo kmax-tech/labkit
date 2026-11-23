@@ -1,6 +1,6 @@
 # A preparation run held to the measurement's promises
 
-Investigation and change, 2026-11-23. Part 1 of the proposal is built (`finalize.is_preparation`, scenario `tests/test_origin_scenario.py`, `PreparationOfTheOnlyProtocol`); part 2 and the standard's clarification wait for the author (TODO, open decision 8).
+Investigation and change, 2026-11-23. Part 1 of the proposal is built (`finalize.check_source_protocols`, scenario `tests/test_origin_scenario.py`, `PreparationOfTheOnlyProtocol`), and so are the standard's clause and the auditor's text (last section); part 2 waits for the author (TODO, open decision 8).
 
 ## The case
 
@@ -51,3 +51,20 @@ The investigation read the code and reproduced finalize on a copy. It did not ru
 On the same copy, with labkit `main` and part 1: `finalize` exits 0; the station notes the preparation, reads its text back, and holds the scenario file's bytes. `report-check` exits 1 with two blockers, both ordinary next steps — the analysis audit has not run, and the protocol has no adopted answer (`labkit-adopt` after that audit). With 0.114.0 it held the same two and the four preparation blockers. The audit and the adoption were not run here (the audit calls a model). argmining27 pins 0.114.0: it reaches the change only with a release and a raised pin.
 
 The stamped prepare script (`labkit/templates/prepare-script.py.template`) starts without `protocol=`, so every stamped area with one protocol, a preparation and a registered promise met this. The scenario test was red on the old finalize for that reason: the preparation held to `[criterion-1]`.
+
+## The standard's clause and the auditor's text (2026-11-23)
+
+The author decided both on 2026-11-23.
+
+**The standard.** LAB-043 Runs go through `runlog`, "An input's origin run is recorded and held", now says that a preparation reports no result: as an origin it owes none of its text's promises, bound or not, while its output's bytes and, where it was bound, the read-back of its text stay held. This alters what the rule demands. The standard makes that its next version, 0.34. The text is corrected under the standard's "Changes", as for 0.20 on 2026-10-19, and the stamp is the author's release step. A bump now would touch 45 tracked files (the `STANDARD` constant and its migration sentence, the template, the field guide, 30 stamped forms under `tests/form_stamps/`, test fixtures), and the release reading 0.34 would refuse every protocol stamped 0.33: argmining27 has six, experiment 12 among them, the case this clause releases.
+
+**The auditor's text.** The analysis audit showed a bound preparation's text as "the question, criteria and method this origin run was measured under". Now `audit_binding.source_protocol_pieces` shows it as context (`PREPARATION_THEN`): the text the preparation was bound to; a preparation reports no result and is held to none of its promises. The run's kind is read once, with its binding, into `SourceProtocolThen.preparation`; finalize's station reads the same field, and `finalize.is_preparation` is gone. A measurement origin's piece is unchanged. The auditor's instructions (`experiment-preflight.agent.md`) say how to read such a piece; they are not in the record's digest.
+
+**Which audit records this invalidates.** The source pieces are in the digest an analysis record binds (`shown_sha`). The text changes only for an analysis record of a run with an input whose origin is a preparation run bound to a protocol whose text reads back. Surveyed on 2026-11-23, read-only: every `runs/*/config.json` under `~/projects/*` (outside virtual environments), each input's `origin_run` looked up in its area, and each such area's `audits/*.toml`.
+
+| Area                                                      | Run reading a recorded origin | Origin                                          | Audit records in the area | Invalidated              |
+|-----------------------------------------------------------|-------------------------------|-------------------------------------------------|---------------------------|--------------------------|
+| argmining27 `experiments/12-generated-scenario-stability` | `2026-11-23T19-18-55_2038`    | `2026-11-23T18-28-40_d9e1`, a bound preparation | none (no `audits/`)       | none                     |
+| argmining27 `experiments/08-missci-repair-weighting`      | `2026-11-23T13-36-52_9e1a`    | two measurements of the same protocol           | none                      | none (not a preparation) |
+
+No other run in `~/projects/*` records an origin. No stored audit record or prompt in this repo or in labkit-evidence shows a source protocol piece (a grep for `SOURCE PROTOCOL` finds only instructions and the changelog). So no audit record is invalidated; experiment 12's first analysis audit will be made under the new text. The survey covered records on this machine only, not clones elsewhere.

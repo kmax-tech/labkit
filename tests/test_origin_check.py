@@ -15,11 +15,13 @@ import unittest
 from unittest import mock
 from pathlib import Path
 
-from labkit.checks import origin_check
+from labkit.checks import audit_binding, origin_check
 from labkit.checks.audit_binding import (
     NO_TEXT_IN_ITS_PLACE,
     NOT_RECONSTRUCTED,
+    PREPARATION_THEN,
     SOURCE_PROTOCOL_LABEL,
+    SOURCE_THEN,
     SourceProtocolThen,
     run_rows,
     source_protocol_finding,
@@ -153,7 +155,9 @@ class SourceProtocolHeld(unittest.TestCase):
     owes its protocol as it started, a run bound to none owes nothing."""
 
     def test_a_bound_origin_without_its_text_then_blocks(self) -> None:
-        then = SourceProtocolThen(A, True, None, f"origin run {A} recorded no commit")
+        then = SourceProtocolThen(
+            A, True, False, None, f"origin run {A} recorded no commit"
+        )
         f = source_protocol_finding(then, Path("/lab/area"))
         assert f is not None and f.fix is not None
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
@@ -163,16 +167,20 @@ class SourceProtocolHeld(unittest.TestCase):
         self.assertIn("measure anew", f.fix)
 
     def test_the_twin_a_bound_origin_whose_text_reads_passes(self) -> None:
-        then = SourceProtocolThen(A, True, "# protocol", "as origin run … saw it")
+        then = SourceProtocolThen(
+            A, True, False, "# protocol", "as origin run … saw it"
+        )
         self.assertIsNone(source_protocol_finding(then, Path("/lab/area")))
 
     def test_an_origin_whose_record_does_not_stand_is_held(self) -> None:
         # whether a protocol is owed is unknown: held, never read as unbound
-        then = SourceProtocolThen(A, None, None, f"origin run {A} is gone")
+        then = SourceProtocolThen(A, None, False, None, f"origin run {A} is gone")
         self.assertIsNotNone(source_protocol_finding(then, Path("/lab/area")))
 
     def test_a_run_bound_to_no_protocol_owes_none(self) -> None:
-        then = SourceProtocolThen(A, False, None, f"origin run {A} was started bound")
+        then = SourceProtocolThen(
+            A, False, False, None, f"origin run {A} was started bound"
+        )
         self.assertIsNone(source_protocol_finding(then, Path("/lab/area")))
 
 
@@ -308,11 +316,18 @@ class SourceHeldAtTheStation(_Area):
     reads is held to that text, a blocker of the reading run's finalize;
     one that reports what the text registered is a note."""
 
-    def told_under(self, text: str) -> tuple[list[str], str]:
+    def told_under(
+        self, text: str, *, preparation: bool = False
+    ) -> tuple[list[str], str]:
         """(blockers, told) of the source-protocol part with the writer's
-        protocol then read back as TEXT."""
+        protocol then read back as TEXT, the writer a preparation where
+        PREPARATION says so."""
         then = SourceProtocolThen(
-            self.writer.run_id, True, text, f"as origin run {self.writer.run_id} saw it"
+            self.writer.run_id,
+            True,
+            preparation,
+            text,
+            f"as origin run {self.writer.run_id} saw it",
         )
         told: list[str] = []
         findings = Findings(told.append)
@@ -330,6 +345,15 @@ class SourceHeldAtTheStation(_Area):
             f"its protocol then: [criterion-1] registered",
             told,
         )
+
+    def test_a_preparation_source_owes_none_of_its_texts_promises(self) -> None:
+        # the twin above: the same text, a measurement source, blocks
+        blocked, told = self.told_under(
+            "- **Criterion:** [criterion-1] n is at least 1\n", preparation=True
+        )
+        self.assertEqual(blocked, [], told)
+        self.assertIn(f"{self.writer.run_id} is a preparation", told)
+        self.assertIn("its protocol then:", told)  # its text is still read back
 
     def test_a_source_under_a_text_without_ids_is_a_note(self) -> None:
         blocked, told = self.told_under("- **Question:** how many rows\n")
@@ -402,6 +426,45 @@ class SourceProtocol(_Area):
         text = self.source_piece()
         self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
         self.assertIn(f"origin run {self.writer.run_id} has no record", text)
+
+    def pieces_of_two_sources(self) -> tuple[str, dict[str, str]]:
+        """A run reading the writer's output and a preparation's, both read
+        back under one text (`source_protocol_then` stood in): (the
+        preparation's run id, the source pieces by label)."""
+        prepared = self.area / "prepared.jsonl"
+        with runlog.run(
+            "p", {}, self.area, data=runlog.NO_INPUTS, run_kind="preparation"
+        ) as p:
+            p.output(prepared)
+            prepared.write_text('{"id": 2}\n', encoding="utf-8")
+            p.metrics(n=1)
+        with runlog.run(
+            "r", {}, self.area, data={"items": self.out, "prepared": prepared}
+        ) as r:
+            r.metrics(n=1)
+
+        def then(area: Path, run_id: str, root: Path | None) -> SourceProtocolThen:
+            return SourceProtocolThen(
+                run_id, True, run_id == p.run_id, "# one text", f"as {run_id} saw it"
+            )
+
+        with mock.patch.object(audit_binding, "source_protocol_then", then):
+            return p.run_id, dict(source_protocol_pieces(self.area, r.dir))
+
+    def test_a_preparation_source_is_shown_as_context_it_owes_nothing_of(self) -> None:
+        prep, pieces = self.pieces_of_two_sources()
+        told = pieces[f"{SOURCE_PROTOCOL_LABEL}{prep}"]
+        # the text is shown once, under the writer; the preparation points
+        # to it and still says what its text is to it
+        self.assertIn(f"the same text as under {SOURCE_PROTOCOL_LABEL}", told)
+        self.assertIn(PREPARATION_THEN, told)
+        self.assertNotIn(SOURCE_THEN, told)
+
+    def test_the_twin_a_measurement_source_keeps_its_sentence(self) -> None:
+        _, pieces = self.pieces_of_two_sources()
+        told = pieces[f"{SOURCE_PROTOCOL_LABEL}{self.writer.run_id}"]
+        self.assertIn(f"— {SOURCE_THEN}\n\n# one text", told)
+        self.assertNotIn(PREPARATION_THEN, told)
 
     def test_one_piece_per_source_run_however_many_inputs_it_wrote(self) -> None:
         with runlog.run(
