@@ -713,7 +713,7 @@ def check_input_origins(
     it saw it when it started (`audit_binding.source_protocol_then`): when
     the run was bound to a protocol and that text cannot be read back, a
     blocker (`source_protocol_finding`) — the audit of this run cannot be
-    shown what its source was measured for; a run bound to no protocol
+    shown the text its source was bound to; a run bound to no protocol
     owes none and is a note (`check_source_protocols` holds a bound one to
     its text's promises, a preparation to none). PROVENANCE_HOLDS_BYTES:
     station 6 ran and holds every input's bytes, so changed bytes and a

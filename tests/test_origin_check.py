@@ -427,10 +427,13 @@ class SourceProtocol(_Area):
         self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
         self.assertIn(f"origin run {self.writer.run_id} has no record", text)
 
-    def pieces_of_two_sources(self) -> tuple[str, dict[str, str]]:
+    def pieces_of_two_sources(
+        self, *, preparation_first: bool = False
+    ) -> tuple[str, dict[str, str]]:
         """A run reading the writer's output and a preparation's, both read
-        back under one text (`source_protocol_then` stood in): (the
-        preparation's run id, the source pieces by label)."""
+        back under one text (`source_protocol_then` stood in), the writer's
+        input first unless PREPARATION_FIRST: (the preparation's run id, the
+        source pieces by label)."""
         prepared = self.area / "prepared.jsonl"
         with runlog.run(
             "p", {}, self.area, data=runlog.NO_INPUTS, run_kind="preparation"
@@ -438,9 +441,10 @@ class SourceProtocol(_Area):
             p.output(prepared)
             prepared.write_text('{"id": 2}\n', encoding="utf-8")
             p.metrics(n=1)
-        with runlog.run(
-            "r", {}, self.area, data={"items": self.out, "prepared": prepared}
-        ) as r:
+        inputs = {"items": self.out, "prepared": prepared}
+        if preparation_first:
+            inputs = {"prepared": prepared, "items": self.out}
+        with runlog.run("r", {}, self.area, data=inputs) as r:
             r.metrics(n=1)
 
         def then(area: Path, run_id: str, root: Path | None) -> SourceProtocolThen:
@@ -464,6 +468,15 @@ class SourceProtocol(_Area):
         _, pieces = self.pieces_of_two_sources()
         told = pieces[f"{SOURCE_PROTOCOL_LABEL}{self.writer.run_id}"]
         self.assertIn(f"— {SOURCE_THEN}\n\n# one text", told)
+        self.assertNotIn(PREPARATION_THEN, told)
+
+    def test_a_measurement_pointing_to_a_preparations_text_says_its_own(self) -> None:
+        # the first piece calls the text context; the measurement after it
+        # must not read as context too
+        _, pieces = self.pieces_of_two_sources(preparation_first=True)
+        told = pieces[f"{SOURCE_PROTOCOL_LABEL}{self.writer.run_id}"]
+        self.assertIn(f"the same text as under {SOURCE_PROTOCOL_LABEL}", told)
+        self.assertIn(SOURCE_THEN, told)
         self.assertNotIn(PREPARATION_THEN, told)
 
     def test_one_piece_per_source_run_however_many_inputs_it_wrote(self) -> None:

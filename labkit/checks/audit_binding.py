@@ -218,7 +218,8 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
         return []  # a record that does not read: the record checks name it
     origins = dict.fromkeys(e.origin_run for e in entries if e.origin_run is not None)
     root = git_root(area)
-    first_with: dict[str, str] = {}  # a text shown → the origin run it was shown for
+    # a text shown → the origin run it was shown for, and whether a preparation
+    first_with: dict[str, tuple[str, bool]] = {}
     out: list[tuple[str, str]] = []
     for run_id in origins:
         then = source_protocol_then(area, run_id, root)
@@ -229,12 +230,16 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
                 (label, f"{NOT_RECONSTRUCTED} {then.where} — {NO_TEXT_IN_ITS_PLACE}")
             )
         elif then.text in first_with:
-            shown_as = f"{SOURCE_PROTOCOL_LABEL}{first_with[then.text]}"
-            same = f"{then.where}: the same text as under {shown_as}"
-            # the first piece's sentence names that run's role, not this one's
-            out.append((label, f"{same} — {what}" if then.preparation else same))
+            first, first_preparation = first_with[then.text]
+            same = (
+                f"{then.where}: the same text as under {SOURCE_PROTOCOL_LABEL}{first}"
+            )
+            # the first piece's sentence names that run's role; a run of the
+            # other role (preparation or not) says its own
+            differs = then.preparation != first_preparation
+            out.append((label, f"{same} — {what}" if differs else same))
         else:
-            first_with[then.text] = run_id
+            first_with[then.text] = (run_id, then.preparation)
             out.append((label, f"{then.where} — {what}\n\n{then.text}"))
     return out
 
@@ -249,7 +254,7 @@ class SourceProtocolThen:
         bound: True when the run recorded a protocol id, so its question,
             criteria and method were registered and their text then is
             owed; False when it recorded none — no protocol was registered
-            for it (a preparation run, say); None when its record does not
+            for it; None when its record does not
             stand or read, so whether one is owed is unknown (the origin
             check names that record, `origin_check.origin_gap`).
         preparation: True when the run's record says `run_kind =
@@ -335,7 +340,7 @@ def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding
     of AREA computed from it cannot be shown what the source was measured
     for, and today's text does not stand in. None when the text reads, and
     for a run that recorded no protocol (`bound` False) — nothing was
-    registered to read back, so a preparation run owes none; a run whose
+    registered to read back, so it owes none; a run whose
     record does not stand (`bound` None) is held, since whether a text is
     owed is unknown. The auditor is told either way
     (`source_protocol_pieces`). The way out restores the evidence or

@@ -627,7 +627,7 @@ class PreparationOfTheOnlyProtocol(_OriginStation):
         measured = self.run_script("01_measure.py")
         return prep, written.path, measured
 
-    def test_a_bound_preparation_owes_none_of_the_measurements_promises(self):
+    def test_a_bound_preparation_origin_is_not_held_to_its_texts_promises(self):
         prep, _, measured = self.prepared_and_measured()
         _, told = self.station(self.protocol)
         self.assertNotIn(f"origin run {prep}, held to the protocol", told)
