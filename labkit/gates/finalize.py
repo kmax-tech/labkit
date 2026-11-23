@@ -709,7 +709,7 @@ def check_input_origins(
     blocker naming the input, the origin and the condition, with the way
     out that restores evidence (`origin_finding`). A plain input and the
     runs the lookup skipped are notes (`origin_notes`). Then, for each
-    origin run whose promise holds, the protocol it was measured under as
+    origin run whose promise holds, the protocol it was bound to as
     it saw it when it started (`audit_binding.source_protocol_then`): when
     the run was bound to a protocol and that text cannot be read back, a
     blocker (`source_protocol_finding`) — the audit of this run cannot be
@@ -760,8 +760,8 @@ def check_input_origins(
 def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> None:
     """Station 7, second part, only for the origin runs of HELD — those
     whose origin promise holds; one that fails is named by its origin
-    blocker and not read here. For each (repeats allowed), the protocol it was measured
-    under as it started (`audit_binding.source_protocol_then`) — a blocker
+    blocker and not read here. For each (repeats allowed), the protocol it was bound
+    to as it started (`audit_binding.source_protocol_then`) — a blocker
     when the run was bound to one and that text cannot be read back
     (`source_protocol_finding`), a note when it reads or when the run was
     bound to none. A text that reads is the one the origin run is held to:

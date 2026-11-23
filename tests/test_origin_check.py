@@ -188,7 +188,11 @@ class SourceProtocolHeld(unittest.TestCase):
     def test_an_origin_whose_record_does_not_stand_is_held(self) -> None:
         # whether a protocol is owed is unknown: held, never read as unbound
         then = SourceProtocolThen(A, None, False, None, f"origin run {A} is gone")
-        self.assertIsNotNone(source_protocol_finding(then, Path("/lab/area")))
+        f = source_protocol_finding(then, Path("/lab/area"))
+        assert f is not None
+        # its own problem, the kind unknown: never told as a measured source
+        self.assertIn(f"the record of origin run {A} does not stand", f.text)
+        self.assertNotIn("measured under", f.text)
 
     def test_a_run_bound_to_no_protocol_owes_none(self) -> None:
         then = SourceProtocolThen(

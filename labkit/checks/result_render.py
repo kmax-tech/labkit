@@ -393,11 +393,13 @@ def source_phrases(area: Path, run: Path) -> list[str]:
     """One phrase per origin run of RUN's inputs (`runs.read_data`), in
     the inputs' order: `<protocol id> as run <id> saw it: <its values>` —
     the values as that run's metrics.json recorded them, every key, ordered
-    and with the comparison as the text it was measured under orders them
+    and with the comparison as the text it was bound to orders them
     (`source_protocol_then`: its commit with its uncommitted.patch, never
     today's text; `recorded_results_line` with that text's `[kept]` and
     `[reference]`) and no verdict derived — a source is evidence of C's
-    number, not a result reported beside it. A run bound to no protocol
+    number, not a result reported beside it. A preparation is named
+    `preparation run <id>` (`audit_binding.origin_role`): it reports no
+    result, its values are what it wrote. A run bound to no protocol
     reads `no protocol, run <id>: …`; a run gone or whose record does not
     read, a text or metrics that do not read back say so in place of the
     values (finalize holds them, `origin_check`,
@@ -415,10 +417,12 @@ def source_phrases(area: Path, run: Path) -> list[str]:
         then = source_protocol_then(area, run_id, root)
         source = runs.run_path(area, run_id)
         pid = runs.read_run_config(source)
+        # a measurement keeps the short "run"; a preparation says what it is
+        called = f"preparation run {run_id}" if then.preparation else f"run {run_id}"
         named = (
-            f"{pid.protocol.id} as run {run_id} saw it"
+            f"{pid.protocol.id} as {called} saw it"
             if pid is not None and pid.protocol.id is not None
-            else f"no protocol, run {run_id}"
+            else f"no protocol, {called}"
         )
         if then.bound is None:  # gone, or its record does not read
             out.append(f"run {run_id}: {then.where}")

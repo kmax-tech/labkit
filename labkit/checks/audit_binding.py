@@ -263,7 +263,9 @@ class SourceProtocolThen:
             "preparation"`: it reports no result and owes none of its
             text's promises, bound or not (LAB-043 Runs go through
             `runlog`); its text is still read back. False when the record
-            names another kind or does not stand or read.
+            names another kind, and when it does not stand or read
+            (`bound` None: the kind is unknown, and every sentence says
+            so rather than calling it a measurement).
         text: The protocol's text then; None when it cannot be read back.
         where: Where TEXT was read from, or why it cannot be; it names the
             run by its `role`.
@@ -375,9 +377,17 @@ def source_protocol_finding(then: SourceProtocolThen, area: Path) -> GateFinding
     blocker."""
     if then.text is not None or then.bound is False:
         return None
+    # a record that does not stand leaves the run's kind unknown: say that,
+    # not what the text would have been to it
+    told = (
+        f"the record of origin run {then.run_id} does not stand, so whether it "
+        f"owes a protocol text, and which, is unknown — {then.where}"
+        if then.bound is None
+        else f"the protocol {then.role} {then.run_id} was {then.basis} cannot be "
+        f"read back — {then.where}"
+    )
     return blocker(
-        f"the protocol {then.role} {then.run_id} was {then.basis} cannot be "
-        f"read back — {then.where}",
+        told,
         fix=f"restore what holds it — the commit (`git fetch`), the run's "
         f"uncommitted.patch or the protocol's history, from git or a backup — "
         f"or, with the right sources, {measure_anew(area)}; never show or "

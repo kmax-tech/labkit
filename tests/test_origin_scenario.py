@@ -23,7 +23,7 @@ import pytest
 
 from labkit.formats import gate, runs
 from labkit.formats.runs import RUN_ID_TIME
-from labkit.checks import recheck
+from labkit.checks import recheck, result_render
 from labkit.checks.audit_binding import (
     NOT_RECONSTRUCTED,
     PREPARATION_THEN,
@@ -640,6 +640,11 @@ class PreparationOfTheOnlyProtocol(_OriginStation):
         self.assertIn(PREPARATION_THEN, source)
         self.assertIn(f"as preparation run {prep} saw it", source)
         self.assertNotIn(SOURCE_THEN, source)
+        # a result computed from it names it a preparation too
+        (phrase,) = result_render.source_phrases(
+            self.area, self.area / "runs" / measured
+        )
+        self.assertIn(f"as preparation run {prep} saw it: ", phrase)
 
     def test_the_twin_the_bytes_a_preparation_wrote_are_still_held(self):
         prep, written, _ = self.prepared_and_measured()
