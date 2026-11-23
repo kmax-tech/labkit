@@ -440,9 +440,11 @@ def shown_block_lines(text: str) -> set[int]:
     """The lines (1-based) of every example code block in TEXT that shows a
     labkit block — a closed fence outside every block
     (`comment_blocks.example_fences`) holding a block's opening line. A run
-    id there names the run of an example: it owes no generated block
-    (`blocks_owed`), though it is still a citation checked as prose. Other
-    fenced text, such as quoted console output, is not exempted."""
+    id there names the run of an example: the gate leaves it out of the
+    citations it passes to `blocks_owed` (`report_hold.owed_blocks`), so it
+    owes no generated block, though it is still a citation checked as
+    prose. Other fenced text, such as quoted console output, is not
+    exempted."""
     lines = text.split("\n")
     return {
         i + 1
