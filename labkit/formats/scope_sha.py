@@ -66,8 +66,10 @@ from labkit.formats.repo import (
     SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
+    AmbiguousArea,
+    area_path,
     layout_root,
-    no_such_area,
+    resolve_area,
     protocols_in,
     rel_posix,
     repo_protocols,
@@ -962,14 +964,25 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             use_pin = False
             i += 1
             continue
-        if Path(a).is_dir():  # `scope-sha <AREA>`, like every other gate
-            area = Path(a)
-            i += 1
-            continue
+        # `scope-sha <AREA>`, like every other gate: a word that is no file
+        # and names an area — a directory or a bare area name; any other
+        # word is a scope file, refused below when it is missing
+        if not Path(a).is_file():
+            try:
+                named = area_path(a)
+            except AmbiguousArea as exc:
+                console.refuse("scope-sha", str(exc))
+                return 2
+            if named.is_dir():
+                area = named
+                i += 1
+                continue
         extra.append(Path(a))
         i += 1
-    if not area.is_dir():
-        console.refuse("scope-sha", no_such_area(area))
+    try:
+        area = resolve_area("scope-sha", area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
 
     try:

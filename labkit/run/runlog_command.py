@@ -459,7 +459,7 @@ def _start(argv: list[str]) -> int:
         "run record and not with exit 0 stays in `runlog AREA` and exits "
         "`--wait` with 2 until the next `runlog start` in the area clears it.",
     )
-    ap.add_argument("area", type=Path, help="the experiment area the run belongs to")
+    ap.add_argument("area", help="the experiment area the run belongs to")
     ap.add_argument(
         "--log", default=None, help="log file (default: AREA/output/start-<ts>.log)"
     )
@@ -482,12 +482,11 @@ def _start(argv: list[str]) -> int:
             "no command given — usage: runlog start AREA [--log FILE] "
             "[--max-seconds S] -- <cmd ...>"
         )
-    area: Path = args.area
-    if not area.is_dir():
-        ap.error(
-            f"{area} is not a directory — name the experiment area first: "
-            f"runlog start AREA -- <cmd ...>"
-        )
+    try:
+        area = repo.resolve_area("runlog start", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
+        return 2
     log = (
         Path(args.log)
         if args.log
