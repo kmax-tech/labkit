@@ -55,7 +55,7 @@ from labkit.formats.standard_contract import (
     first_measurement_hint,
     lane,
 )
-from labkit.formats.scope_sha import area_stamp
+from labkit.formats.scope_sha import SourceError, area_stamp, measured_code
 from labkit.formats.runs import (
     COMPLETED,
     RUN_ID,
@@ -743,6 +743,74 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
         "the registered constants are not in this run's config as registered:\n  "
         + "\n  ".join(lines)
     )
+
+
+def require_answer_reading(
+    base_dir: Path, script: Path, module: str | Path, derived_from: str | None
+) -> str:
+    """The path under the repository root of MODULE, the module a derived
+    run declares as its answer reading (`answer_reading`), or a refusal:
+    no `derived_from` beside it, the area in no git repository, MODULE no
+    file, outside the repository, or not among the modules SCRIPT imports
+    (`scope_sha.measured_code`) — a module the script does not import reads
+    none of its answers. A relative MODULE is read from the repository root.
+    Raises SystemExit with the reason."""
+    if derived_from is None:
+        raise SystemExit(
+            with_way_out(
+                "runlog: answer_reading declares what a derived run re-reads its "
+                "parent's answers with — it goes with derived_from",
+                "pass `derived_from=<the run whose answers are read>`, or drop "
+                "answer_reading",
+            )
+        )
+    root = repo.git_root(base_dir)
+    if root is None:
+        raise SystemExit(
+            with_way_out(
+                f"runlog: answer_reading: {base_dir} lies in no git repository, so "
+                f"the module cannot be compared with what the parent ran",
+                "measure in the repository, or drop answer_reading",
+            )
+        )
+    path = Path(module) if Path(module).is_absolute() else root / module
+    path = path.resolve()
+    if not path.is_file():
+        raise SystemExit(
+            with_way_out(
+                f"runlog: answer_reading = {str(module)!r}: no such file",
+                "name the module that reads an answer, absolute or under the "
+                "repository root",
+            )
+        )
+    if not repo.under_root(root, path):
+        raise SystemExit(
+            with_way_out(
+                f"runlog: answer_reading = {str(module)!r} lies outside the "
+                f"repository {root}",
+                "declare a module of this repository",
+            )
+        )
+    rel = repo.rel_posix(path, root)
+    try:
+        imported = {f.resolve() for f in measured_code(script, root)}
+    except SourceError as exc:
+        raise SystemExit(
+            with_way_out(
+                f"runlog: answer_reading: the code {script.name} imports cannot "
+                f"be read: {exc}",
+                "repair what the sentence names, then start the run again",
+            )
+        ) from exc
+    if path not in imported:
+        raise SystemExit(
+            with_way_out(
+                f"runlog: answer_reading = {rel}: {script.name} does not import "
+                f"it, so it reads none of the answers",
+                "declare the module the script imports to read an answer",
+            )
+        )
+    return rel
 
 
 def completed_parent(base_dir: Path, key: str, run_id: str, why: str = "") -> RunConfig:

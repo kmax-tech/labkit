@@ -103,6 +103,12 @@ MEASUREMENT: RunKind = "measurement"
 #: data, and a small run that tries the instrument
 PREPARATION: RunKind = "preparation"
 PROBE: RunKind = "probe"
+#: what a derived run is, as the README defines the term: it re-reads a
+#: completed run's rows and makes no new model calls — the sentence the
+#: call-log check and runlog's call refusal name
+DERIVED_RUN_CONTRACT = (
+    "a derived run re-reads its parent's rows and makes no model calls"
+)
 #: the measurement script every skeleton stamps (`standard_contract`): the
 #: one script that opens the full run and carries the `DELIVERABLES`
 #: constant the stamp fills; `params` reads its constants

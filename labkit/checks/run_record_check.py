@@ -59,6 +59,7 @@ from labkit.formats.gate import (
 )
 from labkit.formats.runs import (
     CONFIG_FILE,
+    DERIVED_RUN_CONTRACT,
     LLM_CALLS_FILE,
     ModelCall,
     ArtefactError,
@@ -1001,13 +1002,6 @@ class StoringRun:
 
     models_resolved: Mapping[str, object] | None
     unread: str | None
-
-
-#: what a derived run is, as the README defines the term: it re-reads a
-#: completed run's rows and makes no new model calls
-DERIVED_RUN_CONTRACT = (
-    "a derived run re-reads its parent's rows and makes no model calls"
-)
 
 
 def call_log_model_findings(

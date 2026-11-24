@@ -44,7 +44,12 @@ Three ways a run depends on another run's rows — not one:
                    derived_from=ID)`), config.json holds it; the parent must
                    be completed and no repeat (else the best draw could
                    answer through it); the run makes no model call and records no
-                   model — `runs.model_provenance_run` walks this key alone
+                   model — `runs.model_provenance_run` walks this key alone.
+                   With `answer_reading=MODULE` it declares the module that
+                   reads an answer (`answer_reading`, a file of its own in the
+                   run's directory): the parent's code is then compared in
+                   that module and its imports only, and every model call
+                   through `llm` is refused while the run is open
     repeat_of      per run; `runlog.run(..., repeat_of=ID)`: the same measurement
                    asked again — new model calls, its own model record, the
                    same protocol, block, config and inputs as ID or a
@@ -100,6 +105,7 @@ import subprocess
 import sys
 import time
 import uuid
+from importlib.metadata import version
 from pathlib import Path
 from types import TracebackType
 
@@ -122,13 +128,15 @@ from labkit.formats.run_starts import (
     write_start_mark,
 )
 from labkit.formats.runs import (
+    DERIVED_RUN_CONTRACT,
     NO_INPUTS_DECLARED,
     NO_INPUTS_KEY,
     metrics_path,
     patch_path,
     run_path,
 )
-from labkit.run import batch, code_repos, detached
+from labkit.run import batch, code_repos, detached, llm
+from labkit.formats.answer_reading import AnswerReading, write_answer_reading
 from labkit.run.detached import DetachedStart
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
@@ -191,6 +199,7 @@ from labkit.run.start_check import (
     require_detached,
     freeze_gate,
     prepare,
+    require_answer_reading,
     require_registration,
     require_valid_reseed,
     foreground_timeout,
@@ -430,7 +439,8 @@ class Run:
          protocol binding, the promise snapshot, the config frozen
       2. the start check, in this order: the registration (tables owed,
          constants unchanged); a reseed's conditions
-         (`require_valid_reseed`); the detach gate only for a declared
+         (`require_valid_reseed`); a declared answer reading's conditions
+         (`require_answer_reading`); the detach gate only for a declared
          long run whose lane forbids the foreground, whose harness sets a
          limit and which is not already detached; the run index header;
          for a full run that no run of the same script is still open
@@ -449,9 +459,10 @@ class Run:
          derived run resolves no model anew), then under one lock for a
          repeat: the draw counted and, with RESEED, its seed derived
          (`_repeat_draw`), mkdir, the record written (`_write_record`),
-         the start mark (`write_start_mark`) and last the run's start
-         file (`_write_start_file`, `run-starts/<run_id>.json`); a failure
-         of any of the three removes the directory
+         a declared answer reading (`write_answer_reading`), the start
+         mark (`write_start_mark`) and last the run's start file
+         (`_write_start_file`, `run-starts/<run_id>.json`); a failure of
+         any of them removes the directory
 
     A refusal in 1 or 2 is a SystemExit (a RuntimeError for the index
     header and a leak), and leaves no run directory behind. A start file
@@ -475,6 +486,7 @@ class Run:
         derived_from: str | None = None,
         repeat_of: str | None = None,
         reseed: bool = False,
+        answer_reading: str | Path | None = None,
     ) -> None:
         # 1. preparation — what the run is held to, read once
         prepared = prepare(base_dir, config, run_kind, protocol, derived_from)
@@ -487,6 +499,18 @@ class Run:
             prepared.run_kind == MEASUREMENT,
         )
         require_valid_reseed(prepared, repeat_of, reseed)
+        # a declared answer reading: the module the script imports, under the
+        # repository root, beside derived_from — refused otherwise
+        reading = (
+            AnswerReading(
+                module=require_answer_reading(
+                    base_dir, Path(sys.argv[0]).resolve(), answer_reading, derived_from
+                ),
+                labkit=version("labkit"),
+            )
+            if answer_reading is not None
+            else None
+        )
         obligations = lane(prepared.repeat_cost)
         if prepared.run_kind == MEASUREMENT and not obligations.foreground:
             limit = foreground_timeout()
@@ -519,6 +543,9 @@ class Run:
         self._repeat_cost = prepared.repeat_cost
         self._promises = prepared.promises
         self._derived_from = prepared.derived_from
+        #: the module a derived run declared it reads an answer with, None
+        #: when it declared none (`answer_reading`)
+        self.answer_reading = reading
         self._run_kind = prepared.run_kind
         self._data = described
         self._unfrozen_ack = unfrozen_ack
@@ -547,6 +574,8 @@ class Run:
             self.run_id, self.dir = _make_run_dir(base_dir)
             try:
                 self._write_record(provenance)
+                if reading is not None:
+                    write_answer_reading(self.dir, reading)
                 # the mark says a start file is written for this run,
                 # then it is: a failure of either leaves no run directory
                 write_start_mark(self.dir)
@@ -880,7 +909,9 @@ class run:
     """Context manager: `with runlog.run("name", config={...}, data={...}) as r:`
     — every refusal and every record is `Run.__init__` (see its docstring);
     `__exit__` finalizes on a clean exit, a crash leaves the dir without
-    metrics.json (visible)."""
+    metrics.json (visible). A derived run that declares its answer reading
+    refuses every model call through `llm` from `__enter__` to the end of
+    `__exit__`, in every thread (`llm.refusing_calls`)."""
 
     def __init__(
         self,
@@ -893,9 +924,10 @@ class run:
         derived_from: str | None = None,
         repeat_of: str | None = None,
         reseed: bool = False,
+        answer_reading: str | Path | None = None,
     ) -> None:
-        # `protocol`, `derived_from`, `repeat_of`, `reseed` last: no existing
-        # positional call shifts.
+        # `protocol`, `derived_from`, `repeat_of`, `reseed`, `answer_reading`
+        # last: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
         self._run = Run(
             experiment,
@@ -907,9 +939,18 @@ class run:
             derived_from=derived_from,
             repeat_of=repeat_of,
             reseed=reseed,
+            answer_reading=answer_reading,
         )
+        self._held = contextlib.ExitStack()
 
     def __enter__(self) -> Run:
+        if self._run.answer_reading is not None:
+            self._held.enter_context(
+                llm.refusing_calls(
+                    self._run.run_id,
+                    f"it declares its answer reading, and {DERIVED_RUN_CONTRACT}",
+                )
+            )
         return self._run
 
     def __exit__(
@@ -918,16 +959,20 @@ class run:
         exc: BaseException | None,
         _tb: TracebackType | None,
     ) -> bool:
-        if exc_type is None:
-            self._run._finalize()  # crash -> dir stays without metrics.json (visible)
+        with self._held:  # the call refusal ends with the run
+            if exc_type is None:
+                self._run._finalize()  # crash -> dir stays without metrics.json (visible)
+                return False
+            try:
+                write_failure(
+                    self._run.dir, exc_type, exc
+                )  # the reason stays with the run
+            except OSError as err:  # never mask the exception that ended the run
+                console.progress(
+                    "runlog",
+                    f"could not record why {self._run.run_id} broke off: {err}",
+                )
             return False
-        try:
-            write_failure(self._run.dir, exc_type, exc)  # the reason stays with the run
-        except OSError as err:  # never mask the exception that ended the run
-            console.progress(
-                "runlog", f"could not record why {self._run.run_id} broke off: {err}"
-            )
-        return False
 
 
 #: the states of a run still open: alive, or a pid that exists where its
