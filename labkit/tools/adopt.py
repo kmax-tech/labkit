@@ -26,7 +26,6 @@ Exit 0 when every step passed, else the failing step's exit code.
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -36,6 +35,7 @@ from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     choose_protocol,
     layout_root,
+    area_parser,
     resolve_area,
     own_path,
     shown,
@@ -122,13 +122,8 @@ def _resumes(adopted: str | None, step: int, again: str) -> None:
 
 def main(argv: list[str]) -> int:
     """Command line of `labkit-adopt`."""
-    ap = argparse.ArgumentParser(
-        prog="labkit-adopt",
-        description=(__doc__ or "").splitlines()[0],
-    )
-    ap.add_argument("area")
+    ap = area_parser("labkit-adopt", (__doc__ or "").splitlines()[0])
     ap.add_argument("run_id", nargs="?", default=None, metavar="RUN_ID")
-    ap.add_argument("--protocol", type=Path, default=None)
     args = ap.parse_args(argv)
     try:
         area = resolve_area("labkit-adopt", args.area)

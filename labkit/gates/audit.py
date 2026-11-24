@@ -91,7 +91,7 @@ from labkit.formats.gate import (
     coded,
     with_way_out,
 )
-from labkit.formats.repo import resolve_area, shown
+from labkit.formats.repo import GivenOnce, resolve_area, shown
 from labkit.formats.commands import audit_command, decide_command, freeze_command
 from labkit.formats.runs import completed_runs, now_stamp
 from labkit.formats.scope_sha import (
@@ -412,7 +412,10 @@ def main(argv: list[str]) -> int:
         help="with --decide, --findings or --review: this record, not the newest",
     )
     ap.add_argument(
-        "--protocol", type=Path, help="the protocol, in an area holding several"
+        "--protocol",
+        type=Path,
+        action=GivenOnce,
+        help="the protocol, in an area holding several",
     )
     ap.add_argument(
         "--model",

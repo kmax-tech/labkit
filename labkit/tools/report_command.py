@@ -7,12 +7,11 @@ so the gate does not import the step that reads it.
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT
-from labkit.formats.repo import git_root, resolve_area
+from labkit.formats.repo import area_parser, git_root, resolve_area
 from labkit.gates import report_check
 from labkit.gates.next_step import steps_for
 
@@ -32,11 +31,11 @@ def main(argv: list[str]) -> int:
             for step in steps_for(repo, paths, staged=staged, chains=reported.chains):
                 print(step)
         return reported.exit
-    ap = argparse.ArgumentParser(
-        prog="report-check",
-        description=(report_check.__doc__ or "").split("\n\n")[0],
-        # the hooks' form is parsed above, before argparse; it is still part
-        # of this command's contract and stands in its --help
+    # the hooks' form is parsed above, before argparse; it is still part of
+    # this command's contract and stands in its --help
+    ap = area_parser(
+        "report-check",
+        (report_check.__doc__ or "").split("\n\n")[0],
         epilog=(
             "report-check --if-reported [--staged] PATH ...\n"
             "    every protocol of an area a path touches whose head has adopted a\n"
@@ -45,10 +44,7 @@ def main(argv: list[str]) -> int:
             "    the index holds them, and the area's tree must equal the index)\n"
             f"{EXIT_CONTRACT}"
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("area")
-    ap.add_argument("--protocol", type=Path, default=None)
     a = ap.parse_args(argv)
     try:
         area = resolve_area("report-check", a.area)

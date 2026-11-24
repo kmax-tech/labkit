@@ -77,5 +77,37 @@ class AreaParser(unittest.TestCase):
             ap.add_argument("--max", action=repo.GivenOnce, default=3)
 
 
+class EveryCommandRefusesARepeatedProtocol(unittest.TestCase):
+    """Each command that reads `--protocol` refuses it given twice, before
+    it looks at the area (which does not exist here)."""
+
+    def test_each_command(self):
+        from labkit.checks import code_check
+        from labkit.gates import audit, finalize, preflight
+        from labkit.tools import adopt, next_command, params, report_command
+
+        mains = {
+            "preflight": preflight.main,
+            "finalize": finalize.main,
+            "labkit-params": params.main,
+            "code-check": code_check.main,
+            "labkit-audit": audit.main,
+            "labkit-next": next_command.main,
+            "labkit-adopt": adopt.main,
+            "report-check": report_command.main,
+        }
+        argv = ["nope", "--protocol", "A.md", "--protocol", "B.md"]
+        for tool, main in mains.items():
+            with self.subTest(command=tool):
+                err = io.StringIO()
+                with (
+                    contextlib.redirect_stderr(err),
+                    self.assertRaises(SystemExit) as cm,
+                ):
+                    main(argv)
+                self.assertEqual(cm.exception.code, 2)
+                self.assertIn(f"{tool}: error: --protocol given twice", err.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -26,6 +26,7 @@ from labkit.formats.repo import (
     area_protocols,
     choose_protocol,
     layout_root,
+    GivenOnce,
     resolve_area,
     shown,
     experiment_areas,
@@ -71,7 +72,7 @@ def main(argv: list[str]) -> int:
         description=(__doc__ or "").splitlines()[0],
     )
     ap.add_argument("area", nargs="?", default=None)
-    ap.add_argument("--protocol", type=Path, default=None)
+    ap.add_argument("--protocol", type=Path, action=GivenOnce)
     ap.add_argument(
         "--guide", action="store_true", help="print the workflow in full and exit"
     )
