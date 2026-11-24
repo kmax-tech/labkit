@@ -140,7 +140,9 @@ from pathlib import Path
 from labkit.formats import evidence
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import area_args
-from labkit.formats.commands import gate_command
+from labkit.formats.answer_reading import read_answer_reading
+from labkit.formats.protocol_then import as_measured
+from labkit.formats.commands import gate_command, measure_anew
 from labkit.formats.gate import (
     GUARANTEED,
     NOTE,
@@ -180,8 +182,10 @@ from labkit.formats.runs import (
     ArtefactError,
     MetricsError,
     kept_jsonl_rows,
+    lineage,
     outputs_now,
     read_outputs,
+    read_run_dir,
     unreportable,
     read_run_config,
 )
@@ -208,8 +212,10 @@ from labkit.checks.intent_check import NoRunChosen
 from labkit.checks.intent_check import origin_intent_findings
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
+from labkit.formats.protocol_fields import PROMPT_LABEL, field_name
 from labkit.formats.protocol_check import (
     REPEATED_WAY_OUT,
+    field_values,
     head_rule,
     kept_gaps,
     must_and_soft_holes,
@@ -227,6 +233,7 @@ from labkit.checks.origin_check import (
 )
 from labkit.checks.result_render import kept_phrase
 from labkit.checks.run_record_check import (
+    answer_reading_gaps,
     arm_findings,
     code_since_run,
     criterion_n_input_mismatches,
@@ -544,6 +551,67 @@ def check_run_code(
         findings.note(
             f"  the script and the helpers it imports are as {answering_run.name} ran them"
         )
+
+
+def check_answer_reading(
+    findings: Findings, area: Path, protocol: Path, answering_run: Path
+) -> None:
+    """Station 4, third part: each run of the answering run's lineage that
+    declares its answer reading (`answer_reading`) is held to its parent
+    beyond the code (`run_record_check.answer_reading_gaps`): the prompts
+    field of PROTOCOL as each run started under it, and the answer file
+    both registered. A protocol text that cannot be read back blocks, as
+    does an outputs.json that does not read. A note names the declaration
+    and what of the parent's code was compared (`code_since_run`). Says
+    nothing where no run declares one; a broken lineage and a declaration
+    that does not read are `check_run_code`'s blockers."""
+    try:
+        chain = lineage(answering_run)
+    except ValueError:
+        return
+    root = git_root(area)
+    for child, parent in zip(chain, chain[1:]):
+        try:
+            declared = read_answer_reading(child)
+        except ArtefactError:
+            continue
+        if declared is None:
+            continue
+        findings.note(
+            f"  {child.name} declares its answer reading {declared.module}: the "
+            f"code of {parent.name} is compared in that module and the modules it "
+            f"imports, not in its whole script"
+        )
+        # the prompts field as each run started under it: prose, read here
+        prompts: list[str | None] = []
+        for run in (parent, child):
+            text, where = as_measured(protocol, read_run_dir(run), root, role="run")
+            if text is None:
+                findings.block(
+                    f"the prompts {child.name} re-reads with cannot be held to "
+                    f"{parent.name}'s: {where}",
+                    fix=f"restore what the sentence names, or {measure_anew(area)}",
+                    rule=TECHNICAL_RULE,
+                )
+                break
+            prompts.append(
+                field_values(text, normalise=str).get(field_name(PROMPT_LABEL))
+            )
+        try:
+            outputs = (read_outputs(parent) or [], read_outputs(child) or [])
+        except ArtefactError as exc:
+            findings.take(run_file_unread(str(exc), exc, child))
+            continue
+        if len(prompts) == 2:
+            findings.take_all(
+                answer_reading_gaps(
+                    parent.name,
+                    child.name,
+                    (prompts[0], prompts[1]),
+                    outputs,
+                    measure_anew(area),
+                )
+            )
 
 
 def check_declared_scopes(
@@ -1168,7 +1236,9 @@ def finalize_area(
        without one it holds the promise block alone (step 1 names the run).
     4. the run's code and the declared scopes — only with a run: the code
        that produced the number is the code here now (`check_run_code`),
-       each declared scope as the run saw it (`check_declared_scopes`).
+       each declared scope as the run saw it (`check_declared_scopes`), and
+       a derived run that declares its answer reading holds its parent's
+       prompts and answer file (`check_answer_reading`).
     5. open fields — always: protocol placeholders and stamped `<…>`
        placeholders left in the area's README warn; a bound field written
        twice and data counts typed by hand or stale block.
@@ -1242,6 +1312,7 @@ def finalize_area(
         held_by = standing_adoption(chosen, text, answering_run, state)
         check_run_code(findings, area, answering_run, held_by)
         check_declared_scopes(findings, area, answering_run, text, held_by)
+        check_answer_reading(findings, area, chosen, answering_run)
 
     # 5. open fields — always
     findings.header(f"open fields: {chosen.name}")

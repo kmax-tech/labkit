@@ -70,6 +70,7 @@ from labkit.formats.gate import cited_rule
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.commands import render_command
 from labkit.formats.repo import git_root
+from labkit.formats.answer_reading import read_answer_reading
 from labkit.formats.protocol_check import (
     display_label,
     CONCLUSION_LABEL,
@@ -302,6 +303,7 @@ def rendering(
     said, recorded = _verdicts_and_values(area, text, run, limits)
     before = predecessor_verdict(area, text, set())
     drawn = source_phrases(area, run)
+    re_read = re_read_phrase(text, run)
     stand_ins = stand_in_label(run)
     recorded_results = (
         (f"{before} · this question: " if before else "")
@@ -310,6 +312,7 @@ def rendering(
         + recorded
         + note
         + (f" · sources: {'; '.join(drawn)}" if drawn else "")
+        + (f" · {re_read}" if re_read else "")
     )
     return Rendering(
         recorded_results,
@@ -386,6 +389,55 @@ def _verdicts_and_values(
     return (
         "; ".join(verdicts(block, metrics, unjudged)),
         recorded_results_line(metrics, run.name, keys, comparison, kept),
+    )
+
+
+def re_read_phrase(text: str, run: Path) -> str:
+    """`re-reads the answers of run <parent> (commit <c>) with the code of
+    commit <c'>, its answer reading <module> as <parent> ran it[, step <id>
+    (<occasion>)]; changed against <parent>: <key> <was> → <now>, …` for
+    RUN, a derived run that declares its answer reading (`answer_reading`)
+    — the correction it carries, beside the answers it rests on: both
+    commits, the step of TEXT's `[builds_on]` when it builds on that parent,
+    and each key both runs recorded with another value (runlog's own keys
+    aside; `no number changed` when none). "" for a run that declares
+    none, or whose declaration, records or metrics do not read — finalize
+    and the record checks name those."""
+    try:
+        declared = read_answer_reading(run)
+        cfg = runs.read_run_config(run)
+    except (runs.ArtefactError, ValueError):
+        return ""
+    if declared is None or cfg is None or cfg.derived_from is None:
+        return ""
+    parent = runs.run_path(run.parent.parent, cfg.derived_from)
+    try:
+        pcfg = runs.read_run_config(parent)
+        was = runs.read_metrics(runs.metrics_path(parent))
+        now = runs.read_metrics(runs.metrics_path(run))
+    except (runs.ArtefactError, ValueError):
+        return ""
+    if pcfg is None:
+        return ""
+    try:
+        step = protocol_block.builds_on(text)
+    except protocol_block.BlockError:
+        step = None
+    stepped = (
+        f", step {step.id} ({step.occasion})"
+        if step is not None and step.run == parent.name
+        else ""
+    )
+    changed = [
+        f"{k} {was[k]} → {now[k]}"
+        for k in now
+        if k in was and k not in LABKIT_KEYS and was[k] != now[k]
+    ]
+    return (
+        f"re-reads the answers of run {parent.name} (commit {pcfg.git}) with the "
+        f"code of commit {cfg.git}, its answer reading {declared.module} as "
+        f"{parent.name} ran it{stepped}; changed against {parent.name}: "
+        + (", ".join(changed) if changed else "no number changed")
     )
 
 

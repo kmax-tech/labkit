@@ -108,6 +108,7 @@ LAB_027 = cited_rule("LAB-027 Model discipline")
 LAB_036 = cited_rule("LAB-036 Validate, don't trust a single run")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 LAB_057 = cited_rule("LAB-057 One area per idea")
+LAB_067 = cited_rule("LAB-067 A prompt has one home, which the run freezes")
 
 
 CRITERION_N = promises.CRITERION_N_KEY
@@ -197,6 +198,62 @@ def code_since_run(
         blockers += b
         warnings += w
     return blockers, warnings
+
+
+def answer_reading_gaps(
+    parent: str,
+    child: str,
+    prompts: tuple[str | None, str | None],
+    outputs: tuple[list[OutputEntry], list[OutputEntry]],
+    anew: str,
+) -> list[GateFinding]:
+    """The BLOCKERs on CHILD, a derived run that declares its answer
+    reading, against its PARENT, beyond the code (`code_since_run`): the
+    prompts (PROMPTS: the field "Prompt (verbatim, per variant)" as the
+    parent's protocol text held it and as the child's does, None where a
+    text has none) equal, since a prompt changed after the parent ran
+    changes what was measured; and the answers (OUTPUTS, the parent's and
+    the child's registered outputs): every file both registered with the
+    same sha256 in both records, and at least one such file, since a
+    derived run re-reads its parent's output. ANEW is the way out that
+    measures anew (`commands.measure_anew`). Empty when both hold. Pure."""
+    found: list[GateFinding] = []
+    if prompts[0] != prompts[1]:
+        found.append(
+            blocker(
+                f"{child} re-reads the answers of {parent}, but the prompts "
+                f"field differs from the text {parent} was measured under — the "
+                f"answers were asked with other prompts, and new prompts are a new "
+                f"measurement",
+                fix=anew,
+                rule=LAB_067,
+            )
+        )
+    parent_out, child_out = ({o.path: o.sha256 for o in out} for out in outputs)
+    shared = sorted(set(parent_out) & set(child_out))
+    if not shared:
+        found.append(
+            blocker(
+                f"{child} registered none of the files {parent} registered as its "
+                f"output — a derived run re-reads its parent's answers",
+                fix=f"register the answer file {parent} wrote in the derived run "
+                f"(`r.output(...)`), or {anew}",
+                rule=LAB_041,
+            )
+        )
+    for path in shared:
+        if parent_out[path] != child_out[path]:
+            found.append(
+                blocker(
+                    f"{path.name}: {parent} registered sha256 {parent_out[path]}, "
+                    f"{child} {child_out[path]} — the answers changed after "
+                    f"{parent} ran",
+                    fix=f"restore the file as {parent} registered it "
+                    f"(`git log -- {path.name}` names its commits), or {anew}",
+                    rule=LAB_041,
+                )
+            )
+    return found
 
 
 def _or_declared(found: GateFinding, parent: str) -> GateFinding:

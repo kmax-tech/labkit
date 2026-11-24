@@ -32,6 +32,10 @@ HTML_COMMENT = re.compile(r"<!--.*?-->")
 #: (`exploration_state.named_state`). The catalogue lists it among the
 #: fields a protocol owes (`protocol_check.FIELDS`).
 CONCLUSION_LABEL = "Conclusion"
+#: the field that holds the prompts verbatim: a derived run that declares
+#: its answer reading is held to it as its parent's text held it
+#: (`run_record_check.answer_reading_gaps`)
+PROMPT_LABEL = "Prompt (verbatim, per variant)"
 
 
 def field_name(label: str) -> str:
