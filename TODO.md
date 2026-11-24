@@ -40,6 +40,16 @@ Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. 
 
 Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingungen. Vor einem Bau den aktuellen Fall nachstellen oder den jeweils genannten Auslöser belegen. Die vollständigen ursprünglichen Beschreibungen bleiben im [Verlauf](TODO-history-2026-11-20.md#notiert-nicht-geplant).
 
+### Audit 24.11., drittes — offen, nichts entschieden
+
+Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-3.md). HEAD `2cd5e158`, ganze Suite im frischen Worktree: Exit 0. Kein Befund ändert ein Gate-Urteil auf korrekter Eingabe. Offene Punkte:
+
+1. Regel der zweiten Prüfung (Decision Review) an fünf Stellen nachziehen: Hilfe von `--review`, README, Architekturtabelle, Workflow Schritt 6, Exit-2-Docstring — dazu `false-positive`-BLOCKER und `fixed` auf der Conclusion; danach sagt jede Stelle, was der Code verlangt.
+2. Kleine Doku-Drift in einem Commit: `verdict()` → `evaluate_rows` (seit 22.11. offen), `labkit-next --staged` im README (seit 23.11. offen), „warning is planned“ in `promise-block.md` streichen oder in TODO aufnehmen, `runlog --help` um `unreadable`/`broke off`, `term-check` aus `CLAUDE.md` oder als „nur auf dem Rechner des Autors“ markieren.
+3. Drei echte Doppel zusammenlegen: Argumentlesen `<AREA> [--protocol]` über `repo.area_args`, Name der Temp-Datei in `files.py` als ein Helfer, `"preflight"`-Literal durch `PREFLIGHT_AUDIT`.
+4. Klarheit in `finalize`/`recheck`: Meldung „all fields filled“ ehrlich benennen oder je Prüfung trennen, Docstring von `check_open_fields` ergänzen, `route = [str(exc)]` durch eigene Markierung ersetzen, `unkept` umbenennen.
+5. TOML-Kopf der Kommentarblöcke (drei Parser gleicher Form) zu einem Helfer — nur wenn ein vierter Block kommt.
+
 ### Audit 24.11., zweites — umgesetzt, nicht veröffentlicht
 
 Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-2.md). Vom Autor am 24.11. entschieden und gebaut, je ein Commit: Prüfertext trennt „ungebunden“ und „Vorbereitung“ (`35cbd8aa`; `scope_sha` per Test unverändert, `shown_sha` am Code: die Exploration-Abschnitte liegen außerhalb der gebundenen Stücke); `finalize` und `code-check` füllen `<area>` (`f3d60cdc`); Kopfzeile der Audit-Aufzeichnung nennt `--why` (`48ae6977`); Doku (`2e0a6c1a`); Schlusszeile des Ergebnisblocks aus `closer` und zwei Heimat-Zeilen (`c426a654`); Namen `require_agreement`, `kept`, „origin check holds“ (`c324175c`). Ganze Suite auf `c324175c`: Exit 0. Unabhängig gelesen (`code-clarity`).
