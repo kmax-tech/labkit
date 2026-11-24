@@ -124,6 +124,23 @@ def no_such_area(area: Path) -> str:
     )
 
 
+def resolve_area(tool: str, given: str | Path) -> Path:
+    """The area directory GIVEN names on TOOL's command line, as
+    `area_path` resolves it: a directory as written, else a bare name
+    under `experiments/`. Raises `console.Refused(TOOL, …)` for a name
+    several areas carry (the candidates named) and for anything that is no
+    directory (`no_such_area`). The one resolution of an area argument:
+    every area command calls it after reading its line, whatever reads
+    the line."""
+    try:
+        area = area_path(str(given))
+    except AmbiguousArea as exc:
+        raise console.Refused(tool, str(exc)) from exc
+    if not area.is_dir():
+        raise console.Refused(tool, no_such_area(area))
+    return area
+
+
 #: an area's directory name as `labkit-init exp` prints it: `NN-<slug>`
 AREA_NAME = re.compile(r"^(\d+)-(.+)$")
 
@@ -147,9 +164,9 @@ def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
     if not argv or console.asks_help(argv):
         return console.usage(tool, "\n".join(usage), asked=bool(argv))
     try:
-        area = area_path(argv[0])
-    except AmbiguousArea as exc:
-        console.refuse(tool, str(exc))
+        area = resolve_area(tool, argv[0])
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
     protocol = None
     rest = argv[1:]
@@ -159,9 +176,6 @@ def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
             rest = rest[2:]
             continue
         console.refuse(tool, f"unexpected argument {rest[0]!r}")
-        return 2
-    if not area.is_dir():
-        console.refuse(tool, no_such_area(area))
         return 2
     return AreaArgs(area, protocol)
 

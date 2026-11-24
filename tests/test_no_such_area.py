@@ -10,7 +10,7 @@ from pathlib import Path
 
 from labkit.tools import report_command
 from labkit.checks import code_check
-from labkit.formats import repo
+from labkit.formats import console, repo
 
 
 class NoSuchArea(unittest.TestCase):
@@ -186,6 +186,50 @@ class AmbiguousName(unittest.TestCase):
                 self.assertEqual(rc, 2, out.getvalue() + err.getvalue())
                 self.assertIn("experiments/02-x", err.getvalue())
                 self.assertEqual(out.getvalue(), "")
+
+
+class ExistingArea(unittest.TestCase):
+    """`repo.resolve_area`: the one resolution of an area argument — a
+    path as written, a bare name, a name two areas carry, no directory."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name).resolve()
+        for name in ("01-x", "02-x", "03-y"):
+            (self.root / "experiments" / name).mkdir(parents=True)
+        (self.root / "notes.md").write_text("", encoding="utf-8")
+        old = Path.cwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, old)
+
+    def test_a_path_as_written_is_kept(self):
+        self.assertEqual(
+            repo.resolve_area("t", "experiments/03-y"), Path("experiments/03-y")
+        )
+        self.assertEqual(
+            repo.resolve_area("t", self.root / "experiments" / "03-y"),
+            self.root / "experiments" / "03-y",
+        )
+
+    def test_a_bare_name_finds_its_area(self):
+        self.assertEqual(
+            repo.resolve_area("t", "y"), self.root / "experiments" / "03-y"
+        )
+
+    def test_a_name_two_areas_carry_is_refused_with_both(self):
+        with self.assertRaises(console.Refused) as cm:
+            repo.resolve_area("some-tool", "x")
+        self.assertEqual(cm.exception.tool, "some-tool")
+        self.assertIn("experiments/01-x", cm.exception.why)
+        self.assertIn("experiments/02-x", cm.exception.why)
+
+    def test_no_directory_is_refused_with_the_shared_sentence(self):
+        for given in ("z", "notes.md", "experiments/04-z"):
+            with self.subTest(given=given):
+                with self.assertRaises(console.Refused) as cm:
+                    repo.resolve_area("some-tool", given)
+                self.assertEqual(cm.exception.why, repo.no_such_area(Path(given)))
 
 
 if __name__ == "__main__":
