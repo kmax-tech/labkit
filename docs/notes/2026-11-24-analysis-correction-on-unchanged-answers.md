@@ -101,6 +101,8 @@ Where the two ways are not yet clearly delimited in labkit:
 
 ## Proposal, limited (for the author's decision; not built)
 
+> Superseded: the author chose to extend `derived_from` instead of a second path beside it (2026-11-24). What was built and what was exercised: [Built](#built-2026-11-24-a-derived-run-declares-its-answer-reading).
+
 Join existing parts into one tested way; no new run kind and no new run-record field. A re-evaluation is a `measurement` run like today; it is declared by two named inputs its record already has room for.
 
 **1. The declaration lives in two named inputs of the run, not in a new field.** Two places were ruled out. A new `config.json` field: the keys are a closed set both ways (`runs.RUN_CONFIG_KEYS`; a missing or unknown key is refused, `labkit/formats/runs.py:1418`, `:1457`) and this labkit reads schema 5 only, so the field means schema 6 — and schema-6 labkit could no longer read the basis run (schema 5): the correction would lose its origin. A new field in the protocol step `[builds_on]`: "a change to a rule or a field is the next version" and "a protocol of another version is refused" (`labkit/docs/standard.md:3`), so standard 0.34 — and experiment 14's protocol, measured under 0.33, could not carry it. What remains: the names of `data=` inputs are free, and an input entry already records its origin run. A re-evaluation passes `data={..., "re_evaluates": runlog.RunOutput(OUT, run=BASIS), "answer_reading": READING_MODULE}`: two input entries of the existing shape (path, sha256, origin), schema 5 and standard 0.33 unchanged. labkit 0.115.0 reads such a record as two plain inputs; the new labkit gives the two names their meaning (a CHANGELOG entry: two input names now carry a meaning). The basis run's record and every protocol stay as they are.
@@ -140,3 +142,28 @@ Not held: reading code loaded another way (`importlib`, a path built at run time
 7. A declared run whose answer input is missing, or that registers the answer file as its output: refused, never checked another way.
 8. A run without the two inputs and without output: as today; labkit 0.115.0 reads a declared run's record.
 9. A basis run recorded before the change is read and held (the case of `aa0a`); the protocol keeps `standard = "0.33"`.
+
+## Built, 2026-11-24 — a derived run declares its answer reading
+
+Commits on `main`, not released: `0b8c6cb9` (`llm.refusing_calls`, `CallRefused`), `0820ce48` (`runlog.run(..., answer_reading=MODULE)`, `answer-reading.json`), `c3235d20` (`code_since_run` compares the parent in the declared module and its imports), `6da98cf9` (finalize holds prompts field and answer file; the result line names the correction), `e608ebf0` (workflow, agent guide, README term, the blocker's way out).
+
+Why a file of its own and not a field: config.json's fields are a closed set and labkit reads schema 5 only, so a field would mean schema 6 and the parent unreadable; a field in `[builds_on]` would mean standard 0.34, which experiment 14's 0.33 protocol cannot carry. A missing file makes the check stricter (the parent compared whole), never weaker; an older labkit ignores the file and compares whole too.
+
+**Synthetic** (`tests/test_answer_reading_scenario.py`, the counting skeleton with a reading module and a stand-in analysis record as the other scenario tests use): an evaluation fix passes finalize, the area's `--check`, the adoption and report-check; the parent's config.json and rows byte-identical; the result line names the parent, both commits, the reading module and `no number changed`. A changed reading, a changed prompts field, rewritten rows, and the fix without the declaration each hold. Start and refusal: `tests/test_answer_reading_start.py` (worker threads included); comparison: `tests/test_run_code.py`; prompts and answers from data in memory: `tests/test_rules_run_record_check.py`.
+
+**On a copy of argmining27** (`git clone --local` at `1f1f68a`, labkit from `git archive` of `e608ebf0` in a venv of its own; one change to the area: `answer_reading=REPO / "lib" / "scenario_rating.py"` in `run_reevaluate`):
+
+| Step                                                   | Result                                                                                                                                                                                             |
+|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `01_measure.py --stage reevaluate --derived-from aa0a` | run `ec1b`, exit 0, no model call; `answer-reading.json` = `lib/scenario_rating.py`, labkit `0.115.0` (the version string of the unreleased tree)                                                  |
+| `finalize .`, new labkit                               | exit 0, 0 blockers, 3 warnings (the open findings of the analysis audit of `aa0a`); note: `ec1b declares its answer reading lib/scenario_rating.py: the code of aa0a is compared in that module …` |
+| `finalize .`, labkit 0.115.0 (argmining27's own venv)  | exit 1: `scripts/01_measure.py changed since aa0a ran it` — the strict comparison                                                                                                                  |
+| `recheck.require_run_code`, `require_agreement`        | the code proof holds; recomputed from `aa0a`'s rows, metrics.json agrees, nothing grown; against `aa0a` one key differs (`diff_sw_ell_alarm_g_lo`, −0.08333333333333333 → −0.08333333333333336)    |
+| `parse_letter` changed (`.upper()`), no new run        | exit 1: `lib/scenario_rating.py changed since aa0a ran`, the same against `ec1b`, and the declared scope `[quality-check-1]`; restored afterwards                                                  |
+| `aa0a`'s directory and the answer file                 | byte-identical to the original repository                                                                                                                                                          |
+| `labkit-next .`                                        | the analysis audit of `ec1b` is owed                                                                                                                                                               |
+
+Not exercised on the copy: the analysis audit (a paid agent call), the Conclusion, and so the adoption, the area's `--check` through its template and report-check — these ran only on the synthetic area. Not covered by any check: answer reading outside `lib/scenario_rating.py` — in experiment 14 `unreadable_cause` and the letter filter in `evaluate_rows` stay in `scripts/01_measure.py`; the repair's diff (`git diff 1d3d170 bf0bfc7`) touches none of their lines, which the analysis audit has to confirm. `00_compatibility.py` is loaded by `importlib` and is not in any import closure.
+
+Open for the author: the argmining27 change (the one keyword, the audit, the adoption) and the release.
+
