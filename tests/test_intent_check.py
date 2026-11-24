@@ -186,6 +186,17 @@ class TestIntentCheck(_AreaWithRun):
         rc, out = self._run([str(self.proto), "--metrics", str(old)])
         self.assertEqual(rc, 1)
 
+    def test_a_word_after_the_metrics_file_is_refused(self):
+        """`--metrics FILE extra` is refused, not checked with `extra`
+        dropped; the same line without it is checked (the twin above)."""
+        self.proto.write_text(head() + "# x\n[criterion-1].\n", encoding="utf-8")
+        old = self._metrics({}, run="2026-09-09T09-00-00_old1")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = intent_check.main([str(self.proto), "--metrics", str(old), "extra"])
+        self.assertEqual((rc, out.getvalue()), (2, ""))
+        self.assertEqual(err.getvalue(), "intent-check: unexpected argument 'extra'\n")
+
     # -- opt-in by presence ----------------------------------------------
     def test_no_ids_is_no_failure(self):
         """A protocol that promises nothing passes with a note."""

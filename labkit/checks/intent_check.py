@@ -194,10 +194,11 @@ def _named(argv: list[str]) -> tuple[Path, Path | None]:
     for anything else on the line and for a protocol that is not a file."""
     protocol = Path(argv[0])
     metrics_arg = None
-    if len(argv) >= 3 and argv[1] == "--metrics":
-        metrics_arg = Path(argv[2])
-    elif len(argv) > 1:
-        raise console.Refused("intent-check", f"unexpected argument {argv[1]!r}")
+    rest = argv[1:]
+    if len(rest) >= 2 and rest[0] == "--metrics":
+        metrics_arg, rest = Path(rest[1]), rest[2:]
+    if rest:
+        raise console.Refused("intent-check", f"unexpected argument {rest[0]!r}")
     if not protocol.is_file():
         raise console.Refused("intent-check", f"no such protocol: {protocol}")
     return protocol, metrics_arg
