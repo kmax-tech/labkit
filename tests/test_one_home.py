@@ -73,6 +73,10 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("the id letters", r"\[(?:[cab]{2,3}|[CAB]{2,3})\]|\^a\\d", {"promises"}),
     ("the area name NN-slug", r"\^\(\\d\+\)-", {"repo"}),
     ("a temp-and-rename write", r"os\.replace\(", {"files"}),
+    # an area command reads its line with `repo.area_parser` and resolves
+    # the area with `repo.resolve_area`, which says the shared refusal
+    ("an area refused by hand", r"no_such_area\(", {"repo"}),
+    ("an area read off argv by hand", r"area_path\(argv\[", {"repo"}),
     ("the run-id shape", r"\\d\{4\}-\\d\{2\}-\\d\{2\}T", {"runs"}),
     # "relative to the repo, else absolute" has one answer; the conditional
     # form is held here, the try/except copy among the block rules
@@ -689,6 +693,8 @@ class OneHome(unittest.TestCase):
             "the id letters": 'KEY = re.compile(r"([ca])\\d+_pass")',
             "the area name NN-slug": 'm = re.match(r"^(\\d+)-(.+)$", name)',
             "a temp-and-rename write": "os.replace(tmp, path)",
+            "an area refused by hand": 'console.refuse("t", no_such_area(area))',
+            "an area read off argv by hand": "area = area_path(argv[0])",
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
             "a path shown relative by hand": "shown = p.relative_to(b) if p.is_relative_to(b) else p",
             "a shell line cut by hand": "words = shlex.split(command)",

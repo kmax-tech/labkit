@@ -189,9 +189,10 @@ def gather(area: Path, protocol: Path | None) -> AuditInputs:
     directly — in full (every other stamped file is indexed from the
     snapshot, `bound_prompt`). Refuses what is missing."""
     if not area.is_dir():
-        raise AuditError(
-            no_such_area(area), fix="name the area by its path or numbered name"
-        )
+        # not a command line: the audit's own refusal of a path a caller
+        # passed, with its way out — home: repo.resolve_area
+        missing = no_such_area(area)
+        raise AuditError(missing, fix="name the area by its path or numbered name")
     try:
         chosen = the_protocol(area, protocol)
     except ProtocolChoiceError as exc:

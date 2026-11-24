@@ -139,7 +139,7 @@ from pathlib import Path
 
 from labkit.formats import evidence
 from labkit.formats.area_state import AreaState, state_of
-from labkit.formats.repo import area_args
+from labkit.formats.repo import area_parser, resolve_area
 from labkit.formats.answer_reading import read_answer_reading
 from labkit.formats.protocol_then import as_measured
 from labkit.formats.commands import gate_command, measure_anew
@@ -1404,20 +1404,19 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
 
 def main(argv: list[str]) -> int:
     """Command line of `finalize`: check one area."""
-    got = area_args(
+    args = area_parser(
         "finalize",
-        argv,
-        [
-            (__doc__ or "").strip().splitlines()[0],
-            "usage: finalize <AREA> [--protocol PROTOCOL-*.md]",
-            "       (the gate at the stop and the commit is `report-check --if-reported`, "
-            "which runs finalize as one station)",
-            EXIT_CONTRACT,
-        ],
-    )
-    if isinstance(got, int):  # --help, or a refusal told
-        return got
-    return finalize_area(got.area, got.protocol)
+        (__doc__ or "").strip().splitlines()[0]
+        + "\n(the gate at the stop and the commit is `report-check --if-reported`, "
+        "which runs finalize as one station)",
+        epilog=EXIT_CONTRACT,
+    ).parse_args(argv)
+    try:
+        area = resolve_area("finalize", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
+        return 2
+    return finalize_area(area, args.protocol)
 
 
 def cli() -> None:

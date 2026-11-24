@@ -322,15 +322,17 @@ class TestPreflight(unittest.TestCase):
 
     def test_help_flag(self):
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            code = preflight.main(["--help"])
-        self.assertEqual(code, 0)
+        with contextlib.redirect_stdout(buf), self.assertRaises(SystemExit) as cm:
+            preflight.main(["--help"])
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn("usage: preflight", buf.getvalue())
 
     def test_no_args_exits_two(self):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            code = preflight.main([])
-        self.assertEqual(code, 2)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+            preflight.main([])
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("required: AREA", err.getvalue())
 
 
 class TestNoScriptsDirectory(unittest.TestCase):

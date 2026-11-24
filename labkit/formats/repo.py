@@ -15,7 +15,6 @@ Two git calls, by what a non-zero exit means:
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import os
 import re
 import subprocess
@@ -23,6 +22,7 @@ import tempfile
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 from labkit.formats import console
 
@@ -145,39 +145,62 @@ def resolve_area(tool: str, given: str | Path) -> Path:
 AREA_NAME = re.compile(r"^(\d+)-(.+)$")
 
 
-@dataclass(frozen=True)
-class AreaArgs:
-    """`<AREA> [--protocol PROTOCOL-*.md]` as a gate's command line names
-    them (`area_args`)."""
+class GivenOnce(argparse.Action):
+    """An option that takes one value and is refused, by name, when given
+    twice: argparse alone keeps the last value, so `--protocol A
+    --protocol B` would run on B without a word. Its default must be None,
+    which is how a second giving is told from the first."""
 
-    area: Path
-    protocol: Path | None
+    def __init__(self, option_strings: Sequence[str], dest: str, **kw: Any) -> None:
+        """argparse's; raises ValueError for a default other than None."""
+        if kw.get("default") is not None:
+            raise ValueError(f"GivenOnce: {dest} must default to None")
+        super().__init__(option_strings, dest, **kw)
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: object,
+        option_string: str | None = None,
+    ) -> None:
+        """Store VALUES; refuse through PARSER when the option holds one."""
+        if getattr(namespace, self.dest) is not None:
+            parser.error(f"{option_string} given twice — give it once")
+        setattr(namespace, self.dest, values)
 
 
-def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
-    """ARGV of TOOL's `<AREA> [--protocol PROTOCOL-*.md]` command line
-    (`AreaArgs`), or the exit code it ends with: 0 after `--help` (USAGE,
-    its lines, printed), 2 for no argument, then for an area
-    `resolve_area` refuses (several areas, no directory), then for any
-    other argument — the first refusal met is printed. The one reading of
-    preflight's and finalize's command line."""
-    if not argv or console.asks_help(argv):
-        return console.usage(tool, "\n".join(usage), asked=bool(argv))
-    try:
-        area = resolve_area(tool, argv[0])
-    except console.Refused as exc:
-        console.refuse(exc.tool, exc.why)
-        return 2
-    protocol = None
-    rest = argv[1:]
-    while rest:
-        if rest[0] == "--protocol" and len(rest) >= 2:
-            protocol = Path(rest[1])
-            rest = rest[2:]
-            continue
-        console.refuse(tool, f"unexpected argument {rest[0]!r}")
-        return 2
-    return AreaArgs(area, protocol)
+def area_parser(
+    tool: str, description: str, *, protocol: bool = True, epilog: str | None = None
+) -> argparse.ArgumentParser:
+    """The argparse parser of TOOL's `<AREA> [--protocol PROTOCOL-*.md]`
+    command line, for the command to add its own arguments to: the
+    positional `area` as written (the command resolves it with
+    `resolve_area` after `parse_args`) and, with PROTOCOL, `--protocol`
+    (`GivenOnce`). DESCRIPTION and EPILOG are printed as written. A
+    refusal is argparse's: `usage: …` and `TOOL: error: …` on stderr,
+    exit 2 by SystemExit; `--help` prints and exits 0 the same way."""
+    ap = argparse.ArgumentParser(
+        prog=tool,
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument(
+        "area",
+        metavar="AREA",
+        help="the experiment area: its path, or its name as `labkit-init exp` "
+        "printed it (01-<name>)",
+    )
+    if protocol:
+        ap.add_argument(
+            "--protocol",
+            type=Path,
+            action=GivenOnce,
+            metavar="PROTOCOL-*.md",
+            help="the protocol to read (required once the area holds more than one)",
+        )
+    return ap
 
 
 def split_area_name(name: str) -> tuple[str | None, str]:

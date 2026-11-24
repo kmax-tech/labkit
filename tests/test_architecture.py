@@ -316,7 +316,6 @@ FILE_ACCESS_FUNCTIONS = {
     ("preflight", "area_test_python"),
     ("preflight", "area_tests"),
     ("report_check", "check_analysis_script"),
-    ("code_check", "_arguments"),
     ("intent_check", "_named"),
     ("intent_check", "choose_explicit"),
 }

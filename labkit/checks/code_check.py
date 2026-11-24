@@ -111,11 +111,11 @@ from labkit.formats.gate import (
 )
 from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.formats.repo import (
-    AmbiguousArea,
-    area_path,
+    GivenOnce,
+    area_parser,
     choose_protocol,
     layout_root,
-    no_such_area,
+    resolve_area,
     shown,
 )
 from labkit.formats.scope_sha import (
@@ -688,30 +688,6 @@ def _cost_of(text: str) -> str | None:
         return None
 
 
-def _arguments(argv: list[str]) -> tuple[Path, Path | None, Path | None]:
-    """(area, --protocol, --bundle) of ARGV; raises `console.Refused` for an
-    ambiguous or missing area and for anything else on the line."""
-    try:
-        area = area_path(argv[0])
-    except AmbiguousArea as exc:
-        raise console.Refused("code-check", str(exc)) from exc
-    bundle_to = None
-    protocol_arg = None
-    rest = argv[1:]
-    while rest:
-        if rest[0] in ("--bundle", "--protocol") and len(rest) >= 2:
-            if rest[0] == "--bundle":
-                bundle_to = Path(rest[1])
-            else:
-                protocol_arg = Path(rest[1])
-            rest = rest[2:]
-            continue
-        raise console.Refused("code-check", f"unexpected argument {rest[0]!r}")
-    if not area.is_dir():
-        raise console.Refused("code-check", no_such_area(area))
-    return area, protocol_arg, bundle_to
-
-
 def _not_checked(
     findings: Findings, protocol: Path, bundle_to: Path | None, text: str
 ) -> None:
@@ -744,22 +720,24 @@ def _not_checked(
 
 def main(argv: list[str]) -> int:
     """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
-    if not argv or console.asks_help(argv):
-        lines = [
-            (__doc__ or "").strip().splitlines()[0],
-            "usage: code-check <AREA> [--protocol FILE] [--bundle FILE]",
-            "  --protocol FILE  the PROTOCOL-*.md to check against "
-            "(required once the area holds more than one)",
-            "  --bundle FILE    pack sources + schema facts + gate labels "
-            "for an agent you run on them (labkit ships none)",
-            EXIT_CONTRACT,
-        ]
-        return console.usage("code-check", "\n".join(lines), asked=bool(argv))
+    ap = area_parser(
+        "code-check", (__doc__ or "").strip().splitlines()[0], epilog=EXIT_CONTRACT
+    )
+    ap.add_argument(
+        "--bundle",
+        type=Path,
+        action=GivenOnce,
+        metavar="FILE",
+        help="pack sources + schema facts + gate labels for an agent you run "
+        "on them (labkit ships none)",
+    )
+    args = ap.parse_args(argv)
     try:
-        area, protocol_arg, bundle_to = _arguments(argv)
+        area = resolve_area("code-check", args.area)
     except console.Refused as exc:
         console.refuse(exc.tool, exc.why)
         return 2
+    protocol_arg, bundle_to = args.protocol, args.bundle
     protocol = choose_protocol(area, protocol_arg, "code-check")
     if protocol is None:
         return 2

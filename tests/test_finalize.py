@@ -326,15 +326,17 @@ class TestFinalize(unittest.TestCase):
 
     def test_help_flag(self):
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            code = finalize.main(["--help"])
-        self.assertEqual(code, 0)
+        with contextlib.redirect_stdout(buf), self.assertRaises(SystemExit) as cm:
+            finalize.main(["--help"])
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn("usage: finalize", buf.getvalue())
 
     def test_no_args_exits_two(self):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            code = finalize.main([])
-        self.assertEqual(code, 2)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+            finalize.main([])
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("required: AREA", err.getvalue())
 
     def test_no_intent_ids_skips_check(self):
         """Neither prose nor block registers an id: nothing to hold."""

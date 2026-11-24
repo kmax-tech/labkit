@@ -47,10 +47,10 @@ from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path, runs_path, script_copy_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.repo import (
-    AmbiguousArea,
-    area_path,
+    GivenOnce,
+    area_parser,
     choose_protocol,
-    no_such_area,
+    resolve_area,
 )
 from labkit.formats.runs import read_run_config
 from labkit.formats.scope_sha import parse_source
@@ -342,31 +342,21 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
     id (`Measured.told`), and a choice that carries a blocker is refused
     (exit 2) — unlike finalize, which tells the same blocker and goes on
     with the chosen run (`finalize.choose_answering_run`)."""
-    if not argv or console.asks_help(argv):
-        lines = [
-            (__doc__ or "").strip().splitlines()[0],
-            "usage: labkit-params <AREA> [--run RUN_ID] [--protocol PROTOCOL-*.md]",
-        ]
-        return console.usage("labkit-params", "\n".join(lines), asked=bool(argv))
+    ap = area_parser("labkit-params", (__doc__ or "").strip().splitlines()[0])
+    ap.add_argument(
+        "--run",
+        action=GivenOnce,
+        metavar="RUN_ID",
+        help="the run to show (default: the run that answers for the protocol)",
+    )
+    args = ap.parse_args(argv)
     try:
-        area = area_path(argv[0])
-    except AmbiguousArea as exc:
-        console.refuse("labkit-params", str(exc))
+        area = resolve_area("labkit-params", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
-    protocol_arg: Path | None = None
-    run_arg: str | None = None
-    rest = argv[1:]
-    while rest:
-        if rest[0] == "--protocol" and len(rest) >= 2:
-            protocol_arg, rest = Path(rest[1]), rest[2:]
-        elif rest[0] == "--run" and len(rest) >= 2:
-            run_arg, rest = rest[1], rest[2:]
-        else:
-            console.refuse("labkit-params", f"unexpected argument {rest[0]!r}")
-            return 2
-    if not area.is_dir():
-        console.refuse("labkit-params", no_such_area(area))
-        return 2
+    protocol_arg: Path | None = args.protocol
+    run_arg: str | None = args.run
     protocol = choose_protocol(area, protocol_arg, "labkit-params")
     if protocol is None:
         return 2
