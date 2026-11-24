@@ -572,7 +572,8 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(
         prog="runlog",
         description="List an experiment area's runs: the open ones (not yet "
-        "completed) with state (running/unknown/crashed/unfinalized/corrupt), "
+        "completed) with state (running/unknown/crashed/unfinalized/corrupt/"
+        "unreadable, or broke off), "
         "script and frozen config; then the finished ones — what each is "
         "(a run, or derived from which), whether its code was committed, "
         "and the command that started it. "

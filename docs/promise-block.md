@@ -32,7 +32,7 @@ An id is the kind and a number — `[criterion-1]`, `[quality-check-2]`, `[branc
 
 **Separation rule: a criterion judges, a quality check releases the judgement, a branch says what follows from it.** Whether something is a quality check is decided by its function, not by when it was written: a criterion, too, is specified before the result. A quality check asks whether the measurement can support the inference at all; a criterion asks which inference the result supports. "Outcome-neutral" means the check is fixed before the result is known and not by the direction anyone wants — not that passing it is statistically independent of the hypothesis. A comparator without a target value (a baseline the traces are read against) is no promise; it belongs in the text of the criterion it serves.
 
-Two refinements (review 2026-10-08). A quality check names *why* its failure makes the measurement uninterpretable — the instrument's yield, an anchor, a control at its expected value — never a value the hypothesis needs: that threshold is a criterion, and filed as a quality check it would turn a clean negative result into "no verdict". A failed quality check withholds the verdict, not the data: descriptive readings may follow, labelled as such. A branch is decided on its own condition, not on the verdict: a stop rule fires during the run or on a run whose quality check failed too (`verdict()` sets the criterion keys to None, never the branch's). "n/a — only one outcome" is the honest branch when the answer to "and if [criterion-…] fails?" is not known before the run — then no `[branch-…]` id is written; a decision taken afterwards is reported as taken afterwards.
+Two refinements (review 2026-10-08). A quality check names *why* its failure makes the measurement uninterpretable — the instrument's yield, an anchor, a control at its expected value — never a value the hypothesis needs: that threshold is a criterion, and filed as a quality check it would turn a clean negative result into "no verdict". A failed quality check withholds the verdict, not the data: descriptive readings may follow, labelled as such. A branch is decided on its own condition, not on the verdict: a stop rule fires during the run or on a run whose quality check failed too (the skeleton's `evaluate_rows` sets the criterion keys to None, never the branch's). "n/a — only one outcome" is the honest branch when the answer to "and if [criterion-…] fails?" is not known before the run — then no `[branch-…]` id is written; a decision taken afterwards is reported as taken afterwards.
 
 **A branch's outcomes.** Its sentence lists its outcomes in order, each `<condition> → <outcome>: <consequence>`, separated by `;`:
 
@@ -124,12 +124,12 @@ It does **not** state that the region is all the code the number depends on, nor
 
 The counterexample that fixes this: `compute_score()` writes the promise's key, `criterion_1_pass`, and calls `filter_items()`. An edit to `filter_items` (now dropping empty answers instead of counting them wrong) moves the number.
 
-| Version                                     | Sees the edit?                             | Why                                                                                      |
-|---------------------------------------------|--------------------------------------------|------------------------------------------------------------------------------------------|
-| hash over the function that writes the key  | no                                         | `compute_score` itself is unchanged — a stamp that misses exactly the interesting change |
-| declared scope, `filter_items` declared     | yes (guaranteed)                           | region changed → hash changed                                                            |
-| declared scope, `filter_items` not declared | no; a warning is planned (static evidence) | the scope calls repo code outside itself                                                 |
-| area audit stamp (`scope-sha`)              | yes, if in the area                        | but not per promise: any edit anywhere changes it                                        |
+| Version                                     | Sees the edit?          | Why                                                                                      |
+|---------------------------------------------|-------------------------|------------------------------------------------------------------------------------------|
+| hash over the function that writes the key  | no                      | `compute_score` itself is unchanged — a stamp that misses exactly the interesting change |
+| declared scope, `filter_items` declared     | yes (guaranteed)        | region changed → hash changed                                                            |
+| declared scope, `filter_items` not declared | no; nothing warns of it | the scope calls repo code outside itself                                                 |
+| area audit stamp (`scope-sha`)              | yes, if in the area     | but not per promise: any edit anywhere changes it                                        |
 
 Hence: **scope is declared, not derived.** The author says which region a promise rests on; the hash makes that statement checkable. A call-closure warning may help with declaring; it does not replace it.
 

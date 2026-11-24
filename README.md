@@ -139,7 +139,7 @@ The **console commands** are installed with the package. Use `.venv/bin/<command
 
 ```bash
 labkit-init lab [DIR]               # create a lab repo
-labkit-next AREA [--protocol FILE]    # where the area stands, the one next step, and what is held until it is taken
+labkit-next AREA [--protocol FILE] [--staged]  # where the area stands, the one next step, and what is held until it is taken (--staged: the state the index holds, as the pre-commit judges it)
 labkit-next --guide                   # the workflow in full (labkit/docs/agent-guide.md), which the stamped AGENTS.md keeps short
 labkit-adopt AREA [RUN] [--protocol FILE]  # adopt the run: --from-run, the registered report's --into, report-check — stops at the first that does not pass
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--report-file PATH] [--explore]
