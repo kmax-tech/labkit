@@ -964,6 +964,39 @@ class TestStartNamesTheArea(unittest.TestCase):
         self.assertEqual(shlex.split(status), ["runlog", "my lab/01 x"])
         self.assertEqual(shlex.split(wait), ["runlog", "my lab/01 x", "--wait"])
 
+    def test_a_bare_name_starts_the_run_in_its_area(self):
+        """`runlog start x` from the repository root finds
+        `experiments/01-x` as `runlog x` does: the run the command makes
+        there is the one start waits for and names, the default log lands
+        in that area's output/, and the printed lines name the area."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            area = root / "experiments" / "01-x"
+            area.mkdir(parents=True)
+            record = root / "record.json"
+            record.write_text(json.dumps(run_record()), encoding="utf-8")
+            run = area / "runs" / "2026-10-27T20-00-00_bare"
+            script = (
+                "import shutil, pathlib; "
+                f"d = pathlib.Path({str(run)!r}); d.mkdir(parents=True); "
+                f"shutil.copy({str(record)!r}, d / 'config.json')"
+            )
+            cwd = os.getcwd()
+            try:
+                os.chdir(root)
+                code, out = _run_main(
+                    ["start", "x", "--", sys.executable, "-c", script]
+                )
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(code, 0, out)
+            self.assertIn(f"run: {run.name}", out)
+            self.assertEqual(len(list((area / "output").glob("start-*.log"))), 1)
+            self.assertFalse((root / "output").exists())
+            self.assertFalse((root / "x").exists())
+            (line,) = [ln for ln in out.splitlines() if ln.startswith("status:")]
+            self.assertIn("01-x", line)
+
     def test_a_missing_area_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             cwd = os.getcwd()
