@@ -10,6 +10,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **Two threads that write the same file at once no longer crash.** `files.write_atomic` staged under a temp name carrying only the process id, so two threads of one process writing one path shared the temp file and one rename failed with FileNotFoundError — reproduced in 50 of 50 rounds when two threads created the same LLM cache directory (`llm_cache`, its first `.gitignore`). The temp name now carries the thread too (`.NAME.tmp<pid>-<thread>`), as `write_once` already did.
 
+- **The audit of a confirmation no longer calls an unbound run of an exploration's basis "a preparation".** The line read "bound to no protocol (a preparation): it owes no text"; binding is the protocol a run started under, its kind what it was for, and since 0.115.0 a preparation can be bound and an unbound run need not be one. It now reads "bound to no protocol: it owes no text". No audit record goes stale: a record binds `scope_sha`, `block_sha`, `registration` and `shown_sha`, none of which covers how the prompt words the basis (`tests/test_explored_in.py`, the stamp under a reworded basis).
+
 ## 0.115.0 — 2026-11-24
 
 ### Breaking

@@ -37,7 +37,7 @@ class ClosureRun:
             <run> (<input key>)" or "basis of <run>".
         rd: The run as its directory reads now.
         protocol: The protocol of its area it is bound to; None for a run
-            bound to none (a preparation), one whose record does not read,
+            bound to none, one whose record does not read,
             and one whose protocol is not found.
         then: Its own text and step (`protocol_then.step_then`); None
             without PROTOCOL.

@@ -63,7 +63,7 @@ from labkit.formats.protocol_block import BlockError, ExploredIn
 from labkit.formats.protocol_history import scope_differences
 from labkit.formats.protocol_then import last_held_with_id
 from labkit.gates import preflight, registration_hold, report_check, report_exploration
-from labkit.gates.audit_prompt import exploration_evidence
+from labkit.gates.audit_prompt import _closure_lines, exploration_evidence
 from labkit.gates.report_exploration import (
     LAB_050,
     LastHeld,
@@ -620,6 +620,35 @@ class Evidence(_WithSource):
             any("its registration as its first measurement" in k for k in pieces),
             list(pieces),
         )
+
+    def test_an_unbound_run_is_not_called_a_preparation(self) -> None:
+        """A run of the basis bound to no protocol: the audit is told it is
+        bound to none, not what it was for — binding and a run's kind are
+        two facts (a preparation can be bound, as the source run here is)."""
+        (source,) = [
+            m for m in basis_closure(self.explore, self.c) if m.run_id == self.source
+        ]
+        lines = _closure_lines(dataclasses.replace(source, protocol=None, then=None))
+        self.assertEqual(
+            lines,
+            [
+                f"- run {self.source} ({source.reached})",
+                "  bound to no protocol: it owes no text",
+            ],
+        )
+
+    def test_the_record_stamp_binds_the_basis_not_the_wording_shown(self) -> None:
+        """An audit record stays current across a change of how the prompt
+        words the basis: the stamp (`scope_sha`) covers the closure's
+        records and outputs, not the rendered lines. The twin of the stale
+        record a changed basis gives (`Closure`)."""
+        before = self.stamp()
+        with mock.patch(
+            "labkit.gates.audit_prompt._closure_lines", lambda m: [f"- {m.run_id}"]
+        ):
+            basis = self.pieces()["EXPLORATION: the named run and the runs it rests on"]
+            self.assertNotIn("bound to no protocol", basis)
+            self.assertEqual(self.stamp(), before)
 
     def test_the_text_a_run_of_the_basis_started_under_is_shown_in_full(self) -> None:
         """C started under another text than the first measurement: the

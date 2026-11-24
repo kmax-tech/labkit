@@ -573,7 +573,9 @@ def _closure_lines(member: ClosureRun) -> list[str]:
     then = member.then
     if then is None:
         if not member.unread:
-            lines.append("  bound to no protocol (a preparation): it owes no text")
+            # binding is the protocol a run started under, not what the run
+            # was for: a preparation can be bound, an unbound run need not be one
+            lines.append("  bound to no protocol: it owes no text")
     elif then.text is not None:
         lines.append(f"  its protocol {then.where}")
         step = then.step
