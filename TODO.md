@@ -39,11 +39,11 @@ Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. 
 ## Notiert, nicht geplant
 
 Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingungen. Vor einem Bau den aktuellen Fall nachstellen oder den jeweils genannten Auslöser belegen. Die vollständigen ursprünglichen Beschreibungen bleiben im [Verlauf](TODO-history-2026-11-20.md#notiert-nicht-geplant).
-### Audit 24.11., drittes — umgesetzt bis auf zwei Punkte
+### Audit 24.11., drittes — umgesetzt bis auf zwei Punkte (Punkt 1 zur Hälfte)
 
 Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-3.md). Umgesetzt am 24.11., je ein Commit: Regel der zweiten Prüfung an fünf Stellen (Punkt 1), fünf kleine Doku-Drifts (Punkt 2), Temp-Dateiname und `PREFLIGHT_AUDIT` mit einer Heimat (Punkt 3, Teil), Klarheit in `finalize` und `recheck` (Punkt 4). Offen:
 
-1. Argumentlesen `<AREA> [--protocol]`: Plan ausgearbeitet und nach Zweitmeinung überarbeitet ([Notiz](docs/notes/2026-11-24-area-args-plan.md)): erst `existing_area` und die zwei Bedienfehler (`runlog start x`, `scope-sha x`), Schritte 1–3; danach entscheiden, ob die Handschleifen auf argparse wechseln. Entscheidungen eingetragen; noch nicht gebaut. Prüfstand: ganze Suite auf `9e474b84` grün (`.githooks/checks full`, Exit 0); danach nur Notizen und TODO geändert. Nebenbefund dort: `intent-check` übergeht Wörter nach `--metrics FILE`.
+1. Argumentlesen `<AREA> [--protocol]` ([Plan](docs/notes/2026-11-24-area-args-plan.md)): Schritte 1–3 gebaut am 24.11. (`repo.resolve_area`, statt `existing_area`, weil `scaffold.existing_area` den Namen trägt; die argparse-Kommandos rufen es; `scope-sha x`, `scope-sha --area x` und `runlog start x` finden den Bereich). Nebenbefund `intent-check … --metrics FILE extra` behoben. Ganze Suite grün auf `aa5c673c` (`.githooks/checks full`, Exit 0); danach nur Docstring und CHANGELOG. **Offen: Entscheidung über Schritte 4–6** (die Kommandos, die ihre Zeile von Hand lesen — preflight, finalize, labkit-params, code-check, labkit-run-diff — auf argparse). Dafür spricht ein Befund des unabhängigen Lesers: ein Schalter ohne Wert (`--metrics`, `--protocol` am Zeilenende) wird als „unexpected argument“ abgelehnt statt als fehlender Wert; argparse sagt „expected one argument“. In scope-sha gewinnt eine vorhandene Datei gegen einen gleichnamigen Bereich; kein Test hält die Reihenfolge fest.
 2. TOML-Kopf der Kommentarblöcke (drei Parser gleicher Form) zu einem Helfer — erst wenn ein vierter Block kommt.
 
 ### Audit 24.11., zweites — umgesetzt, nicht veröffentlicht
