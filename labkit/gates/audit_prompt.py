@@ -13,6 +13,7 @@ model or writes a file; `gates.audit` does.
 from __future__ import annotations
 
 import ast
+import difflib
 import json
 import os
 import re
@@ -28,6 +29,7 @@ from labkit.formats.area_state import state_of
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import prompt_blocks, unread_prompt_field
 from labkit.formats import (
+    digests,
     findings,
     followup,
     promises,
@@ -831,13 +833,162 @@ FIRST_THAT_READS = (
 IN_RUN_AUDITED = "in the audited run's own text"
 
 
-def value_then_line(label: str, name: str, then: ValueThen) -> str:
+#: the name of the section of the follow-up piece that shows each field
+#: text once (`field_texts_lines`), and how an entry points into it
+FIELD_TEXTS = "FIELD TEXTS"
+#: unchanged words a word diff keeps on each side of a change
+#: (`word_diff`); a longer unchanged run is cut to its ends around `…` —
+#: both texts stand in full above the diff, so the cut hides nothing
+DIFF_CONTEXT_WORDS = 8
+#: the size from which a field text printed twice moves the piece's texts
+#: under `FIELD TEXTS` (`field_text_numbers`): a shorter one ("3
+#: documents") reads better at each entry than as a number, and its
+#: repetition costs less than the section's head; a protocol field of a
+#: long area (7 kB, argmining27 experiment 15) is far above it
+FIELD_TEXT_ONCE_MIN = 500
+
+#: the field texts of a follow-up piece, each (label, value) → its number
+FieldTextNumbers = dict[tuple[str, str], int]
+
+
+def field_text_ref(label: str, value: str, numbers: FieldTextNumbers) -> str:
+    """VALUE of field LABEL as an entry prints it: the value itself, or,
+    when NUMBERS shows it under `FIELD TEXTS`, the number it stands under
+    there."""
+    n = numbers.get((label, value))
+    if n is None:
+        return value
+    return f"field text {n}, under {FIELD_TEXTS} below"
+
+
+def value_then_line(
+    label: str, name: str, then: ValueThen, numbers: FieldTextNumbers | None = None
+) -> str:
     """The line that shows field LABEL in one earlier text, under NAME, the
-    name of that text: the text's place and the value, or that the text
-    cannot be read back and why."""
+    name of that text: the text's place and the value (or the number it
+    stands under in NUMBERS, `field_text_ref`), or that the text cannot be
+    read back and why."""
     if then.value is None:
         return f"{label} {name}: cannot be read back — {then.where}"
-    return f"{label} {name} ({then.where}): {then.value}"
+    return f"{label} {name} ({then.where}): {field_text_ref(label, then.value, numbers or {})}"
+
+
+def shown_values(change: FieldChange) -> list[str]:
+    """The field texts `field_change_lines` prints for CHANGE, in the order
+    printed: each value that can be read back and is not `ABSENT` (a text
+    that does not hold the field, printed as the marker itself)."""
+    then = [t.value for t in (change.first_measured, change.run_audited) if t]
+    return [v for v in [*then, change.now] if v is not None and v != ABSENT]
+
+
+def judged_pair(change: FieldChange) -> tuple[str, str] | None:
+    """The two texts of CHANGE's change to judge, (from, to), as its
+    `change to judge` line names them: from the audited run's own text
+    where the change is taken against it, else from the first
+    registration. None where there is nothing to diff: the first
+    registration is the benchmark and undetermined, a text cannot be read
+    back or does not hold the field, or both texts are equal."""
+    if change.compared_with_run_audited:
+        before = change.run_audited
+    elif change.first_untold:
+        return None
+    else:
+        before = change.first_measured
+    if before is None or before.value in (None, ABSENT) or change.now == ABSENT:
+        return None
+    if before.value == change.now:
+        return None
+    return before.value, change.now
+
+
+def field_text_numbers(changes: Sequence[FieldChange]) -> FieldTextNumbers:
+    """The number of each field text CHANGES print (`shown_values`),
+    numbered from 1 in the order first printed — or {} when no text of
+    `FIELD_TEXT_ONCE_MIN` bytes or more would be printed twice: then each
+    value stands at its entry, as for a single correction with distinct
+    texts or a short text repeated. One such repeated text numbers them
+    all, so a piece has one layout: every field text at its entry, or
+    every one once under `FIELD TEXTS`."""
+    printed = [(c.label, v) for c in changes for v in shown_values(c)]
+    repeated = {key for key in printed if printed.count(key) > 1}
+    if not any(len(v.encode("utf-8")) >= FIELD_TEXT_ONCE_MIN for _, v in repeated):
+        return {}
+    numbers: FieldTextNumbers = {}
+    for key in printed:
+        numbers.setdefault(key, len(numbers) + 1)
+    return numbers
+
+
+def _unchanged(words: list[str], *, first: bool, last: bool) -> list[str]:
+    """The words a word diff keeps of an unchanged run WORDS: up to
+    `DIFF_CONTEXT_WORDS` after the change before it (none when FIRST) and
+    before the change after it (none when LAST), the cut marked `…`."""
+    n = DIFF_CONTEXT_WORDS
+    head = [] if first else words[:n]
+    tail = [] if last else words[-n:]
+    if len(words) <= len(head) + len(tail):
+        return words
+    return [*head, "…", *tail]
+
+
+def word_diff(old: str, new: str) -> str:
+    """The change from OLD to NEW as one line of words: removed words as
+    `[-…-]`, added words as `{+…+}`, unchanged runs cut to their ends
+    (`_unchanged`). Whitespace is folded, as the registration compares a
+    field; texts equal but for whitespace say so. Words, not lines: a
+    protocol field is one paragraph on one line, and a line diff of it
+    would repeat both texts whole."""
+    a, b = old.split(), new.split()
+    if a == b:
+        return "the two texts differ in whitespace only"
+    # autojunk off: in a field of a thousand words it would treat the
+    # common words as junk and diff around them
+    ops = difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes()
+    out: list[str] = []
+    for k, (tag, i1, i2, j1, j2) in enumerate(ops):
+        if tag == "equal":
+            out += _unchanged(a[i1:i2], first=k == 0, last=k == len(ops) - 1)
+        if tag in ("replace", "delete"):
+            out.append("[-" + " ".join(a[i1:i2]) + "-]")
+        if tag in ("replace", "insert"):
+            out.append("{+" + " ".join(b[j1:j2]) + "+}")
+    return " ".join(out)
+
+
+def field_texts_lines(
+    changes: Sequence[FieldChange], numbers: FieldTextNumbers
+) -> list[str]:
+    """The `FIELD TEXTS` section of the follow-up piece: each field text of
+    NUMBERS once in full, indented, under its number, its field's label,
+    its digest and its size; then each change to judge of CHANGES
+    (`judged_pair`) once, as a word diff (`word_diff`) between the two
+    numbered texts. [] when NUMBERS is empty."""
+    if not numbers:
+        return []
+    lines = [
+        f"{FIELD_TEXTS} — each field text the entries above name by number, "
+        f"once in full, with the sha256 of its UTF-8 bytes and its size; then "
+        f"each change to judge once as a word diff: removed words as [-…-], "
+        f"added words as {{+…+}}, unchanged words past {DIFF_CONTEXT_WORDS} "
+        f"on either side of a change cut to …"
+    ]
+    for (label, value), n in numbers.items():
+        data = value.encode("utf-8")
+        lines.append(
+            f"field text {n} · {label} · sha256 {digests.digest(data)} · "
+            f"{len(data)} bytes:"
+        )
+        lines += [f"  {line}" for line in value.split("\n")]
+    pairs = dict.fromkeys(
+        (c.label, *pair) for c in changes if (pair := judged_pair(c)) is not None
+    )
+    for label, old, new in pairs:
+        lines.append(
+            f"change to judge, field text {numbers[(label, old)]} → field text "
+            f"{numbers[(label, new)]} ({label}):"
+        )
+        lines.append(f"  {word_diff(old, new)}")
+    return lines
 
 
 #: what the follow-up tells the auditor while the first registration is
@@ -850,7 +1001,9 @@ NOT_ASSESSABLE_WITHOUT_FIRST = (
 )
 
 
-def field_change_lines(change: FieldChange) -> list[str]:
+def field_change_lines(
+    change: FieldChange, numbers: FieldTextNumbers | None = None
+) -> list[str]:
     """The lines the follow-up prints for a corrected field, in this order:
 
     1. first measurement untold (`first_untold`): that the first
@@ -865,7 +1018,10 @@ def field_change_lines(change: FieldChange) -> list[str]:
     5. which of these the change to judge is taken against.
 
     Equal values are printed on their own lines all the same: each line
-    names the text its value comes from."""
+    names the text its value comes from. A value NUMBERS holds is printed
+    as the number it stands under in the piece's `FIELD TEXTS`
+    (`field_text_ref`); without NUMBERS every value stands here."""
+    numbers = numbers or {}
     lines = []
     if change.first_untold:  # 1
         lines.append(
@@ -876,10 +1032,15 @@ def field_change_lines(change: FieldChange) -> list[str]:
         )
     if change.first_measured is not None:  # 2
         name = FIRST_THAT_READS if change.first_untold else AS_FIRST_REGISTERED
-        lines.append(value_then_line(change.label, name, change.first_measured))
+        lines.append(
+            value_then_line(change.label, name, change.first_measured, numbers)
+        )
     if change.run_audited is not None:  # 3
-        lines.append(value_then_line(change.label, IN_RUN_AUDITED, change.run_audited))
-    lines.append(f"{change.label} now: {change.now}")  # 4
+        lines.append(
+            value_then_line(change.label, IN_RUN_AUDITED, change.run_audited, numbers)
+        )
+    now = field_text_ref(change.label, change.now, numbers)
+    lines.append(f"{change.label} now: {now}")  # 4
     # 5
     if change.compared_with_run_audited and change.first_untold:
         lines.append(
@@ -921,7 +1082,16 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     comes from, and the change to judge (`field_change_lines`), and, when
     the finding requires a check, that metrics.json key with its note and
     its whole value as shown, or that it is missing — or one piece saying
-    there is none."""
+    there is none.
+
+    A field text of `FIELD_TEXT_ONCE_MIN` bytes or more that the
+    corrections would print more than once (several corrections of one
+    field, or one text equal to another) is printed nowhere twice: then
+    every field text of the piece stands once in full under `FIELD TEXTS`
+    after the entries, each entry names the number of its texts, and
+    each change to judge follows there once as a word diff
+    (`field_text_numbers`, `field_texts_lines`). Nothing is dropped; the
+    operating limits are measured on the piece as printed."""
     if not shown.entries:
         return (
             (
@@ -929,6 +1099,8 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
                 "none: no earlier decided BLOCKER or correction in this area",
             ),
         )
+    changes = [shown.changes[e.ref] for e in shown.entries if e.ref in shown.changes]
+    numbers = field_text_numbers(changes)
     entries = []
     for e in shown.entries:
         f = e.finding
@@ -943,12 +1115,14 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
         )
         change = shown.changes.get(e.ref)
         if change is not None:
-            entry += "".join(f"\n  {line}" for line in field_change_lines(change))
+            entry += "".join(
+                f"\n  {line}" for line in field_change_lines(change, numbers)
+            )
         line = required_check_line(f, shown.metrics)
         if line:
             entry += f"\n  {line}"
         entries.append(entry)
-    text = "\n".join(entries)
+    text = "\n".join([*entries, *field_texts_lines(changes, numbers)])
     size = len(text.encode("utf-8"))
     if len(entries) > EARLIER_MAX_ENTRIES or size > EARLIER_MAX_BYTES:
         raise AuditError(
