@@ -89,9 +89,9 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **Done / way out:** required decisions and follow-up evidence cover the current state. `fixed` records a repair decision, not proof that the old run is corrected. Earlier undecided BLOCKERs must be decided before the next analysis audit. A limitation must state what claims remain supported or which promises cannot be assessed. See [audit and follow-up contracts](architecture.md#the-chain) and [decision guidance](../labkit/docs/agent-guide.md#4-finalize-audit-and-decide).
 
-## 6. The decision review — when a BLOCKER was decided `limitation` with `stands`
+## 6. The decision review — when a decision releases a BLOCKER
 
-**When:** an accepted BLOCKER says its verdicts stand within a limitation, or another decision falls under the existing review rules. These include closing a previously unconfirmed decision and dismissing a carried finding.
+**When:** a BLOCKER was decided `limitation` with `stands`, decided `false-positive`, or, on the Conclusion, decided `fixed`; or another decision falls under the existing review rules. These include closing a previously unconfirmed decision and dismissing a carried finding.
 
 **Allowed changes:** correct the Conclusion, decision or supporting evidence as required. Changing the reviewed claim or decision makes its review stale.
 

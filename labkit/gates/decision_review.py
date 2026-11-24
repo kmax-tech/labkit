@@ -56,8 +56,9 @@ Exit codes: 0 no decision reviewed holds the number — every one is
 released, or the not-upheld ones are all a WARNING's, which report-check
 only warns of —, 1 a BLOCKER's decision is not upheld and holds the
 number, 2 no
-review — no record, nothing to review in it (no `stands`, no closed
-contested finding, no carried finding closed), the code or the run not what
+review — no record, nothing to review in it (no `stands`, no BLOCKER
+decided `false-positive`, no BLOCKER on the Conclusion decided `fixed`, no
+closed contested finding, no carried finding closed), the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
 them there or audit again), a decision already reviewed as decided and
 claimed now and not upheld (another draw settles nothing; `--again` draws

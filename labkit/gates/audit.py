@@ -375,8 +375,9 @@ def main(argv: list[str]) -> int:
         "--review",
         action="store_true",
         help="a second auditor on the decisions of the newest analysis record (or "
-        "--record) that owe one — a finding decided `limitation` with effect `stands`, a finding "
-        "closed after a review did not uphold a decision on it, a carried finding "
+        "--record) that owe one — a finding decided `limitation` with effect `stands`, a "
+        "BLOCKER decided `false-positive`, a BLOCKER on the Conclusion decided `fixed`, a "
+        "finding closed after a review did not uphold a decision on it, a carried finding "
         "closed false-positive: does the reported claim stand? writes "
         "audits/<minute>-review.toml. With --record naming a report review "
         "(audits/report-reviews/<minute>-review.toml): a second reviewer on its "
