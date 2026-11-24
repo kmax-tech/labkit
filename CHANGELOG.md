@@ -10,6 +10,12 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **`llm.CallRefused`: no model call while a run that may make none is open.** `llm.refusing_calls(run_id, why)` makes every call through `complete`, `complete_response` and `complete_many` raise `CallRefused` (a `RuntimeError`) before anything is sent, in every thread of the process; runlog enters it for a derived run that declares its answer reading. A derived run's "no model calls" was until now seen only afterwards, in a call log that a run without the answer cache does not write. A model reached by another client is not seen.
 
+### Changed
+
+- **preflight, finalize, labkit-params, code-check and labkit-run-diff read their command line with argparse.** A flag without its value is named (`argument --protocol: expected one argument`), not refused as `unexpected argument '--protocol'`; flags may stand before the area; `-h` prints argparse's help. A refusal of the line reads `usage: …` and `TOOL: error: …` on stderr, exit 2 as before; the refusals of an area (`no such area`, several areas) are unchanged. Called as a function, these `main`s now end a refused line or `--help` with `SystemExit` instead of returning 2 or 0, as labkit-audit and the other argparse commands do. `repo.area_args` and `repo.AreaArgs` are gone; `repo.area_parser` builds the parser.
+
+- **A single-value flag given twice is refused by name.** `--protocol A --protocol B` ran on B without a word; preflight, finalize, labkit-params, code-check, labkit-audit, labkit-next, labkit-adopt and report-check now refuse it (`TOOL: error: --protocol given twice — give it once`, exit 2), as labkit-params does `--run` and code-check `--bundle` (`repo.GivenOnce`). Options meant to repeat (`protocol-fill --prompt-file`, scope-sha's FILE list) are unchanged; `runlog start --max-seconds` still keeps the last value.
+
 ### Fixed
 
 - **`intent-check PROTOCOL --metrics FILE extra` is refused.** A word after the metrics file was dropped without a word and the check ran on the rest; it now ends with exit 2 and `intent-check: unexpected argument 'extra'`.
