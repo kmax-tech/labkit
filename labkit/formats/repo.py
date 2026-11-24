@@ -157,10 +157,10 @@ class AreaArgs:
 def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
     """ARGV of TOOL's `<AREA> [--protocol PROTOCOL-*.md]` command line
     (`AreaArgs`), or the exit code it ends with: 0 after `--help` (USAGE,
-    its lines, printed), 2 for no argument, an area name several areas
-    carry (`area_path`), another argument, or an area that is no directory
-    — each refused with its sentence. The one reading of preflight's and
-    finalize's command line."""
+    its lines, printed), 2 for no argument, then for an area
+    `resolve_area` refuses (several areas, no directory), then for any
+    other argument — the first refusal met is printed. The one reading of
+    preflight's and finalize's command line."""
     if not argv or console.asks_help(argv):
         return console.usage(tool, "\n".join(usage), asked=bool(argv))
     try:
