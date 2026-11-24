@@ -23,11 +23,10 @@ from labkit import PACKAGE_DIR
 from labkit.formats.area_state import file_state_of
 from labkit.formats import console, protocol_block
 from labkit.formats.repo import (
-    area_path,
     area_protocols,
     choose_protocol,
     layout_root,
-    no_such_area,
+    resolve_area,
     shown,
     experiment_areas,
 )
@@ -71,7 +70,7 @@ def main(argv: list[str]) -> int:
         prog="labkit-next",
         description=(__doc__ or "").splitlines()[0],
     )
-    ap.add_argument("area", type=area_path, nargs="?", default=None)
+    ap.add_argument("area", nargs="?", default=None)
     ap.add_argument("--protocol", type=Path, default=None)
     ap.add_argument(
         "--guide", action="store_true", help="print the workflow in full and exit"
@@ -88,8 +87,10 @@ def main(argv: list[str]) -> int:
     area = args.area if args.area is not None else only_area(Path.cwd())
     if area is None:
         return 0 if not experiment_areas(layout_root(Path.cwd())) else 2
-    if not area.is_dir():
-        console.refuse("labkit-next", no_such_area(area))
+    try:
+        area = resolve_area("labkit-next", area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
     protocol = None
     try:

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT
-from labkit.formats.repo import area_path, git_root, no_such_area
+from labkit.formats.repo import git_root, resolve_area
 from labkit.gates import report_check
 from labkit.gates.next_step import steps_for
 
@@ -47,13 +47,15 @@ def main(argv: list[str]) -> int:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("area", type=area_path)
+    ap.add_argument("area")
     ap.add_argument("--protocol", type=Path, default=None)
     a = ap.parse_args(argv)
-    if not a.area.is_dir():
-        console.refuse("report-check", no_such_area(a.area))
+    try:
+        area = resolve_area("report-check", a.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
-    return report_check.protocol_verdict(a.area.resolve(), a.protocol).exit
+    return report_check.protocol_verdict(area.resolve(), a.protocol).exit
 
 
 def cli() -> None:

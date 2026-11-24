@@ -552,12 +552,9 @@ def _reindex(argv: list[str]) -> int:
     )
     args = ap.parse_args(argv)
     try:
-        area = repo.area_path(args.area)
-    except repo.AmbiguousArea as exc:
-        console.refuse("runlog", str(exc))
-        return 2
-    if not area.is_dir():
-        console.refuse("runlog", repo.no_such_area(area))
+        area = repo.resolve_area("runlog", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
     return reindex(area)
 
@@ -628,12 +625,9 @@ def main(argv: list[str]) -> int:
     # a misspelt area would read as "no open runs", exit 0 — and `--wait`
     # as finished
     try:
-        area = repo.area_path(args.area)
-    except repo.AmbiguousArea as exc:
-        console.refuse("runlog", str(exc))
-        return 2
-    if not area.is_dir():
-        console.refuse("runlog", repo.no_such_area(area))
+        area = repo.resolve_area("runlog", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
     if (area / repo.EXPERIMENTS).is_dir():
         # the lab root would read as an area: "no open runs", and --wait as

@@ -91,7 +91,7 @@ from labkit.formats.gate import (
     coded,
     with_way_out,
 )
-from labkit.formats.repo import area_path, no_such_area, shown
+from labkit.formats.repo import resolve_area, shown
 from labkit.formats.commands import audit_command, decide_command, freeze_command
 from labkit.formats.runs import completed_runs, now_stamp
 from labkit.formats.scope_sha import (
@@ -319,15 +319,15 @@ def _answer_or_record(
 def main(argv: list[str]) -> int:
     """Command line of `labkit-audit`: audit one area in one mode, store a
     decision the person gives on one of its findings (`--decide`), or show
-    what there is to decide (`--findings`). An area path that is no
-    directory is refused first, with exit 2 and the sentence every command
-    uses (`repo.no_such_area`), whatever the step."""
+    what there is to decide (`--findings`). An area argument that names
+    no directory, or several areas, is refused before any step, with exit
+    2 and the sentence every command uses (`repo.resolve_area`)."""
     ap = argparse.ArgumentParser(
         prog="labkit-audit",
         description=(__doc__ or "").splitlines()[0],
         epilog=AUDIT_EXIT_CONTRACT,
     )
-    ap.add_argument("area", type=area_path)
+    ap.add_argument("area")
     ap.add_argument("--mode", choices=MODES)
     ap.add_argument(
         "--decide",
@@ -434,11 +434,13 @@ def main(argv: list[str]) -> int:
         ap.error(shape)
     args = ap.parse_args(argv)
     _check_args(ap, args)
-    if not args.area.is_dir():
-        # before any step: `--findings` from a subdirectory with the
-        # repo-relative path would read "no audit record yet", `--review`
-        # end in a traceback
-        console.refuse("labkit-audit", no_such_area(args.area))
+    # before any step: `--findings` from a subdirectory with the
+    # repo-relative path would read "no audit record yet", `--review` end
+    # in a traceback
+    try:
+        args.area = resolve_area("labkit-audit", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
     if args.mode is None:
         return _without_audit(args)

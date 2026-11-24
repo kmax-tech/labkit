@@ -34,10 +34,9 @@ from labkit.checks import recheck
 from labkit.formats import console, protocol_block
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
-    area_path,
     choose_protocol,
     layout_root,
-    no_such_area,
+    resolve_area,
     own_path,
     shown,
 )
@@ -127,13 +126,14 @@ def main(argv: list[str]) -> int:
         prog="labkit-adopt",
         description=(__doc__ or "").splitlines()[0],
     )
-    ap.add_argument("area", type=area_path)
+    ap.add_argument("area")
     ap.add_argument("run_id", nargs="?", default=None, metavar="RUN_ID")
     ap.add_argument("--protocol", type=Path, default=None)
     args = ap.parse_args(argv)
-    area: Path = args.area
-    if not area.is_dir():
-        console.refuse("labkit-adopt", no_such_area(area))
+    try:
+        area = resolve_area("labkit-adopt", args.area)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
         return 2
     protocol = choose_protocol(area, args.protocol, "labkit-adopt")
     if protocol is None:
