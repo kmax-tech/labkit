@@ -46,3 +46,18 @@ Both were repaired in `scripts/01_measure.py` (commit `bf0bfc7`), declared as a 
 
 - No change in argmining27 and no model call. Experiment 14 waits for the result; it is neither adopted nor handed over in the meantime.
 - No change to the global release rule (separate decided task in `TODO.md`).
+
+## Investigation, 2026-11-24 (questions 1 and 2; not built)
+
+**Which check refuses.** `run_record_check.code_since_run` (`labkit/checks/run_record_check.py:119`) walks the answering run and every run it derives from (`runs.lineage`, along `derived_from`) and compares each run's script with the `script_sha` that run recorded (`:186`), and each imported module with the run's start commit. `2b96` derives from `aa0a`, so `aa0a`'s `scripts/01_measure.py` is compared, and the repair changed that file. `recheck.require_run_code` holds the same condition for `02_analyze.py --check`. The docstring says "Analysis code and the pin are not compared: a fix there needs no new measurement" — but the stamped skeleton puts the answer reading (`parse_answer`) and the evaluation (`evaluate_rows`) into the measure script (`labkit/templates/measure-script.py.template:200`, `:255`), and experiment 14 follows it (`parse_letter` from `lib/scenario_rating.py`, applied in `evaluate_rows`). So every evaluation fix reads as a measurement change.
+
+**A supported path exists: a new run that reads the answers as an input with an origin, not a derived run.** A run with no `derived_from` whose recorded input is `aa0a`'s registered output gets `aa0a` as its origin (`labkit/run/input_origins.py`, decided by digest). Its lineage is itself, so `aa0a`'s script is not compared; finalize's input-origins station (`labkit/gates/finalize.py:714`) holds that the input is still the bytes `aa0a` registered and that the protocol `aa0a` was measured under reads back — not `aa0a`'s code. `02_analyze.py --check` recomputes it from the recorded inputs (`recheck.holds_from_inputs`). Shown end to end on the counting skeleton by `tests/test_origin_scenario.py:95-140`: run A measures, `01_measure.py` is changed to read A's rows, run C passes finalize, the adoption, the pre-commit and report-check, and the area's `--check` recomputes C.
+
+What this path does not give, measured against "What the person requires":
+
+- It does not tell the answer-reading rule from the metrics. The new run evaluates with whatever `parse_letter` stands now; a changed reading rule passes as silently as a fixed bootstrap bound. Prompts are covered only in effect (no model call, the answers are `aa0a`'s bytes).
+- Not shown on a model area: the fixture has no `llm-calls.jsonl`; whether finalize's model checks accept a run that reads model answers but calls no model is untested.
+- Not shown: what the adopted result names (origin run, both commits, the audit finding).
+- No guidance names it: `labkit/docs/agent-guide.md` and `docs/workflow.md` do not mention a re-evaluation, and the blocker's way out names only "measure anew" or "restore".
+
+Open for the author: question 3 (how labkit tells "only the evaluation changed" without trusting the author) decides whether the answer-reading rule is held; the declared scopes per promise (`declared_scope_sha`, compared for repeats in `labkit/formats/answering_run.py:282`) are the existing mechanism closest to "a diff restricted to named functions".
