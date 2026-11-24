@@ -24,6 +24,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import recheck  # noqa: E402
 from labkit.checks.run_record_check import code_since_run  # noqa: E402
 from labkit.formats import gate, repo, runs  # noqa: E402
+from labkit.formats.answer_reading import (  # noqa: E402
+    ANSWER_READING_FILE,
+    AnswerReading,
+    write_answer_reading,
+)
 from labkit.formats.run_code import code_then  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from protocol_fixture import (  # noqa: E402
@@ -278,6 +283,88 @@ class CodeSinceRun(unittest.TestCase):
         self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
         (line,) = self.held(derived)
         self.assertIn(f"changed since {parent.name} ran it", line)
+
+    def derived_reading(self, parent: Path, module: str | None) -> Path:
+        """A derived run of PARENT by 03_reevaluate.py, which imports the
+        counting helper as its answer reading, declared as MODULE (None:
+        nothing declared) — as runlog leaves it."""
+        again = self.area / "scripts" / "03_reevaluate.py"
+        again.write_text(
+            "from lib import counting\n\nprint(counting.n([]))\n", encoding="utf-8"
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-qm", "re-evaluation")
+        derived = self.run_now(
+            script=again, name="2026-10-27T11-00-00_cd34", derived_from=parent.name
+        )
+        if module is not None:
+            write_answer_reading(derived, AnswerReading(module=module, labkit="9.9.9"))
+        return derived
+
+    def test_a_declared_answer_reading_compares_only_that_module(self) -> None:
+        """The evaluation fixed after the parent ran: with the answer reading
+        declared, the parent is compared in that module only and passes;
+        without it the parent's whole script holds, as before, and the way
+        out names the declaration."""
+        parent = self.run_now()
+        declared = self.derived_reading(parent, "lib/counting.py")
+        self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
+        self.assertEqual(self.held(declared), [])
+        (declared / ANSWER_READING_FILE).unlink()
+        (line,) = self.held(declared)
+        self.assertIn(f"changed since {parent.name} ran it", line)
+        self.assertIn("answer_reading=MODULE", line)
+
+    def test_a_change_to_the_answer_reading_or_what_it_imports_holds(self) -> None:
+        """The declared module, a constant in it, and a module it imports
+        are compared with the parent's tree; each change holds with the way
+        out to measure anew."""
+        letters = self.repo / "lib" / "letters.py"
+        letters.write_text("LETTERS = 'AB'\n", encoding="utf-8")
+        self.helper.write_text(
+            "from lib import letters\n\nCAP = 2\n\n\ndef n(files):\n    return len(files)\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-qm", "the reading imports letters")
+        parent = self.run_now()
+        declared = self.derived_reading(parent, "lib/counting.py")
+        self.assertEqual(self.held(declared), [])
+        for path, old, new in (
+            (self.helper, "CAP = 2", "CAP = 3"),
+            (letters, "'AB'", "'ABC'"),
+        ):
+            with self.subTest(changed=path.name):
+                text = path.read_text(encoding="utf-8")
+                path.write_text(text.replace(old, new), encoding="utf-8")
+                # the derived run's own script imports it too: both hold
+                lines = self.held(declared)
+                (line,) = [ln for ln in lines if f"since {parent.name}" in ln]
+                self.assertIn(f"{path.name} changed since {parent.name} ran", line)
+                self.assertIn("measure anew", line)
+                path.write_text(text, encoding="utf-8")
+
+    def test_a_declaration_that_cannot_be_held_holds(self) -> None:
+        """A declared module the declaring script does not import, one that is
+        gone, and a declaration that does not read each hold; the last
+        compares the parent whole as well."""
+        unused = self.repo / "lib" / "unused.py"
+        unused.write_text("X = 1\n", encoding="utf-8")
+        parent = self.run_now()
+        declared = self.derived_reading(parent, "lib/unused.py")
+        (line,) = self.held(declared)
+        self.assertIn("no longer imports it", line)
+        write_answer_reading(
+            declared, AnswerReading(module="lib/gone.py", labkit="9.9.9")
+        )
+        (line,) = self.held(declared)
+        self.assertIn("lib/gone.py that", line)
+        self.assertIn("cannot be read now", line)
+        (declared / ANSWER_READING_FILE).write_text("{", encoding="utf-8")
+        self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
+        unread, whole = self.held(declared)
+        self.assertIn(ANSWER_READING_FILE, unread)
+        self.assertIn(f"changed since {parent.name} ran it", whole)
 
     def test_only_a_found_difference_names_its_run(self) -> None:
         """`GateFinding.changed_since` is the comparison's datum: the run

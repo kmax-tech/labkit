@@ -35,6 +35,11 @@ from labkit.formats.runs import (
     untracked_copy_differs,
     untracked_copy_path,
 )
+from labkit.formats.answer_reading import (
+    ANSWER_READING_FILE,
+    AnswerReading,
+    read_answer_reading,
+)
 from labkit.formats.scope_sha import (
     SourceError,
     measured_code,
@@ -141,7 +146,18 @@ def code_since_run(
     names none. Read-only. An extraction exception of the test model
     (docs/notes/2026-11-10-test-model.md): every condition here is an answer
     of git or of the run's kept copies, so the comparison stays one boundary,
-    tested against real repositories (`tests/test_run_code.py`)."""
+    tested against real repositories (`tests/test_run_code.py`).
+
+    Where a run of the chain declares its answer reading
+    (`answer_reading`, a derived run's `answer-reading.json`), its parent is
+    compared in that module and the repo-local modules it imports
+    (`scope_sha.measured_code` of the module) instead of its script and
+    helpers: the evaluation may have changed since the parent ran, the
+    reading of an answer may not. The declared module must still be among
+    the modules the declaring run's script imports. A declaration that does
+    not read is a blocker, and the parent is then compared whole. Without a
+    declaration the parent is compared whole, as before, and a difference
+    there names the declaration as a way out beside measuring anew."""
     try:
         chain = lineage(answering_run)
     except ValueError as exc:
@@ -154,11 +170,107 @@ def code_since_run(
         ], []
     blockers: list[GateFinding] = []
     warnings: list[str] = []
-    for run in chain:
-        b, w = _run_code(area, run)
+    # each run after the first is the parent of the one before it: the
+    # child's declaration decides how much of the parent's code is compared
+    for child, run in zip([None, *chain], chain):
+        declared: AnswerReading | None = None
+        if child is not None:
+            try:
+                declared = read_answer_reading(child)
+            except ArtefactError as exc:
+                blockers.append(
+                    blocker(
+                        f"{child.name}: {exc}",
+                        fix=f"restore {ANSWER_READING_FILE} as runlog wrote it "
+                        f"(`{checkout_command(child / ANSWER_READING_FILE)}` where "
+                        f"git holds it), or {measure_anew(area)}",
+                        stated_outcome=outcome_of_failed_read(exc),
+                        rule=TECHNICAL_RULE,
+                    )
+                )
+        if child is not None and declared is not None:
+            b, w = _reading_since_run(area, run, child, declared)
+        else:
+            b, w = _run_code(area, run)
+            if child is not None:
+                b = [_or_declared(f, run.name) for f in b]
         blockers += b
         warnings += w
     return blockers, warnings
+
+
+def _or_declared(found: GateFinding, parent: str) -> GateFinding:
+    """FOUND, a difference in the code PARENT ran, found for a derived run
+    that declared no answer reading, with that declaration as a way out
+    after measuring anew: when only the evaluation changed, a derived run
+    that declares the module reading an answer is compared there only. A
+    finding that is no found difference is returned as it is."""
+    if found.changed_since != parent:
+        return found
+    return replace(
+        found,
+        fix=f"{found.fix}; or, when only the evaluation changed and not how an "
+        f"answer is read, derive a run from {parent} that declares the module "
+        f"reading an answer (`runlog.run(..., derived_from={parent!r}, "
+        f"answer_reading=MODULE)`) — its parent is compared in that module only",
+    )
+
+
+def _reading_since_run(
+    area: Path, parent: Path, child: Path, declared: AnswerReading
+) -> tuple[list[GateFinding], list[str]]:
+    """`code_since_run` for PARENT where CHILD declared its answer reading
+    DECLARED: the declared module and the repo-local modules it imports,
+    as they are now, against PARENT's tree (`_helpers_since_run`); a
+    blocker when the area lies in no git repository, the module is no
+    longer imported by CHILD's script, or its code cannot be read (gone
+    included: `measured_code`'s SourceError)."""
+    cfg, child_cfg = read_run_config(parent), read_run_config(child)
+    if cfg is None or child_cfg is None:
+        return [], []  # the answering-run station names an unreadable record
+    repo = git_root(area)
+    named = f"the answer reading {declared.module} that {child.name} declared"
+    if repo is None:
+        return [
+            blocker(
+                f"{named} cannot be compared with what {parent.name} ran: the "
+                f"area lies in no git repository now",
+                fix=measure_anew(area),
+                rule=TECHNICAL_RULE,
+            )
+        ], []
+    module = repo / declared.module
+    script = script_of(area, child_cfg)
+    if isinstance(script, str):
+        return [
+            blocker(
+                f"{child.name}: {script}", fix=measure_anew(area), rule=TECHNICAL_RULE
+            )
+        ], []
+    try:
+        reading = measured_code(module, repo)
+        imported = {f.resolve() for f in measured_code(script, repo)}
+    except SourceError as exc:
+        return [
+            blocker(
+                f"{named} cannot be read now: {exc}",
+                fix=f"repair what the error names, then `{gate_command('finalize', area)}`",
+                stated_outcome=outcome_of_failed_read(exc),
+                rule=TECHNICAL_RULE,
+            )
+        ], []
+    if module.resolve() not in imported:
+        return [
+            blocker(
+                f"{named}: {shown(script, Path.cwd())} no longer imports it, so it "
+                f"is not what reads the answers",
+                fix=measure_anew(area),
+                rule=TECHNICAL_RULE,
+            )
+        ], []
+    # the untracked siblings a run copied lie beside its script: the module's
+    # neighbours are named from the declaring run's script, as runlog saw them
+    return _helpers_since_run(reading, script, repo, parent, cfg)
 
 
 def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
