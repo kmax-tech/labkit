@@ -1273,6 +1273,22 @@ class DecisionListReachesThePerson(unittest.TestCase):
             self.assertEqual(
                 (f.status, f.reason, f.effect), ("limitation", "the limit", "stands")
             )
+
+            # a decision taken back: written, then said, exit 0 — the line
+            # crashed with "status 'open' is not decided" after the write
+            said = decide("open", "taken back: the repair did not hold")
+            self.assertIn(
+                "open: the decision is taken back and the finding is undecided "
+                "again; the number does not leave while it is open — "
+                "`labkit-audit experiments/01-x --findings` prints the command "
+                "that decides it",
+                said,
+            )
+            f = findings.read(record).findings[0]
+            self.assertEqual(
+                (f.status, f.reason, f.effect),
+                ("open", "taken back: the repair did not hold", ""),
+            )
             self.assertIn(
                 "false-positive: the auditor misread this state — the reason must "
                 "name the counter-evidence (file, line, value); a second auditor "

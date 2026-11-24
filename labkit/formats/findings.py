@@ -878,7 +878,7 @@ def decision_entails(
 ) -> str:
     """What F's decided status entails — the line `labkit-audit --decide`
     prints under the decision it recorded on F, a finding of RECORD in
-    AREA, and the one home of the five texts. `fixed`: a repair is
+    AREA, and the one home of its texts. `fixed`: a repair is
     claimed, confirmation pending; the next analysis audit judges it, a
     BLOCKER's number does not leave before, the check owed named when F
     carries one (`check_order`); what `fixed` means for this kind of
@@ -897,7 +897,9 @@ def decision_entails(
     carried finding's is held by
     the review (`false_positive_blocker`, `carried_and_closed`). Each
     status is named by its consequence, so it is not misread as another.
-    Raises ValueError on a status that is not decided (DECIDED)."""
+    `open`, a decision taken back: the finding is undecided again, and a
+    BLOCKER's number does not leave while it is open.
+    Raises ValueError on a status outside STATUSES."""
     here = Path.cwd()
     review = audit_command(
         area, "--review", "--record", record.name, protocol=protocol, base=here
@@ -956,7 +958,17 @@ def decision_entails(
             "false-positive: the auditor misread this state — the reason must "
             f"name the counter-evidence (file, line, value){held}"
         )
-    raise ValueError(f"status {f.status!r} is not decided — one of {DECIDED_LIST}")
+    if f.status == OPEN:
+        decide = audit_command(area, "--findings", protocol=protocol, base=here)
+        held = (
+            "; the number does not leave while it is open" if f.grade == BLOCKER else ""
+        )
+        return (
+            "open: the decision is taken back and the finding is undecided again"
+            f"{held} — `{decide}` prints the command that decides it, or a "
+            "handover records it open"
+        )
+    raise ValueError(f"status {f.status!r} — one of {', '.join(STATUSES)}")
 
 
 def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
