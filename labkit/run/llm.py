@@ -81,10 +81,17 @@ prompt size.
 
 For specialized calls (logprobs, raw payloads): use resolve(alias) for
 endpoint/model and do your own HTTP — never a literal URL in the experiment.
+
+While a run that may make no model call is open (`refusing_calls`, entered
+by runlog for a derived run that declares its answer reading), every call
+through `complete`, `complete_response` and `complete_many` raises
+`CallRefused` before anything is sent, in every thread of the process. A
+model reached by another client — own HTTP included — is not seen.
 """
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import http.client
 import json
@@ -96,6 +103,7 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -527,6 +535,49 @@ def takes_max_tokens(alias: str) -> bool:
     return not isinstance(spec(alias), ClaudeCliSpec)
 
 
+class CallRefused(RuntimeError):
+    """A model call made while a run that may make none is open
+    (`refusing_calls`): raised before anything is sent, so no retry
+    follows."""
+
+
+# the open runs that refuse model calls, each with the sentence its refusal
+# names; one table for the whole process, not per thread, so a worker
+# thread a run starts is held like the thread that opened the run
+_REFUSING: dict[str, str] = {}
+_REFUSING_LOCK = threading.Lock()
+
+
+@contextlib.contextmanager
+def refusing_calls(run_id: str, why: str) -> Iterator[None]:
+    """While the block runs, every `complete`, `complete_response` and
+    `complete_many` call in this process, in any thread, raises
+    CallRefused naming RUN_ID and WHY before anything is sent; after it,
+    calls go through again. Raises ValueError when RUN_ID refuses already."""
+    with _REFUSING_LOCK:
+        if run_id in _REFUSING:
+            raise ValueError(f"run {run_id} refuses model calls already")
+        _REFUSING[run_id] = why
+    try:
+        yield
+    finally:
+        with _REFUSING_LOCK:
+            del _REFUSING[run_id]
+
+
+def _refuse_while_held(alias: str) -> None:
+    """CallRefused for a call of ALIAS while a run refuses model calls
+    (`refusing_calls`), naming the first such run; nothing otherwise."""
+    with _REFUSING_LOCK:
+        held = next(iter(_REFUSING.items()), None)
+    if held is not None:
+        run_id, why = held
+        raise CallRefused(
+            f"{alias}: no model call while run {run_id} is open — {why}; "
+            f"nothing was sent"
+        )
+
+
 def complete(
     alias: str,
     prompt: str,
@@ -549,8 +600,9 @@ def complete(
     `attempts` counts total tries, not extra ones; backoff follows _BACKOFF
     (10 s … 300 s, ~13 min in all, so a short outage is survived). Errors
     that no retry can fix — an unknown alias, a temperature the backend cannot
-    honour, a claude-cli reply another model wrote (`UnprovenAnswer`) — are
-    raised immediately. Pass attempts=1 to disable.
+    honour, a claude-cli reply another model wrote (`UnprovenAnswer`), a
+    call while a run refuses model calls (`CallRefused`) — are raised
+    immediately. Pass attempts=1 to disable.
     """
     return complete_response(
         alias,
@@ -580,7 +632,10 @@ def complete_response(
     """`complete` with everything the call returned (`Response`): the
     text, the reasoning trace, the finish reason, the usage, the endpoint
     and the decoded reply — what a cache of raw answers keeps
-    (`llm_cache`). Arguments, retries and errors as `complete`'s."""
+    (`llm_cache`). Arguments, retries and errors as `complete`'s; while a
+    run refuses model calls, CallRefused before the first attempt
+    (`refusing_calls`)."""
+    _refuse_while_held(alias)
     for attempt in range(1, attempts + 1):
         CALL_STATE.thinking = ""  # never a previous call's trace
         CALL_STATE.usage = NO_USAGE  # nor its token counts
