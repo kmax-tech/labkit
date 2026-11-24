@@ -266,10 +266,12 @@ def _or_declared(found: GateFinding, parent: str) -> GateFinding:
         return found
     return replace(
         found,
-        fix=f"{found.fix}; or, when only the evaluation changed and not how an "
-        f"answer is read, derive a run from {parent} that declares the module "
-        f"reading an answer (`runlog.run(..., derived_from={parent!r}, "
-        f"answer_reading=MODULE)`) — its parent is compared in that module only",
+        fix=f"{found.fix}; or, when only the evaluation changed — the prompts, the "
+        f"answer file and the module that reads an answer as {parent} had them —, "
+        f"derive a run from {parent} that declares that module "
+        f"(`runlog.run(..., derived_from={parent!r}, answer_reading=MODULE)`): "
+        f"its parent is compared in that module only (docs/workflow.md, "
+        f"'Correcting the evaluation of unchanged answers')",
     )
 
 

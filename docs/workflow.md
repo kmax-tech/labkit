@@ -136,6 +136,7 @@ The block guarantees exact rendering of bound values, not the meaning of prose b
 1. Inspect `labkit-next AREA` and `labkit-audit AREA --findings`. Their messages name the held evidence, allowed action and next command.
 2. If repairing an adopted result, use `protocol-fill PROTOCOL --withdraw --why "REASON" --into REPORT.md` for the affected report. This withdraws the result and generated blocks; it does not restore source or delete the old run and audits.
 3. Choose the repair that matches the change:
+   - **Evaluation of unchanged answers:** the answers stand and only the code that computes the number from them was wrong — re-evaluate them in a derived run that declares its answer reading, with no model call ([below](#correcting-the-evaluation-of-unchanged-answers)).
    - **Implementation:** repair code and tests, record the decision, repeat
      the affected measurement, then finalize and obtain the required
      follow-up audit and reviews. Adopt the new result.
@@ -156,6 +157,40 @@ The block guarantees exact rendering of bound values, not the meaning of prose b
 To end without a result, use `protocol-fill PROTOCOL --handover --why "REASON" --tried "WHAT WAS TRIED" --into REPORT.md`. It records the remaining state and writes its handover block. Stage the related protocol, report and evidence together. A handover does not approve a result or let new audits ignore lost evidence. Other citations may still need correction.
 
 For failed audit calls and missing evidence, follow the specific recovery commands from `--findings`; an execution failure is not an audit verdict. The [handover recovery contract](notes/2026-10-27-handover-recovery.md) explains retained losses, open findings and when an acknowledgement expires. Detailed command options are in the [command reference](../README.md#command-reference) and [agent guide](../labkit/docs/agent-guide.md#when-you-are-stuck--both-repeat-costs).
+
+### Correcting the evaluation of unchanged answers
+
+Three repairs look alike and are not:
+
+- **Reproducing an old result** with the code it ran: check out the run's commit and run its pinned labkit; nothing new is recorded.
+- **Correcting the evaluation of unchanged answers:** a new run is recorded, but it asks no model. It is a derived run (`derived_from`) that re-reads its parent's answer file and declares the module that reads an answer (`answer_reading`).
+- **New answers:** a changed prompt, a changed rule that reads an answer, another model or other inputs change what was measured. That is a new measurement (`labkit-next` names it); a derived run cannot carry it.
+
+A derived run without the declaration has its parent's whole script compared with what the parent ran: any fix in that script after the parent ran holds it, as before. With the declaration the parent is compared only in the declared module and the repo-local modules it imports.
+
+**Prerequisites.** The parent is a completed measurement, no repeat. Its answer file is registered (`r.output`) and unchanged. The rule that reads an answer lives in a module of its own, which the measuring script imports, and neither it nor what it imports changed since the parent ran — a constant in it included. The prompts field of the protocol is as the parent's text held it. Only the evaluation changed.
+
+**Commands.**
+
+1. Repair the evaluation and its test; commit. In an exploratory protocol declare the step on the parent, naming the finding it repairs: `protocol-fill PROTOCOL --builds-on PARENT --step-id STEP --occasion repair --why "REASON"`. Decide the finding `fixed` (`labkit-audit AREA --decide N fixed --why "REASON"`).
+2. Start the derived run from the measuring script: `runlog.run(..., run_kind="measurement", protocol=PROTOCOL.name, derived_from=PARENT, answer_reading=MODULE)`, reading the parent's answer file and registering it with `r.output(OUT)`. The start refuses a declaration without `derived_from`, a module outside the repository, and one the script does not import. While the run is open, every call through `labkit.run.llm` raises `CallRefused` before anything is sent, in every thread; a model reached by another client is not seen. The run writes `runs/<run_id>/answer-reading.json` beside its record. Commit the run.
+3. `finalize AREA`. Station 4 notes `<run> declares its answer reading MODULE: the code of PARENT is compared in that module and the modules it imports, not in its whole script`, and holds the prompts field and the answer file to the parent's.
+4. `labkit-audit AREA --mode analysis` on the derived run; decide its findings. Whether all of the answer reading lies in the declared module is the auditor's judgement, not a mechanical check: reading code elsewhere in the script, loaded another way or depending on a value outside the module is not compared.
+5. Write the Conclusion and adopt: `labkit-adopt AREA RUN`. The Recorded results line ends `re-reads the answers of run PARENT (commit …) with the code of commit …, its answer reading MODULE as PARENT ran it, step STEP (repair); changed against PARENT: KEY was → now, …` (`no number changed` when none moved).
+6. `02_analyze.py --check` recomputes the run from the parent's rows with the code the derived run ran; `report-check AREA` holds the chain.
+
+**Failure cases**, each a blocker at finalize and so at report-check, which runs it; the area's `--check` holds the code cases (the first, second and fifth row and the two on `answer-reading.json`) the same way:
+
+| What happened                                                        | What is held                                                                               | Way out                                                                                      |
+|----------------------------------------------------------------------|--------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| no declaration                                                       | the parent's script and helpers whole: `… changed since PARENT ran it`                     | measure anew, restore an edit that was not meant, or a derived run that declares the reading |
+| the declared module, a constant in it or a module it imports changed | `MODULE changed since PARENT ran`                                                          | measure anew                                                                                 |
+| the prompts field differs from the parent's text                     | `the prompts field differs from the text PARENT was measured under`                        | measure anew                                                                                 |
+| the answer file has other bytes than the parent registered           | `the answers changed after PARENT ran`                                                     | restore the file, or measure anew                                                            |
+| the script no longer imports the declared module                     | `… no longer imports it, so it is not what reads the answers`                              | measure anew                                                                                 |
+| `answer-reading.json` deleted                                        | the run counts as undeclared: the parent's script is compared whole — never a weaker check | restore the file from git                                                                    |
+| `answer-reading.json` does not read                                  | a blocker naming the file, and the parent compared whole                                   | restore the file from git                                                                    |
+| a labkit before this release reads the run                           | it does not know the file and compares the parent's script whole                           | raise the pin                                                                                |
 
 ## The questions a reader should be able to answer
 
