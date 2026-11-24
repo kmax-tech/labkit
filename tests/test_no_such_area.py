@@ -153,6 +153,21 @@ class BareNameInScopeShaAndRunlogStart(unittest.TestCase):
             with self.subTest(argv=argv):
                 self.assertEqual(self.call(scope_sha.main, argv), by_path)
 
+    def test_scope_sha_takes_an_existing_file_before_an_area_of_its_name(self):
+        """A file `y` and the area `experiments/03-y`: the word `y` is the
+        file (a scope file of the area `.`), `--area y` is the area."""
+        from labkit.formats import scope_sha
+
+        (self.root / "y").write_text("data\n", encoding="utf-8")
+        rc, out, err = self.call(scope_sha.main, ["--no-pin", "y"])
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out.splitlines()[0], "y")
+        self.assertNotIn("measure.py", out)
+        rc, out, err = self.call(scope_sha.main, ["--no-pin", "--area", "y"])
+        self.assertEqual(rc, 0, err)
+        self.assertIn("measure.py", out)
+        self.assertNotIn("\ny\n", f"\n{out}")
+
     def test_scope_sha_keeps_a_missing_word_a_scope_file(self):
         from labkit.formats import scope_sha
 

@@ -143,5 +143,28 @@ class EveryCommandTakesAFlagBeforeTheArea(unittest.TestCase):
                 )
 
 
+class RunlogStartRefusesARepeatedFlag(unittest.TestCase):
+    """`runlog start` refuses `--log` and `--max-seconds` given twice,
+    before anything starts (the area `nope` does not exist)."""
+
+    def test_each_flag(self):
+        from labkit.run import runlog_command
+
+        for flag, a, b in (("--log", "a.log", "b.log"), ("--max-seconds", "1", "2")):
+            with self.subTest(flag=flag):
+                err = io.StringIO()
+                with (
+                    contextlib.redirect_stderr(err),
+                    self.assertRaises(SystemExit) as cm,
+                ):
+                    runlog_command.main(
+                        ["start", "nope", flag, a, flag, b, "--", "true"]
+                    )
+                self.assertEqual(cm.exception.code, 2)
+                self.assertIn(
+                    f"runlog start: error: {flag} given twice", err.getvalue()
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

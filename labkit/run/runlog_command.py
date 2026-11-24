@@ -461,12 +461,14 @@ def _start(argv: list[str]) -> int:
     )
     ap.add_argument("area", help="the experiment area the run belongs to")
     ap.add_argument(
-        "--log", default=None, help="log file (default: AREA/output/start-<ts>.log)"
+        "--log",
+        action=repo.GivenOnce,
+        help="log file (default: AREA/output/start-<ts>.log)",
     )
     ap.add_argument(
         "--max-seconds",
         type=float,
-        default=START_WAIT_S,
+        action=repo.GivenOnce,
         help=f"wait this long for the run's directory (default {int(START_WAIT_S)})",
     )
     words, cmd = console.split_command(argv)
@@ -527,7 +529,8 @@ def _start(argv: list[str]) -> int:
         f"status:  {gate_command('runlog', area)}        wait:  {wait_command(area)}",
         flush=True,
     )
-    return _await_run(area, before, proc, pid, log, args.max_seconds)
+    wait_s = START_WAIT_S if args.max_seconds is None else args.max_seconds
+    return _await_run(area, before, proc, pid, log, wait_s)
 
 
 def _reindex(argv: list[str]) -> int:
