@@ -161,9 +161,18 @@ def import_target(name: str, area: Path, repo: Path) -> Path | None:
 
 
 def readme_text(area: Path) -> str | None:
-    """The area's README.md as text, None without one (`readme_check`)."""
+    """The area's README.md as text, None without one (`readme_check`).
+    Raises ReadError naming the file when it stands and cannot be read as
+    UTF-8 text (its cause as `read_cause` gives it)."""
     readme = area / "README.md"
-    return readme.read_text(encoding="utf-8") if readme.is_file() else None
+    if not readme.is_file():
+        return None
+    try:
+        return readme.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ReadError(
+            f"{readme}: cannot be read as UTF-8 text ({exc})", cause=read_cause(exc)
+        ) from exc
 
 
 def script_candidates(

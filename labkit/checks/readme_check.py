@@ -34,7 +34,8 @@ def readme_placeholders(area: Path) -> list[str]:
     A README that still carries the stamp's blanks tells a reader nothing and
     looks as if it did. No README: nothing.
     Static evidence: the pattern also matches an `<…>` the author wrote in
-    prose outside a code span."""
+    prose outside a code span. Raises ReadError when the README stands and
+    does not read (`scope_sha.readme_text`)."""
     text = readme_text(area)
     if text is None:
         return []
@@ -95,6 +96,8 @@ def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:
     Raises:
         SourceError: `scripts/01_measure.py` does not parse — the gate
             reports it as a blocker (`code_scan.unreadable_source`).
+        ReadError: the README stands and does not read
+            (`scope_sha.readme_text`).
     """
     text = readme_text(area)
     if text is None:

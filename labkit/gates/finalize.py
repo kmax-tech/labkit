@@ -250,6 +250,7 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
+from labkit.formats.files import ReadError
 from labkit.formats.scope_sha import SourceError
 
 CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
@@ -637,21 +638,33 @@ def check_open_fields(
             fix=f"{REPEATED_WAY_OUT}; then `{gate_command('finalize', protocol.parent)}`",
             rule=TECHNICAL_RULE,
         )
-    stale = readme_placeholders(protocol.parent)
-    for line in stale:
-        # a pattern over prose: an `<…>` the author meant is matched too
-        findings.warn(
-            f"{line} — a stamped placeholder, fill or delete the line",
-            evidence_kind=STATIC_EVIDENCE,
-            rule=CODE_016,
-        )
     try:
-        route = readme_route(protocol.parent, protocol.name)
-    except SourceError as exc:
-        findings.take(unreadable_source(exc))
-        route = [str(exc)]
+        stale = readme_placeholders(protocol.parent)
+    except ReadError as exc:
+        # one cause, one blocker: the route check would read the same file
+        findings.block(
+            str(exc),
+            fix=f"repair README.md as UTF-8 text or remove it, then "
+            f"`{gate_command('finalize', protocol.parent)}`",
+            stated_outcome=outcome_of_failed_read(exc),
+            rule=TECHNICAL_RULE,
+        )
+        stale, route = [str(exc)], [str(exc)]
     else:
-        findings.take_all(route)
+        for line in stale:
+            # a pattern over prose: an `<…>` the author meant is matched too
+            findings.warn(
+                f"{line} — a stamped placeholder, fill or delete the line",
+                evidence_kind=STATIC_EVIDENCE,
+                rule=CODE_016,
+            )
+        try:
+            route = readme_route(protocol.parent, protocol.name)
+        except SourceError as exc:
+            findings.take(unreadable_source(exc))
+            route = [str(exc)]
+        else:
+            findings.take_all(route)
     counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")

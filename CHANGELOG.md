@@ -18,6 +18,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **A preparation origin whose text cannot be shown is told as a preparation in the audit too.** Its `SOURCE PROTOCOL` piece ended with "a judgement that needs the origin run's question, criteria or method names it as missing" — a preparation owes none of them. It now ends "a preparation reports no result and owes none of its text's promises, so no judgement waits on that text". The piece is in the digest an analysis record binds (`shown_sha`): a record of a run with such an origin goes stale and is audited again. A survey of the 29 repos with labkit on the author's machine (2026-11-24) found none: of 248 analysis records, 232 are of runs recorded before input origins (schema 3 and 4), 16 read, five of them with a preparation origin, each with its text; 9 records have no run directory left and could not be told.
 
+- **finalize blocks on a README.md that does not read, instead of stopping with a traceback.** The README's placeholder check read the file unguarded; a README that is not UTF-8 ended finalize with `UnicodeDecodeError`. `scope_sha.readme_text` now raises a `ReadError` naming the file, and finalize turns it into one blocker with the way out (repair the README as UTF-8 text or remove it, then `finalize <area>`); the route check over the same file is skipped. A README that reads is checked as before.
+
 ## 0.115.0 — 2026-11-24
 
 ### Breaking

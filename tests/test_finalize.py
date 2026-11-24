@@ -190,6 +190,34 @@ class TestFinalize(unittest.TestCase):
         for line in told:
             self.assertTrue(line.endswith(f"then `code-check {area.resolve()}`"), line)
 
+    def test_a_readme_that_does_not_read_is_one_blocker(self):
+        """A README.md that is not UTF-8 is a blocker naming the file and
+        the way out, not a traceback; the route check over the same file
+        adds nothing."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
+            (area / "README.md").write_bytes(b"\xff\xfe not utf-8")
+            collected = gate.Findings(tell=None)
+            code = finalize.finalize_area(area, None, collected)
+        self.assertEqual(code, 1)
+        (told,) = [f for f in collected.found if "README.md" in f.text]
+        self.assertEqual(told.grade, gate.BLOCKER)
+        self.assertIn(f"{area / 'README.md'}: cannot be read as UTF-8 text", told.text)
+        self.assertIn("repair README.md as UTF-8 text or remove it", told.fix or "")
+
+    def test_the_twin_a_readme_that_reads_blocks_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
+            (area / "README.md").write_text("# The area\n", encoding="utf-8")
+            collected = gate.Findings(tell=None)
+            finalize.finalize_area(area, None, collected)
+        self.assertEqual([b for b in collected.blocked if "README" in b], [])
+        self.assertTrue(any("README.md" in w for w in collected.warned))
+
     def test_no_completed_run_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
