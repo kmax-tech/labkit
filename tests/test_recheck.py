@@ -267,6 +267,14 @@ class Area(unittest.TestCase):
             recheck.agree({"mean": 3.5}, {"mean": 4.5}, reported=frozenset({"mean"}))
         self.assertEqual(recheck.agree({"mean": 3.5}, {"mean": 4.5}), [])
 
+    def test_a_kept_number_missing_from_metrics_is_refused(self):
+        """The kept number the recomputation produces must stand in
+        metrics.json; absent there, it is no key that grew. The twin: the
+        same key unreported grows and passes."""
+        with self.assertRaisesRegex(SystemExit, r"one side only \['mean'\]"):
+            recheck.agree({"n": 3}, {"n": 3, "mean": 4.5}, reported=frozenset({"mean"}))
+        self.assertEqual(recheck.agree({"n": 3}, {"n": 3, "mean": 4.5}), ["mean"])
+
     def test_a_descriptive_value_may_differ_and_may_not_vanish(self):
         """LAB-041 Generate numbers, don't retype them: identifiers exact;
         of the descriptive keys none may disappear."""

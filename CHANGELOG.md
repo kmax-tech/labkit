@@ -2,6 +2,12 @@
 
 labkit does not carry legacy paths: a format or API change is a break, announced here with the last version that still has the old behaviour. Reproduce an old run with the repo's own commit and the labkit version it pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Fixed
+
+- **A recheck refuses when the kept number is missing from metrics.json.** `recheck.agree` compared the protocol's `[kept]` key only when it stood on both sides; a metrics.json without it passed, the recomputed value counted as a key that grew. Now a kept key the recomputation produces and metrics.json lacks fails like an identifier on one side only (`intent or kept keys on one side only [...]`). A run whose metrics.json lacks its reported number, rechecked clean up to 0.115.0, is refused.
+
 ## 0.115.0 — 2026-11-24
 
 ### Breaking
