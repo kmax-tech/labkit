@@ -89,38 +89,42 @@ Where the two ways are not yet clearly delimited in labkit:
 
 ## Proposal, limited (for the author's decision; not built)
 
-Join existing parts into one tested way; no new run kind. A re-evaluation is a `measurement` run like today, with one explicit declaration that the record keeps and every reader branches on.
+Join existing parts into one tested way; no new run kind and no new run-record field. A re-evaluation is a `measurement` run like today; it is declared in the protocol step it belongs to, which every run's own text already carries.
 
-**1. The declaration.** `runlog.run(..., re_evaluates=runlog.RunOutput(OUT, run=ORIGIN), answer_reading=PATH)`. It records in config.json which input holds the answers and which module reads them. It excludes `derived_from` and a registered output of the same file. Without it a run is checked as today; a missing `outputs.json` never switches the check (a lost output stays a blocker, not a different way).
+**1. The declaration lives in the step, not in the run record.** `config.json`'s keys are a closed set both ways (`runs.RUN_CONFIG_KEYS`; a missing or unknown key is refused, `labkit/formats/runs.py:1418`, `:1457`), and this labkit reads schema 5 only. A new field there means schema 6, and schema-6 labkit could no longer read ORIGIN (schema 5) — the correction would lose its origin. The `[builds_on]` table (written by `protocol-fill --builds-on`) already names the basis run and is read back per run from its own text (`protocol_then.step_then`; "the run record gains no field", CHANGELOG 0.115.0). It gains two optional fields, allowed only with `occasion = "repair"`: `re_evaluates` (the `data=` key whose input is the basis run's registered output) and `answer_reading` (the module that reads an answer). A step without them is checked as today; a protocol format change, so a standard change for the author to decide. ORIGIN's record and every existing protocol stay as they are; a labkit before the change refuses a protocol carrying the new fields.
+
+Every reader branches on the step the run was started under, never on a missing file: a declared run without its input, or with an `outputs.json` holding the answer file, is refused; an undeclared run without an output is checked as today.
 
 **2. What is held, and in which tier.**
 
-| Condition                                                                                                                                                                                                                                          | Tier                                       | Existing part                                                    |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|------------------------------------------------------------------|
-| the answers are ORIGIN's registered bytes                                                                                                                                                                                                          | guaranteed                                 | input origins (`origin_check.origin_gap`)                        |
-| the answer reading is unchanged: `answer_reading` and every repo-local module it imports, transitively, byte-equal at ORIGIN's start (its commit plus `uncommitted.patch`) and at this run's start; constants in those files are covered with them | guaranteed                                 | `scope_sha._import_closure`, `repo.blobs_then`                   |
-| the run calls no model (no `llm-calls.jsonl`)                                                                                                                                                                                                      | guaranteed                                 | finalize's model station                                         |
-| the prompts the protocol registers are those of the protocol text ORIGIN was measured under                                                                                                                                                        | guaranteed, to be confirmed while building | source protocol read-back (`audit_binding.source_protocol_then`) |
-| all answer reading lies in the declared module (no inline filter in `evaluate_rows`)                                                                                                                                                               | agent audit                                | the analysis audit is told the declaration                       |
+| Condition                                                                                                                                                                                                 | Tier        | Existing part                                                                                                   | New code                                                                                                          |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|-----------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| the input `re_evaluates` names is the basis run's registered output, its bytes unchanged                                                                                                                  | guaranteed  | input origins (`origin_check.origin_gap`)                                                                       | the key and origin named by the step                                                                              |
+| the answer reading is unchanged: `answer_reading` and every repo-local module it imports, transitively, byte-equal at the basis run's start (its commit plus `uncommitted.patch`) and at this run's start | guaranteed  | `scope_sha._import_closure`, `repo.blobs_then`                                                                  | the comparison                                                                                                    |
+| the registered prompts are unchanged: the field "Prompt (verbatim, per variant)" of the basis run's own text equals the one of this run's text                                                            | guaranteed  | the basis text's read-back (`protocol_then`)                                                                    | the comparison: `registration_differences` does not compare that field (`labkit/formats/protocol_history.py:520`) |
+| no model call through labkit: `labkit.run.llm` refuses every call while a declared run is open                                                                                                            | guaranteed  | none — a run writes `llm-calls.jsonl` only when it opens the answer cache; ORIGIN made 6 144 calls and has none | the refusal                                                                                                       |
+| all answer reading lies in the declared module                                                                                                                                                            | agent audit | the analysis audit                                                                                              | the audit is shown the declaration                                                                                |
 
-Not held: reading code loaded another way (`importlib`, a path built at run time), reading that depends on a config value outside the module, a reading step placed outside the module that the audit misses.
+Not held: reading code loaded another way (`importlib`, a path built at run time); reading that depends on a value outside the module's files; reading placed outside the module that the audit misses; a model called by a client other than `labkit.run.llm`.
 
-**3. The recheck.** `recheck.re_evaluation(run)` reads the declaration; the analyze templates call `holds_from_inputs` for a declared run and `holds` otherwise. `finalize` does not warn "no outputs.json" for a declared run.
+**3. The recheck.** `recheck` reads the declaration from the run's step; the analyze templates call `holds_from_inputs` for a declared run and `holds` otherwise. `finalize` does not warn "no outputs.json" for a declared run.
 
-**4. The result.** The adopted result block names: answers of ORIGIN (its commit), evaluated by this run (its commit), the protocol step it builds on (`--builds-on ORIGIN --step-id … --occasion repair`) and the numbers that changed against ORIGIN's metrics.
+**4. The result.** The adopted result block names: answers of the basis run (its commit), evaluated by this run (its commit), the step (`id`, `occasion = "repair"`, its `why` naming the finding) and the numbers that changed against the basis run's metrics.
 
-**5. The way out.** The `derived_from` blocker in `run_record_check.code_since_run` names the re-evaluation beside "measure anew" when the changed files lie outside the answer reading.
+**5. The way out.** The `derived_from` blocker in `run_record_check.code_since_run` names the declared re-evaluation beside "measure anew".
 
-**Cost for a lab.** The answer reading must live in a module of its own; any change there needs a new measurement, even a harmless one. Experiment 14: `parse_letter` lies in `lib/scenario_rating.py`, which holds the scenario parser too — split it, or accept that every edit there blocks.
+**Experiment 14 can meet the proof without a split and without touching a record.** `lib/scenario_rating.py` holds `parse_letter`, imports only the standard library, and is unchanged from the commit `aa0a` started at (`1d3d170`) to the repair (`bf0bfc7`); `aa0a`'s `uncommitted.patch` touches no file under `lib/`. Declared as `answer_reading`, it compares byte-equal. Not covered by that guarantee: `unreadable_cause` and the letter filter in `evaluate_rows` stay in `scripts/01_measure.py`, which the repair changed; the repair's diff touches no line of them (read from `git diff 1d3d170 bf0bfc7`), which the audit has to confirm. Moving them into the module now would make the module differ from its state at `aa0a` and block — a split serves the next measurement, not this correction. A proof that would survive a split (run the reading as it stood at the basis run and as it stands over the answer file, compare the results) executes old code and is not proposed.
+
+**Cost for a lab.** Any change to the declared module and its imports needs a new measurement, even a harmless one (in experiment 14 also a change to the scenario parser in the same file).
 
 **Acceptance tests** (synthetic, a stand-in audit record as the scenario tests use; then the copy of experiment 14):
 
-1. Only the metrics change: finalize 0, the template's `--check` passes, adoption passes; ORIGIN's record and the answer file byte-identical; the result names ORIGIN, both commits, the step.
+1. Only the metrics change: finalize 0, the template's `--check` passes, adoption passes; the basis run's record and the answer file byte-identical; the result names the basis run, both commits and the step.
 2. `parse_letter` changes: refused, "measure anew".
-3. A helper `parse_letter` calls changes, and a constant in the reading module changes: each refused.
-4. The answer file changed after ORIGIN: refused.
-5. The registered prompts changed: refused.
-6. A declared run whose output file is lost or that calls a model: refused, never checked another way.
-7. An undeclared run without output: as today.
-
-Format note: two new config.json keys; whether that is a schema step (`RUN_SCHEMA`) decides the build.
+3. A helper the reading module imports changes, and a constant in the reading module changes: each refused.
+4. The answer file changed after the basis run: refused.
+5. The registered prompt field changed: refused.
+6. A model call through `labkit.run.llm` inside a declared run: refused before it is sent.
+7. A declared run whose answer input is missing, or that registers the answer file as its output: refused, never checked another way.
+8. An undeclared run without output, and a step without the new fields: as today.
+9. A schema-5 basis run recorded before the change is read and held (the case of `aa0a`).
