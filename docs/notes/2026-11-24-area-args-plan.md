@@ -23,44 +23,54 @@ Inventory with every command's refusals, help and tests: the survey of 2026-11-2
 
 ## Target
 
-Two homes in `labkit/formats/repo.py`, one for each kind of parser, and nothing else that resolves or refuses an area:
+> Revised the same day after a second opinion: no second general argument parser beside argparse. The first draft extended `area_args` with options, positionals and named refusals — work argparse from the standard library already does.
 
-1. **`existing_area(tool, given) -> Path`** — the one resolution: a bare name through `area_path`, a name several areas carry refused, a path that is no directory refused with `no_such_area`; raises `console.Refused(tool, …)`. argparse commands call it right after `parse_args`; `area_args` calls it too.
-2. **`area_args(tool, argv, usage, *, options=(), positionals=(), protocol=True) -> AreaArgs | int`** — the reader for commands without argparse. An `Option` is a frozen dataclass `(flag, takes_value)`; `AreaArgs` gains `options: dict[str, str | bool]` and `positionals: tuple[str, ...]`. Refused by name: a flag without its value ("--run needs a value"), a flag given twice, a wrong number of positionals, an unknown word.
+One resolution, and argparse for reading the line:
 
-Left as they are, deliberately: commands that take a protocol file (intent-check, protocol-fill, protocol-check); labkit-audit's argparse (twelve flags, two-value `--decide`, mutual exclusion); the runlog subcommands' argparse (the `--` split of `runlog start`); report-check's `--if-reported PATH …` form for the hooks. These keep argparse and gain only `existing_area`.
+1. **`repo.existing_area(tool, given) -> Path`** — the one resolution of an area argument: a bare name through `area_path`, a name several areas carry refused, a path that is no directory refused with `no_such_area`; raises `console.Refused(tool, …)`. Every area command calls it after reading its line, whatever reads the line; `scope-sha --area` and its positional area alike.
+2. **argparse for the lines read by hand today** — preflight, finalize, labkit-params, code-check, labkit-run-diff — through one small builder in `repo`, `area_parser(tool, description, *, protocol=True) -> argparse.ArgumentParser`, which adds the `area` positional and, where the command reads one, `--protocol`; each command adds its own flags (`--run`, `--bundle`, the two run ids). `area_args` then becomes `area_parser` plus `existing_area`, or goes.
+3. **Repeated options, decided per option:** a single-value option given twice is refused by name (`--protocol`, `--run`, `--bundle`, `--log`, `--max-seconds`) through one small `argparse.Action` in `repo`; options meant to repeat stay as they are (`protocol-fill --prompt-file`, scope-sha's FILE list). argparse already names a missing value ("expected one argument").
+4. **Order:** the area comes first in every command labkit prints and documents (`labkit/formats/commands.py:462`, `:478`); argparse accepts flags before it too, and that stays — no new restriction without a reason.
+
+Left as they are: commands that take a protocol file (intent-check, protocol-fill, protocol-check); scope-sha's own loop (alias `--area`, default `.`, free FILE list, `--globs`) — it only gains `existing_area`.
+
+To check before step 4, since tests and agents read these texts: argparse writes its refusal as `usage: … / tool: error: …`, the hand loops as `console.refuse` (`tool: …`). Which tests assert the refusal and help text of preflight, finalize, params, code-check and run-diff (`tests/test_cli_help.py`, `tests/test_streams.py`, `tests/test_no_such_area.py`, `tests/test_preflight.py:326`, `tests/test_finalize.py:327`), and whether a refusal an agent meets keeps its way out (`tests/test_ways_out_data.py`). If the console form must stay, the builder sets `exit_on_error=False` and passes argparse's message to `console.refuse`.
+
+Two limits hold for the whole plan:
+
+- **`area_parser` stays small:** the shared setup of `area` and `--protocol`, and the one action that refuses a single-value option given twice — no parsing logic of its own beside argparse.
+- **Changed messages are accepted on purpose, not only re-recorded in tests:** for a missing option value, an unknown or ambiguous area and a repeated option, each message read once as a person meets it — does it say what is wrong and what to type — with exit 2, and the agent-facing refusals keep their way out.
 
 ## Steps, one commit each
 
-1. `existing_area` in `repo`, with rule tests (bare name, ambiguous name, no directory, a path as written); `area_args` uses it. No command changes.
-2. The argparse commands call `existing_area` after `parse_args` instead of their own check: labkit-audit, labkit-next, labkit-adopt, report-check, runlog, runlog reindex (`labkit/gates/audit.py:441`, `labkit/tools/adopt.py:136`, `labkit/tools/next_command.py:92`, `labkit/tools/report_command.py:54`, `labkit/run/runlog_command.py:560`, `:636`). Output unchanged; the existing tests hold.
-3. `runlog start` resolves its area through `existing_area`: `runlog start x -- …` then finds `experiments/x` as `runlog x` does, and refuses with the shared sentence. A fix (it accepts more, refuses the same), named in CHANGELOG.
-4. `area_args` gains `options`, `positionals` and `protocol`, the named refusals, and tests for each refusal and its valid twin — the first tests of "unexpected argument".
-5. labkit-params (`--run`) and code-check (`--bundle`) move to `area_args`; their loops go. labkit-run-diff moves with `positionals=("OLD_RUN", "NEW_RUN")`, `protocol=False`.
-6. scope-sha: its positional and `--area` go through `existing_area`, so a bare name is the area. Its loop stays (alias `--area`, default `.`, free FILE list, `--globs`); moving it would cost as much spec as it saves.
-7. Docs: `docs/architecture.md` ("one home per question": the area argument), README command lines where a refusal sentence is quoted, CHANGELOG.
+1. `existing_area` in `repo`, with rule tests (bare name, ambiguous name, no directory, a path as written); `area_args` uses it.
+2. The argparse commands call it after `parse_args` instead of their own check: labkit-audit, labkit-next, labkit-adopt, report-check, runlog, runlog reindex (`labkit/gates/audit.py:441`, `labkit/tools/adopt.py:136`, `labkit/tools/next_command.py:92`, `labkit/tools/report_command.py:54`, `labkit/run/runlog_command.py:560`, `:636`). Output unchanged.
+3. The two faults a user meets: `runlog start` and scope-sha (positional and `--area`) resolve their area through `existing_area`. A fix: they accept a bare name and refuse with the shared sentence. CHANGELOG.
 
-Steps 1–3 stand on their own and fix what a user meets; 4–6 remove the copies.
+Decision point after step 3: steps 1–3 fix what a user meets. Whether the hand-read lines move to argparse (steps 4–6) is decided then, with the text check above done.
+
+4. `area_parser` and the repeat-refusing action in `repo`, with tests for the missing value, the repeated option and its valid twin, and the order.
+5. preflight, finalize, labkit-params, code-check and labkit-run-diff read their lines through `area_parser`; their loops go, and `area_args` with them.
+6. Docs: `docs/architecture.md` ("one home per question": the area argument), README where a refusal is quoted, CHANGELOG.
 
 ## What changes for a user
 
-- A bare area name works in every area command, scope-sha and runlog start included.
-- Every refusal of an area reads the same: `no such area: … — name it relative to …`.
-- A flag without its value, a flag given twice and a word too many are named as such instead of "unexpected argument".
-- Nothing a command accepted today is refused, except a repeated flag in the loops that now say so (a stricter refusal: a fix, not a break), and labkit-run-diff with `--protocol` (it never read one).
+- After step 3: a bare area name works in every area command, scope-sha and runlog start included, and every refusal of an area reads the same.
+- After step 5: a flag without its value and a single-value flag given twice are named as such; flags may stand before the area in the hand-read commands too.
+- Nothing a command accepts today is refused, except a single-value flag given twice (a stricter refusal: a fix) and `labkit-run-diff --protocol`, which it never read.
 
 ## Acceptance
 
 - `grep "no_such_area("` outside `repo.py` finds no gate, tool or check (the audit prompt's own sentence aside).
-- No loop of its own in params, code-check or run-diff (`tests/test_one_home.py` gains the pattern of the copied loop, with the home `repo`).
-- For each command line: the bare-name case, the ambiguous name and the missing area tested once at the rule layer (`existing_area`, `area_args`), and once per command that the command reaches it (`tests/test_no_such_area.py` already holds most commands; scope-sha and runlog start join).
-- The whole suite green; `just guard` green before each commit.
-- An independent reader (`code-clarity`) on the final diff.
+- After step 5, no hand loop for an area command (`tests/test_one_home.py` gains the pattern, home `repo`).
+- `existing_area` tested at the rule layer; each command reaching it once (`tests/test_no_such_area.py`, scope-sha and runlog start join).
+- The whole suite green; `just guard` before each commit; an independent reader (`code-clarity`) on the final diff.
 
-## Decisions for the author
+## Decisions taken
 
-1. **scope-sha `--area`:** keep it as an alias beside the positional area (step 6 as planned), or drop it in a Breaking release so scope-sha reads its area like every other command — dropping it simplifies the loop but breaks scripts that pass `--area`.
-2. **AREA first:** keep "AREA comes first" in `area_args` (what the next-step commands print, `labkit/formats/commands.py:462`, `:478`), or accept flags before the area as argparse does — the second is friendlier, the first is what every printed command already does.
+1. `scope-sha --area` stays, beside the positional area; both go through `existing_area`.
+2. The area comes first as labkit prints and documents it; an order argparse accepts today is not forbidden.
+3. Repeated options are decided per option (Target, point 3), not refused wholesale.
 
 ## Side finding, not part of this plan
 

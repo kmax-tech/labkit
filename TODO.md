@@ -43,7 +43,7 @@ Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingu
 
 Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-3.md). Umgesetzt am 24.11., je ein Commit: Regel der zweiten Prüfung an fünf Stellen (Punkt 1), fünf kleine Doku-Drifts (Punkt 2), Temp-Dateiname und `PREFLIGHT_AUDIT` mit einer Heimat (Punkt 3, Teil), Klarheit in `finalize` und `recheck` (Punkt 4). Offen:
 
-1. Argumentlesen `<AREA> [--protocol]`: Plan ausgearbeitet ([Notiz](docs/notes/2026-11-24-area-args-plan.md)), sieben Schritte, zwei Entscheidungen beim Autor (scope-sha `--area`, Reihenfolge AREA zuerst); noch nicht gebaut. Nebenbefund dort: `intent-check` übergeht Wörter nach `--metrics FILE`.
+1. Argumentlesen `<AREA> [--protocol]`: Plan ausgearbeitet und nach Zweitmeinung überarbeitet ([Notiz](docs/notes/2026-11-24-area-args-plan.md)): erst `existing_area` und die zwei Bedienfehler (`runlog start x`, `scope-sha x`), Schritte 1–3; danach entscheiden, ob die Handschleifen auf argparse wechseln. Entscheidungen eingetragen; noch nicht gebaut. Prüfstand: ganze Suite auf `9e474b84` grün (`.githooks/checks full`, Exit 0); danach nur Notizen und TODO geändert. Nebenbefund dort: `intent-check` übergeht Wörter nach `--metrics FILE`.
 2. TOML-Kopf der Kommentarblöcke (drei Parser gleicher Form) zu einem Helfer — erst wenn ein vierter Block kommt.
 
 ### Audit 24.11., zweites — umgesetzt, nicht veröffentlicht
