@@ -12,6 +12,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **The audit of a confirmation no longer calls an unbound run of an exploration's basis "a preparation".** The line read "bound to no protocol (a preparation): it owes no text"; binding is the protocol a run started under, its kind what it was for, and since 0.115.0 a preparation can be bound and an unbound run need not be one. It now reads "bound to no protocol: it owes no text". No audit record goes stale: a record binds `scope_sha`, `block_sha`, `registration` and `shown_sha`, none of which covers how the prompt words the basis (`tests/test_explored_in.py`, the stamp under a reworded basis).
 
+- **finalize and code-check, run on their own, print ways out that run as printed.** Both built their findings without the area's slot values, so a way out read `` `code-check <area>` `` (a script that cannot be read) where every other gate names the area. They now fill `<area>` and the audit command as preflight and report-check do (`commands.area_slots`).
+
 ## 0.115.0 — 2026-11-24
 
 ### Breaking

@@ -253,6 +253,21 @@ class TestGateLabels(unittest.TestCase):
 
 
 class TestBundle(unittest.TestCase):
+    def test_a_way_out_names_the_area_not_its_slot(self):
+        """code-check alone fills `<area>` in the ways out it prints: a
+        script that cannot be read says `code-check <the area>`, a command
+        that runs as printed (in the finding and again in the summary)."""
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            (a.path / "scripts" / "04_bytes.py").write_bytes(b"\xff\xfe not utf-8")
+            code, out = a.run()
+            area = a.path.resolve()
+        self.assertEqual(code, 1, out)
+        told = [s for s in out.splitlines() if "the code cannot be read" in s]
+        self.assertTrue(told, out)
+        self.assertNotIn("<area>", out)
+        for line in told:
+            self.assertTrue(line.endswith(f"then `code-check {area}`"), line)
+
     def test_bundle_carries_protocol_scripts_and_facts(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"

@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.gates import registration_hold
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import gate  # noqa: E402
+from labkit.checks import readme_check  # noqa: E402
 from protocol_fixture import PID, completed_run, head  # noqa: E402
 from labkit.formats.area_state import state_of  # noqa: E402
 from command_fixture import run_main
@@ -167,6 +168,27 @@ class TestFinalize(unittest.TestCase):
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("all clear", out)
+
+    def test_a_way_out_names_the_area_not_its_slot(self):
+        """finalize alone fills `<area>` in the ways out it prints: a
+        measure script that does not parse says `code-check <the area>`,
+        a command that runs as printed."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
+            (area / "README.md").write_text(
+                f"{readme_check.ROUTE_START}\nPROTOCOL-x.md\n{readme_check.ROUTE_END}\n"
+            )
+            (area / "scripts").mkdir(exist_ok=True)
+            (area / "scripts" / "01_measure.py").write_text("def (:\n")
+            code, out = _run_finalize(area)
+        self.assertEqual(code, 1, out)
+        told = [s for s in out.splitlines() if "the code cannot be read" in s]
+        self.assertTrue(told, out)
+        self.assertNotIn(gate.AREA_SLOT, out)
+        for line in told:
+            self.assertTrue(line.endswith(f"then `code-check {area.resolve()}`"), line)
 
     def test_no_completed_run_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:

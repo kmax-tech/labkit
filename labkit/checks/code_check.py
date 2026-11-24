@@ -89,7 +89,12 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from labkit.formats.commands import audit_command, gate_command, list_command
+from labkit.formats.commands import (
+    area_slots,
+    audit_command,
+    gate_command,
+    list_command,
+)
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -761,7 +766,7 @@ def main(argv: list[str]) -> int:
 
     repo = layout_root(area)
     text = state_of(area).text_of(protocol)
-    findings = Findings()
+    findings = Findings(**area_slots(area, protocol))
     # code-check alone runs no field report: the block's finding is told here
     for finding in code_findings(area, protocol, text, repo, block_told=False):
         findings.take(finding)

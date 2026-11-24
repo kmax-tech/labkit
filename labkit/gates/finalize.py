@@ -193,6 +193,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import (
     adopt_command,
+    area_slots,
     contract_command,
     data_counts_command,
     fill_command,
@@ -1178,7 +1179,10 @@ def finalize_area(
     every blocker again. Warnings alone end with 0.
     """
     console_output = findings is None
-    findings = Findings() if findings is None else findings
+    # alone, finalize fills the slots its ways out leave (`<area>`); a caller
+    # that hands FINDINGS over fills them as it takes them (report-check)
+    if findings is None:
+        findings = Findings(**area_slots(area, protocol))
     # 0. protocol and settings — the only early end
     try:
         chosen = the_protocol(area, protocol)
