@@ -570,8 +570,9 @@ def agree(
     registered identifiers (`INTENT_KEY`) are compared exactly — on one side
     only, or with another value, the check fails —, and so are the REPORTED
     keys (the protocol's `[kept]` key, `kept_keys`: the number it
-    reports), on one side only failing as well; absent from both, it is
-    finalize's blocker (`kept_number_gaps`), not this check's. Of the other
+    reports), on one side only failing as well; absent from both, this
+    check passes it — finalize blocks a metrics.json that does not hold it
+    as a finite number (`kept_number_gaps`). Of the other
     descriptive keys none may disappear, and a value that differs or a key
     that grew is no failure. Compared as JSON, the way the run recorded it
     (`runs.as_stored`): a tuple from evaluate() is the list in metrics.json,
