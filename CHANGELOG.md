@@ -14,6 +14,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **finalize and code-check, run on their own, print ways out that run as printed.** Both built their findings without the area's slot values, so a way out read `` `code-check <area>` `` (a script that cannot be read) where every other gate names the area. They now fill `<area>` and the audit command as preflight and report-check do (`commands.area_slots`).
 
+- **An audit record's first line names the decide command as it runs.** It read `labkit-audit <area> --decide N STATUS REASON`; the reason goes with `--why REASON`. Records written from now on say `--decide N STATUS --why REASON`; earlier records keep their line (a comment, read by no check).
+
 ## 0.115.0 — 2026-11-24
 
 ### Breaking

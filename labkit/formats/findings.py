@@ -1441,7 +1441,7 @@ def write(
     b, w, k = verdict
     lines = [
         "# written by labkit-audit — decide each finding with "
-        "`labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote",
+        "`labkit-audit <area> --decide N STATUS --why REASON`; a record changed by hand is not one labkit wrote",
         "[audit]",
         f"date = {_s(date_minute(when))}",
         f"mode = {_s(mode)}",

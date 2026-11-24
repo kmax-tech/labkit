@@ -3,16 +3,18 @@
 import contextlib
 import re
 import io
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from labkit.formats.commands import step_command
-from labkit.gates import audit_decisions, audit_reply
+from labkit.gates import audit, audit_decisions, audit_reply
 from labkit.formats import findings, gate, protocol_check, rules
 from labkit.formats import audit_gaps
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
+from command_fixture import run_main  # noqa: E402
 
 BLOCK = "b10c0000000a"  # the promise block every fixture record names
 RUN = "2026-01-01T00-00-00_0001"  # the run every analysis fixture record names
@@ -150,6 +152,25 @@ class WriteRead(unittest.TestCase):
         self.assertEqual([f.status for f in rec.findings], ["open", "open"])
         self.assertEqual(rec.findings[0].text, TWO[0][1])
         self.assertEqual(len(rec.open), 2)
+
+    def test_the_header_names_the_decide_command_as_it_runs(self):
+        """The record's first line tells how to decide a finding; that
+        command, its slots filled, decides one (`--why`, not a bare
+        positional REASON)."""
+        area = area_with([("preflight", TWO)])
+        (path,) = sorted((area / "audits").glob("*.toml"))
+        command = path.read_text(encoding="utf-8").splitlines()[0].split("`")[1]
+        filled = (
+            command.replace("<area>", shlex.quote(str(area)))
+            .replace(" N ", " 2 ")
+            .replace("STATUS", "false-positive")
+            .replace("REASON", shlex.quote("b.py:2 holds x"))
+        )
+        code, out = run_main(audit.main, shlex.split(filled)[1:])
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            [f.status for f in findings.read(path).findings], ["open", "false-positive"]
+        )
 
     def test_quotes_and_unicode_survive(self):
         area = area_with(
@@ -601,7 +622,7 @@ class WriteDecision(unittest.TestCase):
         ):
             self.assertFalse(findings.carried_and_closed(twin))
         head = self.record().read_text(encoding="utf-8").splitlines()[0]
-        self.assertIn("--decide N STATUS REASON", head)
+        self.assertIn("--decide N STATUS --why REASON", head)
         self.assertNotIn("set status and reason here", head)
 
     def test_a_reason_is_owed_and_a_status_is_one_of_the_list(self):
@@ -1045,7 +1066,7 @@ class TemplatesNameTheTuples(unittest.TestCase):
 
 
 class DecideCommand(unittest.TestCase):
-    """`labkit-audit AREA --decide N STATUS REASON` writes the newest record
+    """`labkit-audit AREA --decide N STATUS --why REASON` writes the newest record
     of the area, or the one `--record` names."""
 
     def run_main(self, argv):
