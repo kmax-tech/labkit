@@ -34,6 +34,8 @@ Nutzer oder Labor sollen zwischen „streng“ und „mit dokumentiertem Audit-E
 
 Vor dem Bau sind Geltungsbereich, Speicherort und Weitergabe an Gates, Zweitprüfung und Bericht festzulegen; die Umsetzung braucht eine versionierte Vertragsänderung. Es gibt dafür noch keine verfügbare Flag. [Bestandsaufnahme und beschlossene Grenzen](docs/notes/2026-11-16-audit-record-lifecycle.md).
 
+**Konkreter Vorschlag zur Prüfung (Nutzerauftrag, 2026-11-24):** [Auditentscheidungen und begrenzte Reparaturnachprüfung](docs/notes/2026-11-24-audit-decisions-and-repair-scope.md). Drei Fälle vor dem Bau nachspielen: falsche Nenner, strittige Krankenhaus-Lesart und gemischter Herkunftsbefund. Bestehende Kategorien und Korrekturwege nutzen, Einzelbehauptungen getrennt entscheiden, Folgeprüfungen auf die betroffenen Belege beziehen. Die Note präzisiert den möglichen Abschluss mit dokumentiertem Audit-Einwand sowie die Trennung von Arbeitssicherung und Ergebnisfreigabe. Nächster Schritt erst nach Autorentscheidung: begrenzte Wiedergabe mit festen Auditorantworten, kein Modellaufruf. Noch kein Code-, Format-, Regel- oder Freigabewechsel; die laufende Paketgrößen-Reparatur und die Entscheidungshistorie bleiben eigene Aufträge.
+
 Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. Entscheidungen und erzeugte Darstellungen dürfen geändert werden; alte Bestätigungen gelten nicht automatisch für neue Entscheidungen. Ein zusätzlicher Inhaltsvergleich vor dem ersten Commit bleibt zurückgestellt: Die lokale Anfangskopie ist kein unabhängiger Echtheitsnachweis. Nicht jeder uncommittete Zwischenstand muss aufbewahrt werden.
 
 ## Notiert, nicht geplant
