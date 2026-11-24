@@ -38,6 +38,8 @@ Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. 
 
 ## Notiert, nicht geplant
 
+**Prüfung von `labkit-next`, 24.11. — zwei nachgestellte Anleitungslücken:** Beim ursprünglichen Lauf nach einer Auswertungskorrektur fehlt der Hinweis auf den neuen `answer_reading`-Weg; für einen vorhandenen Bereich ohne Protokoll scheitert der empfohlene Anlegebefehl an „experiment already exists“. Der erklärte Korrekturlauf führt danach im Szenario richtig über Audit und Übernahme zum Abschluss. [Umfang, Gegenproben und Befunde](docs/notes/2026-11-24-next-guidance-audit.md); noch keine Reparatur.
+
 Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingungen. Vor einem Bau den aktuellen Fall nachstellen oder den jeweils genannten Auslöser belegen. Die vollständigen ursprünglichen Beschreibungen bleiben im [Verlauf](TODO-history-2026-11-20.md#notiert-nicht-geplant).
 ### Audit 24.11., drittes — umgesetzt bis auf zwei Punkte (Punkt 1 erledigt)
 
