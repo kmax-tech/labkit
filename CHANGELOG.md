@@ -2,7 +2,7 @@
 
 labkit does not carry legacy paths: a format or API change is a break, announced here with the last version that still has the old behaviour. Reproduce an old run with the repo's own commit and the labkit version it pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
+## 0.115.0 — 2026-11-24
 
 ### Breaking
 
