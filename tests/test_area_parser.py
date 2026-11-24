@@ -48,7 +48,7 @@ class AreaParser(unittest.TestCase):
                     (args.area, args.protocol, args.run), ("a", Path("P.md"), "r1")
                 )
 
-    def test_options_once_or_not_at_all(self):
+    def test_options_default_to_none(self):
         args = parse(["a"])
         self.assertEqual((args.area, args.protocol, args.run), ("a", None, None))
 
@@ -61,6 +61,11 @@ class AreaParser(unittest.TestCase):
             with self.subTest(flag=flag):
                 err = refusal(["a", flag, "x", flag, "y"])
                 self.assertIn(f"t: error: {flag} given twice — give it once", err)
+
+    def test_a_flag_is_not_abbreviated(self):
+        self.assertIn(
+            "unrecognized arguments: --proto", refusal(["a", "--proto", "P.md"])
+        )
 
     def test_an_unknown_word_is_named(self):
         err = refusal(["a", "extra"])
@@ -107,6 +112,35 @@ class EveryCommandRefusesARepeatedProtocol(unittest.TestCase):
                     main(argv)
                 self.assertEqual(cm.exception.code, 2)
                 self.assertIn(f"{tool}: error: --protocol given twice", err.getvalue())
+
+
+class EveryCommandTakesAFlagBeforeTheArea(unittest.TestCase):
+    """`--protocol P AREA`: the word after the flag's value is the area —
+    each command refuses the missing area `nope` by name, not the line."""
+
+    def test_each_command(self):
+        from labkit.checks import code_check
+        from labkit.gates import finalize, preflight
+        from labkit.tools import adopt, params, report_command
+
+        mains = {
+            "preflight": preflight.main,
+            "finalize": finalize.main,
+            "labkit-params": params.main,
+            "code-check": code_check.main,
+            "labkit-adopt": adopt.main,
+            "report-check": report_command.main,
+        }
+        for tool, main in mains.items():
+            with self.subTest(command=tool):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err):
+                    rc = main(["--protocol", "A.md", "nope"])
+                self.assertEqual(rc, 2)
+                self.assertTrue(
+                    err.getvalue().startswith(f"{tool}: no such area: nope"),
+                    err.getvalue(),
+                )
 
 
 if __name__ == "__main__":

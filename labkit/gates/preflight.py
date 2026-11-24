@@ -760,7 +760,9 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `preflight`: the mechanical gate before an area is frozen."""
+    """Command line of `preflight`: the mechanical gate before an area is frozen.
+    A line argparse refuses ends with SystemExit(2), `--help` with
+    SystemExit(0); a refused area returns 2."""
     args = area_parser(
         "preflight", (__doc__ or "").strip().splitlines()[0], epilog=EXIT_CONTRACT
     ).parse_args(argv)

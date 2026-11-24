@@ -1403,7 +1403,9 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `finalize`: check one area."""
+    """Command line of `finalize`: check one area.
+    A line argparse refuses ends with SystemExit(2), `--help` with
+    SystemExit(0); a refused area returns 2."""
     args = area_parser(
         "finalize",
         (__doc__ or "").strip().splitlines()[0]

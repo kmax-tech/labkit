@@ -177,14 +177,17 @@ def area_parser(
     command line, for the command to add its own arguments to: the
     positional `area` as written (the command resolves it with
     `resolve_area` after `parse_args`) and, with PROTOCOL, `--protocol`
-    (`GivenOnce`). DESCRIPTION and EPILOG are printed as written. A
+    (`GivenOnce`). Flags are read as written, not abbreviated. DESCRIPTION and EPILOG are printed as written. A
     refusal is argparse's: `usage: …` and `TOOL: error: …` on stderr,
     exit 2 by SystemExit; `--help` prints and exits 0 the same way."""
+    # allow_abbrev off: a flag is read as written, `--proto` is no
+    # `--protocol`, as in the hand loops this replaced
     ap = argparse.ArgumentParser(
         prog=tool,
         description=description,
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
     )
     ap.add_argument(
         "area",
