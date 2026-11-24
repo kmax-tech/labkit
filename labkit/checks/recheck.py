@@ -580,7 +580,7 @@ def require_agreement(
     not a difference, and `1` is not `true`."""
     recomputed = json.loads(json.dumps(recomputed))
     intent = {k for k in set(metrics) | set(recomputed) if INTENT_KEY.match(k)}
-    unkept = {
+    kept_one_sided = {
         k: [
             side
             for side, d in ((runs.METRICS_FILE, metrics), ("recomputation", recomputed))
@@ -589,9 +589,9 @@ def require_agreement(
         for k in sorted(kept)
         if (k in metrics) != (k in recomputed)
     }
-    if unkept:
+    if kept_one_sided:
         raise SystemExit(
-            f"recheck: the kept number is missing — {unkept}: the number the "
+            f"recheck: the kept number is missing — {kept_one_sided}: the number the "
             f"protocol reports must stand in metrics.json and come out of the "
             f"recomputation"
         )

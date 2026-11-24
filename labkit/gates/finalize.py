@@ -688,8 +688,11 @@ def check_open_fields(
 ) -> None:
     """Station 5: fields of the protocol still empty or a placeholder — in
     a field owed as a must under LAB_011, in any other as an open
-    assignment —, and the README's placeholders (CODE-016 The experiment
-    area reconstructs itself) and route block."""
+    assignment —, a bound field written twice (a blocker), the README's
+    placeholders (CODE-016 The experiment area reconstructs itself) and
+    route block, and the generated data counts (`check_data_counts`). The
+    note "all fields filled, README and data counts clean" stands only when
+    every one of these found nothing."""
     must_holes, soft_holes = must_and_soft_holes(text, head)
     holes = sorted(must_holes + soft_holes)
     for lineno, label in holes:
@@ -730,13 +733,14 @@ def check_open_fields(
             route = readme_route(protocol.parent, protocol.name)
         except SourceError as exc:
             findings.take(unreadable_source(exc))
-            route = [str(exc)]
+            route_clean = False
         else:
             findings.take_all(route)
-        readme_clean = not stale and not route
+            route_clean = not route
+        readme_clean = not stale and route_clean
     counted = check_data_counts(findings, protocol, text, state)
     if not holes and not repeated and readme_clean and counted:
-        findings.note("  all fields filled")
+        findings.note("  all fields filled, README and data counts clean")
 
 
 def check_data_counts(
