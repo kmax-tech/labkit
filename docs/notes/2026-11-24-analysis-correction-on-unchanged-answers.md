@@ -86,3 +86,41 @@ Where the two ways are not yet clearly delimited in labkit:
 - The blocker on `derived_from` names "measure anew" or "restore", not the origin input.
 - `finalize` warns "no outputs.json" on a run that by design writes none.
 - The answer-reading rule (`parse_letter`) is held by neither way.
+
+## Proposal, limited (for the author's decision; not built)
+
+Join existing parts into one tested way; no new run kind. A re-evaluation is a `measurement` run like today, with one explicit declaration that the record keeps and every reader branches on.
+
+**1. The declaration.** `runlog.run(..., re_evaluates=runlog.RunOutput(OUT, run=ORIGIN), answer_reading=PATH)`. It records in config.json which input holds the answers and which module reads them. It excludes `derived_from` and a registered output of the same file. Without it a run is checked as today; a missing `outputs.json` never switches the check (a lost output stays a blocker, not a different way).
+
+**2. What is held, and in which tier.**
+
+| Condition                                                                                                                                                                                                                                          | Tier                                       | Existing part                                                    |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|------------------------------------------------------------------|
+| the answers are ORIGIN's registered bytes                                                                                                                                                                                                          | guaranteed                                 | input origins (`origin_check.origin_gap`)                        |
+| the answer reading is unchanged: `answer_reading` and every repo-local module it imports, transitively, byte-equal at ORIGIN's start (its commit plus `uncommitted.patch`) and at this run's start; constants in those files are covered with them | guaranteed                                 | `scope_sha._import_closure`, `repo.blobs_then`                   |
+| the run calls no model (no `llm-calls.jsonl`)                                                                                                                                                                                                      | guaranteed                                 | finalize's model station                                         |
+| the prompts the protocol registers are those of the protocol text ORIGIN was measured under                                                                                                                                                        | guaranteed, to be confirmed while building | source protocol read-back (`audit_binding.source_protocol_then`) |
+| all answer reading lies in the declared module (no inline filter in `evaluate_rows`)                                                                                                                                                               | agent audit                                | the analysis audit is told the declaration                       |
+
+Not held: reading code loaded another way (`importlib`, a path built at run time), reading that depends on a config value outside the module, a reading step placed outside the module that the audit misses.
+
+**3. The recheck.** `recheck.re_evaluation(run)` reads the declaration; the analyze templates call `holds_from_inputs` for a declared run and `holds` otherwise. `finalize` does not warn "no outputs.json" for a declared run.
+
+**4. The result.** The adopted result block names: answers of ORIGIN (its commit), evaluated by this run (its commit), the protocol step it builds on (`--builds-on ORIGIN --step-id … --occasion repair`) and the numbers that changed against ORIGIN's metrics.
+
+**5. The way out.** The `derived_from` blocker in `run_record_check.code_since_run` names the re-evaluation beside "measure anew" when the changed files lie outside the answer reading.
+
+**Cost for a lab.** The answer reading must live in a module of its own; any change there needs a new measurement, even a harmless one. Experiment 14: `parse_letter` lies in `lib/scenario_rating.py`, which holds the scenario parser too — split it, or accept that every edit there blocks.
+
+**Acceptance tests** (synthetic, a stand-in audit record as the scenario tests use; then the copy of experiment 14):
+
+1. Only the metrics change: finalize 0, the template's `--check` passes, adoption passes; ORIGIN's record and the answer file byte-identical; the result names ORIGIN, both commits, the step.
+2. `parse_letter` changes: refused, "measure anew".
+3. A helper `parse_letter` calls changes, and a constant in the reading module changes: each refused.
+4. The answer file changed after ORIGIN: refused.
+5. The registered prompts changed: refused.
+6. A declared run whose output file is lost or that calls a model: refused, never checked another way.
+7. An undeclared run without output: as today.
+
+Format note: two new config.json keys; whether that is a schema step (`RUN_SCHEMA`) decides the build.
