@@ -898,7 +898,8 @@ def decision_entails(
     the review (`false_positive_blocker`, `carried_and_closed`). Each
     status is named by its consequence, so it is not misread as another.
     `open`, a decision taken back: the finding is undecided again, and a
-    BLOCKER's number does not leave while it is open.
+    BLOCKER's number does not leave while it is open (a handover may
+    record it open); of any grade it holds a frozen protocol's preflight.
     Raises ValueError on a status outside STATUSES."""
     here = Path.cwd()
     review = audit_command(
@@ -961,12 +962,15 @@ def decision_entails(
     if f.status == OPEN:
         decide = audit_command(area, "--findings", protocol=protocol, base=here)
         held = (
-            "; the number does not leave while it is open" if f.grade == BLOCKER else ""
+            "; the number does not leave while it is open, unless a handover "
+            "records it open"
+            if f.grade == BLOCKER
+            else ""
         )
         return (
             "open: the decision is taken back and the finding is undecided again"
-            f"{held} — `{decide}` prints the command that decides it, or a "
-            "handover records it open"
+            f"{held}; a frozen protocol's preflight blocks on it — `{decide}` "
+            "prints the command that decides it"
         )
     raise ValueError(f"status {f.status!r} — one of {', '.join(STATUSES)}")
 

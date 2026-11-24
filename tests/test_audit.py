@@ -1185,6 +1185,23 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertIn("at every repeat cost", said)
         self.assertNotIn("does not leave", said)
 
+    def test_a_warning_taken_back_names_no_number_and_no_handover(self):
+        """An open WARNING holds no number and has no handover (that covers
+        BLOCKERs); what it holds of every grade is a frozen preflight. The
+        BLOCKER's twin is in the test below."""
+        f = findings.Finding(
+            grade="WARNING",
+            text="WARNING · a.py:1 · statement · LAB-015 Preflight audit before freezing · x",
+            status="open",
+            reason="",
+        )
+        said = findings.decision_entails(
+            f, Path("experiments/01-x"), Path("experiments/01-x/audits/r.toml")
+        )
+        self.assertIn("a frozen protocol's preflight blocks on it", said)
+        self.assertNotIn("number", said)
+        self.assertNotIn("handover", said)
+
     def test_the_confirmation_says_what_the_status_entails(self):
         """The status words alone are misread, so under the decision one
         line says what the status entails
@@ -1279,9 +1296,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
             said = decide("open", "taken back: the repair did not hold")
             self.assertIn(
                 "open: the decision is taken back and the finding is undecided "
-                "again; the number does not leave while it is open — "
-                "`labkit-audit experiments/01-x --findings` prints the command "
-                "that decides it",
+                "again; the number does not leave while it is open, unless a "
+                "handover records it open; a frozen protocol's preflight blocks "
+                "on it — `labkit-audit experiments/01-x --findings` prints the "
+                "command that decides it",
                 said,
             )
             f = findings.read(record).findings[0]
