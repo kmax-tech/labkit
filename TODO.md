@@ -39,15 +39,13 @@ Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. 
 
 Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingungen. Vor einem Bau den aktuellen Fall nachstellen oder den jeweils genannten Auslöser belegen. Die vollständigen ursprünglichen Beschreibungen bleiben im [Verlauf](TODO-history-2026-11-20.md#notiert-nicht-geplant).
 
-### Audit 24.11., zweites — umgesetzt
+### Audit 24.11., zweites — umgesetzt, nicht veröffentlicht
 
 Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-2.md). Vom Autor am 24.11. entschieden und gebaut, je ein Commit: Prüfertext trennt „ungebunden“ und „Vorbereitung“ (`35cbd8aa`; `scope_sha` per Test unverändert, `shown_sha` am Code: die Exploration-Abschnitte liegen außerhalb der gebundenen Stücke); `finalize` und `code-check` füllen `<area>` (`f3d60cdc`); Kopfzeile der Audit-Aufzeichnung nennt `--why` (`48ae6977`); Doku (`2e0a6c1a`); Schlusszeile des Ergebnisblocks aus `closer` und zwei Heimat-Zeilen (`c426a654`); Namen `require_agreement`, `kept`, „origin check holds“ (`c324175c`). Ganze Suite auf `c324175c`: Exit 0. Unabhängig gelesen (`code-clarity`).
 
-Offen, nicht gebaut:
+Nachgebaut am 24.11. (vom Autor entschieden): Eine README ohne gültiges UTF-8 ist ein Blocker mit Ausweg statt eines Tracebacks (`readme_text` wirft `ReadError`, Gegenprobe mit lesbarer README). Der feste Satz für eine Vorbereitung ohne lesbaren Text nennt keine geschuldeten Versprechen mehr (`NO_TEXT_OF_A_PREPARATION`); er geht in `shown_sha` ein — Umfrage über die 29 labkit-Repos des Rechners: von 248 Analyse-Aufzeichnungen keine betroffen (232 mit Laufdatensatz vor Schema 5, fünf mit Vorbereitung als Herkunft, alle mit Text; 9 ohne Laufverzeichnis, nicht feststellbar). Grenze, nur dokumentiert (CHANGELOG): Dass eine Aufzeichnung nach der Umformulierung im Exploration-Prompt gültig bleibt, zeigt nicht, dass das Prüferurteil gleich ausgefallen wäre. Ganze Suite auf `a06499b4`: Exit 0; danach nur der benannte Wahrheitswert in `finalize` (schnelle Stufe grün).
 
-1. **`finalize` stürzt bei einer README ohne gültiges UTF-8 ab** (Traceback statt Blocker): `readme_check.readme_placeholders` liest über `scope_sha.readme_text` ohne Fehlerbehandlung (`labkit/checks/readme_check.py:38`, `labkit/formats/scope_sha.py:166`). Nachgestellt am 24.11.
-2. **Fester Satz für eine Vorbereitung ohne lesbaren Text** spricht von „the origin run's question, criteria or method“, die eine Vorbereitung nicht schuldet (`labkit/checks/audit_binding.py:195`, `:232`). Die Abschnitte zum Herkunftsprotokoll gehen in `shown_sha` ein: eine Änderung macht Aufzeichnungen eines Laufs mit einer solchen Herkunft ungültig. Entscheidung beim Autor.
-3. Die Ablehnung falsch gelesener Öffnungszeilen bleibt zweimal (`comment_blocks.py:94`, `report_blocks.py:236`): verschiedene Muster, vom Autor nicht zusammengelegt.
+Bleibt: Die Ablehnung falsch gelesener Öffnungszeilen steht zweimal (`comment_blocks.py:94`, `report_blocks.py:236`) — verschiedene Muster, vom Autor bewusst nicht zusammengelegt.
 
 ### Nutzungsfunde zu Wartung und Lesbarkeit
 
