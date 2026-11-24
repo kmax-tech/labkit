@@ -122,7 +122,7 @@ LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption
 OPEN = re.compile(
     r"^<!-- labkit result: (?P<protocol>\S+) run (?P<run>\S+) \(.*\) -->$"
 )
-CLOSE = "<!-- /labkit result -->"
+CLOSE = closer("result")
 OPEN_NOTE = "protocol-fill --into; edit the protocol, not this block"
 
 
