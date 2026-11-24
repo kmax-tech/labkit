@@ -16,6 +16,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 - **An audit record's first line names the decide command as it runs.** It read `labkit-audit <area> --decide N STATUS REASON`; the reason goes with `--why REASON`. Records written from now on say `--decide N STATUS --why REASON`; earlier records keep their line (a comment, read by no check).
 
+- **A preparation origin whose text cannot be shown is told as a preparation in the audit too.** Its `SOURCE PROTOCOL` piece ended with "a judgement that needs the origin run's question, criteria or method names it as missing" — a preparation owes none of them. It now ends "a preparation reports no result and owes none of its text's promises, so no judgement waits on that text". The piece is in the digest an analysis record binds (`shown_sha`): a record of a run with such an origin goes stale and is audited again. A survey of the 29 repos with labkit on the author's machine (2026-11-24) found none: of 248 analysis records, 232 are of runs recorded before input origins (schema 3 and 4), 16 read, five of them with a preparation origin, each with its text; 9 records have no run directory left and could not be told.
+
 ## 0.115.0 — 2026-11-24
 
 ### Breaking

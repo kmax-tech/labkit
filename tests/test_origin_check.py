@@ -18,6 +18,7 @@ from pathlib import Path
 from labkit.checks import audit_binding, origin_check
 from labkit.checks.audit_binding import (
     NO_TEXT_IN_ITS_PLACE,
+    NO_TEXT_OF_A_PREPARATION,
     NOT_RECONSTRUCTED,
     PREPARATION_THEN,
     SOURCE_PROTOCOL_LABEL,
@@ -449,6 +450,9 @@ class SourceProtocol(_Area):
         ]
         self.assertTrue(text.startswith(NOT_RECONSTRUCTED), text)
         self.assertIn(f"preparation run {p.run_id} was started bound to no", text)
+        # the role holds for what the missing text leaves the judgement too
+        self.assertIn(NO_TEXT_OF_A_PREPARATION, text)
+        self.assertNotIn(NO_TEXT_IN_ITS_PLACE, text)
 
     def test_a_gone_source_run_is_told_not_replaced(self) -> None:
         shutil.move(self.writer.dir, self.aside)

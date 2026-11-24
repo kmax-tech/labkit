@@ -196,6 +196,12 @@ NO_TEXT_IN_ITS_PLACE = (
     "today's text is not shown in its place; a judgement that needs the origin "
     "run's question, criteria or method names it as missing"
 )
+#: the same for a preparation origin: it owes none of its text's promises,
+#: so no judgement waits on the text (PREPARATION_THEN)
+NO_TEXT_OF_A_PREPARATION = (
+    "today's text is not shown in its place; a preparation reports no result "
+    "and owes none of its text's promises, so no judgement waits on that text"
+)
 
 
 def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
@@ -207,7 +213,9 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
     PREPARATION_THEN, context it owes nothing of), never the protocol as it
     reads now and never a newer run's; the text once, a later origin run
     that saw the same text pointing to it. Where it cannot be read back the
-    piece says why (NOT_RECONSTRUCTED) and shows no other text — a
+    piece says why (NOT_RECONSTRUCTED) and shows no other text, with what
+    that leaves the judgement (NO_TEXT_IN_ITS_PLACE, for a preparation
+    NO_TEXT_OF_A_PREPARATION) — a
     preparation still named one (`SourceProtocolThen.role`), so a missing
     text never turns it into a measured source —, the same
     diagnosis whether finalize holds the run for it
@@ -228,9 +236,10 @@ def source_protocol_pieces(area: Path, run_dir: Path) -> list[tuple[str, str]]:
         label = f"{SOURCE_PROTOCOL_LABEL}{run_id}"
         what = PREPARATION_THEN if then.preparation else SOURCE_THEN
         if then.text is None:
-            out.append(
-                (label, f"{NOT_RECONSTRUCTED} {then.where} — {NO_TEXT_IN_ITS_PLACE}")
+            missing = (
+                NO_TEXT_OF_A_PREPARATION if then.preparation else NO_TEXT_IN_ITS_PLACE
             )
+            out.append((label, f"{NOT_RECONSTRUCTED} {then.where} — {missing}"))
         elif then.text in first_with:
             first, first_preparation = first_with[then.text]
             same = (
