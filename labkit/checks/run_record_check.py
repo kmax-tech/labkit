@@ -26,7 +26,10 @@ from pathlib import Path
 from labkit.formats.commands import checkout_command, handover_command
 from labkit.formats.commands import register_anew
 from labkit.formats.runs import (
+    COMPLETED,
+    MEASUREMENT,
     NO_GIT,
+    completion_state,
     kept_script,
     metrics_path,
     output_file,
@@ -140,7 +143,10 @@ def code_since_run(
     names its way out, the fix first: measure anew with the code as it is
     and audit that run — restoring the old code removes the difference,
     not a fault the change corrected —, and only for a change not meant,
-    the command that restores the code as it ran. A blocker that found a
+    the command that restores the code as it ran; on a run that could be
+    the parent of a corrected evaluation (`_could_be_corrected`), and
+    beside a derived run that declared none, also that correction. A
+    blocker that found a
     difference names its run as data (`GateFinding.changed_since`); one
     that could not compare (no script or commit recorded, a commit this
     clone lacks, a helper uncommitted then, a script gone or ambiguous)
@@ -200,7 +206,10 @@ def code_since_run(
             b, w = _reading_since_run(area, run, child, declared)
         else:
             b, w = _run_code(area, run)
-            if child is not None:
+            # the correction is offered where it could be taken: beside a
+            # derived run that declared none, and on a run that could be
+            # its parent before any derived run exists
+            if child is not None or _could_be_corrected(run):
                 b = [_or_declared(f, run.name) for f in b]
         blockers += b
         warnings += w
@@ -261,6 +270,28 @@ def answer_reading_gaps(
                 )
             )
     return found
+
+
+def _could_be_corrected(run: Path) -> bool:
+    """Whether RUN meets what a derived run that declares its answer reading
+    asks of its parent, as far as its record tells: a completed measurement,
+    no repeat, with a registered output (docs/workflow.md, 'Correcting the
+    evaluation of unchanged answers'). Whether only the evaluation changed
+    is not told here: the way out says when it applies, and the derived
+    run's own checks hold it. False for a record that does not read (the
+    answering-run station names it)."""
+    try:
+        if completion_state(run) != COMPLETED:
+            return False
+        cfg = read_run_config(run)
+    except RunConfigError:
+        return False
+    return (
+        cfg is not None
+        and cfg.run_kind == MEASUREMENT
+        and cfg.repeat_of is None
+        and bool(read_outputs(run))
+    )
 
 
 def _or_declared(found: GateFinding, parent: str) -> GateFinding:

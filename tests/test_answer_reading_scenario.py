@@ -156,6 +156,20 @@ class DeclaredAnswerReading(unittest.TestCase):
         )
         self.assertIn(f"changed against {self.a}: no number changed", text)
 
+    def test_before_any_derived_run_the_hold_names_the_correction(self) -> None:
+        """A concluded, the evaluation fixed, no derived run yet: labkit-next
+        holds the changed code, and its way out names measuring anew and
+        restoring — and the derived run that declares its answer reading,
+        which before only a derived run without the declaration showed."""
+        from labkit.gates.next_step import next_step
+
+        self.lab.conclude(self.protocol)
+        self.fix_the_evaluation()
+        with contextlib.chdir(self.lab.root):
+            step = next_step(self.area, self.protocol.resolve())
+        self.assertIn("measure anew", step.next)
+        self.assertIn(f"derived_from={self.a!r}, answer_reading=MODULE", step.next)
+
     def test_without_the_declaration_the_parent_is_compared_whole(self) -> None:
         self.fix_the_evaluation()
         d = self.derive("--derive-undeclared")
