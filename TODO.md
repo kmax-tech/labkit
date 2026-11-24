@@ -43,7 +43,7 @@ Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingu
 
 Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-3.md). Umgesetzt am 24.11., je ein Commit: Regel der zweiten Prüfung an fünf Stellen (Punkt 1), fünf kleine Doku-Drifts (Punkt 2), Temp-Dateiname und `PREFLIGHT_AUDIT` mit einer Heimat (Punkt 3, Teil), Klarheit in `finalize` und `recheck` (Punkt 4). Offen:
 
-1. Argumentlesen `<AREA> [--protocol]`: `repo.area_args` kennt nur `--protocol`, `params` braucht `--run`, `code-check` `--bundle`; Zusammenlegen heißt `area_args` um weitere Optionen erweitern und die Kommandos samt Fehlermeldungen umstellen — eigener Auftrag.
+1. Argumentlesen `<AREA> [--protocol]`: Plan ausgearbeitet ([Notiz](docs/notes/2026-11-24-area-args-plan.md)), sieben Schritte, zwei Entscheidungen beim Autor (scope-sha `--area`, Reihenfolge AREA zuerst); noch nicht gebaut. Nebenbefund dort: `intent-check` übergeht Wörter nach `--metrics FILE`.
 2. TOML-Kopf der Kommentarblöcke (drei Parser gleicher Form) zu einem Helfer — erst wenn ein vierter Block kommt.
 
 ### Audit 24.11., zweites — umgesetzt, nicht veröffentlicht
