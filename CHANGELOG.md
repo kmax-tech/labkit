@@ -18,6 +18,8 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ### Fixed
 
+- **An area without a protocol gets one from the command labkit-next names, instead of a loop.** For `experiments/01-x` made by hand, labkit-next named `labkit-init exp <name> --kind …`; run with `x`, it refused "experiment already exists: 01-x", and labkit-next said the same again. labkit-next now names the area (`labkit-init exp 01-x --kind compute|fit|apply`), and `labkit-init exp` stamps the protocol, the scripts and the area's files into an existing area that holds no protocol, writing only what is absent — a file the area holds is never overwritten. It still refuses an area that holds a protocol (report fields come with `--report`), an area that owes a report under a protocol it no longer holds (that duty's way out), a slug two areas carry, and a typed number naming another area.
+
 - **`intent-check PROTOCOL --metrics FILE extra` is refused.** A word after the metrics file was dropped without a word and the check ran on the rest; it now ends with exit 2 and `intent-check: unexpected argument 'extra'`.
 
 - **`scope-sha` and `runlog start` take an area's bare name, as the other area commands do.** `scope-sha x` from the repository root read `x` as a scope file and refused with "scope file(s) missing: x"; `scope-sha --area x` and `runlog start x -- …` refused it as no directory. All three now find `experiments/01-x` (or `experiments/x`), refuse a name several areas carry by naming each, and refuse an area that does not exist with the sentence every area command uses (`no such area: x (relative to …) — …`). In scope-sha a word that is an existing file stays a scope file, and a word naming neither a file nor an area stays one too, refused as missing.

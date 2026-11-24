@@ -4,7 +4,9 @@ import ast
 import contextlib
 import io
 import json
+import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -366,6 +368,64 @@ class Exp(unittest.TestCase):
         quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         with self.assertRaisesRegex(console.Refused, "already exists"):
             quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
+
+    def test_the_command_next_names_for_an_area_without_a_protocol_completes_it(
+        self,
+    ) -> None:
+        """An area made by hand, without a protocol: the command labkit-next
+        names, run as printed (one kind taken), stamps the protocol into
+        that area — no second area, the files it held unchanged — and the
+        next step is no longer "holds no protocol"."""
+        from labkit.tools import next_command
+
+        area = self.root / "experiments" / "01-x"
+        (area / "scripts").mkdir(parents=True)
+        (area / "scripts" / "measure.py").write_text("mine\n", encoding="utf-8")
+        (area / "notes.txt").write_text("keep\n", encoding="utf-8")
+
+        def next_out() -> str:
+            out = io.StringIO()
+            old = Path.cwd()
+            os.chdir(self.root)
+            try:
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                    self.assertEqual(next_command.main([str(area)]), 0)
+            finally:
+                os.chdir(old)
+            return out.getvalue()
+
+        said = next_out()
+        self.assertIn("holds no protocol", said)
+        (cmd,) = re.findall(r"`(labkit-init exp [^`]* --kind [^`]*)`", said)
+        argv = shlex.split(cmd.replace("compute|fit|apply", "compute"))[1:]
+        old = Path.cwd()
+        os.chdir(self.root)
+        try:
+            self.assertEqual(quiet(scaffold.main, argv), 0)
+        finally:
+            os.chdir(old)
+        self.assertEqual(len(list(area.glob("PROTOCOL-*.md"))), 1)
+        self.assertEqual(
+            sorted(p.name for p in (self.root / "experiments").iterdir() if p.is_dir()),
+            ["01-x"],
+        )
+        self.assertEqual((area / "scripts" / "measure.py").read_text(), "mine\n")
+        self.assertEqual((area / "notes.txt").read_text(), "keep\n")
+        self.assertNotIn("holds no protocol", next_out())
+
+    def test_an_area_without_a_protocol_is_completed_only_when_it_is_the_one_named(
+        self,
+    ) -> None:
+        """Not completed: two areas of the slug, or a typed number naming
+        another area — refused, nothing written."""
+        exp = self.root / "experiments"
+        (exp / "01-x").mkdir()
+        with self.assertRaisesRegex(console.Refused, "already exists"):
+            quiet(scaffold.stamp_area, self.root, "02-x", kind="compute")
+        (exp / "03-x").mkdir()
+        with self.assertRaisesRegex(console.Refused, "already exists"):
+            quiet(scaffold.stamp_area, self.root, "x", kind="compute")
+        self.assertEqual(list(exp.glob("*/PROTOCOL-*.md")), [])
 
     def test_report_refuses_beside_a_label_the_migration_renames(self) -> None:
         """A protocol that kept "Noise ceiling → threshold" would get the

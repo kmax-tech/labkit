@@ -528,7 +528,8 @@ def decide_command(
 
 def stamp_command(name: str = "<new-name>", kind: str = "…") -> Command:
     """The `labkit-init exp NAME --kind KIND` line that stamps a new area
-    and its protocol under a fresh id — the one way labkit writes an id;
+    and its protocol under a fresh id — or, NAME naming an area without a
+    protocol, that area's protocol — the one way labkit writes an id;
     no command gives an existing protocol a new one."""
     return Command(INIT, f"labkit-init exp {name} --kind {kind}")
 

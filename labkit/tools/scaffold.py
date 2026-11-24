@@ -545,7 +545,7 @@ def stamp_constant(text: str, name: str, value: tuple[str, ...]) -> str:
 def stamp_scripts(
     root: Path,
     area: Path,
-    nn: str,
+    nn: str | None,
     slug: str,
     skeleton: standard_contract.Skeleton,
     model: bool | str,
@@ -567,7 +567,7 @@ def stamp_scripts(
 def script_stamps(
     root: Path,
     area: Path,
-    nn: str,
+    nn: str | None,
     slug: str,
     skeleton: standard_contract.Skeleton,
     model: bool | str,
@@ -638,7 +638,9 @@ def stamp_area(
     a computation's kept number is compared with. KEPT is the `[kept]`
     table the head carries (`protocol_block.kept_toml`; `kept_for_new_head`
     says what stands without it).
-    Raises `console.Refused` too for an area of NAME that exists without
+    An area of NAME that exists without a protocol is completed, not
+    refused (`_area_to_complete`). Raises `console.Refused` too for an
+    area of NAME that exists with a protocol, or owes a report, without
     REPORT, with REPORT where NAME names no one area (`existing_area`),
     with REPORT_FILE on a promotion, and with REFERENCE on a kind with a
     bar (`protocol_check.reference_gap`: a fit or an apply compares in
@@ -684,16 +686,16 @@ def stamp_area(
         raise console.Refused("labkit-init", f"--reference: {gap}")
     existing = areas_named(experiments, slug)
     if existing:
-        raise console.Refused(
-            "labkit-init",
-            f"experiment already exists: {_area_names(existing)} under "
-            f"{experiments} — add report fields with "
-            f"`{report_fields_command(existing[0])}`",
-        )
-    here, elsewhere = area_dirs_on_disk(experiments), areas_elsewhere(experiments)
-    nn = next_experiment_number(here, elsewhere)
-    area = experiments / f"{nn}-{slug}"
-    log = numbers_taken_elsewhere(here, elsewhere)
+        area = _area_to_complete(existing, name)
+        nn = split_area_name(area.name)[0]
+        log = [
+            f"  completing     {area} (it holds no protocol; nothing in it is overwritten)"
+        ]
+    else:
+        here, elsewhere = area_dirs_on_disk(experiments), areas_elsewhere(experiments)
+        nn = next_experiment_number(here, elsewhere)
+        area = experiments / f"{nn}-{slug}"
+        log = numbers_taken_elsewhere(here, elsewhere)
     for d in ("data/raw", "data/prepared", "output"):
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
@@ -725,6 +727,40 @@ def stamp_area(
         + f"\nnext: `{step_command(area)}` names the one next step, with its command; "
         f"`labkit-next --guide` the whole route"
     )
+
+
+def _area_to_complete(existing: list[Path], name: str) -> Path:
+    """The one area of EXISTING (the areas NAME's slug names) that `exp
+    NAME` stamps into: an area that holds no protocol and owes no report
+    (`report_check.orphaned_duty_gaps`) gets the protocol, scripts and
+    files it lacks — what labkit-next asks for such an area. Raises
+    `console.Refused` when several areas carry the slug, when a number
+    typed with NAME names another area, when the area holds a protocol
+    (its report fields are added with `--report`), and when it owes a
+    report (the duty's own way out)."""
+    from labkit.gates.report_check import orphaned_duty_gaps
+
+    experiments = existing[0].parent
+    number = split_area_name(name.strip())[0]
+    area = existing[0]
+    if (
+        len(existing) > 1
+        or area_protocols(area)
+        or (number is not None and area.name != f"{number}-{area_slug(name)}")
+    ):
+        raise console.Refused(
+            "labkit-init",
+            f"experiment already exists: {_area_names(existing)} under "
+            f"{experiments} — add report fields with "
+            f"`{report_fields_command(existing[0])}`",
+        )
+    owed = orphaned_duty_gaps(state_of(area))
+    if owed:
+        raise console.Refused(
+            "labkit-init",
+            f"{owed[0].text} — {owed[0].fix or 'restore the protocol it measured under'}",
+        )
+    return area
 
 
 def protocol_stamp(
@@ -1128,7 +1164,7 @@ def same_promises(then: str, now: str) -> bool:
 def stamp_files(
     root: Path,
     area: Path,
-    nn: str,
+    nn: str | None,
     slug: str,
     repeat_cost: str | None,
     kind: str,

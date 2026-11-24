@@ -76,7 +76,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from labkit.formats.commands import contract_command, list_command, wait_command
+from labkit.formats.commands import (
+    contract_command,
+    list_command,
+    path_word,
+    stamp_command,
+    wait_command,
+)
 from labkit.formats import (
     findings,
     handovers,
@@ -169,8 +175,9 @@ def next_step(
             )
         return Step(
             f"{shown(area, Path.cwd())} holds no protocol: nothing is registered",
-            "`labkit-init exp <name> --kind compute|fit|apply` stamps the area "
-            "and its protocol; `labkit-init exp --help` names the options",
+            f"`{stamp_command(path_word(area.name), 'compute|fit|apply')}` "
+            "stamps the protocol and the scripts into this area, overwriting "
+            "nothing in it; `labkit-init exp --help` names the options",
             "every run: a run needs a registered question",
         )
     staged = staged_of(file_state)
