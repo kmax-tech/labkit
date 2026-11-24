@@ -649,7 +649,7 @@ def check_open_fields(
             stated_outcome=outcome_of_failed_read(exc),
             rule=TECHNICAL_RULE,
         )
-        stale, route = [str(exc)], [str(exc)]
+        readme_clean = False
     else:
         for line in stale:
             # a pattern over prose: an `<…>` the author meant is matched too
@@ -665,8 +665,9 @@ def check_open_fields(
             route = [str(exc)]
         else:
             findings.take_all(route)
+        readme_clean = not stale and not route
     counted = check_data_counts(findings, protocol, text, state)
-    if not holes and not repeated and not stale and not route and counted:
+    if not holes and not repeated and readme_clean and counted:
         findings.note("  all fields filled")
 
 
