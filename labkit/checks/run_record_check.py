@@ -143,9 +143,12 @@ def code_since_run(
     names its way out, the fix first: measure anew with the code as it is
     and audit that run — restoring the old code removes the difference,
     not a fault the change corrected —, and only for a change not meant,
-    the command that restores the code as it ran; on a run that could be
-    the parent of a corrected evaluation (`_could_be_corrected`), and
-    beside a derived run that declared none, also that correction. A
+    the command that restores the code as it ran; on a run whose record
+    allows it as the parent of a corrected evaluation
+    (`_could_be_corrected`: a completed measurement, no repeat, with an
+    output — not whether the change lies in the evaluation), and beside a
+    derived run that declared none, also that correction, with its
+    condition: only the evaluation changed. A
     blocker that found a
     difference names its run as data (`GateFinding.changed_since`); one
     that could not compare (no script or commit recorded, a commit this

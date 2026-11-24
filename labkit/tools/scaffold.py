@@ -689,7 +689,8 @@ def stamp_area(
         area = _area_to_complete(existing, name)
         nn = split_area_name(area.name)[0]
         log = [
-            f"  completing     {area} (it holds no protocol; nothing in it is overwritten)"
+            f"  completing     {area} (it holds no protocol): what it lacks is "
+            "stamped, matched by file name; nothing in it is overwritten"
         ]
     else:
         here, elsewhere = area_dirs_on_disk(experiments), areas_elsewhere(experiments)
@@ -708,11 +709,7 @@ def stamp_area(
         ),
         log,
     )
-    pre = experiments / "explore" / f"{slug}.py"
-    if pre.is_file():  # an explore file stamped before the area graduates with it
-        (area / "explore").mkdir(exist_ok=True)
-        pre.rename(area / "explore" / pre.name)
-        log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
+    log += _move_explore_file(experiments / "explore" / f"{slug}.py", area)
     write_if_absent(area / protocol_file_name(slug), stamped, log)
     log += stamp_scripts(
         root, area, nn, slug, skeleton, model, deliverables, deliverable_columns
@@ -729,30 +726,54 @@ def stamp_area(
     )
 
 
+def _move_explore_file(pre: Path, area: Path) -> list[str]:
+    """Move PRE, an explore file stamped before AREA (`exp NAME --explore`),
+    into AREA's explore/, the log line returned; nothing when PRE does not
+    exist. A file of that name AREA holds already — an area being
+    completed — is never replaced: PRE stays and the line says so."""
+    moved_to = area / "explore" / pre.name
+    if not pre.is_file():
+        return []
+    if moved_to.exists() or moved_to.is_symlink():
+        return [f"  skip (exists)  {moved_to} — {pre} stays where it is"]
+    moved_to.parent.mkdir(exist_ok=True)
+    pre.rename(moved_to)
+    return [f"  moved          {pre} -> {moved_to}"]
+
+
 def _area_to_complete(existing: list[Path], name: str) -> Path:
     """The one area of EXISTING (the areas NAME's slug names) that `exp
     NAME` stamps into: an area that holds no protocol and owes no report
     (`report_check.orphaned_duty_gaps`) gets the protocol, scripts and
     files it lacks — what labkit-next asks for such an area. Raises
-    `console.Refused` when several areas carry the slug, when a number
-    typed with NAME names another area, when the area holds a protocol
-    (its report fields are added with `--report`), and when it owes a
-    report (the duty's own way out)."""
+    `console.Refused`, in this order: when an area of the slug holds a
+    protocol (its report fields are added with `--report`), when several
+    areas carry the slug (naming how to name one), when a number typed
+    with NAME names another area, and when the area owes a report (the
+    duty's own way out)."""
     from labkit.gates.report_check import orphaned_duty_gaps
 
     experiments = existing[0].parent
     number = split_area_name(name.strip())[0]
     area = existing[0]
-    if (
-        len(existing) > 1
-        or area_protocols(area)
-        or (number is not None and area.name != f"{number}-{area_slug(name)}")
-    ):
+    if any(area_protocols(a) for a in existing):
         raise console.Refused(
             "labkit-init",
             f"experiment already exists: {_area_names(existing)} under "
             f"{experiments} — add report fields with "
             f"`{report_fields_command(existing[0])}`",
+        )
+    if len(existing) > 1:
+        raise console.Refused(
+            "labkit-init",
+            f"{area_slug(name)!r} names {_area_names(existing)} under "
+            f"{experiments}; {_name_one(existing)}",
+        )
+    if number is not None and area.name != f"{number}-{area_slug(name)}":
+        raise console.Refused(
+            "labkit-init",
+            f"{area_slug(name)!r} names {area.name}, not {number}-{area_slug(name)}"
+            f" — give {area.name} to stamp into it, or another name for a new area",
         )
     owed = orphaned_duty_gaps(state_of(area))
     if owed:

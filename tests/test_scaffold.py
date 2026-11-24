@@ -420,12 +420,27 @@ class Exp(unittest.TestCase):
         another area — refused, nothing written."""
         exp = self.root / "experiments"
         (exp / "01-x").mkdir()
-        with self.assertRaisesRegex(console.Refused, "already exists"):
+        with self.assertRaisesRegex(
+            console.Refused, "'x' names 01-x, not 02-x — give 01-x to stamp into it"
+        ):
             quiet(scaffold.stamp_area, self.root, "02-x", kind="compute")
         (exp / "03-x").mkdir()
-        with self.assertRaisesRegex(console.Refused, "already exists"):
+        with self.assertRaisesRegex(console.Refused, "'x' names 01-x, 03-x under"):
             quiet(scaffold.stamp_area, self.root, "x", kind="compute")
         self.assertEqual(list(exp.glob("*/PROTOCOL-*.md")), [])
+
+    def test_completing_an_area_never_replaces_its_explore_file(self) -> None:
+        """The explore file stamped before the area (`--explore`) moves in
+        only where the area holds none of that name; else both stay."""
+        exp = self.root / "experiments"
+        (exp / "explore").mkdir(exist_ok=True)
+        (exp / "explore" / "x.py").write_text("early\n", encoding="utf-8")
+        (exp / "01-x" / "explore").mkdir(parents=True)
+        (exp / "01-x" / "explore" / "x.py").write_text("mine\n", encoding="utf-8")
+        quiet(scaffold.stamp_area, self.root, "x", kind="compute")
+        self.assertEqual(len(list((exp / "01-x").glob("PROTOCOL-*.md"))), 1)
+        self.assertEqual((exp / "01-x" / "explore" / "x.py").read_text(), "mine\n")
+        self.assertEqual((exp / "explore" / "x.py").read_text(), "early\n")
 
     def test_report_refuses_beside_a_label_the_migration_renames(self) -> None:
         """A protocol that kept "Noise ceiling → threshold" would get the
