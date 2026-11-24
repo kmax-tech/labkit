@@ -44,7 +44,7 @@ class EntryLayer(unittest.TestCase):
         for entry, layer in (
             ("labkit.gates.finalize.check_reference", "gate"),
             ("labkit.gates.report_check.Checked.text", "gate"),
-            ("labkit.checks.recheck.agree", "check"),
+            ("labkit.checks.recheck.require_agreement", "check"),
             ("labkit.formats.findings.read", "format"),
             ("labkit.run.runlog.Run.__init__", "run"),
             ("labkit.console_line", "other"),

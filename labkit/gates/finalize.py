@@ -710,7 +710,7 @@ def check_input_origins(
     blocker naming the input, the origin and the condition, with the way
     out that restores evidence (`origin_finding`). A plain input and the
     runs the lookup skipped are notes (`origin_notes`). Then, for each
-    origin run whose promise holds, the protocol it was bound to as
+    origin run whose origin check holds, the protocol it was bound to as
     it saw it when it started (`audit_binding.source_protocol_then`): when
     the run was bound to a protocol and that text cannot be read back, a
     blocker (`source_protocol_finding`) — the audit of this run cannot be
@@ -738,7 +738,7 @@ def check_input_origins(
         findings.note("  n/a — the run recorded no input file")
         return
     findings.note(f"  {LOOKED_UP_WITHIN_AREA}")
-    held: list[str] = []  # origin runs whose promise holds, in the inputs' order
+    held: list[str] = []  # origin runs whose origin check holds, in the inputs' order
     for entry in entries:
         state = origin_state(area, entry)
         for line in state.notes:
@@ -760,7 +760,7 @@ def check_input_origins(
 
 def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> None:
     """Station 7, second part, only for the origin runs of HELD — those
-    whose origin promise holds; one that fails is named by its origin
+    whose origin check holds; one that fails is named by its origin
     blocker and not read here. For each (repeats allowed), the protocol it was bound
     to as it started (`audit_binding.source_protocol_then`) — a blocker
     when the run was bound to one and that text cannot be read back

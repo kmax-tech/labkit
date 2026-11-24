@@ -45,7 +45,7 @@ recomputation: every input the run recorded is still the bytes it read —
 an input with an origin run still that run's registered output
 (`inputs_pinned`, the same condition as finalize's input-origins
 station) —, and only then does the computing run's own evaluation over
-those inputs have to give the numbers its metrics.json holds (`agree`).
+those inputs have to give the numbers its metrics.json holds (`require_agreement`).
 The source runs are not run again.
 
 An older run is checked apart from the answering one
@@ -484,7 +484,7 @@ def protocol_as_run_saw(run: Path, area: Path) -> str | None:
 def kept_keys(run: Path, area: Path) -> frozenset[str]:
     """The `[kept]` key RUN's protocol named when the run started
     (`protocol_as_run_saw`, not the protocol as it reads now) — the number
-    it reports, compared exactly by `agree` —, empty for an unbound run or
+    it reports, compared exactly by `require_agreement` —, empty for an unbound run or
     a text without the table. Raises SystemExit when that text cannot be
     read back or its head does not read."""
     text = protocol_as_run_saw(run, area)
@@ -559,16 +559,17 @@ def _named_outputs(outs: Mapping[str, Path]) -> None:
         )
 
 
-def agree(
+def require_agreement(
     metrics: dict,
     recomputed: dict,
     ignore: frozenset[str] = LABKIT_KEYS,
-    reported: frozenset[str] = frozenset(),
+    kept: frozenset[str] = frozenset(),
 ) -> list[str]:
-    """metrics.json against the recomputation; returns the keys that grew.
+    """metrics.json against the recomputation: SystemExit where they
+    disagree, else the keys that grew.
     As LAB-041 Generate numbers, don't retype them states it: the
     registered identifiers (`INTENT_KEY`) are compared exactly — on one side
-    only, or with another value, the check fails —, and so are the REPORTED
+    only, or with another value, the check fails —, and so are the KEPT
     keys (the protocol's `[kept]` key, `kept_keys`: the number it
     reports), on one side only failing as well; absent from both, this
     check passes it — finalize blocks a metrics.json that does not hold it
@@ -585,7 +586,7 @@ def agree(
             for side, d in ((runs.METRICS_FILE, metrics), ("recomputation", recomputed))
             if k not in d
         ]
-        for k in sorted(reported)
+        for k in sorted(kept)
         if (k in metrics) != (k in recomputed)
     }
     if unkept:
@@ -610,7 +611,7 @@ def agree(
         )
     differing = sorted(
         k
-        for k in intent | reported
+        for k in intent | kept
         if k in metrics and runs.as_stored(recomputed[k]) != runs.as_stored(metrics[k])
     )
     if differing:
@@ -715,7 +716,7 @@ def verified_outputs(
     metrics, the keys the recomputation grew). Every file of OUTS is
     pinned first (`pin`: registered by RUN, its bytes the ones RUN
     recorded); only then is RECOMPUTE handed the rows of all of them by
-    their key (`output_rows`) and compared with metrics.json (`agree`). What
+    their key (`output_rows`) and compared with metrics.json (`require_agreement`). What
     `holds_outputs` checks before the note, and what `02_analyze.py
     --draws` checks for every draw — a draw shown unchecked lets an edited
     repeat file change the flipped items, an edited metrics.json the
@@ -736,11 +737,11 @@ def verified_outputs(
     if hold_block_now:
         block_unchanged(run, area, state=state)
     metrics = runs.read_metrics(runs.metrics_path(run))
-    grown = agree(
+    grown = require_agreement(
         metrics,
         recompute(output_rows(run, outs)),
         ignore,
-        reported=kept_keys(run, area),
+        kept=kept_keys(run, area),
     )
     return metrics, grown
 
@@ -885,22 +886,22 @@ def holds_as_measured_outputs(
     _named_outputs(outs)
     run = run_dir(area, protocol, run_id)
     with contextlib.ExitStack() as stack:
-        kept = {
+        kept_outputs = {
             key: stack.enter_context(output_as_recorded(run, out, area))
             for key, out in outs.items()
         }
         scopes_unchanged(run, area)
         require_run_code(run, area)
         metrics = runs.read_metrics(runs.metrics_path(run))
-        grown = agree(
+        grown = require_agreement(
             metrics,
-            recompute(output_rows(run, {k: r.path for k, r in kept.items()})),
+            recompute(output_rows(run, {k: r.path for k, r in kept_outputs.items()})),
             ignore,
-            reported=kept_keys(run, area),
+            kept=kept_keys(run, area),
         )
         return AsMeasured(
             run.name,
-            {k: r.source for k, r in kept.items()},
+            {k: r.source for k, r in kept_outputs.items()},
             len(set(metrics) - ignore),
             grown,
         )
@@ -1025,7 +1026,9 @@ def verified_from_inputs(
     if hold_block_now:
         block_unchanged(run, area)
     metrics = runs.read_metrics(runs.metrics_path(run))
-    grown = agree(metrics, recompute(pinned), ignore, reported=kept_keys(run, area))
+    grown = require_agreement(
+        metrics, recompute(pinned), ignore, kept=kept_keys(run, area)
+    )
     return metrics, grown
 
 

@@ -245,27 +245,38 @@ class Area(unittest.TestCase):
             ({"a": 0}, {"a": False}),
         ):
             with self.assertRaises(SystemExit, msg=f"{stored!r} vs {again!r}"):
-                recheck.agree({"criterion_1_pass": stored}, {"criterion_1_pass": again})
+                recheck.require_agreement(
+                    {"criterion_1_pass": stored}, {"criterion_1_pass": again}
+                )
         self.assertEqual(
-            recheck.agree({"criterion_1_pass": True}, {"criterion_1_pass": True}), []
+            recheck.require_agreement(
+                {"criterion_1_pass": True}, {"criterion_1_pass": True}
+            ),
+            [],
         )
 
     def test_a_tuple_is_the_list_the_run_recorded(self):
         """evaluate() returns a tuple, metrics.json holds a list: the same
         value after the JSON round trip, not a difference."""
         self.assertEqual(
-            recheck.agree({"criterion_1_pass": [1, 2]}, {"criterion_1_pass": (1, 2)}),
+            recheck.require_agreement(
+                {"criterion_1_pass": [1, 2]}, {"criterion_1_pass": (1, 2)}
+            ),
             [],
         )
         with self.assertRaises(SystemExit):
-            recheck.agree({"criterion_1_pass": [1, 2]}, {"criterion_1_pass": (1, 3)})
+            recheck.require_agreement(
+                {"criterion_1_pass": [1, 2]}, {"criterion_1_pass": (1, 3)}
+            )
 
     def test_the_kept_number_is_compared_exactly(self):
         """A computation's `[kept]` key is the number it reports: exact, as
         an identifier."""
         with self.assertRaisesRegex(SystemExit, "kept number"):
-            recheck.agree({"mean": 3.5}, {"mean": 4.5}, reported=frozenset({"mean"}))
-        self.assertEqual(recheck.agree({"mean": 3.5}, {"mean": 4.5}), [])
+            recheck.require_agreement(
+                {"mean": 3.5}, {"mean": 4.5}, kept=frozenset({"mean"})
+            )
+        self.assertEqual(recheck.require_agreement({"mean": 3.5}, {"mean": 4.5}), [])
 
     def test_a_kept_number_on_one_side_only_is_refused(self):
         """The kept number missing from metrics.json or from the
@@ -278,24 +289,26 @@ class Area(unittest.TestCase):
             with self.assertRaisesRegex(
                 SystemExit, rf"kept number is missing — \{{'mean': \['{side}'\]\}}"
             ):
-                recheck.agree(metrics, recomputed, reported=frozenset({"mean"}))
-        self.assertEqual(recheck.agree({"n": 3}, {"n": 3, "mean": 4.5}), ["mean"])
+                recheck.require_agreement(metrics, recomputed, kept=frozenset({"mean"}))
         self.assertEqual(
-            recheck.agree({"n": 3}, {"n": 3}, reported=frozenset({"mean"})), []
+            recheck.require_agreement({"n": 3}, {"n": 3, "mean": 4.5}), ["mean"]
+        )
+        self.assertEqual(
+            recheck.require_agreement({"n": 3}, {"n": 3}, kept=frozenset({"mean"})), []
         )
 
     def test_a_descriptive_value_may_differ_and_may_not_vanish(self):
         """LAB-041 Generate numbers, don't retype them: identifiers exact;
         of the descriptive keys none may disappear."""
         self.assertEqual(
-            recheck.agree(
+            recheck.require_agreement(
                 {"criterion_1_pass": True, "funnel": [3, 2]},
                 {"criterion_1_pass": True, "funnel": [3, 1], "table": "new"},
             ),
             ["table"],
         )
         with self.assertRaisesRegex(SystemExit, "vanished"):
-            recheck.agree(
+            recheck.require_agreement(
                 {"criterion_1_pass": True, "funnel": [3, 2]}, {"criterion_1_pass": True}
             )
 
