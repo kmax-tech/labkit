@@ -1,6 +1,6 @@
 # Plan: one home for reading an area from the command line
 
-Plan, 2026-11-24. Built the same day, all six steps: `resolve_area` (steps 1–3), then, after a second opinion said yes at the decision point, `area_parser` and `GivenOnce` (steps 4–6); labkit-adopt and report-check read their line through `area_parser` too, labkit-audit and labkit-next gained `GivenOnce` on `--protocol`. `runlog start --max-seconds` keeps the last value (its default is not None, which `GivenOnce` needs). Follows the third audit of the same day ([note](2026-11-24-repo-audit-3.md), open point "argument parsing").
+Plan, 2026-11-24. Built the same day, all six steps: `resolve_area` (steps 1–3), then, after a second opinion said yes at the decision point, `area_parser` and `GivenOnce` (steps 4–6); labkit-adopt and report-check read their line through `area_parser` too, labkit-audit and labkit-next gained `GivenOnce` on `--protocol`.; `runlog start` refuses `--log` and `--max-seconds` given twice (its wait default is applied after parsing, since `GivenOnce` needs None). Left out on purpose: labkit-audit's other single-value flags (`--record`, `--model`, `--timeout`, `--out`) still keep the last value. Follows the third audit of the same day ([note](2026-11-24-repo-audit-3.md), open point "argument parsing").
 
 ## The problem
 
