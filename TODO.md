@@ -14,7 +14,7 @@ Stand: 2026-11-24. Diese Datei nennt den nächsten Auftrag, offene Entscheidunge
 | Eigener Folgeauftrag | Globale Freigaberegel                           | Umsetzungsplan und Vertragsänderung erforderlich; noch nicht gebaut.                                                                                                                                                                                                             |
 | Eigener Auftrag      | Bestehende Labore umziehen                      | Pins, Protokolle und gestempelte Skripte je Repo prüfen.                                                                                                                                                                                                                         |
 
-**Bereits abgeschlossen:** Der explorative Ablauf und Standard 0.33 sind auf `main`. `v0.115.0` wurde am 2026-11-24 auf `e39cb323` veröffentlicht und mit Tag gepusht (Standard bleibt 0.33). Seitdem auf `main`, unveröffentlicht: die zwei Reparaturen aus dem Audit vom 24.11. (CHANGELOG „Unreleased“). Release, Tag und Push bleiben beim Autor.
+**Bereits abgeschlossen:** Der explorative Ablauf und Standard 0.33 sind auf `main`. `v0.115.0` wurde am 2026-11-24 auf `e39cb323` veröffentlicht und mit Tag gepusht (Standard bleibt 0.33). Seitdem auf `main`, unveröffentlicht: die Reparaturen aus beiden Audits vom 24.11. (CHANGELOG „Unreleased“). Release, Tag und Push bleiben beim Autor.
 
 ## Offene Entscheidungen — noch kein Bauauftrag
 
@@ -39,17 +39,15 @@ Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. 
 
 Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingungen. Vor einem Bau den aktuellen Fall nachstellen oder den jeweils genannten Auslöser belegen. Die vollständigen ursprünglichen Beschreibungen bleiben im [Verlauf](TODO-history-2026-11-20.md#notiert-nicht-geplant).
 
-### Audit 24.11., zweites — offene Punkte
+### Audit 24.11., zweites — umgesetzt
 
-Umfang: die 95 Commits seit dem Audit vom 23.11. Kein Befund ändert ein Gate-Urteil bei korrekter Eingabe; vorherrschend ist Prosa, die „an kein Protokoll gebunden“ noch mit „Vorbereitung“ gleichsetzt. Befunde mit `pfad:zeile`: [Notiz](docs/notes/2026-11-24-repo-audit-2.md).
+Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-2.md). Vom Autor am 24.11. entschieden und gebaut, je ein Commit: Prüfertext trennt „ungebunden“ und „Vorbereitung“ (`35cbd8aa`; `scope_sha` per Test unverändert, `shown_sha` am Code: die Exploration-Abschnitte liegen außerhalb der gebundenen Stücke); `finalize` und `code-check` füllen `<area>` (`f3d60cdc`); Kopfzeile der Audit-Aufzeichnung nennt `--why` (`48ae6977`); Doku (`2e0a6c1a`); Schlusszeile des Ergebnisblocks aus `closer` und zwei Heimat-Zeilen (`c426a654`); Namen `require_agreement`, `kept`, „origin check holds“ (`c324175c`). Ganze Suite auf `c324175c`: Exit 0. Unabhängig gelesen (`code-clarity`).
 
-1. **Platzhalter `<area>` füllen:** `finalize` und `code-check`, einzeln aufgerufen, drucken einen Ausweg wörtlich als `code-check <area>`. Mit Ja bekommen beide die Bereichswerte wie die übrigen Gates; der Ausweg ist dann direkt ausführbar.
-2. **Audit-Prompt richtigstellen:** Er nennt einen ungebundenen Lauf „a preparation“. Mit Ja trennt der Text beides, wie seit 0.115.0 der Code; nur Prüfertext, keine Aufzeichnung wird ungültig.
-3. **Kopfzeile der Audit-Aufzeichnung:** nennt `--decide N STATUS REASON`, richtig ist `--why REASON`. Mit Ja stimmt der Hinweis in jeder neu geschriebenen Aufzeichnung; alte bleiben unverändert.
-4. **Prosa nachziehen** (Architektur-Beispiel „a preparation run“, fester Satz für eine Vorbereitung ohne Text, „the one fence walker“, `is_preparation` im CHANGELOG, Ausnahme für Beispiel-Codeblöcke in Architektur und Moduldoc). Mit Ja ein Doku-Commit, kein Verhalten.
-5. **Zwei kleine Heimaten zusammenlegen:** Schlusszeile des Ergebnisblocks einmal (`CLOSE = closer("result")`, bytegleich) und zwei fehlende Zeilen in der Heimat-Tabelle der Architektur. Mit Ja kein Formatbruch; die Ablehnung falscher Öffnungszeilen bleibt doppelt (anderes Muster).
-6. **Namen:** „holds“ in `finalize` doppelt belegt, „kept“ in `recheck` dreifach, `agree` klingt nach Ja/Nein. Nur beim nächsten Anfassen; mit Ja jetzt ein reiner Umbenennungs-Commit.
+Offen, nicht gebaut:
 
+1. **`finalize` stürzt bei einer README ohne gültiges UTF-8 ab** (Traceback statt Blocker): `readme_check.readme_placeholders` liest über `scope_sha.readme_text` ohne Fehlerbehandlung (`labkit/checks/readme_check.py:38`, `labkit/formats/scope_sha.py:166`). Nachgestellt am 24.11.
+2. **Fester Satz für eine Vorbereitung ohne lesbaren Text** spricht von „the origin run's question, criteria or method“, die eine Vorbereitung nicht schuldet (`labkit/checks/audit_binding.py:195`, `:232`). Die Abschnitte zum Herkunftsprotokoll gehen in `shown_sha` ein: eine Änderung macht Aufzeichnungen eines Laufs mit einer solchen Herkunft ungültig. Entscheidung beim Autor.
+3. Die Ablehnung falsch gelesener Öffnungszeilen bleibt zweimal (`comment_blocks.py:94`, `report_blocks.py:236`): verschiedene Muster, vom Autor nicht zusammengelegt.
 
 ### Nutzungsfunde zu Wartung und Lesbarkeit
 
