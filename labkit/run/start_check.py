@@ -494,7 +494,7 @@ def _audit_unavailable(
             ) from exc
     try:
         failed = failed_attempts.audit_unavailable(
-            base_dir, sha, "preflight", block_sha
+            base_dir, sha, PREFLIGHT_AUDIT, block_sha
         )
     except findings.FindingsError as exc:
         raise SystemExit(
@@ -513,7 +513,7 @@ def _audit_unavailable(
         audit = commands.audit_command(
             base_dir,
             "--mode",
-            "preflight",
+            PREFLIGHT_AUDIT,
             protocol=base_dir / bound.name if bound.head is not None else None,
         )
         raise SystemExit(

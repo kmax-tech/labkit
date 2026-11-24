@@ -110,6 +110,14 @@ def _replace(path: Path, write: Callable[[Path], object]) -> None:
     os.replace(_stage(path, write), path)
 
 
+def _temp_beside(path: Path) -> Path:
+    """The temp file beside PATH this process and thread write through: the
+    thread in the name too, since two threads of one process staging the
+    same PATH (the cache's first `.gitignore`) would share and lose one
+    temp file."""
+    return path.with_name(f".{path.name}.tmp{os.getpid()}-{threading.get_ident()}")
+
+
 def _stage(path: Path, write: Callable[[Path], object]) -> Path:
     """The temp file beside PATH, written by WRITE and given PATH's mode
     when PATH exists; removed again when a step fails. PermissionError,
@@ -119,9 +127,7 @@ def _stage(path: Path, write: Callable[[Path], object]) -> Path:
         if not os.access(path, os.W_OK):
             raise PermissionError(f"{path}: not writable — nothing written")
         mode = stat.S_IMODE(path.stat().st_mode)
-    # The thread in the name too: two threads of one process staging the same
-    # PATH (the cache's first `.gitignore`) would share and lose one temp file.
-    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}-{threading.get_ident()}")
+    tmp = _temp_beside(path)
     try:
         write(tmp)
         if mode is not None:
@@ -140,7 +146,7 @@ def write_once(path: Path, text: str) -> bool:
     again; a reader sees no file or the whole one. The record a cache
     keeps per key goes through it (`llm_cache`): the first answer under a
     key is the one every later read gets."""
-    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}-{threading.get_ident()}")
+    tmp = _temp_beside(path)
     try:
         tmp.write_text(text, encoding="utf-8")
         os.link(tmp, path)
