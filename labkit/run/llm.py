@@ -551,9 +551,13 @@ _REFUSING_LOCK = threading.Lock()
 @contextlib.contextmanager
 def refusing_calls(run_id: str, why: str) -> Iterator[None]:
     """While the block runs, every `complete`, `complete_response` and
-    `complete_many` call in this process, in any thread, raises
-    CallRefused naming RUN_ID and WHY before anything is sent; after it,
-    calls go through again. Raises ValueError when RUN_ID refuses already."""
+    `complete_many` (through `complete`) call in this process raises
+    CallRefused naming RUN_ID and WHY before anything is sent: in any
+    thread, and for every run of the process alike — the refusal is
+    process-wide, and its sentence names the first refusing run. After the
+    block, calls go through again. runlog enters it at `run.__enter__`, so
+    a run object built and never entered refuses nothing. Raises ValueError
+    when RUN_ID refuses already."""
     with _REFUSING_LOCK:
         if run_id in _REFUSING:
             raise ValueError(f"run {run_id} refuses model calls already")

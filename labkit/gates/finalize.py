@@ -574,7 +574,7 @@ def check_answer_reading(
         try:
             declared = read_answer_reading(child)
         except ArtefactError:
-            continue
+            continue  # `check_run_code` blocks on it, and compares the parent whole
         if declared is None:
             continue
         findings.note(

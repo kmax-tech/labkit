@@ -149,16 +149,23 @@ def code_since_run(
     of git or of the run's kept copies, so the comparison stays one boundary,
     tested against real repositories (`tests/test_run_code.py`).
 
-    Where a run of the chain declares its answer reading
-    (`answer_reading`, a derived run's `answer-reading.json`), its parent is
-    compared in that module and the repo-local modules it imports
-    (`scope_sha.measured_code` of the module) instead of its script and
-    helpers: the evaluation may have changed since the parent ran, the
-    reading of an answer may not. The declared module must still be among
-    the modules the declaring run's script imports. A declaration that does
-    not read is a blocker, and the parent is then compared whole. Without a
-    declaration the parent is compared whole, as before, and a difference
-    there names the declaration as a way out beside measuring anew."""
+    How much of a parent's code is compared depends on its child's
+    `answer-reading.json` (`answer_reading`):
+
+    - missing (no declaration, a file deleted, a run of an older labkit):
+      the parent's script and helpers whole, as before; a difference
+      there names the declaration as a way out beside measuring anew;
+    - present but not readable: a blocker naming the file, and the parent
+      compared whole as well;
+    - present: the declared module and the repo-local modules it imports
+      (`scope_sha.measured_code` of the module), which must still be among
+      the modules the child's script imports — the evaluation may have
+      changed since the parent ran, the reading of an answer may not.
+
+    The declaration narrows this comparison for every caller (finalize,
+    recheck, the registration hold, the adoption). Only finalize, and
+    report-check through it, also holds the prompts field and the answer
+    file to the parent's (`answer_reading_gaps`)."""
     try:
         chain = lineage(answering_run)
     except ValueError as exc:
@@ -260,8 +267,10 @@ def _or_declared(found: GateFinding, parent: str) -> GateFinding:
     """FOUND, a difference in the code PARENT ran, found for a derived run
     that declared no answer reading, with that declaration as a way out
     after measuring anew: when only the evaluation changed, a derived run
-    that declares the module reading an answer is compared there only. A
-    finding that is no found difference is returned as it is."""
+    that declares the module reading an answer is compared there only.
+    Only a finding whose `changed_since` is PARENT gains it; any other —
+    one that could not compare, or a difference in another run — is
+    returned as it is."""
     if found.changed_since != parent:
         return found
     return replace(
