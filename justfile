@@ -12,6 +12,14 @@ default:
 check tier="full":
     .githooks/checks {{tier}}
 
+# the fast guards before a commit (~25 s): format, lint and the rule tests that
+# refused commits most often — a way out without a command, the layers and
+# file access, one home per logic; the commit hook stays the check
+guard:
+    {{venv}}/ruff format --check .
+    {{venv}}/ruff check .
+    {{venv}}/pytest -q -n 4 -p no:cacheprovider tests/test_ways_out_data.py tests/test_architecture.py tests/test_one_home.py
+
 # the suite, or the tests matching NAME
 test name="":
     {{venv}}/pytest -q {{ if name != "" { "-k " + quote(name) } else { "" } }}

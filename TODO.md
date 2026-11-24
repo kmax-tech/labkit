@@ -39,13 +39,6 @@ Originalantworten, ursprüngliche Befunde und Zweitprüfungen bleiben erhalten. 
 ## Notiert, nicht geplant
 
 Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingungen. Vor einem Bau den aktuellen Fall nachstellen oder den jeweils genannten Auslöser belegen. Die vollständigen ursprünglichen Beschreibungen bleiben im [Verlauf](TODO-history-2026-11-20.md#notiert-nicht-geplant).
-### Schneller Vorlauf vor dem Commit
-
-Anlass: Beim Bau der Auswertungskorrektur (24.11.) scheiterten 3 von 9 Hook-Läufen (je ~2,5 min) an Dingen, die in Sekunden prüfbar sind: `ruff format`, ein Blocker-Ausweg ohne Kommando (`tests/test_ways_out_data.py`), Dateizugriff in der Prüfschicht bzw. Kern→Lehre-Import (`tests/test_architecture.py`), Pfad-Heimat (`tests/test_one_home.py`). Vorhaben: ein Kommando unter 30 s, das genau diese Wächter vor dem Commit laufen lässt (Ort offen: `just`-Rezept, Zeile in `CLAUDE.md` „Setup and tests“, oder vorderer Schritt in `.githooks/checks fast`). Abnahme: dieselben drei Fehler fallen im Vorlauf auf, der Hook bleibt unverändert die Prüfung.
-
-Nebenbefund dazu: `tests/test_recheck_inputs.py::FromInputs::test_intact_inputs_with_code_not_recorded_are_not_verifiable` scheitert einzeln aufgerufen (auch auf `c3235d20` ohne Änderung), unter xdist grün — nachstellen, Ursache benennen.
-
-
 ### Audit 24.11., drittes — offen, nichts entschieden
 
 Befunde: [Notiz](docs/notes/2026-11-24-repo-audit-3.md). HEAD `2cd5e158`, ganze Suite im frischen Worktree: Exit 0. Kein Befund ändert ein Gate-Urteil auf korrekter Eingabe. Offene Punkte:

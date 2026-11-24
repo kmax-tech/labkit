@@ -12,6 +12,7 @@ import contextlib
 import io
 import json
 import shutil
+import sys
 import tempfile
 import unittest
 from collections.abc import Mapping
@@ -52,8 +53,11 @@ class FromInputs(unittest.TestCase):
         self.factor = self.area / "factor.txt"
         self.factor.write_text("2\n", encoding="utf-8")
         inputs = {"rows": self.rows, "factor": self.factor}
-        with runlog.run("c", {}, self.area, data=inputs) as c:
-            c.metrics(**evaluate(inputs))
+        # C records no script whatever started the tests: sys.argv[0] is a file
+        # under `python -m pytest` and none under xdist's workers
+        with mock.patch.object(sys, "argv", [""]):
+            with runlog.run("c", {}, self.area, data=inputs) as c:
+                c.metrics(**evaluate(inputs))
         self.c = c.dir
         self.calls = 0
 
