@@ -61,3 +61,28 @@ What this path does not give, measured against "What the person requires":
 - No guidance names it: `labkit/docs/agent-guide.md` and `docs/workflow.md` do not mention a re-evaluation, and the blocker's way out names only "measure anew" or "restore".
 
 Open for the author: question 3 (how labkit tells "only the evaluation changed" without trusting the author) decides whether the answer-reading rule is held; the declared scopes per promise (`declared_scope_sha`, compared for repeats in `labkit/formats/answering_run.py:282`) are the existing mechanism closest to "a diff restricted to named functions".
+
+## Probe on a copy, 2026-11-24 (question 1 for experiment 14; nothing adopted, nothing changed in argmining27)
+
+A `git clone --local` of argmining27 at `1f1f68a` in the session scratchpad, its pinned labkit 0.115.0. One change to the area's `run_reevaluate`: no `derived_from`, the answer file recorded as input `answers` with the chosen origin `runlog.RunOutput(OUT, run=aa0a)` (needed: `2b96` registered the same bytes, so the origin is not unique), no `r.output(OUT)`; `metrics_from_inputs` reads the rows from that input. Run `6ead`, no model call:
+
+| Step                                    | Result                                                                                                                                                                                                                                                   |
+|-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| run record                              | `derived_from` none; `answers` origin `aa0a`, chosen, sha `9602e84dbb10a2be`                                                                                                                                                                             |
+| `finalize .`                            | exit 0, 0 blockers, 4 warnings: the three open findings of the analysis audit of `aa0a`, and "no outputs.json"; input origins: "the output of `aa0a` (chosen by the script), as both records hold it", the protocol `aa0a` was measured under reads back |
+| `recheck.verified_from_inputs` directly | holds: 769 keys recomputed from the recorded inputs, none grown; against `aa0a` one key differs (`diff_sw_ell_alarm_g_lo`, −0.08333333333333333 → −0.08333333333333336), `n_weighting_expected` 10 in both                                               |
+| `aa0a` and the answer file              | byte-identical to the original repository                                                                                                                                                                                                                |
+| `02_analyze.py --check` as stamped      | exit 1: "run `6ead` did not register fixed-scenario-cross-rating.jsonl as an output" — the area's check always calls `recheck.holds` first                                                                                                               |
+| same, through `holds_from_inputs`       | exit 1: the protocol has no answer yet — the check follows the adoption                                                                                                                                                                                  |
+| `labkit-next .`                         | the new analysis audit is owed (the code changed since the audit of `aa0a`)                                                                                                                                                                              |
+| `labkit-adopt . 6ead`                   | exit 2: the Conclusion is open                                                                                                                                                                                                                           |
+
+Not run: the analysis audit (an agent call) and the Conclusion (the author's text), so neither the adoption, report-check nor what the adopted result shows of the origin, both commits and the finding.
+
+Where the two ways are not yet clearly delimited in labkit:
+
+- Three relations of a run to earlier answers exist; the skeleton carries two. `derived_from` re-reads the parent's rows and holds the parent's code (`runs.lineage`). An origin input with rows of its own is rechecked by the stamped `02_analyze.py` (`holds`, then `verified_from_inputs`). An origin input with no rows of its own — the correction case — has `recheck.holds_from_inputs`, which no template calls (`labkit/templates/analyze-script.py.template:112`, `analyze-quick-script.py.template:75`); only tests do.
+- `code_since_run` says analysis code is not compared, while the skeleton puts the answer reading and `evaluate_rows` into the measure script (`labkit/templates/measure-script.py.template:200`, `:255`).
+- The blocker on `derived_from` names "measure anew" or "restore", not the origin input.
+- `finalize` warns "no outputs.json" on a run that by design writes none.
+- The answer-reading rule (`parse_letter`) is held by neither way.
