@@ -41,8 +41,35 @@ class WriteAtomic(unittest.TestCase):
         self.assertEqual(seen, {200_000})
         self.assertFalse([p for p in d.iterdir() if f".tmp{os.getpid()}" in p.name])
 
+    def test_two_threads_writing_one_file_both_succeed(self):
+        """Two threads of one process, the same new file (the cache's first
+        `.gitignore`): each stages its own temp file, neither loses it to
+        the other's rename. Before, 50 of 50 rounds raised
+        FileNotFoundError."""
+        d = Path(tempfile.mkdtemp())
+        for i in range(50):
+            target = d / f"ignore-{i}"
+            start = threading.Barrier(2)
+            errors: list[BaseException] = []
+
+            def write(t: Path = target, b: threading.Barrier = start) -> None:
+                b.wait()
+                try:
+                    files.write_atomic(t, "*\n")
+                except BaseException as exc:
+                    errors.append(exc)
+
+            threads = [threading.Thread(target=write) for _ in range(2)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            self.assertEqual(errors, [], f"round {i}")
+            self.assertEqual(target.read_text(), "*\n")
+        self.assertEqual(len(list(d.iterdir())), 50)
+
     def test_a_failed_write_leaves_the_old_file_and_no_temp_file(self):
-        """A failed write leaves no staging file (`.REPORT.md.tmp<pid>`
+        """A failed write leaves no staging file (`.REPORT.md.tmp<pid>-<thread>`
         beside the report). The twin: a write that succeeds leaves no temp
         file either (above)."""
         d = Path(tempfile.mkdtemp())
