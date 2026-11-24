@@ -42,6 +42,18 @@ Both were repaired in `scripts/01_measure.py` (commit `bf0bfc7`), declared as a 
 - A test where the answer file changed after the parent run: refused.
 - The existing tests stay green; no change to standards or rule texts without the author's decision.
 
+## Documentation acceptance — required before completion
+
+These are requirements for the implementation's documentation, not instructions for an already available feature. Document the selected extension of `derived_from`; the alternative paths investigated below are not parallel user workflows.
+
+1. Extend `docs/workflow.md`, in its existing "Repair and recovery" section, with the complete correction procedure. Distinguish reproducing an old result with its original code, correcting the evaluation of unchanged answers in a new recorded run, and collecting new answers after changing the measurement conditions. Explain that a new run does not necessarily make new model calls. Show the prerequisites, actual commands, expected outcome and failure cases through adoption and report checking.
+2. Add a short decision guide to `labkit/docs/agent-guide.md`, beside "Finalize, audit and decide". This guide ships with the package: give agents the necessary next actions without requiring an unshipped repository note. Distinguish mechanical checks from the audit's judgement of answer reading outside the declared module. Keep the detailed worked explanation in `docs/workflow.md`.
+3. Update the `derived run` entry in the README's "Terms" table. Explain what `derived_from` records, the additional declaration needed for the correction path, and which code checks remain in force without that declaration. Use the implemented spelling; do not invent a command or field for the documentation.
+4. Make the blocker for a changed parent script name the supported correction path and its prerequisites, alongside the cases that require new answers or restoration of an accidental edit. Its next action must agree with the workflow and agent guide.
+5. Exercise the documented procedure end to end with a self-contained scenario and an explicitly identified stand-in audit, as the existing scenario tests do. Demonstrate successful recomputation, adoption and report checking, unchanged original answers and records, and the reported relationship between the old and corrected results. Verify that a missing file never silently selects another check. Record what was actually exercised on the copy of experiment 14; a synthetic success is not a completed adoption in that laboratory.
+
+Keep the investigation, decisions and evidence in this note. Keep only the current assignment, status and link in `TODO.md`. Mark unimplemented behaviour as planned until the supported procedure passes its acceptance checks. This documentation requirement authorizes no paid audit or model call and no change to the original argmining27 repository.
+
 ## Not in this task
 
 - No change in argmining27 and no model call. Experiment 14 waits for the result; it is neither adopted nor handed over in the meantime.
