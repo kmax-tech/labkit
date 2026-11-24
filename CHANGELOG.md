@@ -6,7 +6,7 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 
 ### Fixed
 
-- **A recheck refuses when the kept number is missing from metrics.json.** `recheck.agree` compared the protocol's `[kept]` key only when it stood on both sides; a metrics.json without it passed, the recomputed value counted as a key that grew. Now a kept key the recomputation produces and metrics.json lacks fails like an identifier on one side only (`intent or kept keys on one side only [...]`). A run whose metrics.json lacks its reported number, rechecked clean up to 0.115.0, is refused.
+- **A recheck refuses when the kept number stands on one side only.** `recheck.agree` compared the protocol's `[kept]` key only when it stood on both sides; a metrics.json without it passed, the recomputed value counted as a key that grew. Now a kept key in metrics.json or in the recomputation alone fails: `the kept number is missing — {'mean': ['metrics.json']}`. A kept key absent from both stays finalize's blocker (`kept_number_gaps`). A run whose metrics.json lacks its reported number, rechecked clean up to 0.115.0, is refused.
 
 - **Two threads that write the same file at once no longer crash.** `files.write_atomic` staged under a temp name carrying only the process id, so two threads of one process writing one path shared the temp file and one rename failed with FileNotFoundError — reproduced in 50 of 50 rounds when two threads created the same LLM cache directory (`llm_cache`, its first `.gitignore`). The temp name now carries the thread too (`.NAME.tmp<pid>-<thread>`), as `write_once` already did.
 

@@ -570,18 +570,30 @@ def agree(
     registered identifiers (`INTENT_KEY`) are compared exactly — on one side
     only, or with another value, the check fails —, and so are the REPORTED
     keys (the protocol's `[kept]` key, `kept_keys`: the number it
-    reports) — one the recomputation produces and metrics.json lacks fails
-    too; of the other descriptive keys none may disappear, and a value
-    that differs or a key that grew is no failure. Compared as JSON, the way the run recorded it
+    reports), on one side only failing as well; absent from both, it is
+    finalize's blocker (`kept_number_gaps`), not this check's. Of the other
+    descriptive keys none may disappear, and a value that differs or a key
+    that grew is no failure. Compared as JSON, the way the run recorded it
     (`runs.as_stored`): a tuple from evaluate() is the list in metrics.json,
     not a difference, and `1` is not `true`."""
     recomputed = json.loads(json.dumps(recomputed))
     intent = {k for k in set(metrics) | set(recomputed) if INTENT_KEY.match(k)}
-    one_sided = sorted(
-        k
-        for k in intent | (reported & set(recomputed))
+    unkept = {
+        k: [
+            side
+            for side, d in ((runs.METRICS_FILE, metrics), ("recomputation", recomputed))
+            if k not in d
+        ]
+        for k in sorted(reported)
         if (k in metrics) != (k in recomputed)
-    )
+    }
+    if unkept:
+        raise SystemExit(
+            f"recheck: the kept number is missing — {unkept}: the number the "
+            f"protocol reports must stand in metrics.json and come out of the "
+            f"recomputation"
+        )
+    one_sided = sorted(k for k in intent if (k in metrics) != (k in recomputed))
     vanished = sorted(set(metrics) - set(recomputed) - ignore)
     if one_sided or vanished:
         beside = (
@@ -593,12 +605,11 @@ def agree(
         )
         raise SystemExit(
             f"recheck: metrics.json and the recomputation disagree — "
-            f"intent or kept keys on one side only {one_sided}, vanished "
-            f"{vanished}{beside}"
+            f"intent keys on one side only {one_sided}, vanished {vanished}{beside}"
         )
     differing = sorted(
         k
-        for k in intent | (reported & set(recomputed))
+        for k in intent | reported
         if k in metrics and runs.as_stored(recomputed[k]) != runs.as_stored(metrics[k])
     )
     if differing:
