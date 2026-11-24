@@ -840,11 +840,12 @@ FIELD_TEXTS = "FIELD TEXTS"
 #: (`word_diff`); a longer unchanged run is cut to its ends around `…` —
 #: both texts stand in full above the diff, so the cut hides nothing
 DIFF_CONTEXT_WORDS = 8
-#: the size from which a field text printed twice moves the piece's texts
-#: under `FIELD TEXTS` (`field_text_numbers`): a shorter one ("3
-#: documents") reads better at each entry than as a number, and its
-#: repetition costs less than the section's head; a protocol field of a
-#: long area (7 kB, argmining27 experiment 15) is far above it
+#: the size from which a field text printed twice moves all the piece's
+#: texts, short ones included, under `FIELD TEXTS` (`field_text_numbers`):
+#: a shorter repeated one ("3 documents") reads better at each entry than
+#: as a number, and its repetition costs less than the section's head; a
+#: protocol field of a long area (7 kB, argmining27 experiment 15) is far
+#: above it
 FIELD_TEXT_ONCE_MIN = 500
 
 #: the field texts of a follow-up piece, each (label, value) → its number
@@ -967,10 +968,13 @@ def field_texts_lines(
         return []
     lines = [
         f"{FIELD_TEXTS} — each field text the entries above name by number, "
-        f"once in full, with the sha256 of its UTF-8 bytes and its size; then "
-        f"each change to judge once as a word diff: removed words as [-…-], "
-        f"added words as {{+…+}}, unchanged words past {DIFF_CONTEXT_WORDS} "
-        f"on either side of a change cut to …"
+        f"once in full (one number per distinct text: entries that show the "
+        f"same text name the same number), with the sha256 of its UTF-8 bytes "
+        f"and its size; then each change to judge between two texts that read "
+        f"and differ, once, as a word diff (whitespace folded): removed words "
+        f"as [-…-], added words as {{+…+}}, unchanged words past "
+        f"{DIFF_CONTEXT_WORDS} on either side of a change cut to …. The diff "
+        f"points to the change; the full texts are the evidence"
     ]
     for (label, value), n in numbers.items():
         data = value.encode("utf-8")
@@ -1015,7 +1019,9 @@ def field_change_lines(
        as the first registration (no line where no measurement is listed);
     3. with a run audited: the field in that run's own text;
     4. the field now;
-    5. which of these the change to judge is taken against.
+    5. which of these the change to judge is taken against;
+    6. with NUMBERS, where that change's word diff stands under
+       `FIELD TEXTS` (none where `judged_pair` gives none).
 
     Equal values are printed on their own lines all the same: each line
     names the text its value comes from. A value NUMBERS holds is printed
@@ -1070,6 +1076,12 @@ def field_change_lines(
         lines.append(
             f"change to judge: from the value {AS_FIRST_REGISTERED} to the value now"
         )
+    pair = judged_pair(change)
+    if numbers and pair is not None:
+        old, new = (numbers[(change.label, v)] for v in pair)
+        lines.append(
+            f"word diff: under {FIELD_TEXTS} below, field text {old} → field text {new}"
+        )
     return lines
 
 
@@ -1086,11 +1098,12 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
 
     A field text of `FIELD_TEXT_ONCE_MIN` bytes or more that the
     corrections would print more than once (several corrections of one
-    field, or one text equal to another) is printed nowhere twice: then
+    field, or one text equal to another) is printed in full only once: then
     every field text of the piece stands once in full under `FIELD TEXTS`
     after the entries, each entry names the number of its texts, and
     each change to judge follows there once as a word diff
-    (`field_text_numbers`, `field_texts_lines`). Nothing is dropped; the
+    (`field_text_numbers`, `field_texts_lines`). No field text is dropped
+    (the diff folds whitespace and cuts unchanged runs; the texts do not); the
     operating limits are measured on the piece as printed."""
     if not shown.entries:
         return (

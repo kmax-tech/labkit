@@ -136,6 +136,9 @@ class SeveralCorrectionsOfOneField(unittest.TestCase):
         diff = lines[lines.index(diffs[0]) + 1]
         self.assertIn("Item 40 [-(first)-] {+(now)+} of the", diff)
         self.assertTrue(diff.startswith("  … ") and diff.endswith(" …"), diff)
+        # each entry points to it, below its change to judge line
+        pointer = "  word diff: under FIELD TEXTS below, field text 1 → field text 3"
+        self.assertEqual(lines.count(pointer), 2)
 
     def test_two_runs_audited_add_their_own_texts_and_no_second_copy(self):
         other = scope("as another run")
