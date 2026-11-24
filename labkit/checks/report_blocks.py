@@ -11,6 +11,10 @@ in a report result block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
     auc = 0.69, n = 12 (run 2026-10-22T09-13-08_0dc3)
     <!-- /labkit result -->
 
+A block shown inside a closed fenced code block outside every block is an
+example the document shows, not a block, and is not read
+(`comment_blocks.example_lines`).
+
 The opening line names the protocol the block belongs to — its path
 relative to the report, without spaces — and the run it shows. The body is
 what that protocol, declaring that run as its result, renders

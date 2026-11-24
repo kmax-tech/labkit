@@ -1,10 +1,14 @@
 """markdown — the structure of a Markdown file labkit reads: its fenced
 blocks and its `## ` sections.
 
-The one fence walker (`fence_spans`) and the one cut into sections
+One fence grammar (`FENCE`, `fence_end`), the fence walker of prose and
+protocol readers (`fence_spans`) and the one cut into sections
 (`section_starts`), outside every fence: a `## ` line or a ``` inside a
 fence is body. Protocols (`protocol_block`), reports, rules and the
-stamped skeletons are read through them. Pure: text in, indexes out.
+stamped skeletons are read through them. The report-block reader walks
+the same grammar on its own terms (`comment_blocks.example_fences`): there
+an unclosed fence hides nothing, here it runs to the end. Pure: text in,
+indexes out.
 """
 
 from __future__ import annotations
@@ -21,8 +25,9 @@ FENCE = re.compile(r"^(\s*)(`{3,}(?!.*`)|~{3,})\s*([\w+-]*)")
 
 def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
     """(info string, first body line, line after the body) of every
-    top-level fenced block, as 0-based indexes into LINES — the one fence
-    walker; `fenced_blocks` is its text form, and the readers that need a
+    top-level fenced block, as 0-based indexes into LINES — the walk of
+    prose and protocol readers (the report-block reader has its own,
+    `comment_blocks.example_fences`); `fenced_blocks` is its text form, and the readers that need a
     place (the head's line, the Prompt block to replace) use the spans.
     A fence inside another fence is body, not a block: a verbatim prompt
     that asks the model for ```toml output is no second head. A fence
@@ -81,7 +86,7 @@ def section_end(lines: list[str], start: int) -> int:
 
 def fenced_lines(lines: list[str]) -> set[int]:
     """The 0-based indexes of every line a fence takes — its markers and its
-    body, by `fence_spans`. For a reader that walks lines and must skip the
+    body, by `fence_spans`, an unclosed one to the end. For a reader that walks lines and must skip the
     fenced ones (a prose count, a label search, a rule scan). A flag
     toggled on ``` by hand would turn prose into code at a `~~~` fence or a
     ``` nested in a fence, where the protocol parser reads it right."""
