@@ -1081,7 +1081,8 @@ SHA256_SHAPE = re.compile(r"^[0-9a-f]{64}$")
 class EvidenceFile:
     """One `[[evidence_file]]` table: a data or output file the protocol
     declares for the audit to read in full — PATH relative to the
-    protocol's directory, inside it — with the SHA256 of its bytes when
+    protocol's directory, lexically below it (a symlink on the way may
+    lead elsewhere, as a `data/` link does) — with the SHA256 of its bytes when
     it was declared. Not a promise's `scope` (code a promise rests on, part
     of the registration) and not the area's committed audit evidence
     (`evidence`): neither the registration nor the promise block covers it."""
@@ -1093,8 +1094,9 @@ class EvidenceFile:
 def evidence_files(text: str) -> tuple[EvidenceFile, ...]:
     """The protocol's `[[evidence_file]]` tables in the order written, ()
     without any. Each has exactly `path` (a relative `/`-separated path
-    below the protocol's directory: no `..`, not absolute, not empty) and
-    `sha256` (SHA256_SHAPE); a path declared twice is refused. Whether the
+    lexically below the protocol's directory: no `..`, not absolute, not
+    empty) and `sha256` (SHA256_SHAPE); a path declared twice — compared
+    after `./` and `//` fold away — is refused. Whether the
     file stands and still has that digest is the audit's
     (`audit_prompt.evidence_file_pieces`), not the parser's. Raises
     BlockError naming the table and the field on any other shape."""
@@ -1128,7 +1130,7 @@ def evidence_files(text: str) -> tuple[EvidenceFile, ...]:
                 f"{where} sha256 = {sha!r} — the file's sha256 when declared, "
                 f"64 lowercase hex digits (`shasum -a 256 {path}` prints it)"
             )
-        if any(e.path == path for e in out):
+        if any(PurePosixPath(e.path) == PurePosixPath(path) for e in out):
             raise BlockError(f"{where} path = {path!r} is declared twice")
         out.append(EvidenceFile(path, sha))
     return tuple(out)

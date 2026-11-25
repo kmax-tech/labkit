@@ -7,7 +7,7 @@ declared promise scopes, never a data file the person rests a repair on
 (a classification JSON, an output Markdown), so a finding about it stayed
 "not assessable". A promise `scope` would change the registration. The
 declaration lives beside the promises, not in them: the prompt shows each
-declared file under `EVIDENCE: <path> (sha256 …)`, the area stamp binds its
+declared file under `EVIDENCE FILE: <path> (sha256 …)`, the area stamp binds its
 bytes, and a file changed since its declaration, missing or too large is
 refused before any model call.
 """
@@ -121,6 +121,12 @@ class Parse(unittest.TestCase):
                 + evidence_table("a.json", "b" * 64),
                 "declared twice",
             ),
+            "twice, spelled apart": (
+                evidence_table("a.json", "a" * 64)
+                + "\n"
+                + evidence_table("./a.json", "b" * 64),
+                "declared twice",
+            ),
         }
         for what, (tables, needle) in cases.items():
             with self.subTest(what=what):
@@ -151,7 +157,7 @@ class Shown(_Area):
     def test_a_declared_json_file_is_shown_in_full_with_its_sha256(self) -> None:
         prompt = self.prompt()
         self.assertIn(
-            "===== EVIDENCE: experiments/01/data/raw/classification.json "
+            "===== EVIDENCE FILE: experiments/01/data/raw/classification.json "
             f"(sha256 {sha256(CLASSIFICATION)}) =====",
             prompt,
         )
@@ -160,7 +166,7 @@ class Shown(_Area):
     def test_an_undeclared_file_is_not_shown(self) -> None:
         prompt = self.prompt()
         self.assertNotIn("UNDECLARED-WORDCHECK-MARK", prompt)
-        self.assertNotIn(f"EVIDENCE: experiments/01/{UNDECLARED}", prompt)
+        self.assertNotIn(f"EVIDENCE FILE: experiments/01/{UNDECLARED}", prompt)
 
     def test_the_twin_the_same_file_declared_is_shown(self) -> None:
         """The known positive of the test above: the mark it looks for does
@@ -176,7 +182,7 @@ class Shown(_Area):
     def test_the_twin_without_a_declaration_shows_no_evidence_file(self) -> None:
         self.declare("")
         prompt = self.prompt()
-        self.assertNotIn("EVIDENCE: experiments/01/", prompt)
+        self.assertNotIn("EVIDENCE FILE: experiments/01/", prompt)
         self.assertNotIn('"case-1"', prompt)
 
 
@@ -286,6 +292,27 @@ class Bound(_Area):
         before = scope_sha.area_stamp(self.area)[0]
         (self.area / UNDECLARED).write_text("changed\n", encoding="utf-8")
         self.assertEqual(scope_sha.area_stamp(self.area)[0], before)
+
+    def test_another_protocols_file_is_stamped_and_not_shown(self) -> None:
+        """The stamp covers every protocol's declarations, as it covers
+        every protocol's scopes; the prompt shows the audited one's."""
+        other = self.area / "data" / "other.json"
+        other.write_text('{"other": 1}\n', encoding="utf-8")
+        (self.area / "PROTOCOL-y.md").write_text(
+            "# y\n"
+            + head(
+                id="p-1111111111111111",
+                promises=evidence_table("data/other.json", sha256('{"other": 1}\n')),
+            ),
+            encoding="utf-8",
+        )
+        reading = audit_prompt.gather(self.area, self.protocol)
+        prompt = audit_prompt.bound_prompt("preflight", self.area, reading).prompt
+        self.assertIn("classification.json", prompt)
+        self.assertNotIn('"other": 1', prompt)
+        before = scope_sha.area_stamp(self.area)[0]
+        other.write_text('{"other": 2}\n', encoding="utf-8")
+        self.assertNotEqual(scope_sha.area_stamp(self.area)[0], before)
 
     def test_an_area_without_a_declaration_keeps_its_stamp(self) -> None:
         """The basis is appended only when declared: the stamp without a

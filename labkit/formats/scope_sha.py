@@ -627,13 +627,20 @@ def evidence_file_basis(
     file's bytes, NO_FILE while it is not a file. CONTENTS maps each
     declared file that is a file, resolved, to the bytes the entries took
     — what the prompt shows. Whether the bytes still have the declared
-    digest is the audit's, not the stamp's.
+    digest is the audit's, not the stamp's. The audit shows only the
+    audited protocol's files (`audit_prompt.evidence_file_pieces`): a file
+    another protocol of the area declares is stamped and not shown, so its
+    change stales the audit of every protocol of the area — the reach of
+    a declared scope. Each declared file is read whole here; the size
+    limit is the prompt's, not the stamp's.
 
     Raises:
         OSError: A protocol, or a declared file that stands, does not read.
         protocol_block.BlockError: An `[[evidence_file]]` table of a block
             that reads is malformed (a ValueError): a declaration nobody
-            can read is refused, never stamped as if absent. A block that
+            can read is refused, never stamped as if absent; every caller
+            of `area_snapshot` meets it, as it meets a malformed promise
+            block. A block that
             does not read at all is skipped, as by the other bases — the
             head check names it."""
     root = layout_root(area)

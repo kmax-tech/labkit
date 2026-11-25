@@ -121,7 +121,7 @@ INLINE_NOTE = (
     "its adopted run and Conclusion, the runs the adopted run rests on and "
     "the inputs both protocols' runs recorded under `===== EXPLORATION: … "
     "=====` lines, every data or output file the protocol declares in "
-    "`[[evidence_file]]`, in full, under an `===== EVIDENCE: <path> (sha256 "
+    "`[[evidence_file]]`, in full, under an `===== EVIDENCE FILE: <path> (sha256 "
     "<hex>) =====` line, and the area's "
     "earlier decided BLOCKERs and corrections under one `===== EARLIER DECIDED "
     "BLOCKERS AND CORRECTIONS =====` line. Nothing else is in scope."
@@ -662,8 +662,8 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
     return tuple(pieces)
 
 
-#: how a declared evidence file's piece opens: `EVIDENCE: <path> (sha256 <hex>)`
-EVIDENCE_FILE_LABEL = "EVIDENCE: "
+#: how a declared evidence file's piece opens: `EVIDENCE FILE: <path> (sha256 <hex>)`
+EVIDENCE_FILE_LABEL = "EVIDENCE FILE: "
 #: operating limits of the declared evidence files, not thresholds of
 #: meaning: past either the audit refuses before the call, naming each file
 #: and its size, rather than show a cut file (set 2026-11-25 above the
@@ -677,7 +677,7 @@ def evidence_file_pieces(
 ) -> tuple[tuple[str, str], ...]:
     """The files TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`
     as prompt pieces, in the order declared, each in full under
-    `EVIDENCE: <path> (sha256 <hex>)` — the bytes of SNAP, the ones the
+    `EVIDENCE FILE: <path> (sha256 <hex>)` — the bytes of SNAP, the ones the
     record's sha covers (`scope_sha.evidence_file_basis`). () without a
     declaration.
 
@@ -1507,7 +1507,9 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     the record binds what the prompt shows. The code is one snapshot: its
     bytes render the prompt, its sha goes in the record, and every stamped
     file the reading does not take in full is indexed — so the prompt shows
-    each file the stamp covers, no more and no fewer. The promise block and
+    each file the stamp covers, no more and no fewer (an `[[evidence_file]]`
+    another protocol of the area declares is stamped, not shown:
+    `scope_sha.evidence_file_basis`). The promise block and
     the registration (`protocol_check.registration_stamp`) come from the one
     protocol text the prompt carries; in MODE analysis
     the run is chosen once, and what the prompt shows of it is one snapshot
