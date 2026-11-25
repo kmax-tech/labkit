@@ -100,3 +100,7 @@ So `runlog start` waits for a run folder whose record is not there yet, and refu
 
 Not examined: other test files whose stand-in commands write a record straight to `config.json`.
 
+
+## The two tiers timed (2026-11-25)
+
+One run each on 11 cores, on `2153095c`, 27 test files carrying the mark `slow`: the fast tier (`.githooks/checks fast`: ruff, format, pyright and the suite without the scenario files) 124 s; the whole suite alone (`pytest -n auto`, after the git answers were kept) 525 s. `AGENTS.md` and `.githooks/checks` cite these two numbers; they cited 81 s and 383 s from 2026-11-10, when 13 files carried the mark. Sequential runs drift by about 15 %, so neither number is more than an order of size.
