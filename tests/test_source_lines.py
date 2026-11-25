@@ -47,7 +47,7 @@ class SourceLines(e2e.CountCommands):
         )
         while time.strftime(RUN_ID_TIME) <= newest:
             time.sleep(0.02)
-        return self.lab.run_id_of(self.lab.script(self.area, script))
+        return self.lab.measure(self.area, script)
 
     def setUp(self) -> None:
         super().setUp()

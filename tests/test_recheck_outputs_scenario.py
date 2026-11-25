@@ -71,7 +71,7 @@ class TwoOutputFiles(unittest.TestCase):
         cls.area, cls.protocol = stamp_count(cls.lab)
         _two_outputs(cls.area / "scripts" / "01_measure.py")
         cls.lab.commit("the count writes its ids as a second output")
-        cls.run_id = cls.lab.run_id_of(cls.lab.script(cls.area, "01_measure.py"))
+        cls.run_id = cls.lab.measure(cls.area)
         cls.lab.commit("the run, its two output files")
         cls.run_dir = runs.run_path(cls.area, cls.run_id)
         cls.counts = cls.area / "output" / "lines.jsonl"

@@ -183,6 +183,31 @@ class Lab:
             )
         return r.stdout
 
+    def wait_for_a_later_second(self, area: Path) -> None:
+        """Return once the clock shows a later second than every run AREA
+        holds. Run ids carry the second, and two bound runs of one second
+        leave the answering run's choice blocked
+        (`answering_run.same_second_rival`) — a history no lab writes by
+        hand, and one a test must not owe to how long its commands take.
+        Waits for the clock, not for a guessed time."""
+        runs = area / "runs"
+        held = runs.iterdir() if runs.is_dir() else ()
+        newest = max((d.name[: len(_SECOND)] for d in held), default="")
+        while time.strftime(RUN_ID_TIME) <= newest:
+            time.sleep(0.02)
+
+    def measure(
+        self,
+        area: Path,
+        name: str = "01_measure.py",
+        *args: str,
+        env: dict | None = None,
+    ) -> str:
+        """Run AREA's script NAME as a measurement, in a later second than
+        every run the area holds (`wait_for_a_later_second`); its run id."""
+        self.wait_for_a_later_second(area)
+        return self.run_id_of(self.script(area, name, *args, env=env))
+
     @staticmethod
     def run_id_of(output: str) -> str:
         m = re.search(r"run: (\S+)", output)
@@ -635,16 +660,8 @@ class CountCommands(unittest.TestCase):
     # -- the commands, as an agent runs them
     def measure(self) -> str:
         """Run the measuring script, in a later second than every run the
-        area holds: run ids carry the second, and two in one second leave
-        the answering run's choice blocked (`answering_run.same_second_rival`)
-        — a history no lab writes by hand. Waits for the clock, not for a
-        guessed time."""
-        runs = self.area / "runs"
-        held = runs.iterdir() if runs.is_dir() else ()
-        newest = max((d.name[: len(_SECOND)] for d in held), default="")
-        while time.strftime(RUN_ID_TIME) <= newest:
-            time.sleep(0.02)
-        return self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        area holds (`Lab.measure`); its run id."""
+        return self.lab.measure(self.area)
 
     def records(self) -> set[Path]:
         return set((self.area / "audits").glob("*-analysis*.toml"))
@@ -2682,7 +2699,7 @@ class StatedBar(unittest.TestCase):
         )
         lab.script(area, "00_prepare.py")
         lab.commit("registered: the task's bar as at_least")
-        run_id = lab.run_id_of(lab.script(area, "01_measure.py"))
+        run_id = lab.measure(area)
         metrics = json.loads(
             (area / "runs" / run_id / "metrics.json").read_text(encoding="utf-8")
         )

@@ -76,9 +76,7 @@ class EachProtocolAdoptsItsOwn(CountCommands):
         self.lab.commit("two protocols, each registered with a wrong document count")
         self.clean += f"\n{self.area.relative_to(self.lab.root).as_posix()}/scripts/03_measure_second.py"
         self.run_first = self.measure()
-        self.run_second = self.lab.run_id_of(
-            self.lab.script(self.area, "03_measure_second.py")
-        )
+        self.run_second = self.lab.measure(self.area, "03_measure_second.py")
         for protocol in (self.first, self.second):
             # the Conclusion line written: labkit-adopt refuses without it
             self.lab.conclude(protocol)

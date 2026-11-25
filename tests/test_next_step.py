@@ -59,7 +59,7 @@ class OneChainPerHold(unittest.TestCase):
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
         root = self.lab.root
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         self.lab.conclude(self.protocol)
         rc, out = self.lab.adopt(self.protocol, run_id)
@@ -185,7 +185,7 @@ class TheChain(unittest.TestCase):
         self.assertIn("`[reference]`", step.next)
         self.assertIn("hand-checked case", step.next)
         self.assertIn("blocker(s) stand, and this is the first", step.held)
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         # measured, no analysis audit: audit the run that answers; no report
         # registered, so no progress account and no registration hint
         step = self.step()
@@ -416,7 +416,7 @@ class ProgressAccount(unittest.TestCase):
 
     def measure(self) -> str:
         """The count measured and its Conclusion written: the adoption owes it."""
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         self.lab.concluded(self.protocol)
         return run_id
 
@@ -632,7 +632,7 @@ class DiscussingReport(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.run_id = self.lab.measure(self.area)
         self.lab.conclude(self.protocol)  # the adoption owes it
         # the analysis audit done: the chain names it before the report, and
         # `next` names the first hold — with it done, the review is the one left
@@ -791,7 +791,7 @@ class MissingRegisteredReport(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab, report_file="REPORT.md")
-        self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.measure(self.area)
         self.report = self.lab.root / "REPORT.md"
 
     def test_the_stop_prints_the_step_next_reads_from_the_same_finding(self):
@@ -846,7 +846,7 @@ class TwoProtocols(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         self.lab.conclude(self.protocol)  # the adoption owes it
         self.lab.record(self.area, self.protocol, "analysis", run_id)
         text = self.protocol.read_text(encoding="utf-8")
@@ -884,7 +884,7 @@ class ProtocolInTheIndexOnly(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         self.lab.record(self.area, self.protocol, "analysis", run_id)
         rc, out = self.lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)
@@ -941,7 +941,7 @@ class ReportInTheIndexOnly(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.run_id = self.lab.measure(self.area)
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
         rc, out = self.lab.adopt(self.protocol, self.run_id)
         self.assertEqual(rc, 0, out)
@@ -983,7 +983,7 @@ class AWarningBesideTheAdoption(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         self.lab.record(self.area, self.protocol, "analysis", run_id)
         rc, out = self.lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)
@@ -1032,7 +1032,7 @@ class AdoptionInTheTreeOnly(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        run_id = self.lab.measure(self.area)
         self.lab.record(self.area, self.protocol, "analysis", run_id)
         self.lab.commit("the run and its audit")
         rc, out = self.lab.adopt(self.protocol, run_id)
@@ -1074,7 +1074,7 @@ class RunInTheTreeOnly(unittest.TestCase):
         self.lab = Lab()
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
-        self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.run_id = self.lab.measure(self.area)
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
         rc, out = self.lab.adopt(self.protocol, self.run_id)
         self.assertEqual(rc, 0, out)

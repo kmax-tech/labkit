@@ -643,14 +643,14 @@ class AStepAtHighRepeatCost(unittest.TestCase):
     ):
         lab = self.lab
         self.frozen()
-        run_a = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        run_a = lab.measure(self.area)
         # a repeat is a new run id under the same audit
         out = lab.script(self.area, "01_measure.py", "--repeat-of", run_a)
         self.assertIn(f"draw 2 of {run_a}", out)
         # a step that changes nothing the audit read
         self.step_on(run_a, "again")
         lab.commit("B: a step on A that rewrites no field")
-        run_b = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        run_b = lab.measure(self.area)
         # a step that rewrites what the number is about
         lab.fill(
             self.protocol, "--force", "Exclusions / filters=points with an empty text"

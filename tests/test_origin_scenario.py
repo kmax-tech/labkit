@@ -13,7 +13,6 @@ import contextlib
 import io
 import json
 import re
-import time
 import unittest
 from collections.abc import Mapping
 from pathlib import Path
@@ -22,7 +21,6 @@ from unittest import mock
 import pytest
 
 from labkit.formats import gate, runs
-from labkit.formats.runs import RUN_ID_TIME
 from labkit.checks import recheck, result_render
 from labkit.checks.audit_binding import (
     NOT_RECONSTRUCTED,
@@ -100,13 +98,13 @@ class OriginHeldThroughTheHooks(unittest.TestCase):
         self.protocol.write_text(
             text.replace(RUNS_LINE, f"{RUNS_LINE}\n{THEN}"), encoding="utf-8"
         )
-        source = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        source = lab.measure(self.area)
         patch = self.area / "runs" / source / "uncommitted.patch"
         (written,) = runs.read_outputs(self.area / "runs" / source) or []
         lab.commit("run A, its rows")
         _point_script_at(self.measure, written.path)
         lab.commit("the script reads A's rows")
-        compared = lab.run_id_of(lab.script(self.area, "01_measure.py"))
+        compared = lab.measure(self.area)
         entries = runs.read_data(self.area / "runs" / compared) or []
         self.assertEqual(
             {e.key: e.origin_run for e in entries}, {"source": None, "inputs": source}
@@ -233,14 +231,8 @@ class _OriginStation(CountCommands):
 
     def run_script(self, script: str) -> str:
         """SCRIPT of the area run in a later second than every run it holds
-        (`CountCommands.measure`); its run id."""
-        held = (self.area / "runs").iterdir() if (self.area / "runs").is_dir() else ()
-        newest = max(
-            (d.name[: len(time.strftime(RUN_ID_TIME))] for d in held), default=""
-        )
-        while time.strftime(RUN_ID_TIME) <= newest:
-            time.sleep(0.02)
-        return self.lab.run_id_of(self.lab.script(self.area, script))
+        (`Lab.measure`); its run id."""
+        return self.lab.measure(self.area, script)
 
     def station(self, protocol: Path) -> tuple[int, str]:
         """finalize on PROTOCOL: (exit, the input-origins station's lines)."""

@@ -250,7 +250,7 @@ class CountDelivers(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.lab = e2e.Lab()
         cls.area, cls.protocol = e2e.stamp_count(cls.lab, deliverables=(DELIVERABLE,))
-        cls.run_id = cls.lab.run_id_of(cls.lab.script(cls.area, "01_measure.py"))
+        cls.run_id = cls.lab.measure(cls.area)
         cls.delivered = cls.lab.root / DELIVERABLE
 
     @classmethod

@@ -46,7 +46,7 @@ class Adopt(unittest.TestCase):
     ) -> tuple[Path, Path, str]:
         """The count measured, its Conclusion written unless CONCLUDED is False."""
         area, protocol = stamp_count(self.lab, report_file=report_file)
-        run_id = self.lab.run_id_of(self.lab.script(area, "01_measure.py"))
+        run_id = self.lab.measure(area)
         if concluded:
             self.lab.conclude(protocol)
         return area, protocol, run_id

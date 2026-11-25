@@ -94,7 +94,7 @@ class DeclaredAnswerReading(unittest.TestCase):
             text.replace(anchor, PROMPT + anchor, 1), encoding="utf-8"
         )
         self.lab.commit("the area reads a row's count in reading.py")
-        self.a = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.a = self.lab.measure(self.area)
         self.lab.commit("run A")
         self.a_dir = self.area / "runs" / self.a
         self.out = self.area / "output" / "lines.jsonl"
@@ -116,9 +116,7 @@ class DeclaredAnswerReading(unittest.TestCase):
         self.lab.commit("the evaluation fixed")
 
     def derive(self, flag: str = "--derive") -> str:
-        d = self.lab.run_id_of(
-            self.lab.script(self.area, "01_measure.py", flag, self.a)
-        )
+        d = self.lab.measure(self.area, "01_measure.py", flag, self.a)
         self.lab.commit("run D")
         return d
 

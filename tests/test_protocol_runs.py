@@ -13,7 +13,6 @@ from __future__ import annotations
 import contextlib
 import io
 import re
-import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -25,7 +24,6 @@ from test_origin_scenario import _pointed
 
 from labkit.checks import protocol_runs
 from labkit.formats import protocol_block, runs
-from labkit.formats.runs import RUN_ID_TIME
 from labkit.gates import report_check
 from labkit.tools import run_diff
 
@@ -455,13 +453,9 @@ class SourceProtocol(e2e.CountCommands):
     with A0; A1 in M stales it, a run of Q does not."""
 
     def run_script(self, script: str) -> str:
-        held = (self.area / "runs").iterdir() if (self.area / "runs").is_dir() else ()
-        newest = max(
-            (d.name[: len(time.strftime(RUN_ID_TIME))] for d in held), default=""
-        )
-        while time.strftime(RUN_ID_TIME) <= newest:
-            time.sleep(0.02)
-        return self.lab.run_id_of(self.lab.script(self.area, script))
+        """SCRIPT of the area run in a later second than every run it holds
+        (`Lab.measure`); its run id."""
+        return self.lab.measure(self.area, script)
 
     def setUp(self) -> None:
         super().setUp()
