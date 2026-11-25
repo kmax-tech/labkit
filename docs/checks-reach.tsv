@@ -1,0 +1,355 @@
+# traced: 4656 passed, 4 skipped, 7868 subtests passed in 1079.27s (0:17:59)
+unit	channel	nth	wording	standing	tests	rule_tests	test_files
+labkit.checks.audit_binding.check_audit_findings_decided	finding	1	{…} — {…}	direct	10	1	tests/test_adopt_per_protocol.py tests/test_end_to_end.py tests/test_finalize_open_findings.py tests/test_handovers.py tests/test_next_step.py tests/test_protocol_runs.py tests/test_rules_audit_binding.py
+labkit.checks.audit_binding.check_audit_findings_decided	finding	2	{…} — {…}	direct	2	1	tests/test_finalize_open_findings.py tests/test_rules_audit_binding.py
+labkit.checks.audit_binding.check_audit_records_read	finding	1	{…}	direct	3	1	tests/test_finalize_open_findings.py tests/test_handovers.py tests/test_rules_audit_binding.py
+labkit.checks.audit_binding.check_audited_runs_kept	finding	1	{…}: names {…} as the run it read, and there is no runs/{…}/ in this area — the run the r…	direct	5	3	tests/test_finalize_open_findings.py tests/test_report_check.py tests/test_rules_audit_binding.py tests/test_rules_registration_hold.py
+labkit.checks.audit_binding.source_protocol_finding	finding	1	{…}	direct	5	0	tests/test_origin_check.py tests/test_origin_scenario.py
+labkit.checks.code_check._intent_id_findings	finding	1	[{…}] is registered, but no script names a '{…}'/'{…}_*' key literal (a key assembled at …	direct	13	0	tests/test_agent_hooks.py tests/test_apply_skeleton.py tests/test_code_check.py tests/test_code_ids_keywords.py tests/test_preflight.py tests/test_promise_preflight.py
+labkit.checks.code_check._intent_id_findings	finding	1	key '{…}_*' is in the intent-id namespace, but the protocol registers no [{…}] · a number…	direct	7	0	tests/test_apply_skeleton.py tests/test_code_check.py tests/test_code_ids_keywords.py tests/test_unreadable_source.py
+labkit.checks.code_check.constant_copies	finding	1	[{…}] {…}:{…} sets {…} = {…} itself ({…}) · a copy judges by an unregistered value once t…	direct	4	0	tests/test_audit_rest.py tests/test_unreadable_source.py
+labkit.checks.code_check.main	finding	1	bundle: {…} could not be read — the reader sees `not readable` in its place	only through commands	1	0	tests/test_check_stations.py
+labkit.checks.code_check.promise_block_findings	finding	1	[{…}] declared scope: {…} · runlog refuses the run	direct	4	0	tests/test_audit_robustness.py tests/test_code_check.py tests/test_promise_preflight.py
+labkit.checks.code_check.promise_block_findings	finding	1	[{…}] declares key '{…}', which no script names as a literal{…} (an assembled key is not …	direct	10	0	tests/test_agent_hooks.py tests/test_apply_skeleton.py tests/test_code_check.py tests/test_preflight_stations.py tests/test_promise_preflight.py
+labkit.checks.code_check.promise_block_findings	finding	1	promise block: {…}	direct	2	0	tests/test_promise_preflight.py
+labkit.checks.code_check.quality_check_reads	finding	1	[{…}] key '{…}' is written but nothing decides on it under its literal name · if no decis…	direct	22	0	tests/test_agent_hooks.py tests/test_code_check.py tests/test_codex_hooks.py tests/test_preflight.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py tests/test_unreadable_source.py
+labkit.checks.code_check.quality_check_reads	finding	1	quality-check keys: read check not done — {…}	direct	1	0	tests/test_check_stations.py
+labkit.checks.code_scan.unreadable_source	finding	1	{…} · the code cannot be read, so no check over it holds	direct	13	0	tests/test_code_check.py tests/test_code_ids_keywords.py tests/test_finalize.py tests/test_finalize_steps.py tests/test_preflight_stations.py tests/test_read_causes.py tests/test_unreadable_source.py
+labkit.checks.import_check._coverage_in	finding	1	`sys.path` gains {…} · imports after it may resolve outside lib/ and src/, which the stam…	direct	2	0	tests/test_code_check.py
+labkit.checks.import_check._coverage_in	finding	1	`{…}(…)` loads code at run time · the stamp follows `import` lines only, so it does not c…	direct	2	0	tests/test_code_check.py
+labkit.checks.import_check._coverage_in	finding	1	names area `{…}` · this area's stamp does not follow a path into it	direct	2	0	tests/test_code_check.py
+labkit.checks.import_check._import_findings	finding	1	`{…}` resolves to {…}, outside lib/ and src/ · the stamp does not cover it, a change ther…	direct	1	0	tests/test_code_check.py
+labkit.checks.intent_check.check_block_against_run	finding	1	{…}	only through commands	3	0	tests/test_promises.py
+labkit.checks.intent_check.check_block_against_run	finding	1	{…}: [{…}] declares key '{…}', which the run does not report.	direct	12	0	tests/test_end_to_end.py tests/test_finalize.py tests/test_origin_scenario.py tests/test_promises.py
+labkit.checks.intent_check.check_block_against_run	finding	1	{…}: {…}.	direct	2	0	tests/test_intent_check.py tests/test_promises.py
+labkit.checks.intent_check.hold	finding	1	{…}	direct	20	0	tests/test_area_state.py tests/test_finalize.py tests/test_promises.py tests/test_registration_committed.py tests/test_replacement.py
+labkit.checks.intent_check.hold	finding	2	{…}	direct	17	0	tests/test_end_to_end.py tests/test_finalize.py tests/test_intent_check.py tests/test_intent_check_binding.py tests/test_intent_check_choice.py tests/test_origin_scenario.py
+labkit.checks.intent_check.origin_intent_findings	finding	1	{…}	direct	3	0	tests/test_intent_check.py tests/test_origin_check.py
+labkit.checks.intent_check.origin_intent_findings	finding	1	{…}: promise block: {…}	direct	1	0	tests/test_intent_check.py
+labkit.checks.intent_check.origin_intent_findings	finding	1	{…}: {…}	direct	1	0	tests/test_intent_check.py
+labkit.checks.intent_check.unregistered_outcomes	finding	1	{…}: [{…}] records {…} = {…}, which is none of its outcomes' names	direct	2	0	tests/test_promises.py
+labkit.checks.notes_check.check_file	finding	1	{…}:1: MISSING: no italic meta line after the title	direct	2	0	tests/test_agent_hooks.py
+labkit.checks.notes_check.check_file	finding	1	{…}:{…}: MISSING: declared 'Instrument — implementiert' but names no script, function, or…	direct	1	0	tests/test_notes_check.py
+labkit.checks.notes_check.check_file	finding	1	{…}:{…}: MISSING: no kind in the meta line	direct	2	0	tests/test_notes_check.py
+labkit.checks.notes_check.check_file	finding	1	{…}:{…}: warning: Related-Lesart without a citekey — write 'Related-Lesart (<citekey>)'	direct	1	0	tests/test_notes_check.py
+labkit.checks.notes_check.check_file	finding	1	{…}:{…}: warning: filename says related-* but the declared kind is {…}	direct	1	0	tests/test_notes_check.py
+labkit.checks.notes_check.check_file	finding	1	{…}:{…}: warning: no date in the meta line	unreached	0	0	
+labkit.checks.notes_check.check_file	finding	1	{…}:{…}: warning: none of the named scripts resolve in the repo ({…}{…}) — code paths may…	unreached	0	0	
+labkit.checks.notes_check.check_notes	finding	1	{…}: not readable ({…})	direct	2	0	tests/test_check_stations.py tests/test_read_causes.py
+labkit.checks.origin_check.origin_finding	finding	1	{…}	direct	9	0	tests/test_origin_check.py tests/test_origin_scenario.py tests/test_registration_committed.py
+labkit.checks.prompt_check.check_parser_fixtures	finding	1	cannot be parsed ({…}) · which parsers it calls cannot be told	direct	1	0	tests/test_code_check_gates.py
+labkit.checks.prompt_check.check_parser_fixtures	finding	1	{…}() is called by no test under tests/ · a parser fails silently into a wrong number	direct	4	0	tests/test_code_check_gates.py tests/test_preflight.py
+labkit.checks.prompt_check.check_prompt_drift	finding	1	prompt block drifted from {…}: {…} of {…} fixed line(s) missing, e.g. {…}	direct	8	0	tests/test_code_check_gates.py tests/test_code_check_prompts.py tests/test_preflight.py tests/test_protocol_fill.py
+labkit.checks.prompt_check.check_prompt_drift	finding	1	{…}	direct	1	0	tests/test_prompt_templates.py
+labkit.checks.prompt_check.check_prompt_drift	finding	1	{…} is not statically readable (a call or a format spec this check does not compute) · pr…	direct	1	0	tests/test_code_check_prompts.py
+labkit.checks.prompt_check.require_registered_templates	exit	1	{…}	direct	1	0	tests/test_prompt_templates.py
+labkit.checks.prompt_check.require_registered_templates	exit	1	{…}: no such protocol — no template is held to it	unreached	0	0	
+labkit.checks.prompt_check.require_registered_templates	exit	1	{…}: {…} of {…} template(s) the run uses are not registered as they are — refused before …	direct	3	0	tests/test_prompt_templates.py tests/test_public_api.py
+labkit.checks.readme_check.readme_route	finding	1	README.md route: does not name {…}	direct	11	0	tests/test_adopt_per_protocol.py tests/test_finalize_steps.py tests/test_origin_scenario.py tests/test_protocol_runs.py tests/test_source_lines.py
+labkit.checks.readme_check.readme_route	finding	2	README.md route: does not name {…}	direct	2	0	tests/test_finalize.py tests/test_finalize_steps.py
+labkit.checks.readme_check.readme_route	finding	1	README.md route: scripts/01_measure.py defines no evaluate_rows	direct	1	0	tests/test_finalize_steps.py
+labkit.checks.readme_check.readme_route	finding	1	README.md route: scripts/01_measure.py does not exist	unreached	0	0	
+labkit.checks.readme_check.readme_route	finding	1	README.md: no {…} … {…} block — the route (protocol · runlog · labkit-params · evaluate_r…	direct	3	0	tests/test_finalize.py tests/test_finalize_steps.py
+labkit.checks.recheck._named_run	exit	1	recheck: {…}	direct	2	0	tests/test_completion_consumers.py tests/test_recheck_refusals.py
+labkit.checks.recheck._named_run	exit	1	recheck: {…} is a repeat of {…} — supporting evidence, never the answer; `02_analyze.py -…	direct	1	0	tests/test_repeats.py
+labkit.checks.recheck._named_run	exit	1	recheck: {…} is bound to {…}, not to {…} — it answers another question	direct	1	0	tests/test_recheck_binding.py
+labkit.checks.recheck._named_run	exit	1	recheck: {…} is not a completed run ({…})	direct	2	0	tests/test_completion_consumers.py tests/test_protocol_fill.py
+labkit.checks.recheck.block_unchanged	exit	1	recheck: run {…} {…}	direct	3	0	tests/test_promises.py tests/test_recheck_own_text.py
+labkit.checks.recheck.block_unchanged	exit	1	recheck: run {…}: {…}	direct	1	0	tests/test_audit_robustness.py
+labkit.checks.recheck.chosen_run	exit	1	recheck: the protocol carries no stamped id ([protocol] id) — no run binds to it; `labkit…	direct	1	0	tests/test_recheck_binding.py
+labkit.checks.recheck.chosen_run	exit	1	recheck: {…}	direct	1	0	tests/test_recheck_refusals.py
+labkit.checks.recheck.chosen_run	exit	1	recheck: {…}{…}	direct	12	0	tests/test_answering_run_exhaustive.py tests/test_end_to_end.py tests/test_next_step.py tests/test_protocol_fill.py tests/test_public_api.py tests/test_recheck_binding.py
+labkit.checks.recheck.cited	exit	1	recheck: numbers not in {…}: {…}	direct	3	0	tests/test_recheck.py
+labkit.checks.recheck.cited	exit	1	recheck: {…} does not cite run {…}	direct	2	0	tests/test_end_to_end.py tests/test_recheck.py
+labkit.checks.recheck.cited	exit	1	recheck: {…} has no answer yet — `{…}` writes it once that run's analysis audit is decide…	direct	24	0	tests/test_deliverable.py tests/test_end_to_end.py tests/test_exploration_link_scenario.py tests/test_handovers.py tests/test_origin_scenario.py tests/test_protocol_runs.py tests/test_recheck.py
+labkit.checks.recheck.cited	exit	1	recheck: {…}: no such note	direct	1	0	tests/test_recheck_refusals.py
+labkit.checks.recheck.inputs_pinned	exit	1	recheck: run {…} recorded no input file — nothing to recompute from; hold its own output …	direct	1	0	tests/test_recheck_inputs.py
+labkit.checks.recheck.inputs_pinned	exit	1	recheck: run {…}: data[{…}] = {…} is not the input it read: {…}, the run recorded sha256 …	direct	1	0	tests/test_recheck_inputs.py
+labkit.checks.recheck.inputs_pinned	exit	1	recheck: run {…}: {…}	unreached	0	0	
+labkit.checks.recheck.inputs_pinned	exit	1	recheck: run {…}: {…} — not recomputed from inputs that are not the ones it read	direct	5	0	tests/test_origin_scenario.py tests/test_recheck_inputs.py
+labkit.checks.recheck.kept_keys	exit	1	recheck: run {…}: {…}	direct	1	0	tests/test_recheck_refusals.py
+labkit.checks.recheck.output_as_recorded	exit	1	recheck: run {…} did not register {…} as an output	unreached	0	0	
+labkit.checks.recheck.output_rows	exit	1	recheck: run {…}: output {…} ({…}) is no row file — {…}. The recomputation reads row file…	direct	1	0	tests/test_recheck.py
+labkit.checks.recheck.pin	exit	1	recheck: run {…} did not register {…} as an output	direct	2	0	tests/test_recheck_outputs_scenario.py tests/test_recheck_refusals.py
+labkit.checks.recheck.pin	exit	1	recheck: {…} is not the file run {…} recorded — {…}; rerun the script or name that run	direct	9	0	tests/test_exploration_hold.py tests/test_public_api.py tests/test_recheck.py tests/test_recheck_outputs_scenario.py tests/test_repair_guidance.py tests/test_repeats.py tests/test_withdrawal_order.py
+labkit.checks.recheck.protocol_as_run_saw	exit	1	recheck: run {…}: {…}	unreached	0	0	
+labkit.checks.recheck.protocol_as_run_saw	exit	1	recheck: the protocol run {…} was measured under cannot be read back: {…} — what it regis…	direct	3	0	tests/test_recheck_own_text.py tests/test_recheck_refusals.py
+labkit.checks.recheck.protocol_named	exit	1	recheck: {…}	direct	3	0	tests/test_origin_scenario.py tests/test_recheck_per_protocol.py
+labkit.checks.recheck.reads_another_run	exit	1	recheck: run {…}: {…}	unreached	0	0	
+labkit.checks.recheck.require_agreement	exit	1	recheck: metrics.json and the recomputation disagree — intent keys on one side only {…}, …	direct	4	0	tests/test_evidence_unread.py tests/test_recheck.py
+labkit.checks.recheck.require_agreement	exit	1	recheck: recomputation differs from metrics.json in the identifiers or the kept number {…}	direct	9	0	tests/test_recheck.py tests/test_recheck_inputs.py tests/test_recheck_outputs_scenario.py tests/test_recheck_own_text.py
+labkit.checks.recheck.require_agreement	exit	1	recheck: the kept number is missing — {…}: the number the protocol reports must stand in …	direct	1	0	tests/test_recheck.py
+labkit.checks.recheck.require_run_code	exit	1	recheck: the code that computed run {…} is not the code here now: {…} — recomputing with …	direct	12	0	tests/test_adopt_per_protocol.py tests/test_end_to_end.py tests/test_exploration_link_scenario.py tests/test_next_step.py tests/test_origin_scenario.py tests/test_run_code.py
+labkit.checks.recheck.scopes_unchanged	exit	1	recheck: declared scope cannot be compared with what run {…} recorded: {…}, or recheck fr…	direct	1	0	tests/test_promises.py
+labkit.checks.recheck.scopes_unchanged	exit	1	recheck: declared scope changed since run {…}: {…} — rerun, or recheck from that run's co…	direct	1	0	tests/test_promises.py
+labkit.checks.recheck.script_module	exit	1	recheck: run {…}: {…} does not import	unreached	0	0	
+labkit.checks.recheck.script_module	exit	1	recheck: {…}	unreached	0	0	
+labkit.checks.report_blocks.block_gaps	finding	1	{…} differs from the protocol's rendering — written before its Conclusion, a decision or …	direct	11	0	tests/test_end_to_end.py tests/test_report_blocks.py tests/test_report_blocks_text.py tests/test_result_render.py tests/test_workflow_example.py
+labkit.checks.report_blocks.block_gaps	finding	1	{…}: the protocol has adopted run {…} now	direct	2	0	tests/test_report_blocks.py tests/test_report_blocks_text.py
+labkit.checks.report_blocks.block_gaps	finding	1	{…}: {…}	direct	2	0	tests/test_origin_scenario.py tests/test_report_blocks.py
+labkit.checks.report_blocks.block_gaps	finding	1	{…}: {…} — a block shows an adopted result only	direct	2	0	tests/test_next_step.py tests/test_report_blocks_text.py
+labkit.checks.report_blocks.block_gaps	finding	2	{…}: {…} — a block shows an adopted result only	direct	3	0	tests/test_handovers.py tests/test_report_blocks.py tests/test_report_blocks_text.py
+labkit.checks.report_blocks.cited_gaps	finding	1	{…}	direct	6	0	tests/test_next_step.py tests/test_origin_scenario.py tests/test_report_blocks.py tests/test_report_blocks_text.py
+labkit.checks.report_blocks.cited_gaps	finding	2	{…}	direct	3	0	tests/test_report_blocks.py tests/test_report_blocks_text.py
+labkit.checks.report_blocks.discussion_gaps	finding	1	{…} has no why	direct	1	0	tests/test_report_blocks.py
+labkit.checks.report_blocks.discussion_gaps	finding	1	{…} repeats the block at line {…} — one block per protocol and run	direct	1	0	tests/test_report_blocks_text.py
+labkit.checks.report_blocks.discussion_gaps	finding	1	{…}: its line differs from its head	direct	1	0	tests/test_report_blocks.py
+labkit.checks.result_render.render_gaps	finding	1	"{…}" differs from the record and its decision reviews — a line written before the decisi…	direct	5	0	tests/test_decision_review.py tests/test_result_render.py
+labkit.checks.result_render.render_gaps	finding	1	"{…}" is written {…} times — one generated line per label	direct	1	0	tests/test_result_render.py
+labkit.checks.result_render.render_gaps	finding	1	"{…}" names a limit no covering record decides — written by hand or from an older record	direct	3	0	tests/test_end_to_end.py tests/test_result_render.py
+labkit.checks.result_render.render_gaps	finding	1	no "{…}" line — the limit's line belongs in the protocol	direct	3	0	tests/test_end_to_end.py tests/test_result_render.py
+labkit.checks.result_render.render_gaps	finding	1	the Recorded results line differs from its rendering (the run's metrics.json, the stand-i…	direct	11	0	tests/test_end_to_end.py tests/test_reference.py tests/test_report_blocks.py tests/test_report_check.py tests/test_result_render.py tests/test_source_lines.py tests/test_workflow_example.py
+labkit.checks.result_render.render_gaps	finding	1	the Recorded results line is not written	direct	2	0	tests/test_replacement.py tests/test_result_render.py
+labkit.checks.run_record_check._continued_with_other_code	finding	1	{…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s …	direct	1	0	tests/test_row_provenance.py
+labkit.checks.run_record_check._criterion_n_warning	finding	1	{…}	direct	3	2	tests/test_finalize.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check._derived_run_calls	finding	1	{…} — yet its call log holds {…} call{…} of alias `{…}` that asked the model	direct	2	1	tests/test_finalize_steps.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check._derived_run_calls	finding	1	{…} — yet its call log holds {…} of alias `{…}` stored outside any run{…}, which no recor…	direct	2	2	tests/test_rules_run_record_check.py
+labkit.checks.run_record_check._gone	finding	1	{…} is not at its recorded path on this machine — deleted, moved or held elsewhere; the r…	direct	2	1	tests/test_finalize_provenance.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check._helpers_since_run	finding	1	the tree {…} started from cannot be read for {…}: {…}	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._helpers_since_run	finding	1	{…} changed since {…} ran	direct	5	0	tests/test_answer_reading_scenario.py tests/test_run_code.py
+labkit.checks.run_record_check._helpers_since_run	finding	1	{…} changed since {…} ran it (it was untracked; the run kept it as {…})	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._helpers_since_run	finding	1	{…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w…	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._helpers_since_run	finding	1	{…} started at commit {…}, which this clone does not hold	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._helpers_since_run	finding	1	{…}, so the helpers its script imports ({…}) cannot be compared	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._helpers_since_run	finding	2	{…}, so the helpers its script imports ({…}) cannot be compared	direct	2	0	tests/test_run_code.py
+labkit.checks.run_record_check._metrics_model_findings	finding	1	model provenance: the lineage of {…} is broken — {…}	unreached	0	0	
+labkit.checks.run_record_check._metrics_model_findings	finding	1	{…} called a model, but no run in its lineage recorded models_resolved — record the alias…	direct	2	0	tests/test_finalize_steps.py
+labkit.checks.run_record_check._own_record_unbacked	finding	1	{…}'s call log holds {…} of alias `{…}` ({…}), but its models_resolved does not name `{…}…	direct	8	4	tests/test_finalize_steps.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check._reading_since_run	finding	1	{…} cannot be compared with what {…} ran: the area lies in no git repository now	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._reading_since_run	finding	1	{…} cannot be read now: {…}	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._reading_since_run	finding	1	{…}: {…}	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._reading_since_run	finding	1	{…}: {…} no longer imports it, so it is not what reads the answers	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check._recorded_sources	finding	1	source not frozen — the run carries no `data=`	direct	21	0	tests/test_area_state.py tests/test_finalize_provenance.py tests/test_kept.py tests/test_registration_committed.py tests/test_report_blocks.py tests/test_report_check_areas.py tests/test_run_code.py
+labkit.checks.run_record_check._recorded_sources	finding	1	{…}	direct	3	0	tests/test_check_stations.py tests/test_finalize_provenance.py
+labkit.checks.run_record_check._run_code	finding	1	the code {…} ran cannot be read now: {…}	direct	2	0	tests/test_finalize.py tests/test_run_code.py
+labkit.checks.run_record_check._run_code	finding	1	{…} changed since {…} ran it — its number came from other code	direct	31	0	tests/test_adopt_per_protocol.py tests/test_answer_reading_scenario.py tests/test_end_to_end.py tests/test_exploration_link_scenario.py tests/test_finalize.py tests/test_next_step.py tests/test_origin_scenario.py tests/test_repair_guidance.py tests/test_run_code.py tests/test_withdrawal_order.py
+labkit.checks.run_record_check._run_code	finding	1	{…} recorded no script — the code behind its number cannot be compared	direct	10	0	tests/test_audit.py tests/test_explored_in.py tests/test_origin_scenario.py tests/test_promises.py tests/test_protocol_fill.py tests/test_recheck.py tests/test_recheck_inputs.py tests/test_run_code.py
+labkit.checks.run_record_check._run_code	finding	1	{…}: {…}	direct	3	0	tests/test_run_code.py
+labkit.checks.run_record_check._stored_answer_unbacked	finding	1	{…}'s call log holds {…} of alias `{…}` stored by run {…}, but {…} — no record says which…	direct	5	3	tests/test_finalize_steps.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check._untracked_source	finding	1	{…} — whether it belongs to the project is left open	direct	10	2	tests/test_end_to_end.py tests/test_explored_in.py tests/test_finalize_provenance.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check.answer_reading_gaps	finding	1	{…} re-reads the answers of {…}, but the prompts field differs from the text {…} was meas…	direct	2	1	tests/test_answer_reading_scenario.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check.answer_reading_gaps	finding	1	{…} registered none of the files {…} registered as its output — a derived run re-reads it…	direct	1	1	tests/test_rules_run_record_check.py
+labkit.checks.run_record_check.answer_reading_gaps	finding	1	{…}: {…} registered sha256 {…}, {…} {…} — the answers changed after {…} ran	direct	2	1	tests/test_answer_reading_scenario.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check.arm_findings	finding	1	arm `{…}`: the protocol names alias {…}, the answering run recorded no such alias	direct	1	0	tests/test_arm_lines.py
+labkit.checks.run_record_check.arm_findings	finding	1	arm `{…}`: the protocol names fingerprint {…}, the answering run recorded no such value —…	direct	1	0	tests/test_arm_lines.py
+labkit.checks.run_record_check.arm_findings	finding	1	arm `{…}`: the protocol names {…}, no such file under {…}	direct	1	0	tests/test_arm_lines.py
+labkit.checks.run_record_check.code_since_run	finding	1	{…}: its runs cannot be followed ({…})	direct	2	0	tests/test_registration_committed.py tests/test_run_code.py
+labkit.checks.run_record_check.code_since_run	finding	1	{…}: {…}	direct	1	0	tests/test_run_code.py
+labkit.checks.run_record_check.kept_number_gaps	finding	1	the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th…	direct	7	0	tests/test_audit.py tests/test_end_to_end.py tests/test_kept.py tests/test_promises.py tests/test_protocol_fill.py tests/test_reference_end_to_end.py
+labkit.checks.run_record_check.model_provenance_findings	finding	1	model provenance: the call log of {…} does not read — {…}	direct	1	0	tests/test_finalize_steps.py
+labkit.checks.run_record_check.model_provenance_findings	finding	1	model provenance: the stand-ins behind {…} cannot be counted — {…}; the result line canno…	direct	8	0	tests/test_finalize_provenance.py tests/test_finalize_steps.py tests/test_origin_scenario.py tests/test_registration_committed.py
+labkit.checks.run_record_check.model_provenance_findings	finding	1	model provenance: {…} has no config.json — which model it recorded cannot be read	direct	1	0	tests/test_finalize_steps.py
+labkit.checks.run_record_check.null_lane_findings	finding	1	{…}: the null lane's answer and gold equal the registered lane's on every item — if the n…	direct	2	1	tests/test_finalize_steps.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check.output_record_findings	finding	1	{…}: not the file run {…} recorded — {…}	direct	13	3	tests/test_audit.py tests/test_deliverable.py tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_repair_guidance.py tests/test_rules_run_record_check.py tests/test_unread_registration.py tests/test_withdrawal_order.py
+labkit.checks.run_record_check.provenance_findings	finding	1	no outputs.json — the run registered no output file (run.output)	direct	71	0	tests/test_agent_hooks.py tests/test_area_state.py tests/test_check_stations.py tests/test_codex_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_finalize_provenance.py tests/test_kept.py tests/test_protocol_fill.py tests/test_registration_committed.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_run_code.py
+labkit.checks.run_record_check.provenance_findings	finding	1	not a git repository — cannot tell whether source and output are committed	direct	27	0	tests/test_check_stations.py tests/test_finalize_provenance.py tests/test_kept.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_run_code.py
+labkit.checks.run_record_check.provenance_findings	finding	1	output {…} is not yet tracked — `{…}` before the commit that cites the number	direct	160	0	tests/test_adopt.py tests/test_adopt_per_protocol.py tests/test_counter_cases.py tests/test_deliverable.py tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_exploration_link_scenario.py tests/test_finalize_provenance.py tests/test_handovers.py tests/test_next_step.py tests/test_obligations_scenario.py tests/test_origin_scenario.py tests/test_protocol_runs.py tests/test_reference_end_to_end.py tests/test_repair_guidance.py tests/test_source_lines.py tests/test_unread_registration.py tests/test_withdrawal_order.py
+labkit.checks.run_record_check.row_provenance_findings	finding	1	row provenance: the lineage of {…} is broken — {…}	direct	2	0	tests/test_lineage.py tests/test_registration_committed.py
+labkit.checks.run_record_check.row_provenance_findings	finding	1	{…}: {…}	direct	1	0	tests/test_row_provenance.py
+labkit.checks.run_record_check.row_provenance_findings	finding	1	{…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file …	direct	9	0	tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_repair_guidance.py tests/test_row_provenance.py tests/test_withdrawal_order.py
+labkit.checks.run_record_check.single_draw	finding	1	the draws of {…} cannot be counted: {…}	direct	1	0	tests/test_repeats.py
+labkit.checks.run_record_check.single_draw	finding	1	{…} is one draw — no spread: `scripts/01_measure.py --repeat-of {…}` draws it again, `02_…	direct	40	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_repeats.py
+labkit.checks.run_record_check.source_finding	finding	1	source {…} is not the bytes the run read: {…}, the run recorded sha256 {…}	direct	7	1	tests/test_finalize_provenance.py tests/test_origin_scenario.py tests/test_rules_run_record_check.py
+labkit.checks.run_record_check.stand_in_findings	finding	1	{…}: fixed answers stored with `llm_cache.store_stand_in`, not answers of a model — its n…	direct	4	2	tests/test_finalize_steps.py tests/test_rules_run_record_check.py tests/test_stand_in_run_through.py
+labkit.formats.answering_run.AnsweringRun.explain	finding	1	{…}	direct	62	0	tests/test_agent_hooks.py tests/test_answering_run.py tests/test_answering_run_exhaustive.py tests/test_area_state.py tests/test_audit.py tests/test_audit_robustness.py tests/test_codex_hooks.py tests/test_end_to_end.py tests/test_exploration_link_scenario.py tests/test_finalize.py tests/test_finalize_open_findings.py tests/test_finalize_steps.py tests/test_intent_check.py tests/test_intent_check_binding.py tests/test_next_step.py tests/test_origin_scenario.py tests/test_params.py tests/test_protocol_fill.py tests/test_public_api.py tests/test_recheck_binding.py tests/test_registration_committed.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_reported_through.py
+labkit.formats.answering_run.AnsweringRun.explain	finding	1	{…} {…} — no answer: a probe or producer run, or a script that reports no registered key	direct	14	0	tests/test_answering_run.py tests/test_answering_run_exhaustive.py tests/test_area_state.py tests/test_counter_cases.py tests/test_end_to_end.py tests/test_intent_check_choice.py tests/test_origin_scenario.py tests/test_recheck_binding.py
+labkit.formats.area_state.missing_start_warning	finding	1	{…}	direct	6	2	tests/test_end_to_end.py tests/test_registration_committed.py tests/test_rules_registration_hold.py
+labkit.formats.area_state.unassigned_record_warning	finding	1	the record of run {…} does not read, and neither a start file nor the run index names it:…	direct	3	1	tests/test_end_to_end.py tests/test_registration_committed.py tests/test_rules_registration_hold.py
+labkit.formats.area_state.unread_start_warning	finding	1	{…} — nothing is taken from a start file that does not read	direct	3	1	tests/test_end_to_end.py tests/test_registration_committed.py tests/test_rules_registration_hold.py
+labkit.formats.evidence.change_blockers	finding	1	{…}	direct	2	0	tests/test_evidence_unread.py tests/test_read_causes.py
+labkit.formats.evidence.change_blockers	finding	2	{…}	direct	8	0	tests/test_evidence.py tests/test_origin_scenario.py tests/test_read_causes.py tests/test_replacement.py tests/test_report_blocks.py
+labkit.formats.protocol_history.check_annotation_validity	finding	1	{…} — {…}	direct	3	0	tests/test_annotation_validity.py
+labkit.formats.protocol_history.check_protocol_id	finding	1	{…}: DUPLICATE protocol id {…} — also carried by {…}. An id binds runs to ONE protocol	direct	6	0	tests/test_agent_hooks_undecided.py tests/test_exploration_link_scenario.py tests/test_protocol_id.py
+labkit.formats.protocol_history.check_protocol_id	finding	1	{…}: WARNING: protocol id changed against HEAD ({…} -> {…}) — runs bound to the old id st…	direct	2	0	tests/test_check_stations.py tests/test_protocol_id.py
+labkit.formats.reference.comparison_gaps	finding	1	`{…}` {…}, so the registered reference ({…}) cannot be compared and no verdict can be rep…	direct	1	0	tests/test_reference.py
+labkit.formats.reference.comparison_gaps	finding	1	metrics.json carries {…} and the head registers no [reference] — a comparison is register…	direct	1	0	tests/test_reference.py
+labkit.formats.reference.comparison_gaps	finding	1	the head registers [reference] on `{…}`, and the run recorded no verdict (no `{…}` in met…	direct	2	0	tests/test_reference.py tests/test_registration_committed.py
+labkit.formats.reference.comparison_gaps	finding	1	the run compared with {…}, the head registers {…} — the reference changed after the run, …	direct	2	0	tests/test_reference.py
+labkit.formats.reference.comparison_gaps	finding	1	the verdict in metrics.json does not read: `{…}` = {…}, `{…}` = {…} — written beside the …	direct	1	0	tests/test_reference.py
+labkit.gates.audit.early_for_tier	finding	1	repeat_cost = "low" and no completed run · the first run is the cheaper probe; one audit …	direct	2	0	tests/test_audit.py tests/test_check_stations.py
+labkit.gates.exploration_hold.live_holds	finding	1	what the number is about changed after the answering run {…}: {…} (as the protocol stands…	direct	9	0	tests/test_adopt_per_protocol.py tests/test_exploration_hold.py tests/test_registration_station.py tests/test_report_check.py tests/test_source_lines.py
+labkit.gates.exploration_hold.live_holds	finding	1	whether a correction in place releases what the number is about cannot be checked: {…}	direct	1	0	tests/test_finalize_steps.py
+labkit.gates.exploration_hold.step_gap_hold	finding	1	run {…} made the step "{…}" on {…}, and its declared changes are not the differences of t…	only through commands	1	0	tests/test_exploration_hold.py
+labkit.gates.exploration_hold.unknown_step_hold	finding	1	the step a run was measured under cannot be told: {…}{…} — the comparison with its basis …	only through commands	1	0	tests/test_exploration_hold.py
+labkit.gates.exploration_hold.unstepped_holds	finding	1	run {…} was measured without a step, and its registration differs from the first measurem…	direct	5	0	tests/test_exploration_hold.py tests/test_registration_station.py
+labkit.gates.finalize._refuse	finding	1	{…}	direct	3	0	tests/test_finalize.py
+labkit.gates.finalize.check_answer_reading	finding	1	the prompts {…} re-reads with cannot be held to {…}'s: {…}	direct	1	0	tests/test_run_code.py
+labkit.gates.finalize.check_data_counts	finding	1	{…}	direct	3	0	tests/test_finalize_steps.py
+labkit.gates.finalize.check_declared_scopes	finding	1	declared scope cannot be compared with what {…} recorded: {…}	direct	1	0	tests/test_finalize.py
+labkit.gates.finalize.check_declared_scopes	finding	1	declared scope changed since {…}: {…}	direct	3	0	tests/test_finalize.py tests/test_promises.py
+labkit.gates.finalize.check_declared_scopes	finding	1	{…} recorded no promise block: {…} — a run records the block it was measured under, so th…	direct	2	0	tests/test_audit.py tests/test_registration_contract.py
+labkit.gates.finalize.check_intent_keys_in_metrics	finding	1	intent-check: {…}	direct	1	0	tests/test_finalize.py
+labkit.gates.finalize.check_kept_number	finding	1	{…}: {…}{…}	direct	2	0	tests/test_kept.py tests/test_reference.py
+labkit.gates.finalize.check_open_fields	finding	1	{…}	direct	1	0	tests/test_finalize.py
+labkit.gates.finalize.check_open_fields	finding	1	{…} — a stamped placeholder, fill or delete the line	direct	42	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_obligations_scenario.py
+labkit.gates.finalize.check_open_fields	finding	1	{…}: {…}	direct	5	0	tests/test_field_values.py tests/test_finalize_steps.py tests/test_report_check_areas.py
+labkit.gates.finalize.check_open_fields	finding	1	{…}:{…}: {…}	direct	20	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_high_compute_workflow.py tests/test_report_blocks.py
+labkit.gates.finalize.check_reference	finding	1	{…}: {…}	direct	1	0	tests/test_reference.py
+labkit.gates.finalize.check_reference	finding	2	{…}: {…}	direct	1	0	tests/test_reference.py
+labkit.gates.finalize.check_run_code	finding	1	{…}	direct	1	0	tests/test_run_code.py
+labkit.gates.finalize.choose_answering_run	finding	1	no stamped protocol id ([protocol] id) — no run is bound to it	direct	2	0	tests/test_finalize.py tests/test_finalize_steps.py
+labkit.gates.finalize.choose_answering_run	finding	1	{…}: bound to this protocol and newer by name than the adopted run {…} — if one of them a…	direct	9	0	tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_finalize_steps.py tests/test_protocol_runs.py tests/test_repair_guidance.py tests/test_withdrawal_order.py
+labkit.gates.finalize.declared_run_gaps	finding	1	{…}	direct	8	0	tests/test_end_to_end.py tests/test_finalize_steps.py tests/test_migration_bar.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_report_check_stations.py
+labkit.gates.finalize.run_file_unread	finding	1	{…}	direct	1	0	tests/test_read_causes.py
+labkit.gates.finalize.run_file_unread	finding	2	{…}	direct	4	0	tests/test_finalize_steps.py tests/test_origin_check.py tests/test_read_causes.py tests/test_reference.py
+labkit.gates.finalize.unreportable_warnings	finding	1	the answering run {…}: {…} — its number cannot be reported (report-check refuses it)	direct	14	0	tests/test_agent_hooks.py tests/test_end_to_end.py tests/test_finalize_open_findings.py tests/test_promises.py tests/test_protocol_fill.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_report_check_stations.py
+labkit.gates.preflight._owed	finding	1	{…}	direct	18	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py
+labkit.gates.preflight._owed	finding	2	{…}	direct	35	0	tests/test_agent_hooks.py tests/test_explored_in.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
+labkit.gates.preflight.check_audit_records	finding	1	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.check_handed_over_elsewhere	finding	1	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.check_handed_over_elsewhere	finding	2	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.check_hooks	finding	1	{…}	direct	41	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_high_compute_workflow.py tests/test_next_step.py tests/test_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py
+labkit.gates.preflight.check_promise_sentences	finding	1	[[promise]] {…} still carries the stamp's `<…>` sentence — frozen = true refuses it	direct	2	0	tests/test_agent_hooks.py tests/test_promise_preflight.py
+labkit.gates.preflight.check_protocol_fields	finding	1	REPEATED (must): {…}	direct	1	0	tests/test_field_values.py
+labkit.gates.preflight.check_protocol_fields	finding	1	missing (should): {…}	direct	34	0	tests/test_agent_hooks.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_protocol_id.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
+labkit.gates.preflight.check_protocol_fields	finding	1	{…}	direct	36	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_explored_in.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
+labkit.gates.preflight.check_protocol_fields	finding	2	{…}	direct	1	0	tests/test_repeat_cost_lowered_and_waived_audit.py
+labkit.gates.preflight.check_protocol_fields	finding	1	{…}:{…}: PLACEHOLDER (must): {…}	direct	3	0	tests/test_agent_hooks.py tests/test_preflight_stations.py
+labkit.gates.preflight.check_protocol_fields	finding	1	{…}:{…}: placeholder (should): {…}	direct	3	0	tests/test_agent_hooks.py tests/test_preflight_stations.py
+labkit.gates.preflight.check_scope_stamp	finding	1	cannot stamp the area's scope: {…}	direct	6	0	tests/test_preflight_stations.py
+labkit.gates.preflight.check_scope_stamp	finding	2	cannot stamp the area's scope: {…}	direct	2	0	tests/test_explored_in.py tests/test_preflight_stations.py
+labkit.gates.preflight.check_working_tree	finding	1	uncommitted changes in {…} (commit or stash before the run)	direct	20	0	tests/test_agent_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py
+labkit.gates.preflight.preflight_area	finding	1	HEAD (must): {…}	direct	4	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.tell_test_run	finding	1	pytest is not installed in this interpreter — tests not run	direct	1	0	tests/test_finalize_steps.py
+labkit.gates.preflight.tell_test_run	finding	1	{…} did not run{…} — {…}	direct	2	0	tests/test_finalize_steps.py tests/test_read_causes.py
+labkit.gates.preflight.tell_test_run	finding	1	{…} failed{…} — {…}	direct	12	0	tests/test_agent_hooks.py tests/test_area_tests_root.py tests/test_end_to_end.py tests/test_finalize.py tests/test_finalize_steps.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_read_causes.py tests/test_reference_end_to_end.py
+labkit.gates.registered_report._undetermined_duty	finding	1	{…}: whether it owes a report cannot be told — {…}	direct	13	0	tests/test_audit.py tests/test_end_to_end.py tests/test_registered_report_stations.py tests/test_registration_committed.py
+labkit.gates.registered_report.missing_report	finding	1	{…} registers {…} as its report; the report is missing ({…}), and its area holds a measur…	direct	1	0	tests/test_adopt.py
+labkit.gates.registered_report.missing_report	finding	2	{…} registers {…} as its report; the report is missing ({…}), and its area holds a measur…	direct	5	0	tests/test_next_step.py tests/test_registration_committed.py tests/test_report_check.py
+labkit.gates.registered_report.orphaned_report_duties	finding	1	{…}: no protocol of the area carries the id {…}, under which it measured ({…}); that prot…	direct	4	0	tests/test_registration_committed.py
+labkit.gates.registered_report.registered_review	finding	1	{…}: its discussion blocks do not read — {…}	direct	1	0	tests/test_registered_report_stations.py
+labkit.gates.registered_report.report_binding_gap	finding	1	{…} registered {…} as its report {…}, and its head now registers none — the report a meas…	direct	14	0	tests/test_registration_committed.py
+labkit.gates.registered_report.result_owed	finding	1	{…} registers {…} as its report, and {…} carries neither {…} nor the protocol's handover …	direct	12	0	tests/test_origin_scenario.py tests/test_report_check.py tests/test_reported_through.py
+labkit.gates.registration_hold.binding_conflict_hold	finding	1	which protocol a run belongs to is contradicted: {…} — no file is taken over another, so …	direct	3	1	tests/test_end_to_end.py tests/test_registration_station.py tests/test_rules_registration_hold.py
+labkit.gates.registration_hold.later_record_warning	finding	1	{…} — the start files put {…} after that of a measurement of this protocol that reads, an…	direct	7	1	tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_registration_committed.py tests/test_rules_registration_hold.py
+labkit.gates.registration_hold.lost_record_hold	finding	1	what the number is about cannot be compared with its first measurement: {…} — {…} may hav…	direct	15	5	tests/test_end_to_end.py tests/test_registration_committed.py tests/test_registration_station.py tests/test_rules_registration_hold.py
+labkit.gates.registration_hold.missing_start_hold	finding	1	{…} — which protocol it was bound to at its start and when it started cannot be checked, …	direct	6	1	tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_finalize_steps.py tests/test_rules_registration_hold.py
+labkit.gates.registration_hold.now_hold	finding	1	what the number is about changed after the first measurement {…}{…}: {…} (as the protocol…	direct	23	15	tests/test_end_to_end.py tests/test_registration_committed.py tests/test_repair_guidance.py tests/test_rules_registration_hold.py tests/test_unread_registration.py
+labkit.gates.registration_hold.registration_changes	finding	1	the first measurements recorded different registrations: {…} — which one stood before the…	direct	3	0	tests/test_counter_cases.py tests/test_registration_committed.py tests/test_replacement.py
+labkit.gates.registration_hold.registration_changes	finding	1	the registration changed after the first measurement {…}{…}: {…} (recorded by the answeri…	direct	6	0	tests/test_registration_committed.py
+labkit.gates.registration_hold.scope_changes	finding	1	whether a correction in place releases what the number is about cannot be checked: {…}	direct	2	0	tests/test_finalize_steps.py tests/test_unread_registration.py
+labkit.gates.registration_hold.seen_hold	finding	1	what the number is about changed after the first measurement {…}{…}: {…} (as the answerin…	direct	34	17	tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_registration_committed.py tests/test_registration_station.py tests/test_repair_guidance.py tests/test_rules_registration_hold.py
+labkit.gates.registration_hold.split_hold	finding	1	the first measurements saw different texts of what the number is about: {…} — {…} — which…	direct	8	0	tests/test_exploration_hold.py tests/test_registration_committed.py
+labkit.gates.registration_hold.type_hold	finding	1	the type changed after the first measurement {…}: "{…}" → "{…}" ({…}) — the workflow that…	direct	4	0	tests/test_exploration_hold.py tests/test_registration_station.py
+labkit.gates.registration_hold.types_split_hold	finding	1	the first measurements registered different types: {…} — which workflow binds the runs ca…	direct	1	0	tests/test_registration_station.py
+labkit.gates.registration_hold.unread_history_hold	finding	1	{…} — the runs and start files a commit holds were not read back, so whether a start file…	direct	6	1	tests/test_finalize_steps.py tests/test_registration_committed.py tests/test_report_check_stations.py tests/test_rules_registration_hold.py tests/test_unread_registration.py
+labkit.gates.registration_hold.unread_hold	finding	1	what the number is about cannot be compared with its first measurement: {…} — the compari…	direct	11	0	tests/test_audit.py tests/test_origin_scenario.py tests/test_registration_committed.py tests/test_unread_registration.py tests/test_ways_out.py
+labkit.gates.report_check._registration_at	finding	1	the registration as committed at {…} ({…}{…}) lacks {…} — the registration is what the co…	direct	6	0	tests/test_registration_committed.py
+labkit.gates.report_check._registration_at	finding	1	{…} ({…}{…}) recorded a commit this repository does not hold (a rewritten history, a shal…	direct	3	0	tests/test_registration_committed.py
+labkit.gates.report_check._registration_at	finding	1	{…} at {…} ({…}{…}) cannot be read: {…} — the registration that stood before the number c…	direct	2	0	tests/test_registration_committed.py tests/test_unread_registration.py
+labkit.gates.report_check._registration_at	finding	1	{…} recorded no commit ({…}{…}) — it started outside the history, so the registration can…	direct	2	0	tests/test_registration_committed.py
+labkit.gates.report_check._registration_at	finding	1	{…} recorded no commit ({…}{…}) — what the run started from is unknown, so the registrati…	direct	1	0	tests/test_registration_committed.py
+labkit.gates.report_check._registration_at	finding	1	{…} was not committed at {…} ({…}{…}) — nothing stood before the number; the registration…	direct	1	0	tests/test_registration_committed.py
+labkit.gates.report_check.analysis_audit_gap	finding	1	no analysis audit covers the area as it is now, and none can run — {…}	direct	9	0	tests/test_end_to_end.py tests/test_handovers.py
+labkit.gates.report_check.analysis_audit_gap	finding	1	no analysis audit covers the area as it is now, and none can until the exploration link r…	direct	9	0	tests/test_exploration_link_scenario.py tests/test_explored_in.py tests/test_report_check_stations.py
+labkit.gates.report_check.analysis_audit_gap	finding	1	no answering run to hold it to — {…}	direct	3	0	tests/test_report_check_areas.py tests/test_report_check_stations.py
+labkit.gates.report_check.analysis_audit_gap	finding	1	the analysis audit cannot be held to the area: {…}	direct	3	0	tests/test_protocol_fill.py tests/test_report_check_stations.py
+labkit.gates.report_check.analysis_audit_gap	finding	1	the analysis audit cannot be held to the run: {…}	direct	3	0	tests/test_handovers.py tests/test_report_check_stations.py
+labkit.gates.report_check.analysis_audit_gap	finding	1	{…}	direct	107	0	tests/test_adopt.py tests/test_adopt_per_protocol.py tests/test_agent_hooks.py tests/test_answer_reading_scenario.py tests/test_audit.py tests/test_codex_hooks.py tests/test_deliverable.py tests/test_end_to_end.py tests/test_evidence_unread.py tests/test_exploration_hold.py tests/test_exploration_link_scenario.py tests/test_explored_in.py tests/test_handovers.py tests/test_next_step.py tests/test_origin_scenario.py tests/test_protocol_fill.py tests/test_protocol_runs.py tests/test_registration_committed.py tests/test_repair_guidance.py tests/test_replacement.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_report_check_stations.py tests/test_source_lines.py tests/test_withdrawal_order.py
+labkit.gates.report_check.cut_off_adoption_gaps	finding	1	{…}: an adoption was cut off during its check — the protocol may hold a proposal no check…	direct	1	0	tests/test_adopt.py
+labkit.gates.report_check.declaration_gaps	finding	1	{…}: {…}	direct	3	0	tests/test_end_to_end.py tests/test_report_check.py tests/test_report_check_areas.py
+labkit.gates.report_check.freeze_gaps	finding	1	{…}: line {…}: {…} still a placeholder	direct	1	0	tests/test_report_check_areas.py
+labkit.gates.report_check.freeze_gaps	finding	1	{…}: not `frozen = true` — a reported number owes the freeze	direct	8	0	tests/test_audit.py tests/test_protocol_fill.py tests/test_replacement.py tests/test_report_check_areas.py tests/test_report_check_stations.py
+labkit.gates.report_check.freeze_gaps	finding	1	{…}: {…}	direct	15	0	tests/test_audit.py tests/test_protocol_fill.py tests/test_registration_committed.py tests/test_replacement.py tests/test_report_check_areas.py tests/test_report_check_stations.py
+labkit.gates.report_check.recomputation_findings	finding	1	{…}	direct	2	0	tests/test_origin_scenario.py tests/test_report_check_areas.py
+labkit.gates.report_check.recomputation_findings	finding	2	{…}	direct	56	0	tests/test_adopt_per_protocol.py tests/test_audit.py tests/test_deliverable.py tests/test_end_to_end.py tests/test_evidence_unread.py tests/test_exploration_hold.py tests/test_exploration_link_scenario.py tests/test_handovers.py tests/test_next_step.py tests/test_origin_scenario.py tests/test_protocol_fill.py tests/test_protocol_runs.py tests/test_registration_committed.py tests/test_repair_guidance.py tests/test_replacement.py tests/test_report_check_areas.py tests/test_withdrawal_order.py
+labkit.gates.report_check.recomputation_findings	finding	1	{…} — no result, the numbers are not held to the run	direct	1	0	tests/test_gate_timeouts.py
+labkit.gates.report_check.registration_gaps	finding	1	not a git repository — the registration cannot be held to the commit of the first measure…	direct	25	0	tests/test_registration_committed.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py
+labkit.gates.report_check.repeated_gaps	finding	1	{…}: {…}	direct	1	0	tests/test_report_check_areas.py
+labkit.gates.report_check.unreportable_gaps	finding	1	the answering run {…}: {…} — its number cannot be reported; a reported number owes {…}	direct	12	0	tests/test_agent_hooks.py tests/test_finalize_open_findings.py tests/test_protocol_fill.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py
+labkit.gates.report_check.unreportable_gaps	finding	1	{…}: no config.json in this file state — the run's record cannot be checked	direct	1	0	tests/test_report_check_stations.py
+labkit.gates.report_decisions.check_carried_closings_upheld	finding	1	audit {…} #{…}: a carried finding (from {…}) `{…}` — the follow-up did not find the fault…	direct	4	2	tests/test_audit.py tests/test_report_decisions_stations.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_contested_closings_upheld	finding	1	audit {…} #{…}: `{…}` on a {…} a review said {…} on ({…}) — closing a finding a reviewer …	direct	4	2	tests/test_decision_review.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_decision_reviews_read	finding	1	a review nobody can read: {…}	direct	3	1	tests/test_decision_review.py tests/test_report_decisions_stations.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_earlier_blockers_released	finding	1	audit {…}: {…}	direct	19	2	tests/test_adopt_per_protocol.py tests/test_audit.py tests/test_counter_cases.py tests/test_decision_review.py tests/test_end_to_end.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_first_dismissals_upheld	finding	1	audit {…} #{…}: `false-positive` on a BLOCKER {…} — a blocking finding is not released by…	direct	6	1	tests/test_decision_review.py tests/test_end_to_end.py tests/test_report_decisions_stations.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_limit_effects_decided	finding	1	{…}: a BLOCKER decided limitation owes its effect on the verdicts	direct	4	1	tests/test_decision_review.py tests/test_report_decisions_stations.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_limits_upheld	finding	1	{…}: `{…}` on a {…} decided limitation {…} — no decision review upholds that {…}	direct	24	7	tests/test_decision_review.py tests/test_end_to_end.py tests/test_report_decisions_stations.py tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.check_repaired_claims_upheld	finding	1	audit {…} #{…}: `fixed` on a BLOCKER on the Conclusion {…} — no follow-up audit is shown …	direct	1	1	tests/test_rules_report_decisions.py
+labkit.gates.report_decisions.followup_findings	finding	1	the carried findings of {…} do not form a chain: {…}	direct	1	0	tests/test_report_decisions_stations.py
+labkit.gates.report_decisions.limit_gaps	finding	1	the result cannot be rendered from {…}: {…}	direct	4	0	tests/test_origin_scenario.py tests/test_report_decisions_stations.py
+labkit.gates.report_exploration.later_use_findings	finding	1	data use after the audit: run {…} of {…} recorded {…} — {…}. The run is taken as not show…	direct	5	0	tests/test_explored_in.py
+labkit.gates.report_exploration.unresolved_link_hold	finding	1	exploration link: [explored_in] protocol = {…} names {…} — the exploration this confirmat…	direct	18	8	tests/test_exploration_link_scenario.py tests/test_explored_in.py tests/test_rules_report_exploration.py
+labkit.gates.report_hold.discussion_sources	finding	1	{…} names {…}, and there is no such protocol	direct	1	0	tests/test_report_hold_stations.py
+labkit.gates.report_hold.discussion_sources	finding	1	{…}: {…}'s area has no runs/{…}/ — a discussion names a run of its protocol's area	direct	2	0	tests/test_area_state.py tests/test_report_blocks.py
+labkit.gates.report_hold.hold_report	finding	1	{…}	direct	1	0	tests/test_report_hold_stations.py
+labkit.gates.report_hold.hold_report	finding	1	{…}: {…}	direct	1	0	tests/test_report_hold_stations.py
+labkit.gates.report_hold.link_gap	finding	1	{…}: a symbolic link to {…} — a report is held as a file at its own path, never through a…	direct	4	0	tests/test_agent_hooks.py tests/test_report_blocks.py
+labkit.gates.report_hold.owed_blocks	finding	1	line {…}: cites run {…}, the adopted result of {…}, without its generated block — the num…	direct	7	0	tests/test_next_step.py tests/test_report_blocks.py tests/test_report_check.py tests/test_source_lines.py
+labkit.gates.report_hold.report_hints	finding	1	{…}: no assigned source found for the numbers on {…} line(s) — they stand outside every g…	direct	18	0	tests/test_counter_cases.py tests/test_next_step.py tests/test_report_blocks.py tests/test_report_check.py
+labkit.gates.report_hold.report_hints	finding	1	{…}: numbers on {…} line(s) beside a discussed run — a discussed run's number in a report…	direct	1	0	tests/test_report_blocks.py
+labkit.gates.report_hold.review_gap	finding	1	{…}: its report review cannot be told — {…}	direct	2	0	tests/test_claim_review.py tests/test_report_hold_stations.py
+labkit.gates.report_hold.review_hold	finding	1	{…}: the report review holds this state ({…}) — {…}	direct	13	0	tests/test_claim_review.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_hold_stations.py
+labkit.gates.report_hold.review_hold	finding	1	{…}: {…} and has no clean report review of this state (one naming no claim){…} — a cold r…	direct	25	0	tests/test_agent_hooks.py tests/test_area_state.py tests/test_claim_review.py tests/test_handovers.py tests/test_next_step.py tests/test_origin_scenario.py tests/test_registration_committed.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_hold_stations.py tests/test_reported_through.py
+labkit.gates.report_hold.review_hold	finding	1	{…}: {…} and has no clean report review of this state — and none can run: {…}	direct	2	0	tests/test_handovers.py tests/test_report_hold_stations.py
+labkit.gates.report_hold.staged_area_gap	finding	1	{…}: the working tree differs from the index ({…}) — {…} the tree, the commit holds the i…	direct	17	0	tests/test_end_to_end.py tests/test_next_step.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_hold_stations.py
+labkit.gates.report_hold.through_gap	finding	1	{…} differs from what the analysis run's record and adoption say now — a stale rendering …	direct	2	0	tests/test_reported_through.py
+labkit.gates.report_hold.through_gap	finding	1	{…}: {…}	direct	3	0	tests/test_origin_scenario.py tests/test_reported_through.py
+labkit.gates.report_hold.through_gaps	finding	1	line {…}: the reported-through block of {…} repeats the block at line {…} — one block per…	direct	1	0	tests/test_reported_through.py
+labkit.gates.report_hold.undeclared_findings	finding	1	{…}: cites a run of a protocol whose head does not read — {…}	direct	1	0	tests/test_report_hold_stations.py
+labkit.gates.report_hold.undeclared_findings	finding	1	{…}: cites {…}, the answering run of {…}, which adopts it in the working tree but not in …	direct	1	0	tests/test_report_check.py
+labkit.gates.report_hold.undeclared_findings	finding	1	{…}: cites {…}, the answering run of {…}, which has adopted no result	direct	9	0	tests/test_counter_cases.py tests/test_handovers.py tests/test_report_blocks.py tests/test_report_check.py
+labkit.gates.report_hold.undeclared_findings	finding	1	{…}: cites {…}, the answering run of {…}, which has adopted no result — and neither its a…	direct	1	0	tests/test_handovers.py
+labkit.gates.report_hold.undeclared_findings	finding	1	{…}: cites {…}, which no protocol has adopted as its result — a reported number is adopte…	direct	5	0	tests/test_counter_cases.py tests/test_report_blocks.py tests/test_report_check.py
+labkit.gates.report_hold.undeclared_findings	finding	1	{…}: line {…}: run {…} is discussed as not reported, but {…} has adopted it as its result	direct	2	0	tests/test_report_blocks.py
+labkit.gates.report_replacement._predecessor	finding	1	[replaces] protocol = {…} names {…}	direct	2	0	tests/test_replacement.py tests/test_report_replacement_stations.py
+labkit.gates.report_replacement._predecessor	finding	1	[replaces] protocol is its own id	direct	1	0	tests/test_replacement.py
+labkit.gates.report_replacement._predecessor	finding	1	the replacements run in a circle ({…})	direct	2	0	tests/test_replacement.py
+labkit.gates.report_replacement._predecessor_open	finding	1	its predecessor's BLOCKER is still open — {…}	direct	2	0	tests/test_replacement.py
+labkit.gates.report_replacement._predecessor_open	finding	1	the predecessor's audit records do not read: {…}	direct	1	0	tests/test_report_replacement_stations.py
+labkit.gates.report_replacement._undeclared_changes	finding	1	changed against {…} ({…}) and not declared: {…} {…} → {…}	direct	6	0	tests/test_counter_cases.py tests/test_replacement.py
+labkit.gates.report_replacement._undeclared_changes	finding	1	declares a change the registrations do not show: {…} {…} → {…} (the predecessor {…}, this…	direct	2	0	tests/test_replacement.py
+labkit.gates.report_replacement._undeclared_changes	finding	1	the registrations cannot be compared — {…}	direct	1	0	tests/test_replacement.py
+labkit.gates.report_replacement.replacement_gaps	finding	1	{…}: {…}	direct	2	0	tests/test_report_replacement_stations.py
+labkit.run.batch.Ledger.require_complete	exit	1	{…}: the output does not balance its {…} input items — {…}. The run is NOT complete.	direct	6	0	tests/test_batch_ledger.py tests/test_template_items.py
+labkit.run.batch.Store.__enter__	exit	1	{…} exists — another run is writing this output: {…} {…}	direct	8	0	tests/test_batch.py
+labkit.run.code_repos.require_recordable	exit	1	runlog: the run imports untracked code it cannot record (above {…} MB, in no commit): {…}	direct	1	0	tests/test_code_repos.py
+labkit.run.detached.main	exit	1	usage: python -P -m labkit.run.detached FD AREA UNSTARTED LOG -- COMMAND… (started by `ru…	direct	1	0	tests/test_run_start_refusals.py
+labkit.run.endpoint_lease._refuse	exit	1	llm: endpoint {…} is leased to alias '{…}' (pid {…}, {…}, since {…}) — refusing to run '{…	direct	6	0	tests/test_endpoint_lease.py
+labkit.run.lanes.Lanes.balance	exit	1	{…}: rows of {…} instruments — {…} — one file holds one measurement: write a new output f…	direct	1	0	tests/test_lanes.py
+labkit.run.lanes.Lanes.require_registered_prompts	exit	1	{…}	direct	1	0	tests/test_lanes.py
+labkit.run.lanes.Lanes.require_registered_prompts	exit	1	{…}: the prompt this script sends is not the registered one — {…} line(s) the Prompt bloc…	direct	2	0	tests/test_lanes.py
+labkit.run.llm_cache._require_declared	exit	1	llm_cache: the lab has not declared a cache — a cached answer repeats instead of measurin…	direct	2	0	tests/test_llm_cache.py
+labkit.run.runlog.Run._write_start_file	exit	1	runlog: the start of {…} could not be recorded in {…}: {…} — the run did not start, and n…	direct	1	0	tests/test_run_starts.py
+labkit.run.runlog.Run._write_start_file	exit	1	runlog: {…} exists — a run with the id {…} started before, and its start file is never ov…	direct	1	0	tests/test_run_starts.py
+labkit.run.runlog._decide_origins_and_warn	exit	1	{…}	direct	7	0	tests/test_input_origins.py tests/test_public_api.py
+labkit.run.runlog._repeat_draw	exit	1	runlog: repeat_of and derived_from exclude each other — a repeat asks the model again, a …	direct	1	0	tests/test_repeats.py
+labkit.run.runlog._repeat_draw	exit	1	runlog: repeat_of={…}: the next draw number cannot be counted — {…}	direct	1	0	tests/test_repeats.py
+labkit.run.runlog._repeat_draw	exit	1	runlog: repeat_of={…}: {…}	direct	1	0	tests/test_run_start_refusals.py
+labkit.run.runlog._repeat_draw	exit	1	runlog: this run is no repeat of {…} — it measures something else: {…}	direct	3	0	tests/test_repeats.py
+labkit.run.runlog._repeat_parent	exit	1	runlog: {…} is itself a repeat of {…}	direct	1	0	tests/test_repeats.py
+labkit.run.runlog._require_no_open_twin	exit	1	runlog: {…} is still measuring in {…}: {…} — a second measurement beside it would read an…	direct	1	0	tests/test_runlog_wait.py
+labkit.run.start_check._audit_unavailable	exit	1	runlog: LABKIT_UNFROZEN=1 — the area cannot be stamped ({…}), so no failed audit attempt …	unreached	0	0	
+labkit.run.start_check._audit_unavailable	exit	1	runlog: promise block: {…}	direct	1	0	tests/test_run_start_refusals.py
+labkit.run.start_check._audit_unavailable	exit	1	runlog: this run declares run_kind='measurement' (a full run) on a protocol not ready for…	direct	7	0	tests/test_runlog_freeze_gate.py tests/test_runlog_unfrozen_failed_audit.py
+labkit.run.start_check._audit_unavailable	exit	1	runlog: {…}	direct	1	0	tests/test_runlog_unfrozen_failed_audit.py
+labkit.run.start_check._derived_parent	exit	1	runlog: derived_from={…} is a repeat of {…} — supporting evidence, never the answer	direct	1	0	tests/test_repeats.py
+labkit.run.start_check._derived_parent	exit	1	runlog: derived_from={…} is not a run id	direct	1	0	tests/test_repeats.py
+labkit.run.start_check._promise_snapshot	exit	1	runlog: promise block: {…}	direct	1	0	tests/test_promises.py
+labkit.run.start_check._undecided_findings	exit	1	runlog: {…}	direct	1	0	tests/test_runlog_unfrozen_blocker.py
+labkit.run.start_check.completed_parent	exit	1	runlog: {…}={…} names no completed run under {…} ({…}){…}	direct	6	0	tests/test_builds_on.py tests/test_completion_consumers.py tests/test_repeats.py tests/test_run_completion.py
+labkit.run.start_check.completed_parent	exit	1	runlog: {…}={…}: {…}	direct	2	0	tests/test_repeats.py
+labkit.run.start_check.foreground_timeout	exit	1	runlog: {…}={…} is not a number of seconds >= 0	direct	1	0	tests/test_runlog_freeze_gate.py
+labkit.run.start_check.freeze_gate	exit	1	runlog: {…}, and a preflight audit found BLOCKER(s) nobody decided — not an unfrozen prot…	direct	2	0	tests/test_runlog_unfrozen_blocker.py
+labkit.run.start_check.freeze_gate	exit	1	runlog: {…}, but its protocol is not ready for one: {…}	direct	23	0	tests/test_exploration_hold.py tests/test_obligations_scenario.py tests/test_run_record_atomic.py tests/test_runlog_freeze_gate.py tests/test_runlog_unfrozen_failed_audit.py
+labkit.run.start_check.prepare	exit	1	runlog: run_kind='probe' is not allowed at repeat_cost='low' — this repeat cost has no se…	direct	3	0	tests/test_registration_contract.py tests/test_run_kind.py tests/test_runlog_freeze_gate.py
+labkit.run.start_check.protocol_binding	exit	1	runlog: protocol={…} is not one of the PROTOCOL-*.md in the run's area ({…}): {…}	unreached	0	0	
+labkit.run.start_check.protocol_binding	exit	1	runlog: {…} protocols in {…} — nothing would say which one this run belongs to: {…}	direct	2	0	tests/test_run_start_refusals.py tests/test_run_starts.py
+labkit.run.start_check.protocol_binding	exit	1	runlog: {…}: {…}	direct	4	0	tests/test_protocol_identity.py tests/test_runlog_freeze_gate.py
+labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading = {…} lies outside the repository {…}	direct	1	0	tests/test_answer_reading_start.py
+labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading = {…}: no such file	direct	1	0	tests/test_answer_reading_start.py
+labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading = {…}: {…} does not import it, so it reads none of the answers	direct	1	0	tests/test_answer_reading_start.py
+labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading declares what a derived run re-reads its parent's answers with — i…	direct	1	0	tests/test_answer_reading_start.py
+labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading: the code {…} imports cannot be read: {…}	unreached	0	0	
+labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading: {…} lies in no git repository, so the module cannot be compared w…	unreached	0	0	
+labkit.run.start_check.require_detached	exit	1	runlog: this run declares run_kind='measurement' and sits in a foreground shell an agent …	direct	5	0	tests/test_audit_robustness.py tests/test_runlog_freeze_gate.py tests/test_runlog_wait.py
+labkit.run.start_check.require_exploration_link	exit	1	runlog: this is the first measurement of {…}, and its [explored_in] is no valid link to a…	direct	2	0	tests/test_explored_in.py
+labkit.run.start_check.require_exploration_link	exit	1	runlog: {…}	direct	1	0	tests/test_explored_in.py
+labkit.run.start_check.require_registration	exit	1	runlog: {…}: {…}	direct	3	0	tests/test_registration_contract.py tests/test_runlog_freeze_gate.py
+labkit.run.start_check.require_registration	exit	2	runlog: {…}: {…}	direct	3	0	tests/test_promises.py tests/test_registration_contract.py
+labkit.run.start_check.require_step_basis	exit	1	runlog: [builds_on] run = {…} is a repeat of {…} — supporting evidence, never a step's ba…	direct	1	0	tests/test_builds_on.py
+labkit.run.start_check.require_step_basis	exit	1	runlog: [builds_on] run = {…} is bound to {…}, not to this protocol ({…})	direct	1	0	tests/test_builds_on.py
+labkit.run.start_check.require_step_basis	exit	1	runlog: {…}	direct	1	0	tests/test_builds_on.py
+labkit.run.start_check.require_valid_reseed	exit	1	runlog: reseed draws a repeat's seed anew — it goes with repeat_of	direct	1	0	tests/test_repeats.py
+labkit.run.start_check.require_valid_reseed	exit	1	runlog: reseed: the config holds no integer `{…}` to draw anew ({…})	direct	1	0	tests/test_repeats.py
+labkit.run.start_check.require_valid_reseed	exit	1	runlog: reseed: the protocol registers `{…}` = {…} — a spread over seeds needs a seed the…	direct	1	0	tests/test_repeats.py

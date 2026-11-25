@@ -14,11 +14,12 @@ check tier="full":
 
 # the fast guards before a commit (~25 s): format, lint and the rule tests that
 # refused commits most often — a way out without a command, the layers and
-# file access, one home per logic; the commit hook stays the check
+# file access, one home per logic, the checks overview against the source;
+# the commit hook stays the check
 guard:
     {{venv}}/ruff format --check .
     {{venv}}/ruff check .
-    {{venv}}/pytest -q -n 4 -p no:cacheprovider tests/test_ways_out_data.py tests/test_architecture.py tests/test_one_home.py
+    {{venv}}/pytest -q -n 4 -p no:cacheprovider tests/test_ways_out_data.py tests/test_architecture.py tests/test_one_home.py tests/test_check_overview.py
 
 # the suite, or the tests matching NAME
 test name="":
@@ -127,3 +128,7 @@ release version:
 # every place labkit tells a finding, with its rule, and every rule with its places: just inventory > /tmp/checks.md
 inventory:
     {{venv}}/python -m labkit.tools.check_inventory
+
+# write docs/checks-overview.md anew after a finding site changed (seconds; its reach columns come from docs/checks-reach.tsv)
+overview:
+    {{venv}}/python -m labkit.tools.check_overview

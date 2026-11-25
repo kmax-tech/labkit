@@ -1,13 +1,14 @@
 """test_inventory — which test of labkit's suite reaches which finding site,
 and through which layer it entered labkit.
 
-    python -m labkit.tools.test_inventory [--out FILE]
+    python -m labkit.tools.test_inventory [--out FILE] [--reach FILE]
 
 The basis for a clear test model: whether a rule's check is tested on its
 own or only inside a scenario that runs whole commands, and how many tests
 reach the same check. Runs the suite of the checkout labkit is installed
 from (`tests/`, `pytest -n auto`) once with every gate finding built and
-every `SystemExit` raised with a string message traced, and tells per rule
+every `SystemExit` raised in the package with a string message traced — at
+its raise, whether or not a caller catches it —, and tells per rule
 and per finding site
 (`check_inventory.finding_sites`) the tests that reached it — their count,
 how many of them carry the mark `rule`, and the test files they stand in —
@@ -41,8 +42,14 @@ environment of its own carries no test name and is not traced; a process in
 which another tool holds the monitoring id traces no exit, and the output
 counts those processes; a finding rebuilt where no site stands
 (`dataclasses.replace` in a gate), or an exit raised where the scan counts
-none (`sys.exit("…")`), counts as unmapped. Computed at every call,
-committed nowhere: line numbers move with every edit.
+none (`sys.exit("…")`, a `raise SystemExit(main(…))` whose main returned a
+string), counts as unmapped, and the last table lists every such place.
+Computed at every call, committed nowhere: line numbers move with every
+edit. With `--reach FILE` a green run in which every process traced its exits
+also writes each traced site's
+standing, test counts and test files without line numbers
+(`render_reach`) — `docs/checks-reach.tsv` is the one such
+file the repository keeps, the source of `docs/checks-overview.md`.
 """
 
 from __future__ import annotations
@@ -52,7 +59,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from types import CodeType, FrameType
@@ -88,7 +95,7 @@ MONITOR_TOOL = 4
 #: the name's end of the marker a process leaves in the trace folder when it
 #: could not trace its exits
 EXITS_UNTRACED_SUFFIX = ".exits-untraced"
-USAGE = "usage: python -m labkit.tools.test_inventory [--out FILE]"
+USAGE = "usage: python -m labkit.tools.test_inventory [--out FILE] [--reach FILE]"
 
 
 @dataclass(frozen=True)
@@ -209,7 +216,11 @@ def trace_exits(folder: str) -> None:
     """
     monitoring = sys.monitoring
     monitoring.use_tool_id(MONITOR_TOOL, "labkit-test-inventory")
-    last: list[BaseException] = []  # the exit reported last, to tell its later frames
+    # the exit reported last, to tell its later frames. The object itself
+    # is kept, not its id: a dead exception's id is given to the next one.
+    # So one exit, with its traceback, stays alive until the next, and the
+    # same object raised a second time is recorded once.
+    last: list[BaseException] = []
 
     def raised(code: CodeType, offset: int, exc: BaseException) -> None:
         if type(exc) is not SystemExit or not isinstance(exc.code, str):
@@ -407,6 +418,172 @@ def _tests(layers: dict[str, set[str]]) -> set[str]:
     return set().union(*layers.values()) if layers else set()
 
 
+# -- the reach per site, without line numbers: what a traced run leaves ----
+
+#: the first line of the reach file names the traced run after this mark
+REACH_HEAD = "# traced: "
+REACH_COLUMNS = (
+    "unit",
+    "channel",
+    "nth",
+    "wording",
+    "standing",
+    "tests",
+    "rule_tests",
+    "test_files",
+)
+
+
+@dataclass(frozen=True)
+class SiteKey:
+    """What names a finding site without its line: the UNIT it stands in
+    (`module.qualname`), its CHANNEL, the constant text of its message
+    (WORDING, `FindingSite.wording`) and NTH, its place (from 1) among the
+    sites of that unit, channel and wording by line.
+
+    What the key cannot tell: WORDING is the scan's text, cut at
+    `check_inventory.WORDING_WIDTH` characters and every value `{…}` — two
+    messages that differ only past the cut, or only in their values, share
+    it and are told apart by NTH alone; a change past the cut keeps the
+    key; and two such sites that trade places in their function trade
+    their keys."""
+
+    unit: str
+    channel: str
+    wording: str
+    nth: int
+
+
+@dataclass(frozen=True)
+class SiteReach:
+    """What a traced run of the suite found for one site: its STANDING
+    (`STANDINGS`), the number of TESTS that reached it, how
+    many of them carry the mark `rule` (RULE_TESTS), and the test FILES
+    they stand in, sorted."""
+
+    standing: str
+    tests: int
+    rule_tests: int
+    files: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TracedReach:
+    """The content of a reach file: RUN, the traced suite's summary line,
+    and the reach of each site by its key."""
+
+    run: str
+    by_site: dict[SiteKey, SiteReach]
+
+
+def site_keys(sites: list[FindingSite]) -> dict[tuple[str, int, str], SiteKey]:
+    """(path, line, channel) of each of SITES → its key (`SiteKey`),
+    numbered by line whatever the order of SITES (`finding_sites` walks a
+    function breadth-first, not by line). Pure."""
+    seen: Counter[tuple[str, str, str]] = Counter()
+    out = {}
+    for s in sorted(sites, key=lambda s: (s.path, s.line)):
+        seen[(s.unit, s.channel, s.wording)] += 1
+        out[(s.path, s.line, s.channel)] = SiteKey(
+            s.unit, s.channel, s.wording, seen[(s.unit, s.channel, s.wording)]
+        )
+    return out
+
+
+def traced_reach(
+    sites: list[FindingSite], r: Reach, rule_tests: set[str], run: str
+) -> TracedReach:
+    """The reach R of a traced run (its summary line RUN) by site key: one
+    entry per traced site of SITES, the unreached included. RULE_TESTS are
+    the node ids of the tests marked `rule`. Pure."""
+    keys = site_keys(sites)
+    by_site = {}
+    for s in traced_sites(sites):
+        layers = r.by_site[(s.path, s.line)]
+        tests = _tests(layers)
+        by_site[keys[(s.path, s.line, s.channel)]] = SiteReach(
+            site_standing(layers),
+            len(tests),
+            len(tests & rule_tests),
+            tuple(sorted({t.split("::", 1)[0] for t in tests})),
+        )
+    return TracedReach(run, by_site)
+
+
+def render_reach(reach: TracedReach) -> str:
+    """REACH as the text of a reach file: the head line naming the run, the
+    column names, then one tab-separated row per site, sorted. Pure.
+
+    Raises:
+        ValueError: A field holds a tab or a line break, or a file name a
+            space — the row would not read back.
+    """
+    lines = [REACH_HEAD + reach.run, "\t".join(REACH_COLUMNS)]
+    for key, found in sorted(
+        reach.by_site.items(),
+        key=lambda x: (x[0].unit, x[0].channel, x[0].wording, x[0].nth),
+    ):
+        fields = [
+            key.unit,
+            key.channel,
+            str(key.nth),
+            key.wording,
+            found.standing,
+            str(found.tests),
+            str(found.rule_tests),
+            " ".join(found.files),
+        ]
+        if any("\t" in f or "\n" in f for f in fields) or any(
+            " " in f for f in found.files
+        ):
+            raise ValueError(f"{key.unit}: a field of its reach row holds a separator")
+        lines.append("\t".join(fields))
+    return "\n".join(lines) + "\n"
+
+
+def read_reach(text: str, name: str) -> TracedReach:
+    """The reach file TEXT (called NAME in an error) as `render_reach` wrote
+    it. Pure.
+
+    Raises:
+        ValueError: Naming NAME and the line — a missing head or column
+            line, a row with another number of fields, a count that is no
+            integer or out of range, a standing STANDINGS does not hold,
+            or a site named twice.
+    """
+    lines = text.splitlines()
+    if not lines or not lines[0].startswith(REACH_HEAD):
+        raise ValueError(f"{name}:1: no head line `{REACH_HEAD}<the traced run>`")
+    if len(lines) < 2 or lines[1].split("\t") != list(REACH_COLUMNS):
+        raise ValueError(f"{name}:2: the column line is not {' '.join(REACH_COLUMNS)}")
+    by_site: dict[SiteKey, SiteReach] = {}
+    for n, line in enumerate(lines[2:], 3):
+        fields = line.split("\t")
+        if len(fields) != len(REACH_COLUMNS):
+            raise ValueError(
+                f"{name}:{n}: {len(fields)} fields, not {len(REACH_COLUMNS)}"
+            )
+        unit, channel, nth, wording, standing, tests, rule_tests, files = fields
+        if standing not in STANDINGS:
+            raise ValueError(f"{name}:{n}: standing {standing!r} is not one of them")
+        try:
+            key = SiteKey(unit, channel, wording, int(nth))
+            found = SiteReach(
+                standing, int(tests), int(rule_tests), tuple(files.split())
+            )
+        except ValueError as exc:
+            raise ValueError(f"{name}:{n}: a count is no integer ({exc})") from exc
+        if key.nth < 1 or found.tests < 0 or not 0 <= found.rule_tests <= found.tests:
+            raise ValueError(
+                f"{name}:{n}: nth below 1, a count below 0, or more rule tests "
+                f"than tests"
+            )
+        if key in by_site:
+            raise ValueError(f"{name}:{n}: the site stands in an earlier row too")
+        by_site[key] = found
+    return TracedReach(lines[0].removeprefix(REACH_HEAD), by_site)
+
+
 def render_test_inventory(
     sites: list[FindingSite],
     r: Reach,
@@ -440,7 +617,8 @@ def render_test_inventory(
         f"tool held the monitoring id): {exits_untraced}.",
         "",
         "An exit is a `SystemExit` itself raised in the package with a string "
-        "message; a subclass and `console.Refused` are no site and not traced.",
+        "message, counted at its raise — also where a caller catches it; a "
+        "subclass and `console.Refused` are no site and not traced.",
         "",
         "Reaching a site is not asserting it; a subprocess with an environment "
         "of its own is not traced. `direct`: some test entered below a "
@@ -456,16 +634,21 @@ def render_test_inventory(
             for c in channels
         ]
         out.append(f"| {name} | {counts[0]} | {counts[1]} |")
-    lowest = [lowest_layer(v) for v in r.by_site.values()]
+    lowest = {
+        c: [lowest_layer(v) for k, v in r.by_site.items() if key[k].channel == c]
+        for c in channels
+    }
     out += [
         "",
         "The narrowest layer through which some test reaches each site:",
         "",
-        "| lowest layer | sites |",
-        "|---|---|",
+        "| lowest layer | gate findings | exits |",
+        "|---|---|---|",
     ]
     out += [
-        f"| {layer} | {lowest.count(layer)} |" for layer in DEPTH if layer in lowest
+        f"| {layer} | {lowest[FINDING].count(layer)} | {lowest[EXIT].count(layer)} |"
+        for layer in DEPTH
+        if layer in lowest[FINDING] or layer in lowest[EXIT]
     ]
     out += _rule_marked(key, r, rule_tests)
     findings = {k: s for k, s in key.items() if s.channel == FINDING}
@@ -737,9 +920,9 @@ def _per_scenario(r: Reach, slow: set[str]) -> list[str]:
 
 
 def _unmapped_and_failed(r: Reach, failed: list[str]) -> list[str]:
-    """The places that built a finding or raised an exit where no site of
-    that channel stands, most first, and the tests that failed under the
-    trace."""
+    """Every place that built a finding or raised an exit where no site of
+    that channel stands — the exits first, within a channel the place told
+    most often first —, and the tests that failed under the trace."""
     places: dict[tuple[str, str], int] = defaultdict(int)
     for e in r.unmapped:
         places[(f"{e.path}:{e.line}", e.channel)] += 1
@@ -752,7 +935,9 @@ def _unmapped_and_failed(r: Reach, failed: list[str]) -> list[str]:
     ]
     out += [
         f"| `{p}` | {channel} | {n} |"
-        for (p, channel), n in sorted(places.items(), key=lambda x: -x[1])[:15]
+        for (p, channel), n in sorted(
+            places.items(), key=lambda x: (x[0][1] != EXIT, -x[1], x[0][0])
+        )
     ]
     if failed:
         out += ["", "## Tests that failed under the trace", ""]
@@ -814,18 +999,27 @@ def collected_ids(output: str) -> set[str]:
 def main(argv: list[str]) -> int:
     """Run the traced suite and print the inventory, or write it to `--out
     FILE`; 0, or 1 when the suite is not green (the inventory is still
-    written, its first line says so)."""
+    written, its first line says so).
+
+    Side effects:
+        Writes `--out FILE`; writes `--reach FILE` (the reach per site,
+        `render_reach`) only when the suite is green and every process
+        traced its exits — else the reach is not the suite's.
+    """
     from labkit.formats import console
-    from labkit.tools.check_inventory import entry_points, finding_sites, read_modules
+    from labkit.tools.check_inventory import (
+        entry_points,
+        finding_sites,
+        path_options,
+        read_modules,
+    )
 
     if argv in (["--help"], ["-h"]):
         print(__doc__)
         return 0
-    out: Path | None = None
-    if argv:
-        if len(argv) != 2 or argv[0] != "--out":
-            raise console.Refused("test_inventory", USAGE)
-        out = Path(argv[1])
+    options = path_options("test_inventory", USAGE, ("--out", "--reach"), argv)
+    out = options.get("--out")
+    reach_file = options.get("--reach")
     repo = PACKAGE_DIR.parent
     if not (repo / "tests").is_dir() or not (repo / "pyproject.toml").is_file():
         raise console.Refused(
@@ -853,9 +1047,23 @@ def main(argv: list[str]) -> int:
         untraced = exits_untraced(folder / "trace")
     if code != 0:
         suite_line = f"NOT GREEN (pytest exit {code}): {suite_line}"
+    reached = reach(events, sites, commands)
+    # the reach file stands for the whole suite with every exit traced
+    if reach_file is not None and code == 0 and untraced == 0:
+        reach_file.write_text(
+            render_reach(traced_reach(sites, reached, marked, suite_line)),
+            encoding="utf-8",
+        )
+        print(f"test_inventory: wrote {reach_file}")
+    if reach_file is not None and (code != 0 or untraced != 0):
+        print(
+            f"test_inventory: {reach_file} not written — the suite is not green "
+            f"(pytest exit {code}) or {untraced} processes traced no exit",
+            file=sys.stderr,
+        )
     text = render_test_inventory(
         sites,
-        reach(events, sites, commands),
+        reached,
         slow_files(repo / "tests"),
         marked,
         suite_line,

@@ -159,7 +159,8 @@ class ReachAndStanding(unittest.TestCase):
             "| `labkit/checks/c.py:3` | `labkit.x.f` | finding | unreached | 0 | 0 | — |",
             text,
         )
-        self.assertIn("| gate | 1 |", text)  # the direct site, reached through a gate
+        # the direct site, reached through a gate; no exit site here
+        self.assertIn("| gate | 1 | 0 |", text)
         self.assertIn("| LAB-001 | 2 | 1 | 1 | 0 | 2 |", text)
         self.assertIn(f"| {NOT_RECORDED} | 1 | 0 | 0 | 1 | 0 |", text)
         self.assertIn(
@@ -220,6 +221,27 @@ class ExitsAreHeldToExitSites(unittest.TestCase):
         )
         self.assertIn("| direct | 0 | 1 |", text)
         self.assertIn("| unreached | 1 | 0 |", text)
+        # the exit was reached below a command, in the run layer; the
+        # gate finding by nothing, so it has no lowest layer
+        self.assertIn("| run | 0 | 1 |", text)
+
+    def test_every_unmapped_place_is_listed_the_exits_first(self):
+        """An exit raised where the scan counts no site is told once among
+        many findings rebuilt elsewhere: the table lists every place and
+        opens with the exits, so the one exit is not cut off."""
+        rebuilt = [
+            event(self.TEST, "labkit/gates/g.py", 100 + n, "labkit.gates.g.f")
+            for n in range(20)
+            for _ in range(2)
+        ]
+        stray = event(self.TEST, "labkit/run/s.py", 40, "labkit.run.s.f", ti.EXIT)
+        r = ti.reach([*rebuilt, stray], self.SITES, COMMANDS)
+        text = ti.render_test_inventory(self.SITES, r, set(), set(), "1 passed", [])
+        table = text.split("## Findings and exits told where no site stands")[1]
+        rows = [ln for ln in table.splitlines() if ln.startswith("| `")]
+        self.assertEqual(rows[0], "| `labkit/run/s.py:40` | exit | 1 |")
+        self.assertEqual(len(rows), 21)
+        self.assertIn("| `labkit/gates/g.py:119` | finding | 2 |", rows)
 
     def test_two_traced_sites_on_one_line_are_refused(self):
         with self.assertRaises(ValueError) as cm:

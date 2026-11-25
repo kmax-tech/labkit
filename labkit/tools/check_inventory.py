@@ -10,7 +10,9 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
   - a finding site is a call that builds a gate finding (`GateFinding`,
     `blocker`, `coded`, `Findings.block`, `Findings.warn`; channel
     `finding`), a `raise SystemExit(<message>)` (how code a measure script
-    reaches ends, `console.Refused` says which; channel `exit`), or a call
+    reaches ends, `console.Refused` says which; channel `exit`; the
+    message a string, a name or a call that builds it — not a literal
+    exit code and not a `main(...)` passed through), or a call
     that prints a `WARNING:` or `BLOCKER:` line of its own (channel
     `printed`); a `console.Refused` (exit 2: the command cannot run) is no
     finding and is left out
@@ -428,6 +430,9 @@ def _call_rules(
 #: the one spelling of a refusal with its way out (`gate.with_way_out`): a
 #: `SystemExit` around it is a refusal, its first argument the message
 WAY_OUT_WRAPPER = "with_way_out"
+#: the one call inside a `SystemExit` whose result is an exit code, not a
+#: message: a command's `main` (`raise SystemExit(main(argv))`)
+MAIN_NAME = "main"
 
 
 def _rule_argument(call: ast.Call) -> ast.AST | None:
@@ -531,9 +536,13 @@ def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
 
 def _refusal_message(n: ast.AST) -> ast.AST | None:
     """The message of a `raise SystemExit(<message>)` — for
-    `SystemExit(with_way_out(<message>, <fix>))` its first argument; None
-    for any other node, and for an exit code or a main's result passed
-    through (`SystemExit(main(argv))`)."""
+    `SystemExit(with_way_out(<message>, <fix>))` its first argument, for a
+    message another call builds (`SystemExit(str(exc))`) that call; None
+    for any other node, for a literal exit code, and for a main's result
+    passed through (`SystemExit(main(argv))`: a call to the name
+    MAIN_NAME, bare or as an attribute — `cli.main(…)`, `self.main()`).
+    Any other call counts as a message — also one that returns an exit
+    code, which the scan cannot tell from one that builds a sentence."""
     if not (isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call)):
         return None
     exc = n.exc
@@ -543,8 +552,18 @@ def _refusal_message(n: ast.AST) -> ast.AST | None:
         return None
     arg = exc.args[0]
     if isinstance(arg, ast.Call):
-        wrapped = isinstance(arg.func, ast.Name) and arg.func.id == WAY_OUT_WRAPPER
-        return arg.args[0] if wrapped and arg.args else None
+        called = (
+            arg.func.id
+            if isinstance(arg.func, ast.Name)
+            else arg.func.attr
+            if isinstance(arg.func, ast.Attribute)
+            else None
+        )
+        if called == MAIN_NAME:
+            return None
+        if called == WAY_OUT_WRAPPER and arg.args:
+            return arg.args[0]
+        return arg
     if isinstance(arg, ast.Constant) and isinstance(arg.value, int):
         return None
     return arg
@@ -978,23 +997,22 @@ def render_audit_rules(
     return "\n".join(lines) + "\n"
 
 
-def _options(argv: list[str]) -> dict[str, Path]:
-    """ARGV's options, each with its path. Raises console.Refused for an
-    unknown option, one given twice and one without its value."""
+def path_options(
+    tool: str, usage: str, names: tuple[str, ...], argv: list[str]
+) -> dict[str, Path]:
+    """ARGV's options, each of NAMES with the path after it. Raises
+    console.Refused, as TOOL and with USAGE, for an option not in NAMES,
+    one given twice and one without its value."""
     options: dict[str, Path] = {}
     rest = list(argv)
     while rest:
         option = rest[0]
-        if option not in ("--out", "--records"):
-            raise console.Refused(
-                "check_inventory", f"{option!r} is no option; {USAGE}"
-            )
+        if option not in names:
+            raise console.Refused(tool, f"{option!r} is no option; {usage}")
         if option in options:
-            raise console.Refused("check_inventory", f"{option} given twice; {USAGE}")
+            raise console.Refused(tool, f"{option} given twice; {usage}")
         if len(rest) < 2:
-            raise console.Refused(
-                "check_inventory", f"{option} without its value; {USAGE}"
-            )
+            raise console.Refused(tool, f"{option} without its value; {usage}")
         options[option] = Path(rest[1])
         rest = rest[2:]
     return options
@@ -1006,7 +1024,7 @@ def main(argv: list[str]) -> int:
     if argv in (["--help"], ["-h"]):
         print(__doc__)
         return 0
-    options = _options(argv)
+    options = path_options("check_inventory", USAGE, ("--out", "--records"), argv)
     out = options.get("--out")
     text = inventory(PACKAGE_DIR)
     experiments = options.get("--records")
