@@ -1,6 +1,16 @@
 # Keeping a decision taken back — proposal
 
-Status: proposal, 2026-11-24, nothing built. Waits for the author's decision ([TODO](../../TODO.md), entry on `labkit-audit --decide N open`).
+Status: decided by the author on 2026-11-25; the proposal below is kept as written on 2026-11-24, and where the decision departs from it, the decision holds.
+
+## Decided by the author — 2026-11-25
+
+1. The history stands in the record (option A), one entry for every decision a later one replaces; a decision equal to the current one writes no entry. Taking a decided status back to `open` owes a reason. `--findings` shows each replaced decision on one line.
+2. A decision taken back and restored word for word needs new confirmations. The proposal's comparison of a review file's age with `until` is dropped: `until` is exact to the minute, so a take-back and a restore within one minute could not be told apart. Instead the history joins `decision_digest` when there is one. A record without history keeps its digests, and so its reviews and fix verdicts. Built as its own commit with its own review, released together with point 1.
+3. The history logic has its own module, `labkit/formats/decision_history.py`. It is no general journal, and the claims of a report review keep no history yet.
+
+Two limits belong to the order: the history is not shown to the decision reviewer or the follow-up auditor (their prompts stay as long as they are), and `--findings` gives each replaced decision one line, the full reason staying in the record.
+
+Departures from the text below: an entry's `until` is written as the record's `[audit] date` is (`2026-11-24T14:02`); a present `replaced_decisions` key holds at least one entry, so an empty array is refused; a record that does not read is left to the reader's own error, and the committed-record check compares its history only when both versions read.
 
 ## The problem
 
