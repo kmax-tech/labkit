@@ -12,7 +12,6 @@ from __future__ import annotations
 import contextlib
 import io
 import os
-import time
 import unittest
 
 import pytest
@@ -22,7 +21,6 @@ from test_origin_scenario import _pointed
 
 from labkit.formats import protocol_block, runs
 from labkit.formats.protocol_check import recorded_results_field
-from labkit.formats.runs import RUN_ID_TIME
 from labkit.tools import protocol_fill, report_command
 
 # an end-to-end scenario file: the full suite before a push runs it, the
@@ -41,12 +39,6 @@ class SourceLines(e2e.CountCommands):
     citation of it would owe M's block."""
 
     def run_script(self, script: str) -> str:
-        held = (self.area / "runs").iterdir() if (self.area / "runs").is_dir() else ()
-        newest = max(
-            (d.name[: len(time.strftime(RUN_ID_TIME))] for d in held), default=""
-        )
-        while time.strftime(RUN_ID_TIME) <= newest:
-            time.sleep(0.02)
         return self.lab.measure(self.area, script)
 
     def setUp(self) -> None:

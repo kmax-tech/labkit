@@ -183,16 +183,23 @@ class Lab:
             )
         return r.stdout
 
-    def wait_for_a_later_second(self, area: Path) -> None:
+    def wait_for_a_later_second(self, area: Path, *, than: str = "") -> None:
         """Return once the clock shows a later second than every run AREA
-        holds. Run ids carry the second, and two bound runs of one second
-        leave the answering run's choice blocked
-        (`answering_run.same_second_rival`) — a history no lab writes by
-        hand, and one a test must not owe to how long its commands take.
-        Waits for the clock, not for a guessed time."""
+        holds — and than the run THAN, an id whose directory the area need
+        not hold any more (a test deleted or moved it). Run ids carry the
+        second, and two bound runs of one second leave the answering run's
+        choice blocked (`answering_run.same_second_rival`) — a history no
+        lab writes by hand, and one a test must not owe to how long its
+        commands take. Waits for the clock, not for a guessed time.
+
+        The wait covers every run the area holds. A test calls it before
+        a start that can be chosen as the answer; a repeat (`--repeat-of`)
+        is never the answer (`answering_run.bound_runs`) and a skeleton's
+        `--probe` opens no run, so those starts go without it."""
         runs = area / "runs"
         held = runs.iterdir() if runs.is_dir() else ()
         newest = max((d.name[: len(_SECOND)] for d in held), default="")
+        newest = max(newest, than[: len(_SECOND)])
         while time.strftime(RUN_ID_TIME) <= newest:
             time.sleep(0.02)
 
@@ -878,9 +885,9 @@ class FirstMeasurementLost(CountCommands):
         return run_a, kept
 
     def start_b(self, run_a: str) -> tuple[str, str]:
-        """Start B in a later second than A: (its id, what the start printed)."""
-        while time.strftime(RUN_ID_TIME) <= run_a[: len(_SECOND)]:
-            time.sleep(0.02)
+        """Start B in a later second than A, whose directory may be gone:
+        (its id, what the start printed)."""
+        self.lab.wait_for_a_later_second(self.area, than=run_a)
         out = self.lab.script(self.area, "01_measure.py")
         return self.lab.run_id_of(out), out
 
@@ -2311,12 +2318,10 @@ class AdoptedRunWithoutIntentKeys(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.lab.close()
 
-    def _measured_later(self, earlier: str) -> str:
-        """A full run in a later second than the run EARLIER: its id. Run
-        ids carry the second, and two bound runs of one second leave the
-        answering run's choice blocked (`answering_run.same_second_rival`)."""
-        while time.strftime(RUN_ID_TIME) <= earlier[: len(_SECOND)]:
-            time.sleep(0.02)
+    def _measured_later(self) -> str:
+        """A full run in a later second than every run the area holds
+        (`Lab.wait_for_a_later_second`): its id."""
+        self.lab.wait_for_a_later_second(self.area)
         return self.lab.run_id_of(self._measured())
 
     def test_the_way_out_lifts_the_hold_and_a_full_run_alone_does_not(self):
@@ -2356,7 +2361,7 @@ class AdoptedRunWithoutIntentKeys(unittest.TestCase):
         self.assertNotIn(-1, at, way_out)
         self.assertEqual(at, sorted(at), way_out)
         # the step the way out puts second, taken alone: the hold stays
-        run_b = self._measured_later(run_a)
+        self._measured_later()
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
         self.assertIn(hold, out)
@@ -2367,7 +2372,7 @@ class AdoptedRunWithoutIntentKeys(unittest.TestCase):
                 [str(self.protocol), "--withdraw", "--why", "it reports no intent key"]
             )
         self.assertEqual(rc, 0, told.getvalue())
-        run_c = self._measured_later(run_b)
+        run_c = self._measured_later()
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_c)
