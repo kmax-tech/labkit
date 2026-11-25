@@ -16,6 +16,7 @@ from pathlib import Path
 
 from labkit.checks import notes_check
 from labkit.formats.gate import OPEN_RULE
+from repo_fixture import git as _git
 
 
 # Verbatim head of counterstory-messprotokoll.md (counterfactual-worlds),
@@ -175,6 +176,42 @@ class TestCheckFile(unittest.TestCase):
         self.assertEqual(len(warn), 1)
         self.assertIn("citekey", warn[0].text)
         self.assertEqual(warn[0].rule, notes_check.LAB_082)
+
+    def test_a_meta_line_without_a_date_warns(self):
+        text = "# Entwurf ohne Datum\n\n*Instrument — Entwurf · noch ohne Lauf.*\n"
+        must, warn = self.check("note.md", text)
+        self.assertEqual(must, [])
+        (no_date,) = warn
+        self.assertIn("note.md:3: warning: no date in the meta line", no_date.text)
+        self.assertEqual(no_date.rule, OPEN_RULE)
+        # the twin: the same line with its date is quiet
+        dated = text.replace("*Instrument", "*2026-09-01 · Instrument")
+        self.assertEqual(self.check("note.md", dated), ([], []))
+
+    def test_named_scripts_none_of_which_is_in_the_repo_warn(self):
+        import tempfile
+
+        text = (
+            "# Instrument mit verschwundenem Skript\n\n"
+            "*2026-09-01 · Instrument — implementiert · Skript `s9_gone.py`.*\n"
+        )
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            _git(root, "init", "-q")
+            note = root / "note.md"
+            note.write_text(text, encoding="utf-8")
+            must, warn = notes_check.check_file(note)
+            self.assertEqual(must, [])
+            (rotten,) = warn
+            self.assertIn(
+                "none of the named scripts resolve in the repo (s9_gone.py)",
+                rotten.text,
+            )
+            self.assertEqual(rotten.rule, OPEN_RULE)
+            # the twin: the script anywhere in the repository, and it is quiet
+            (root / "scripts").mkdir()
+            (root / "scripts" / "s9_gone.py").write_text("", encoding="utf-8")
+            self.assertEqual(notes_check.check_file(note), ([], []))
 
     def test_related_kind_mismatch_warns(self):
         must, warn = self.check("related-foo.md", STAMPED_DRAFT)

@@ -274,6 +274,21 @@ class ModelProvenanceFindings(unittest.TestCase):
             )
             self.assertEqual(gap.rule, run_record_check.LAB_027)
 
+    def test_a_model_run_whose_lineage_is_broken_is_named(self):
+        # the parent `derived_from` names is gone: whether a run above
+        # recorded the model cannot be said, and the warning says that
+        # instead of "no run recorded models_resolved"
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(d, {"criterion_1_pass": True, "llm_retries": 0}, {})
+            cfg = json.loads((run / "config.json").read_text(encoding="utf-8"))
+            cfg["derived_from"] = "2026-10-07T10-00-00_bbbb"
+            (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+            found = run_record_check.model_provenance_findings(Path(d), run)
+            (broken,) = [f for f in found if "is broken" in f.text]
+            self.assertIn(f"model provenance: the lineage of {run.name}", broken.text)
+            self.assertEqual((broken.grade, broken.rule), (WARNING, TECHNICAL_RULE))
+            self.assertFalse([f for f in found if "recorded models_resolved" in f.text])
+
     def test_a_model_run_with_models_resolved_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(
@@ -634,6 +649,19 @@ class ReadmeRoute(unittest.TestCase):
                 ["README.md route: scripts/01_measure.py defines no evaluate_rows"],
             )
             self.assertEqual(got[0].rule, readme_check.CODE_016)
+
+    def test_a_missing_measure_script_is_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, ROUTE)
+            (area / "scripts" / "01_measure.py").unlink()
+            got = readme_check.readme_route(area, "PROTOCOL-a.md")
+            self.assertEqual(
+                [g.text for g in got],
+                ["README.md route: scripts/01_measure.py does not exist"],
+            )
+            self.assertEqual(
+                (got[0].grade, got[0].rule), (WARNING, readme_check.CODE_016)
+            )
 
     def test_a_script_that_does_not_parse_raises_naming_it(self):
         # an unterminated f-string, as a sed edit leaves one: an error naming
