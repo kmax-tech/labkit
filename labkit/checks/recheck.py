@@ -295,14 +295,25 @@ def script_module(area: Path, run: Path) -> ModuleType:
     return module
 
 
-def pin(run: Path, out: Path) -> None:
-    """Refuse rows the chosen run did not write."""
+def registered_output(run: Path, out: Path) -> runs.OutputEntry:
+    """The entry RUN registered for the file OUT (its outputs.json).
+
+    Raises:
+        SystemExit: RUN did not register OUT as an output.
+    """
     outputs = runs.read_outputs(run) or []
     recorded = next((o for o in outputs if o.path.resolve() == out.resolve()), None)
     if recorded is None:
         raise SystemExit(
             f"recheck: run {run.name} did not register {out.name} as an output"
         )
+    return recorded
+
+
+def pin(run: Path, out: Path) -> None:
+    """Refuse rows the chosen run did not write: OUT must be an output RUN
+    registered (`registered_output`) and still the file it recorded."""
+    recorded = registered_output(run, out)
     drift = run_record_check.output_drift(runs.output_now(recorded))
     if drift is not None:
         raise SystemExit(
@@ -341,16 +352,12 @@ def output_as_recorded(run: Path, out: Path, area: Path) -> Iterator[RecordedOut
     any ref reaches that holds OUT with those bytes
     (`repo.blobs_in_history`), written to a temporary directory that is
     removed when the block ends. The working tree, OUT included, is not
-    touched. Raises SystemExit when RUN did not register OUT, and
+    touched. Raises SystemExit when RUN did not register OUT
+    (`registered_output`), and
     `NotVerifiable` when the record holds no sha256 for it or no bytes
     with that sha256 are left — the file as it stands is never read in
     their place. Raises RuntimeError when git fails."""
-    outputs = runs.read_outputs(run) or []
-    recorded = next((o for o in outputs if o.path.resolve() == out.resolve()), None)
-    if recorded is None:
-        raise SystemExit(
-            f"recheck: run {run.name} did not register {out.name} as an output"
-        )
+    recorded = registered_output(run, out)
     now = runs.output_now(recorded)
     drift = run_record_check.output_drift(now)
     if drift is None:
