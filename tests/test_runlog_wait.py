@@ -36,6 +36,15 @@ def _run_main(argv):
     return run_main(runlog_command.main, argv, capture_stderr=False)
 
 
+#: how a stand-in command publishes the record it wrote to `.config.tmp` in
+#: its run folder: by rename, as a run does (`files.write_atomic`) — for a
+#: script that imports `os` and holds the run folder as `d`. A copy or a
+#: write straight to config.json leaves the file empty for an instant, and
+#: `runlog start` reads a run as soon as its folder is there and refuses a
+#: record that does not read (docs/notes/2026-11-25-suite-runtime.md)
+RECORD_BY_RENAME = "os.replace(d / '.config.tmp', d / 'config.json')"
+
+
 class TestWait(unittest.TestCase):
     def test_idle_area_exits_0_and_names_the_last_finished_run(self):
         with tempfile.TemporaryDirectory() as d:
@@ -439,10 +448,11 @@ class TestStartWaitsForTheRun(unittest.TestCase):
             record.write_text(json.dumps(run_record()), encoding="utf-8")
             run = Path(d) / "runs" / "2026-10-27T20-00-00_late"
             script = (
-                "import time, shutil, pathlib; time.sleep(0.6); "
+                "import os, time, shutil, pathlib; time.sleep(0.6); "
                 f"d = pathlib.Path({str(run)!r}); d.mkdir(parents=True); "
                 "time.sleep(0.3); "
-                f"shutil.copy({str(record)!r}, d / 'config.json'); time.sleep(0.3)"
+                f"shutil.copy({str(record)!r}, d / '.config.tmp'); "
+                f"{RECORD_BY_RENAME}; time.sleep(0.3)"
             )
             code, out = self._start(d, script)
             self.assertEqual(code, 0, out)
@@ -598,7 +608,8 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
                 f"d = pathlib.Path({str(run_dir)!r}); d.mkdir(parents=True)\n"
                 f"record = {record!r}\n"
                 "record['pid'] = os.getpid()\n"
-                "(d / 'config.json').write_text(json.dumps(record))\n"
+                "(d / '.config.tmp').write_text(json.dumps(record))\n"
+                f"{RECORD_BY_RENAME}\n"
                 "time.sleep(2)\n",
                 encoding="utf-8",
             )
@@ -645,7 +656,8 @@ def _run_script(run_dir: Path, *, finished: bool, then: str) -> str:
         f"d = pathlib.Path({str(run_dir)!r}); d.mkdir(parents=True)\n"
         f"record = {record!r}\n"
         "record.update(pid=os.getpid(), started=now_stamp())\n"
-        "(d / 'config.json').write_text(json.dumps(record))\n" + done + then + "\n"
+        "(d / '.config.tmp').write_text(json.dumps(record))\n"
+        f"{RECORD_BY_RENAME}\n" + done + then + "\n"
     )
 
 
@@ -977,9 +989,10 @@ class TestStartNamesTheArea(unittest.TestCase):
             record.write_text(json.dumps(run_record()), encoding="utf-8")
             run = area / "runs" / "2026-10-27T20-00-00_bare"
             script = (
-                "import shutil, pathlib; "
+                "import os, shutil, pathlib; "
                 f"d = pathlib.Path({str(run)!r}); d.mkdir(parents=True); "
-                f"shutil.copy({str(record)!r}, d / 'config.json')"
+                f"shutil.copy({str(record)!r}, d / '.config.tmp'); "
+                f"{RECORD_BY_RENAME}"
             )
             cwd = os.getcwd()
             try:
