@@ -133,6 +133,106 @@ class RefusalsOnStderr(unittest.TestCase):
         self.assertEqual(found, [], "refuse through console.refuse")
 
 
+class OncePerCommand(unittest.TestCase):
+    """`once_per_command`: inside one command a question is asked once;
+    with no command running, after an exception, and for an answer the
+    caller's KEEP refuses, it is asked every time."""
+
+    def setUp(self) -> None:
+        self.asked: list[str] = []
+
+    def ask(self, answer: str = "answer") -> str:
+        from labkit.formats import console
+
+        def asking() -> str:
+            self.asked.append(answer)
+            return answer
+
+        return console.once_per_command("the question", asking)
+
+    def test_inside_a_command_the_question_is_asked_once(self):
+        from labkit.formats import console
+
+        with console.one_command():
+            self.assertEqual([self.ask(), self.ask()], ["answer", "answer"])
+            self.assertEqual(self.asked, ["answer"])
+            # the key is the question: another key is asked for itself
+            self.assertEqual(console.once_per_command("another", lambda: 7), 7)
+
+    def test_with_no_command_running_it_is_asked_every_time(self):
+        self.assertEqual([self.ask("a"), self.ask("b")], ["a", "b"])
+
+    def test_a_command_starts_with_no_answer_and_leaves_none(self):
+        from labkit.formats import console
+
+        with console.one_command():
+            self.ask("first command")
+        self.assertEqual(self.ask("between"), "between")
+        with console.one_command():
+            self.assertEqual(self.ask("second command"), "second command")
+        with self.assertRaises(KeyError), console.one_command():
+            self.ask("ended by an error")
+            raise KeyError("the command failed")
+        self.assertEqual(self.ask("after the error"), "after the error")
+
+    def test_a_command_inside_a_command_is_refused(self):
+        """The inner span's end would drop the outer one's answers; the
+        outer command goes on keeping."""
+        from labkit.formats import console
+
+        with console.one_command():
+            self.ask()
+            with self.assertRaises(RuntimeError), console.one_command():
+                self.fail("the inner span opened")
+            self.ask()
+        self.assertEqual(self.asked, ["answer"])
+
+    def test_an_exception_keeps_nothing(self):
+        from labkit.formats import console
+
+        def failing() -> str:
+            raise OSError("could not read")
+
+        with console.one_command():
+            with self.assertRaises(OSError):
+                console.once_per_command("the question", failing)
+            self.assertEqual(self.ask(), "answer")
+
+    def test_an_answer_keep_refuses_is_asked_again(self):
+        from labkit.formats import console
+
+        answers = iter([None, "arrived", "never asked"])
+        with console.one_command():
+            got = [
+                console.once_per_command(
+                    "the question", lambda: next(answers), keep=lambda a: a is not None
+                )
+                for _ in range(3)
+            ]
+        self.assertEqual(got, [None, "arrived", "arrived"])
+
+    def test_exit_with_runs_main_as_one_command(self):
+        from unittest import mock
+
+        from labkit.formats import console
+
+        def main(argv: list[str]) -> int:
+            self.ask()
+            self.ask()
+            return 0
+
+        for _ in range(2):
+            with mock.patch.object(sys, "argv", ["tool"]):
+                with self.assertRaises(SystemExit) as exit_:
+                    console.exit_with(main)
+            self.assertEqual(exit_.exception.code, 0)
+        # once per command, and the second command did not get the first's
+        self.assertEqual(self.asked, ["answer", "answer"])
+        self.ask("after the commands")
+        self.ask("after the commands")
+        self.assertEqual(self.asked[2:], ["after the commands"] * 2)
+
+
 class SplitCommand(unittest.TestCase):
     """The one cut of a command line that runs another command: at the
     first `--`, the rest untouched (`runlog start`, `usability log`)."""

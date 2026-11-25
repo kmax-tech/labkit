@@ -5,15 +5,80 @@ When a reader closes the pipe early, stdout is redirected to /dev/null
 and the command exits 0; this also prevents a broken pipe on final flush.
 Usage errors and progress go to stderr; findings and results go to stdout.
 
+While `exit_with` runs a command's main, answers that cannot change are
+kept for that command (`once_per_command`); with no command running
+nothing is kept.
+
 """
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Hashable, Iterator
 from importlib.metadata import distribution
+from typing import TypeVar, cast
+
+T = TypeVar("T")
+
+#: the answers kept for the command now running, by key; None while no
+#: command runs — `once_per_command` then keeps nothing
+_kept_answers: dict[Hashable, object] | None = None
+
+
+@contextlib.contextmanager
+def one_command() -> Iterator[None]:
+    """The span of one command: inside it `once_per_command` keeps answers,
+    starting from none; at its end, also by an exception, they are dropped
+    and nothing is kept. `exit_with` runs a command's main in it.
+
+    Side effects:
+        Sets and clears this module's kept answers.
+
+    Raises:
+        RuntimeError: a command is already running — the inner span's end
+            would drop the outer one's answers.
+    """
+    global _kept_answers
+    if _kept_answers is not None:
+        raise RuntimeError("one_command inside one_command: a command is running")
+    _kept_answers = {}
+    try:
+        yield
+    finally:
+        _kept_answers = None
+
+
+def once_per_command(
+    key: Hashable, ask: Callable[[], T], *, keep: Callable[[T], bool] | None = None
+) -> T:
+    """ASK's answer, asked at most once per command for KEY.
+
+    For a question whose answer cannot change while the command runs — an
+    object read by its full hash — and whose answer is immutable. The
+    caller owes both; KEY names the question whole (what is asked, where,
+    of what), since two questions under one key get the first one's answer.
+
+    With no command running (`one_command`) ASK is called every time: in a
+    measure script — a run's start, its own call of `recheck` — and in a
+    main called directly, without `exit_with`. An exception out of ASK
+    passes through and nothing is kept. KEEP, when given, decides for an
+    answer whether it is one of those that cannot change; an answer it
+    refuses is returned and asked again next time.
+
+    Side effects:
+        Inside a command, keeps the answer until the command ends.
+    """
+    if _kept_answers is None:
+        return ask()
+    if key in _kept_answers:
+        return cast(T, _kept_answers[key])
+    answer = ask()
+    if keep is None or keep(answer):
+        _kept_answers[key] = answer
+    return answer
 
 
 def refuse(tool: str, why: str) -> None:
@@ -79,9 +144,11 @@ class Refused(Exception):
 
 def exit_with(main: Callable[[list[str]], int]) -> None:
     """Exit with `main(argv)`'s code; a `Refused` raised out of it is printed
-    through `refuse` and exits 2; a pipe closed by the reader is exit 0."""
+    through `refuse` and exits 2; a pipe closed by the reader is exit 0.
+    MAIN runs as one command (`one_command`)."""
     try:
-        code = main(sys.argv[1:])
+        with one_command():
+            code = main(sys.argv[1:])
     except Refused as exc:
         refuse(exc.tool, exc.why)
         code = 2

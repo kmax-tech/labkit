@@ -19,15 +19,18 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import commands
+from labkit.formats import commands, console
 from labkit.formats import requirements
 from labkit.formats import repo  # noqa: E402
 from labkit.run import provenance, runlog  # noqa: E402
+from repo_fixture import git  # noqa: E402
 
 
 def make_repo(commit: bool = True) -> Path:
@@ -393,6 +396,173 @@ class Git(unittest.TestCase):
         self.assertEqual(repo.git(["status", "--porcelain"], r), "")
         (r / "g.txt").write_text("y")
         self.assertIn("g.txt", repo.git(["status", "--porcelain"], r) or "")
+
+
+class KeptWithinACommand(unittest.TestCase):
+    """Inside one command a question about an object named by its full hash
+    starts git once (`repo._once_by_hash`): a blob's content, "is this
+    commit known", the tree a run saw. Outside a command, for a name that
+    can move, and after a failed reading, git is asked every time."""
+
+    def _commit(self, d: Path, text: str) -> str:
+        (d / "f.txt").write_text(text)
+        git(d, "commit", "-qam", text)
+        return git(d, "rev-parse", "HEAD")
+
+    @contextlib.contextmanager
+    def _git_starts(self) -> Iterator[mock.Mock]:
+        """The processes `repo` starts inside the block (`call_count`)."""
+        with mock.patch.object(repo.subprocess, "run", wraps=subprocess.run) as run:
+            yield run
+
+    def _questions(self, d: Path) -> dict[str, object]:
+        """One question per reader that keeps its answer, each about HEAD's
+        commit or the blob of `f.txt`, as (name → a call that asks it)."""
+        commit = git(d, "rev-parse", "HEAD")
+        blob = git(d, "rev-parse", "HEAD:f.txt")
+        patch = (
+            "diff --git a/f.txt b/f.txt\n--- a/f.txt\n+++ b/f.txt\n"
+            "@@ -1 +1 @@\n-x\n\\ No newline at end of file\n+y\n"
+        )
+        return {
+            "blob_text": lambda: repo.blob_text(d, blob),
+            "blob_bytes": lambda: repo.blob_bytes(d, blob),
+            "commit_of": lambda: repo.commit_of(d, commit),
+            "commit_known": lambda: repo.commit_known(d, commit),
+            "tree_then": lambda: repo.tree_then(d, commit, patch),
+            "blobs_then": lambda: repo.blobs_then(d, commit, patch, [d / "f.txt"]),
+        }
+
+    def test_the_second_same_question_in_a_command_starts_no_git(self):
+        d = make_repo()
+        for name, ask in self._questions(d).items():
+            with self.subTest(name), console.one_command(), self._git_starts() as run:
+                first = ask()  # type: ignore[operator]  # a call, see _questions
+                asked = run.call_count
+                self.assertGreater(asked, 0)
+                self.assertEqual(ask(), first)  # type: ignore[operator]
+                self.assertEqual(run.call_count, asked)
+
+    def test_outside_a_command_every_question_starts_git(self):
+        d = make_repo()
+        for name, ask in self._questions(d).items():
+            with self.subTest(name), self._git_starts() as run:
+                first = ask()  # type: ignore[operator]  # a call, see _questions
+                asked = run.call_count
+                self.assertEqual(ask(), first)  # type: ignore[operator]
+                self.assertEqual(run.call_count, 2 * asked)
+
+    def test_two_commands_share_no_answer(self):
+        d = make_repo()
+        blob = git(d, "rev-parse", "HEAD:f.txt")
+        with self._git_starts() as run:
+            for _ in range(2):
+                with console.one_command():
+                    self.assertEqual(repo.blob_text(d, blob), "x")
+                    self.assertEqual(repo.blob_text(d, blob), "x")
+            self.assertEqual(run.call_count, 2)
+
+    def test_the_kept_answers_are_the_ones_git_gives(self):
+        """A kept answer per question, not one per object: the text and the
+        bytes of a blob, two patches on one commit, two file lists."""
+        d = make_repo()
+        commit = git(d, "rev-parse", "HEAD")
+        blob = git(d, "rev-parse", "HEAD:f.txt")
+        (d / "f.txt").write_text("y\n")
+        patch = repo.tree_patch(d)
+        git(d, "checkout", "-q", "--", "f.txt")
+        with console.one_command():
+            for _ in range(2):
+                self.assertEqual(repo.blob_text(d, blob), "x")
+                self.assertEqual(repo.blob_bytes(d, blob), b"x")
+                self.assertEqual(repo.commit_of(d, commit), commit)
+                clean = repo.tree_then(d, commit, "")
+                self.assertEqual(clean, git(d, "rev-parse", "HEAD^{tree}"))
+                self.assertNotEqual(repo.tree_then(d, commit, patch), clean)
+                self.assertEqual(
+                    repo.blobs_then(d, commit, "", [d / "f.txt"]), {d / "f.txt": blob}
+                )
+                self.assertEqual(
+                    repo.blobs_then(d, commit, "", [d / "g.txt"]), {d / "g.txt": None}
+                )
+                changed = repo.blobs_then(d, commit, patch, [d / "f.txt"])
+                self.assertNotEqual(changed, {d / "f.txt": blob})
+                self.assertEqual(repo.blob_text(d, changed[d / "f.txt"] or ""), "y\n")
+
+    def test_a_blob_that_could_not_be_read_is_read_again(self):
+        """The failed reading is not kept; the twin: once the blob is in the
+        object store, the same command reads it."""
+        d = make_repo()
+        (d / "new.txt").write_text("not stored yet")
+        blob = git(d, "hash-object", "new.txt")
+        with console.one_command():
+            for _ in range(2):
+                with self.assertRaises(RuntimeError), self._git_starts() as run:
+                    repo.blob_text(d, blob)
+                self.assertEqual(run.call_count, 1)
+                with self.assertRaises(RuntimeError):
+                    repo.blob_bytes(d, blob)
+            git(d, "hash-object", "-w", "new.txt")
+            self.assertEqual(repo.blob_text(d, blob), "not stored yet")
+            self.assertEqual(repo.blob_bytes(d, blob), b"not stored yet")
+
+    def test_a_tree_that_could_not_be_built_is_built_again(self):
+        d = make_repo()
+        commit = git(d, "rev-parse", "HEAD")
+        foreign = (
+            "diff --git a/f.txt b/f.txt\n--- a/f.txt\n+++ b/f.txt\n"
+            "@@ -1 +1 @@\n-no such line\n+y\n"
+        )
+        with console.one_command():
+            for _ in range(2):
+                with self.assertRaises(repo.GitError), self._git_starts() as run:
+                    repo.tree_then(d, commit, foreign)
+                self.assertGreater(run.call_count, 0)
+
+    def test_an_unknown_commit_is_asked_again_and_known_once_it_arrived(self):
+        """ "Not known" is not kept: the commit a clone made is unknown here
+        until it is fetched, inside the same command."""
+        d = make_repo()
+        clone = Path(tempfile.mkdtemp()) / "clone"
+        subprocess.run(["git", "clone", "-q", str(d), str(clone)], check=True)
+        elsewhere = self._commit(clone, "made elsewhere")
+        with console.one_command():
+            self.assertFalse(repo.commit_known(d, elsewhere))
+            self.assertIsNone(repo.commit_of(d, elsewhere))
+            git(d, "fetch", "-q", str(clone), "HEAD")
+            self.assertTrue(repo.commit_known(d, elsewhere))
+            self.assertEqual(repo.commit_of(d, elsewhere), elsewhere)
+
+    def test_a_name_that_can_move_is_asked_every_time(self):
+        """A branch, `HEAD` and a short hash are not kept: after a commit
+        inside the command `HEAD` names the new one."""
+        d = make_repo()
+        first = git(d, "rev-parse", "HEAD")
+        with console.one_command():
+            self.assertEqual(repo.commit_of(d, "HEAD"), first)
+            second = self._commit(d, "second")
+            self.assertEqual(repo.commit_of(d, "HEAD"), second)
+            with self._git_starts() as run:
+                self.assertEqual(repo.commit_of(d, first[:12]), first)
+                self.assertEqual(repo.commit_of(d, first[:12]), first)
+            self.assertEqual(run.call_count, 2)
+
+    def test_one_repository_spelled_two_ways_is_asked_once(self):
+        d = make_repo()
+        blob = git(d, "rev-parse", "HEAD:f.txt")
+        with console.one_command(), self._git_starts() as run:
+            self.assertEqual(repo.blob_text(d, blob), "x")
+            self.assertEqual(repo.blob_text(d / ".git" / "..", blob), "x")
+            self.assertEqual(run.call_count, 1)
+
+    def test_the_same_hash_in_another_repository_is_another_question(self):
+        d, other = make_repo(), make_repo()
+        (d / "new.txt").write_text("only in the first repository")
+        blob = git(d, "hash-object", "-w", "new.txt")
+        with console.one_command():
+            self.assertEqual(repo.blob_text(d, blob), "only in the first repository")
+            with self.assertRaises(RuntimeError):
+                repo.blob_text(other, blob)
 
 
 class CommittedSince(unittest.TestCase):

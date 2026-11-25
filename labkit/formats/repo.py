@@ -19,14 +19,16 @@ import os
 import re
 import subprocess
 import tempfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, TypeVar
 
 from labkit.formats import console
 
 GIT_TIMEOUT_S = 20
+
+T = TypeVar("T")
 
 
 class GitError(RuntimeError):
@@ -747,33 +749,42 @@ def indexed_blobs(repo: Path, folder: Path) -> dict[Path, str]:
 
 def blob_text(repo: Path, sha: str) -> str:
     """The text of blob SHA in REPO's object store (`git cat-file blob`).
+    Read once per command when SHA is a full hash (`_once_by_hash`).
     Raises RuntimeError when git cannot read it."""
-    blob = git_run(["cat-file", "blob", sha], repo)
-    if blob.returncode != 0:
-        raise RuntimeError(
-            f"git cat-file blob {sha} failed in {repo}: {blob.stderr.strip()}"
-        )
-    return blob.stdout
+
+    def read() -> str:
+        blob = git_run(["cat-file", "blob", sha], repo)
+        if blob.returncode != 0:
+            raise RuntimeError(
+                f"git cat-file blob {sha} failed in {repo}: {blob.stderr.strip()}"
+            )
+        return blob.stdout
+
+    return _once_by_hash(("blob_text", sha), repo, sha, read)
 
 
 def blob_bytes(repo: Path, sha: str) -> bytes:
     """The bytes of blob SHA in REPO's object store (`git cat-file blob`),
-    as git stores them — no end-of-line or filter conversion. Raises
-    GitError when git cannot run, RuntimeError when it cannot read the
-    blob."""
+    as git stores them — no end-of-line or filter conversion. Read once
+    per command when SHA is a full hash (`_once_by_hash`). Raises GitError
+    when git cannot run, RuntimeError when it cannot read the blob."""
     args = ["git", "cat-file", "blob", sha]
-    try:
-        blob = subprocess.run(
-            args, cwd=repo, capture_output=True, timeout=GIT_TIMEOUT_S
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise GitError(f"{' '.join(args)} in {repo}: {exc}") from exc
-    if blob.returncode != 0:
-        raise RuntimeError(
-            f"{' '.join(args)} failed in {repo}: "
-            f"{blob.stderr.decode('utf-8', 'replace').strip()}"
-        )
-    return blob.stdout
+
+    def read() -> bytes:
+        try:
+            blob = subprocess.run(
+                args, cwd=repo, capture_output=True, timeout=GIT_TIMEOUT_S
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise GitError(f"{' '.join(args)} in {repo}: {exc}") from exc
+        if blob.returncode != 0:
+            raise RuntimeError(
+                f"{' '.join(args)} failed in {repo}: "
+                f"{blob.stderr.decode('utf-8', 'replace').strip()}"
+            )
+        return blob.stdout
+
+    return _once_by_hash(("blob_bytes", sha), repo, sha, read)
 
 
 def blobs_in_history(repo: Path, path: Path) -> list[tuple[str, str]]:
@@ -911,8 +922,24 @@ def _in_index_then(
     """The output of git LAST run on a temporary index holding COMMIT's tree
     with PATCH applied (only the paths INCLUDES names, `git apply
     --include`; all when empty) — the one reading of a run's tree then,
-    shared by `blobs_then` and `tree_then`. Raises GitError naming the step
-    that failed."""
+    shared by `blobs_then` and `tree_then`. Built once per command for the
+    same COMMIT (a full hash), PATCH, INCLUDES and LAST (`_once_by_hash`):
+    the objects the first build wrote stay in the object store. Raises
+    GitError naming the step that failed."""
+    key = ("in_index_then", commit, patch, tuple(includes), tuple(last))
+    return _once_by_hash(
+        key,
+        repo,
+        commit,
+        lambda: _build_index_then(repo, commit, patch, includes, last),
+    )
+
+
+def _build_index_then(
+    repo: Path, commit: str, patch: str, includes: list[str], last: list[str]
+) -> str:
+    """`_in_index_then`'s answer, built anew: the temporary index, PATCH
+    applied, LAST run on it."""
     with tempfile.TemporaryDirectory() as tmp:
         env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
         steps: list[tuple[list[str], str | None]] = [(["read-tree", commit], None)]
@@ -1228,15 +1255,48 @@ def fork_point(repo: Path, base: str) -> str | None:
 FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 
+def _once_by_hash(
+    key: tuple[object, ...],
+    repo: Path,
+    sha: str,
+    ask: Callable[[], T],
+    *,
+    keep: Callable[[T], bool] | None = None,
+) -> T:
+    """ASK's answer about the git object SHA under REPO, asked once per
+    command (`console.once_per_command`) when SHA is a full hash: what a
+    full hash names does not change, where a branch, `HEAD` or a short
+    hash names something else after a commit — for those ASK is called
+    every time, as it is with no command running. KEY tells this question
+    from every other about the same object; REPO is added to it resolved,
+    so one repository reached by two spellings is one. An exception out of
+    ASK and an answer KEEP (when given) refuses are not kept.
+
+    Rests on the object store only gaining objects while a command runs:
+    a `git gc --prune` in mid-command could remove an object a kept answer
+    names."""
+    if FULL_SHA.fullmatch(sha) is None:
+        return ask()
+    return console.once_per_command((*key, str(repo.resolve())), ask, keep=keep)
+
+
 def commit_of(repo: Path, ref: str) -> str | None:
     """The commit REF (a tag, a branch, a sha) names under REPO, as its full
     sha; None when it names none. `--verify --quiet`: without them
     rev-parse echoes an unknown ref back on stdout instead of failing
     empty. The one "ref → commit" for the lab-pin check, a lock's ref and a
-    pin's tag. Raises GitError when git cannot run (REPO missing among
-    them)."""
-    r = git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], repo)
-    return r.stdout.strip() if r.returncode == 0 else None
+    pin's tag. Asked once per command when REF is a full hash and names a
+    commit (`_once_by_hash`); "names none" is asked again, since the
+    commit may arrive (a fetch, a commit). Raises GitError when git cannot
+    run (REPO missing among them)."""
+
+    def ask() -> str | None:
+        r = git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], repo)
+        return r.stdout.strip() if r.returncode == 0 else None
+
+    return _once_by_hash(
+        ("commit_of", ref), repo, ref, ask, keep=lambda commit: commit is not None
+    )
 
 
 def commit_known(repo: Path, commit: str) -> bool:
