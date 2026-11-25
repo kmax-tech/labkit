@@ -17,10 +17,20 @@ there, so a test that never cleans up leaves nothing behind — preflight
 reads an area's siblings as the repo's other areas, and leftovers in the
 system temp directory would pile up there run after run
 (docs/notes/2026-10-20-test-temp-dirs.md).
+
+On macOS the suite calls git's own binary, not Apple's launcher: `/usr/bin/git`
+looks the binary up at every call (12 ms against 4 ms, measured), and a
+scenario test starts thousands of git processes
+(docs/notes/2026-11-25-suite-runtime.md). `_direct_git` puts a folder that
+holds one link, `git`, first on PATH — not the developer tools' whole folder,
+which also holds a `python3` and a `pip3`. Where git is not the launcher,
+PATH stays as it is.
 """
 
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 from collections.abc import Iterator
 
@@ -36,6 +46,39 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     shutil.rmtree(_SESSION_TMP)
 
 
+#: Apple's launcher, which finds the developer tools' git at every call
+_GIT_LAUNCHER = "/usr/bin/git"
+
+
+def _direct_git() -> None:
+    """On macOS, when `git` on PATH is Apple's launcher: put a folder with
+    one link to the binary the launcher starts (`xcrun -f git`) first on
+    PATH, for this process and every process it starts. Elsewhere nothing.
+
+    Side effects:
+        Creates a folder with the link under the session's temporary
+        directory and changes `os.environ["PATH"]`.
+
+    Raises:
+        RuntimeError: `xcrun` does not name a git binary — the launcher
+            would not start one either.
+    """
+    if sys.platform != "darwin" or shutil.which("git") != _GIT_LAUNCHER:
+        return
+    found = subprocess.run(["xcrun", "-f", "git"], capture_output=True, text=True)
+    binary = found.stdout.strip()
+    if found.returncode != 0 or not os.path.isfile(binary):
+        raise RuntimeError(
+            f"git on PATH is {_GIT_LAUNCHER}, and `xcrun -f git` names no binary "
+            f"(exit {found.returncode}: {found.stderr.strip() or binary!r}) — "
+            f"install the command line tools: xcode-select --install"
+        )
+    folder = tempfile.mkdtemp(prefix="labkit-test-git-")
+    os.symlink(binary, os.path.join(folder, "git"))
+    os.environ["PATH"] = folder + os.pathsep + os.environ["PATH"]
+
+
+_direct_git()
 os.environ["LABKIT_LEASE_DIR"] = tempfile.mkdtemp(prefix="labkit-test-leases-")
 for _name in [n for n in os.environ if n.startswith("GIT_")]:
     del os.environ[_name]
