@@ -565,6 +565,85 @@ class KeptWithinACommand(unittest.TestCase):
                 repo.blob_text(other, blob)
 
 
+class ReplacedObjects(unittest.TestCase):
+    """labkit reads an object under its own hash (`repo.NO_REPLACE_ENV`): a
+    replacement (`git replace`) changes no reading, fresh or kept within a
+    command. In each test plain git first shows that the replacement is in
+    force."""
+
+    def setUp(self) -> None:
+        self.d = d = make_repo()  # f.txt holds "x"
+        self.first = git(d, "rev-parse", "HEAD")
+        (d / "f.txt").write_text("second\n")
+        git(d, "commit", "-qam", "second")
+        self.second = git(d, "rev-parse", "HEAD")
+
+    def _replace_the_second_commit(self) -> None:
+        git(self.d, "replace", self.second, self.first)
+        self.assertEqual(git(self.d, "show", f"{self.second}:f.txt"), "x")
+
+    def _replace_the_blob(self) -> str:
+        """The blob of f.txt at the second commit, replaced by another."""
+        blob = git(self.d, "rev-parse", f"{self.second}:f.txt")
+        (self.d / "other.txt").write_text("the replacement")
+        other = git(self.d, "hash-object", "-w", "other.txt")
+        git(self.d, "replace", blob, other)
+        self.assertEqual(git(self.d, "cat-file", "blob", blob), "the replacement")
+        return blob
+
+    def test_every_git_started_is_told_not_to_follow_replacements(self):
+        blob = git(self.d, "rev-parse", "HEAD:f.txt")
+        with mock.patch.object(repo.subprocess, "run", wraps=subprocess.run) as run:
+            repo.git_run(["status"], self.d)
+            repo.git_run(["status"], self.d, env={"GIT_NO_REPLACE_OBJECTS": "0"})
+            repo.tree_then(self.d, self.second, "")  # a caller's own environment
+            repo.blob_bytes(self.d, blob)
+        self.assertGreater(run.call_count, 3)
+        for call in run.call_args_list:
+            self.assertEqual(call.kwargs["env"]["GIT_NO_REPLACE_OBJECTS"], "1", call)
+            self.assertIn("PATH", call.kwargs["env"])  # the process's own stays
+
+    def test_a_replaced_blob_reads_as_itself(self):
+        blob = self._replace_the_blob()
+        self.assertEqual(repo.blob_text(self.d, blob), "second\n")
+        self.assertEqual(repo.blob_bytes(self.d, blob), b"second\n")
+
+    def test_a_replaced_commit_reads_as_itself(self):
+        d, f = self.d, self.d / "f.txt"
+        tree = git(d, "rev-parse", f"{self.second}^{{tree}}")
+        blob = git(d, "rev-parse", f"{self.second}:f.txt")
+        self._replace_the_second_commit()
+        self.assertNotEqual(git(d, "rev-parse", f"{self.second}^{{tree}}"), tree)
+        self.assertEqual(repo.tree_then(d, self.second, ""), tree)
+        self.assertEqual(repo.blobs_then(d, self.second, "", [f]), {f: blob})
+        self.assertEqual(repo.text_at(d, f, self.second), "second\n")
+        # the history and the working tree against HEAD are the real ones:
+        # replaced, the second commit has the first one's content, no parent
+        with self.assertRaises(subprocess.CalledProcessError):
+            git(d, "merge-base", "--is-ancestor", self.first, self.second)
+        self.assertTrue(repo.is_ancestor(d, self.first, self.second))
+        self.assertNotEqual(git(d, "status", "--porcelain", "-uno"), "")
+        self.assertFalse(repo.tree_dirty(d, untracked=False))
+        self.assertEqual(repo.tree_patch(d), "")
+
+    def test_a_replacement_made_in_mid_command_changes_no_reading(self):
+        """Kept and first asked after it: both the object itself."""
+        d, f = self.d, self.d / "f.txt"
+        blob = git(d, "rev-parse", f"{self.second}:f.txt")
+        tree = git(d, "rev-parse", f"{self.second}^{{tree}}")
+        with console.one_command():
+            self.assertEqual(repo.blob_text(d, blob), "second\n")  # kept from here
+            self.assertEqual(repo.tree_then(d, self.second, ""), tree)
+            self.assertEqual(self._replace_the_blob(), blob)
+            self._replace_the_second_commit()
+            self.assertEqual(repo.blob_text(d, blob), "second\n")
+            self.assertEqual(repo.tree_then(d, self.second, ""), tree)
+            # asked for the first time after the replacements
+            self.assertEqual(repo.blob_bytes(d, blob), b"second\n")
+            self.assertEqual(repo.blobs_then(d, self.second, "", [f]), {f: blob})
+        self.assertEqual(repo.blob_text(d, blob), "second\n")  # and with none kept
+
+
 class CommittedSince(unittest.TestCase):
     """`paths_committed_since`: what the commits after a base touched — the
     stop's second source beside git status."""

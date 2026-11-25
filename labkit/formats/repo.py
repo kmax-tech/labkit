@@ -10,6 +10,11 @@ Two git calls, by what a non-zero exit means:
     git_run(args, cwd)  the completed process, for commands whose exit code
                         IS the answer (`ls-files --error-unmatch`,
                         `rev-parse --verify`, `show HEAD:path`)
+
+Every git this module starts reads the objects the repository holds under
+their own hashes: a replacement (`git replace`) is not followed
+(`NO_REPLACE_ENV`). A recorded hash then names the content read, in this
+clone as in any other that holds the object.
 """
 
 from __future__ import annotations
@@ -27,6 +32,13 @@ from typing import Any, TypeVar
 from labkit.formats import console
 
 GIT_TIMEOUT_S = 20
+
+#: set for every git this module starts: an object is read under its own
+#: hash, a replacement (`refs/replace/`, `git replace`) is not followed —
+#: git's default follows it, and then a commit's tree, a file at a commit, a
+#: blob and the history answer for another object than the hash a record
+#: names, in this clone only (a replacement is not cloned)
+NO_REPLACE_ENV = {"GIT_NO_REPLACE_OBJECTS": "1"}
 
 T = TypeVar("T")
 
@@ -773,7 +785,11 @@ def blob_bytes(repo: Path, sha: str) -> bytes:
     def read() -> bytes:
         try:
             blob = subprocess.run(
-                args, cwd=repo, capture_output=True, timeout=GIT_TIMEOUT_S
+                args,
+                cwd=repo,
+                capture_output=True,
+                timeout=GIT_TIMEOUT_S,
+                env=_git_env(None),
             )
         except (OSError, subprocess.SubprocessError) as exc:
             raise GitError(f"{' '.join(args)} in {repo}: {exc}") from exc
@@ -1072,6 +1088,12 @@ def layout_root(path: Path) -> Path:
     return base
 
 
+def _git_env(added: Mapping[str, str] | None) -> dict[str, str]:
+    """The environment of a git this module starts: the process's own as it
+    is now, ADDED over it, `NO_REPLACE_ENV` over both."""
+    return {**os.environ, **(added or {}), **NO_REPLACE_ENV}
+
+
 def git_run(
     args: list[str],
     cwd: Path,
@@ -1079,7 +1101,8 @@ def git_run(
     env: Mapping[str, str] | None = None,
     stdin: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run git, ENV added to the environment and STDIN given; the caller
+    """Run git with STDIN given, in the process's environment with ENV
+    added and then `NO_REPLACE_ENV`, which ENV cannot undo; the caller
     reads the exit code. Raises GitError only when git itself cannot run
     (missing binary, timeout)."""
     try:
@@ -1089,7 +1112,7 @@ def git_run(
             capture_output=True,
             text=True,
             timeout=timeout,
-            env={**os.environ, **env} if env else None,
+            env=_git_env(env),
             input=stdin,
         )
     except (OSError, subprocess.SubprocessError) as exc:
@@ -1272,9 +1295,11 @@ def _once_by_hash(
     so one repository reached by two spellings is one. An exception out of
     ASK and an answer KEEP (when given) refuses are not kept.
 
-    Rests on the object store only gaining objects while a command runs:
-    a `git gc --prune` in mid-command could remove an object a kept answer
-    names."""
+    A full hash names one content because git reads the object itself
+    (`NO_REPLACE_ENV`): a replacement made in mid-command changes neither a
+    kept nor a fresh answer. Rests on the object store only gaining objects
+    while a command runs: a `git gc --prune` in mid-command could remove an
+    object a kept answer names."""
     if FULL_SHA.fullmatch(sha) is None:
         return ask()
     return console.once_per_command((*key, str(repo.resolve())), ask, keep=keep)
