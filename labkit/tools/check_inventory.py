@@ -520,11 +520,11 @@ def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
             else None
         )
         return _OUTCOME_CONSTANTS.get(name or "", COMPUTED)
+    if assignment == NOT_RECORDED:
+        return REFUSED
     if evidence_kind not in _EVIDENCE_CONSTANTS:
         return "variable"
     kind = _EVIDENCE_CONSTANTS[evidence_kind]
-    if assignment == NOT_RECORDED:
-        return REFUSED
     if kind == gate.STATIC_EVIDENCE:
         # whatever the rule (`gate.derived_outcome`), also one passed in
         return gate.SUSPECTED

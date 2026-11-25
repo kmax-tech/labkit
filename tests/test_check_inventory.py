@@ -239,6 +239,7 @@ class CheckOutcome(unittest.TestCase):
             out.block("stated nothing", fix="x", stated_outcome=None, rule=TECHNICAL_RULE)
             out.block("rule passed in", fix="x", rule=why.rule)
             out.warn("kind passed in", evidence_kind=kind, rule=TECHNICAL_RULE)
+            out.warn("kind passed in, no assignment", evidence_kind=kind)
             raise SystemExit("refused")
         """,
     )
@@ -259,6 +260,7 @@ class CheckOutcome(unittest.TestCase):
                 ("stated nothing", gate.VIOLATED),
                 ("rule passed in", "variable"),
                 ("kind passed in", "variable"),
+                ("kind passed in, no assignment", inv.REFUSED),
                 ("refused", "none"),
             ],
         )
@@ -266,9 +268,9 @@ class CheckOutcome(unittest.TestCase):
     def test_the_table_and_the_count_line_tell_it(self) -> None:
         text = inv.render_inventory(inv.finding_sites([self.OUTCOMES]), [], {}, [])
         self.assertIn(
-            "Check outcome of the 11 gate findings (`GateFinding.outcome`): "
+            "Check outcome of the 12 gate findings (`GateFinding.outcome`): "
             "3 violated, 1 deviation, 2 suspected, 1 not executable, 1 computed, "
-            "2 variable, 1 refused",
+            "2 variable, 2 refused",
             text,
         )
         self.assertIn("| Rule (data) | Check outcome | Cited in the text |", text)
