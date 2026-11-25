@@ -157,3 +157,17 @@ Built on 2026-11-25 after this measurement: a test with its valid twin for each 
 | sites a rule test reaches                        | 37 of 264  | 37 of 264 by the mark `rule` |
 
 The 11 unreached exit sites lie in `labkit/checks/recheck.py` (6), `labkit/run/start_check.py` (4) and `labkit/checks/prompt_check.py` (1). The 202 tests that carry the mark reach no exit site. The count by the mark equals the count by file name here, because every marked test that reaches a site stands in a `test_rules_*` file. The mark establishes that a test starts no process and enters no command; whether it holds one condition, a reader of the test establishes.
+
+## The exit count checked, and the overview page
+
+Checked on 2026-11-25 on `e4a38cf3`: a count of the syntax tree made independently of the inventory found 89 places that raise `SystemExit` with a message, where the inventory counted 86. The three it left out pass their message through a call other than `with_way_out` (`labkit/checks/prompt_check.py`, `labkit/run/lanes.py`, `labkit/run/runlog.py`); their exits fell under "told where no site stands", whose table showed the 15 most frequent places only. The scan now counts a message however it is built, and that table lists every place. No site was counted twice. In a sample of seven reached exit sites, a test of the named file asserts the site's sentence in all seven.
+
+| What                               | 86 sites counted | 89 sites counted |
+|------------------------------------|------------------|------------------|
+| exit sites reached below a command | 75               | 78               |
+| exit sites no test reaches         | 11               | 11               |
+
+The standing of the gate-finding sites is unchanged (256 direct, 4 only through commands, 4 unreached).
+
+The page [checks-overview.md](../checks-overview.md) now carries what this note measured, per site and without line numbers, and a test holds it equal to the source. Its reach columns come from `docs/checks-reach.tsv`, which a traced run writes. The page states each site's own words; which condition a site checks, and whether a test asserts it, a reader establishes — the inventories do not.
+
