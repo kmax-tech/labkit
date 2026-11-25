@@ -15,6 +15,7 @@ refused before any model call.
 import contextlib
 import hashlib
 import io
+import os
 import sys
 import tempfile
 import unittest
@@ -33,6 +34,7 @@ from labkit.formats import (  # noqa: E402
     scope_sha,
 )
 from labkit.gates import audit, audit_prompt  # noqa: E402
+from labkit.tools import protocol_fill  # noqa: E402
 from protocol_fixture import head, protocol_id_of, registration_of  # noqa: E402
 from repo_fixture import init_repo  # noqa: E402
 
@@ -84,6 +86,25 @@ class _Area(unittest.TestCase):
     def prompt(self) -> str:
         reading = audit_prompt.gather(self.area, None)
         return audit_prompt.bound_prompt("preflight", self.area, reading).prompt
+
+    def _record(self) -> str:
+        text = self.protocol.read_text(encoding="utf-8")
+        return findings.write(
+            self.area,
+            "preflight",
+            "opus",
+            scope_sha.area_stamp(self.area)[0],
+            promises.block_stamp(text),
+            (0, 0, 0),
+            [],
+            registration=registration_of(self.area, preflight=True),
+            protocol_id=protocol_id_of(self.area),
+        ).name
+
+    def _gap(self, name: str) -> str | None:
+        text = self.protocol.read_text(encoding="utf-8")
+        gap = audit_gaps.audit_record_gap(self.area, name, text)
+        return gap.why if gap else None
 
     def refusal(self) -> str:
         with self.assertRaises(AuditError) as cm:
@@ -256,25 +277,6 @@ class Bound(_Area):
     """The area stamp binds each declared file's bytes and its declared
     digest, so a record stops covering the area once one changes."""
 
-    def _record(self) -> str:
-        text = self.protocol.read_text(encoding="utf-8")
-        return findings.write(
-            self.area,
-            "preflight",
-            "opus",
-            scope_sha.area_stamp(self.area)[0],
-            promises.block_stamp(text),
-            (0, 0, 0),
-            [],
-            registration=registration_of(self.area, preflight=True),
-            protocol_id=protocol_id_of(self.area),
-        ).name
-
-    def _gap(self, name: str) -> str | None:
-        text = self.protocol.read_text(encoding="utf-8")
-        gap = audit_gaps.audit_record_gap(self.area, name, text)
-        return gap.why if gap else None
-
     def test_the_record_covers_the_area_while_nothing_changed(self) -> None:
         self.assertIsNone(self._gap(self._record()))
 
@@ -327,6 +329,216 @@ class Bound(_Area):
         from labkit.formats.digests import tree_digest
 
         self.assertEqual(snap.sha, tree_digest(sorted(files), trailer=[]))
+
+
+class SplitCannotBypass(_Area):
+    """The total limit is over every declared file: one file too large for
+    the per-file limit is refused, and the same bytes split into files
+    each within it are refused by the total."""
+
+    def test_one_large_file_and_its_parts_are_both_refused(self) -> None:
+        part = "s" * (audit_prompt.EVIDENCE_FILE_MAX_BYTES - 1)
+        whole = part * 3
+        big = self.area / "data" / "whole.txt"
+        big.write_text(whole, encoding="utf-8")
+        self.declare(evidence_table("data/whole.txt", sha256(whole)))
+        self.assertIn(f"whole.txt ({len(whole)} bytes)", self.refusal())
+        tables = ""
+        for i in range(3):
+            (self.area / "data" / f"split{i}.txt").write_text(part, encoding="utf-8")
+            tables += evidence_table(f"data/split{i}.txt", sha256(part)) + "\n"
+        self.declare(tables)
+        why = self.refusal()
+        self.assertIn(f"{len(whole)} bytes in all", why)
+        self.assertNotIn(f"({len(part)} bytes)", why)  # no part over the per-file limit
+
+    def test_the_twin_parts_within_the_total_are_shown(self) -> None:
+        part = "s" * (audit_prompt.EVIDENCE_FILES_MAX_BYTES // 2)
+        tables = ""
+        for i in range(2):
+            (self.area / "data" / f"split{i}.txt").write_text(part, encoding="utf-8")
+            tables += evidence_table(f"data/split{i}.txt", sha256(part)) + "\n"
+        self.declare(tables)
+        self.assertIn("EVIDENCE FILE: experiments/01/data/split1.txt", self.prompt())
+
+
+class Fill(_Area):
+    """`protocol-fill --evidence-file PATH` writes the table the audit reads,
+    with the sha256 computed and the audit's own checks run on the protocol
+    as it would be; nothing declared is overwritten silently."""
+
+    def fill(self, *args: str) -> tuple[int, str, str]:
+        """protocol-fill on the protocol with ARGS: (exit, stdout, stderr)."""
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = protocol_fill.main([str(self.protocol), *args])
+        return code, out.getvalue(), err.getvalue()
+
+    def text(self) -> str:
+        return self.protocol.read_text(encoding="utf-8")
+
+    def write(self, rel: str, content: str) -> Path:
+        f = self.area / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(content, encoding="utf-8")
+        return f
+
+    def test_a_new_file_is_declared_with_its_computed_sha256(self) -> None:
+        f = self.write(UNDECLARED, "WORDCHECK\n")
+        code, out, _ = self.fill("--evidence-file", str(f))
+        self.assertEqual(code, 0)
+        self.assertIn("added", out)
+        self.assertEqual(
+            protocol_block.evidence_files(self.text())[-1],
+            protocol_block.EvidenceFile(UNDECLARED, sha256("WORDCHECK\n")),
+        )
+        self.assertIn(f"EVIDENCE FILE: experiments/01/{UNDECLARED}", self.prompt())
+
+    def test_the_path_is_written_relative_to_the_protocol(self) -> None:
+        """Given from another working directory, the table holds the path
+        the audit resolves against the protocol's directory."""
+        f = self.write("output/check.md", "x\n")
+        cwd = Path.cwd()
+        os.chdir(self.repo)
+        self.addCleanup(os.chdir, cwd)
+        code, _, err = self.fill("--evidence-file", "experiments/01/output/check.md")
+        self.assertEqual(code, 0, err)
+        paths = [e.path for e in protocol_block.evidence_files(self.text())]
+        self.assertEqual(paths[-1], "output/check.md")
+        self.assertTrue((self.protocol.parent / paths[-1]).samefile(f))
+
+    def test_a_path_through_a_symlink_stays_as_written(self) -> None:
+        """A link to another area's data is declared by the link's path,
+        as the stamp names it, not by where it leads — given as a path below
+        the protocol's resolved directory (`repo.rel_posix`)."""
+        shared = self.repo / "experiments" / "00" / "data"
+        shared.mkdir(parents=True)
+        (shared / "cases.json").write_text("[]\n", encoding="utf-8")
+        (self.area / "linked").symlink_to(Path("..") / "00" / "data")
+        code, _, err = self.fill(
+            "--evidence-file", str(self.area.resolve() / "linked" / "cases.json")
+        )
+        self.assertEqual(code, 0, err)
+        paths = [e.path for e in protocol_block.evidence_files(self.text())]
+        self.assertEqual(paths[-1], "linked/cases.json")
+
+    def test_the_same_path_and_sha256_changes_nothing(self) -> None:
+        before = self.protocol.read_bytes()
+        code, out, _ = self.fill("--evidence-file", str(self.json))
+        self.assertEqual(code, 0)
+        self.assertIn("already declared with this sha256", out)
+        self.assertEqual(self.protocol.read_bytes(), before)
+
+    def test_another_sha256_for_a_declared_path_is_refused(self) -> None:
+        before = self.protocol.read_bytes()
+        self.json.write_text('{"case-1": "incompatible"}\n', encoding="utf-8")
+        code, _, err = self.fill("--evidence-file", str(self.json))
+        self.assertEqual(code, 2)
+        self.assertIn(sha256(CLASSIFICATION), err)
+        self.assertIn("--replace-evidence-file", err)
+        self.assertEqual(self.protocol.read_bytes(), before)
+
+    def test_the_twin_replace_writes_only_the_new_sha256(self) -> None:
+        before = self.protocol.read_bytes()
+        new = '{"case-1": "incompatible"}\n'
+        self.json.write_text(new, encoding="utf-8")
+        code, out, err = self.fill(
+            "--evidence-file", str(self.json), "--replace-evidence-file"
+        )
+        self.assertEqual(code, 0, err)
+        self.assertIn(f"was {sha256(CLASSIFICATION)}", out)
+        self.assertEqual(
+            self.protocol.read_bytes(),
+            before.replace(sha256(CLASSIFICATION).encode(), sha256(new).encode()),
+        )
+        self.assertIn(new.strip(), self.prompt())
+
+    def test_a_replaced_file_is_no_longer_covered_by_the_earlier_record(
+        self,
+    ) -> None:
+        """An audit record made before the replacement does not cover the
+        area after it: the stamp binds the new bytes and the new digest."""
+        record = self._record()
+        self.assertIsNone(Bound._gap(self, record))  # type: ignore[arg-type]
+        self.json.write_text('{"case-1": "incompatible"}\n', encoding="utf-8")
+        code, _, err = self.fill(
+            "--evidence-file", str(self.json), "--replace-evidence-file"
+        )
+        self.assertEqual(code, 0, err)
+        self.assertIsNotNone(Bound._gap(self, record))  # type: ignore[arg-type]
+
+    def test_a_path_outside_the_protocols_directory_is_refused(self) -> None:
+        f = self.repo / "elsewhere.json"
+        f.write_text("{}\n", encoding="utf-8")
+        before = self.protocol.read_bytes()
+        code, _, err = self.fill("--evidence-file", str(f))
+        self.assertEqual(code, 2)
+        self.assertIn("not below", err)
+        self.assertEqual(self.protocol.read_bytes(), before)
+
+    def test_each_file_the_audit_would_refuse_is_refused_unwritten(self) -> None:
+        """The audit's checks, on the protocol as it would be: no file, not
+        text, over the per-file limit, and the total over every declared
+        file once the new one is added."""
+        third = audit_prompt.EVIDENCE_FILES_MAX_BYTES // 3
+        self.write("data/a.txt", "a" * third)
+        self.write("data/b.txt", "b" * third)
+        self.declare(
+            evidence_table("data/raw/classification.json", sha256(CLASSIFICATION))
+            + "\n"
+            + evidence_table("data/a.txt", sha256("a" * third))
+            + "\n"
+            + evidence_table("data/b.txt", sha256("b" * third))
+        )
+        (self.area / "data" / "raw.bin").write_bytes(b"\xff\xfe\x00")
+        cases = {
+            "no file": ("data/none.txt", None, "is not a file"),
+            "not text": ("data/raw.bin", None, "not UTF-8 text"),
+            "over the per-file limit": (
+                "data/big.txt",
+                "z" * (audit_prompt.EVIDENCE_FILE_MAX_BYTES + 1),
+                f"({audit_prompt.EVIDENCE_FILE_MAX_BYTES + 1} bytes)",
+            ),
+            "over the total once added": (
+                "data/c.txt",
+                "c" * third,
+                f"{3 * third + len(CLASSIFICATION)} bytes in all",
+            ),
+        }
+        for what, (rel, content, needle) in cases.items():
+            with self.subTest(what=what):
+                if content is not None:
+                    self.write(rel, content)
+                before = self.protocol.read_bytes()
+                code, _, err = self.fill("--evidence-file", str(self.area / rel))
+                self.assertEqual(code, 2)
+                self.assertIn(needle, err)
+                self.assertEqual(self.protocol.read_bytes(), before)
+
+    def test_the_twin_a_file_that_fits_the_total_is_added(self) -> None:
+        third = audit_prompt.EVIDENCE_FILES_MAX_BYTES // 3
+        self.write("data/a.txt", "a" * third)
+        code, _, err = self.fill("--evidence-file", str(self.area / "data/a.txt"))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(protocol_block.evidence_files(self.text())), 2)
+
+    def test_a_stale_declaration_of_another_file_is_refused_too(self) -> None:
+        """The checks run over every declared file, as the audit's do."""
+        self.json.write_text('{"case-1": "incompatible"}\n', encoding="utf-8")
+        f = self.write(UNDECLARED, "WORDCHECK\n")
+        before = self.protocol.read_bytes()
+        code, _, err = self.fill("--evidence-file", str(f))
+        self.assertEqual(code, 2)
+        self.assertIn("changed after their declaration", err)
+        self.assertEqual(self.protocol.read_bytes(), before)
+
+    def test_replace_goes_only_with_evidence_file(self) -> None:
+        with (
+            contextlib.redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit) as cm,
+        ):
+            protocol_fill.main([str(self.protocol), "--replace-evidence-file"])
+        self.assertEqual(cm.exception.code, 2)
 
 
 if __name__ == "__main__":

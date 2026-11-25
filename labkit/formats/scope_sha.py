@@ -652,14 +652,43 @@ def evidence_file_basis(
             protocol_block.parse_toml_block(text)
         except protocol_block.BlockError:
             continue  # a block that does not read: the head check names it
-        for ef in protocol_block.evidence_files(text):
+        for ef, found in declared_evidence_bytes(p, text):
             name = f"{EVIDENCE_FILE_KEY} of {_key(p, root)}: {ef.path}"
-            f = p.parent / ef.path
             data = NO_FILE
-            if f.is_file():
-                data = contents[f.resolve()] = f.read_bytes()
+            if found is not None:
+                data = contents[found.file] = found.data
             entries += [(f"{name} declared", ef.sha256.encode("utf-8")), (name, data)]
     return entries, contents
+
+
+@dataclass(frozen=True)
+class EvidenceBytes:
+    """A declared evidence file as read: FILE resolved, DATA its bytes."""
+
+    file: Path
+    data: bytes
+
+
+def declared_evidence_bytes(
+    protocol: Path, text: str
+) -> list[tuple[protocol_block.EvidenceFile, EvidenceBytes | None]]:
+    """Each file TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`
+    (`protocol_block.evidence_files`), in the order declared, with its
+    bytes read now — None while the path, resolved against PROTOCOL's
+    directory, is not a file. The one read of declared evidence files: the
+    stamp (`evidence_file_basis`) and `protocol-fill --evidence-file`,
+    which checks a declaration before writing it
+    (`audit_prompt.checked_evidence_files`), take the bytes from here.
+
+    Raises:
+        OSError: A declared file that stands does not read.
+        protocol_block.BlockError: TEXT's block or a table is malformed."""
+    out: list[tuple[protocol_block.EvidenceFile, EvidenceBytes | None]] = []
+    for ef in protocol_block.evidence_files(text):
+        f = protocol.parent / ef.path
+        found = EvidenceBytes(f.resolve(), f.read_bytes()) if f.is_file() else None
+        out.append((ef, found))
+    return out
 
 
 #: entry names of the validation basis start so, apart from every file key
@@ -740,9 +769,12 @@ def predecessor_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
             continue
         name = f"{PREDECESSOR_KEY} of {_key(p, root)}"
         entries.append((name, rep.protocol.encode("utf-8")))
-        if ids is None:
-            ids = protocol_block.repo_protocol_ids(area)
-        hits = ids.get(rep.protocol, [])
+        # the repo's ids, read at the first protocol that needs them; `known`
+        # is never None (repo_protocol_ids returns a dict) — the type checker
+        # does not narrow `ids` itself across the loop
+        known = ids if ids is not None else protocol_block.repo_protocol_ids(area)
+        ids = known
+        hits = known.get(rep.protocol, [])
         if len(hits) != 1:
             told.append(
                 f"{_key(p, root)} replaces {rep.protocol}, no one protocol of the repo"
@@ -800,9 +832,12 @@ def exploration_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
             continue
         name = f"{EXPLORED_IN_KEY} of {_key(p, root)}"
         entries.append((name, f"{link.protocol} {link.run}".encode("utf-8")))
-        if ids is None:
-            ids = protocol_block.repo_protocol_ids(area)
-        hits = ids.get(link.protocol, [])
+        # the repo's ids, read at the first protocol that needs them; `known`
+        # is never None (repo_protocol_ids returns a dict) — the type checker
+        # does not narrow `ids` itself across the loop
+        known = ids if ids is not None else protocol_block.repo_protocol_ids(area)
+        ids = known
+        hits = known.get(link.protocol, [])
         if len(hits) != 1:
             told.append(
                 f"{_key(p, root)} names the exploration {link.protocol}, no one "
@@ -907,9 +942,12 @@ def _validation_refs(
         if ref.key != "protocol":
             yield p, ref, None
             continue
-        if ids is None:
-            ids = protocol_block.repo_protocol_ids(area)
-        hits = ids.get(ref.value, [])
+        # the repo's ids, read at the first protocol that needs them; `known`
+        # is never None (repo_protocol_ids returns a dict) — the type checker
+        # does not narrow `ids` itself across the loop
+        known = ids if ids is not None else protocol_block.repo_protocol_ids(area)
+        ids = known
+        hits = known.get(ref.value, [])
         yield p, ref, hits[0] if len(hits) == 1 else None
 
 

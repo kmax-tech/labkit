@@ -281,6 +281,35 @@ def toml_block_span(text: str) -> tuple[int, int] | None:
     return spans[0] if spans else None
 
 
+def with_tables_at_block_end(
+    text: str, dropped: tuple[re.Pattern[str], ...], table: list[str]
+) -> str:
+    """TEXT with TABLE (TOML lines) written at the end of its TOML block,
+    after one blank line, and every table whose header line one of DROPPED
+    matches removed first (its header to the next table header). Blank
+    lines at the end of the block go; every other byte stays. The one
+    editor that replaces or appends a table of the head (`[explored_in]`,
+    `[builds_on]`, `[[evidence_file]]`); the caller reads the result back.
+    Raises ValueError without a TOML block, BlockError with two."""
+    span = toml_block_span(text)
+    if span is None:
+        raise ValueError("no ```toml block — the table is written into the head")
+    start, end = span
+    lines = text.split("\n")
+    kept: list[str] = []
+    in_dropped = False
+    for line in lines[start:end]:
+        if any(h.match(line) for h in dropped):
+            in_dropped = True
+        elif TABLE_HEADER.match(line):
+            in_dropped = False
+        if not in_dropped:
+            kept.append(line)
+    while kept and not kept[-1].strip():
+        kept.pop()
+    return "\n".join([*lines[:start], *kept, "", *table, *lines[end:]])
+
+
 def block_text(text: str) -> str | None:
     """The raw text of the protocol's TOML block, None if it has none.
 

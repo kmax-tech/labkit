@@ -157,6 +157,7 @@ protocol-fill PROTOCOL --freeze [RECORD] # the freeze: frozen = true, preflight_
 protocol-fill PROTOCOL --data-counts [RUN_ID] # the counts a preparation run recorded (the newest without RUN_ID), as the generated end of Data / scope
 protocol-fill PROTOCOL --builds-on RUN_ID --step-id STEP --occasion observation|planned|repair --why "…" # the step the next runs make: [builds_on] with RUN_ID as basis and every change of the registration against that run's text, computed
 protocol-fill PROTOCOL --explored-in EXPLORATION_PROTOCOL # a confirmatory protocol's link to its exploration: [explored_in] with that protocol's id and the run it has adopted
+protocol-fill PROTOCOL --evidence-file PATH [--replace-evidence-file] # a data or output file the audit reads in full: [[evidence_file]] with its path and computed sha256, refused when the audit would refuse it
 protocol-fill PROTOCOL --into REPORT.md # the adopted result as a generated block in a report
 protocol-fill PROTOCOL --handover --why "…" --tried "…" --into REPORT.md # end without a result: [result] withdrawn, a handover record, its block in the report
 protocol-fill PROTOCOL --discuss RUN_ID --why "…" --into REPORT.md # a run the report looks at without reporting it, as a discussion block

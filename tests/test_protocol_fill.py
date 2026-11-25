@@ -1631,6 +1631,7 @@ class OneOperationPerCall(unittest.TestCase):
             *("--why", "w"),
         ],
         "explored_in": ["--explored-in", "E.md"],
+        "evidence_file": ["--evidence-file", "data/x.json"],
         "freeze": ["--freeze"],
     }
     MISSING = "/nonexistent/PROTOCOL-x.md"

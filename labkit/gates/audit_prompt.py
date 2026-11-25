@@ -17,7 +17,7 @@ import difflib
 import json
 import os
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -672,6 +672,17 @@ EVIDENCE_FILE_MAX_BYTES = 200_000
 EVIDENCE_FILES_MAX_BYTES = 400_000
 
 
+@dataclass(frozen=True)
+class CheckedEvidenceFile:
+    """A declared evidence file that passed `checked_evidence_files`: NAME
+    its path as the prompt shows it (from the repository root), SHA256 the
+    declared digest (its bytes' digest), TEXT its whole content."""
+
+    name: str
+    sha256: str
+    text: str
+
+
 def evidence_file_pieces(
     protocol: Path, text: str, snap: scope_sha.Snapshot
 ) -> tuple[tuple[str, str], ...]:
@@ -679,13 +690,31 @@ def evidence_file_pieces(
     as prompt pieces, in the order declared, each in full under
     `EVIDENCE FILE: <path> (sha256 <hex>)` — the bytes of SNAP, the ones the
     record's sha covers (`scope_sha.evidence_file_basis`). () without a
-    declaration.
+    declaration. Raises AuditError, before any model call, as
+    `checked_evidence_files` does."""
+    return tuple(
+        (f"{EVIDENCE_FILE_LABEL}{ef.name} (sha256 {ef.sha256})", ef.text)
+        for ef in checked_evidence_files(protocol, text, snap.evidence_files)
+    )
 
-    Raises AuditError, before any model call, naming each file it holds:
-    a declared file that is not a file; one whose sha256 is no longer the
-    declared one; one over EVIDENCE_FILE_MAX_BYTES, or all together over
-    EVIDENCE_FILES_MAX_BYTES (`evidence_size_refusal`); one that is not
-    UTF-8 text. Nothing is dropped or cut."""
+
+def checked_evidence_files(
+    protocol: Path, text: str, contents: Mapping[Path, bytes]
+) -> tuple[CheckedEvidenceFile, ...]:
+    """The files TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`,
+    in the order declared, checked as the audit shows them — the one home
+    of these checks, for the audit (`evidence_file_pieces`) and for
+    `protocol-fill --evidence-file`, which runs them on the protocol as it
+    would be written. CONTENTS maps each declared file that is a file,
+    resolved, to its bytes (`scope_sha.evidence_file_basis`,
+    `scope_sha.declared_evidence_bytes`); a declared file missing from it
+    is not a file. () without a declaration.
+
+    Raises AuditError naming each file it holds: a declared file that is
+    not a file; one whose sha256 is no longer the declared one; one over
+    EVIDENCE_FILE_MAX_BYTES, or all together over EVIDENCE_FILES_MAX_BYTES
+    (`evidence_size_refusal`); one that is not UTF-8 text. Nothing is
+    dropped or cut. BlockError on a malformed table."""
     declared = protocol_block.evidence_files(text)
     if not declared:
         return ()
@@ -695,7 +724,7 @@ def evidence_file_pieces(
         (
             ef.path if where == "." else f"{where}/{ef.path}",
             ef.sha256,
-            snap.evidence_files.get((protocol.parent / ef.path).resolve()),
+            contents.get((protocol.parent / ef.path).resolve()),
         )
         for ef in declared
     ]
@@ -726,13 +755,11 @@ def evidence_file_pieces(
     )
     if too_large is not None:
         raise too_large
-    pieces: list[tuple[str, str]] = []
+    checked: list[CheckedEvidenceFile] = []
     unreadable: list[str] = []
     for name, sha, data in held:
         try:
-            pieces.append(
-                (f"{EVIDENCE_FILE_LABEL}{name} (sha256 {sha})", data.decode("utf-8"))
-            )
+            checked.append(CheckedEvidenceFile(name, sha, data.decode("utf-8")))
         except UnicodeDecodeError:
             unreadable.append(name)
     if unreadable:
@@ -741,7 +768,7 @@ def evidence_file_pieces(
             f"{', '.join(unreadable)} — the prompt shows text only",
             fix="declare a text form of the file (JSON, CSV, Markdown)",
         )
-    return tuple(pieces)
+    return tuple(checked)
 
 
 def evidence_size_refusal(
