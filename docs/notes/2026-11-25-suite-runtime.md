@@ -83,3 +83,20 @@ The expectation before the build was that a quarter to a half of a command's git
 What remains is mostly what was left out on purpose: `git rev-parse` (1288), `git log` (566), `git ls-files` (414) and `git show` (281) read `HEAD`, the index or history by name. Keeping those needs a rule for when a kept answer still holds — a command that commits moves `HEAD` in mid-process.
 
 Not measured: the whole suite's time against the 746 s before (one run after the change gives the exit status, not a comparison — sequential runs drift), and any other test. The measurement was taken before an independent reader's findings were worked in; those changed names, one docstring and a refusal of nested commands, not which answers are kept. Logs and scripts: internal evidence repository, `2026-11-25-check-inventories/run6-kept-answers/`.
+
+## A start test that failed once in a whole run (2026-11-25)
+
+`tests/test_runlog_wait.py`, `test_a_bare_name_starts_the_run_in_its_area`, failed once in a whole run and passed alone three times and in the next whole run. Its message: `runlog start: run …: its record does not read — …/config.json: unreadable run metadata (Expecting value: line 1 column 1 (char 0))` — an empty file.
+
+Reproduced with a controlled delay, three ways for the stand-in command to write its record (script: internal evidence repository, `2026-11-25-check-inventories/run7-start-record/`):
+
+| The stand-in command                                                       | `runlog start`            |
+|----------------------------------------------------------------------------|---------------------------|
+| leaves `config.json` empty for 1.5 s, then writes the record               | exit 2, the same sentence |
+| leaves the run folder without a record for 1.5 s, then renames it in place | exit 0                    |
+| renames the record in place at once                                        | exit 0                    |
+
+So `runlog start` waits for a run folder whose record is not there yet, and refuses a record that is there and does not read. A run publishes its record by rename (`files.write_atomic`), so it is never seen half written; the test's stand-in wrote it with `shutil.copy`, which creates the file empty and then fills it. The fault was the stand-in's, not the command's and not a time limit. Four stand-in commands of that file wrote the record that way; they now write it beside and rename it (`RECORD_BY_RENAME`). No wait was added and no limit raised.
+
+Not examined: other test files whose stand-in commands write a record straight to `config.json`.
+
