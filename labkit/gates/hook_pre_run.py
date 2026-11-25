@@ -36,6 +36,7 @@ import sys
 from pathlib import Path
 
 from labkit.gates.hook_session import keep_stop_base
+from labkit.gates.hook_session import named_project_dir
 from labkit.formats.area_state import state_of
 from labkit.formats.scope_sha import SourceError, read_source
 from labkit.gates.hook_session import session_repo
@@ -315,9 +316,10 @@ def pre_run(event: dict, *, require_resolved_scripts: bool = False) -> int:
 
     # the walk to an area ends at the repo root, not at the project
     # directory: a session started in `<area>/scripts` must still find the
-    # area above its script
-    project = event.get("project_dir") or os.environ.get("CLAUDE_PROJECT_DIR")
-    stop = repo if repo is not None else (Path(project) if project else None)
+    # area above its script. Outside a repository it ends at the project
+    # the session names, and nowhere when it names none — the working
+    # directory is no end, it may be that `scripts` folder
+    stop = repo if repo is not None else named_project_dir(event)
     blocked: list[str] = []
     notes: list[str] = []
     for script in scripts:

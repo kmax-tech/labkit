@@ -49,14 +49,25 @@ from labkit.formats.digests import file_digest
 from labkit.formats.digests import digest as scope_digest
 
 
-def project_dir(event: dict | None = None) -> Path:
-    """The explicit project_dir, else CLAUDE_PROJECT_DIR, event cwd or process cwd.
+def named_project_dir(event: dict | None = None) -> Path | None:
+    """The project directory the session names: the event's explicit
+    project_dir, else CLAUDE_PROJECT_DIR; None when neither is set — no
+    working directory stands in for it (`project_dir` adds that).
 
     Codex supplies project_dir so an inherited Claude environment cannot
     select another repository. Claude Code uses its project environment.
     """
     project = (event or {}).get("project_dir") or os.environ.get("CLAUDE_PROJECT_DIR")
-    return Path(project or (event or {}).get("cwd") or os.getcwd())
+    return Path(project) if project else None
+
+
+def project_dir(event: dict | None = None) -> Path:
+    """The project directory the session names (`named_project_dir`), else
+    the event's cwd, else the process's."""
+    named = named_project_dir(event)
+    if named is not None:
+        return named
+    return Path((event or {}).get("cwd") or os.getcwd())
 
 
 def session_repo(event: dict | None = None) -> Path | None:

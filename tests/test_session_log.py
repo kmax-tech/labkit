@@ -10,8 +10,35 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest import mock
 
 from labkit.gates import hook_session
+
+
+class ProjectDir(unittest.TestCase):
+    """Which directory is the session's project: the one it names, and only
+    `project_dir` lets a working directory stand in."""
+
+    def test_the_event_names_it_before_the_environment(self):
+        with mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": "/env"}):
+            self.assertEqual(
+                hook_session.named_project_dir({"project_dir": "/event"}),
+                Path("/event"),
+            )
+            self.assertEqual(hook_session.named_project_dir({}), Path("/env"))
+            self.assertEqual(hook_session.named_project_dir(), Path("/env"))
+
+    def test_a_working_directory_names_no_project(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+            event = {"cwd": "/somewhere/scripts"}
+            self.assertIsNone(hook_session.named_project_dir(event))
+            self.assertIsNone(hook_session.named_project_dir())
+            # the twin: the project directory falls back to it
+            self.assertEqual(
+                hook_session.project_dir(event), Path("/somewhere/scripts")
+            )
+            self.assertEqual(hook_session.project_dir(), Path(os.getcwd()))
 
 
 class SessionLog(unittest.TestCase):
