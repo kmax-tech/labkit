@@ -562,3 +562,41 @@ class TheLinesOfAFieldChange(unittest.TestCase):
             "Unit as first registered: cannot be read back — its first "
             "measurement r1 recorded no commit",
         )
+
+
+class FirstMeasurementsOnTwoBranches(_TwoRuns):
+    """`registration_hold.types_split_hold`: two first measurements on
+    diverged history, neither before the other, that registered different
+    types — which workflow binds the runs cannot be told. The twin: the
+    same history under one type has no such hold."""
+
+    SPLIT = "the first measurements registered different types: "
+
+    def diverged(self, first_type: str, later_type: str) -> None:
+        """FIRST measured under FIRST_TYPE on one branch, LATER under
+        LATER_TYPE on a branch from the same base commit."""
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "base")
+        base = _git(self.root, "rev-parse", "HEAD")
+        self.run_under(first_type, FOUR, FIRST)
+        _git(self.root, "checkout", "-q", "-b", "side", base)
+        self.run_under(later_type, FOUR, LATER)
+
+    def test_different_types_hold_with_a_new_registration_or_a_handover(self):
+        self.diverged("exploratory", "confirmatory")
+        ctx = report_context.checked(self.area, self.protocol)
+        assert ctx.run is not None
+        flow, holds = registration_station.station_changes(
+            ctx.area, ctx.protocol, PID, ctx.run, ctx.area_state, ctx.evidence
+        )
+        self.assertIs(flow, Workflow.UNDECIDED)
+        (split,) = [h for h in holds if h.text.startswith(self.SPLIT)]
+        self.assertEqual((split.grade, split.rule.rule_id), (BLOCKER, "LAB-003"))
+        self.assertIn(f"{FIRST} (exploratory), {LATER} (confirmatory)", split.text)
+        self.assertIn("--handover", split.fix or "")
+
+    def test_the_twin_one_type_on_both_branches_has_no_such_hold(self):
+        self.diverged("exploratory", "exploratory")
+        flow, lines, _ = self.station()
+        self.assertIs(flow, Workflow.EXPLORATORY)
+        self.assertFalse(any(self.SPLIT in ln for ln in lines), lines)

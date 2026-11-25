@@ -302,6 +302,36 @@ class SourceHeldToItsOwnText(_AreaWithRun):
     def test_a_text_that_registers_no_id_owes_nothing(self):
         self.assertEqual(self.held({"n": 3}, head() + "# 66 — a count\n"), [])
 
+    def test_a_promise_block_of_its_text_that_does_not_read_blocks(self):
+        """Before any comparison: the block of the text the run saw has a
+        promise without its key, so nothing can be held against the run.
+        The twin: the same promise with its key reads, and that blocker is
+        gone."""
+        prose = PROTOCOL.removeprefix(head())
+        run = self._metrics(self.FULL).parent
+        without_key = '[[promise]]\nid = "criterion-1"\n'
+        reads = (
+            without_key
+            + 'key = "criterion_1_pass"\nsentence = "null holds"\n'
+            + 'scope = ["scripts/01_measure.py"]\n'
+        )
+        twin = intent_check.origin_intent_findings(
+            run, head(promises=reads) + prose, self.area
+        )
+        self.assertFalse([f.text for f in twin if "promise block: " in f.text])
+        (found,) = intent_check.origin_intent_findings(
+            run, head(promises=without_key) + prose, self.area
+        )
+        self.assertEqual(found.grade, "BLOCKER")
+        self.assertTrue(
+            found.text.startswith(
+                "origin run 2026-09-09T10-00-00_ab12, held to the protocol as it "
+                "saw it: promise block: "
+            ),
+            found.text,
+        )
+        self.assertIn("measure the origin anew under its protocol", found.fix or "")
+
     def test_a_source_whose_metrics_do_not_read_blocks(self):
         mpath = self._metrics(self.FULL)
         mpath.write_text("[", encoding="utf-8")

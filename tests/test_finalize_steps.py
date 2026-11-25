@@ -866,6 +866,51 @@ class ARegistrationReleaseThatCannotBeChecked(unittest.TestCase):
         self.assertEqual(self._held(lambda *_a, **_k: []), [])
 
 
+class AnExplorationReleaseThatCannotBeChecked(unittest.TestCase):
+    """The same condition in an exploration (`exploration_hold.live_holds`,
+    the protocol as it stands against the answering run's own text): an
+    `AuditError` of the follow-up's coverage is one blocker naming why.
+    Composition: the comparison is stubbed."""
+
+    def _held(self, inner) -> list:
+        from labkit.formats.area_state import Measured
+        from labkit.formats.protocol_then import StepThen
+        from labkit.gates import exploration_hold
+        from state_fixture import area_evidence
+
+        with mock.patch.object(exploration_hold, "scope_now", inner):
+            return exploration_hold.live_holds(
+                AREA,
+                AREA / "PROTOCOL-x.md",
+                PID,
+                AREA / "runs" / "r1",
+                StepThen("r1", None, None, "nowhere", None),
+                AREA,
+                Measured(AREA, PID, (), (), (), ()),
+                area_state(),
+                area_evidence(),
+            )
+
+    def test_an_audit_error_is_one_blocker_with_its_way_out(self):
+        from labkit.checks.audit_binding import AuditError
+
+        def fails(*_a, **_k):
+            raise AuditError("the follow-up's record does not read", fix="restore it")
+
+        (f,) = self._held(fails)
+        self.assertEqual(
+            f.text,
+            "whether a correction in place releases what the number is about "
+            "cannot be checked: the follow-up's record does not read",
+        )
+        self.assertEqual(
+            (f.grade, f.fix, f.rule), ("BLOCKER", "restore it", TECHNICAL_RULE)
+        )
+
+    def test_the_twin_a_comparison_that_finds_no_change_holds_nothing(self):
+        self.assertEqual(self._held(lambda *_a, **_k: None), [])
+
+
 class AnUnlistedHistoryComesBeforeTheOtherHolds(unittest.TestCase):
     """Station 2 (`registration_station.station_changes`): a history git
     could not list is the one finding, before the hold on a start file

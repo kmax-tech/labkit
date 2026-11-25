@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import recheck  # noqa: E402
 from labkit.checks.run_record_check import code_since_run  # noqa: E402
 from labkit.formats import gate, repo, runs  # noqa: E402
+from labkit.formats.commands import measure_anew  # noqa: E402
 from labkit.formats.answer_reading import (  # noqa: E402
     ANSWER_READING_FILE,
     AnswerReading,
@@ -366,6 +367,45 @@ class CodeSinceRun(unittest.TestCase):
         self.assertIn(ANSWER_READING_FILE, unread)
         self.assertIn(f"changed since {parent.name} ran it", whole)
 
+    def test_a_declared_reading_without_a_repository_or_its_script_holds(self) -> None:
+        """The comparison of a declared answer reading needs the area's
+        repository and the declaring run's script: with the script gone, and
+        with the repository gone, the parent's comparison holds as not made.
+        The twin, both in place: the declaration passes."""
+        parent = self.run_now()
+        declared = self.derived_reading(parent, "lib/counting.py")
+        self.assertEqual(self.held(declared), [])
+        again = self.area / "scripts" / "03_reevaluate.py"
+        kept = again.read_text(encoding="utf-8")
+        again.unlink()
+        # the derived run's own comparison names the gone script too, with
+        # the restore as a way out; the parent's names measuring anew alone
+        (of_parent,) = [
+            f
+            for f in code_since_run(self.area, declared)[0]
+            if f.fix == measure_anew(self.area)
+        ]
+        self.assertEqual(
+            of_parent.text,
+            f"{declared.name}: its script scripts/03_reevaluate.py is gone",
+        )
+        self.assertEqual(of_parent.rule, gate.TECHNICAL_RULE)
+        again.write_text(kept, encoding="utf-8")
+        shutil.rmtree(self.repo / ".git")
+        (of_parent,) = [
+            f
+            for f in code_since_run(self.area, declared)[0]
+            if f.text.startswith("the answer reading")
+        ]
+        self.assertEqual(
+            of_parent.text,
+            f"the answer reading lib/counting.py that {declared.name} declared "
+            f"cannot be compared with what {parent.name} ran: the area lies in "
+            f"no git repository now",
+        )
+        self.assertEqual(of_parent.fix, measure_anew(self.area))
+        self.assertEqual(of_parent.rule, gate.TECHNICAL_RULE)
+
     def test_only_a_found_difference_names_its_run(self) -> None:
         """`GateFinding.changed_since` is the comparison's datum: the run
         whose code differs — the parent's for a derived run — and nothing
@@ -614,6 +654,70 @@ class FinalizeStation(unittest.TestCase):
             script.write_text(script.read_text() + "# fixed after the run\n")
             self.assertIn("BLOCKER: ", station())
             self.assertIn("changed since 2026-10-27T10-00-00_ab12 ran it", station())
+
+
+class ThePromptsOfADeclaredReading(unittest.TestCase):
+    """`finalize.check_answer_reading`: a derived run that declares its
+    answer reading is held to the prompts field its parent was measured
+    under, so the protocol text each of the two runs saw must read back."""
+
+    PARENT, DERIVED = "2026-10-27T10-00-00_ab12", "2026-10-27T11-00-00_cd34"
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.repo = Path(self._tmp.name)
+        _git(self.repo, "init", "-q")
+        self.area = self.repo / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+        self.protocol = self.area / "PROTOCOL-x.md"
+        self.protocol.write_text(
+            head(repeat_cost="low", promises=None)
+            + "- **Prompt (verbatim, per variant):** count the files\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-qm", "the protocol")
+        self.commit = _git(self.repo, "rev-parse", "HEAD")
+
+    def run_recorded(self, name: str, *, git_full: str, parent: str | None) -> Path:
+        """Run NAME as runlog leaves it: its record naming the commit
+        GIT_FULL and the run it derives from, and the one answer file both
+        runs register."""
+        d = runs.run_path(self.area, name)
+        d.mkdir(parents=True)
+        cfg = run_record(git=git_full[:7], git_full=git_full, derived_from=parent)
+        (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        answers = [{"path": "experiments/01-x/answers.jsonl", "sha256": "abc"}]
+        (d / "outputs.json").write_text(json.dumps(answers), encoding="utf-8")
+        return d
+
+    def held(self, *, parent_commit: str) -> list[gate.GateFinding]:
+        """The blockers of the station's part for a derived run that declares
+        its answer reading, its parent recorded at PARENT_COMMIT."""
+        self.run_recorded(self.PARENT, git_full=parent_commit, parent=None)
+        derived = self.run_recorded(
+            self.DERIVED, git_full=self.commit, parent=self.PARENT
+        )
+        write_answer_reading(
+            derived, AnswerReading(module="lib/counting.py", labkit="9.9.9")
+        )
+        found = gate.Findings(tell=None)
+        finalize.check_answer_reading(found, self.area, self.protocol, derived)
+        return [f for f in found.found if f.grade == gate.BLOCKER]
+
+    def test_a_parent_whose_protocol_text_cannot_be_read_back_holds(self) -> None:
+        (f,) = self.held(parent_commit="")
+        self.assertEqual(
+            f.text,
+            f"the prompts {self.DERIVED} re-reads with cannot be held to "
+            f"{self.PARENT}'s: run {self.PARENT} recorded no commit",
+        )
+        self.assertEqual(f.rule, gate.TECHNICAL_RULE)
+        self.assertIn("restore what the sentence names, or measure anew", f.fix or "")
+
+    def test_the_twin_both_texts_read_back_with_one_prompt_passes(self) -> None:
+        self.assertEqual(self.held(parent_commit=self.commit), [])
 
 
 if __name__ == "__main__":
