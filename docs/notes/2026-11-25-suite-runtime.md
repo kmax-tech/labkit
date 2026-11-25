@@ -53,3 +53,10 @@ Estimates, not measured: with cause 1 addressed the whole suite might take 450 t
 - Why the suite grew from 383 s to 875 s: no older commit was run. More scenario tests, more git calls per gate, or both — not separated.
 - Linux, where no launcher stands before git: cause 1 does not apply there.
 - Whether keeping a git answer within a command is safe at each call site. A command that commits moves `HEAD` in mid-process; the repeat counts are an upper bound, the reads by hash a lower bound.
+
+## After two changes to the tests (2026-11-25)
+
+Built after this measurement, in the tests only. Every measurement a test starts waits for a later second than the runs its area holds (`Lab.measure` in `tests/test_end_to_end.py`, the one home of the wait), so the origin test no longer depends on how long git takes: alone with the direct git it passes in 31 s, where it took 70 s. And on macOS the suite calls git's binary through one link first on `PATH` (`tests/conftest.py`, `_direct_git`): 3.5 ms a call against 11.7 ms through the launcher, 100 calls each.
+
+The whole suite with both, run alone: exit 0, 4659 passed, 1 skipped, 746 s — against 831 s and 875 s before, about 12 % less. The estimate above (450 to 550 s) was extrapolated from two tests run alone and did not hold under 11 workers. Why the gain is smaller there was not examined. No other test depended on the slow git.
+
