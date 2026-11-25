@@ -24,7 +24,7 @@ class Decided:
     replaced_decisions: tuple[ReplacedDecision, ...] = ()
 
     @property
-    def undecided(self) -> bool:
+    def never_decided(self) -> bool:
         return (self.status, self.reason, self.effect) == ("open", "", "")
 
 

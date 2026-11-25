@@ -81,7 +81,7 @@ class ReplacedDecision:
 
 class DecidedFinding(Protocol):
     """What this module reads of a finding (`findings.Finding`): its decision
-    as it stands, whether it is the undecided start, and its history."""
+    as it stands, whether it was never decided, and its history."""
 
     @property
     def status(self) -> str:
@@ -99,8 +99,9 @@ class DecidedFinding(Protocol):
         ...
 
     @property
-    def undecided(self) -> bool:
-        """Is this the state a finding is written in, before any decision?"""
+    def never_decided(self) -> bool:
+        """Is this the state a finding is written in — `open` without a reason?
+        An `open` with a reason is a decision taken back, not this."""
         ...
 
     @property
@@ -154,7 +155,7 @@ def after_replacing(
     decision added as the newest entry — unless CURRENT is the undecided
     start, which is no decision, or the new decision equals the one that
     stands. Pure."""
-    if current.undecided:
+    if current.never_decided:
         return current.replaced_decisions
     if (current.status, current.reason, current.effect) == (status, reason, effect):
         return current.replaced_decisions
@@ -168,11 +169,14 @@ def history_kept(committed: DecidedFinding, now: DecidedFinding) -> bool:
     NOW's unchanged and COMMITTED's decision was not lost: it still stands
     and nothing was added, or it is the first entry added. A COMMITTED that
     is the undecided start owes no entry, so any entries may follow. Entries
-    after the first added one are not compared: no commit saw them. Pure."""
+    after the first added one are not compared: no commit saw them. Nor is
+    the minute of the first added entry: an entry written by hand with the
+    committed decision's words passes, as a decision line written by hand
+    does. Pure."""
     held = committed.replaced_decisions
     if now.replaced_decisions[: len(held)] != held:
         return False
-    if committed.undecided:
+    if committed.never_decided:
         return True
     decision = (committed.status, committed.reason, committed.effect)
     added = now.replaced_decisions[len(held) :]

@@ -168,15 +168,26 @@ def record_changed(before: str, after: str) -> bool:
     the decision lines is compared whole. The histories are compared only
     when both versions read as records: one that does not is reported by
     the record's own reader (`findings.read`), not here. Pure."""
+    stand = other_lines_stand(before, after)
+    if stand is None:
+        return before != after
+    return not stand or decision_lost(before, after)
+
+
+def other_lines_stand(before: str, after: str) -> bool | None:
+    """Do BEFORE and AFTER, two versions of a record, agree in every line
+    but their findings' decision lines (`findings.without_decisions`)? None
+    when the findings of one lack those lines. Pure."""
     kept, now = findings.without_decisions(before), findings.without_decisions(after)
     if kept is None or now is None:
-        return before != after
-    return kept != now or decision_lost(before, after)
+        return None
+    return kept == now
 
 
 def decision_lost(before: str, after: str) -> bool:
     """Did a finding of AFTER, a record's text, lose a decision BEFORE holds
-    (`decision_history.history_kept`)? Asked of two versions that differ in
+    — does one of them not keep its history (`decision_history.history_kept`,
+    asked per finding; this is its negation over the record)? Asked of two versions that differ in
     their findings' decision lines alone; False when one of them does not
     read as a record or they hold different numbers of findings. Pure."""
     committed, standing = findings.findings_in(before), findings.findings_in(after)
@@ -321,13 +332,10 @@ def _changed_audit_file(
         return None
     if not is_record:
         return "report review"
-    lines_stand = (
-        bool(before and after)
-        and (kept := findings.without_decisions(before or "")) is not None
-        and kept == findings.without_decisions(after or "")
-    )
-    # the lines stand and the record changed all the same: a decision was lost
-    return DECISION_LOST if lines_stand else "record"
+    # the other lines stand and the record changed all the same: a decision was lost
+    if before and after and other_lines_stand(before, after):
+        return DECISION_LOST
+    return "record"
 
 
 def told(

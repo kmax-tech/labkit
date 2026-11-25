@@ -447,7 +447,7 @@ def without_claim_decisions(text: str) -> str | None:
     (`findings.without_decisions` on `[[claim]]`): what
     `write_claim_decision` keeps byte for byte. None when a claim lacks
     them. Pure."""
-    return findings.without_decisions(text, CLAIM_HEADER)
+    return findings.without_decisions(text, CLAIM_HEADER, history=False)
 
 
 def write_claim_decision(path: Path, n: int, status: str, reason: str) -> ReportReview:

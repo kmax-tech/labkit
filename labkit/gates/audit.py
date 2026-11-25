@@ -335,7 +335,8 @@ def main(argv: list[str]) -> int:
         metavar=("N", "STATUS"),
         help="store your decision on finding N of the newest record: STATUS "
         f"({' | '.join(s for s in findings.STATUSES if s != findings.OPEN)}), its reason "
-        f"with --why (owed for {', '.join(findings.REASON_OWED)}); no audit runs. "
+        f"with --why (owed for {', '.join(findings.REASON_OWED)}), or "
+        f"{findings.OPEN} to take a decision back (--why owed); no audit runs. "
         "With --report-review REPORT: your decision on claim N of the report "
         "review (--record, else the one review of this state that names a "
         "claim) — false-positive, the counter-evidence with --why (open takes "

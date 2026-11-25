@@ -325,9 +325,10 @@ class Finding:
     replaced_decisions: tuple[ReplacedDecision, ...] = ()
 
     @property
-    def undecided(self) -> bool:
+    def never_decided(self) -> bool:
         """Is this the state a finding is written in — `open`, no reason, no
-        effect? It is no decision: an `open` with a reason is one taken back."""
+        effect? It is no decision. An `open` with a reason is undecided too,
+        but it is a decision taken back, and replacing it keeps it."""
         return (self.status, self.reason, self.effect) == (OPEN, "", "")
 
     @property
@@ -2008,7 +2009,11 @@ def _multi_line_end(
 
 
 def _decision_lines(
-    lines: list[str], n: int, header: re.Pattern[str] = _FINDING_HEADER
+    lines: list[str],
+    n: int,
+    header: re.Pattern[str] = _FINDING_HEADER,
+    *,
+    history: bool,
 ) -> dict[str, tuple[int, int, str, str]] | None:
     """{"status": (first, end, head, tail), "reason": …, "effect": … when it
     stands} of the N-th table HEADER opens in LINES (`[[finding]]` unless
@@ -2017,11 +2022,11 @@ def _decision_lines(
     text after it on its last line (a comment). A value is a one-line TOML
     string or a multi-line one; None when status or reason is missing or a
     multi-line value never closes. The table runs from its header to the
-    next table header of any kind. A `[[finding]]` table's replaced
+    next table header of any kind. With HISTORY the table's replaced
     decisions join them under `decision_history.KEY` when the array stands
     as labkit writes it — from its opening line to the line that closes it,
-    HEAD and TAIL empty; a `[[claim]]` keeps no history, so there the lines
-    are no decision lines."""
+    HEAD and TAIL empty. HISTORY is true for a `[[finding]]`; a `[[claim]]`
+    keeps no history, so there such lines are no decision lines."""
     seen, inside = 0, False
     at: dict[str, tuple[int, int, str, str]] = {}
     i = 0
@@ -2034,7 +2039,7 @@ def _decision_lines(
             inside = False
         elif (
             inside
-            and header is _FINDING_HEADER
+            and history
             and decision_history.ARRAY_OPENING.match(line.splitlines()[0])
         ):
             end = decision_history.array_end(lines, i)
@@ -2059,7 +2064,7 @@ def _decision_lines(
 
 
 def without_decisions(
-    text: str, header: re.Pattern[str] = _FINDING_HEADER
+    text: str, header: re.Pattern[str] = _FINDING_HEADER, *, history: bool = True
 ) -> str | None:
     """TEXT, a record's, with every finding's decision lines removed —
     `status`, `reason` and `effect`, a multi-line value whole, and a
@@ -2068,13 +2073,14 @@ def without_decisions(
     results are equal differ in decisions alone (`evidence.AreaEvidence.change_sentences`). None
     when a finding lacks the status and reason lines labkit-audit writes,
     or a multi-line value never closes. HEADER opens the tables decided:
-    `[[finding]]`, or a report review's `[[claim]]`
+    `[[finding]]`, or a report review's `[[claim]]`, which keeps no
+    replaced decisions and is read with HISTORY false
     (`report_reviews.without_claim_decisions`). Pure."""
     lines = text.splitlines(keepends=True)
     count = sum(1 for line in lines if header.match(line))
     dropped: set[int] = set()
     for n in range(1, count + 1):
-        at = _decision_lines(lines, n, header)
+        at = _decision_lines(lines, n, header, history=history)
         if at is None:
             return None
         for first, end, _, _ in at.values():
@@ -2103,7 +2109,7 @@ def with_decision(
     value never closes. The rewrite of a decision without an effect: a
     report review's claim (`report_reviews.write_claim_decision`). Pure."""
     lines = text.splitlines(keepends=True)
-    at = _decision_lines(lines, n, header)
+    at = _decision_lines(lines, n, header, history=False)
     if at is None:
         return None
     values = {"status": status, "reason": reason}
@@ -2240,7 +2246,7 @@ def _decided_text(
     lines or its array do not stand as labkit-audit writes them."""
     # decoded, not read as text: a CRLF record keeps its line endings
     lines = path.read_bytes().decode("utf-8").splitlines(keepends=True)
-    at = _decision_lines(lines, n)
+    at = _decision_lines(lines, n, history=True)
     if at is None:
         raise FindingsError(
             f"{path}: finding {n} has no `status` and `reason` lines as labkit-audit "
