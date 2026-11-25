@@ -149,6 +149,72 @@ class Rules(CacheCase):
             )
 
 
+class DerivedRun(CacheCase):
+    """A derived run asks no model (`runlog.run(..., derived_from=…)`): what
+    the cache holds is read, and nothing else reaches the model — counted
+    at the stand-in server."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.parent, _ = self.run_once()
+        self.assertEqual(self.server.chats, 1)
+
+    def derived(self) -> runlog.run:
+        return runlog.run("e", {}, self.area, derived_from=self.parent.run_id)
+
+    def test_a_stored_answer_is_read(self) -> None:
+        for replay in (False, True):
+            with self.subTest(replay=replay), self.derived() as run:
+                cache = llm_cache.Cache(run, root=self.root, replay=replay)
+                answer = cache.complete("o", "Is this a fallacy?", temperature=0)
+                self.assertEqual(answer.response.text, "the answer")
+                assert answer.origin is not None
+                self.assertEqual(answer.origin.run, self.parent.run_id)
+        self.assertEqual(self.server.chats, 1, "a hit asked the model")
+
+    def test_a_miss_asks_no_model(self) -> None:
+        with self.derived() as run:
+            cache = llm_cache.Cache(run, root=self.root)
+            with self.assertRaisesRegex(llm.CallRefused, "derived run"):
+                cache.complete("o", "a prompt nobody asked", temperature=0)
+        with self.derived() as run:
+            cache = llm_cache.Cache(run, root=self.root, replay=True)
+            with self.assertRaisesRegex(llm_cache.CacheMiss, "no stored answer"):
+                cache.complete("o", "a prompt nobody asked", temperature=0)
+        self.assertEqual(self.server.chats, 1, "a miss asked the model")
+
+    def test_an_answer_that_cannot_be_cached_asks_no_model(self) -> None:
+        self.server.digest = None  # no weights digest: the call is not cacheable
+        llm._FROZEN.clear()
+        with self.derived() as run:
+            cache = llm_cache.Cache(run, root=self.root)
+            with self.assertRaisesRegex(llm.CallRefused, "nothing was sent"):
+                cache.complete("o", "Is this a fallacy?", temperature=0)
+        with self.derived() as run:
+            cache = llm_cache.Cache(run, root=self.root, replay=True)
+            with self.assertRaisesRegex(llm_cache.CacheMiss, "replay asks no model"):
+                cache.complete("o", "Is this a fallacy?", temperature=0)
+        self.assertEqual(self.server.chats, 1)
+
+    def test_a_call_past_the_cache_asks_no_model(self) -> None:
+        with self.derived():
+            with self.assertRaisesRegex(llm.CallRefused, "nothing was sent"):
+                llm.complete("o", "Is this a fallacy?", temperature=0)
+        self.assertEqual(self.server.chats, 1)
+
+    def test_the_twin_a_measurement_asks_its_model(self) -> None:
+        with runlog.run("e", {"model": "o"}, self.area):
+            self.assertEqual(
+                llm.complete("o", "Is this a fallacy?", temperature=0), "the answer"
+            )
+        self.assertEqual(self.server.chats, 2)
+        # and through the cache on a miss
+        with runlog.run("e", {"model": "o"}, self.area) as run:
+            cache = llm_cache.Cache(run, root=self.root)
+            cache.complete("o", "a prompt nobody asked", temperature=0)
+        self.assertEqual(self.server.chats, 3)
+
+
 class CallLog(CacheCase):
     """The reader of a run's `llm-calls.jsonl` (`runs.read_model_calls`): what the
     cache wrote reads back, no file is no calls, a line that is not one

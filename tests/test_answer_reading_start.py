@@ -1,9 +1,9 @@
 """A derived run that declares its answer reading (`runlog.run(...,
 derived_from=ID, answer_reading=MODULE)`): the start writes the
 declaration beside the record and refuses a declaration that cannot be
-held; while the run is open every model call through `llm` is refused, in
-every thread, and after it calls go through again. A derived run without
-the declaration starts as before.
+held. While a derived run is open — with the declaration or without —
+every model call through `llm` is refused, in every thread, and after it
+calls go through again; a run that is not derived calls its model.
 
     .venv/bin/python -m pytest tests/test_answer_reading_start.py
 """
@@ -92,50 +92,88 @@ class AnswerReadingStart(unittest.TestCase):
         assert reading is not None
         self.assertEqual(reading.module, "lib/reading.py")
 
-    def test_a_derived_run_without_it_starts_as_before(self) -> None:
-        # the twin: no declaration, no file, no refusal of calls
+    def test_a_derived_run_without_a_declared_answer_reading_writes_no_file(
+        self,
+    ) -> None:
         derived = self._run(derived_from=self.parent)
         self.assertFalse((self.area / "runs" / derived / ANSWER_READING_FILE).exists())
-        spec = mock.patch.object(llm, "spec", typed(lambda alias: SPECS[alias]))
-        send = mock.patch.object(llm, "_complete_once", side_effect=Sent)
-        with spec, send, contextlib.redirect_stdout(io.StringIO()):
-            with self._open(derived_from=self.parent) as run:
-                with self.assertRaises(Sent):
-                    llm.complete("local", "p", attempts=1)
-                run.metrics(n=1)
 
-    def test_every_call_is_refused_while_the_run_is_open_in_every_thread(self) -> None:
+    def test_a_derived_run_without_a_declared_answer_reading_refuses_every_call(
+        self,
+    ) -> None:
         spec = mock.patch.object(llm, "spec", typed(lambda alias: SPECS[alias]))
         send = mock.patch.object(llm, "_complete_once", side_effect=Sent)
         with spec, send as sent, contextlib.redirect_stdout(io.StringIO()):
-            with self._open(
-                derived_from=self.parent, answer_reading="lib/reading.py"
-            ) as run:
-                with self.assertRaises(llm.CallRefused) as cm:
-                    llm.complete("local", "p")
-                self.assertIn(f"run {run.run_id} is open", str(cm.exception))
-                with ThreadPoolExecutor(max_workers=3) as pool:
-                    futures = [
-                        pool.submit(llm.complete, "local", "p") for _ in range(6)
-                    ]
-                for f in futures:
-                    self.assertIsInstance(f.exception(), llm.CallRefused)
+            with self._open(derived_from=self.parent) as run:
+                for call in (
+                    lambda: llm.complete("local", "p", attempts=1),
+                    lambda: llm.complete_response("local", "p", attempts=1),
+                    lambda: llm.complete_many("local", ["p", "q"], workers=2),
+                ):
+                    with self.assertRaises(llm.CallRefused) as cm:
+                        call()
+                    self.assertIn(f"run {run.run_id} is open", str(cm.exception))
+                    self.assertIn(
+                        f"it derives from {self.parent} (derived_from)",
+                        str(cm.exception),
+                    )
                 run.metrics(n=1)
             sent.assert_not_called()
             with self.assertRaises(Sent):  # released with the run
                 llm.complete("local", "p", attempts=1)
 
-    def test_the_refusal_ends_with_a_run_that_broke_off(self) -> None:
+    def test_the_twin_a_run_that_is_not_derived_calls_its_model(self) -> None:
         spec = mock.patch.object(llm, "spec", typed(lambda alias: SPECS[alias]))
         send = mock.patch.object(llm, "_complete_once", side_effect=Sent)
         with spec, send, contextlib.redirect_stdout(io.StringIO()):
-            with self.assertRaises(KeyError):
-                with self._open(
-                    derived_from=self.parent, answer_reading="lib/reading.py"
-                ):
-                    raise KeyError("broke off")
-            with self.assertRaises(Sent):
-                llm.complete("local", "p", attempts=1)
+            with self._open() as run:
+                with self.assertRaises(Sent):  # the backend was reached
+                    llm.complete("local", "p", attempts=1)
+                run.metrics(n=1)
+
+    #: the two forms of a derived run: with a declared answer reading, without
+    DERIVED = ({"answer_reading": "lib/reading.py"}, {})
+
+    def test_every_call_is_refused_while_the_run_is_open_in_every_thread(self) -> None:
+        spec = mock.patch.object(llm, "spec", typed(lambda alias: SPECS[alias]))
+        send = mock.patch.object(llm, "_complete_once", side_effect=Sent)
+        for form in self.DERIVED:
+            with (
+                self.subTest(form=form),
+                spec,
+                send as sent,
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with self._open(derived_from=self.parent, **form) as run:
+                    with self.assertRaises(llm.CallRefused) as cm:
+                        llm.complete("local", "p")
+                    self.assertIn(f"run {run.run_id} is open", str(cm.exception))
+                    with ThreadPoolExecutor(max_workers=3) as pool:
+                        futures = [
+                            pool.submit(llm.complete, "local", "p") for _ in range(6)
+                        ]
+                    for f in futures:
+                        self.assertIsInstance(f.exception(), llm.CallRefused)
+                    run.metrics(n=1)
+                sent.assert_not_called()
+                with self.assertRaises(Sent):  # released with the run
+                    llm.complete("local", "p", attempts=1)
+
+    def test_the_refusal_ends_with_a_run_that_broke_off(self) -> None:
+        spec = mock.patch.object(llm, "spec", typed(lambda alias: SPECS[alias]))
+        send = mock.patch.object(llm, "_complete_once", side_effect=Sent)
+        for form in self.DERIVED:
+            with (
+                self.subTest(form=form),
+                spec,
+                send,
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with self.assertRaises(KeyError):
+                    with self._open(derived_from=self.parent, **form):
+                        raise KeyError("broke off")
+                with self.assertRaises(Sent):
+                    llm.complete("local", "p", attempts=1)
 
     def test_a_declaration_that_cannot_be_held_is_refused_before_the_run(self) -> None:
         outside = Path(self._tmp.name).parent / "reading-outside.py"

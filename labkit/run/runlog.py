@@ -45,11 +45,13 @@ Three ways a run depends on another run's rows — not one:
                    be completed and no repeat (else the best draw could
                    answer through it); the run makes no model call and records no
                    model — `runs.model_provenance_run` walks this key alone.
+                   Every model call through `llm` is refused while the run
+                   is open (`run`); an answer the cache holds is still read,
+                   and a model reached by another client is not seen.
                    With `answer_reading=MODULE` it declares the module that
                    reads an answer (`answer_reading`, a file of its own in the
                    run's directory): the parent's code is then compared in
-                   that module and its imports only, and every model call
-                   through `llm` is refused while the run is open
+                   that module and its imports only
     repeat_of      per run; `runlog.run(..., repeat_of=ID)`: the same measurement
                    asked again — new model calls, its own model record, the
                    same protocol, block, config and inputs as ID or a
@@ -542,7 +544,10 @@ class Run:
         self._protocol = prepared.bound.binding
         self._repeat_cost = prepared.repeat_cost
         self._promises = prepared.promises
-        self._derived_from = prepared.derived_from
+        #: the completed run this one derives from, as the start check
+        #: accepted it and config.json records it; None for a run that is
+        #: not derived
+        self.derived_from = prepared.derived_from
         #: the module a derived run declared it reads an answer with, None
         #: when it declared none (`answer_reading`)
         self.answer_reading = reading
@@ -657,7 +662,7 @@ class Run:
             "experiment": self.experiment,
             "script": self.script,
             "protocol": self._protocol,
-            "derived_from": self._derived_from,
+            "derived_from": self.derived_from,
             "repeat_of": self._repeat_of,
             "draw": self.draw,
             "run_kind": self._run_kind,
@@ -715,7 +720,7 @@ class Run:
         """
         for p in map(Path, paths):
             held = _runs_held(p) if p.suffix == ".jsonl" else set()
-            if held and self._derived_from is None:
+            if held and self.derived_from is None:
                 done = _completed_among(self.dir.parent, held - {self.run_id})
                 if done:
                     print(continued_warning(p, done))
@@ -909,9 +914,12 @@ class run:
     """Context manager: `with runlog.run("name", config={...}, data={...}) as r:`
     — every refusal and every record is `Run.__init__` (see its docstring);
     `__exit__` finalizes on a clean exit, a crash leaves the dir without
-    metrics.json (visible). A derived run that declares its answer reading
-    refuses every model call through `llm` from `__enter__` to the end of
-    `__exit__`, in every thread (`llm.refusing_calls`)."""
+    metrics.json (visible). A derived run (`derived_from`), with or without
+    a declared answer reading, refuses every model call through `llm` from
+    `__enter__` to the end of `__exit__`, in every thread
+    (`llm.refusing_calls`). A run that is not derived opens no refusal of
+    its own; the refusal is process-wide, so while a derived run is open a
+    call made for any other run of the process is refused as well."""
 
     def __init__(
         self,
@@ -944,11 +952,13 @@ class run:
         self._held = contextlib.ExitStack()
 
     def __enter__(self) -> Run:
-        if self._run.answer_reading is not None:
+        parent = self._run.derived_from
+        if parent is not None:
             self._held.enter_context(
                 llm.refusing_calls(
                     self._run.run_id,
-                    f"it declares its answer reading, and {DERIVED_RUN_CONTRACT}",
+                    f"it derives from {parent} (derived_from), and "
+                    f"{DERIVED_RUN_CONTRACT}",
                 )
             )
         return self._run

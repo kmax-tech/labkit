@@ -83,7 +83,7 @@ For specialized calls (logprobs, raw payloads): use resolve(alias) for
 endpoint/model and do your own HTTP — never a literal URL in the experiment.
 
 While a run that may make no model call is open (`refusing_calls`, entered
-by runlog for a derived run that declares its answer reading), every call
+by runlog for every derived run, `runlog.run(..., derived_from=…)`), every call
 through `complete`, `complete_response` and `complete_many` raises
 `CallRefused` before anything is sent, in every thread of the process. A
 model reached by another client — own HTTP included — is not seen.
