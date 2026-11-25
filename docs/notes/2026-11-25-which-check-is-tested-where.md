@@ -2,7 +2,7 @@
 
 **Answer.** Of the 264 places that build a gate finding, 37 are reached by a rule test (a test in `tests/test_rules_*.py`); 227 are not. Most of those 227 are tested all the same: 186 are reached by a fast test that calls a function below a whole command, 26 only by scenario files, 5 only through whole commands, and 10 by no test. One condition is often told at several places, each with a sentence of its own; the code holds at least 11 written exceptions that keep one cause from being told twice, 5 of them in `report_check.chain_gaps`.
 
-**Status.** A measurement on commit `763c2e57`, ordered by the author on 2026-11-25. Nothing was built or changed. What to build follows the author's decision ([what the numbers say about the three proposals](#what-the-numbers-say-about-the-three-proposals)).
+**Status.** A measurement on commit `763c2e57`, ordered by the author on 2026-11-25. Nothing was built or changed. The numbers below are that commit's. The same day the author released four of the smaller steps at the end of this note; [what they changed](#after-the-four-steps) stands last. What to build follows the author's decision ([what the numbers say about the three proposals](#what-the-numbers-say-about-the-three-proposals)).
 
 ## Terms
 
@@ -142,3 +142,18 @@ Smaller steps the numbers point to, each on its own:
 3. Print the reaching test files per site in the test inventory. The trace holds them; this note needed a script of its own to read them.
 4. Decide what "rule test" means for the count: the file name, the mark `rule`, or any test that calls the site's function directly. By file name it is 37 of 264; with the station files it is 86.
 5. List the tellers of one condition, starting from the functions that several gate modules call.
+
+## After the four steps
+
+Built on 2026-11-25 after this measurement: a test with its valid twin for each of the six unreached blockers; the test inventory prints the test files per site, traces each `SystemExit` raised in the package with a string message, and counts the tests that carry the mark `rule`. The extended inventory ran once on that state (exit 0; 4642 passed, 4 skipped, 862 s).
+
+| What                                             | Before     | After                        |
+|--------------------------------------------------|------------|------------------------------|
+| gate-finding sites no test reaches               | 10         | 4, all warnings              |
+| gate-finding sites reached only through commands | 5          | 4                            |
+| exit sites reached below a command               | not traced | 75 of 86                     |
+| exit sites no test reaches                       | not traced | 11                           |
+| printed sites                                    | not traced | not traced (6)               |
+| sites a rule test reaches                        | 37 of 264  | 37 of 264 by the mark `rule` |
+
+The 11 unreached exit sites lie in `labkit/checks/recheck.py` (6), `labkit/run/start_check.py` (4) and `labkit/checks/prompt_check.py` (1). The 202 tests that carry the mark reach no exit site. The count by the mark equals the count by file name here, because every marked test that reaches a site stands in a `test_rules_*` file. The mark establishes that a test starts no process and enters no command; whether it holds one condition, a reader of the test establishes.
