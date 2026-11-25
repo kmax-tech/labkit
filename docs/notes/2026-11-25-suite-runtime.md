@@ -60,3 +60,26 @@ Built after this measurement, in the tests only. Every measurement a test starts
 
 The whole suite with both, run alone: exit 0, 4659 passed, 1 skipped, 746 s — against 831 s and 875 s before, about 12 % less. The estimate above (450 to 550 s) was extrapolated from two tests run alone and did not hold under 11 workers. Why the gain is smaller there was not examined. No other test depended on the slow git.
 
+## After keeping git answers within a command (2026-11-25)
+
+Built for cause 2 and cause 3, in the package: while a console command runs, an answer about a git object named by its full hash is asked once (`console.once_per_command`, `repo._once_by_hash`). Kept are a blob's content, a full hash that names a commit, and the tree a run started from per commit, patch and file list. Nothing that depends on `HEAD`, the index or the working tree is kept, and nothing at all outside a console command.
+
+Measured on `tests/test_repair_paths.py`, a correction then a code repair, run alone without parallel workers, with the direct git and the log of every child process, alternately from a worktree of the commit before (`73918ea0`) and from the changed checkout, twice each. The machine was in use by another session (load 2 to 6 on 11 cores), so the times are a direction, the counts are exact and were the same in both runs of a pair.
+
+| Count                                             | Before | After  | Change |
+|---------------------------------------------------|--------|--------|--------|
+| git processes in the whole test                   | 5590   | 3317   | −41 %  |
+| in the six calls of `labkit-next`                 | 1448   | 600    | −59 %  |
+| in the first `labkit-adopt`                       | 452    | 198    | −56 %  |
+| in the two later calls of `labkit-adopt`          | 1095   | 430    | −61 %  |
+| in the seven calls of the stand-in audit answer   | 496    | 496    | 0      |
+| in the nine calls of `02_analyze.py --check`      | 178    | 178    | 0      |
+| `git read-tree`, `git write-tree`, `git cat-file` | 1263   | 165    | −87 %  |
+| `git rev-parse`                                   | 2089   | 1288   | −38 %  |
+| the test's call, seconds (two runs each)          | 65, 78 | 51, 54 |        |
+
+The expectation before the build was that a quarter to a half of a command's git calls go; for the labkit commands it is 56 % to 61 %, for the whole test 41 %. A measure script and the analysis script keep nothing, as built: their counts did not change (the two measure starts read 79 against 81, and 12 `pip freeze` git calls appear only in the runs from the worktree — a difference between the two trees' installs, not of the change; together 14 of the 2273 fewer processes).
+
+What remains is mostly what was left out on purpose: `git rev-parse` (1288), `git log` (566), `git ls-files` (414) and `git show` (281) read `HEAD`, the index or history by name. Keeping those needs a rule for when a kept answer still holds — a command that commits moves `HEAD` in mid-process.
+
+Not measured: the whole suite's time against the 746 s before (one run after the change gives the exit status, not a comparison — sequential runs drift), and any other test. The measurement was taken before an independent reader's findings were worked in; those changed names, one docstring and a refusal of nested commands, not which answers are kept. Logs and scripts: internal evidence repository, `2026-11-25-check-inventories/run6-kept-answers/`.
