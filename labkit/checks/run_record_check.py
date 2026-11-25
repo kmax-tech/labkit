@@ -313,7 +313,8 @@ def _or_declared(found: GateFinding, parent: str) -> GateFinding:
         f"answer file and the module that reads an answer as {parent} had them —, "
         f"derive a run from {parent} that declares that module "
         f"(`runlog.run(..., derived_from={parent!r}, answer_reading=MODULE)`): "
-        f"its parent is compared in that module only (docs/workflow.md, "
+        f"its parent is compared in that module only (`labkit-next --guide`, step "
+        f"4; the procedure: docs/workflow.md in the labkit repository, "
         f"'Correcting the evaluation of unchanged answers')",
     )
 

@@ -85,4 +85,6 @@ translation, and it has its own commit.
 
 `lib exp` in LAB-003 No run without an intent paragraph and
 LAB-046 Notebooks: explore yes, report never became `labkit-init exp` with
-labkit's own scaffold (0.78.0).
+labkit's own scaffold (0.78.0); in LAB-016 Resolution check before freezing
+it stood through 0.115.0, with the two contracts named by a path on the
+author's machine.

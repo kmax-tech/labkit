@@ -397,7 +397,7 @@ def earlier_ids(text: str) -> list[str]:
 EARLIER_IDS_HELP = (
     "promise ids are written as their kind and a number since labkit "
     "0.104.0 — [criterion-1], [quality-check-1], [branch-1] "
-    "(docs/promise-block.md); re-register the promises so, or check this "
+    "(docs/promise-block.md in the labkit repository); re-register the promises so, or check this "
     "protocol with labkit 0.103.0 (C/A/B) or 0.47 (K/S/W/N)"
 )
 
