@@ -105,3 +105,11 @@ Two ways to make code and sentence agree, the author's decision:
 1. The code follows the sentence: runlog refuses model calls for every derived run, declared or not. One condition changes (`labkit/run/runlog.py:947`). A stored answer read in a replay never reaches `llm` (`labkit/run/llm_cache.py:305`), so a derived run that replays keeps working; a derived run that asks a model today ends with `CallRefused` — a break to announce. Another client stays unseen.
 2. The sentence follows the code: the README and the constant say that the contract is refused beforehand only with a declared answer reading and seen afterwards only through the answer cache.
 
+**Decided, 2026-11-25: the code follows the sentence.** The author released the first way and asked for counter-tests that reach the call. Before the change, the test of a derived run without declaration showed the call arriving at the backend's send (`tests/test_answer_reading_start.py`, then named `test_a_derived_run_without_it_starts_as_before`: passed). After it, `runlog.run` enters `llm.refusing_calls` for every derived run, and the tests hold:
+
+- a derived run with and without `answer_reading`: `complete`, `complete_response` and `complete_many` raise `CallRefused`, the backend's send is not called, in worker threads too, and a run that broke off releases the refusal (`tests/test_answer_reading_start.py`);
+- at a stand-in server that counts its requests (`tests/test_llm_cache.py`, `DerivedRun`): a stored answer is read in normal and replay mode, a miss and a call that cannot be cached raise `CallRefused` or `CacheMiss`, a call past the cache raises `CallRefused` — the count stays at the parent's one request;
+- the twins: a run that is not derived reaches the backend, directly and through the cache on a miss; a repeat asks the model again (`test_a_repeat_never_reads_the_cache`, as before).
+
+Not covered by a new test: a run of kind `measurement` that is not derived (the condition reads `derived_from` only; the scenario files start such runs). The limits of rows four and five of the table stand: another client, and a `Run` never entered. The audit prompt still does not ask whether a derived run called a model.
+
