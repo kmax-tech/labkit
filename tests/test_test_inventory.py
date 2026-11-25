@@ -347,6 +347,27 @@ class Trace(unittest.TestCase):
         self.assertIn("held the monitoring id): 1.", told)
 
 
+class ExitStatus(unittest.TestCase):
+    """The command's exit status (`exit_status`): a reach file asked for and
+    not written is no success."""
+
+    def test_a_green_suite_with_every_exit_traced_is_0(self):
+        self.assertEqual(ti.exit_status(0, reach_asked=True, untraced=0), 0)
+        self.assertEqual(ti.exit_status(0, reach_asked=False, untraced=0), 0)
+
+    def test_a_reach_file_asked_for_and_not_written_is_1(self):
+        self.assertFalse(ti.reach_stands(0, 2))
+        self.assertEqual(ti.exit_status(0, reach_asked=True, untraced=2), 1)
+
+    def test_the_twin_untraced_exits_without_a_reach_file_stay_0(self):
+        self.assertEqual(ti.exit_status(0, reach_asked=False, untraced=2), 0)
+
+    def test_a_suite_not_green_is_1_either_way(self):
+        self.assertFalse(ti.reach_stands(1, 0))
+        self.assertEqual(ti.exit_status(1, reach_asked=False, untraced=0), 1)
+        self.assertEqual(ti.exit_status(1, reach_asked=True, untraced=0), 1)
+
+
 class CollectedIds(unittest.TestCase):
     """`collected_ids`: the node ids among the lines `pytest --collect-only
     -q` prints, the summary and blank lines left out."""

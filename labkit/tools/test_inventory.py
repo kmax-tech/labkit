@@ -49,7 +49,8 @@ edit. With `--reach FILE` a green run in which every process traced its exits
 also writes each traced site's
 standing, test counts and test files without line numbers
 (`render_reach`) — `docs/checks-reach.tsv` is the one such
-file the repository keeps, the source of `docs/checks-overview.md`.
+file the repository keeps, the source of `docs/checks-overview.md`. A run
+that does not write the file asked for ends with exit 1.
 """
 
 from __future__ import annotations
@@ -996,15 +997,37 @@ def collected_ids(output: str) -> set[str]:
     return {ln.strip() for ln in output.splitlines() if "::" in ln}
 
 
+def reach_stands(suite_exit: int, untraced: int) -> bool:
+    """Does a traced run's reach stand for the whole suite — the suite green
+    (SUITE_EXIT 0) and every process's exits traced (UNTRACED 0)? Only then
+    is a reach file written. Pure."""
+    return suite_exit == 0 and untraced == 0
+
+
+def exit_status(suite_exit: int, reach_asked: bool, untraced: int) -> int:
+    """The command's exit status: 1 when the suite is not green (SUITE_EXIT
+    not 0), or when a reach file was asked for (REACH_ASKED) and the run's
+    reach does not stand (`reach_stands`), so the file was not written;
+    else 0. Without `--reach`, processes that traced no exit (UNTRACED)
+    leave it 0: the inventory states their number. Pure."""
+    if suite_exit != 0:
+        return 1
+    if reach_asked and not reach_stands(suite_exit, untraced):
+        return 1
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Run the traced suite and print the inventory, or write it to `--out
-    FILE`; 0, or 1 when the suite is not green (the inventory is still
-    written, its first line says so).
+    FILE`; the exit status is `exit_status`'s: 1 when the suite is not
+    green, or when `--reach FILE` was asked for and not written (the
+    inventory is still written, its first line names a suite not green).
 
     Side effects:
         Writes `--out FILE`; writes `--reach FILE` (the reach per site,
         `render_reach`) only when the suite is green and every process
-        traced its exits — else the reach is not the suite's.
+        traced its exits (`reach_stands`) — else the reach is not the
+        suite's.
     """
     from labkit.formats import console
     from labkit.tools.check_inventory import (
@@ -1048,14 +1071,13 @@ def main(argv: list[str]) -> int:
     if code != 0:
         suite_line = f"NOT GREEN (pytest exit {code}): {suite_line}"
     reached = reach(events, sites, commands)
-    # the reach file stands for the whole suite with every exit traced
-    if reach_file is not None and code == 0 and untraced == 0:
+    if reach_file is not None and reach_stands(code, untraced):
         reach_file.write_text(
             render_reach(traced_reach(sites, reached, marked, suite_line)),
             encoding="utf-8",
         )
         print(f"test_inventory: wrote {reach_file}")
-    if reach_file is not None and (code != 0 or untraced != 0):
+    if reach_file is not None and not reach_stands(code, untraced):
         print(
             f"test_inventory: {reach_file} not written — the suite is not green "
             f"(pytest exit {code}) or {untraced} processes traced no exit",
@@ -1075,7 +1097,7 @@ def main(argv: list[str]) -> int:
     else:
         out.write_text(text, encoding="utf-8")
         print(f"test_inventory: wrote {out}")
-    return 0 if code == 0 else 1
+    return exit_status(code, reach_file is not None, untraced)
 
 
 def cli() -> None:
