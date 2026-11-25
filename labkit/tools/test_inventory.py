@@ -6,9 +6,12 @@ and through which layer it entered labkit.
 The basis for a clear test model: whether a rule's check is tested on its
 own or only inside a scenario that runs whole commands, and how many tests
 reach the same check. Runs the suite of the checkout labkit is installed
-from (`tests/`, `pytest -n auto`) once with every gate finding traced, and
-tells per rule and per finding site (`check_inventory.finding_sites`) the
-tests that reached it, by the layer through which each test entered:
+from (`tests/`, `pytest -n auto`) once with every gate finding built and
+every `SystemExit` raised with a string message traced, and tells per rule
+and per finding site
+(`check_inventory.finding_sites`) the tests that reached it — their count,
+how many of them carry the mark `rule`, and the test files they stand in —
+by the layer through which each test entered:
 
   - `command` — a console script's `main` or `cli` (`[project.scripts]`),
     called in the test's process or run in a subprocess it started
@@ -18,17 +21,28 @@ tests that reached it, by the layer through which each test entered:
 
 How it traces: a `sitecustomize` on PYTHONPATH (`install_trace`) wraps
 `GateFinding.__init__` in every Python process of the run that inherits its
-environment; each finding built appends the test (`PYTEST_CURRENT_TEST`),
-the first labkit frame outside `formats/gate.py` (the site) and the
-outermost labkit frame (the entry) to one file per process.
+environment and registers a `sys.monitoring` callback for raised
+exceptions; each finding built, and each `SystemExit` raised in the package
+with a message, appends the test (`PYTEST_CURRENT_TEST`), the site (for a
+finding the first labkit frame outside `formats/gate.py`, for an exit the
+raising frame) and the outermost labkit frame (the entry) to one file per
+process. The tests marked `rule` are the ones pytest collects under
+`-m rule`, collected once before the run.
 
 Its limits, which the output repeats: reaching a site is not asserting it —
-a test may build a finding and check something else; only gate findings
-are traced, not a site's `exit` or `printed` channel; a subprocess started
-with an environment of its own carries no test name and is not traced; a
-finding rebuilt where no site stands (`dataclasses.replace` in a gate)
-counts as unmapped. Computed at every call, committed nowhere: line
-numbers move with every edit.
+a test may build a finding and check something else; the mark `rule` holds
+that a test starts no process and enters no command, not that it holds one
+condition; a site's `printed` channel is not traced; of the exits only a
+`SystemExit` itself with a string code is — not a subclass
+(`recheck.NotVerifiable`) and not `console.Refused`, which the scan counts
+as no site either, and an exit site whose message is a name that holds an
+integer at run time is never reached; a subprocess started with an
+environment of its own carries no test name and is not traced; a process in
+which another tool holds the monitoring id traces no exit, and the output
+counts those processes; a finding rebuilt where no site stands
+(`dataclasses.replace` in a gate), or an exit raised where the scan counts
+none (`sys.exit("…")`), counts as unmapped. Computed at every call,
+committed nowhere: line numbers move with every edit.
 """
 
 from __future__ import annotations
@@ -41,6 +55,7 @@ import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from types import CodeType, FrameType
 from typing import TYPE_CHECKING, Any
 
 from labkit import PACKAGE_DIR
@@ -63,21 +78,33 @@ LAYERS = {
     "probes": "probe",
 }
 COMMAND = "command"
+#: the channels the trace follows (`check_inventory.FindingSite.channel`);
+#: a `printed` site is not traced
+FINDING, EXIT = "finding", "exit"
+#: the `sys.monitoring` tool id the trace of exits takes — one of the ids
+#: Python leaves to tools, apart from the debugger's, coverage's and the
+#: profiler's
+MONITOR_TOOL = 4
+#: the name's end of the marker a process leaves in the trace folder when it
+#: could not trace its exits
+EXITS_UNTRACED_SUFFIX = ".exits-untraced"
 USAGE = "usage: python -m labkit.tools.test_inventory [--out FILE]"
 
 
 @dataclass(frozen=True)
 class Event:
-    """One gate finding built during a test: the TEST (pytest's node id),
-    the site's PATH (relative to the package's parent) and LINE, the ENTRY
-    (`module.qualname` of the outermost labkit frame) and whether it was
-    built in a SUBPROCESS the test started."""
+    """One finding told during a test: the TEST (pytest's node id), the
+    site's PATH (relative to the package's parent) and LINE, the ENTRY
+    (`module.qualname` of the outermost labkit frame), whether it was told
+    in a SUBPROCESS the test started, and its CHANNEL — FINDING for a gate
+    finding built, EXIT for a `SystemExit` raised with a message."""
 
     test: str
     path: str
     line: int
     entry: str
     subprocess: bool
+    channel: str
 
 
 # -- the trace, in every process of the run ----------------------------------
@@ -103,21 +130,28 @@ def _module_of(rel: str) -> str:
     return rel.removesuffix(".py").removesuffix("/__init__").replace("/", ".")
 
 
-def _record(folder: str) -> None:
-    """Append the finding being built now as one JSON line to this
-    process's file in FOLDER; nothing outside a test."""
+def _record(folder: str, frame: FrameType | None, channel: str) -> None:
+    """Append what is told now as one JSON line to this process's file in
+    FOLDER: a gate finding being built (CHANNEL FINDING; FRAME the
+    constructor's caller, the site the first labkit frame outside
+    `formats/gate.py`) or a `SystemExit` being raised (CHANNEL EXIT; FRAME
+    the raising frame, which is the site). Nothing outside a test, and
+    nothing for an exit raised outside the package."""
     test = os.environ.get("PYTEST_CURRENT_TEST")
     if not test:
         return
     site: tuple[str, int] | None = None
     entry: tuple[str, str] | None = None
-    frame = sys._getframe(2)  # past _record and the wrapper
+    raised_here = channel == EXIT
     while frame is not None:
         rel = _package_rel(frame.f_code.co_filename)
+        if raised_here and rel is None:
+            return
         if rel is not None:
-            if site is None and rel != GATE_MODULE:
+            if site is None and (raised_here or rel != GATE_MODULE):
                 site = (rel, frame.f_lineno)
             entry = (rel, frame.f_code.co_qualname)
+        raised_here = False
         frame = frame.f_back
     if site is None or entry is None:
         return
@@ -129,15 +163,18 @@ def _record(folder: str) -> None:
         "line": site[1],
         "entry": f"{_module_of(entry[0])}.{entry[1]}",
         "subprocess": "pytest" not in sys.modules,
+        "channel": channel,
     }
     _out[1].write(json.dumps(line) + "\n")
     _out[1].flush()
 
 
 def install_trace() -> None:
-    """Wrap `GateFinding.__init__` so that each finding built is recorded,
-    when TRACE_ENV names a folder; else do nothing. Called by the
-    `sitecustomize` `run_suite` puts on PYTHONPATH."""
+    """Record each gate finding built and each `SystemExit` raised with a
+    message, when TRACE_ENV names a folder; else do nothing. Called by the
+    `sitecustomize` `run_suite` puts on PYTHONPATH. Wraps
+    `GateFinding.__init__` and registers a `sys.monitoring` callback for
+    raised exceptions (`trace_exits`)."""
     folder = os.environ.get(TRACE_ENV)
     if not folder:
         return
@@ -147,13 +184,47 @@ def install_trace() -> None:
 
     def traced(self: GateFinding, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401 — GateFinding's own signature
         built(self, *args, **kwargs)
-        _record(folder)
+        _record(folder, sys._getframe(1), FINDING)
 
     GateFinding.__init__ = traced  # type: ignore[method-assign]
+    try:
+        trace_exits(folder)
+    except ValueError as exc:
+        # an error here would end in Python's one-line sitecustomize warning
+        # and leave the exits of this process silently uncounted: the
+        # marker makes the inventory say so (`exits_untraced`)
+        marker = Path(folder) / f"{os.getpid()}{EXITS_UNTRACED_SUFFIX}"
+        marker.write_text(f"{exc}\n", encoding="utf-8")
+
+
+def trace_exits(folder: str) -> None:
+    """Record into FOLDER each `SystemExit` raised with a message — the
+    exception class itself, not a subclass, its code a string: what the
+    inventory counts as an `exit` site (`raise SystemExit(<message>)`).
+    Python reports a raised exception once in every frame it passes; only
+    the first report, in the raising frame, is recorded.
+
+    Raises:
+        ValueError: Another tool holds MONITOR_TOOL in this process.
+    """
+    monitoring = sys.monitoring
+    monitoring.use_tool_id(MONITOR_TOOL, "labkit-test-inventory")
+    last: list[BaseException] = []  # the exit reported last, to tell its later frames
+
+    def raised(code: CodeType, offset: int, exc: BaseException) -> None:
+        if type(exc) is not SystemExit or not isinstance(exc.code, str):
+            return
+        if last and last[0] is exc:
+            return
+        last[:] = [exc]
+        _record(folder, sys._getframe(1), EXIT)
+
+    monitoring.register_callback(MONITOR_TOOL, monitoring.events.RAISE, raised)
+    monitoring.set_events(MONITOR_TOOL, monitoring.events.RAISE)
 
 
 SITECUSTOMIZE = """\
-# written by labkit.tools.test_inventory: trace gate findings in this process
+# written by labkit.tools.test_inventory: trace findings and exits in this process
 try:
     from labkit.tools import test_inventory
 except ImportError:
@@ -212,11 +283,24 @@ def read_events(trace: Path) -> list[Event]:
                 raise ValueError(f"{f}:{n}: not a trace line (no object)")
             try:
                 out.append(
-                    Event(d["test"], d["path"], d["line"], d["entry"], d["subprocess"])
+                    Event(
+                        d["test"],
+                        d["path"],
+                        d["line"],
+                        d["entry"],
+                        d["subprocess"],
+                        d["channel"],
+                    )
                 )
             except KeyError as exc:
                 raise ValueError(f"{f}:{n}: not a trace line (no {exc})") from exc
     return out
+
+
+def exits_untraced(trace: Path) -> int:
+    """How many processes of the run left a marker in TRACE that they could
+    not trace their exits (`install_trace`)."""
+    return len(list(trace.glob(f"*{EXITS_UNTRACED_SUFFIX}")))
 
 
 # -- the inventory, from the events ------------------------------------------
@@ -241,25 +325,54 @@ def site_at(path: str, line: int, sites: list[FindingSite]) -> FindingSite | Non
     return min(hits, key=lambda s: s.end_line - s.line) if hits else None
 
 
+def traced_sites(sites: list[FindingSite]) -> list[FindingSite]:
+    """Of SITES, those the trace follows: the gate findings and the exits."""
+    return [s for s in sites if s.channel in (FINDING, EXIT)]
+
+
+def require_one_site_per_line(traced: list[FindingSite]) -> None:
+    """Refuse TRACED sites of which two start on one line of one file: a
+    site is known by its file and line (`Reach.by_site`). `main` asks
+    before the suite runs, `reach` again for any other caller.
+
+    Raises:
+        ValueError: Naming the file and line two sites share.
+    """
+    seen: set[tuple[str, int]] = set()
+    for s in traced:
+        if (s.path, s.line) in seen:
+            raise ValueError(
+                f"{s.path}:{s.line}: two traced finding sites start on this line"
+            )
+        seen.add((s.path, s.line))
+
+
 @dataclass(frozen=True)
 class Reach:
-    """Which tests reached which site: BY_SITE maps a site's (path, line)
-    to {layer: the tests that entered through it}; UNMAPPED are the events
-    whose place is no finding site."""
+    """Which tests reached which site: BY_SITE maps a traced site's (path,
+    line) to {layer: the tests that entered through it}; UNMAPPED are the
+    events whose place is no site of their channel."""
 
     by_site: dict[tuple[str, int], dict[str, set[str]]]
     unmapped: list[Event]
 
 
 def reach(events: list[Event], sites: list[FindingSite], commands: set[str]) -> Reach:
-    """The reach of EVENTS over the finding-channel SITES (`Reach`). Pure."""
-    traced = [s for s in sites if s.channel == "finding"]
+    """The reach of EVENTS over the traced SITES (`traced_sites`), each
+    event held to the sites of its own channel (`Reach`). Pure.
+
+    Raises:
+        ValueError: Two traced sites start on one line of one file — the
+            key of `Reach.by_site` would stand for both.
+    """
+    traced = traced_sites(sites)
+    require_one_site_per_line(traced)
     by_site: dict[tuple[str, int], dict[str, set[str]]] = {
         (s.path, s.line): defaultdict(set) for s in traced
     }
     unmapped = []
     for e in events:
-        s = site_at(e.path, e.line, traced)
+        s = site_at(e.path, e.line, [s for s in traced if s.channel == e.channel])
         if s is None:
             unmapped.append(e)
             continue
@@ -298,32 +411,51 @@ def render_test_inventory(
     sites: list[FindingSite],
     r: Reach,
     slow_files: set[str],
+    rule_tests: set[str],
     suite_line: str,
     failed: list[str],
+    *,
+    exits_untraced: int = 0,
 ) -> str:
-    """The inventory as markdown: the run, the standing of the sites, per
-    rule, the sites no test reaches below a command, the unreached, the
-    sites most tests reach, and per test file."""
-    traced = [s for s in sites if s.channel == "finding"]
+    """The inventory as markdown: the run, the standing of the traced sites
+    by channel, the sites a test marked `rule` (RULE_TESTS, node ids)
+    reaches, per rule, the sites no test reaches below a command, the
+    unreached, the sites most tests reach, per test file, per scenario
+    test, per site with its test files, and the events no site stands
+    for. EXITS_UNTRACED is the number of processes that traced no exit
+    (`exits_untraced`); the head names it."""
+    traced = traced_sites(sites)
     key = {(s.path, s.line): s for s in traced}
     stand = {k: site_standing(v) for k, v in r.by_site.items()}
+    channels = (FINDING, EXIT)
+    n = {c: sum(1 for s in traced if s.channel == c) for c in channels}
+    printed = len(sites) - len(traced)
     out = [
         "# Test inventory — which test reaches which finding site",
         "",
-        f"Suite: {suite_line}. Gate-finding sites: {len(traced)} of "
-        f"{len(sites)} finding sites (the `exit` and `printed` channels are not "
-        f"traced). Unmapped findings (built where no site stands): {len(r.unmapped)}.",
+        f"Suite: {suite_line}. Traced sites: {n[FINDING]} gate findings and "
+        f"{n[EXIT]} exits of {len(sites)} finding sites; the {printed} `printed` "
+        f"sites are not traced. Unmapped findings and exits (told where no site "
+        f"stands): {len(r.unmapped)}. Processes that traced no exit (another "
+        f"tool held the monitoring id): {exits_untraced}.",
+        "",
+        "An exit is a `SystemExit` itself raised in the package with a string "
+        "message; a subclass and `console.Refused` are no site and not traced.",
         "",
         "Reaching a site is not asserting it; a subprocess with an environment "
         "of its own is not traced. `direct`: some test entered below a "
         "command (a gate, check, format … function); `only through commands`: "
         "every test that reached it ran a whole command.",
         "",
-        "| standing | sites |",
-        "|---|---|",
+        "| standing | gate findings | exits |",
+        "|---|---|---|",
     ]
     for name in STANDINGS:
-        out.append(f"| {name} | {sum(1 for v in stand.values() if v == name)} |")
+        counts = [
+            sum(1 for k, v in stand.items() if v == name and key[k].channel == c)
+            for c in channels
+        ]
+        out.append(f"| {name} | {counts[0]} | {counts[1]} |")
     lowest = [lowest_layer(v) for v in r.by_site.values()]
     out += [
         "",
@@ -335,13 +467,80 @@ def render_test_inventory(
     out += [
         f"| {layer} | {lowest.count(layer)} |" for layer in DEPTH if layer in lowest
     ]
-    out += _per_rule(key, stand, r)
+    out += _rule_marked(key, r, rule_tests)
+    findings = {k: s for k, s in key.items() if s.channel == FINDING}
+    out += _per_rule(findings, stand, r)
     out += _site_lists(key, stand, r)
     out += _most_reached(key, r)
     out += _per_file(r, slow_files)
     out += _per_scenario(r, slow_files)
+    out += _per_site(key, stand, r, rule_tests)
     out += _unmapped_and_failed(r, failed)
     return "\n".join(out) + "\n"
+
+
+def _rule_marked(
+    key: dict[tuple[str, int], FindingSite], r: Reach, rule_tests: set[str]
+) -> list[str]:
+    """The count of sites a test marked `rule` reaches, by channel, and
+    what the mark does and does not establish."""
+    counts = {
+        c: (
+            sum(
+                1
+                for k, s in key.items()
+                if s.channel == c and _tests(r.by_site[k]) & rule_tests
+            ),
+            sum(1 for s in key.values() if s.channel == c),
+        )
+        for c in (FINDING, EXIT)
+    }
+    return [
+        "",
+        "## Sites a test marked `rule` reaches",
+        "",
+        f"{len(rule_tests)} tests carry the mark `rule`. They reach "
+        f"{counts[FINDING][0]} of {counts[FINDING][1]} gate-finding sites and "
+        f"{counts[EXIT][0]} of {counts[EXIT][1]} exit sites; the table per site "
+        "names the count for each. The mark's guard refuses a test that "
+        "starts a process or enters a console command, and `pure_call` a "
+        "check that opens a file, each within the limits "
+        "`tests/check_guards.py` names. That a test holds "
+        "one condition, with its violation and its valid twin, is not "
+        "established by the mark: a reader of the test establishes it.",
+    ]
+
+
+def _per_site(
+    key: dict[tuple[str, int], FindingSite],
+    stand: dict[tuple[str, int], str],
+    r: Reach,
+    rule_tests: set[str],
+) -> list[str]:
+    """One row per traced site: its standing, its tests, how many of them
+    carry the mark `rule`, and the test files they stand in, most tests
+    first."""
+    out = [
+        "",
+        "## Per site (the test files that reach it)",
+        "",
+        "| site | unit | channel | standing | tests | rule tests | test files |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for k in sorted(key):
+        s, tests = key[k], _tests(r.by_site[k])
+        per_file: dict[str, int] = defaultdict(int)
+        for test in tests:
+            per_file[test.split("::", 1)[0]] += 1
+        files = ", ".join(
+            f"`{f}` {count}"
+            for f, count in sorted(per_file.items(), key=lambda x: (-x[1], x[0]))
+        )
+        out.append(
+            f"| `{s.path}:{s.line}` | `{s.unit}` | {s.channel} | {stand[k]} | "
+            f"{len(tests)} | {len(tests & rule_tests)} | {files or '—'} |"
+        )
+    return out
 
 
 def _per_rule(
@@ -471,7 +670,7 @@ class ScenarioTest:
 
 
 def scenario_tests(r: Reach, slow: set[str]) -> list[ScenarioTest]:
-    """Every test of the SLOW files that reached a gate finding site, with
+    """Every test of the SLOW files that reached a traced site, with
     its sites and the sites no faster test reaches below a command
     (`ScenarioTest`), sorted by test id. Reach is not an assertion: COVERED
     says only that each site it reaches has a faster test too, never that
@@ -507,8 +706,8 @@ def scenario_tests(r: Reach, slow: set[str]) -> list[ScenarioTest]:
 def scenario_standing(test: str, listed: list[ScenarioTest]) -> str:
     """The standing of TEST: its entry's in LISTED (`scenario_tests`), else
     UNKNOWN — a scenario test whose findings were not traced (it reached no
-    gate finding, only exits or printed lines, or its subprocess carried no
-    test name) says nothing about redundancy."""
+    traced site, only printed lines or exits that are none, or its
+    subprocess carried no test name) says nothing about redundancy."""
     return next((s.standing for s in listed if s.test == test), UNKNOWN)
 
 
@@ -522,7 +721,7 @@ def _per_scenario(r: Reach, slow: set[str]) -> list[str]:
         "",
         "## Per scenario test (step 4: reach only, not assertions)",
         "",
-        f"{len(listed)} scenario tests reached a gate finding site: "
+        f"{len(listed)} scenario tests reached a traced site: "
         f"{counts[COVERED]} {COVERED} (every site has a faster test too), "
         f"{counts[HOLDS_A_SITE]} {HOLDS_A_SITE}. A scenario test not listed is "
         f"{UNKNOWN}. Reach never establishes a replacement: its assertions are "
@@ -538,20 +737,22 @@ def _per_scenario(r: Reach, slow: set[str]) -> list[str]:
 
 
 def _unmapped_and_failed(r: Reach, failed: list[str]) -> list[str]:
-    """The places that built a finding where no site stands, most first,
-    and the tests that failed under the trace."""
-    places: dict[str, int] = defaultdict(int)
+    """The places that built a finding or raised an exit where no site of
+    that channel stands, most first, and the tests that failed under the
+    trace."""
+    places: dict[tuple[str, str], int] = defaultdict(int)
     for e in r.unmapped:
-        places[f"{e.path}:{e.line}"] += 1
+        places[(f"{e.path}:{e.line}", e.channel)] += 1
     out = [
         "",
-        "## Findings built where no site stands",
+        "## Findings and exits told where no site stands",
         "",
-        "| place | findings |",
-        "|---|---|",
+        "| place | channel | told |",
+        "|---|---|---|",
     ]
     out += [
-        f"| `{p}` | {n} |" for p, n in sorted(places.items(), key=lambda x: -x[1])[:15]
+        f"| `{p}` | {channel} | {n} |"
+        for (p, channel), n in sorted(places.items(), key=lambda x: -x[1])[:15]
     ]
     if failed:
         out += ["", "## Tests that failed under the trace", ""]
@@ -567,6 +768,47 @@ def slow_files(tests_dir: Path) -> set[str]:
         for p in tests_dir.glob("test_*.py")
         if "pytestmark = pytest.mark.slow" in p.read_text(encoding="utf-8")
     }
+
+
+def rule_tests(repo: Path) -> set[str]:
+    """The node ids of the tests of REPO's suite that carry the mark
+    `rule`, as pytest collects them (`--collect-only -m rule`); runs no
+    test.
+
+    Raises:
+        RuntimeError: The collection did not end with exit 0 — pytest's
+            output is in the message.
+    """
+    r = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "-m",
+            "rule",
+            "-p",
+            "no:cacheprovider",
+            "tests",
+        ],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"collecting the tests marked `rule` ended with exit {r.returncode}:\n"
+            f"{r.stdout}{r.stderr}"
+        )
+    return collected_ids(r.stdout)
+
+
+def collected_ids(output: str) -> set[str]:
+    """The node ids in OUTPUT, what `pytest --collect-only -q` printed: its
+    lines that name a test (`file::…`), without the summary and blank
+    lines. Pure."""
+    return {ln.strip() for ln in output.splitlines() if "::" in ln}
 
 
 def main(argv: list[str]) -> int:
@@ -597,6 +839,8 @@ def main(argv: list[str]) -> int:
         ).values()
     }
     sites = finding_sites(read_modules(PACKAGE_DIR))
+    require_one_site_per_line(traced_sites(sites))
+    marked = rule_tests(repo)
     with tempfile.TemporaryDirectory(prefix="labkit-test-inventory-") as d:
         folder = Path(d)
         log = folder / "pytest.log"
@@ -606,14 +850,17 @@ def main(argv: list[str]) -> int:
         suite_line = lines[-1] if lines else "no output"
         failed = [ln.split(" ", 1)[1] for ln in lines if ln.startswith("FAILED ")]
         events = read_events(folder / "trace")
+        untraced = exits_untraced(folder / "trace")
     if code != 0:
         suite_line = f"NOT GREEN (pytest exit {code}): {suite_line}"
     text = render_test_inventory(
         sites,
         reach(events, sites, commands),
         slow_files(repo / "tests"),
+        marked,
         suite_line,
         failed,
+        exits_untraced=untraced,
     )
     if out is None:
         sys.stdout.write(text)
