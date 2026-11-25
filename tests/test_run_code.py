@@ -370,7 +370,7 @@ class CodeSinceRun(unittest.TestCase):
     def test_a_declared_reading_without_a_repository_or_its_script_holds(self) -> None:
         """The comparison of a declared answer reading needs the area's
         repository and the declaring run's script: with the script gone, and
-        with the repository gone, the parent's comparison holds as not made.
+        with the repository gone, the reading's comparison holds as not made.
         The twin, both in place: the declaration passes."""
         parent = self.run_now()
         declared = self.derived_reading(parent, "lib/counting.py")
@@ -378,33 +378,35 @@ class CodeSinceRun(unittest.TestCase):
         again = self.area / "scripts" / "03_reevaluate.py"
         kept = again.read_text(encoding="utf-8")
         again.unlink()
-        # the derived run's own comparison names the gone script too, with
-        # the restore as a way out; the parent's names measuring anew alone
-        (of_parent,) = [
+        # two findings carry this sentence, both naming the derived run: the
+        # run's own code comparison adds the restore to its way out, the
+        # comparison of the declared reading names measuring anew alone —
+        # only the way out tells them apart
+        (reading_not_compared,) = [
             f
             for f in code_since_run(self.area, declared)[0]
             if f.fix == measure_anew(self.area)
         ]
         self.assertEqual(
-            of_parent.text,
+            reading_not_compared.text,
             f"{declared.name}: its script scripts/03_reevaluate.py is gone",
         )
-        self.assertEqual(of_parent.rule, gate.TECHNICAL_RULE)
+        self.assertEqual(reading_not_compared.rule, gate.TECHNICAL_RULE)
         again.write_text(kept, encoding="utf-8")
         shutil.rmtree(self.repo / ".git")
-        (of_parent,) = [
+        (reading_not_compared,) = [
             f
             for f in code_since_run(self.area, declared)[0]
             if f.text.startswith("the answer reading")
         ]
         self.assertEqual(
-            of_parent.text,
+            reading_not_compared.text,
             f"the answer reading lib/counting.py that {declared.name} declared "
             f"cannot be compared with what {parent.name} ran: the area lies in "
             f"no git repository now",
         )
-        self.assertEqual(of_parent.fix, measure_anew(self.area))
-        self.assertEqual(of_parent.rule, gate.TECHNICAL_RULE)
+        self.assertEqual(reading_not_compared.fix, measure_anew(self.area))
+        self.assertEqual(reading_not_compared.rule, gate.TECHNICAL_RULE)
 
     def test_only_a_found_difference_names_its_run(self) -> None:
         """`GateFinding.changed_since` is the comparison's datum: the run

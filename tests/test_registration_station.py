@@ -31,7 +31,7 @@ from state_fixture import audit_record
 
 from labkit.formats import findings, followup
 from labkit.formats.area_state import Measured
-from labkit.formats.gate import BLOCKER
+from labkit.formats.gate import BLOCKER, GateFinding
 from labkit.formats.protocol_history import Workflow
 from labkit.gates import (
     audit_prompt,
@@ -582,21 +582,25 @@ class FirstMeasurementsOnTwoBranches(_TwoRuns):
         _git(self.root, "checkout", "-q", "-b", "side", base)
         self.run_under(later_type, FOUR, LATER)
 
-    def test_different_types_hold_with_a_new_registration_or_a_handover(self):
-        self.diverged("exploratory", "confirmatory")
+    def split_holds(self) -> tuple[Workflow, list[GateFinding]]:
+        """(workflow, the holds of station 2 whose text opens with SPLIT)."""
         ctx = report_context.checked(self.area, self.protocol)
         assert ctx.run is not None
         flow, holds = registration_station.station_changes(
             ctx.area, ctx.protocol, PID, ctx.run, ctx.area_state, ctx.evidence
         )
+        return flow, [h for h in holds if h.text.startswith(self.SPLIT)]
+
+    def test_different_types_hold_with_a_new_registration_or_a_handover(self):
+        self.diverged("exploratory", "confirmatory")
+        flow, (split,) = self.split_holds()
         self.assertIs(flow, Workflow.UNDECIDED)
-        (split,) = [h for h in holds if h.text.startswith(self.SPLIT)]
         self.assertEqual((split.grade, split.rule.rule_id), (BLOCKER, "LAB-003"))
         self.assertIn(f"{FIRST} (exploratory), {LATER} (confirmatory)", split.text)
         self.assertIn("--handover", split.fix or "")
 
     def test_the_twin_one_type_on_both_branches_has_no_such_hold(self):
         self.diverged("exploratory", "exploratory")
-        flow, lines, _ = self.station()
+        flow, split = self.split_holds()
         self.assertIs(flow, Workflow.EXPLORATORY)
-        self.assertFalse(any(self.SPLIT in ln for ln in lines), lines)
+        self.assertEqual(split, [])
