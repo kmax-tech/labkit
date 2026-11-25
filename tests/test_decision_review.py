@@ -931,6 +931,34 @@ class TheCall(unittest.TestCase):
         self.assertIn("review state: every decision reviewed is released", out)
         self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
 
+    def test_a_decision_taken_back_and_restored_needs_a_new_review(self):
+        """An upheld decision taken back and given again word for word is not
+        released by the review of the earlier one; a review of the restored
+        decision releases it. The twin: the same decision given again
+        without a take-back in between keeps its review."""
+        limit = ("limitation", "Finding noted", "stands")
+        area, record = area_with([BLOCKER], {1: limit})
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        rc, out, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, out)
+
+        def upheld() -> bool:
+            return reviews.upholding(
+                findings.read(record), 1, reviews.area_reviews(area), text
+            )
+
+        self.assertTrue(upheld())
+        decide(record, 1, *limit)
+        self.assertTrue(upheld())
+        decide(record, 1, "open", "the limit may not hold")
+        decide(record, 1, *limit)
+        now = findings.read(record).findings[0]
+        self.assertEqual((now.status, now.reason, now.effect), limit)
+        self.assertFalse(upheld())
+        rc, out, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, out)
+        self.assertTrue(upheld())
+
     def test_a_rejected_decision_is_not_released_by_a_later_draw(self):
         """Every draw on one state counts, so an unchanged rejected is not
         re-reviewed until an upheld comes: the command refuses another draw,

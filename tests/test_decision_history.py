@@ -188,6 +188,17 @@ class ArrayLines(unittest.TestCase):
         read = tomllib.loads("\n".join(lines))[decision_history.KEY]
         self.assertEqual(decision_history.read_entries(read), (FIXED, awkward))
 
+    def test_no_history_adds_nothing_to_a_digest_and_each_entry_adds_its_values(self):
+        self.assertEqual(decision_history.digest_fields(()), [])
+        self.assertEqual(
+            decision_history.digest_fields((FIXED, TAKEN_BACK)),
+            [
+                decision_history.KEY,
+                *("fixed", "seed set", "", "2026-11-24T14:02"),
+                *("open", "set after the split", "", "2026-11-24T15:10"),
+            ],
+        )
+
     def test_the_array_ends_after_its_closing_line_or_never(self):
         lines = [
             "x = 1\n",

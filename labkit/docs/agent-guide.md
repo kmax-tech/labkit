@@ -108,7 +108,7 @@ Before you report any result, run `finalize <area>`, then `labkit-audit
 
 `labkit-audit <area> --decide <N> <STATUS> --why "<REASON>" --record <record>`
 
-A decision can be replaced, also taken back with status `open`; taking a decision back owes `--why`. The record keeps each replaced decision with its reason (`replaced_decisions`), and `--findings` shows it. Do not edit these entries.
+A decision can be replaced, also taken back with status `open`; taking a decision back owes `--why`. The record keeps each replaced decision with its reason (`replaced_decisions`), and `--findings` shows it. Do not edit these entries. A decision taken back and given again, even word for word, owes its review again, and the next follow-up audit judges a decided BLOCKER again.
 
 READ lines are hints, not findings to decide. The third field of each finding is what it is about, the auditor's subject: `implementation` (code, data handling or run depart from the registration), `statement` (the run is right; the finding is about what the text says) or `undetermined` (a suspicion the auditor could not settle; its check settles it). `--decide` refuses `limitation` for an `implementation` and an `undetermined` finding. The sixth field is the rule the finding holds, `LAB-nnn` or `new class`; it is kept apart from the subject, and a decision never changes it.
 

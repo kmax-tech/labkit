@@ -228,7 +228,8 @@ def claim_decision_digest(claim: ReportClaim) -> str:
     """The digest of CLAIM as decided — line, kind, why, status, reason —
     which a claim review binds to (`ClaimVerdict.decision_sha`): a changed
     reason is another decision, and a verdict on the old one says nothing
-    about it. As `findings.decision_digest`."""
+    about it. As `findings.decision_digest`, without replaced decisions:
+    a claim keeps none (`decision_history`)."""
     fields = [claim.line, claim.kind, claim.why, claim.status, claim.reason]
     return digest(as_stored(fields).encode("utf-8"))
 

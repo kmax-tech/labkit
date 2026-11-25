@@ -1010,18 +1010,23 @@ def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
 
 def decision_digest(f: Finding) -> str:
     """The digest of F as decided — grade, text, status, reason, effect, and
-    the required check and its note and the finding a carried one continues
-    when there are — which a review and a fix verdict
+    the required check and its note, the finding a carried one continues
+    and the decisions this one replaced when there are — which a review and
+    a fix verdict
     bind to (`reviews.Decision.decision_sha`, `FixVerdict.decision_sha`): a
     changed reason, effect or check is another decision, and a verdict on
-    the old one says nothing about it. The check joins the digest only
-    when there is one, so a finding without a check keeps its digest and
-    the reviews bound to it."""
+    the old one says nothing about it. So is a decision taken back and
+    given again word for word: its replaced decisions differ
+    (`decision_history.digest_fields`), and a confirmation of the earlier
+    one does not return with the wording. The check, the carried finding
+    and the replaced decisions join the digest only when there are any, so
+    a finding without them keeps its digest and the reviews bound to it."""
     fields = [f.grade, f.text, f.status, f.reason, f.effect]
     if f.check:
         fields += [f.check] + ([f.check_note] if f.check_note else [])
     if f.carries:
         fields += ["carries", f.carries]
+    fields += decision_history.digest_fields(f.replaced_decisions)
     return digest(as_stored(fields).encode("utf-8"))
 
 

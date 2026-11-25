@@ -14,6 +14,8 @@ from labkit.formats.commands import step_command
 from labkit.gates import audit, audit_decisions, audit_reply
 from labkit.formats import decision_history, findings, gate, protocol_check, rules
 from labkit.formats.decision_history import ReplacedDecision
+from labkit.formats.digests import digest
+from labkit.formats.runs import as_stored
 from labkit.formats import audit_gaps
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 from command_fixture import run_main  # noqa: E402
@@ -1896,6 +1898,35 @@ class ReplacedDecisions(unittest.TestCase):
         ):
             findings.write_decision(path, 1, "open", "does not hold")
         self.assertEqual(path.read_text(encoding="utf-8"), by_hand)
+
+    def test_a_decision_restored_word_for_word_is_another_decision(self):
+        """The digest a review binds to holds the replaced decisions. The
+        twin: without a replaced decision the digest is the one a finding
+        had before the history existed, and deciding again unchanged keeps
+        it."""
+        path = self.record()
+        first = findings.write_decision(path, 1, "fixed", "seed set", when=minute(1))
+        digest_of = findings.decision_digest
+        # spelled out, not computed by the function under test
+        before_history = digest(
+            as_stored(
+                ["BLOCKER", first.findings[0].text, "fixed", "seed set", ""]
+            ).encode("utf-8")
+        )
+        self.assertEqual(digest_of(first.findings[0]), before_history)
+        again = findings.write_decision(path, 1, "fixed", "seed set", when=minute(2))
+        self.assertEqual(digest_of(again.findings[0]), digest_of(first.findings[0]))
+        findings.write_decision(path, 1, "open", "set after the split", when=minute(3))
+        restored = findings.write_decision(path, 1, "fixed", "seed set", when=minute(4))
+        self.assertEqual(
+            (restored.findings[0].status, restored.findings[0].reason),
+            (first.findings[0].status, first.findings[0].reason),
+        )
+        self.assertNotEqual(
+            digest_of(restored.findings[0]), digest_of(first.findings[0])
+        )
+        # the other finding of the record is untouched
+        self.assertEqual(digest_of(restored.findings[1]), digest_of(first.findings[1]))
 
     def test_an_array_that_never_closes_has_no_decision_lines(self):
         text = self.taken_back_and_restored().read_text(encoding="utf-8")

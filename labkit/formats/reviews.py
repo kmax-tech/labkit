@@ -350,7 +350,8 @@ def verdicts_on_state(
     under the claim the protocol TEXT makes now — the decisions whose
     `decision_sha` is the digest of the finding as it stands
     (`findings.decision_digest`) — oldest first; [] when never reviewed,
-    reviewed as a different decision (a changed reason, effect or status)
+    reviewed as a different decision (a changed reason, effect or status,
+    or the same words given again after a take-back)
     or under another claim. Every draw on one state counts, not the
     newest: a contested decision is settled by deciding again (the reason
     names the evidence, the effect changes, the claim is limited), never
