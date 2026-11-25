@@ -5,7 +5,8 @@ holds the fields a machine reads — the head — and its optional
 `[[promise]]` tables hold the promises (`promises.py`); a computation
 names its kept number in a `[kept]` table (`kept`: the metrics key and its
 unit) and may carry a `[reference]` table, the stated value that number is
-compared with (`reference`):
+compared with (`reference`); any protocol may declare `[[evidence_file]]`
+tables, data or output files the audit reads in full (`evidence_files`):
 
     [protocol]
     standard = "0.33"
@@ -122,6 +123,7 @@ _TOP_LEVEL = {
     "explored_in",
     "reference",
     "kept",
+    "evidence_file",
 }
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
@@ -1067,6 +1069,69 @@ def explored_in_toml(link: ExploredIn) -> str:
         f"protocol = {toml_string(link.protocol)}\n"
         f"run = {toml_string(link.run)}\n"
     )
+
+
+#: the fields of one `[[evidence_file]]` table, a file the audit reads in full
+EVIDENCE_FILE_KEYS = ("path", "sha256")
+#: a sha256 as `sha256sum` prints it: 64 lowercase hex digits
+SHA256_SHAPE = re.compile(r"^[0-9a-f]{64}$")
+
+
+@dataclass(frozen=True)
+class EvidenceFile:
+    """One `[[evidence_file]]` table: a data or output file the protocol
+    declares for the audit to read in full — PATH relative to the
+    protocol's directory, inside it — with the SHA256 of its bytes when
+    it was declared. Not a promise's `scope` (code a promise rests on, part
+    of the registration) and not the area's committed audit evidence
+    (`evidence`): neither the registration nor the promise block covers it."""
+
+    path: str
+    sha256: str
+
+
+def evidence_files(text: str) -> tuple[EvidenceFile, ...]:
+    """The protocol's `[[evidence_file]]` tables in the order written, ()
+    without any. Each has exactly `path` (a relative `/`-separated path
+    below the protocol's directory: no `..`, not absolute, not empty) and
+    `sha256` (SHA256_SHAPE); a path declared twice is refused. Whether the
+    file stands and still has that digest is the audit's
+    (`audit_prompt.evidence_file_pieces`), not the parser's. Raises
+    BlockError naming the table and the field on any other shape."""
+    data = parse_toml_block(text)
+    if "evidence_file" not in data:
+        return ()
+    rows = data["evidence_file"]
+    if not isinstance(rows, list):
+        raise BlockError("`evidence_file` must be [[evidence_file]] tables")
+    out: list[EvidenceFile] = []
+    for i, row in enumerate(rows, start=1):
+        where = f"[[evidence_file]] #{i}"
+        if not isinstance(row, dict):
+            raise BlockError(f"{where} is not a table")
+        _only_keys(row, where, EVIDENCE_FILE_KEYS)
+        path, sha = row.get("path"), row.get("sha256")
+        parts = PurePosixPath(path).parts if isinstance(path, str) else ()
+        if (
+            not isinstance(path, str)
+            or not path.strip()
+            or "\\" in path
+            or PurePosixPath(path).is_absolute()
+            or ".." in parts
+        ):
+            raise BlockError(
+                f"{where} path = {path!r} — a file below the protocol's "
+                f"directory, relative to it, `/`-separated, without `..`"
+            )
+        if not isinstance(sha, str) or not SHA256_SHAPE.match(sha):
+            raise BlockError(
+                f"{where} sha256 = {sha!r} — the file's sha256 when declared, "
+                f"64 lowercase hex digits (`shasum -a 256 {path}` prints it)"
+            )
+        if any(e.path == path for e in out):
+            raise BlockError(f"{where} path = {path!r} is declared twice")
+        out.append(EvidenceFile(path, sha))
+    return tuple(out)
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:

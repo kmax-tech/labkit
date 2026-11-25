@@ -17,7 +17,9 @@ and calls itself confirmatory, the stamp also covers the predecessor's
 evidence (`predecessor_basis`: its id and the records of its runs); where a
 protocol names `[explored_in]`, the exploration it builds on
 (`exploration_basis`: the records and outputs of the runs the link names,
-the run that exploration adopts and its Conclusion). NOT covered otherwise:
+the run that exploration adopts and its Conclusion); where a protocol
+declares `[[evidence_file]]` tables, each declared file's bytes and its
+declared sha256 (`evidence_file_basis`). NOT covered otherwise:
 data files, prompt files, models.toml, the protocol — an unchanged stamp
 says the CODE is the same, not the inputs. Sibling:
 `promises.declared_scope_sha` is the same idea per promise, over its
@@ -502,6 +504,9 @@ class Snapshot:
             its predecessor's run records (`predecessor_basis`), and one
             per confirmation for the exploration it names
             (`exploration_basis`); () when there is none of them.
+        evidence_files: Resolved path → the bytes the sha covers of each
+            file a protocol of the area declares in `[[evidence_file]]`
+            and that stands (`evidence_file_basis`); empty without one.
     """
 
     sha: str
@@ -509,6 +514,7 @@ class Snapshot:
     contents: Mapping[Path, bytes]
     pin: tuple[str, str] | None
     validation: tuple[str, ...] = ()
+    evidence_files: Mapping[Path, bytes] = MappingProxyType({})
 
     def text(self, path: Path) -> str:
         """The snapshot's text of PATH. Raises KeyError naming a path the
@@ -583,11 +589,13 @@ def area_snapshot(
     basis, told = validation_basis(area)
     before, told_before = predecessor_basis(area)
     explored, told_explored = exploration_basis(area)
+    declared_whole, evidence_bytes = evidence_file_basis(area)
     # appended after the files and only when declared: an area without an
-    # `annotation_validity`, a confirmatory successor or an `[explored_in]`
-    # keeps the stamp it had
+    # `annotation_validity`, a confirmatory successor, an `[explored_in]` or
+    # an `[[evidence_file]]` keeps the stamp it had
     sha = tree_digest(
-        [*entries, *basis, *before, *explored], trailer=[pin[1]] if pin else []
+        [*entries, *basis, *before, *explored, *declared_whole],
+        trailer=[pin[1]] if pin else [],
     )
     return Snapshot(
         sha,
@@ -595,7 +603,56 @@ def area_snapshot(
         MappingProxyType(contents),
         pin,
         told + told_before + told_explored,
+        MappingProxyType(evidence_bytes),
     )
+
+
+#: entry names of the evidence-file basis start so, apart from every file key
+EVIDENCE_FILE_KEY = "evidence_file"
+#: the stamped bytes of a declared evidence file that is not a file
+NO_FILE = b"<missing>"
+
+
+def evidence_file_basis(
+    area: Path,
+) -> tuple[list[tuple[str, bytes]], dict[Path, bytes]]:
+    """(entries, contents): what the area stamp covers of the files the
+    protocols of AREA declare in `[[evidence_file]]`
+    (`protocol_block.evidence_files`), so an audit shown them
+    (`audit_prompt.evidence_file_pieces`) goes stale when one changes —
+    every protocol's, as with declared scopes, so the stamp needs no
+    choice. Per declared file two entries, named by the protocol and the
+    path as written (not resolved: a `data/` symlink that leaves the repo
+    puts no machine's path in the stamp): the declared sha256, and the
+    file's bytes, NO_FILE while it is not a file. CONTENTS maps each
+    declared file that is a file, resolved, to the bytes the entries took
+    — what the prompt shows. Whether the bytes still have the declared
+    digest is the audit's, not the stamp's.
+
+    Raises:
+        OSError: A protocol, or a declared file that stands, does not read.
+        protocol_block.BlockError: An `[[evidence_file]]` table of a block
+            that reads is malformed (a ValueError): a declaration nobody
+            can read is refused, never stamped as if absent. A block that
+            does not read at all is skipped, as by the other bases — the
+            head check names it."""
+    root = layout_root(area)
+    entries: list[tuple[str, bytes]] = []
+    contents: dict[Path, bytes] = {}
+    for p in area_protocols(area):
+        text = p.read_text(encoding="utf-8")
+        try:
+            protocol_block.parse_toml_block(text)
+        except protocol_block.BlockError:
+            continue  # a block that does not read: the head check names it
+        for ef in protocol_block.evidence_files(text):
+            name = f"{EVIDENCE_FILE_KEY} of {_key(p, root)}: {ef.path}"
+            f = p.parent / ef.path
+            data = NO_FILE
+            if f.is_file():
+                data = contents[f.resolve()] = f.read_bytes()
+            entries += [(f"{name} declared", ef.sha256.encode("utf-8")), (name, data)]
+    return entries, contents
 
 
 #: entry names of the validation basis start so, apart from every file key
