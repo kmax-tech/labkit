@@ -2,6 +2,12 @@
 
 labkit does not carry legacy paths: a format or API change is a break, announced here with the last version that still has the old behaviour. Reproduce an old run with the repo's own commit and the labkit version it pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Fixed
+
+- **A derived run whose script is gone is told once, not twice.** For a derived run that declares its answer reading, the code comparison (`run_record_check.code_since_run`: finalize, recheck, the registration hold, the adoption) told `RUN: its script … is gone` twice — once from the run's own comparison, with the restore in its way out, and once from the comparison of the declared reading, with measuring anew alone. The second is now left out where the first was made; a derived run in the middle of a chain, which has no comparison of its own, is still told by the comparison of its reading (`tests/test_run_code.py`).
+
 ## 0.116.0 — 2026-11-25
 
 ### In short

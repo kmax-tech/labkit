@@ -369,29 +369,26 @@ class CodeSinceRun(unittest.TestCase):
 
     def test_a_declared_reading_without_a_repository_or_its_script_holds(self) -> None:
         """The comparison of a declared answer reading needs the area's
-        repository and the declaring run's script: with the script gone, and
-        with the repository gone, the reading's comparison holds as not made.
-        The twin, both in place: the declaration passes."""
+        repository and the declaring run's script. With the script gone the
+        run's own code comparison tells it, once, with the restore in its
+        way out — the comparison of the declared reading adds no second
+        finding for the same cause. With the repository gone, the reading's
+        comparison holds as not made. The twin, both in place: the
+        declaration passes."""
         parent = self.run_now()
         declared = self.derived_reading(parent, "lib/counting.py")
         self.assertEqual(self.held(declared), [])
         again = self.area / "scripts" / "03_reevaluate.py"
         kept = again.read_text(encoding="utf-8")
         again.unlink()
-        # two findings carry this sentence, both naming the derived run: the
-        # run's own code comparison adds the restore to its way out, the
-        # comparison of the declared reading names measuring anew alone —
-        # only the way out tells them apart
-        (reading_not_compared,) = [
-            f
-            for f in code_since_run(self.area, declared)[0]
-            if f.fix == measure_anew(self.area)
-        ]
+        (script_gone,) = code_since_run(self.area, declared)[0]
         self.assertEqual(
-            reading_not_compared.text,
+            script_gone.text,
             f"{declared.name}: its script scripts/03_reevaluate.py is gone",
         )
-        self.assertEqual(reading_not_compared.rule, gate.TECHNICAL_RULE)
+        self.assertIn(measure_anew(self.area), script_gone.fix or "")
+        self.assertIn("restore it from", script_gone.fix or "")
+        self.assertEqual(script_gone.rule, gate.TECHNICAL_RULE)
         again.write_text(kept, encoding="utf-8")
         shutil.rmtree(self.repo / ".git")
         (reading_not_compared,) = [
@@ -407,6 +404,37 @@ class CodeSinceRun(unittest.TestCase):
         )
         self.assertEqual(reading_not_compared.fix, measure_anew(self.area))
         self.assertEqual(reading_not_compared.rule, gate.TECHNICAL_RULE)
+
+    def test_a_gone_script_no_own_comparison_told_is_told_by_the_reading(self) -> None:
+        """A derived run in the middle of a chain — it declares its reading
+        over its parent, and a later run declares one over it — has no code
+        comparison of its own: its script gone is told by the comparison of
+        its declared reading, once. The twin, the script in place: nothing
+        is held."""
+        parent = self.run_now()
+        middle = self.derived_reading(parent, "lib/counting.py")
+        later_script = self.area / "scripts" / "04_reevaluate_again.py"
+        later_script.write_text(
+            "from lib import counting\n\nprint(counting.n([]) + 0)\n", encoding="utf-8"
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-qm", "a second re-evaluation")
+        last = self.run_now(
+            script=later_script,
+            name="2026-10-27T12-00-00_ef56",
+            derived_from=middle.name,
+        )
+        write_answer_reading(
+            last, AnswerReading(module="lib/counting.py", labkit="9.9.9")
+        )
+        self.assertEqual(self.held(last), [])
+        (self.area / "scripts" / "03_reevaluate.py").unlink()
+        (script_gone,) = code_since_run(self.area, last)[0]
+        self.assertEqual(
+            script_gone.text,
+            f"{middle.name}: its script scripts/03_reevaluate.py is gone",
+        )
+        self.assertEqual(script_gone.fix, measure_anew(self.area))
 
     def test_only_a_found_difference_names_its_run(self) -> None:
         """`GateFinding.changed_since` is the comparison's datum: the run

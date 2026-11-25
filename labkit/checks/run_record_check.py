@@ -187,6 +187,9 @@ def code_since_run(
         ], []
     blockers: list[GateFinding] = []
     warnings: list[str] = []
+    # whether CHILD — the run of the previous pass — had its own code
+    # compared there (`_run_code`), which tells a script it cannot compare
+    script_told = False
     # each run after the first is the parent of the one before it: the
     # child's declaration decides how much of the parent's code is compared
     for child, run in zip([None, *chain], chain):
@@ -206,9 +209,13 @@ def code_since_run(
                     )
                 )
         if child is not None and declared is not None:
-            b, w = _reading_since_run(area, run, child, declared)
+            b, w = _reading_since_run(
+                area, run, child, declared, script_told=script_told
+            )
+            script_told = False
         else:
             b, w = _run_code(area, run)
+            script_told = True
             # the correction is offered where it could be taken: beside a
             # derived run that declared none, and on a run that could be
             # its parent before any derived run exists
@@ -320,14 +327,23 @@ def _or_declared(found: GateFinding, parent: str) -> GateFinding:
 
 
 def _reading_since_run(
-    area: Path, parent: Path, child: Path, declared: AnswerReading
+    area: Path,
+    parent: Path,
+    child: Path,
+    declared: AnswerReading,
+    *,
+    script_told: bool,
 ) -> tuple[list[GateFinding], list[str]]:
     """`code_since_run` for PARENT where CHILD declared its answer reading
     DECLARED: the declared module and the repo-local modules it imports,
     as they are now, against PARENT's tree (`_helpers_since_run`); a
     blocker when the area lies in no git repository, the module is no
     longer imported by CHILD's script, or its code cannot be read (gone
-    included: `measured_code`'s SourceError)."""
+    included: `measured_code`'s SourceError). CHILD's script not found (gone
+    or ambiguous) is a blocker here only when SCRIPT_TOLD is False: where
+    CHILD's own comparison ran (`_run_code`), that one tells why the script
+    cannot be compared — gone or ambiguous, with the restore in its way
+    out, or none recorded — one cause, one finding."""
     cfg, child_cfg = read_run_config(parent), read_run_config(child)
     if cfg is None or child_cfg is None:
         return [], []  # the answering-run station names an unreadable record
@@ -345,6 +361,8 @@ def _reading_since_run(
     module = repo / declared.module
     script = script_of(area, child_cfg)
     if isinstance(script, str):
+        if script_told:
+            return [], []
         return [
             blocker(
                 f"{child.name}: {script}", fix=measure_anew(area), rule=TECHNICAL_RULE
