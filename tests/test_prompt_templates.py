@@ -336,6 +336,16 @@ class Scenario(unittest.TestCase):
             prompt_check.require_registered_templates(self.protocol, templates)
         self.assertIn("generate_no_context: not covered", str(cm.exception.code))
 
+    def test_a_protocol_that_is_not_there_refuses_the_start(self) -> None:
+        """No template is held to a file nobody can read; the twin is the
+        registered protocol above, which passes."""
+        gone = self.protocol.with_name("PROTOCOL-gone.md")
+        with self.assertRaises(SystemExit) as cm:
+            prompt_check.require_registered_templates(gone, {"A": "text"})
+        self.assertEqual(
+            str(cm.exception), f"{gone}: no such protocol — no template is held to it"
+        )
+
     def test_prompt_file_without_prompts_is_a_usage_error(self) -> None:
         with self.assertRaises(SystemExit) as cm:
             run_main(

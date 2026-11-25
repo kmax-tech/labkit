@@ -652,6 +652,11 @@ class CountCommands(unittest.TestCase):
     def setUp(self) -> None:
         self.lab = Lab()
         self.addCleanup(self.lab.close)
+        self.stamp_the_count_area()
+
+    def stamp_the_count_area(self) -> None:
+        """The count area stamped in `self.lab`, and the auditor's answer
+        without findings for it."""
         self.area, self.protocol = stamp_count(
             self.lab, protocol_type=self.PROTOCOL_TYPE
         )

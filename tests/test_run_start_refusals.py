@@ -42,6 +42,55 @@ class TheRunStartRefuses(unittest.TestCase):
         bound = start_check.protocol_binding(self.area, "PROTOCOL-a.md")
         self.assertIsNotNone(bound.head)
 
+    def test_a_named_protocol_that_is_not_the_area_s_binds_no_run(self):
+        (self.area / "PROTOCOL-a.md").write_text(head(repeat_cost="low"))
+        with self.assertRaises(SystemExit) as cm:
+            start_check.protocol_binding(self.area, "PROTOCOL-elsewhere.md")
+        said = str(cm.exception)
+        self.assertIn("protocol='PROTOCOL-elsewhere.md' is not one of the", said)
+        self.assertIn("\n  PROTOCOL-a.md", said)  # the ones it could name
+
+    def test_an_area_that_cannot_be_stamped_refuses_the_acknowledged_run(self):
+        """No failed audit attempt can be held to code nobody can stamp;
+        the twin with the scope file is the test below, which gets past
+        this step."""
+        text = head(repeat_cost="high")
+        bound = start_check._Bound(
+            {"id": "x", "path": "P.md"}, text, protocol_block.head(text)
+        )
+        with self.assertRaises(SystemExit) as cm:
+            start_check._audit_unavailable(self.area, bound)
+        said = str(cm.exception)
+        self.assertIn("LABKIT_UNFROZEN=1 — the area cannot be stamped", said)
+        self.assertIn("no failed audit attempt can be held to its code", said)
+
+    def test_an_answer_reading_outside_any_repository_is_refused(self):
+        script = self.area / "01_measure.py"
+        script.write_text("import reading\n")
+        (self.area / "reading.py").write_text("X = 1\n")
+        with self.assertRaises(SystemExit) as cm:
+            start_check.require_answer_reading(self.area, script, "reading.py", "r1")
+        self.assertIn("lies in no git repository", str(cm.exception))
+
+    def test_an_answer_reading_whose_script_does_not_parse_is_refused(self):
+        """Then, as the twin of this refusal and of the one above: in a
+        repository, with a script that reads, the module's path under the
+        root comes back."""
+        (self.area / ".git").mkdir()  # the root, by `repo.git_root`
+        script = self.area / "01_measure.py"
+        (self.area / "reading.py").write_text("X = 1\n")
+        script.write_text("import reading\nfrom lib import (\n")
+        with self.assertRaises(SystemExit) as cm:
+            start_check.require_answer_reading(self.area, script, "reading.py", "r1")
+        self.assertIn(
+            "the code 01_measure.py imports cannot be read", str(cm.exception)
+        )
+        script.write_text("import reading\n")
+        self.assertEqual(
+            start_check.require_answer_reading(self.area, script, "reading.py", "r1"),
+            "reading.py",
+        )
+
     def test_a_promise_block_that_does_not_read_refuses_the_acknowledged_run(self):
         scope_file(self.area)
         text = head(repeat_cost="high", promises=BROKEN_BLOCK)

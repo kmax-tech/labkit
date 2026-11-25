@@ -55,6 +55,71 @@ class RecheckRefuses(unittest.TestCase):
             said, "recheck: run r1 did not register rows.jsonl as an output"
         )
 
+    def test_an_output_the_run_did_not_register_is_not_looked_for_in_history(self):
+        """The same refusal where the recorded bytes of an output are asked
+        for (`output_as_recorded`), before those bytes are looked for."""
+        run = self._run()
+
+        def ask() -> None:
+            with recheck.output_as_recorded(run, self.area / "rows.jsonl", self.area):
+                self.fail("an output the run did not register was handed out")
+
+        self.assertEqual(
+            self._refused(ask),
+            "recheck: run r1 did not register rows.jsonl as an output",
+        )
+
+    def _run(self, config: str | None = None, **fields: object) -> Path:
+        """Run r1 of the area with a complete record, FIELDS replaced, or
+        with CONFIG as the text of its config.json."""
+        run = runs.run_path(self.area, "r1")
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(
+            json.dumps(run_record(fields)) if config is None else config
+        )
+        return run
+
+    def test_a_record_that_does_not_read_ends_every_reading_of_it(self):
+        run = self._run(config="{not json")
+        for name, call in (
+            (
+                "the protocol as the run saw it",
+                lambda: recheck.protocol_as_run_saw(run, self.area),
+            ),
+            ("the script the run ran", lambda: recheck.script_module(self.area, run)),
+        ):
+            with self.subTest(name):
+                said = self._refused(call)
+                self.assertTrue(said.startswith("recheck: "), said)
+                self.assertIn("config.json: unreadable run metadata", said)
+
+    def test_an_input_record_that_does_not_read_ends_every_reading_of_it(self):
+        # an input entry without its rows field: `runs.data_entries` refuses it
+        run = self._run(data={"cases": {"path": ""}})
+        for name, call in (
+            ("does it read another run", lambda: recheck.reads_another_run(run)),
+            ("its inputs", lambda: recheck.inputs_pinned(run, self.area)),
+        ):
+            with self.subTest(name):
+                said = self._refused(call)
+                self.assertTrue(said.startswith("recheck: run r1: "), said)
+                self.assertIn("cases", said)
+
+    def test_the_twin_a_record_that_reads_is_read(self):
+        # for the protocol read-back and the origin question; the script and
+        # the inputs of a readable record are read in tests/test_recheck_inputs.py
+        run = self._run()
+        self.assertIsNone(recheck.protocol_as_run_saw(run, self.area))  # unbound
+        self.assertFalse(recheck.reads_another_run(run))
+
+    def test_a_script_python_cannot_import_is_refused_by_name(self):
+        """A file of the recorded name that is no Python module."""
+        (self.area / "measure.txt").write_text("not a module\n")
+        run = self._run(script="measure.txt", command=["measure.txt"])
+        said = self._refused(lambda: recheck.script_module(self.area, run))
+        self.assertTrue(said.startswith("recheck: run r1: "), said)
+        self.assertTrue(said.endswith("measure.txt does not import"), said)
+
     def test_a_note_that_is_not_there(self):
         note = self.area / "NOTE.md"
         said = self._refused(lambda: recheck.cited(note, ["0.5"], "r1"))

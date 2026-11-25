@@ -33,6 +33,7 @@ import contextlib
 import re
 import shlex
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -64,37 +65,105 @@ UNCOVERED = (
 RESTAMP = "labkit-init exp <new-name> --kind …"
 
 
+@dataclass(frozen=True)
+class _Built:
+    """The confirmation's state as built once: the lab, a copy of its
+    folder as the build left it, and the names the tests read."""
+
+    lab: e2e.Lab
+    copy: Path
+    names: dict[str, object]
+
+
+#: the state `_Confirmation` builds, once per test process (each worker of
+#: a parallel run builds its own); closed by `tearDownModule`
+_built: _Built | None = None
+
+
+def tearDownModule() -> None:
+    """Remove the lab the module's tests shared."""
+    global _built
+    if _built is not None:
+        _built.lab.close()
+        _built = None
+
+
 class _Confirmation(e2e.CountCommands):
     """The count area as an exploration with run A adopted and committed,
     and a second count area, confirmatory, that names it as explored in,
     with run B measured, finalized, audited without findings, its
     Conclusion written and all of it committed: the state one
-    `labkit-adopt` away from a result. A base without tests of its own."""
+    `labkit-adopt` away from a result. A base without tests of its own.
+
+    The state is built once per test process (`_build`) and kept as a copy
+    of the lab's folder; every test, the first one too, starts from that
+    copy put back at the lab's own path, since the lab's records name
+    absolute paths."""
+
+    #: what `_build` sets on the test and every later test gets again
+    NAMES = (
+        "area",
+        "protocol",
+        "clean",
+        "run_a",
+        "exploration",
+        "exploration_id",
+        "run_b",
+        "record",  # the audit record `analysis` wrote last
+    )
 
     def setUp(self) -> None:
-        super().setUp()
-        self.run_a = self.adopted_a()
-        self.exploration = self.protocol
-        self.exploration_id = self.id_of(self.exploration)
-        self.area, self.protocol = e2e.stamp_count(
-            self.lab, protocol_type="confirmatory", area_name="confirm"
+        global _built
+        if _built is None:
+            _built = self._build()
+        self.lab = _built.lab
+        shutil.rmtree(self.lab.root)
+        shutil.copytree(_built.copy, self.lab.root, symlinks=True)
+        for name, value in _built.names.items():
+            setattr(self, name, value)
+
+    def _build(self) -> _Built:
+        """Build the state in a lab of its own and copy the lab's folder
+        beside it.
+
+        Side effects:
+            Creates a lab in a temporary directory that stays until
+            `tearDownModule`; a build that fails removes it, and the next
+            test builds anew.
+        """
+        self.lab = e2e.Lab()
+        try:
+            self.stamp_the_count_area()
+            self.run_a = self.adopted_a()
+            self.exploration = self.protocol
+            self.exploration_id = self.id_of(self.exploration)
+            self.area, self.protocol = e2e.stamp_count(
+                self.lab, protocol_type="confirmatory", area_name="confirm"
+            )
+            self.clean = e2e.clean_answer(self.lab, self.area)
+            rc, out = self.command(
+                protocol_fill.main,
+                self.rel(self.protocol),
+                "--explored-in",
+                self.rel(self.exploration),
+            )
+            self.assertEqual(rc, 0, out)
+            self.lab.commit("the confirmation names its exploration")
+            self.run_b = self.measure()
+            rc, out = self.lab.finalize(self.area)
+            self.assertEqual(rc, 0, out)
+            rc, out, _ = self.analysis(self.clean)
+            self.assertEqual(rc, 0, out)
+            self.lab.conclude(self.protocol)
+            self.lab.commit(f"run {self.run_b}, audited")
+            copy = self.lab.root.with_name("lab-as-built")
+            shutil.copytree(self.lab.root, copy, symlinks=True)
+        except BaseException:
+            self.lab.close()  # a failed build leaves no lab behind
+            raise
+        return _Built(
+            self.lab, copy, {name: getattr(self, name) for name in self.NAMES}
         )
-        self.clean = e2e.clean_answer(self.lab, self.area)
-        rc, out = self.command(
-            protocol_fill.main,
-            self.rel(self.protocol),
-            "--explored-in",
-            self.rel(self.exploration),
-        )
-        self.assertEqual(rc, 0, out)
-        self.lab.commit("the confirmation names its exploration")
-        self.run_b = self.measure()
-        rc, out = self.lab.finalize(self.area)
-        self.assertEqual(rc, 0, out)
-        rc, out, _ = self.analysis(self.clean)
-        self.assertEqual(rc, 0, out)
-        self.lab.conclude(self.protocol)
-        self.lab.commit(f"run {self.run_b}, audited")
 
     def rel(self, path: Path) -> str:
         return path.relative_to(self.lab.root).as_posix()
