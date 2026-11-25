@@ -15,9 +15,15 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+import pytest
+
 from labkit.formats import protocol_block, reference
 from protocol_fixture import fill_known_case
 from test_end_to_end import KNOWN_IDS, KNOWN_METRICS, KNOWN_ROWS, Lab, _replace
+
+# an end-to-end scenario file: the full suite before a push runs it, the
+# commit hook does not (.githooks/checks)
+pytestmark = pytest.mark.slow
 
 LINES = (("a.txt", 1), ("b.txt", 2), ("c.txt", 6))  # mean 3.0
 
