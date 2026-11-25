@@ -65,6 +65,14 @@ release version:
     import re, subprocess, sys
     from pathlib import Path
 
+    # the version line as the package reads it — one pattern, so a line
+    # labkit reads is never one the release calls missing. The package
+    # needs no third-party module, so it imports from the checkout; this
+    # python3 must be one labkit runs under. The pattern ends at the closing
+    # quote: setting the version keeps what follows on the line
+    sys.path.insert(0, str(Path.cwd()))
+    from labkit.tools.repo_check import PYPROJECT_VERSION_RE as version_re
+
     v = "{{version}}"
     tag = f"v{v}"
 
@@ -82,7 +90,6 @@ release version:
     if git("rev-parse", "-q", "--verify", f"refs/tags/{tag}", check=False).returncode == 0:
         at = git("rev-parse", "--short", tag).stdout.strip()
         die(f"tag {tag} exists already, on {at}")
-    version_re = re.compile(r'^version = "(\d+\.\d+\.\d+)"$', re.M)
     head = version_re.search(git("show", "HEAD:pyproject.toml").stdout)
     if head is None:
         die("HEAD:pyproject.toml has no version line")
