@@ -97,7 +97,15 @@ class Decide(unittest.TestCase):
         self.assertEqual(rec.limits(), [(1, rec.findings[0])])
         again = findings.write_decision(self.path, 1, "limitation", "kept", "stands")
         self.assertEqual(again.findings[0].effect, "stands")
-        self.assertEqual(self.path.read_text(encoding="utf-8").count("effect ="), 1)
+        lines = self.path.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            [x for x in lines if x.startswith("effect =")], ['effect = "stands"']
+        )
+        # the effect it replaced is kept with its decision
+        self.assertEqual(
+            [d.effect for d in again.findings[0].replaced_decisions],
+            ["criterion-1 not assessable"],
+        )
 
     def test_an_accepted_warning_may_name_an_effect_and_is_then_a_limit(self):
         rec = findings.write_decision(self.path, 2, "limitation", "a cue", "stands")

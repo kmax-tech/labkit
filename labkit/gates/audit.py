@@ -347,7 +347,8 @@ def main(argv: list[str]) -> int:
         default="",
         metavar="REASON",
         help="with --decide: why — the change for fixed, the limit for limitation, the "
-        "counter-evidence (file, line, value) for false-positive",
+        "counter-evidence (file, line, value) for false-positive, and for open after "
+        "a decided status why that decision no longer holds (owed)",
     )
     ap.add_argument(
         "--not-assessable",

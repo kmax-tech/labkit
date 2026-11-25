@@ -99,6 +99,80 @@ class Rules(unittest.TestCase):
         after = before.replace("the seed is not recorded", "all is well")
         self.assertTrue(evidence.record_changed(before, after))
 
+    def test_a_committed_decision_replaced_and_kept_is_no_change(self):
+        path = _record(self.area)
+        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        committed = path.read_text(encoding="utf-8")
+        findings.write_decision(path, 1, "open", "the limit does not hold")
+        taken_back = path.read_text(encoding="utf-8")
+        self.assertIn('{ status = "limitation", reason = "noted"', taken_back)
+        self.assertFalse(evidence.record_changed(committed, taken_back))
+        findings.write_decision(path, 1, "false-positive", "a.py:9 sets the seed")
+        decided_again = path.read_text(encoding="utf-8")
+        # against the commit, and against a later commit that holds the take-back
+        self.assertFalse(evidence.record_changed(committed, decided_again))
+        self.assertFalse(evidence.record_changed(taken_back, decided_again))
+
+    def test_a_committed_decision_lost_is_a_change(self):
+        """The twin: the same record with a committed decision that is not
+        kept — replaced by hand without its entry, or its entry edited or
+        removed afterwards."""
+        path = _record(self.area)
+        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        committed = path.read_text(encoding="utf-8")
+        by_hand = committed.replace('reason = "noted"', 'reason = "noted twice"')
+        self.assertNotEqual(by_hand, committed)
+        self.assertTrue(evidence.record_changed(committed, by_hand))
+        findings.write_decision(path, 1, "open", "the limit does not hold")
+        taken_back = path.read_text(encoding="utf-8")
+        entry = taken_back.index("replaced_decisions = [")
+        without_entry = (
+            taken_back[:entry] + taken_back[taken_back.index("status =", entry + 60) :]
+        )
+        read = findings.findings_in(without_entry)
+        assert read is not None
+        self.assertEqual(read[0].replaced_decisions, ())
+        self.assertTrue(evidence.record_changed(committed, without_entry))
+        edited = taken_back.replace('reason = "noted"', 'reason = "never noted"')
+        self.assertNotEqual(edited, taken_back)
+        self.assertTrue(evidence.record_changed(committed, edited))
+        self.assertTrue(evidence.record_changed(taken_back, edited))
+        self.assertTrue(evidence.record_changed(taken_back, without_entry))
+
+    def test_a_lost_decision_is_told_even_where_the_first_commit_is_restored(self):
+        """The first commit of a record holds no decision, so "back as first
+        committed" cannot excuse a decision lost since; a rewritten line it
+        does excuse."""
+        path = _record(self.area)
+        rel = f"audits/{path.name}"
+        first = path.read_text(encoding="utf-8")
+        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        decided = path.read_text(encoding="utf-8")
+        for texts, restored, told in (
+            ((decided, first), True, [(rel, evidence.DECISION_LOST)]),
+            ((decided, first), False, [(rel, evidence.DECISION_LOST)]),
+            ((decided.replace("seed", "SEED"), decided), True, []),
+            ((decided.replace("seed", "SEED"), decided), False, [(rel, "record")]),
+            ((first, decided), False, []),
+        ):
+            with self.subTest(restored=restored, told=told):
+                audits, _ = evidence.broken(
+                    [("M", rel)],
+                    set(),
+                    lambda _rel, texts=texts: texts,
+                    lambda _rel, restored=restored: restored,
+                    deletions=True,
+                )
+                self.assertEqual(audits, told)
+
+    def test_a_version_that_does_not_read_is_left_to_the_records_reader(self):
+        path = _record(self.area)
+        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        committed = path.read_text(encoding="utf-8")
+        unread = committed.replace('status = "limitation"', 'status = "done"')
+        self.assertIsNone(findings.findings_in(unread))
+        self.assertFalse(evidence.record_changed(committed, unread))
+
     def test_a_record_without_decision_lines_is_compared_whole(self):
         self.assertIsNone(findings.without_decisions("[[finding]]\ntext = 'x'\n"))
         self.assertTrue(evidence.record_changed("[[finding]]\n", "[[finding]]\n#\n"))
@@ -155,6 +229,26 @@ class Committed(unittest.TestCase):
             evidence.change_sentences(evidence.change_findings(self.area, staged=True)),
             [],
         )
+
+    def test_a_committed_decision_taken_back_is_kept_and_its_entry_held(self):
+        findings.write_decision(self.record, 1, "limitation", "noted", "stands")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "decided")
+        findings.write_decision(self.record, 1, "open", "the limit does not hold")
+        self.assertEqual(
+            evidence.change_sentences(evidence.change_findings(self.area)), []
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "taken back")
+        text = self.record.read_text(encoding="utf-8")
+        self.assertIn('reason = "noted"', text)
+        self.record.write_text(
+            text.replace('reason = "noted"', 'reason = "never noted"'), encoding="utf-8"
+        )
+        (line,) = evidence.change_sentences(evidence.change_findings(self.area))
+        rel = f"experiments/01-x/audits/{self.record.name}"
+        self.assertIn(f"{rel.split('/', 2)[2]}: a decision on a finding was lost", line)
+        self.assertIn(f"`git checkout HEAD -- {rel}`", line)
 
     def test_a_record_edited_beyond_its_decisions_names_its_restore(self):
         text = self.record.read_text(encoding="utf-8")

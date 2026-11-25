@@ -1202,6 +1202,62 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertNotIn("number", said)
         self.assertNotIn("handover", said)
 
+    def test_a_take_back_owes_its_reason_and_the_list_shows_what_was_replaced(self):
+        """`--decide N open` after a decision is refused without `--why`, the
+        record untouched; with it the replaced decision is kept, and
+        `--findings` shows each replaced decision on one line. The twin: an
+        undecided finding set to `open` owes no reason and keeps nothing."""
+        area = repo_with()
+        run(area, BLOCK)
+        record = findings.area_records(area)[-1].path
+
+        def main(*words: str) -> tuple[int, str, str]:
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = audit.main([str(area), *words])
+            return rc, out.getvalue(), err.getvalue()
+
+        written = record.read_text(encoding="utf-8")
+        self.assertEqual(main("--decide", "1", "open")[0], 0)
+        self.assertEqual(record.read_text(encoding="utf-8"), written)
+        long_reason = "dropped the feature " + "and its rows " * 20
+        self.assertEqual(main("--decide", "1", "fixed", "--why", long_reason)[0], 0)
+        decided = record.read_text(encoding="utf-8")
+        rc, _, err = main("--decide", "1", "open")
+        self.assertEqual(rc, 2)
+        self.assertIn(
+            "finding 1: taking the decision `fixed` back owes a reason — why it "
+            "no longer holds",
+            err,
+        )
+        self.assertEqual(record.read_text(encoding="utf-8"), decided)
+        rc, _, err = main("--decide", "1", "open", "--why", "the rows are still read")
+        self.assertEqual(rc, 0, err)
+        rc, _, err = main("--decide", "1", "false-positive", "--why", "a.py:1 reads b")
+        self.assertEqual(rc, 0, err)
+        f = findings.read(record).findings[0]
+        self.assertEqual(
+            [(d.status, d.reason) for d in f.replaced_decisions],
+            [("fixed", long_reason.strip()), ("open", "the rows are still read")],
+        )
+        _, said, _ = main("--findings")
+        shown = [x for x in said.splitlines() if x.startswith("      replaced ")]
+        self.assertEqual(len(shown), 2, said)
+        first, second = f.replaced_decisions
+        self.assertTrue(
+            shown[0].startswith(
+                f"      replaced {first.until}: was fixed — dropped the feature and its rows"
+            )
+        )
+        self.assertEqual(len(shown[0]), audit_decisions.DECISION_TEXT_WIDTH)
+        self.assertTrue(shown[0].endswith("…"))
+        self.assertEqual(
+            shown[1],
+            f"      replaced {second.until}: was open — the rows are still read",
+        )
+        lines = said.splitlines()
+        self.assertIn("[decided false-positive]", lines[lines.index(shown[0]) - 1])
+
     def test_the_confirmation_says_what_the_status_entails(self):
         """The status words alone are misread, so under the decision one
         line says what the status entails

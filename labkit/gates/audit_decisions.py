@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit.formats.gate import BLOCKER, WARNING
+from labkit.formats.decision_history import ReplacedDecision
 from labkit.formats.findings import EFFECT_GRADES
 from labkit.formats import (
     attempts,
@@ -68,6 +69,24 @@ CAUSE_FIRST = (
 )
 
 
+def _cut(text: str) -> str:
+    """TEXT, one line, as the decision list shows it: whole up to
+    DECISION_TEXT_WIDTH characters, else cut there and marked `…`."""
+    if len(text) <= DECISION_TEXT_WIDTH:
+        return text
+    return text[: DECISION_TEXT_WIDTH - 1] + "…"
+
+
+def replaced_decision_line(was: ReplacedDecision) -> str:
+    """The one line the decision list gives a decision a later one replaced
+    (`decision_history`): its status and effect, the minute it was replaced,
+    and its reason on one line, cut like a finding's text — the record
+    holds the reason whole."""
+    decision = was.status + (f" ({was.effect})" if was.effect else "")
+    reason = " ".join(was.reason.split()) or "no reason given"
+    return _cut(f"      replaced {was.until}: was {decision} — {reason}")
+
+
 def decision_lines(
     record: findings.Record, area: Path, report: str, protocol: Path | None = None
 ) -> list[str]:
@@ -81,7 +100,9 @@ def decision_lines(
     (`findings.allowed_decisions`): where `limitation` is refused, the line
     in its place says why and names the ways that remain
     (`findings.subject_refusal`). The effect `<ID> not assessable` is named
-    only where the protocol registers a promise (`may_leave_unassessed`)."""
+    only where the protocol registers a promise (`may_leave_unassessed`).
+    Under a finding stand the decisions a later one replaced, oldest first,
+    one line each (`replaced_decision_line`)."""
     here = Path.cwd()
     where = shown(record.path, here)
     out: list[str] = []
@@ -117,13 +138,9 @@ def decision_lines(
         if findings.open_blockers([record]):
             out.append(CAUSE_FIRST.format(step=step_command(area)))
         for n, f in enumerate(record.findings, 1):
-            text = (
-                f.one_line
-                if len(f.one_line) <= DECISION_TEXT_WIDTH
-                else f.one_line[: DECISION_TEXT_WIDTH - 1] + "…"
-            )
             mark = "" if f.status == findings.OPEN else f"[decided {f.status}] "
-            out.append(f"  {n} · {mark}{text}")
+            out.append(f"  {n} · {mark}{_cut(f.one_line)}")
+            out += [replaced_decision_line(was) for was in f.replaced_decisions]
             out.append(
                 "      "
                 + decide_command(

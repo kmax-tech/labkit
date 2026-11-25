@@ -5,13 +5,15 @@ import re
 import io
 import shlex
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from labkit.formats.commands import step_command
 from labkit.gates import audit, audit_decisions, audit_reply
-from labkit.formats import findings, gate, protocol_check, rules
+from labkit.formats import decision_history, findings, gate, protocol_check, rules
+from labkit.formats.decision_history import ReplacedDecision
 from labkit.formats import audit_gaps
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 from command_fixture import run_main  # noqa: E402
@@ -56,6 +58,11 @@ def area_with(
             protocol_id=protocol_id_of(area),
         )
     return area
+
+
+def minute(m: int) -> time.struct_time:
+    """Minute M of one fixed hour: the clock a test gives `write_decision`."""
+    return time.strptime(f"2026-11-25T10:{m:02d}", "%Y-%m-%dT%H:%M")
 
 
 def set_status(path: Path, n: int, status: str, reason: str = "") -> None:
@@ -555,7 +562,15 @@ class WriteDecision(unittest.TestCase):
                 )
                 written = path.read_text(encoding="utf-8")
                 self.assertIn('reason = "the leak is named"  # kept', written)
-                self.assertNotIn("over two lines", written)
+                self.assertNotIn(opening, written)
+                # an `open` with a reason is a decision: replaced, it is kept
+                self.assertEqual(
+                    [
+                        (d.status, d.reason)
+                        for d in after.findings[0].replaced_decisions
+                    ],
+                    [("open", "checked by hand\nover two lines")],
+                )
 
     def test_a_multi_line_value_closes_where_toml_closes_it(self):
         """An escaped quote run and up to two quotes before the closing three
@@ -574,13 +589,20 @@ class WriteDecision(unittest.TestCase):
                 at = text.index('reason = ""\n')
                 path.write_text(text[:at] + hand + text[at + len('reason = ""\n') :])
                 self.assertEqual(findings.read(path).findings[0].reason, value)
-                findings.write_decision(path, 1, "false-positive", "not a fault")
+                findings.write_decision(
+                    path, 1, "false-positive", "not a fault", when=minute(1)
+                )
                 after = path.read_text(encoding="utf-8")
+                # the hand-set reason made the finding a decision: it is kept
+                kept = decision_history.array_lines(
+                    (ReplacedDecision("open", value, "", "2026-11-25T10:01"),)
+                )
                 self.assertEqual(
                     after,
                     text.replace(
                         'status = "open"\nreason = ""\n',
-                        'status = "false-positive"\nreason = "not a fault"\n',
+                        "\n".join(kept)
+                        + '\nstatus = "false-positive"\nreason = "not a fault"\n',
                         1,
                     ),
                 )
@@ -636,11 +658,33 @@ class WriteDecision(unittest.TestCase):
             with self.subTest(status=status):
                 with self.assertRaises(findings.FindingsError):
                     findings.write_decision(path, 1, status, reason)
+        findings.write_decision(path, 1, "open", "")  # the undecided start owes none
+        self.assertEqual(path.read_text(encoding="utf-8"), before)
         findings.write_decision(path, 1, "fixed", "")  # fixed owes no reason
         self.assertEqual(findings.read(path).findings[0].status, "fixed")
-        findings.write_decision(path, 1, "open", "")
-        self.assertEqual(findings.read(path).findings[0].status, "open")
-        self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    def test_taking_a_decision_back_owes_a_reason(self):
+        for status, reason, effect in (
+            ("fixed", "", ""),
+            ("limitation", "known", "stands"),
+            ("false-positive", "a.py:1 reads b", ""),
+        ):
+            with self.subTest(status=status):
+                path = self.record()
+                findings.write_decision(path, 1, status, reason, effect)
+                decided = path.read_text(encoding="utf-8")
+                for no_reason in ("", "  "):
+                    with self.assertRaisesRegex(
+                        findings.FindingsError,
+                        f"finding 1: taking the decision `{status}` back owes a reason",
+                    ):
+                        findings.write_decision(path, 1, "open", no_reason)
+                self.assertEqual(path.read_text(encoding="utf-8"), decided)
+                after = findings.write_decision(path, 1, "open", "does not hold")
+                self.assertEqual(
+                    (after.findings[0].status, after.findings[0].reason),
+                    ("open", "does not hold"),
+                )
 
     def test_a_number_outside_the_record_is_named(self):
         path = self.record()
@@ -1720,3 +1764,149 @@ class CorrectedField(unittest.TestCase):
         self.assertEqual(
             findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
         )
+
+
+class ReplacedDecisions(unittest.TestCase):
+    """A decision another one replaces stays in the record, with the minute
+    it was replaced (`decision_history`); the record reads it back, and
+    nothing but the finding's decision lines changes."""
+
+    def record(self) -> Path:
+        area = area_with([("preflight", TWO)])
+        return next((area / "audits").glob("*.toml"))
+
+    def taken_back_and_restored(self) -> Path:
+        path = self.record()
+        findings.write_decision(path, 1, "fixed", "seed set", when=minute(1))
+        findings.write_decision(path, 1, "open", "set after the split", when=minute(2))
+        findings.write_decision(path, 1, "fixed", "seed set", when=minute(3))
+        return path
+
+    def test_each_replaced_decision_is_kept_in_its_order(self):
+        path = self.record()
+        written = path.read_text(encoding="utf-8")
+        first = findings.write_decision(path, 1, "fixed", "seed set", when=minute(1))
+        self.assertEqual(first.findings[0].replaced_decisions, ())
+        self.assertNotIn(decision_history.KEY, path.read_text(encoding="utf-8"))
+        path = self.taken_back_and_restored()
+        rec = findings.read(path)
+        self.assertEqual(
+            rec.findings[0].replaced_decisions,
+            (
+                ReplacedDecision("fixed", "seed set", "", "2026-11-25T10:02"),
+                ReplacedDecision("open", "set after the split", "", "2026-11-25T10:03"),
+            ),
+        )
+        self.assertEqual(rec.findings[1].replaced_decisions, ())
+        text = path.read_text(encoding="utf-8")
+        self.assertIn(
+            'rule = "LAB-038"\nreplaced_decisions = [\n'
+            '  { status = "fixed", reason = "seed set", effect = "", '
+            'until = "2026-11-25T10:02" },\n'
+            '  { status = "open", reason = "set after the split", effect = "", '
+            'until = "2026-11-25T10:03" },\n'
+            ']\nstatus = "fixed"\nreason = "seed set"\n',
+            text,
+        )
+        self.assertEqual(
+            findings.without_decisions(text), findings.without_decisions(written)
+        )
+
+    def test_the_same_decision_given_again_adds_no_entry(self):
+        path = self.taken_back_and_restored()
+        before = path.read_text(encoding="utf-8")
+        findings.write_decision(path, 1, "fixed", " seed set ", when=minute(9))
+        self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    def test_a_replaced_limit_keeps_its_effect(self):
+        path = self.record()
+        findings.write_decision(
+            path, 1, "limitation", "known", "criterion-1 not assessable"
+        )
+        after = findings.write_decision(
+            path, 1, "false-positive", "a.py:1 reads b", when=minute(4)
+        )
+        self.assertEqual(
+            after.findings[0].replaced_decisions,
+            (
+                ReplacedDecision(
+                    "limitation",
+                    "known",
+                    "criterion-1 not assessable",
+                    "2026-11-25T10:04",
+                ),
+            ),
+        )
+        self.assertEqual(findings.read(path), after)
+
+    def test_a_crlf_record_keeps_its_line_endings_in_the_history(self):
+        path = self.record()
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+        findings.write_decision(path, 1, "fixed", "seed set")
+        findings.write_decision(path, 1, "open", "does not hold")
+        findings.write_decision(path, 1, "fixed", "seed set in main")
+        after = path.read_bytes().decode("utf-8")
+        self.assertNotIn("\n", after.replace("\r\n", ""))
+        self.assertEqual(len(findings.read(path).findings[0].replaced_decisions), 2)
+
+    def test_an_entry_a_finding_cannot_hold_is_refused_by_name(self):
+        path = self.taken_back_and_restored()
+        text = path.read_text(encoding="utf-8")
+        entry = '{ status = "fixed", reason = "seed set", effect = "", until = "2026-11-25T10:02" }'
+        self.assertIn(entry, text)
+        for hand, said in (
+            (entry.replace('"fixed"', '"done"'), "entry 1: status 'done' — one of"),
+            (
+                entry.replace('effect = ""', 'effect = "stands"'),
+                "entry 1: --not-assessable belongs to a BLOCKER or WARNING decided",
+            ),
+            (entry.replace("T10:02", " 10:02"), "entry 1: until .* is not a minute"),
+            (entry.replace(', effect = ""', ""), "entry 1 is not a table of exactly"),
+        ):
+            with self.subTest(hand=hand):
+                path.write_text(text.replace(entry, hand), encoding="utf-8")
+                with self.assertRaisesRegex(
+                    findings.FindingsError, f"finding 1: {decision_history.KEY} {said}"
+                ):
+                    findings.read(path)
+        path.write_text(
+            text[: text.index("replaced_decisions = [")]
+            + "replaced_decisions = []\n"
+            + text[text.index('\nstatus = "fixed"') + 1 :],
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+            findings.FindingsError, "not an array of at least one entry"
+        ):
+            findings.read(path)
+
+    def test_an_array_set_on_one_line_by_hand_reads_and_is_not_decided(self):
+        """TOML reads the array on one line too, but the writer finds only
+        the form it writes: it refuses instead of adding a second array."""
+        path = self.taken_back_and_restored()
+        text = path.read_text(encoding="utf-8")
+        first, end = text.index("replaced_decisions = ["), text.index("]\nstatus")
+        one_line = " ".join(text[first:end].split()) + " ]\n"
+        by_hand = text[:first] + one_line + text[end + 2 :]
+        path.write_text(by_hand, encoding="utf-8")
+        self.assertEqual(len(findings.read(path).findings[0].replaced_decisions), 2)
+        with self.assertRaisesRegex(
+            findings.FindingsError,
+            "do not stand one entry per line .* changed by hand; restore it",
+        ):
+            findings.write_decision(path, 1, "open", "does not hold")
+        self.assertEqual(path.read_text(encoding="utf-8"), by_hand)
+
+    def test_an_array_that_never_closes_has_no_decision_lines(self):
+        text = self.taken_back_and_restored().read_text(encoding="utf-8")
+        self.assertIsNotNone(findings.without_decisions(text))
+        self.assertIsNone(
+            findings.without_decisions(text.replace("]\nstatus", "status"))
+        )
+
+    def test_the_findings_of_a_text_read_or_are_none(self):
+        path = self.taken_back_and_restored()
+        text = path.read_text(encoding="utf-8")
+        self.assertEqual(findings.findings_in(text), findings.read(path).findings)
+        self.assertIsNone(findings.findings_in(text.replace('"fixed"', '"done"')))
+        self.assertIsNone(findings.findings_in("not = [toml"))

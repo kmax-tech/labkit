@@ -7,7 +7,11 @@ commit holds it, it stays as written:
 
     audits/<record>.toml   only its findings' decision lines change —
                            `status`, `reason`, `effect`, which `labkit-audit
-                           --decide` writes (`findings.without_decisions`)
+                           --decide` writes (`findings.without_decisions`) —
+                           and their replaced decisions are only added to:
+                           a committed entry stays, a committed decision
+                           that was replaced is kept as the next entry
+                           (`decision_history.history_kept`)
     audits/report-reviews/<review>.toml
                            only its claims' decision lines change
                            (`report_reviews.without_claim_decisions`); one of
@@ -62,7 +66,13 @@ from datetime import datetime
 from pathlib import Path
 
 from labkit.formats.commands import checkout_command
-from labkit.formats import findings, handovers, report_reviews, reviews
+from labkit.formats import (
+    decision_history,
+    findings,
+    handovers,
+    report_reviews,
+    reviews,
+)
 from labkit.formats.attempts import evidence_gaps
 from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
@@ -120,6 +130,9 @@ RUN_RECORD_FILES = (
 _SCRIPT_COPY = script_copy_path(Path(), "").stem
 #: how `broken` names a run's start file among its findings
 START_FILE = "start file"
+#: how `broken` names a record whose lines stand but which lost a decision
+#: the earlier state holds (`decision_lost`)
+DECISION_LOST = "record decision lost"
 #: the suffixes of the files labkit writes under `audits/` (records,
 #: reviews, failed attempts, the journal, kept answers, handover records)
 AUDIT_SUFFIXES = (".toml", ".jsonl", ".txt", ".json")
@@ -146,13 +159,33 @@ def closed_runs(files: Iterable[str]) -> set[str]:
 
 
 def record_changed(before: str, after: str) -> bool:
-    """Does AFTER, a record's text, differ from BEFORE beyond its findings'
-    decision lines (`findings.without_decisions`)? A version whose findings
-    lack those lines is compared whole. Pure."""
+    """Does AFTER, a record's text, differ from BEFORE, the version a commit
+    holds, beyond what a decision writes? Yes when a line other than its
+    findings' decision lines differs (`findings.without_decisions`), or when
+    a finding lost a decision BEFORE holds: an entry of its replaced
+    decisions changed or gone, or BEFORE's decision replaced without being
+    kept (`decision_history.history_kept`). A version whose findings lack
+    the decision lines is compared whole. The histories are compared only
+    when both versions read as records: one that does not is reported by
+    the record's own reader (`findings.read`), not here. Pure."""
     kept, now = findings.without_decisions(before), findings.without_decisions(after)
     if kept is None or now is None:
         return before != after
-    return kept != now
+    return kept != now or decision_lost(before, after)
+
+
+def decision_lost(before: str, after: str) -> bool:
+    """Did a finding of AFTER, a record's text, lose a decision BEFORE holds
+    (`decision_history.history_kept`)? Asked of two versions that differ in
+    their findings' decision lines alone; False when one of them does not
+    read as a record or they hold different numbers of findings. Pure."""
+    committed, standing = findings.findings_in(before), findings.findings_in(after)
+    if committed is None or standing is None or len(committed) != len(standing):
+        return False
+    return not all(
+        decision_history.history_kept(was, is_now)
+        for was, is_now in zip(committed, standing)
+    )
 
 
 def report_review_changed(before: str, after: str) -> bool:
@@ -221,7 +254,9 @@ def broken(
     whose claims' decisions alone changed (`report_review_changed`) or one
     moved aside (`moved_aside`). UNDONE tells a later
     version that is back as labkit first committed it (`original`): a
-    restore breaks nothing either. Pure apart from TEXTS and UNDONE."""
+    restore breaks nothing either — but a decision the earlier state holds
+    and the later lost (DECISION_LOST) is told whatever the first commit
+    held: that commit knows no decision. Pure apart from TEXTS and UNDONE."""
     # a start file lies in run-starts/ and in no run's folder: the loop below
     # passes it over, and `start_file_changes` holds it
     audits = start_file_changes(entries, undone)
@@ -243,7 +278,7 @@ def broken(
                 audits.append((rel, how))
             continue
         what = _changed_audit_file(rel, texts)
-        if what is not None and not undone(rel):
+        if what is not None and (what == DECISION_LOST or not undone(rel)):
             audits.append((rel, what))
     return audits, runs
 
@@ -271,9 +306,11 @@ def _changed_audit_file(
 ) -> str | None:
     """What the changed audit file REL (relative to an area) is, for
     `broken`'s sentence — "record" or "report review" when it changed
-    beyond its decision lines, "changed" for any other audit file — or
-    None when a record's or a report review's decisions alone changed
-    (TEXTS reads the two versions)."""
+    beyond its decision lines, DECISION_LOST for a record that changed in
+    them alone and lost a decision the earlier version holds, "changed" for
+    any other audit file — or None when a record's or a report review's
+    decisions alone changed and none was lost (TEXTS reads the two
+    versions)."""
     parts = rel.split("/")
     is_record = len(parts) == 2 and findings.is_record_name(parts[1])
     if not is_record and not is_report_review(rel):
@@ -282,7 +319,15 @@ def _changed_audit_file(
     changed = record_changed if is_record else report_review_changed
     if before and after and not changed(before, after):
         return None
-    return "record" if is_record else "report review"
+    if not is_record:
+        return "report review"
+    lines_stand = (
+        bool(before and after)
+        and (kept := findings.without_decisions(before or "")) is not None
+        and kept == findings.without_decisions(after or "")
+    )
+    # the lines stand and the record changed all the same: a decision was lost
+    return DECISION_LOST if lines_stand else "record"
 
 
 def told(
@@ -309,6 +354,17 @@ def told(
                     f"{rel}: changed beyond its findings' decision lines {where} — "
                     "an audit record keeps what the auditor wrote; only a "
                     "decision changes it",
+                    f"restore it ({checkout(rel)}), then decide with the "
+                    f"`--decide` command `{audit_command(area, '--findings')}` prints",
+                )
+            )
+        elif what == DECISION_LOST:
+            out.append(
+                (
+                    f"{rel}: a decision on a finding was lost {where} — a "
+                    "decision another one replaces stays in the record "
+                    f"(`{decision_history.KEY}`), and an entry a commit holds "
+                    "never changes",
                     f"restore it ({checkout(rel)}), then decide with the "
                     f"`--decide` command `{audit_command(area, '--findings')}` prints",
                 )

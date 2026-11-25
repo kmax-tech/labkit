@@ -26,6 +26,8 @@ area, one file per audit:
     status = "open"      # open | fixed | limitation | false-positive
     reason = ""          # owed for limitation and false-positive
     # effect = "stands"  — a BLOCKER or WARNING decided limitation: see EFFECT
+    # replaced_decisions = [ … ]  — before `status`, once a decision replaced
+    #                      another: each earlier decision, kept (`decision_history`)
 
 The person decides each finding with `labkit-audit AREA --decide N STATUS
 --why REASON`, which validates the decision the person typed and stores it
@@ -106,7 +108,8 @@ from labkit.formats.gate import (
     RuleAssignment,
 )
 from labkit.formats.commands import checkout_command, stage_command
-from labkit.formats import promises, protocol_block
+from labkit.formats import decision_history, promises, protocol_block
+from labkit.formats.decision_history import ReplacedDecision
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_history import correctable
 from labkit.formats.protocol_check import (
@@ -317,6 +320,15 @@ class Finding:
     # apart from the subject and the place, and never inferred from them.
     # None only for a finding not read from a record (a test's)
     rule: RuleAssignment | None = None
+    # the decisions a later one replaced, oldest first (`decision_history`):
+    # added by `write_decision` alone, never copied to a carried finding
+    replaced_decisions: tuple[ReplacedDecision, ...] = ()
+
+    @property
+    def undecided(self) -> bool:
+        """Is this the state a finding is written in — `open`, no reason, no
+        effect? It is no decision: an `open` with a reason is one taken back."""
+        return (self.status, self.reason, self.effect) == (OPEN, "", "")
 
     @property
     def one_line(self) -> str:
@@ -1741,11 +1753,35 @@ def _finding(path: Path, i: int, row: object) -> Finding:
         carries,
         subject,
         rule,
+        _replaced_decisions(path, i, row),
     )
     problem = _effect_problem(found)
     if problem:
         raise FindingsError(f"{path}: finding {i}: {problem}")
     return found
+
+
+def _replaced_decisions(path: Path, i: int, row: dict) -> tuple[ReplacedDecision, ...]:
+    """The replaced decisions of the i-th `[[finding]]` table
+    (`decision_history.read_entries`), each held to what a decision on this
+    finding can be: a status of STATUSES and an effect that fits it
+    (`_effect_problem`). Raises FindingsError naming the entry."""
+    try:
+        entries = decision_history.read_entries(row.get(decision_history.KEY))
+    except decision_history.DecisionHistoryError as exc:
+        raise FindingsError(f"{path}: finding {i}: {exc}") from exc
+    for k, entry in enumerate(entries, start=1):
+        where = f"{path}: finding {i}: {decision_history.KEY} entry {k}"
+        if entry.status not in STATUSES:
+            raise FindingsError(
+                f"{where}: status {entry.status!r} — one of {', '.join(STATUSES)}"
+            )
+        problem = _effect_problem(
+            Finding(row["grade"], row["text"], entry.status, entry.reason, entry.effect)
+        )
+        if problem:
+            raise FindingsError(f"{where}: {problem}")
+    return entries
 
 
 def _auditor_fields(
@@ -1950,6 +1986,22 @@ def _closing(rest: str, delim: str) -> int | None:
     return None
 
 
+def _multi_line_end(
+    lines: list[str], i: int, opened: re.Match[str]
+) -> tuple[int, str] | None:
+    """Where the multi-line decision value OPENED on lines[i] ends: the
+    index of its last line and the text after its closing delimiter there
+    (a comment); None when it never closes."""
+    delim, j = opened.group(3), i
+    rest = lines[i].splitlines()[0][opened.end() :]
+    while (end := _closing(rest, delim)) is None:
+        j += 1
+        if j == len(lines):
+            return None
+        rest = lines[j].splitlines()[0] if lines[j].strip("\r\n") else ""
+    return j, rest[end:]
+
+
 def _decision_lines(
     lines: list[str], n: int, header: re.Pattern[str] = _FINDING_HEADER
 ) -> dict[str, tuple[int, int, str, str]] | None:
@@ -1960,7 +2012,11 @@ def _decision_lines(
     text after it on its last line (a comment). A value is a one-line TOML
     string or a multi-line one; None when status or reason is missing or a
     multi-line value never closes. The table runs from its header to the
-    next table header of any kind."""
+    next table header of any kind. A `[[finding]]` table's replaced
+    decisions join them under `decision_history.KEY` when the array stands
+    as labkit writes it — from its opening line to the line that closes it,
+    HEAD and TAIL empty; a `[[claim]]` keeps no history, so there the lines
+    are no decision lines."""
     seen, inside = 0, False
     at: dict[str, tuple[int, int, str, str]] = {}
     i = 0
@@ -1971,6 +2027,16 @@ def _decision_lines(
             inside = seen == n
         elif protocol_block.TABLE_HEADER.match(line):
             inside = False
+        elif (
+            inside
+            and header is _FINDING_HEADER
+            and decision_history.ARRAY_OPENING.match(line.splitlines()[0])
+        ):
+            end = decision_history.array_end(lines, i)
+            if end is None:
+                return None
+            at[decision_history.KEY] = (i, end, "", "")
+            i = end - 1
         elif inside and line.strip():
             first = line.splitlines()[0]
             one = _DECISION_LINE.match(first)
@@ -1978,15 +2044,11 @@ def _decision_lines(
             if one:
                 at[one.group(2)] = (i, i + 1, one.group(1), one.group(3))
             elif opened:
-                delim, j = opened.group(3), i
-                rest = first[opened.end() :]
-                while (end := _closing(rest, delim)) is None:
-                    j += 1
-                    if j == len(lines):
-                        return None
-                    rest = lines[j].splitlines()[0] if lines[j].strip("\r\n") else ""
-                at[opened.group(2)] = (i, j + 1, opened.group(1), rest[end:])
-                i = j
+                closed = _multi_line_end(lines, i, opened)
+                if closed is None:
+                    return None
+                at[opened.group(2)] = (i, closed[0] + 1, opened.group(1), closed[1])
+                i = closed[0]
         i += 1
     return at if {"status", "reason"} <= set(at) else None
 
@@ -1995,7 +2057,8 @@ def without_decisions(
     text: str, header: re.Pattern[str] = _FINDING_HEADER
 ) -> str | None:
     """TEXT, a record's, with every finding's decision lines removed —
-    `status`, `reason` and `effect`, a multi-line value whole: what
+    `status`, `reason` and `effect`, a multi-line value whole, and a
+    finding's replaced decisions: what
     `write_decision` keeps byte for byte. Two versions of one record whose
     results are equal differ in decisions alone (`evidence.AreaEvidence.change_sentences`). None
     when a finding lacks the status and reason lines labkit-audit writes,
@@ -2012,6 +2075,17 @@ def without_decisions(
         for first, end, _, _ in at.values():
             dropped.update(range(first, end))
     return "".join(line for i, line in enumerate(lines) if i not in dropped)
+
+
+def findings_in(text: str) -> tuple[Finding, ...] | None:
+    """The findings TEXT, a record's, holds, in its order — for a comparison
+    of two versions of one record (`evidence.record_changed`); None when
+    TEXT does not read as a record, which the record's own reader reports
+    (`read`). Pure."""
+    try:
+        return _record_of(Path("record.toml"), text).findings
+    except FindingsError:
+        return None
 
 
 def with_decision(
@@ -2037,7 +2111,13 @@ def with_decision(
 
 
 def write_decision(
-    path: Path, n: int, status: str, reason: str, effect: str = ""
+    path: Path,
+    n: int,
+    status: str,
+    reason: str,
+    effect: str = "",
+    *,
+    when: time.struct_time | None = None,
 ) -> Record:
     """Set finding N (1-based) of the record at PATH to STATUS with REASON —
     and, for a limit, EFFECT (`effect_ids`) — the decision the
@@ -2045,10 +2125,16 @@ def write_decision(
     lines are found by the record's structure (the N-th `[[finding]]`
     table), their values written by `toml_string`, every other byte kept;
     an effect line is added after the reason, or dropped when the decision
-    no longer owes one. The result is read back and the file replaced whole
+    no longer owes one. A decision this one replaces is kept: added to the
+    finding's replaced decisions with the minute WHEN (local time now when
+    None) — not the undecided start, and nothing when the decision is given
+    again unchanged (`decision_history.after_replacing`). The result is
+    read back and the file replaced whole
     (`files.write_atomic`) only when exactly that finding changed. Raises
     FindingsError — the file untouched — on a record that does not read, a
-    number outside it, a status outside STATUSES, a reason owed and empty,
+    number outside it, a status outside STATUSES, a reason owed and empty
+    (for `limitation` and `false-positive`, and for `open` when it takes a
+    decided status back),
     `limitation` on an implementation finding (`subject_refusal`), a BLOCKER
     limitation without its effect or an effect anywhere else, or a
     finding without the status and reason lines labkit-audit writes (a
@@ -2065,9 +2151,17 @@ def write_decision(
     if status in REASON_OWED and not reason.strip():
         raise FindingsError(f"status {status!r} owes a reason — why it is {status}")
     old = before.findings[n - 1]
+    if status == OPEN and old.status in DECIDED and not reason.strip():
+        raise FindingsError(
+            f"{path}: finding {n}: taking the decision `{old.status}` back owes "
+            f"a reason — why it no longer holds"
+        )
     refused = subject_refusal(old, status)
     if refused is not None:
         raise FindingsError(f"{path}: finding {n}: {refused}")
+    history = decision_history.after_replacing(
+        old, status, reason.strip(), effect.strip(), date_minute(when)
+    )
     # the check, the subject and the rule stay the auditor's: a decision never sets them
     decided = Finding(
         old.grade,
@@ -2080,9 +2174,12 @@ def write_decision(
         old.carries,
         old.subject,
         old.rule,
+        history,
     )
     _hold_effect(decided)
-    text = _decided_text(path, n, decided)
+    # None when the decision replaced none: the history stays as it stands
+    replaced = history[-1] if history != old.replaced_decisions else None
+    text = _decided_text(path, n, decided, replaced)
     after = _record_of(path, text)
     expected = list(before.findings)
     expected[n - 1] = decided
@@ -2126,10 +2223,16 @@ def _hold_effect(decided: Finding) -> None:
         raise (EffectFormError if decided.effect_allowed else FindingsError)(problem)
 
 
-def _decided_text(path: Path, n: int, decided: Finding) -> str:
+def _decided_text(
+    path: Path, n: int, decided: Finding, replaced: ReplacedDecision | None
+) -> str:
     """The record's text with finding N's decision lines set to DECIDED —
     each value written on one line (`toml_string`), a multi-line one
-    replaced whole."""
+    replaced whole — and REPLACED, the decision this one replaces (None when
+    none), added as the last entry of the finding's replaced decisions: on
+    a line before the array's closing one, or with a new array before the
+    first decision line. Raises FindingsError when the finding's decision
+    lines or its array do not stand as labkit-audit writes them."""
     # decoded, not read as text: a CRLF record keeps its line endings
     lines = path.read_bytes().decode("utf-8").splitlines(keepends=True)
     at = _decision_lines(lines, n)
@@ -2138,6 +2241,16 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
             f"{path}: finding {n} has no `status` and `reason` lines as labkit-audit "
             f"writes them — the record was changed by hand; restore it "
             f"(`{checkout_command(path.name)}` in its audits/) or audit again"
+        )
+    history_at = at.pop(decision_history.KEY, None)
+    earlier = len(decided.replaced_decisions) - (0 if replaced is None else 1)
+    # entries TOML read that no line of the array's form shows: an array on one line
+    if earlier and history_at is None:
+        raise FindingsError(
+            f"{path}: finding {n}: its `{decision_history.KEY}` do not stand one "
+            f"entry per line as labkit-audit writes them — the record was "
+            f"changed by hand; restore it (`{checkout_command(path.name)}` in "
+            f"its audits/) or audit again"
         )
 
     def ending(span: tuple[int, int, str, str]) -> str:
@@ -2167,6 +2280,18 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
                 [line(at["effect"], decided.effect)] if decided.effect else [],
             )
         )
+    if replaced is not None and history_at is not None:
+        closing = history_at[1] - 1
+        entry = decision_history.entry_line(replaced) + ending(history_at)
+        edits.append(((closing, closing, "", ""), [entry]))
+    if replaced is not None and history_at is None:
+        # with the first decision line's edit: an edit of its own at the
+        # same line would be applied in no certain order
+        first_edit = min(edits, key=lambda e: e[0][0])
+        first_edit[1][:0] = [
+            text + ending(first_edit[0])
+            for text in decision_history.array_lines((replaced,))
+        ]
     for (first, end, _, _), new in sorted(edits, key=lambda e: -e[0][0]):
         lines[first:end] = new
     return "".join(lines)
