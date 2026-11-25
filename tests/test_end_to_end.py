@@ -2145,7 +2145,21 @@ class Judge(unittest.TestCase):
         # fixed after all: no effect owed, and the line is the record's no longer
         rc, out = self._decide(record, "fixed", "")
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("effect", record.read_text(encoding="utf-8"))
+        # the decision holds no effect line; the limits it replaced keep theirs
+        decided = findings.read(record).findings[0]
+        self.assertEqual((decided.status, decided.effect), ("fixed", ""))
+        self.assertEqual(
+            [
+                line
+                for line in record.read_text(encoding="utf-8").splitlines()
+                if line.startswith("effect")
+            ],
+            [],
+        )
+        self.assertEqual(
+            [d.effect for d in decided.replaced_decisions],
+            ["criterion-1 not assessable", "stands"],
+        )
         # but `fixed` in the state audited: no follow-up has seen a repair, the
         # code is the audited code — report-check holds it; the twin, the
         # finding dismissed as not applying to this state, passes once a
