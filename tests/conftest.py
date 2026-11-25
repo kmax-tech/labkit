@@ -60,11 +60,17 @@ def _direct_git() -> None:
         directory and changes `os.environ["PATH"]`.
 
     Raises:
-        RuntimeError: `xcrun` does not name a git binary — the launcher
-            would not start one either.
+        RuntimeError: `xcrun` is not on PATH or does not name a git binary
+            — the launcher would not start one either.
     """
     if sys.platform != "darwin" or shutil.which("git") != _GIT_LAUNCHER:
         return
+    if shutil.which("xcrun") is None:
+        raise RuntimeError(
+            f"git on PATH is {_GIT_LAUNCHER}, and `xcrun`, which names the binary "
+            f"it starts, is not on PATH — install the command line tools: "
+            f"xcode-select --install"
+        )
     found = subprocess.run(["xcrun", "-f", "git"], capture_output=True, text=True)
     binary = found.stdout.strip()
     if found.returncode != 0 or not os.path.isfile(binary):
