@@ -708,26 +708,34 @@ def checked_evidence_files(
     would be written. CONTENTS maps each declared file that is a file,
     resolved, to its bytes (`scope_sha.evidence_file_basis`,
     `scope_sha.declared_evidence_bytes`); a declared file missing from it
-    is not a file. () without a declaration.
+    is not a file, or — while the path is a file — one that does not read.
+    () without a declaration.
 
     Raises AuditError naming each file it holds: a declared file that is
-    not a file; one whose sha256 is no longer the declared one; one over
+    not a file; one that does not read (`evidence_unreadable_refusal`);
+    one whose sha256 is no longer the declared one; one over
     EVIDENCE_FILE_MAX_BYTES, or all together over EVIDENCE_FILES_MAX_BYTES
     (`evidence_size_refusal`); one that is not UTF-8 text. Nothing is
     dropped or cut. BlockError on a malformed table."""
     declared = protocol_block.evidence_files(text)
     if not declared:
         return ()
-    where = shown(protocol.parent, layout_root(protocol.parent))
     # (path as the prompt names it, declared sha256, the snapshot's bytes)
     found: list[tuple[str, str, bytes | None]] = [
         (
-            ef.path if where == "." else f"{where}/{ef.path}",
+            evidence_file_name(protocol, ef.path),
             ef.sha256,
             contents.get((protocol.parent / ef.path).resolve()),
         )
         for ef in declared
     ]
+    unread = [
+        evidence_file_name(protocol, ef.path)
+        for ef, (_, _, data) in zip(declared, found)
+        if data is None and (protocol.parent / ef.path).is_file()
+    ]
+    if unread:
+        raise evidence_unreadable_refusal(protocol.name, unread)
     gone = [name for name, _, data in found if data is None]
     if gone:
         raise AuditError(
@@ -769,6 +777,26 @@ def checked_evidence_files(
             fix="declare a text form of the file (JSON, CSV, Markdown)",
         )
     return tuple(checked)
+
+
+def evidence_file_name(protocol: Path, path: str) -> str:
+    """The declared PATH of PROTOCOL as the prompt and every refusal name
+    it: from the repository root."""
+    where = shown(protocol.parent, layout_root(protocol.parent))
+    return path if where == "." else f"{where}/{path}"
+
+
+def evidence_unreadable_refusal(protocol_name: str, names: list[str]) -> AuditError:
+    """The refusal of declared evidence files (NAMES, as
+    `evidence_file_name` gives them) that are files and do not read — a
+    permission, an I/O error — for the audit and for `protocol-fill
+    --evidence-file` alike."""
+    return AuditError(
+        f"{protocol_name}: evidence file(s) that cannot be read: "
+        f"{', '.join(names)} — the auditor would be shown nothing of them",
+        fix="make the file readable (its permissions), or remove its "
+        "[[evidence_file]] table",
+    )
 
 
 def evidence_size_refusal(

@@ -19,6 +19,7 @@ writes it.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -26,9 +27,13 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats import digests, protocol_block
 from labkit.formats.protocol_block import EvidenceFile, toml_string
-from labkit.formats.repo import rel_posix
-from labkit.formats.scope_sha import declared_evidence_bytes
-from labkit.gates.audit_prompt import CheckedEvidenceFile, checked_evidence_files
+from labkit.formats.scope_sha import EvidenceBytes, declared_evidence_bytes
+from labkit.gates.audit_prompt import (
+    CheckedEvidenceFile,
+    checked_evidence_files,
+    evidence_file_name,
+    evidence_unreadable_refusal,
+)
 
 #: the header line of one declared evidence file in the TOML block
 _EVIDENCE_HEADER = protocol_block.array_header("evidence_file")
@@ -62,21 +67,23 @@ class Declaration:
 
 def declared_path(protocol: Path, given: Path) -> str:
     """GIVEN as an `[[evidence_file]]` path: relative to PROTOCOL's
-    directory, `/`-separated, as git names it (`repo.rel_posix`: the
-    directory resolved, GIVEN taken as written while it lies below it, so
-    a `data/` link on the way stays as written; else its folders resolved,
-    its last component never). Raises ValueError when it does not lie below
-    that directory, or is that directory."""
-    try:
-        rel = rel_posix(given, protocol.parent)
-    except ValueError as exc:
+    directory, `/`-separated, the part below it as written — the path the
+    audit joins to that directory again. GIVEN is made absolute lexically
+    (`os.path.abspath`, no link followed); its nearest folder that resolves
+    to PROTOCOL's resolved directory is that directory, however the prefix
+    is spelled (`/var` or `/private/var` on macOS, a link to the repo).
+    Below it nothing is resolved, so a `data/` link on the way stays as
+    written. Raises ValueError when no folder above GIVEN is that
+    directory (the directory itself included)."""
+    target = Path(os.path.abspath(given))
+    home = protocol.parent.resolve()
+    folder = next((a for a in target.parents if a.resolve() == home), None)
+    if folder is None:
         raise ValueError(
-            f"{given} is not below {protocol.parent} ({exc}) — an evidence file "
-            f"is declared relative to the protocol's directory"
-        ) from None
-    if rel == ".":
-        raise ValueError(f"{given} is the protocol's directory, not a file")
-    return rel
+            f"{given} is not below {protocol.parent} — an evidence file is "
+            f"declared relative to the protocol's directory"
+        )
+    return target.relative_to(folder).as_posix()
 
 
 def declare_evidence_file(
@@ -98,16 +105,21 @@ def declare_evidence_file(
             path declared with another sha256 and REPLACE not set; a table
             that does not read back as written.
         AuditError: The protocol as it would be fails the audit's checks
-            (`checked_evidence_files`) — a declared file missing, changed,
-            not UTF-8, over the per-file limit, or all of them over the
-            total limit.
-        protocol_block.BlockError: TEXT's block or a table is malformed.
-        OSError: A declared file does not read."""
+            (`checked_evidence_files`) — a declared file missing, not
+            readable, changed, not UTF-8, over the per-file limit, or all of
+            them over the total limit; also GIVEN itself not readable.
+        protocol_block.BlockError: TEXT's block or a table is malformed."""
     path = declared_path(protocol, given)
     f = protocol.parent / path
     if not f.is_file():
         raise ValueError(f"{given} is not a file")
-    entry = EvidenceFile(path, digests.digest(f.read_bytes(), None))
+    try:
+        data = f.read_bytes()
+    except OSError as exc:
+        raise evidence_unreadable_refusal(
+            protocol.name, [evidence_file_name(protocol, path)]
+        ) from exc
+    entry = EvidenceFile(path, digests.digest(data, None))
     declared = protocol_block.evidence_files(text)
     # at most one: `evidence_files` refuses a path declared twice
     same = next(
@@ -136,7 +148,7 @@ def declare_evidence_file(
     contents = {
         found.file: found.data
         for _, found in declared_evidence_bytes(protocol, new)
-        if found is not None
+        if isinstance(found, EvidenceBytes)
     }
     checked = checked_evidence_files(protocol, new, contents)
     total = sum(

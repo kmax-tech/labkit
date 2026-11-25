@@ -609,8 +609,11 @@ def area_snapshot(
 
 #: entry names of the evidence-file basis start so, apart from every file key
 EVIDENCE_FILE_KEY = "evidence_file"
-#: the stamped bytes of a declared evidence file that is not a file
-NO_FILE = b"<missing>"
+#: what an evidence-file entry name ends with when the declared file is not
+#: a file (` \\ missing`) or does not read (` \\ unreadable`), its bytes
+#: empty: `protocol_block.evidence_files` refuses a backslash in a path, so
+#: no declared file's own entry can carry this name, whatever its content
+EVIDENCE_NOT_READ = " \\ "
 
 
 def evidence_file_basis(
@@ -624,8 +627,10 @@ def evidence_file_basis(
     choice. Per declared file two entries, named by the protocol and the
     path as written (not resolved: a `data/` symlink that leaves the repo
     puts no machine's path in the stamp): the declared sha256, and the
-    file's bytes, NO_FILE while it is not a file. CONTENTS maps each
-    declared file that is a file, resolved, to the bytes the entries took
+    file's bytes — while it is not a file, or does not read, an entry of
+    its own instead (`EVIDENCE_NOT_READ`), so a missing file never stamps
+    like any content. CONTENTS maps each declared file that read,
+    resolved, to the bytes the entries took
     — what the prompt shows. Whether the bytes still have the declared
     digest is the audit's, not the stamp's. The audit shows only the
     audited protocol's files (`audit_prompt.evidence_file_pieces`): a file
@@ -635,7 +640,9 @@ def evidence_file_basis(
     limit is the prompt's, not the stamp's.
 
     Raises:
-        OSError: A protocol, or a declared file that stands, does not read.
+        OSError: A protocol does not read (a declared file that does not
+            read is stamped as such; the audit refuses it,
+            `audit_prompt.checked_evidence_files`).
         protocol_block.BlockError: An `[[evidence_file]]` table of a block
             that reads is malformed (a ValueError): a declaration nobody
             can read is refused, never stamped as if absent; every caller
@@ -654,10 +661,14 @@ def evidence_file_basis(
             continue  # a block that does not read: the head check names it
         for ef, found in declared_evidence_bytes(p, text):
             name = f"{EVIDENCE_FILE_KEY} of {_key(p, root)}: {ef.path}"
-            data = NO_FILE
-            if found is not None:
-                data = contents[found.file] = found.data
-            entries += [(f"{name} declared", ef.sha256.encode("utf-8")), (name, data)]
+            entries.append((f"{name} declared", ef.sha256.encode("utf-8")))
+            if found is None:
+                entries.append((f"{name}{EVIDENCE_NOT_READ}missing", b""))
+            elif isinstance(found, EvidenceUnreadable):
+                entries.append((f"{name}{EVIDENCE_NOT_READ}unreadable", b""))
+            else:
+                entries.append((name, found.data))
+                contents[found.file] = found.data
     return entries, contents
 
 
@@ -669,25 +680,50 @@ class EvidenceBytes:
     data: bytes
 
 
+@dataclass(frozen=True)
+class EvidenceUnreadable:
+    """A declared evidence file that is a file and does not read: FILE
+    resolved, WHY the error (`PermissionError: …`)."""
+
+    file: Path
+    why: str
+
+
 def declared_evidence_bytes(
     protocol: Path, text: str
-) -> list[tuple[protocol_block.EvidenceFile, EvidenceBytes | None]]:
+) -> list[
+    tuple[protocol_block.EvidenceFile, EvidenceBytes | EvidenceUnreadable | None]
+]:
     """Each file TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`
     (`protocol_block.evidence_files`), in the order declared, with its
     bytes read now — None while the path, resolved against PROTOCOL's
-    directory, is not a file. The one read of declared evidence files: the
+    directory, is not a file, EvidenceUnreadable when it is one and its
+    read fails (an OSError, kept, never raised). The one read of declared evidence files: the
     stamp (`evidence_file_basis`) and `protocol-fill --evidence-file`,
     which checks a declaration before writing it
     (`audit_prompt.checked_evidence_files`), take the bytes from here.
 
     Raises:
-        OSError: A declared file that stands does not read.
         protocol_block.BlockError: TEXT's block or a table is malformed."""
-    out: list[tuple[protocol_block.EvidenceFile, EvidenceBytes | None]] = []
+    out: list[
+        tuple[protocol_block.EvidenceFile, EvidenceBytes | EvidenceUnreadable | None]
+    ] = []
     for ef in protocol_block.evidence_files(text):
         f = protocol.parent / ef.path
-        found = EvidenceBytes(f.resolve(), f.read_bytes()) if f.is_file() else None
-        out.append((ef, found))
+        if not f.is_file():
+            out.append((ef, None))
+            continue
+        try:
+            out.append((ef, EvidenceBytes(f.resolve(), f.read_bytes())))
+        except OSError as exc:
+            out.append(
+                (
+                    ef,
+                    EvidenceUnreadable(
+                        f.resolve(), f"{type(exc).__name__}: {exc.strerror}"
+                    ),
+                )
+            )
     return out
 
 

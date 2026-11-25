@@ -407,20 +407,54 @@ class Fill(_Area):
         self.assertEqual(paths[-1], "output/check.md")
         self.assertTrue((self.protocol.parent / paths[-1]).samefile(f))
 
-    def test_a_path_through_a_symlink_stays_as_written(self) -> None:
-        """A link to another area's data is declared by the link's path,
-        as the stamp names it, not by where it leads — given as a path below
-        the protocol's resolved directory (`repo.rel_posix`)."""
+    def linked_cases(self) -> None:
+        """`linked/` in the area, a link to another area's data holding
+        `cases.json`."""
         shared = self.repo / "experiments" / "00" / "data"
         shared.mkdir(parents=True)
         (shared / "cases.json").write_text("[]\n", encoding="utf-8")
         (self.area / "linked").symlink_to(Path("..") / "00" / "data")
+
+    def last_path(self) -> str:
+        return protocol_block.evidence_files(self.text())[-1].path
+
+    def test_a_path_through_a_symlink_stays_as_written(self) -> None:
+        """A link to another area's data is declared by the link's path,
+        as the stamp names it, not by where it leads."""
+        self.linked_cases()
         code, _, err = self.fill(
-            "--evidence-file", str(self.area.resolve() / "linked" / "cases.json")
+            "--evidence-file", str(self.area / "linked" / "cases.json")
         )
         self.assertEqual(code, 0, err)
-        paths = [e.path for e in protocol_block.evidence_files(self.text())]
-        self.assertEqual(paths[-1], "linked/cases.json")
+        self.assertEqual(self.last_path(), "linked/cases.json")
+
+    def test_a_prefix_spelled_through_another_link_keeps_the_link_below(
+        self,
+    ) -> None:
+        """The repository reached through a link of its own (as `/var` is
+        `/private/var` on macOS): the part below the protocol's directory
+        is still written as given, both ways round."""
+        aliases = tempfile.TemporaryDirectory()
+        self.addCleanup(aliases.cleanup)
+        alias = Path(aliases.name) / "repo-alias"
+        alias.symlink_to(self.repo.resolve(), target_is_directory=True)
+        self.linked_cases()
+        given = alias / "experiments" / "01" / "linked" / "cases.json"
+        code, _, err = self.fill("--evidence-file", str(given))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.last_path(), "linked/cases.json")
+        other = self.write("output/b.md", "b\n")
+        out, err2 = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err2):
+            code = protocol_fill.main(
+                [
+                    str(alias / "experiments" / "01" / self.protocol.name),
+                    "--evidence-file",
+                    str(other.resolve()),
+                ]
+            )
+        self.assertEqual(code, 0, err2.getvalue())
+        self.assertEqual(self.last_path(), "output/b.md")
 
     def test_the_same_path_and_sha256_changes_nothing(self) -> None:
         before = self.protocol.read_bytes()
@@ -539,6 +573,70 @@ class Fill(_Area):
         ):
             protocol_fill.main([str(self.protocol), "--replace-evidence-file"])
         self.assertEqual(cm.exception.code, 2)
+
+
+class NotRead(_Area):
+    """A declared file that is gone, or does not read, is stamped under a
+    name no content can take and refused by name, never a traceback."""
+
+    def test_a_deleted_file_does_not_stamp_like_the_content_missing(self) -> None:
+        """The content `<missing>` was once the marker of a deleted file:
+        the record made over it no longer covers once the file is gone."""
+        self.json.write_text("<missing>", encoding="utf-8")
+        self.declare(
+            evidence_table("data/raw/classification.json", sha256("<missing>"))
+        )
+        record = self._record()
+        self.assertIsNone(self._gap(record))
+        before = scope_sha.area_stamp(self.area)[0]
+        self.json.unlink()
+        self.assertNotEqual(scope_sha.area_stamp(self.area)[0], before)
+        self.assertIsNotNone(self._gap(record))
+
+    def test_the_twin_an_empty_file_does_not_stamp_like_a_deleted_one(self) -> None:
+        self.json.write_text("", encoding="utf-8")
+        self.declare(evidence_table("data/raw/classification.json", sha256("")))
+        empty = scope_sha.area_stamp(self.area)[0]
+        self.json.unlink()
+        self.assertNotEqual(scope_sha.area_stamp(self.area)[0], empty)
+
+    def unreadable(self, f: Path) -> None:
+        """F's permissions taken away for the test, given back after."""
+        if os.geteuid() == 0:
+            self.skipTest("root reads a file without permissions")
+        f.chmod(0)
+        self.addCleanup(f.chmod, 0o644)
+
+    def test_an_unreadable_file_is_refused_by_the_audit_before_the_call(self) -> None:
+        self.unreadable(self.json)
+        scope_sha.area_stamp(self.area)  # stamps, does not raise
+        self.assertIn("cannot be read", self.refusal())
+        err = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete") as call,
+            contextlib.redirect_stderr(err),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            code = audit.main([str(self.area), "--mode", "preflight"])
+        self.assertEqual(code, 2)
+        call.assert_not_called()
+        self.assertIn(
+            "cannot be read: experiments/01/data/raw/classification.json",
+            err.getvalue(),
+        )
+
+    def test_an_unreadable_file_is_refused_by_fill_unwritten(self) -> None:
+        f = self.area / "output" / "locked.md"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("x\n", encoding="utf-8")
+        self.unreadable(f)
+        before = self.protocol.read_bytes()
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = protocol_fill.main([str(self.protocol), "--evidence-file", str(f)])
+        self.assertEqual(code, 2)
+        self.assertIn("cannot be read: experiments/01/output/locked.md", err.getvalue())
+        self.assertEqual(self.protocol.read_bytes(), before)
 
 
 if __name__ == "__main__":
