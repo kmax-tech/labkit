@@ -185,9 +185,9 @@ def other_lines_stand(before: str, after: str) -> bool | None:
 
 
 def decision_lost(before: str, after: str) -> bool:
-    """Did a finding of AFTER, a record's text, lose a decision BEFORE holds
-    — does one of them not keep its history (`decision_history.history_kept`,
-    asked per finding; this is its negation over the record)? Asked of two versions that differ in
+    """Did a finding of AFTER, a record's text, lose a decision BEFORE holds?
+    True when any finding of AFTER fails `decision_history.history_kept`
+    against the same finding of BEFORE. Asked of two versions that differ in
     their findings' decision lines alone; False when one of them does not
     read as a record or they hold different numbers of findings. Pure."""
     committed, standing = findings.findings_in(before), findings.findings_in(after)

@@ -19,7 +19,7 @@ date`). The key is absent while no decision was replaced: a new record
 holds none, and a present key holds at least one entry.
 
 Which decisions are kept (`after_replacing`): every decision another one
-replaces — a status taken back, a reason corrected. The undecided start
+replaces — a status taken back, a reason corrected. The never-decided start
 (`open` without a reason) is no decision and leaves no entry; a decision
 given again unchanged leaves none either.
 
@@ -152,7 +152,7 @@ def after_replacing(
 ) -> tuple[ReplacedDecision, ...]:
     """The history of CURRENT once STATUS, REASON and EFFECT are stored as
     its decision at the minute UNTIL: its history, with CURRENT's own
-    decision added as the newest entry — unless CURRENT is the undecided
+    decision added as the newest entry — unless CURRENT is the never-decided
     start, which is no decision, or the new decision equals the one that
     stands. Pure."""
     if current.never_decided:
@@ -168,7 +168,7 @@ def history_kept(committed: DecidedFinding, now: DecidedFinding) -> bool:
     same finding as a commit holds it? Yes when COMMITTED's entries open
     NOW's unchanged and COMMITTED's decision was not lost: it still stands
     and nothing was added, or it is the first entry added. A COMMITTED that
-    is the undecided start owes no entry, so any entries may follow. Entries
+    is the never-decided start owes no entry, so any entries may follow. Entries
     after the first added one are not compared: no commit saw them. Nor is
     the minute of the first added entry: an entry written by hand with the
     committed decision's words passes, as a decision line written by hand
