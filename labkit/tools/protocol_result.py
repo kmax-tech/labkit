@@ -20,7 +20,7 @@ from pathlib import Path
 from labkit.formats import markdown
 from labkit.formats import (
     evidence,
-    findings,
+    finding_limits,
     protocol_block,
     runs,
 )
@@ -207,7 +207,7 @@ def drop_stray_limits(
     lines = field_lines(text)
     for f in sorted(fields(text), key=lambda f: -f.line):
         label = display_label(f.label)
-        if label.startswith(findings.LIMIT_PREFIX) and label not in keep_labels:
+        if label.startswith(finding_limits.LIMIT_PREFIX) and label not in keep_labels:
             del lines[f.line - 1 : f.last]
             dropped.append(label)
     return "".join(lines), dropped
@@ -299,7 +299,7 @@ def limit_lines(
             # would read #3, #2, #1)
             at = answer.last
             for f in fields(text):
-                if f.line == at + 1 and f.label.startswith(findings.LIMIT_PREFIX):
+                if f.line == at + 1 and f.label.startswith(finding_limits.LIMIT_PREFIX):
                     at = f.last
             insert_line(lines, at, line)
         text = "".join(lines)

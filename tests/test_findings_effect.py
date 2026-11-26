@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 from labkit.tools import protocol_result
-from labkit.formats import audit_records, findings
+from labkit.formats import audit_records, finding_limits, findings
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
 
@@ -43,12 +43,12 @@ def record(area: Path) -> Path:
 
 class EffectGrammar(unittest.TestCase):
     def test_stands_and_not_assessable(self):
-        self.assertEqual(findings.effect_ids("stands"), ())
+        self.assertEqual(finding_limits.effect_ids("stands"), ())
         self.assertEqual(
-            findings.effect_ids("criterion-1 not assessable"), ("criterion-1",)
+            finding_limits.effect_ids("criterion-1 not assessable"), ("criterion-1",)
         )
         self.assertEqual(
-            findings.effect_ids("criterion-1, quality-check-2 not assessable"),
+            finding_limits.effect_ids("criterion-1, quality-check-2 not assessable"),
             ("criterion-1", "quality-check-2"),
         )
 
@@ -61,7 +61,7 @@ class EffectGrammar(unittest.TestCase):
             "holds",
         ):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
-                findings.effect_ids(bad)
+                finding_limits.effect_ids(bad)
 
 
 class Decide(unittest.TestCase):
@@ -136,13 +136,13 @@ class Decide(unittest.TestCase):
         Which promise a limit leaves unjudged stands in the line's verdicts
         (`result_render.verdicts`)."""
         a, b = "Limitation (audit x #1)", "Limitation (audit x #2)"
-        self.assertEqual(findings.answer_note([]), "")
+        self.assertEqual(finding_limits.answer_note([]), "")
         self.assertEqual(
-            findings.answer_note([(a, "stands")]),
+            finding_limits.answer_note([(a, "stands")]),
             "; subject to 1 recorded limitation (the Limitation lines below)",
         )
         self.assertEqual(
-            findings.answer_note(
+            finding_limits.answer_note(
                 [(a, "stands"), (b, "criterion-1, quality-check-2 not assessable")]
             ),
             "; subject to 2 recorded limitations (the Limitation lines below)",

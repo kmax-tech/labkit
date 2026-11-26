@@ -6,7 +6,7 @@ assessable`) and the closing decisions of one analysis record.
                  [--model ALIAS] [--timeout S] [--out FILE]
 
 A finding decided `limitation` whose effect is `stands` claims that the verdicts hold,
-read within the limit (`findings.EFFECT_STANDS`). The reviewer gets, in one
+read within the limit (`finding_limits.EFFECT_STANDS`). The reviewer gets, in one
 call: every such decision of the record (the finding, the person's
 reason), the protocol as it is now (the registration and the reported
 claim — Conclusion, Recorded results, Limitation lines), the files the findings
@@ -83,6 +83,7 @@ from labkit.formats import (
     console,
     evidence,
     findings,
+    finding_limits,
     finding_decisions,
     audit_records,
     finding_line,
@@ -174,7 +175,7 @@ def as_proposed(area: Path, text: str, run_dir: Path | None) -> str:
             continue
         if label in proposed:
             replace_lines(lines, f.line, f.last, f"- **{label}:** {proposed[label]}")
-        elif label.startswith(findings.LIMIT_PREFIX):
+        elif label.startswith(finding_limits.LIMIT_PREFIX):
             del lines[f.line - 1 : f.last]  # stray: an earlier verdict
     return "".join(lines)
 

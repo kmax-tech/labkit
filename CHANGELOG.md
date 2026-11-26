@@ -76,6 +76,16 @@ labkit does not carry legacy paths: a format or API change is a break, announced
   | `labkit.formats.findings.carried_and_closed`     | `labkit.formats.finding_decisions.carried_and_closed`     |
   | `labkit.formats.findings.decide_way`             | `labkit.formats.finding_decisions.decide_way`             |
   | `labkit.formats.findings.decide_ways`            | `labkit.formats.finding_decisions.decide_ways`            |
+  | `labkit.formats.findings.EFFECT_STANDS`          | `labkit.formats.finding_limits.EFFECT_STANDS`             |
+  | `labkit.formats.findings.EFFECT_FORM`            | `labkit.formats.finding_limits.EFFECT_FORM`               |
+  | `labkit.formats.findings.leaves_unjudged`        | `labkit.formats.finding_limits.leaves_unjudged`           |
+  | `labkit.formats.findings.effect_ids`             | `labkit.formats.finding_limits.effect_ids`                |
+  | `labkit.formats.findings.effect_sentence`        | `labkit.formats.finding_limits.effect_sentence`           |
+  | `labkit.formats.findings.LIMIT_PREFIX`           | `labkit.formats.finding_limits.LIMIT_PREFIX`              |
+  | `labkit.formats.findings.limit_label`            | `labkit.formats.finding_limits.limit_label`               |
+  | `labkit.formats.findings.UNCONFIRMED`            | `labkit.formats.finding_limits.UNCONFIRMED`               |
+  | `labkit.formats.findings.limit_line`             | `labkit.formats.finding_limits.limit_line`                |
+  | `labkit.formats.findings.answer_note`            | `labkit.formats.finding_limits.answer_note`               |
 
 ### Added
 

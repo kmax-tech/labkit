@@ -49,6 +49,7 @@ from labkit.formats import (
     audit_gaps,
     failed_attempts,
     findings,
+    finding_limits,
     finding_decisions,
     audit_records,
     required_check,
@@ -1185,7 +1186,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
             text="WARNING · a.py:1 · statement · LAB-015 Preflight audit before freezing · x",
             status="limitation",
             reason="the limit",
-            effect=findings.EFFECT_STANDS,
+            effect=finding_limits.EFFECT_STANDS,
         )
         said = finding_decisions.decision_entails(
             f, Path("experiments/01-x"), Path("experiments/01-x/audits/r.toml")
@@ -3633,7 +3634,9 @@ class FollowupGate(unittest.TestCase):
         labels = [
             label for label, _, _ in result_render.limits_of(area, text, run, found=())
         ]
-        self.assertEqual(labels, [findings.limit_label(audit_records.read(r2.path), n)])
+        self.assertEqual(
+            labels, [finding_limits.limit_label(audit_records.read(r2.path), n)]
+        )
         # stands instead: the decision review is owed for it
         audit_records.write_decision(
             r2.path, n, "limitation", "kept as a limit", "stands"

@@ -1,7 +1,7 @@
 """reviews — a second auditor's verdicts on decided findings, as data.
 
 A finding decided `limitation` with the effect `stands` says: the verdicts hold, read
-within this limit (`findings.EFFECT_STANDS`). Whether the reason given
+within this limit (`finding_limits.EFFECT_STANDS`). Whether the reason given
 bears that out is a second auditor's question: `labkit-audit AREA --review` hands every such decision of
 one record to a cold reviewer with the finding, the reason, the protocol
 (the registered intent and the reported claim), the files the findings

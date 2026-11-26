@@ -35,6 +35,7 @@ from labkit.formats.gate import (
 from labkit.formats.gate import LAB_015
 from labkit.formats import (
     findings,
+    finding_limits,
     finding_decisions,
     audit_records,
     followup,
@@ -209,7 +210,7 @@ def check_limit_effects_decided(
     """
     return [
         blocker(
-            f"{findings.limit_label(record, n)}: a BLOCKER decided limitation "
+            f"{finding_limits.limit_label(record, n)}: a BLOCKER decided limitation "
             "owes its effect on the verdicts",
             fix=f"decide it again: `{decide_again(n)}`",
             rule=LAB_015,
@@ -280,12 +281,12 @@ def check_limits_upheld(
         out.append(
             GateFinding(
                 BLOCKER if f.grade == BLOCKER else WARNING,
-                f"{findings.limit_label(record, n)}: `{f.effect}` on a {f.grade} "
+                f"{finding_limits.limit_label(record, n)}: `{f.effect}` on a {f.grade} "
                 f"decided limitation {reviews.state(record, n, found, text)} — no "
                 "decision review upholds that "
                 + (
                     "the reported claim stands within this limit"
-                    if f.effect == findings.EFFECT_STANDS
+                    if f.effect == finding_limits.EFFECT_STANDS
                     else "the fault prevents judging what it leaves not assessable"
                 ),
                 fix=fix,

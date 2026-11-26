@@ -13,7 +13,13 @@ import unittest
 import pytest
 
 from check_guards import pure_call
-from labkit.formats import finding_decisions, findings, followup, reviews
+from labkit.formats import (
+    finding_decisions,
+    finding_limits,
+    findings,
+    followup,
+    reviews,
+)
 from labkit.formats.commands import DECIDE, Command
 from labkit.formats.gate import (
     BLOCKER,
@@ -141,7 +147,7 @@ class ALimitHasItsEffect(unittest.TestCase):
 
     def test_the_twin_an_effect_decided_and_a_warning_without_one_pass(self):
         rec = record(
-            finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS),
+            finding(BLOCKER, "limitation", effect=finding_limits.EFFECT_STANDS),
             finding(WARNING, "limitation"),
         )
         self.assertEqual(
@@ -203,7 +209,9 @@ class AStandsIsUpheld(unittest.TestCase):
     (`check_limits_upheld`)."""
 
     def test_a_blocker_limitation_that_stands_unreviewed_blocks(self):
-        rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
+        rec = record(
+            finding(BLOCKER, "limitation", effect=finding_limits.EFFECT_STANDS)
+        )
         (f,) = _limits(rec)
         self.assertEqual(
             (f.grade, f.evidence_kind, f.outcome), (BLOCKER, GUARANTEED, VIOLATED)
@@ -221,12 +229,16 @@ class AStandsIsUpheld(unittest.TestCase):
         )
 
     def test_a_warning_limitation_that_stands_unreviewed_warns(self):
-        rec = record(finding(WARNING, "limitation", effect=findings.EFFECT_STANDS))
+        rec = record(
+            finding(WARNING, "limitation", effect=finding_limits.EFFECT_STANDS)
+        )
         (f,) = _limits(rec)
         self.assertEqual((f.grade, f.rule), (WARNING, LAB_015))
 
     def test_a_rejection_and_an_again_draw_release_nothing(self):
-        rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
+        rec = record(
+            finding(BLOCKER, "limitation", effect=finding_limits.EFFECT_STANDS)
+        )
         (f,) = _limits(rec, review(rec, "rejected"))
         self.assertIn("limitation rejected: the reviewer's why —", f.text)
         # after a rejection the way is to decide again, not the review made
@@ -246,7 +258,9 @@ class AStandsIsUpheld(unittest.TestCase):
         (`decision_review.contested_gap`), so the gate names the evidence
         that changes the state, not the review (usage round 24, acceptance
         2026-11-15); with a rejection among the verdicts, deciding again."""
-        rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
+        rec = record(
+            finding(BLOCKER, "limitation", effect=finding_limits.EFFECT_STANDS)
+        )
         (f,) = _limits(rec, review(rec, reviews.INSUFFICIENT))
         self.assertEqual((f.grade, f.fix), (BLOCKER, INSUFFICIENT_AFTER))
         (f,) = _limits(
@@ -255,7 +269,9 @@ class AStandsIsUpheld(unittest.TestCase):
         self.assertEqual(f.fix, AFTER)
 
     def test_the_twin_an_upheld_stands_passes(self):
-        rec = record(finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS))
+        rec = record(
+            finding(BLOCKER, "limitation", effect=finding_limits.EFFECT_STANDS)
+        )
         self.assertEqual(_limits(rec, review(rec, reviews.UPHELD)), [])
 
 
@@ -307,7 +323,7 @@ class AContestedClosingIsUpheld(unittest.TestCase):
     (`check_contested_closings_upheld`)."""
 
     #: the decision the reviewer rejected, before it was closed
-    BEFORE = finding(BLOCKER, "limitation", effect=findings.EFFECT_STANDS)
+    BEFORE = finding(BLOCKER, "limitation", effect=finding_limits.EFFECT_STANDS)
 
     def test_closing_a_rejected_decision_holds_at_the_findings_grade(self):
         for grade, status in ((BLOCKER, "false-positive"), (WARNING, "fixed")):

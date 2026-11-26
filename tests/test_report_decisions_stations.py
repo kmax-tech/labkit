@@ -11,7 +11,7 @@ import dataclasses
 import unittest
 from unittest import mock
 
-from labkit.formats import audit_records, findings, followup
+from labkit.formats import audit_records, finding_limits, findings, followup
 from labkit.formats.gate import (
     BLOCKER,
     NOT_EXECUTABLE,
@@ -86,7 +86,7 @@ class TheResultSectionCannotBeRendered(unittest.TestCase):
 
     def test_the_twin_nothing_reported_owes_no_rendering(self):
         with (
-            covering(finding("limitation", effect=findings.EFFECT_STANDS)),
+            covering(finding("limitation", effect=finding_limits.EFFECT_STANDS)),
             mock.patch.object(report_decisions, "rendering") as rendering,
         ):
             gaps = report_decisions.limit_gaps(
@@ -106,7 +106,7 @@ class TheReviewStationHandsTheWayIn(unittest.TestCase):
             area_evidence(), reviews_unread="audits/reviews/x.toml: not TOML"
         )
         with covering(
-            finding("limitation", effect=findings.EFFECT_STANDS),
+            finding("limitation", effect=finding_limits.EFFECT_STANDS),
             finding("false-positive"),
         ):
             unread, stands, dismissed = report_decisions.review_findings(

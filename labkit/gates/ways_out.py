@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from labkit.formats import finding_decisions, findings, promises
+from labkit.formats import finding_decisions, finding_limits, findings, promises
 from labkit.formats.commands import handover_command, register_anew
 from labkit.formats.gate import AUDIT_SLOT
 from labkit.checks.audit_binding import AuditError
@@ -233,7 +233,7 @@ def rejected_way(finding: findings.Finding, promised: bool) -> str:
     assessable` is decided again as `stands`, repaired, or shown
     inapplicable: its effect no longer voids a verdict. No state is read
     or written; another draw alone settles nothing."""
-    if findings.leaves_unjudged(finding.effect):
+    if finding_limits.leaves_unjudged(finding.effect):
         # a rejected `not assessable` is lifted: the verdicts read as the run
         # recorded them (`result_render.limits_of`), a miss included
         routes = (

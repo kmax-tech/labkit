@@ -56,7 +56,7 @@ from labkit.checks.run_record_check import (
 )
 from labkit.formats import (
     evidence,
-    findings,
+    finding_limits,
     promises,
     protocol_block,
     reference,
@@ -211,9 +211,9 @@ def left_unjudged(
     quality check recorded as not met voids is not listed unless named: that
     void follows from the run, not from the decision, and is not reviewed. "" for an
     effect that names no promise (`stands`, or none). Pure."""
-    if not findings.leaves_unjudged(effect):
+    if not finding_limits.leaves_unjudged(effect):
         return ""
-    ids = set(findings.effect_ids(effect))
+    ids = set(finding_limits.effect_ids(effect))
     left = [p for p in block.promises if p.id in ids]
 
     def recorded(p: promises.Promise) -> str:
@@ -251,7 +251,7 @@ def limits_of(
     records covering RUN; EFFECT is "" for a lifted one. An effect a
     decision review among FOUND did not uphold as decided and claimed now
     — rejected, insufficient, or draws that disagree (`reviews.contested`)
-    — reads as proposed, not confirmed (`findings.UNCONFIRMED`), and an
+    — reads as proposed, not confirmed (`finding_limits.UNCONFIRMED`), and an
     `<ID> not assessable` among them is lifted: given as "", so the
     verdicts read as the run recorded them; not confirmed, it does not
     hide a miss. An unreviewed or upheld one reads as its
@@ -270,12 +270,12 @@ def limits_of(
                 continue
             contested = reviews.contested(r, n, list(found), text)
             # a `not assessable` no review upheld voids no verdict: the miss stands
-            lifted = contested and findings.leaves_unjudged(f.effect)
+            lifted = contested and finding_limits.leaves_unjudged(f.effect)
             effect = "" if lifted else f.effect
             out.append(
                 (
-                    findings.limit_label(r, n),
-                    findings.limit_line(f, contested=contested),
+                    finding_limits.limit_label(r, n),
+                    finding_limits.limit_line(f, contested=contested),
                     effect,
                 )
             )
@@ -296,7 +296,7 @@ def rendering(
     `runs.read_metrics` raises on a run without readable metrics, and
     ValueError when the stand-ins cannot be counted (`stand_in_label`)."""
     limits = limits_of(area, text, run, found=found)
-    note = findings.answer_note([(label, effect) for label, _, effect in limits])
+    note = finding_limits.answer_note([(label, effect) for label, _, effect in limits])
     said, recorded = _verdicts_and_values(area, text, run, limits)
     before = predecessor_verdict(area, text, set())
     drawn = source_phrases(area, run)
@@ -380,7 +380,7 @@ def _verdicts_and_values(
     for label, _, effect in limits:
         if not effect:  # a contested `not assessable`: lifted (`limits_of`)
             continue
-        for pid in findings.effect_ids(effect):
+        for pid in finding_limits.effect_ids(effect):
             unjudged.setdefault(pid, label)
     keys = frozenset(p.key for p in block.promises)
     return (
@@ -618,7 +618,8 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
     generated = [
         label
         for label in dict.fromkeys(labels)
-        if label == RECORDED_RESULTS_LABEL or label.startswith(findings.LIMIT_PREFIX)
+        if label == RECORDED_RESULTS_LABEL
+        or label.startswith(finding_limits.LIMIT_PREFIX)
     ]
     for label in generated:
         n = labels.count(label)
@@ -661,7 +662,10 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
             )
     expected_labels = {label for label, _ in expected.limits}
     for label in have:
-        if label.startswith(findings.LIMIT_PREFIX) and label not in expected_labels:
+        if (
+            label.startswith(finding_limits.LIMIT_PREFIX)
+            and label not in expected_labels
+        ):
             gaps.append(
                 blocker(
                     f'"{label}" names a limit no covering record decides — written '

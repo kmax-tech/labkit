@@ -20,6 +20,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    finding_limits,
     finding_decisions,
     audit_records,
     finding_line,
@@ -774,7 +775,7 @@ def decide(
                 effect = ", ".join(ids) + " not assessable"
                 _registered(area, protocol, effect)
             elif grade in findings.EFFECT_GRADES:
-                effect = findings.EFFECT_STANDS
+                effect = finding_limits.EFFECT_STANDS
         rec = audit_records.write_decision(record, int(n_text), status, reason, effect)
     except findings.FindingsError as exc:
         why = str(exc)
@@ -856,7 +857,7 @@ def stands_check_hint(area: Path, record: findings.Record, f: findings.Finding) 
     stands. A hint, never a hold: the decision stands as given, and a
     limitation that rests on something else owes no measurement. Names
     the run's metrics that cannot be read."""
-    if f.effect != findings.EFFECT_STANDS or not f.check:
+    if f.effect != finding_limits.EFFECT_STANDS or not f.check:
         return ""
     if f.check.startswith((required_check.FILE_CHECK, *required_check.REQUEST_CHECKS)):
         return ""
@@ -983,9 +984,9 @@ def repair_hint(
 def _registered(area: Path, protocol: Path | None, effect: str) -> None:
     """FindingsError unless every id EFFECT names is a promise of the area's
     protocol (`promises.table_ids`) — EffectFormError when EFFECT is not in
-    `findings.EFFECT_FORM`."""
+    `finding_limits.EFFECT_FORM`."""
     try:
-        ids = findings.effect_ids(effect)
+        ids = finding_limits.effect_ids(effect)
     except ValueError as exc:
         raise findings.EffectFormError(str(exc)) from exc
     if not ids:

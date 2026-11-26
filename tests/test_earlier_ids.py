@@ -77,10 +77,10 @@ class EarlierIdsInRecords(unittest.TestCase):
     def test_an_effect_in_the_old_letters_names_the_version_that_reads_it(self):
         """An audit record of 0.103.0 leaves `C1 not assessable`: refused with
         the version that reads it; the twin, today's id, reads."""
-        from labkit.formats import findings
+        from labkit.formats import finding_limits
 
         with self.assertRaisesRegex(ValueError, "labkit 0.103.0"):
-            findings.effect_ids("C1 not assessable")
+            finding_limits.effect_ids("C1 not assessable")
         self.assertEqual(
-            findings.effect_ids("criterion-1 not assessable"), ("criterion-1",)
+            finding_limits.effect_ids("criterion-1 not assessable"), ("criterion-1",)
         )

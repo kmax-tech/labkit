@@ -24,11 +24,11 @@ from labkit.formats.protocol_check import CONCLUSION_LABEL, field_name, field_or
 from labkit.formats.protocol_history import correctable
 from labkit.formats.repo import is_protocol_name
 from labkit.formats.runs import as_stored
+from labkit.formats.finding_limits import EFFECT_STANDS
 from labkit.formats.finding_line import IMPLEMENTATION, STATEMENT, UNDETERMINED
 from labkit.formats.findings import (
     CARRIED_CLOSING,
     DECIDED,
-    EFFECT_STANDS,
     FALSE_POSITIVE,
     FIXED,
     Finding,
