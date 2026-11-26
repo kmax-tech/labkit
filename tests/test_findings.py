@@ -852,7 +852,7 @@ class Rule(unittest.TestCase):
         # the dash inside the free text shifts the positions; the field is
         # found by its content
         self.assertEqual(findings.active_rule_of(self.ONE), "LAB-038")
-        self.assertEqual(findings.active_rule_of(self.NEW), findings.NEW_CLASS)
+        self.assertEqual(findings.active_rule_of(self.NEW), gate.NEW_CLASS)
         self.assertEqual(
             findings.active_rule_of(
                 "BLOCKER · a.py:1 · statement · x\n· `LAB-015 Preflight audit before freezing` · z"
@@ -862,7 +862,7 @@ class Rule(unittest.TestCase):
         rec = findings.read(self.record())
         self.assertEqual(
             [findings.stored_rule(f.rule) for f in rec.findings],
-            ["LAB-038", findings.NEW_CLASS],
+            ["LAB-038", gate.NEW_CLASS],
         )
         # subject and rule are two fields, neither read from the other
         self.assertEqual(
@@ -920,10 +920,8 @@ class Rule(unittest.TestCase):
         assert known.name is not None
         self.assertEqual((known.kind, known.rule_id), (gate.KNOWN_RULE, "LAB-038"))
         self.assertEqual(findings.stored_rule(known), "LAB-038")
-        self.assertEqual(
-            findings.recorded_rule(findings.NEW_CLASS), gate.NEW_CLASS_RULE
-        )
-        self.assertEqual(findings.stored_rule(gate.NEW_CLASS_RULE), findings.NEW_CLASS)
+        self.assertEqual(findings.recorded_rule(gate.NEW_CLASS), gate.NEW_CLASS_RULE)
+        self.assertEqual(findings.stored_rule(gate.NEW_CLASS_RULE), gate.NEW_CLASS)
         for refused in (gate.OPEN_RULE, gate.TECHNICAL_RULE, None):
             with self.subTest(refused=refused), self.assertRaises(ValueError):
                 findings.stored_rule(refused)

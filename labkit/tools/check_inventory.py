@@ -995,13 +995,13 @@ def render_audit_rules(
         f"## Audit findings in {experiments}",
         "",
         f"{sum(per_rule.values())} findings in {len(records)} audit records, "
-        f"{len(new)} of them `{findings.NEW_CLASS}`.",
+        f"{len(new)} of them `{gate.NEW_CLASS}`.",
         "",
         "| Rule | Findings |",
         "|---|---|",
         *(f"| {rule} | {n} |" for rule, n in sorted(per_rule.items())),
         "",
-        f"## `{findings.NEW_CLASS}` — for the author to review",
+        f"## `{gate.NEW_CLASS}` — for the author to review",
         "",
         "A fault no rule of the standard names. It becomes a rule only by a "
         "decision with its grounds, never by this list.",

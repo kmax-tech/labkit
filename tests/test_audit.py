@@ -1993,7 +1993,7 @@ class RequiredCheck(unittest.TestCase):
         one keeps its check-less digest."""
         base = findings.Finding("BLOCKER", "x", "fixed", "r")
         legacy = digests.digest(
-            findings.as_stored(["BLOCKER", "x", "fixed", "r", ""]).encode("utf-8")
+            runs.as_stored(["BLOCKER", "x", "fixed", "r", ""]).encode("utf-8")
         )
         self.assertEqual(findings.decision_digest(base), legacy)
         with_check = findings.Finding("BLOCKER", "x", "fixed", "r", "", "a_key")
