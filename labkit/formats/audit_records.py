@@ -26,7 +26,8 @@ area, one file per audit:
                          # auditor wrote below it, joined by line breaks (\n)
     status = "open"      # open | fixed | limitation | false-positive
     reason = ""          # owed for limitation and false-positive
-    # effect = "stands"  — a BLOCKER or WARNING decided limitation: see EFFECT
+    # effect = "stands"  — a BLOCKER or WARNING decided limitation, in the
+    #                      form `finding_limits.EFFECT_FORM`
     # replaced_decisions = [ … ]  — before `status`, once a decision replaced
     #                      another: each earlier decision, kept (`decision_history`)
 
@@ -165,7 +166,8 @@ def write(
     exactly the BLOCKER and WARNING lines of FINDINGS (`verdict_disagrees`):
     a finding line is never withdrawn by prose below it.
     FIX_VERDICTS are written as `[[fix_verdict]]` tables after the
-    findings, in mode analysis only; a verdict outside FIX_VERDICTS, one
+    findings, in mode analysis only; a verdict not in the constant
+    `findings.FIX_VERDICTS`, one
     without its why and a second one on the same finding are refused
     (`fix_verdict_problem`). CARRIED are the earlier findings a follow-up
     did not find resolved, as `followup.carried_finding` built them: each
