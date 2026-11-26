@@ -192,6 +192,14 @@ class Lab:
         lab writes by hand, and one a test must not owe to how long its
         commands take. Waits for the clock, not for a guessed time.
 
+        It waits past every start file's second too. A run's id is drawn
+        before its start file is written, so the file can carry the second
+        after the id's; a next run whose id is one second later then shares
+        that second with it, and the order of the two starts is unknown to
+        the registration station (seen once in a whole run, 2026-11-26:
+        ids `…49-04` and `…49-05`, both start files in second 05). A start
+        file that does not read holds no second to wait past.
+
         The wait covers every run the area holds. A test calls it before
         a start that can be chosen as the answer; a repeat (`--repeat-of`)
         is never the answer (`answering_run.bound_runs`) and a skeleton's
@@ -201,6 +209,13 @@ class Lab:
         newest = max((d.name[: len(_SECOND)] for d in held), default="")
         newest = max(newest, than[: len(_SECOND)])
         while time.strftime(RUN_ID_TIME) <= newest:
+            time.sleep(0.02)
+        started = [
+            start.started
+            for start in run_starts.read_starts(area).values()
+            if start.started is not None
+        ]
+        while started and run_starts.utc_now() <= max(started):
             time.sleep(0.02)
 
     def measure(
