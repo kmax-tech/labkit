@@ -30,13 +30,10 @@ def _run(
     d = area / "runs" / name
     d.mkdir(parents=True)
     cfg = {
-        "schema_version": runs.RUN_SCHEMA,
-        "run_kind": "measurement",
         "script": "01_measure.py",
         "protocol": {"id": "p-0001", "path": "x.md"},
         "derived_from": derived_from,
         "models_resolved": models_resolved or {},
-        "config": {},
     }
     (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
     return d

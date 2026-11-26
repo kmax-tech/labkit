@@ -22,7 +22,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats.runs import RUN_SCHEMA
 from labkit.formats.evidence import read_evidence
 from labkit.gates import registered_report
 from labkit.formats.area_state import state_of
@@ -252,8 +251,6 @@ class TheChain(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": RUN_SCHEMA,
-                        "run_kind": "measurement",
                         "pid": os.getpid(),
                         "script": me.split()[0],
                     }

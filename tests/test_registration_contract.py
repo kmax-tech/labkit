@@ -8,7 +8,7 @@ finding in protocol-check, a blocker in finalize.
 
 from __future__ import annotations
 
-from labkit.formats.runs import RunKind, RUN_SCHEMA
+from labkit.formats.runs import RunKind
 
 import contextlib
 import io
@@ -239,13 +239,10 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
         d = area / "runs" / "2026-10-08T10-00-00_aaaa"
         d.mkdir(parents=True)
         cfg = {
-            "schema_version": RUN_SCHEMA,
-            "run_kind": "measurement",
             "script": "01_measure.py",
             "pid": 1,
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
             "promises": recorded,
-            "config": {},
         }
         (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
         return d

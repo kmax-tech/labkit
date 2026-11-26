@@ -53,8 +53,6 @@ class _AreaWithRun(unittest.TestCase):
                     {
                         "script": "01_measure.py",
                         "pid": 1,
-                        "schema_version": RUN_SCHEMA,
-                        "run_kind": "measurement",
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                     }
                 )

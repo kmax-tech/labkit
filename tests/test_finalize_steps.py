@@ -232,10 +232,7 @@ class ModelProvenanceFindings(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": RUN_SCHEMA,
-                        "run_kind": "measurement",
                         "models_resolved": models_resolved,
-                        "config": {},
                     }
                 )
             ),

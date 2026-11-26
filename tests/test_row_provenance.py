@@ -183,10 +183,7 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": runs.RUN_SCHEMA,
-                        "run_kind": "measurement",
                         "derived_from": derived_from,
-                        "config": {},
                         **({"script_sha": script_sha} if script_sha else {}),
                     }
                 )

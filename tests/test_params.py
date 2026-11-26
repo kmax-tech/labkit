@@ -64,8 +64,6 @@ def _run(
         json.dumps(
             run_record(
                 {
-                    "schema_version": RUN_SCHEMA,
-                    "run_kind": "measurement",
                     "script": "01_measure.py",
                     "pid": 1,
                     "protocol": {"id": pid, "path": "PROTOCOL-x.md"},

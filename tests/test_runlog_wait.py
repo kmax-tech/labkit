@@ -84,8 +84,6 @@ class TestWait(unittest.TestCase):
                 json.dumps(
                     run_record(
                         {
-                            "schema_version": runs.RUN_SCHEMA,
-                            "run_kind": "measurement",
                             "pid": 999_999_99,
                             "script": "01_measure.py",
                         }
@@ -280,8 +278,6 @@ class TestWait(unittest.TestCase):
                 json.dumps(
                     run_record(
                         {
-                            "schema_version": runs.RUN_SCHEMA,
-                            "run_kind": "measurement",
                             "pid": os.getpid(),
                             "script": me.split()[0],
                         }
@@ -307,8 +303,6 @@ class TestWait(unittest.TestCase):
                 json.dumps(
                     run_record(
                         {
-                            "schema_version": runs.RUN_SCHEMA,
-                            "run_kind": "measurement",
                             "pid": os.getpid(),
                             "script": "01_measure.py",
                         }
@@ -338,8 +332,6 @@ class TestWait(unittest.TestCase):
                     json.dumps(
                         run_record(
                             {
-                                "schema_version": runs.RUN_SCHEMA,
-                                "run_kind": "measurement",
                                 "pid": pid,
                                 "script": script,
                             }
@@ -602,7 +594,7 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             script = Path(d) / "01_measure.py"
             run_dir = Path(d) / "runs" / "2026-10-28T17-23-36_open"
-            record = run_record({"run_kind": "measurement", "script": "01_measure.py"})
+            record = run_record(script="01_measure.py")
             script.write_text(
                 "import json, os, pathlib, time\n"
                 f"d = pathlib.Path({str(run_dir)!r}); d.mkdir(parents=True)\n"
@@ -644,7 +636,7 @@ def _start_in(d: str, *command: str, max_seconds: str = "0.3") -> tuple[int, str
 def _run_script(run_dir: Path, *, finished: bool, then: str) -> str:
     """A script that opens a run record in RUN_DIR naming its own pid —
     completed when FINISHED, else left open — and then runs THEN."""
-    record = run_record({"run_kind": "measurement", "script": "01_measure.py"})
+    record = run_record(script="01_measure.py")
     done = (
         "(d / 'metrics.json').write_text('{}'); (d / 'completion.json').write_text('{}')\n"
         if finished

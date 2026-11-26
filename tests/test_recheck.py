@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol_fixture import run_record, PID, head, recheck_without_git  # noqa: E402
 
-from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import recheck, result_render  # noqa: E402
 
 ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
@@ -44,8 +43,6 @@ class Area(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": RUN_SCHEMA,
-                        "run_kind": "measurement",
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                     }
                 )

@@ -14,7 +14,6 @@ import unittest
 from pathlib import Path
 
 from protocol_fixture import head, run_record  # noqa: E402
-from labkit.formats.runs import RUN_SCHEMA
 from labkit.checks import run_record_check
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 
@@ -45,8 +44,6 @@ def _repo(
         json.dumps(
             run_record(
                 {
-                    "schema_version": RUN_SCHEMA,
-                    "run_kind": "measurement",
                     "config": {
                         "judge": {
                             "alias": "gpt-oss-20b-leguin",

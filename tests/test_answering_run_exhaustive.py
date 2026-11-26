@@ -83,14 +83,9 @@ def _write(area: Path, name: str, kind: Kind) -> Path:
         (d / "config.json").write_text("{not json", encoding="utf-8")
         return d
     cfg: dict = {
-        "schema_version": runs.RUN_SCHEMA,
-        "run_kind": "measurement",
         "script": "01_measure.py",
         "pid": 1,
         "protocol": {"id": kind.pid, "path": "x.md"},
-        "derived_from": None,
-        "models_resolved": {},
-        "config": {},
     }
     if kind.repeat:
         cfg["repeat_of"] = kind.parent

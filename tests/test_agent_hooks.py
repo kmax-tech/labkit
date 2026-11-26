@@ -785,7 +785,6 @@ class StopFixture(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": RUN_SCHEMA,
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,

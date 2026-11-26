@@ -17,7 +17,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from protocol_fixture import run_record  # noqa: E402
-from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.run import runlog_command  # noqa: E402
 from command_fixture import run_main
 
@@ -52,8 +51,6 @@ class TestCli(unittest.TestCase):
                 json.dumps(
                     run_record(
                         {
-                            "schema_version": RUN_SCHEMA,
-                            "run_kind": "measurement",
                             "pid": 999_999,
                             "script": "01_measure.py",
                             "config": {"items": "data/prepared/x.jsonl"},

@@ -394,13 +394,7 @@ class NewestCompleted(unittest.TestCase):
     def _run(self, area: Path, name: str) -> Path:
         d = area / "runs" / name
         d.mkdir(parents=True)
-        (d / "config.json").write_text(
-            json.dumps(
-                run_record(
-                    {"schema_version": runs.RUN_SCHEMA, "run_kind": "measurement"}
-                )
-            )
-        )
+        (d / "config.json").write_text(json.dumps(run_record()))
         (d / "metrics.json").write_text("{}")
         (d / "completion.json").write_text("{}")
         return d

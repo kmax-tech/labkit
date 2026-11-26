@@ -36,8 +36,6 @@ def make_run(area: Path, name: str) -> Path:
         json.dumps(
             run_record(
                 {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "run_kind": "measurement",
                     "script": "01_measure.py",
                     "pid": 1,
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},

@@ -102,8 +102,6 @@ class Provenance(unittest.TestCase):
             "script": "01_measure.py",
             "script_sha": script_sha_of(scope_file(self.area)),
             "pid": 1,
-            "schema_version": runs.RUN_SCHEMA,
-            "run_kind": "measurement",
             "git": started[:7],
             "git_full": started,
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
