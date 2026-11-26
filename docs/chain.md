@@ -87,7 +87,7 @@ The evaluation means the frozen criterion: earlier decisions are shown, and the 
 
 ## run → report (the decisions)
 
-A limit states its effect, and a second, cold auditor judges each decision: only `upheld` releases.
+A limit states its effect. The cases below say which decisions need a second, cold auditor and when an `upheld` review releases them.
 
 * A limit whose effect is `stands` claims the verdicts hold within the limit.
 * A limit whose effect is `<ID> not assessable` claims that the fault prevents judging each promise it names — only those, a criterion beside a named quality check only when named too (`result_render.left_unjudged`, each with its recorded verdict; one verdict for all, `upheld` only when every one holds).
@@ -531,7 +531,7 @@ denominator `criterion_<i>_n` matches a recorded input count
 
 ## report → number
 
-The reported number is recomputed from output files pinned to the run, with the code the run ran.
+The reported number is recomputed with the code the run ran, from the run's recorded output files or its recorded inputs, as the cases below say.
 
 * Every output file the number is computed from is pinned to the run. Several are named by key and recomputed together (`recheck.holds_outputs`). Each is a row file, one JSON object per line (a stagekit stage output is one JSON document: the area writes the rows it reads into a row file it registers).
 * The code here is shown to be the code the run ran. Changed: refused. Not comparable: not verifiable, held by report-check as a check not executed.
