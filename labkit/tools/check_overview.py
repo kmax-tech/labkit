@@ -188,6 +188,35 @@ def overview(package_dir: Path, reach_text: str, reach_name: str) -> str:
     )
 
 
+def write_or_compare(
+    tool: str, page: Path, text: str, *, check: bool, sources: str
+) -> int:
+    """Write the generated page PAGE (relative to the checkout) as TEXT, or
+    with CHECK compare the file with TEXT: 0, or 1 when the page on disk is
+    not TEXT. TOOL is the module that generates the page, named in every
+    line and as the command that writes it anew; SOURCES says what the
+    page follows from (`the source gives`).
+
+    Side effects:
+        Without CHECK, creates or overwrites PAGE in the checkout; prints
+        one line, on a difference to stderr.
+    """
+    file = PACKAGE_DIR.parent / page
+    if check:
+        if file.is_file() and file.read_text(encoding="utf-8") == text:
+            print(f"{tool}: {page} is current")
+            return 0
+        print(
+            f"{tool}: {page} is not what {sources} — write it anew: "
+            f"python -m labkit.tools.{tool}",
+            file=sys.stderr,
+        )
+        return 1
+    file.write_text(text, encoding="utf-8")
+    print(f"{tool}: wrote {page}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Write the page, or with `--check` compare it: 0, or 1 when the page
     on disk is not what would be written.
@@ -214,20 +243,13 @@ def main(argv: list[str]) -> int:
         text = overview(PACKAGE_DIR, reach_file.read_text(encoding="utf-8"), str(REACH))
     except ValueError as exc:
         raise console.Refused("check_overview", str(exc)) from exc
-    page = repo / OVERVIEW
-    if argv == ["--check"]:
-        if page.is_file() and page.read_text(encoding="utf-8") == text:
-            print(f"check_overview: {OVERVIEW} is current")
-            return 0
-        print(
-            f"check_overview: {OVERVIEW} is not what the source and {REACH} "
-            f"give — write it anew: python -m labkit.tools.check_overview",
-            file=sys.stderr,
-        )
-        return 1
-    page.write_text(text, encoding="utf-8")
-    print(f"check_overview: wrote {OVERVIEW}")
-    return 0
+    return write_or_compare(
+        "check_overview",
+        OVERVIEW,
+        text,
+        check=argv == ["--check"],
+        sources=f"the source and {REACH} give",
+    )
 
 
 def cli() -> None:
