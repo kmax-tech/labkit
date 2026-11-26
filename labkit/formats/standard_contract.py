@@ -50,6 +50,9 @@ COMPUTE_KIND, FIT_KIND, APPLY_KIND = PROTOCOL_KINDS
 #: the agent audits, by the mode `labkit-audit` and `findings` name them
 PREFLIGHT_AUDIT = "preflight"
 ANALYSIS_AUDIT = "analysis"
+#: the third mode of `labkit-audit`: the cold reader's read of an area, which
+#: writes no audit record
+CLARITY = "clarity"
 
 #: the two forms of a protocol: the low cut (the fields marked in the
 #: template) and the full form (every must; every should once frozen; the
@@ -519,7 +522,7 @@ def first_measurement_hint(protocol: Path, text: str) -> str:
     if not lane(head.repeat_cost).freeze:
         # high hears it from preflight before the freeze; low runs no preflight
         clarity = commands.audit_command(
-            protocol.parent, "--mode", "clarity", protocol=protocol
+            protocol.parent, "--mode", CLARITY, protocol=protocol
         )
         hint += (
             f"; let a cold reader read the area while its prose can still change: "

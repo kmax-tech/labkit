@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Final, Literal, cast
 
-from labkit.formats.digests import DIGEST_CHARS, file_digest
+from labkit.formats.digests import DIGEST_CHARS, digest, file_digest
 from labkit.formats.files import (
     ACCESS,
     MALFORMED,
@@ -31,7 +31,13 @@ from labkit.formats.files import (
     write_atomic,
 )
 from labkit.formats import jsonl
-from labkit.formats.repo import experiment_areas, lab_root, layout_root, rel_posix
+from labkit.formats.repo import (
+    commit_known,
+    experiment_areas,
+    lab_root,
+    layout_root,
+    rel_posix,
+)
 
 
 def _command_of(pid: int) -> str | None:
@@ -386,6 +392,22 @@ def run_path(area: Path, run_id: str) -> Path:
 def metrics_path(run_dir: Path) -> Path:
     """RUN_DIR's `metrics.json`."""
     return run_dir / METRICS_FILE
+
+
+#: what a run records as `script_sha` when it ran no script file
+NO_SCRIPT = "no-script"
+
+
+def script_digest(script: Path | bytes) -> str:
+    """The digest a run records as `script_sha`: of SCRIPT, a script file
+    or the bytes of one. The one home of its width and method, for the
+    writer (`provenance.snapshot_script`, `provenance.script_sha`) and
+    every check that compares a script with a record. A run without a
+    script file records `NO_SCRIPT` instead. Raises OSError when a file
+    does not read."""
+    if isinstance(script, bytes):
+        return digest(script, DIGEST_CHARS)
+    return file_digest(script)[:DIGEST_CHARS]
 
 
 def script_copy_path(run_dir: Path, suffix: str) -> Path:
@@ -928,7 +950,7 @@ def kept_script(run_dir: Path, suffix: str, sha: str) -> Path | None:
     and its digest begins with SHA, the digest the run recorded; None
     otherwise (no copy, or one whose bytes are not the run's)."""
     kept = script_copy_path(run_dir, suffix)
-    if kept.is_file() and file_digest(kept)[:DIGEST_CHARS] == sha:
+    if kept.is_file() and script_digest(kept) == sha:
         return kept
     return None
 
@@ -1549,11 +1571,68 @@ def patch_lost(rd: RunDir) -> bool:
     """Whether run RD started from a changed tree and its uncommitted.patch
     is gone: runlog writes the patch whenever the tree was not clean (its
     `git` ends in DIRTY_MARK), so without the file the commit alone is not
-    what the run saw — neither its protocol text
-    (`protocol_then.as_measured`) nor its code (`run_code.code_then`)
-    reads back. RD's config must read."""
+    what the run saw — neither its protocol text nor its code reads back
+    (`start_point`). RD's config must read."""
     assert rd.config is not None, "a run whose config reads"
     return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
+
+
+@dataclass(frozen=True)
+class StartPoint:
+    """What a run started from, readable in ROOT: COMMIT, the full sha its
+    record names, and CHANGED_TREE, whether the record says the tree had
+    changes then (`git` ends in DIRTY_MARK) — where it did, the run's
+    `uncommitted.patch` stands (`start_point` refused otherwise)."""
+
+    root: Path
+    commit: str
+    changed_tree: bool
+
+
+def start_point(rd: RunDir, root: Path | None, *, subject: str) -> StartPoint | str:
+    """Where run RD started, as a `StartPoint` — or a str: the sentence
+    saying why its start cannot be read back, opened by SUBJECT (how the
+    caller names the run: "run <id>", "its first measurement <id>"). The
+    one home of the preconditions the protocol text a run saw
+    (`protocol_then.as_measured`) and the code it ran
+    (`run_code.code_then`) share; what each reads from the start point is
+    its own. In this order:
+
+    1. RD's record does not read.
+    2. The record names no commit (`recorded_commit`).
+    3. ROOT is None: no repository to read the commit from.
+    4. It started from a tree with changes and its patch is gone
+       (`patch_lost`): the commit alone is not what it started from.
+    5. This clone does not hold the commit.
+
+    A run gone from the tree (`from_commit`) that started from a changed
+    tree is `code_then`'s own refusal, made before it asks here. The patch
+    itself is read by each caller, and the two differ in one case: an
+    `uncommitted.patch` beside a record that says the tree was clean, which
+    runlog does not write (it writes the patch when it sets the mark).
+    `as_measured` applies such a file, `code_then` passes it over. Which is
+    right — or whether the contradiction is to be refused — is an open
+    decision (`TODO.md`, the audit of 2026-11-26); until it is taken each
+    keeps the reading it had."""
+    if rd.config is None:
+        return f"{subject} has no readable record"
+    commit = recorded_commit(rd.config)
+    if commit is None:
+        return f"{subject} recorded no commit"
+    if root is None:
+        return f"{subject}: no repository to read the commit from"
+    if patch_lost(rd):
+        return (
+            f"{subject} started from a tree with changes ({rd.config.git}), "
+            f"and its uncommitted.patch is gone: the commit alone is not what "
+            f"it started from"
+        )
+    if not commit_known(root, commit):
+        return (
+            f"{subject} started at {commit[:12]}, a commit this clone does "
+            f"not hold — `git fetch` brings it"
+        )
+    return StartPoint(root, commit, rd.config.git.endswith(DIRTY_MARK))
 
 
 def run_dir_from_text(d: Path, text: str, *, from_commit: str | None = None) -> RunDir:

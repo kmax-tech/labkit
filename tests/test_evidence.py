@@ -427,7 +427,10 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
         )
 
     def staged(self) -> list[tuple[str, str]]:
-        return evidence.change_findings(self.area, staged=True)
+        """(sentence, way out) of every change the index holds."""
+        return [
+            (c.why, c.fix) for c in evidence.change_findings(self.area, staged=True)
+        ]
 
     def test_a_run_staged_without_its_start_file_holds_the_commit(self):
         _git(self.root, "add", str(self.run_dir))
@@ -441,7 +444,9 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
             f"`git add -- experiments/01-x/run-starts/{CLOSED}.json`",
             fix.replace(str(self.root) + "/", ""),
         )
-        (hold,) = evidence.change_blockers(self.staged())
+        (hold,) = evidence.change_blockers(
+            evidence.change_findings(self.area, staged=True)
+        )
         self.assertEqual(hold.grade, "BLOCKER")
         # the area state of the commit does not count the file either
         self.assertEqual(state_of(self.area, file_state=INDEX).starts, {})

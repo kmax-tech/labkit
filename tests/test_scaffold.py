@@ -111,17 +111,13 @@ class Lab(unittest.TestCase):
         source_version() is the pyproject's."""
         source = scaffold.source_version()
         self.assertIsNotNone(source)
-        real = scaffold.importlib.metadata.version
-        scaffold.importlib.metadata.version = lambda name: "0.0.1"
-        try:
+        with mock.patch.object(console, "installed_version", return_value="0.0.1"):
             with self.assertRaises(console.Refused) as cm:
                 scaffold.labkit_pin()
-            self.assertIn("0.0.1", str(cm.exception))
-            self.assertIn(str(source), str(cm.exception))
-            scaffold.importlib.metadata.version = lambda name: source
+        self.assertIn("0.0.1", str(cm.exception))
+        self.assertIn(str(source), str(cm.exception))
+        with mock.patch.object(console, "installed_version", return_value=source):
             self.assertTrue(scaffold.labkit_pin().endswith(f"@v{source}"))
-        finally:
-            scaffold.importlib.metadata.version = real
 
     def test_lab_from_a_checkout_off_the_pin_is_refused(self) -> None:
         """A lab stamped from a checkout whose templates differ from the

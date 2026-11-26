@@ -67,7 +67,12 @@ import re
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
-from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
+from labkit.checks.report_blocks import (
+    DISCUSSION_RESTORE_WAY,
+    Discussion,
+    ReportBlockError,
+    discussions,
+)
 from labkit.formats import attempts, console, evidence, findings, report_reviews
 from labkit.formats.area_state import state_of
 from labkit.formats.report_reviews import ReportClaim, held_by
@@ -78,7 +83,7 @@ from labkit.formats.prompts import prompt_body
 from labkit.gates import audit_call, audit_prompt, audit_reply, report_hold
 from labkit.gates.ways_out import ANSWER_AGAIN
 
-REPORT_REVIEW = "report"
+REPORT_REVIEW = audit_prompt.REPORT_REVIEW
 #: the mode of its attempts in the area's journal (`attempts`)
 ATTEMPT_MODE = report_reviews.ATTEMPT_MODE
 #: a claim line of the reviewer's report
@@ -125,8 +130,7 @@ def gather_report(
     except ReportBlockError as exc:
         raise AuditError(
             f"{report.name}: {exc}",
-            fix="restore the block's comment lines as `protocol-fill` wrote them "
-            "(`--discuss … --into` writes the block again)",
+            fix=DISCUSSION_RESTORE_WAY,
         ) from exc
     state = state_of(area)
     held = evidence.read_evidence(area, staged=False)

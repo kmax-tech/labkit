@@ -1,5 +1,5 @@
 """A report outside the protocol, held at the stop and the commit
-(`report_check.hold_reported`) in a repository: its generated result
+(`report_check.hold_changed_paths`) in a repository: its generated result
 blocks, the run ids it cites, its discussions and its reviews, in the tree
 and in the index. The blocks as text (`checks/report_blocks`):
 tests/test_report_blocks_text.py.
@@ -47,7 +47,9 @@ class ReportFiles(unittest.TestCase):
     def _gate(self, root: Path, *paths: Path, staged: bool = False) -> tuple[int, str]:
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = report_check.hold_reported(list(paths), root, staged=staged).exit
+            code = report_check.hold_changed_paths(
+                list(paths), root, staged=staged
+            ).exit
         return code, buf.getvalue()
 
     def _reported(self, git: bool = False) -> tuple[Path, Path]:

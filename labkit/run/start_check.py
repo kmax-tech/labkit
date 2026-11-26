@@ -23,6 +23,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from labkit.formats.commands import repair_head_way
 from labkit.formats.area_state import (
     CLOCKS_ASSUMED,
     UNASSIGNED_LEAVES_OPEN,
@@ -33,7 +34,7 @@ from labkit.formats.area_state import (
     unread_start_warning,
 )
 from labkit.formats import evidence
-from labkit.formats.commands import checkout_command, contract_command, fill_command
+from labkit.formats.commands import checkout_command, fill_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import PROBE, RunKind, parse_run_kind
@@ -141,8 +142,7 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
         raise SystemExit(
             with_way_out(
                 f"runlog: {rel}: {exc}",
-                f"repair the head as the sentence says "
-                f"(`{contract_command(path)}` shows its fields)",
+                repair_head_way(path),
             )
         ) from exc
     if head.id is None:
@@ -553,7 +553,7 @@ def _audit_line_findings(
         return [
             filled(
                 f"{protocol.name}: `preflight_audit` is empty — run `preflight`, then "
-                f"the preflight audit (`{AUDIT_SLOT} --mode preflight`), decide its "
+                f"the preflight audit (`{AUDIT_SLOT} --mode {PREFLIGHT_AUDIT}`), decide its "
                 f"findings and name its record here (LAB-015 Preflight audit before "
                 f"freezing)"
             )

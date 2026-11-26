@@ -113,6 +113,7 @@ from labkit.formats.repo import (
     shown,
     text_at,
     unreadable_at,
+    UNREAD_OBJECTS_WAY,
 )
 from labkit.formats.commands import audit_command
 from labkit.formats.runs import name_minute, now_stamp
@@ -626,13 +627,6 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
     return held, text
 
 
-#: the way back from a journal git cannot read: the objects, not the journal
-UNREAD_JOURNAL_WAY = (
-    "restore the repository's missing objects (`git fsck` names them; a clone "
-    "that holds them `git fetch`es them), then run the check again"
-)
-
-
 def unreadable_journal(root: Path, area: Path, rev: str) -> AttemptError | None:
     """The AttemptError when git cannot read AREA's journal at REV ("HEAD",
     or INDEX_REV for the index) in ROOT (`repo.unreadable_at`), naming the
@@ -645,7 +639,7 @@ def unreadable_journal(root: Path, area: Path, rev: str) -> AttemptError | None:
     return AttemptError(
         f"{where}:{DIR}/{JOURNAL}: git cannot read the journal ({why}) — whether "
         f"it was cut or lost lines cannot be told",
-        fix=UNREAD_JOURNAL_WAY,
+        fix=UNREAD_OBJECTS_WAY,  # the objects, not the journal
     )
 
 

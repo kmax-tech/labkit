@@ -79,13 +79,13 @@ that file.
 
 from __future__ import annotations
 
-import os
 import re
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.repo import path_beside
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
 from labkit.formats.protocol_check import CONCLUSION_LABEL, QUESTION_LABEL
@@ -124,6 +124,14 @@ OPEN = re.compile(
 )
 CLOSE = closer("result")
 OPEN_NOTE = "protocol-fill --into; edit the protocol, not this block"
+
+
+#: the way out of a report whose discussion blocks do not read
+#: (`ReportBlockError` from `discussions`), for every gate that tells it
+DISCUSSION_RESTORE_WAY = (
+    "restore the block's comment lines as `protocol-fill` wrote them "
+    "(`--discuss … --into` writes the block again)"
+)
 
 
 class ReportBlockError(ValueError):
@@ -205,7 +213,7 @@ def path_from_report(protocol: Path, report: Path) -> str:
     directory, `/`-separated — the block's owner as `--into` writes it and
     as the gate names it when a block is owed. Raises ValueError on a path
     with whitespace: the block's opening line holds it as one word."""
-    rel = Path(os.path.relpath(protocol.resolve(), report.resolve().parent)).as_posix()
+    rel = path_beside(protocol.resolve(), report.resolve())
     if any(c.isspace() for c in rel):
         raise ValueError(
             f"{rel}: a protocol path with whitespace cannot name a result block"

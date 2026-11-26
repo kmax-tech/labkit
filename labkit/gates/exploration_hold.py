@@ -58,6 +58,7 @@ from labkit.gates.registration_hold import (
     declares_as_result,
     first_measurement,
     quoted_changes,
+    release_unchecked,
     scope_now,
     scope_rule,
     standing_adoption,
@@ -288,16 +289,7 @@ def live_holds(
             else {}
         )
     except AuditError as exc:
-        return [
-            blocker(
-                f"whether a correction in place releases what the number is about "
-                f"cannot be checked: {exc.why}",
-                fix=exc.fix
-                or f"repair what the sentence names, then "
-                f"`{gate_command('finalize', area)}`",
-                rule=TECHNICAL_RULE,
-            )
-        ]
+        return [release_unchecked(exc, area)]
     if now is None or not now.kept:
         return []
     shown = first_measurement(protocol, rd, root)

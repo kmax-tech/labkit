@@ -182,7 +182,9 @@ RULES: list[tuple[str, str, set[str]]] = [
     # spelling each
     (
         "an audit mode spelled by hand",
-        r"[=!]= \"(?:analysis|preflight)\"|mode=\"(?:analysis|preflight)\"",
+        r"[=!]= \"(?:analysis|preflight)\"|mode=\"(?:analysis|preflight)\""
+        # the argument pair of a printed audit step
+        r"|\"--mode\",\s*\"(?:analysis|preflight|clarity)\"",
         {"standard_contract"},
     ),
     (
@@ -401,6 +403,40 @@ RULES: list[tuple[str, str, set[str]]] = [
     (
         "a repo-relative path spelled by hand (str form)",
         r"str\([^()\n]*\.relative_to\((?:root|repo)\)\)",
+        {"repo"},
+    ),
+    # writer and checkers of a run's `script_sha` share `runs.script_digest`
+    # and `runs.NO_SCRIPT`
+    ("the no-script word spelled by hand", r"\"no-script\"", {"runs"}),
+    # one sentence for every gate; whether a check ran is the finding's own
+    # field, never read off these words (`repo.UNREAD_OBJECTS_WAY`)
+    (
+        "the missing-objects way out written by hand",
+        r"restore the repository's missing objects",
+        {"repo"},
+    ),
+    # `commands.repair_head_way` words it, with or without a path
+    (
+        "the repair-the-head way out written by hand",
+        r"repair the head as the sentence says \(",
+        {"commands"},
+    ),
+    # `report_blocks.DISCUSSION_RESTORE_WAY`
+    (
+        "the discussion-block way out written by hand",
+        r"`--discuss … --into` writes the block again",
+        {"report_blocks"},
+    ),
+    # `console.installed_version`: each caller says what its absence means
+    (
+        "the installed version read by hand",
+        r"version\(\"labkit\"\)",
+        {"console"},
+    ),
+    # `repo.path_beside` spells a path a report's block holds
+    (
+        "a path beside a file spelled by hand",
+        r"os\.path\.relpath\([^\n]*\)\)\.as_posix\(\)",
         {"repo"},
     ),
 ]
@@ -684,6 +720,20 @@ class OneHome(unittest.TestCase):
         nothing guards nothing)."""
         samples = {
             "sha256 by hand": "h = hashlib.sha256(data).hexdigest()",
+            "the no-script word spelled by hand": 'if cfg.script_sha == "no-script":',
+            "the missing-objects way out written by hand": (
+                'fix="restore the repository\'s missing objects (`git fsck` names them)"'
+            ),
+            "the repair-the-head way out written by hand": (
+                'fix="repair the head as the sentence says (`protocol-check x --contract`)"'
+            ),
+            "the discussion-block way out written by hand": (
+                'fix="them (`--discuss … --into` writes the block again)"'
+            ),
+            "the installed version read by hand": 'labkit=version("labkit"),',
+            "a path beside a file spelled by hand": (
+                "rel = Path(os.path.relpath(target, base)).as_posix()"
+            ),
             "a criterion bar computed by hand": "bar = base + Fraction(str(cfg.margin))",
             "git outside repo.git_run": 'subprocess.run(["git", "status"])',
             "a PROTOCOL-*.md scan": 'for f in root.rglob("PROTOCOL-*.md"):',

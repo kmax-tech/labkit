@@ -50,18 +50,20 @@ class ChangedRunUnreadable(e2e.CountCommands):
         return obj, kept
 
     def test_the_twin_a_readable_change_is_held_as_changed(self):
-        ((why, _),) = evidence.change_findings(self.area)
-        self.assertIn("metrics.json (changed)", why)
+        (found,) = evidence.change_findings(self.area)
+        self.assertIn("metrics.json (changed)", found.why)
+        self.assertTrue(found.compared)
 
     def test_an_unreadable_object_is_held_and_restored_held_as_changed(self):
         obj, kept = self.remove(f"HEAD:{self.rel}")
-        ((why, fix),) = evidence.change_findings(self.area)
-        self.assertIn(UNREAD, why)
-        self.assertIn("unable to read", why)
-        self.assertIn("git fsck", fix)
+        (found,) = evidence.change_findings(self.area)
+        self.assertIn(UNREAD, found.why)
+        self.assertIn("unable to read", found.why)
+        self.assertIn("git fsck", found.fix)
+        self.assertFalse(found.compared)
         shutil.move(str(kept), str(obj))
-        ((why, _),) = evidence.change_findings(self.area)
-        self.assertIn("metrics.json (changed)", why)
+        (found,) = evidence.change_findings(self.area)
+        self.assertIn("metrics.json (changed)", found.why)
 
     def test_report_check_and_labkit_next_hold_it_without_a_traceback(self):
         self.remove(f"HEAD:{self.rel}")

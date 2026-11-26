@@ -18,7 +18,7 @@ import functools
 import os
 import sys
 from collections.abc import Callable, Hashable, Iterator
-from importlib.metadata import distribution
+from importlib.metadata import PackageNotFoundError, distribution, version
 from typing import TypeVar, cast
 
 T = TypeVar("T")
@@ -170,6 +170,17 @@ def command_names() -> frozenset[str]:
         for ep in distribution("labkit").entry_points
         if ep.group == "console_scripts"
     )
+
+
+def installed_version() -> str | None:
+    """The installed labkit's version, None where labkit runs from a source
+    tree that is not installed (on `PYTHONPATH` only). The one reading of
+    it: a caller that needs the version says itself what its absence
+    means — a refusal, or the word "unknown"."""
+    try:
+        return version("labkit")
+    except PackageNotFoundError:
+        return None
 
 
 def split_command(argv: list[str]) -> tuple[list[str], list[str] | None]:

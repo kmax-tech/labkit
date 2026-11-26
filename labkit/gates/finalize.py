@@ -51,8 +51,10 @@ each step's condition):
   4. run code and declared scopes  the script and the helpers it imports,
                     the run's and its lineage's, are the code here now
                     (blocker, `check_run_code`; a module in another
-                    repository warns), and every declared promise scope is
-                    unchanged since the run
+                    repository warns), every declared promise scope is
+                    unchanged since the run, and a derived run that
+                    declares its answer reading is held to its parent
+                    beyond the code (`check_answer_reading`)
   5. open fields    protocol fields still holding a placeholder — a
                     warning, a must field's too (preflight blocks that
                     before the freeze); a bound field written twice and
@@ -137,6 +139,7 @@ from functools import partial
 from dataclasses import replace
 from pathlib import Path
 
+from labkit.formats.commands import repair_head_way
 from labkit.formats import evidence
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.repo import area_parser, resolve_area
@@ -198,7 +201,6 @@ from labkit.formats.repo import (
 from labkit.formats.commands import (
     adopt_command,
     area_slots,
-    contract_command,
     data_counts_command,
     fill_command,
     measure_command,
@@ -501,7 +503,7 @@ def check_intent_keys_in_metrics(
         findings.note("  no intent ids registered — nothing to check")
         return
     try:
-        held = intent_hold(
+        intent = intent_hold(
             protocol,
             metrics_path(answering_run) if answering_run is not None else None,
             state,
@@ -523,12 +525,12 @@ def check_intent_keys_in_metrics(
         return
     # Its findings as data, each a blocker; its notes — which run, on what
     # proof — stay notes.
-    for line in held.notes:
+    for line in intent.notes:
         findings.note(f"  {line}")
-    for finding in held.findings:
+    for finding in intent.findings:
         findings.take(replace(finding, text=f"intent-check: {finding.text}"))
-    if not held.findings:
-        findings.note(f"  {held.summary}")
+    if not intent.findings:
+        findings.note(f"  {intent.summary}")
 
 
 def check_run_code(
@@ -824,7 +826,8 @@ def check_input_origins(
         findings.note("  n/a — the run recorded no input file")
         return
     findings.note(f"  {LOOKED_UP_WITHIN_AREA}")
-    held: list[str] = []  # origin runs whose origin check holds, in the inputs' order
+    # origin runs whose origin check holds, in the inputs' order
+    origins_ok: list[str] = []
     for entry in entries:
         state = origin_state(area, entry)
         for line in state.notes:
@@ -834,18 +837,21 @@ def check_input_origins(
         if state.gap is None:
             findings.note(f"  {origin_held(entry)}")
             assert entry.origin_run is not None  # state.now is set
-            held.append(entry.origin_run)  # only a held origin's protocol is read
+            # only an origin that holds has its protocol read
+            origins_ok.append(entry.origin_run)
         elif state.gap.part == BYTES_CHANGED and provenance_holds_bytes:
             findings.note(f"  {state.gap.told} — the provenance station names it")
         else:
             findings.take(origin_finding(state.gap, area))
     # an origin whose promise fails is named above, once; its protocol is
     # read back only where the run itself stands
-    check_source_protocols(findings, area, held)
+    check_source_protocols(findings, area, origins_ok)
 
 
-def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> None:
-    """Station 7, second part, only for the origin runs of HELD — those
+def check_source_protocols(
+    findings: Findings, area: Path, origin_runs: list[str]
+) -> None:
+    """Station 7, second part, only for ORIGIN_RUNS — those
     whose origin check holds; one that fails is named by its origin
     blocker and not read here. For each (repeats allowed), the protocol it was bound
     to as it started (`audit_binding.source_protocol_then`) — a blocker
@@ -864,7 +870,7 @@ def check_source_protocols(findings: Findings, area: Path, held: list[str]) -> N
     and held"); its text is still read back, and its bytes held in the
     first part."""
     root = git_root(area)
-    for run_id in dict.fromkeys(held):
+    for run_id in dict.fromkeys(origin_runs):
         then = source_protocol_then(area, run_id, root)
         finding = source_protocol_finding(then, area)
         if finding is not None:
@@ -948,12 +954,12 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
             )
         )
         return
-    held = null_lane_findings(kept, answering_run.parent.parent)
-    findings.take_all(held.unmoved)
-    if held.examined == 0:
+    null_lane = null_lane_findings(kept, answering_run.parent.parent)
+    findings.take_all(null_lane.unmoved)
+    if null_lane.examined == 0:
         findings.note("  n/a — no kept output holds a registered and a null lane")
-    elif not held.unmoved:
-        findings.note(f"  the null lane moved in {held.examined} kept output(s)")
+    elif not null_lane.unmoved:
+        findings.note(f"  the null lane moved in {null_lane.examined} kept output(s)")
 
 
 def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
@@ -1053,9 +1059,9 @@ def check_reference(
             "  not compared — the kept-number station names the kept key it lacks"
         )
         return
-    held = reference.comparison_gaps(ref, key, metrics)
-    findings.take_all(held)
-    if held:
+    gaps = reference.comparison_gaps(ref, key, metrics)
+    findings.take_all(gaps)
+    if gaps:
         return
     if ref is None or key is None:
         findings.note("  n/a — no [reference] registered")
@@ -1114,11 +1120,11 @@ def check_kept_number(
             )
         )
         return
-    held = kept_number_gaps(
+    gaps = kept_number_gaps(
         key, metrics, answering_run.name, answering_run.parent.parent, head.kind
     )
-    findings.take_all(held)
-    if not held:
+    findings.take_all(gaps)
+    if not gaps:
         kept = protocol_block.kept(text)
         assert kept is not None and kept.unit is not None, "kept_gaps found it filled"
         findings.note(f"  {kept_phrase(key, metrics[key], kept.unit)}")
@@ -1261,7 +1267,10 @@ def finalize_area(
        registered reference the run cannot compare (the key absent or no
        finite number) blocks — a missed one is a result.
     10. audit findings — always: an `open` BLOCKER in a record of this
-       protocol blocks; one on another protocol of the area does not.
+       protocol blocks; one on another protocol of the area does not. An
+       audit record that does not read is the station's one blocker: the
+       runs gone behind a record and the open findings are then not
+       checked (`check_open_audit_findings`).
 
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
@@ -1286,8 +1295,7 @@ def finalize_area(
             findings,
             console_output,
             f"{chosen.name}: {exc}",
-            f"repair the head as the sentence says: "
-            f"`{contract_command(chosen)}` shows its fields",
+            repair_head_way(chosen),
             head_rule(exc),
         )
         return 2
@@ -1369,7 +1377,8 @@ def finalize_area(
         findings.header("reference comparison")
         check_reference(findings, chosen, text, head, answering_run)
 
-    # 10. audit findings — always; a head without an id has no record
+    # 10. audit findings — always; a head without an id has no record, and
+    # a record that does not read ends the station with that blocker
     findings.header("audit findings")
     check_open_audit_findings(findings, area, state, held, chosen, head.id)
 

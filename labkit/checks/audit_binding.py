@@ -21,6 +21,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import NamedTuple
 
+from labkit.formats.commands import repair_head_way
 from labkit.formats.commands import (
     measure_anew,
     Command,
@@ -67,7 +68,6 @@ from labkit.formats.repo import (
     rel_posix,
     shown,
 )
-from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
@@ -109,8 +109,7 @@ def audited_run(state: AreaState, protocol: Path, text: str) -> tuple[Path | Non
     except protocol_block.BlockError as exc:
         raise AuditError(
             f"{protocol.name}: head unreadable — {exc}",
-            fix=f"repair the head as the sentence says "
-            f"(`{contract_command(protocol)}` shows its fields)",
+            fix=repair_head_way(protocol),
         ) from exc
     if pid is None:
         return None, "the protocol id is still a placeholder"
@@ -159,12 +158,25 @@ def run_rows(
         out.append(rows_excerpt(path, name))
     shown_metrics = runs.metrics_text(run_dir)
     if shown_metrics is not None:
-        out.append((f"FILE: {rel_run}/metrics.json", shown_metrics))
+        out.append((metrics_label(rel_run), shown_metrics))
     out += dependency_pieces(run_dir)
     out += origin_piece(area, run_dir)
     out += source_protocol_pieces(area, run_dir)
     out += protocol_runs_pieces(area, run_dir, requests)
     return out
+
+
+def metrics_label(rel_run: str) -> str:
+    """The label of the piece that shows a run's metrics.json, REL_RUN the
+    run's directory as the prompt names it. `is_metrics_label` finds the
+    piece again by it."""
+    return f"FILE: {rel_run}/{runs.METRICS_FILE}"
+
+
+def is_metrics_label(label: str) -> bool:
+    """Whether LABEL is a `metrics_label` — the piece `RunShown.metrics`
+    reads the shown metrics from."""
+    return label.startswith("FILE: ") and label.endswith(f"/{runs.METRICS_FILE}")
 
 
 #: how the label of the piece MODE analysis shows of one origin run's
@@ -519,7 +531,7 @@ class RunShown(NamedTuple):
         run showed none. Raises AuditError on a shown text that is no JSON
         object."""
         for label, text in self.pieces:
-            if label.startswith("FILE: ") and label.endswith("/metrics.json"):
+            if is_metrics_label(label):
                 try:
                     data = json.loads(text)
                 except json.JSONDecodeError as exc:

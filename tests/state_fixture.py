@@ -23,6 +23,7 @@ from pathlib import Path
 from labkit.formats import findings
 from labkit.formats.answering_run import RunFacts
 from labkit.formats.area_state import TREE, AreaState, FileState, Measured
+from labkit.formats import evidence
 from labkit.formats.evidence import AreaEvidence
 from labkit.formats import protocol_block
 from labkit.formats.files import MALFORMED
@@ -73,7 +74,7 @@ def area_evidence(
     records: Sequence[findings.Record] = (),
     gaps: Sequence[str] = (),
     unreadable: Sequence[str] = (),
-    changes: Sequence[tuple[str, str]] = (),
+    changes: Sequence[evidence.EvidenceChange] = (),
     ignored: Sequence[str] = (),
 ) -> AreaEvidence:
     """The `AreaEvidence` with exactly these fields; no review, report review

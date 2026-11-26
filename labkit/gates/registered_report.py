@@ -797,8 +797,7 @@ def registered_review(
     except report_blocks.ReportBlockError as exc:
         return blocker(
             f"{name_r}: its discussion blocks do not read — {exc}",
-            fix="restore the block's comment lines as `protocol-fill` wrote "
-            "them (`--discuss … --into` writes the block again)",
+            fix=report_blocks.DISCUSSION_RESTORE_WAY,
             rule=TECHNICAL_RULE,
         )
     return review_gap(

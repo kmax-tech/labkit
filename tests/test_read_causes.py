@@ -13,7 +13,7 @@ from labkit.checks.code_scan import unreadable_source
 from labkit.formats import files, gate, runs, scope_sha
 from labkit.gates import finalize, preflight
 from labkit.checks import notes_check
-from labkit.formats import evidence
+from labkit.formats import evidence, repo
 
 from gate_fixture import EVERY_RULE
 
@@ -456,8 +456,12 @@ class EvidenceComparison(unittest.TestCase):
     def test_a_comparison_git_could_not_run_is_not_executed(self) -> None:
         unread, changed = evidence.change_blockers(
             [
-                ("git could not compare", evidence.UNREAD_WAY),
-                ("a record changed", "restore it"),
+                evidence.EvidenceChange(
+                    "git could not compare", repo.UNREAD_OBJECTS_WAY, compared=False
+                ),
+                # the same way out on a comparison that ran: the words of
+                # the way out decide nothing
+                evidence.EvidenceChange("a record changed", repo.UNREAD_OBJECTS_WAY),
             ]
         )
         self.assertEqual(unread.outcome, gate.NOT_EXECUTABLE)

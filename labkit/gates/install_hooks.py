@@ -37,7 +37,6 @@ import re
 import shlex
 
 from labkit.formats import console
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TypedDict
 
@@ -48,11 +47,9 @@ MARK = "# installed by labkit-hooks"
 
 
 def labkit_version() -> str:
-    """The installed labkit's version, or "unknown" outside an installed package."""
-    try:
-        return version("labkit")
-    except PackageNotFoundError:
-        return "unknown"
+    """The installed labkit's version (`console.installed_version`), or
+    "unknown" outside an installed package."""
+    return console.installed_version() or "unknown"
 
 
 def pre_commit() -> str:

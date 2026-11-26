@@ -18,7 +18,6 @@ from pathlib import Path
 from labkit.formats import runs
 from labkit.formats.repo import (
     GitError,
-    commit_known,
     rel_posix,
     tree_diff,
     tree_then,
@@ -49,23 +48,22 @@ class CodeThen:
 def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
     """The tree run RD started from: its recorded commit with its
     `uncommitted.patch` applied (`repo.tree_then`). No tree, the reason in
-    WHERE: a record that does not read, no recorded commit or no
-    repository (ROOT None), a commit this clone does not hold, a run
-    started from a changed tree whose patch is gone (the commit alone is
-    not what it ran), or a patch that does not apply. Never the tree as it
-    stands now."""
+    WHERE: every reason the run's start point does not read back
+    (`runs.start_point`: no record, no commit, no repository, a patch
+    gone, a commit this clone does not hold), a run gone from the tree
+    that started from a changed tree (its patch is read from its directory
+    only), or a patch that does not apply. Never the tree as it stands now."""
     name = rd.dir.name
-    if rd.config is None:
-        return CodeThen(name, None, f"run {name} has no readable record")
-    commit = runs.recorded_commit(rd.config)
-    if commit is None:
-        return CodeThen(name, None, f"run {name} recorded no commit")
-    if root is None:
-        return CodeThen(
-            name, None, f"run {name}: no repository to read the commit from"
-        )
-    dirty = rd.config.git.endswith(runs.DIRTY_MARK)
-    if rd.from_commit is not None and dirty:
+    # this reader's own refusal, where it stood before the shared ones for a
+    # lost patch and an unknown commit: a run read at a commit has no
+    # directory to read its patch from
+    if (
+        rd.config is not None
+        and runs.recorded_commit(rd.config) is not None
+        and root is not None
+        and rd.from_commit is not None
+        and rd.config.git.endswith(runs.DIRTY_MARK)
+    ):
         return CodeThen(
             name,
             None,
@@ -73,23 +71,15 @@ def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
             f"changes; its uncommitted.patch is read from its directory only — "
             f"restore the directory from {rd.from_commit[:12]} to compare",
         )
-    if rd.from_commit is None and runs.patch_lost(rd):
-        return CodeThen(
-            name,
-            None,
-            f"run {name} started from a tree with changes and its "
-            f"uncommitted.patch is gone: the commit alone is not what it ran",
-        )
-    if not commit_known(root, commit):
-        return CodeThen(
-            name,
-            None,
-            f"run {name} started at {commit[:12]}, a commit this clone does "
-            f"not hold — `git fetch` brings it",
-        )
-    patch = runs.patch_text(rd.dir) if dirty else ""
+    start = runs.start_point(rd, root, subject=f"run {name}")
+    if isinstance(start, str):
+        return CodeThen(name, None, start)
+    commit = start.commit
+    # read only where the record says the tree had changes: the reading
+    # this function had; `as_measured` differs (`runs.start_point`)
+    patch = runs.patch_text(rd.dir) if start.changed_tree else ""
     try:
-        tree = tree_then(root, commit, patch)
+        tree = tree_then(start.root, commit, patch)
     except GitError as exc:
         return CodeThen(name, None, f"run {name}: {exc}")
     patched = " with its uncommitted.patch" if patch.strip() else ""

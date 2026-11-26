@@ -4,7 +4,9 @@
 directory exists (or the command ended first, said so); `runlog [AREA]` shows what an area's runs are doing and
 how they ended, `--wait` and `--follow` block until it is idle — no open
 run and no command `runlog start` detached still running (`detached`) —
-or a run, or a started command, ended without finishing cleanly;
+or a run, or a started command, ended without finishing cleanly; `--wait`
+gives up after `--max-seconds` (default 90) with exit 3, `--interval` sets
+the poll interval, `--notify` sends a macOS notification when the wait ends;
 `runlog reindex` rebuilds
 runs.tsv from the run directories (`runlog.reindex`). The run itself is
 written by `runlog.Run`; this module only reads it and starts processes.

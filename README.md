@@ -143,11 +143,12 @@ labkit-next AREA [--protocol FILE] [--staged]  # where the area stands, the one 
 labkit-next --guide                   # the workflow in full (labkit/docs/agent-guide.md), which the stamped AGENTS.md keeps short
 labkit-adopt AREA [RUN] [--protocol FILE]  # adopt the run: --from-run, the registered report's --into, report-check — stops at the first that does not pass
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--report-file PATH] [--explore]
+labkit-init exp NAME --kind KIND --deliverable PATH [--deliverable-columns A,B,C] # a file an external task names as its output: the run writes it from the kept rows and registers it; with the columns named, the write refuses others
 labkit-init exp NAME --kind KIND [--kept KEY] [--unit UNIT] # the kept number, at every kind: the head's [kept] (metrics key and unit; without them placeholders for protocol-fill at compute, the skeleton's score and unit "1" at fit|apply)
 labkit-init exp NAME --kind compute --kept KEY --reference VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT] # a computation compared with a stated value: the head's [reference], on the [kept] key
 labkit-init exp NAME --kind KIND --change-kind # another kind before the first measurement, written fields kept
 labkit-init numbers [--staged]      # one number per area (--staged: the index); the next free one over every branch and worktree
-protocol-check PROTOCOL             # check required fields and promise tables
+protocol-check [--staged] [--template PATH] PROTOCOL # check required fields and promise tables (--staged: as git's index holds the protocol; --template: against this template, not the packaged one)
 protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: the fields it owes and its row) or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL type=exploratory|confirmatory # the type; no measurement starts while it is a placeholder
@@ -166,9 +167,9 @@ protocol-fill PROTOCOL --withdraw --why "…" [--into REPORT.md] # the adoption 
 code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
 intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
 scope-sha AREA                     # code stamp used by an audit
-preflight AREA                     # readiness before freezing
-finalize AREA                      # checks after the run
-labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
+preflight AREA [--protocol FILE]   # readiness before freezing (--protocol: required once the area holds several)
+finalize AREA [--protocol FILE]    # checks after the run
+labkit-audit AREA --mode preflight|analysis|clarity [--protocol FILE] [--model ALIAS] [--timeout SECONDS] [--out FILE] # the one audit call, bounded by --timeout; --out also writes the report there
 labkit-audit AREA --decide N STATUS --why REASON [--not-assessable IDS] [--record FILE] # store your decision on a finding (fixed, limitation, false-positive)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, a BLOCKER decided `false-positive`, a BLOCKER on the Conclusion decided `fixed`, and a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw on a judged state — its verdicts count, it lifts no hold; the exit is the state's, as without --again: 1 while a BLOCKER's decision is not upheld and holds the number, 0 otherwise — a WARNING's not-upheld decision is printed and warned, not held)
@@ -177,10 +178,10 @@ labkit-audit AREA --report-review REPORT --decide N false-positive --why REASON 
 labkit-audit AREA --review --record REPORT-REVIEW-FILE     # a second reviewer on the claims decided false-positive; only its `upheld` releases the report
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas, citing reports, and the report a protocol head registers (owed its result block or handover block once delivered)
-runlog [AREA] [--wait | --follow]    # inspect or monitor runs
+runlog [AREA] [--wait [--max-seconds N] | --follow] [--interval S] [--notify] # inspect or monitor runs; --wait gives up after N seconds (default 90) with exit 3
 runlog start AREA -- COMMAND       # start a detached run; returns once its run directory exists (2: the command failed first, 3: still starting)
 runlog reindex AREA                # recover missing index rows
-labkit-params AREA [--run ID]       # values and provenance of a run
+labkit-params AREA [--protocol FILE] [--run ID] # values and provenance of a run
 labkit-run-diff AREA OLD_RUN NEW_RUN # the full code difference of two runs (commit plus uncommitted.patch)
 labkit-hooks install|check [REPO]   # install or check hooks
 claude-hook pre-run|post-change|stop # live Claude Code hook adapter
@@ -283,6 +284,6 @@ python3 -m venv .venv
 .venv/bin/pytest -q
 ```
 
-`just check` runs lint, formatting, type checking and the suite. [AGENTS.md](AGENTS.md) holds the contribution rules; [architecture](docs/architecture.md) explains layers, [core and doctrine](docs/architecture.md#core-and-doctrine), records and enforcement; [TODO](TODO.md) holds open work. Historical audits and usability measurements live under `docs/` and `docs/usability/`.
+`just check` runs lint, formatting, type checking and the suite. [AGENTS.md](AGENTS.md) holds the contribution rules; [architecture](docs/architecture.md) explains layers, [core and doctrine](docs/architecture.md#core-and-doctrine), records and enforcement; [TODO](TODO.md) holds open work. Historical audits and usability measurements live under `docs/notes/` and `docs/usability/`.
 
 A release starts with its CHANGELOG entry; `just release X.Y.Z` sets the version, commits through the checks and tags that commit. The author pushes the tag. Experiment repos adopt it by changing their pin.

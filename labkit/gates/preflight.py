@@ -47,7 +47,8 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      open, or git, always;
                      a missing scope file, a script or promise block that does not
                      read only while no earlier blocker stands, else it is told
-  6. working tree    uncommitted changes (warning, not a blocker)
+  6. working tree    uncommitted changes (warning, not a blocker); outside a
+                     git repo there is nothing to check
   7. hooks           the installed labkit hooks match this labkit (warning);
                      outside a git repo there is nothing to check
   8. area tests      tests/test_<NN>_<name>.py via pytest — the resolution
@@ -71,6 +72,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from labkit.formats.commands import repair_head_way
 from labkit.formats.commands import (
     area_slots,
     audit_command,
@@ -249,7 +251,7 @@ def preflight_area(
        exploration's registered output), or git, always; a missing scope
        file, a script or promise block that does not read only while no
        earlier blocker stands, else it is told; the stamp is told.
-    6. working tree — always.
+    6. working tree — only inside a git repo.
     7. hooks — only inside a git repo.
     8. area tests — always; frozen = true grades a missing test a blocker.
     9. summary — 1 if any station found a blocker, else 0.
@@ -276,7 +278,7 @@ def preflight_area(
         )
         findings.block(
             f"HEAD (must): {report.head_error}",
-            fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
+            fix=repair_head_way(protocol),
             rule=report.head_rule,
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
@@ -294,7 +296,9 @@ def preflight_area(
 
     # 2. repeat cost — told, never counted
     findings.header("repeat cost")
-    clarity = audit_command(area, "--mode", "clarity", protocol=protocol).line
+    clarity = audit_command(
+        area, "--mode", standard_contract.CLARITY, protocol=protocol
+    ).line
     for line in repeat_cost_lines(head.repeat_cost, lane, clarity):
         findings.note(line)
 
@@ -324,9 +328,13 @@ def preflight_area(
     findings.header("scope-sha")
     check_scope_stamp(findings, area, protocol)
 
-    # 6. working tree — always
+    # 6. working tree — only inside a git repo: outside one no commit holds
+    # anything, and `tree_dirty` would answer False for a tree nobody compared
     findings.header("working tree")
-    check_working_tree(findings, repo)
+    if git_repo is None:
+        findings.note("  n/a — not a git repo")
+    else:
+        check_working_tree(findings, repo)
 
     # 7. hooks — only inside a git repo
     findings.header("hooks")
@@ -661,8 +669,8 @@ def check_scope_stamp(findings: Findings, area: Path, protocol: Path) -> None:
 
 
 def check_working_tree(findings: Findings, repo: Path) -> None:
-    """Station 6: uncommitted changes under REPO warn — the number would
-    rest on code no commit holds."""
+    """Station 6: uncommitted changes under REPO, a git repository, warn —
+    the number would rest on code no commit holds."""
     if tree_dirty(repo):
         findings.warn(
             f"uncommitted changes in {repo} (commit or stash before the run)",

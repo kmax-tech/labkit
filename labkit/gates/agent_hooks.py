@@ -70,7 +70,7 @@ pre-commit
     from the repository's root, holds the index the commit carries in one
     entry (`commit_gates`): the MUST fields of every protocol the commit
     adds or changes, report-check over every staged path
-    (`report_check.hold_reported`), and the undecided state
+    (`report_check.hold_changed_paths`), and the undecided state
     (`undecided.undecided_state`); then `labkit-next`'s step per protocol
     touched, from the chains the hold ran.
 
@@ -302,7 +302,7 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
         # lines are kept to be told under the stop's own heading
         lines: list[str] = []
         try:
-            reported = report_check.hold_reported(
+            reported = report_check.hold_changed_paths(
                 changed, repo, staged=False, tell=lines.append
             )
             rc, chains = reported.exit, reported.chains
@@ -481,7 +481,7 @@ def commit_gates(argv: list[str]) -> int:
     if protocols:
         template = protocol_report.template_lines(protocol_report.find_template(None))
         held = protocol_report.check_files(protocols, template, staged=True)
-    reported = report_check.hold_reported(paths, repo, staged=True)
+    reported = report_check.hold_changed_paths(paths, repo, staged=True)
     held = reported.exit != 0 or held
     state = undecided_state(repo, paths, staged=True)
     for line in state.acknowledged:

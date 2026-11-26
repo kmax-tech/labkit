@@ -107,7 +107,6 @@ import subprocess
 import sys
 import time
 import uuid
-from importlib.metadata import version
 from pathlib import Path
 from types import TracebackType
 
@@ -395,6 +394,25 @@ def _make_run_dir(base_dir: Path) -> tuple[str, Path]:
     )
 
 
+def _declared_under() -> str:
+    """The installed labkit's version, which a run's declared answer
+    reading records (`AnswerReading.labkit`). Raises SystemExit with the
+    way out where labkit runs from a source tree that is not installed:
+    the declaration would name no version."""
+    installed = console.installed_version()
+    if installed is None:
+        raise SystemExit(
+            with_way_out(
+                "runlog: labkit runs from a source tree that is not installed, "
+                "so the version this run's answer reading is declared under "
+                "cannot be recorded",
+                "install labkit (`pip install -e .` in its checkout, or the "
+                "lab's pinned requirements), then start the run again",
+            )
+        )
+    return installed
+
+
 class NoInputs:
     """The type of NO_INPUTS: `data=runlog.NO_INPUTS` declares that a run
     reads no input file — told apart, in the run's record
@@ -508,7 +526,7 @@ class Run:
                 module=require_answer_reading(
                     base_dir, Path(sys.argv[0]).resolve(), answer_reading, derived_from
                 ),
-                labkit=version("labkit"),
+                labkit=_declared_under(),
             )
             if answer_reading is not None
             else None

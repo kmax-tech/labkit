@@ -58,6 +58,8 @@ scope = ["scripts/01_measure.py:evaluate"]
 
 The protocol's one fenced TOML block holds the head (`[protocol]`, see `labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`; its optional `report = "REPORT.md"` names the report file, relative to the repository root, that owes this protocol's result once it exists — `labkit-init exp --report-file` stamps it, `docs/workflow.md` section 8 says what releases it), the `[[promise]]` tables and — once a number is reported — the `[result]` table naming the run (`protocol_block.declared_run`, written by `protocol-fill --from-run`; the binding document says what the gates hold it to). Every protocol carries the `[kept]` table (a computation's since standard 0.24, a fit's and an apply's since the separation of obligations, docs/notes/2026-11-14-exploratory-workflow-plan.md) — the number it reports, by its metrics key and unit; a fit's or an apply's criterion judges exactly that number:
 
+Beside these the block takes any number of `[[evidence_file]]` tables (`protocol_block.evidence_files`): a data or output file the audit reads in full, with `path` (relative to the protocol's directory) and `sha256` (its digest when declared), written by `protocol-fill --evidence-file`. They are no promise: neither the promise block's digest (`block_sha`) nor the registration covers them, so a declaration added after the first measurement changes neither. The area stamp covers them (`scope_sha.evidence_file_basis`), and the audit refuses a declared file that changed, is missing, leads out of the repository or passes the size limits (`audit_prompt.checked_evidence_files`).
+
 ```toml
 [kept]
 key = "deforestation_rate"   # the metrics.json key of the kept number

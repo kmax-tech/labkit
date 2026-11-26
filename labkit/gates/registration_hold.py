@@ -18,6 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats import evidence
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
@@ -68,6 +69,7 @@ from labkit.formats.repo import (
     area_protocols,
     only_protocol,
     git_root,
+    UNREAD_OBJECTS_WAY,
 )
 from labkit.formats.commands import (
     Command,
@@ -547,19 +549,22 @@ def scope_changes(
             area, protocol, pid, run, root, firsts, others, measured, state, held
         )
     except AuditError as exc:
-        # whether a follow-up's release still covers the run cannot be told:
-        # held as that, never as an unreleased change whose way back would
-        # undo a correction
-        return [
-            blocker(
-                f"whether a correction in place releases what the number is about "
-                f"cannot be checked: {exc.why}",
-                fix=exc.fix
-                or f"repair what the sentence names, then "
-                f"`{gate_command('finalize', area)}`",
-                rule=TECHNICAL_RULE,
-            )
-        ]
+        return [release_unchecked(exc, area)]
+
+
+def release_unchecked(exc: AuditError, area: Path) -> GateFinding:
+    """The blocker when EXC kept the check from telling whether a
+    follow-up's release still covers a correction in place on AREA: held as
+    that — a check that did not run —, never as an unreleased change whose
+    way back would undo a correction. The one wording, for the registration
+    and for an exploration's hold (`exploration_hold`)."""
+    return blocker(
+        f"whether a correction in place releases what the number is about "
+        f"cannot be checked: {exc.why}",
+        fix=exc.fix
+        or f"repair what the sentence names, then `{gate_command('finalize', area)}`",
+        rule=TECHNICAL_RULE,
+    )
 
 
 def _scope_held(
@@ -624,7 +629,7 @@ def _scope_held(
                     first_measurement(protocol, first, root),
                     diffs,
                     refs,
-                    audit_command(area, "--mode", "analysis", protocol=protocol),
+                    audit_command(area, "--mode", ANALYSIS_AUDIT, protocol=protocol),
                 )
     now = scope_now(area, protocol, pid, run, root, measured, state, held)
     if now is None or not now.kept:
@@ -646,7 +651,7 @@ def _scope_held(
         first_measurement(protocol, now.first, root),
         now.kept,
         refs,
-        audit_command(area, "--mode", "analysis", protocol=protocol),
+        audit_command(area, "--mode", ANALYSIS_AUDIT, protocol=protocol),
         measure=measure_command(area) if code_changed else None,
         withdraw=withdraw_command(declaring) if declaring else None,
     )
@@ -984,7 +989,7 @@ def unread_history_hold(
     only with an answering run and a stamped id (`untold_first_holds`),
     and report-check's report duty, which runs always
     (`report_check.report_binding_gaps`). The ways out: the repository's
-    objects restored (`evidence.UNREAD_WAY`), then the check that told it
+    objects restored (`repo.UNREAD_OBJECTS_WAY`), then the check that told it
     again on AREA (TOLD_BY, the tool's name: `finalize` or
     `report-check`); where they cannot be restored, the handover
     (HANDOVER_WAY). Known as UNREAD_HISTORY. [] when the history was
@@ -997,7 +1002,7 @@ def unread_history_hold(
             f"not read back, so whether a start file is missing was not checked "
             f"and which run measured first is not told; no number of this area "
             f"is released over it",
-            fix=f"{evidence.UNREAD_WAY} (`{gate_command(told_by, area)}`); "
+            fix=f"{UNREAD_OBJECTS_WAY} (`{gate_command(told_by, area)}`); "
             f"where they cannot be restored, {handover_way}",
             stated_outcome=NOT_EXECUTABLE,
             rule=TECHNICAL_RULE,

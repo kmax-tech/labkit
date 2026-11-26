@@ -174,7 +174,7 @@ class IfReported(unittest.TestCase):
         """The pre-commit's form of the gate over PATHS in the repo ROOT."""
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = report_check.hold_reported(list(paths), root, staged=True).exit
+            code = report_check.hold_changed_paths(list(paths), root, staged=True).exit
         return code, buf.getvalue()
 
     def test_staged_reads_the_answer_as_the_index_holds_it(self):
@@ -413,12 +413,12 @@ class IfReported(unittest.TestCase):
     def test_the_cli_takes_staged(self):
         clean = report_check.HoldVerdict(0, {})
         with mock.patch.object(
-            report_check, "hold_reported", return_value=clean
+            report_check, "hold_changed_paths", return_value=clean
         ) as gate:
             report_command.main(["--if-reported", "--staged", "a/PROTOCOL-x.md"])
         gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=True)
         with mock.patch.object(
-            report_check, "hold_reported", return_value=clean
+            report_check, "hold_changed_paths", return_value=clean
         ) as gate:
             report_command.main(["--if-reported", "a/PROTOCOL-x.md"])
         gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=False)
@@ -556,7 +556,9 @@ class RegisteredReport(unittest.TestCase):
     def _gate(self, root: Path, *paths: Path, staged: bool = False) -> tuple[int, str]:
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = report_check.hold_reported(list(paths), root, staged=staged).exit
+            code = report_check.hold_changed_paths(
+                list(paths), root, staged=staged
+            ).exit
         return code, buf.getvalue()
 
     OWED = "carries neither"

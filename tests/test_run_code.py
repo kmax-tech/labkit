@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import recheck  # noqa: E402
 from labkit.checks.run_record_check import code_since_run  # noqa: E402
-from labkit.formats import gate, repo, runs  # noqa: E402
+from labkit.formats import gate, protocol_then, repo, runs  # noqa: E402
 from labkit.formats.commands import measure_anew  # noqa: E402
 from labkit.formats.answer_reading import (  # noqa: E402
     ANSWER_READING_FILE,
@@ -523,6 +523,62 @@ class CodeSinceRun(unittest.TestCase):
         self.assertEqual(
             code_then(read(run), self.repo).where, f"run {run.name} recorded no commit"
         )
+
+    def test_the_start_point_is_one_answer_for_code_and_protocol(self) -> None:
+        """`runs.start_point`: the reason a run's start does not read back
+        is one sentence, opened by how the caller names the run — the code
+        reader (`code_then`) and the protocol reader
+        (`protocol_then.as_measured`) both take it from there."""
+        run = self.run_now()
+        self._record(run, git=runs.NO_GIT, git_full="")
+        rd = runs.read_run_dir(run)
+        self.assertEqual(
+            runs.start_point(rd, self.repo, subject="origin run r"),
+            "origin run r recorded no commit",
+        )
+        self.assertEqual(
+            code_then(rd, self.repo).where,
+            runs.start_point(rd, self.repo, subject=f"run {run.name}"),
+        )
+        _, where = protocol_then.as_measured(
+            self.area / "PROTOCOL-x.md", rd, self.repo, role="run"
+        )
+        self.assertEqual(
+            where, runs.start_point(rd, self.repo, subject=f"run {run.name}")
+        )
+
+    def test_a_patch_beside_a_clean_record_is_passed_over_by_the_code_reader(
+        self,
+    ) -> None:
+        """The state no run of this labkit leaves — runlog writes the patch
+        exactly when it marks the tree changed: `code_then` passes such a
+        file over, even one that does not apply. The protocol reader
+        applies it (`tests/test_unread_registration.py`,
+        `test_a_recorded_patch_that_does_not_apply_blocks`). Held here as
+        it stands, so that the open decision (TODO, the audit of
+        2026-11-26: apply, pass over, or refuse the contradiction) is taken
+        knowingly and not by a refactoring."""
+        run = self.run_now()
+        cfg = runs.read_run_dir(run).config
+        assert cfg is not None, "the fixture's record reads"
+        self.assertFalse(cfg.git.endswith(runs.DIRTY_MARK))
+        clean = code_then(runs.read_run_dir(run), self.repo).tree
+        self.assertIsNotNone(clean)
+        runs.patch_path(run).write_text(
+            "diff --git a/none.py b/none.py\n--- a/none.py\n+++ b/none.py\n"
+            "@@ -1,1 +1,1 @@\n-a line that is not there\n+x\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(code_then(runs.read_run_dir(run), self.repo).tree, clean)
+
+    def test_the_twin_a_start_that_reads_gives_commit_and_patch(self) -> None:
+        run = self.run_now()
+        start = runs.start_point(
+            runs.read_run_dir(run), self.repo, subject=f"run {run.name}"
+        )
+        assert isinstance(start, runs.StartPoint), start
+        self.assertEqual(start.commit, _git(self.repo, "rev-parse", "HEAD").strip())
+        self.assertFalse(start.changed_tree)
 
     def test_an_area_outside_a_repository_is_the_cause_named(self) -> None:
         """The run recorded its commit and the area's repository is gone

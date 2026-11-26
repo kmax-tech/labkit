@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 from labkit.formats import attempts, findings, protocol_block
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.area_state import (
     CLOCKS_ASSUMED,
     AreaState,
@@ -150,7 +151,7 @@ def later_use_findings(
     by_run: dict[str, list[SharedInput]] = {}
     for s in not_shown_since(shared, began):
         by_run.setdefault(s.exploring_run, []).append(s)
-    audit = audit_command(area, "--mode", "analysis", protocol=protocol)
+    audit = audit_command(area, "--mode", ANALYSIS_AUDIT, protocol=protocol)
     since = (
         f"started after the analysis audit that covers this result began "
         f"({began.isoformat(timespec='seconds')}; {CLOCKS_ASSUMED})"

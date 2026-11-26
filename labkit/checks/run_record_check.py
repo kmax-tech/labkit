@@ -11,8 +11,10 @@ asked (`single_draw`), every JSONL row held to the runs that wrote it
 (`row_provenance_findings`), every arm the protocol names present
 (`arm_findings`), a null lane that moved in the kept rows
 (`null_lane_findings`), the kept number held as the head's `[kept] key`
-names it (`kept_number_gaps`). Each returns findings; finalize's stations decide
-their grade. Read-only.
+names it (`kept_number_gaps`). Each returns findings graded where they are
+made (`gate.blocker`, a `GateFinding` warning); only where a check returns
+plain sentences (the warnings of `code_since_run`) the finalize station that
+takes them gives the grade. Read-only.
 """
 
 from __future__ import annotations
@@ -49,7 +51,6 @@ from labkit.formats.scope_sha import (
     script_candidates,
     scripts_named,
 )
-from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import promises, protocol_block
@@ -89,6 +90,7 @@ from labkit.formats.runs import (
 )
 from labkit.formats.answering_run import repeats_of
 from labkit.formats.runs import lineage, model_provenance_run, source_runs
+from labkit.formats.runs import NO_SCRIPT, script_digest
 from labkit.formats.repo import (
     GitError,
     blobs_now,
@@ -400,7 +402,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
     if cfg is None:
         return [], []  # the answering-run station names an unreadable record
     rid, here = run.name, Path.cwd()
-    if cfg.script_sha == "no-script":
+    if cfg.script_sha == NO_SCRIPT:
         return [
             blocker(
                 f"{rid} recorded no script — the code behind its number cannot be compared",
@@ -421,7 +423,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
             )
         ], []
     out: list[GateFinding] = []
-    if file_digest(script)[:DIGEST_CHARS] != cfg.script_sha:
+    if script_digest(script) != cfg.script_sha:
         out.append(
             replace(
                 blocker(
@@ -485,13 +487,10 @@ def script_as_run(area: Path, run: Path) -> tuple[Path | None, str]:
     cfg = read_run_config(run)
     if cfg is None:
         return None, f"run {run.name} has no readable record"
-    if cfg.script_sha == "no-script":
+    if cfg.script_sha == NO_SCRIPT:
         return None, f"run {run.name} recorded no script"
     script = script_of(area, cfg)
-    if (
-        isinstance(script, Path)
-        and file_digest(script)[:DIGEST_CHARS] == cfg.script_sha
-    ):
+    if isinstance(script, Path) and script_digest(script) == cfg.script_sha:
         return script, ""
     tree = (
         script

@@ -24,7 +24,7 @@ from labkit.formats import requirements
 from labkit.formats import console, jsonl, repo
 from labkit.formats.files import write_atomic_bytes
 from labkit.formats.gate import with_way_out
-from labkit.formats.digests import DIGEST_CHARS, digest, file_digest, tree_digest
+from labkit.formats.digests import DIGEST_CHARS, file_digest, tree_digest
 from labkit.formats.runs import (
     DIRTY_MARK,
     LEAKAGE_CHECK_KEY,
@@ -33,6 +33,8 @@ from labkit.formats.runs import (
     RECORD_SHA_CHARS,
     recorded_path,
     script_copy_path,
+    script_digest,
+    NO_SCRIPT,
     untracked_copy_path,
 )
 
@@ -586,24 +588,25 @@ def snapshot_script(run_dir: Path) -> str:
     try:
         src = Path(sys.argv[0]).resolve()
         if not src.is_file():
-            return "no-script"
+            return NO_SCRIPT
         body = src.read_bytes()
         write_atomic_bytes(script_copy_path(run_dir, src.suffix), body)
         # the hash of the bytes copied, not of a second read: a save in
         # between would leave a record whose hash matches no stored script
-        return digest(body)
+        return script_digest(body)
     except OSError:
-        return "no-script"
+        return NO_SCRIPT
 
 
 def script_sha() -> str:
-    """The running script's content hash (config.json `script_sha`), or
-    "no-script" — read before mkdir too, for a repeat's comparison."""
+    """The running script's content hash (config.json `script_sha`,
+    `runs.script_digest`), or `runs.NO_SCRIPT` — read before mkdir too,
+    for a repeat's comparison."""
     try:
         src = Path(sys.argv[0]).resolve()
-        return file_digest(src)[:DIGEST_CHARS] if src.is_file() else "no-script"
+        return script_digest(src) if src.is_file() else NO_SCRIPT
     except OSError:
-        return "no-script"
+        return NO_SCRIPT
 
 
 _SNAPSHOT_CAP = 2 * 1024 * 1024  # a "source file" above 2 MB is data

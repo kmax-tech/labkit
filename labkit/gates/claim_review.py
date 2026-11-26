@@ -70,7 +70,7 @@ from labkit.gates import audit_call, audit_prompt, report_hold, report_review
 from labkit.gates.decision_review import parse_review
 
 #: the review's mode: its instructions (`audit_prompt.instructions`)
-CLAIM_REVIEW = "claim"
+CLAIM_REVIEW = audit_prompt.CLAIM_REVIEW
 CLAIMS_LABEL = (
     "CLAIMS — the decisions under review: each claim the report's first reader "
     "named and the person decided `false-positive`, with the reason given"

@@ -6,7 +6,6 @@ One home for the shape, so a fixture states only what it varies:
 
 from __future__ import annotations
 
-from labkit.formats import digests
 from labkit.formats.runs import RunKind
 
 import json
@@ -146,10 +145,11 @@ def declared_scope_area(repo: Path) -> Path:
 
 
 def script_sha_of(script: Path) -> str:
-    """The `script_sha` a run of SCRIPT records (`provenance.snapshot_script`):
-    a fixture run that names the script it ran, so the code-since-run check
-    (finalize station 4) finds it unchanged."""
-    return digests.file_digest(script)[: digests.DIGEST_CHARS]
+    """The `script_sha` a run of SCRIPT records (`provenance.snapshot_script`,
+    through `runs.script_digest`, the writer's own function): a fixture run
+    that names the script it ran, so the code-since-run check (finalize
+    station 4) finds it unchanged."""
+    return runs.script_digest(script)
 
 
 #: the origin fields of a plain input without origin run, as runlog writes
@@ -203,7 +203,7 @@ def run_record(
         "audit_failed": None,
         "repeat_cost": None,
         "promises": None,
-        "script_sha": "no-script",
+        "script_sha": runs.NO_SCRIPT,
         "untracked_sources": [],
         "pid": 1,
         "git": "g",

@@ -4,6 +4,7 @@
     labkit-init exp NAME [--repo DIR] [--repeat-cost low|high] --kind compute|fit|apply [--model [ALIAS]]
                          [--kept KEY] [--unit UNIT]
                          [--reference VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT]]
+                         [--deliverable PATH [--deliverable-columns A,B,C]]
                          [--report] [--report-file PATH] [--explore]
     labkit-init exp NAME --kind compute|fit|apply --change-kind
     labkit-init numbers [--repo DIR] [--staged]
@@ -68,7 +69,6 @@ import argparse
 import difflib
 from typing import NoReturn
 from dataclasses import dataclass
-import importlib.metadata
 import os
 import re
 
@@ -228,7 +228,14 @@ def pinned_ref(ref: str | None = None) -> str:
     editable install keeps the version of its last `pip install -e` while
     the templates are read live, so the pin would name an older release
     than the templates stamped."""
-    version = importlib.metadata.version("labkit")
+    version = console.installed_version()
+    if version is None:
+        raise console.Refused(
+            "labkit-init",
+            "labkit runs from a source tree that is not installed, so there "
+            "is no installed version to pin — run `pip install -e '.[dev]'` "
+            "in the labkit checkout",
+        )
     source = source_version()
     if source is not None and source != version:
         raise console.Refused(

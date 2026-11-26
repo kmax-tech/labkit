@@ -227,6 +227,20 @@ def contract_command(protocol: Path) -> Command:
     )
 
 
+def repair_head_way(protocol: Path | None) -> str:
+    """The way out of a protocol head that does not read: repair it as the
+    sentence beside it says, with the `--contract` line that shows its
+    fields — PROTOCOL as the working directory reaches it
+    (`contract_command`), the `<PROTOCOL>` placeholder where the sentence
+    knows no path. The one wording for every gate that tells such a head."""
+    line = (
+        contract_command(protocol).line
+        if protocol is not None
+        else f"protocol-check {protocol_word(None)} --contract"
+    )
+    return f"repair the head as the sentence says (`{line}` shows its fields)"
+
+
 def protocol_word(protocol: Path | None) -> str:
     """PROTOCOL as a printed command names it: shell-quoted as the working
     directory reaches it (`shown`); None: the `<PROTOCOL>` placeholder, for

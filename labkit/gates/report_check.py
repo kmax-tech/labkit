@@ -15,12 +15,12 @@
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
 This module holds the protocol's release stations and the entry points
-(`hold_reported`, `hold_declared`; the command line is `tools.report_command`): the order and the conditions of
+(`hold_changed_paths`, `hold_declared`; the command line is `tools.report_command`): the order and the conditions of
 what runs stand here. The context every station reads is
 `report_context.checked`; the replacement station lives in
 `report_replacement`, the stations on the audit decisions (limits, reviews,
 follow-up) in `report_decisions`. Finding the reports a change reaches and what holds
-each lives in `report_hold`, which `hold_reported` calls after the protocols.
+each lives in `report_hold`, which `hold_changed_paths` calls after the protocols.
 
 `finalize` holds the run before the number is written back and comes
 before the analysis audit; report-check comes last and holds the whole
@@ -93,6 +93,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from labkit.formats.repo import UNREAD_OBJECTS_WAY
 from labkit.formats import commands
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
 from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE
@@ -362,16 +363,18 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
 
 
 def _registration_at(
-    ctx: Checked, root: Path, rd: RunDir, held: int
+    ctx: Checked, root: Path, rd: RunDir, firsts: int
 ) -> list[GateFinding]:
-    """`registration_gaps` for RD, one of HELD first measurements, in the
+    """`registration_gaps` for RD, one of FIRSTS first measurements, in the
     repository ROOT."""
     cfg = rd.config
     assert cfg is not None, "the first measurements are read runs only"
     at = f"the first measurement {rd.dir.name}"
     # several are first on diverged history or beside a run git cannot
     # place: without the why, a reader takes the second blocker for a bug
-    among = "" if held == 1 else f"; one of {held} that git's history does not order"
+    among = (
+        "" if firsts == 1 else f"; one of {firsts} that git's history does not order"
+    )
     then = committed_at(ctx.protocol, rd, root)
     commit = then.commit
     # what stood before the number cannot be repaired afterwards: a new
@@ -423,9 +426,8 @@ def _registration_at(
                 f"{ctx.protocol.name} at {at} ({commit[:12]}{among}) cannot be read: "
                 f"{then.detail} — the registration that stood before the number "
                 f"cannot be told",
-                fix=f"make it readable: restore the repository's missing objects "
-                f"(`git fsck` names them) or fetch them from a clone that has them "
-                f"(`git fetch`), then `{gate_command('report-check', ctx.area)}`; "
+                fix=f"{UNREAD_OBJECTS_WAY} "
+                f"(`{gate_command('report-check', ctx.area)}`); "
                 f"where they are lost, {anew}",
                 rule=TECHNICAL_RULE,
             )
@@ -590,7 +592,7 @@ FINALIZE = "finalize: "
 
 
 #: where a gate's lines go as they are found: `print` on the console; a
-#: hook that tells them elsewhere passes its own (`hold_reported`)
+#: hook that tells them elsewhere passes its own (`hold_changed_paths`)
 Tell = Callable[[str], None]
 
 
@@ -687,8 +689,8 @@ def protocol_verdict(
 
     # 2. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
-        held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
-        tell(f"  {chosen.name}: {held}")
+        passed = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
+        tell(f"  {chosen.name}: {passed}")
     return ProtocolVerdict(findings.report("report-check", "reporting"), chain)
 
 
@@ -834,7 +836,7 @@ def orphaned_duty_gaps(state: AreaState) -> list[GateFinding]:
     the state's protocol texts) — the one reading for report-check's
     station, its area form on an area without a protocol
     (`protocol_verdict`), and the stop's and the commit's hold
-    (`hold_reported`). [] outside a repository."""
+    (`hold_changed_paths`). [] outside a repository."""
     if state.repo is None:
         return []
     carried = {protocol_block.id_of(t) for t in state.protocol_texts.values()}
@@ -989,12 +991,13 @@ def chain_gaps(
     3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it,
-       with an answering run — without one (where finalize reads CTX's
-       text) finalize's run choice is the one blocker; under a covering
+       with an answering run, and without one on an adoption's proposal;
+       without one elsewhere (where finalize reads CTX's text) finalize's
+       run choice is the one blocker; under a covering
        audit, the warnings for a named exploration's runs it was not
        shown (`report_exploration`).
     6. Recomputation: the analysis script's `--check` for CTX's protocol
-       (its own run, that run's script), always.
+       (its own run, that run's script), unless UNDECLARED.
     7. Decisions: reviews and follow-ups where the lane owes the analysis.
     8. Report: the registered report, once delivered in CTX's state, and
        the review every report discussing a run of the protocol owes
@@ -1005,7 +1008,7 @@ def chain_gaps(
     Every applicable station runs despite earlier blockers; a declared run
     whose code changed puts the withdrawal before every later hold
     (`withdrawn_first`). One cause is one blocker: where finalize reads the
-    text CTX holds (every state but the adoption's proposal, `same_text`),
+    text CTX holds (every state but the adoption's proposal, `on_proposal`),
     a cause finalize already holds is not held a second time — no answering
     run (left out of station 5), a field written twice (left out of station
     2), the marks that make a run unreportable (finalize's warning left out
@@ -1017,8 +1020,10 @@ def chain_gaps(
     coverage standing — the area stamp is one digest and cannot tell the
     link from another change — and that blocker names the link's way out,
     never an audit, which could not release while the link does not
-    resolve (`analysis_audit_gap`). Finalize's own stations
-    are named by what they check, never by number, here.
+    resolve (`analysis_audit_gap`). Every station number in this
+    docstring and in this function's comments is this chain's (0–8 above):
+    finalize and preflight number their own stations, and theirs are named
+    here by what they check, never by number.
     UNDECLARED (no run adopted yet, the one a next step asks about):
     the stations the adoption writes and holds on its proposal — the result
     section (`report_decisions.limit_gaps`), the recomputation, the report —
@@ -1030,7 +1035,7 @@ def chain_gaps(
     # in every state but the proposal an adoption checks: for INDEX the
     # tree equals the index, since `hold_declared` and `next_step` hold an
     # area whose tree differs from it before the chain (`staged_area_gap`)
-    same_text = ctx.file_state != PROPOSED
+    on_proposal = ctx.file_state == PROPOSED
     # 0. evidence — an adoption cut off, then committed evidence changed
     out = cut_off_adoption_gaps(ctx)
     out += ctx.evidence.change_blockers()
@@ -1041,7 +1046,7 @@ def chain_gaps(
     if ln.freeze:
         # a field written twice: finalize's open-fields station holds it on
         # the text it reads
-        out += freeze_gaps(ctx, repeated=not same_text)
+        out += freeze_gaps(ctx, repeated=on_proposal)
     elif ln.registration:
         out += registration_gaps(ctx)
     out += replacement_gaps(ctx)
@@ -1056,7 +1061,7 @@ def chain_gaps(
     finalized = finalize_findings(ctx.area, ctx.protocol, ctx.area_state, ctx.evidence)
     # the history git could not list is station 2's blocker, whatever the text
     finalized = without_unread_history(finalized)
-    if same_text:
+    if not on_proposal:  # finalize read the text CTX holds
         finalized = without_declaration_blocker(finalized, ctx)
         finalized = without_unreportable_warnings(finalized, ctx.run)
     out += finalized
@@ -1070,7 +1075,7 @@ def chain_gaps(
     # 5. analysis — where the lane owes it and an answering run exists;
     # without one, finalize's run-choice station holds it where it reads
     # this text
-    if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or not same_text):
+    if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or on_proposal):
         # while the link holds, the audit is not the next step (station 2's is)
         analysis = analysis_findings(
             ctx, result_section=not undeclared, link_unresolved=bool(link)
@@ -1131,8 +1136,8 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     if not pid:
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
     state = state_of(area)
-    held = state.measured_of(pid)
-    measured = [rd for rd in held.present if held.may_have_measured(rd)]
+    of_protocol = state.measured_of(pid)
+    measured = [rd for rd in of_protocol.present if of_protocol.may_have_measured(rd)]
     if not measured:
         # measured and deleted since: git or the index keeps them, so a
         # handover never says "no run of it was measured" over deleted runs
@@ -1140,18 +1145,18 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
             {
                 rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
                 f"{gone_run_restore(rd)}"
-                for rd in held.deleted
-                if held.may_have_measured(rd)
+                for rd in of_protocol.deleted
+                if of_protocol.may_have_measured(rd)
             }
             | {
                 r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
                 f"{LOST_RUN_SENTENCE}"
-                for r in held.lost_measurements
+                for r in of_protocol.lost_measurements
             }
             | {
                 r: f"{r}: started (its start file stands), and runs/{r}/ is gone — "
                 f"{LOST_RUN_SENTENCE}"
-                for r in held.started_only_measurements
+                for r in of_protocol.started_only_measurements
             }
         )
         if gone:
@@ -1159,10 +1164,10 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
                 max(gone), handovers.UNUSABLE, tuple(gone[r] for r in sorted(gone))
             )
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
-    choice = held.answering(adopted_run(text))
+    choice = of_protocol.answering(adopted_run(text))
     if choice.run_dir is None or not any(rd.dir == choice.run_dir for rd in measured):
         # why each measurement was left out of the choice
-        _, left = held.bound()
+        _, left = of_protocol.bound()
         ours = {rd.dir for rd in measured}
         why = [f"{f.dir.name}: {f.why or f.state}" for f in left if f.dir in ours]
         why += [choice.blocker] if choice.blocker else []
@@ -1180,12 +1185,12 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     except AuditError as exc:
         # the audit cannot be held to the run: that holds the adoption too
         return handovers.RunAccount(run, handovers.HELD, (str(exc),))
-    held = tuple(
+    blocker_texts = tuple(
         g.text
         for g in chain_gaps(ctx, undeclared=ctx.declared is None, review=False).blockers
     )
-    state = handovers.HELD if held else handovers.ADOPTABLE
-    return handovers.RunAccount(run, state, held)
+    account = handovers.HELD if blocker_texts else handovers.ADOPTABLE
+    return handovers.RunAccount(run, account, blocker_texts)
 
 
 def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
@@ -1275,8 +1280,8 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     an adoption that does not stand."""
     if ctx.file_state == PROPOSED or ctx.run is None or ctx.declared != ctx.run.name:
         return None
-    held = any(f.changed_since is not None for f in finalized)
-    return ctx.protocol if held else None
+    code_changed = any(f.changed_since is not None for f in finalized)
+    return ctx.protocol if code_changed else None
 
 
 def tell_adoption_order(findings: Findings) -> None:
@@ -1328,7 +1333,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     did (`formerly_registering`), and those a report among PATHS shows a
     result of (`held_by_reports`: a block names it, or its prose cites a
     run the protocol declares) — the index's when STAGED, the tree's
-    otherwise. The one reader for the gate (`hold_reported`) and for the
+    otherwise. The one reader for the gate (`hold_changed_paths`) and for the
     step printed beside its hold (`next_step.steps_for`): read apart, a
     protocol the index holds and the tree deleted, or a report at the root
     citing an adopted run, would be held with no step beside it."""
@@ -1353,7 +1358,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
 
 @dataclass(frozen=True)
 class HoldVerdict:
-    """What `hold_reported` found: EXIT, the worst exit code of every hold;
+    """What `hold_changed_paths` found: EXIT, the worst exit code of every hold;
     CHAINS, per protocol whose chain ran (a declared result), what it found
     — the chain a step printed beside the hold reads instead of running it
     again (`next_step.steps_for`)."""
@@ -1362,14 +1367,16 @@ class HoldVerdict:
     chains: dict[Path, ReleaseChain]
 
 
-def hold_reported(
+def hold_changed_paths(
     paths: list[Path], repo: Path, *, staged: bool, tell: Tell = print
 ) -> HoldVerdict:
     """`report-check` for every protocol of an area one of PATHS touches
     whose head declares a result, and for every report among PATHS
     (`report_files`): the gate at the stop and the commit. A result declared
-    reported is held to the whole chain, a protocol declaring none is
-    skipped (an exploration may end with no reported result). A report
+    reported is held to the whole chain; a protocol declaring none is not
+    held to the chain (an exploration may end with no reported result),
+    but its registered report, once delivered, is held all the same
+    (`hold_registered`). A report
     that is a symbolic link is refused alone, naming the copy that replaces
     it; its other checks wait for that copy. A report's generated blocks
     are held to the protocols they name, which the stations hold too, its
@@ -1396,8 +1403,8 @@ def hold_reported(
     reached = reached_reports(
         protocols, reports, repo, staged=staged, sources=touched.sources
     )
-    held = {p for p, _ in reports} | {p for p, _, _ in reached}
-    reached += discussing_reports(paths, held, repo, staged=staged)
+    report_paths = {p for p, _ in reports} | {p for p, _, _ in reached}
+    reached += discussing_reports(paths, report_paths, repo, staged=staged)
     # touched.sources is blank when no report is among PATHS (`reached_by`);
     # the reports reached then need every protocol's citations read
     sources = (

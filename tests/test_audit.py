@@ -143,6 +143,25 @@ def no_model_call(alias, prompt, **kw):
 
 
 class Audit(unittest.TestCase):
+    def test_the_metrics_piece_is_found_by_the_label_it_is_written_under(self):
+        label = audit_binding.metrics_label("experiments/01/runs/r1")
+        self.assertTrue(audit_binding.is_metrics_label(label))
+        self.assertFalse(
+            audit_binding.is_metrics_label("FILE: experiments/01/runs/r1/outputs.json")
+        )
+
+    def test_a_mode_without_instructions_is_refused(self):
+        """A misspelled mode was once given the preflight agent's
+        instructions without a word."""
+        with self.assertRaises(ValueError) as cm:
+            audit_prompt.instructions("reveiw")
+        self.assertIn("'reveiw'", str(cm.exception))
+
+    def test_the_twin_every_listed_mode_has_instructions(self):
+        for mode in audit_prompt.AGENT_OF_MODE:
+            with self.subTest(mode=mode):
+                self.assertTrue(audit_prompt.instructions(mode).strip())
+
     def test_the_auditor_reads_protocol_code_lib_and_the_cited_rules(self):
         rc, _, err, sent = run(repo_with(), CLEAN)
         self.assertEqual(rc, 0)

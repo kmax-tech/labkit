@@ -38,7 +38,6 @@ missing evidence. Rationale: docs/notes/2026-10-27-handover-recovery.md.
 from __future__ import annotations
 
 import json
-import os
 import secrets
 import tomllib
 from collections.abc import Iterable, Sequence
@@ -65,6 +64,7 @@ from labkit.formats.comment_blocks import (
 )
 from labkit.formats.repo import (
     GitError,
+    path_beside,
     REPORT_SUFFIX,
     area_protocols,
     blobs_now,
@@ -492,12 +492,12 @@ class HandoverBlock:
 def _shown(record: Handover, root: Path, path: Path) -> tuple[str, str, str]:
     """(protocol, record file, audits folder) of RECORD kept at PATH, each
     relative to RECORD's report — as its block names them."""
-    base = (root / record.report).parent
-
-    def rel(target: Path) -> str:
-        return Path(os.path.relpath(target, base)).as_posix()
-
-    return rel(root / record.protocol), rel(path), rel(path.parents[1])
+    report = root / record.report
+    return (
+        path_beside(root / record.protocol, report),
+        path_beside(path, report),
+        path_beside(path.parents[1], report),
+    )
 
 
 def handover_lines(record: Handover, root: Path, path: Path) -> list[str]:

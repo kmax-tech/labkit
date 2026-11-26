@@ -106,7 +106,7 @@ from labkit.gates.ways_out import ANSWER_AGAIN, contested_way
 
 #: the review's mode: its instructions, the prompt's MODE line and its
 #: attempts in the area's journal (`attempts`)
-REVIEW = "review"
+REVIEW = audit_prompt.REVIEW
 #: a decision line of the reviewer's report
 DECISION = re.compile(
     findings.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + findings.SEP + r"\s*\**"

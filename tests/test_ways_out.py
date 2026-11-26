@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks.audit_binding import gone_run_way  # noqa: E402
-from labkit.formats import area_state, protocol_block  # noqa: E402
+from labkit.formats import area_state, commands, protocol_block, repo  # noqa: E402
 from labkit.gates import audit, registration_hold, ways_out  # noqa: E402
 from labkit.tools import protocol_fill, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
@@ -242,6 +242,31 @@ class HandoverIntoTheRegisteredReport(unittest.TestCase):
     def test_the_twin_a_head_without_a_report_names_the_default(self):
         self.assertIn("--into REPORT.md`", ways_out.handover(self.protocol(None)))
         self.assertIn("--into REPORT.md`", ways_out.HANDOVER_WAY)
+
+
+class OneWording(unittest.TestCase):
+    """Sentences several gates tell have one builder each."""
+
+    def test_the_repair_of_a_head_names_the_contract_line(self):
+        self.assertEqual(
+            commands.repair_head_way(None),
+            "repair the head as the sentence says (`protocol-check <PROTOCOL> "
+            "--contract` shows its fields)",
+        )
+        named = commands.repair_head_way(Path.cwd() / "PROTOCOL-x.md")
+        self.assertIn("`protocol-check PROTOCOL-x.md --contract`", named)
+
+    def test_a_path_beside_a_file_is_relative_to_its_folder(self):
+        report = Path("/repo/docs/REPORT.md")
+        self.assertEqual(
+            repo.path_beside(Path("/repo/docs/exp/PROTOCOL-x.md"), report),
+            "exp/PROTOCOL-x.md",
+        )
+        # the twin: a target outside the report's folder is reached with `..`
+        self.assertEqual(
+            repo.path_beside(Path("/repo/experiments/01/PROTOCOL-x.md"), report),
+            "../experiments/01/PROTOCOL-x.md",
+        )
 
 
 if __name__ == "__main__":

@@ -35,6 +35,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.gate import AUDIT_SLOT, BLOCKER
 from labkit.formats.findings import (
     DECIDED,
@@ -327,7 +328,7 @@ class Hold:
 
 
 #: the follow-up audit as a step names it
-FOLLOWUP_AUDIT = f"`{AUDIT_SLOT} --mode analysis`"
+FOLLOWUP_AUDIT = f"`{AUDIT_SLOT} --mode {ANALYSIS_AUDIT}`"
 #: the step when a follow-up audit is all that is missing
 STEP_AUDIT = f"{FOLLOWUP_AUDIT} follows it up"
 

@@ -4,7 +4,7 @@ analysis audit).
 
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes
-a stale audit look current. The scope covers exactly: `scripts/*.py` and
+a stale audit look current. The scope covers: `scripts/*.py` and
 `analysis/*.py` of the area, the files its protocols' promises declare as
 scope, the repo-local `lib/` and `src/` modules all of these import (shared
 anchors and thresholds live there), and the `labkit==` pin line when one is
@@ -21,7 +21,9 @@ the run that exploration adopts and its Conclusion); where a protocol
 declares `[[evidence_file]]` tables, each declared file's bytes and its
 declared sha256 (`evidence_file_basis`). NOT covered otherwise:
 data files, prompt files, models.toml, the protocol — an unchanged stamp
-says the CODE is the same, not the inputs. Sibling:
+says the code and the records and files named above are the same, not the
+inputs; a changed stamp can mean a new run record or evidence file, not
+new code. Sibling:
 `promises.declared_scope_sha` is the same idea per promise, over its
 declared scope.
 

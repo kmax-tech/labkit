@@ -9,7 +9,7 @@ to cite (`repo_sources`), and what holds one (`hold_report`: result blocks
 owed and current, discussions, runs reported through an adopted analysis
 (`stated_through`, `through_gaps`), promotions, a report review owed). What
 the report a protocol's head registers owes stands in `registered_report`.
-`report_check` is the entry: `hold_reported` decides the order and the
+`report_check` is the entry: `hold_changed_paths` decides the order and the
 conditions — the protocols first, then every report — and calls into here.
 """
 
@@ -20,6 +20,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
+from labkit.formats.commands import repair_head_way
 from labkit.checks.report_blocks import WHY_DOCUMENTS, block_protocol, discuss_command
 from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
@@ -1504,9 +1505,7 @@ def undeclared_findings(
         return out + [
             blocker(
                 f"{rel}: cites a run of a protocol whose head does not read — {exc.why}",
-                fix=exc.fix
-                or "repair the head as the sentence says (`protocol-check "
-                "<PROTOCOL> --contract` shows its fields)",
+                fix=exc.fix or repair_head_way(None),
                 rule=TECHNICAL_RULE,
             )
         ]
@@ -1667,7 +1666,7 @@ def discussion_review_findings(
     holds each such report with (`report_review_owed`), read here per
     protocol so that `report_check.chain_gaps` — and through it
     `report-check AREA` and `labkit-next` — holds and names exactly what
-    the stop and the commit hold (`report_check.hold_reported`), one
+    the stop and the commit hold (`report_check.hold_changed_paths`), one
     function for both. Only the discussion blocks naming PROTOCOL count; a
     report whose blocks do not read is left to its own hold (`hold_report`
     names the block). STAGED: the index's files and texts, [] outside a

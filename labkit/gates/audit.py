@@ -16,16 +16,20 @@ The agent audit of LAB-015 Preflight audit before freezing (preflight, before
 freezing) and LAB-050 Analysis audit before reporting (analysis, before a
 number leaves) as one command, the only runner. The instructions ship with the
 package (`experiment-preflight.agent.md`); the files they tell the auditor to
-read are gathered and inlined (`audit_prompt`) — the area's protocol,
-`scripts/*.py`, `analysis/*.py`, the repo-local `lib/` modules they import, and
-from the lab standard that ships with labkit exactly the rules the instructions
-cite (`audit_prompt.cited_rules`):
+read are gathered and inlined (`audit_prompt.gather`) — the area's protocol,
+`scripts/*.py`, `analysis/*.py`, the files the promises declare as `scope`
+and the repo modules these import directly, in full, deeper modules as an
+index; the files the protocol declares in `[[evidence_file]]`; and from the
+lab standard that ships with labkit exactly the rules the instructions cite
+(`audit_prompt.cited_rules`, which reads them off the instructions; today
 LAB-103 The audit reads by declared scope, not by import graph,
 LAB-015 Preflight audit before freezing (the scar table, the severity legend),
 LAB-017 The number of audits follows the cost tier,
 LAB-004 Identifiers make the intent addressable,
-LAB-050 Analysis audit before reporting — not the whole standard, which costs
-~30k tokens per read. In MODE analysis the answering run's rows come too: the
+LAB-050 Analysis audit before reporting,
+LAB-003 No run without an intent paragraph and
+LAB-009 Verdict only at the registered tier) — not the whole standard, which
+costs ~30k tokens per read. In MODE analysis the answering run's rows come too: the
 first 50 and the last 20 lines of every output it registered, numbered, and its
 `metrics.json` — the auditor has no tools, so what it is told to look at must
 be on the page. One call goes through `labkit.run.llm` to the alias the lab's
@@ -50,10 +54,12 @@ exit 0:
 The report is printed (and written to --out), and its findings are written
 as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
 line, every one `open` (`labkit.formats.findings`); deciding each (fixed / limitation
-/ false-positive, with reason; `audit_decisions`) and stamping the protocol
-field stays with the human (LAB-015 Preflight audit before freezing), and `preflight`
+/ false-positive, with reason; `audit_decisions`) and freezing the protocol
+stays with the human (LAB-015 Preflight audit before freezing), and `preflight`
 holds the file to that. The command prints the stamp's facts — date, scope
-sha, counts — to copy from, and what the call cost (`llm.last_usage()`:
+sha, counts — and, in mode preflight, the `protocol-fill … --freeze <record>`
+line that names the record in the head once every finding is decided; and
+what the call cost (`llm.last_usage()`:
 prompt and output tokens, USD where the backend prices it) beside the
 prompt size on stderr.
 
@@ -136,7 +142,7 @@ DEFAULT_MODEL = "opus"  # without `[audit] model` in models.toml (`llm.audit_ali
 DEFAULT_TIMEOUT_S = (
     failed_attempts.ATTEMPT_TIMEOUT_S
 )  # one call reads the area, the rules, the rows
-MODES = (*findings.MODES, "clarity")  # the recorded modes and the readability read
+MODES = (*findings.MODES, CLARITY)  # the recorded modes and the readability read
 #: the audit's exit contract — not `gate.EXIT_CONTRACT`: a warning is a
 #: finding to decide here, so it exits 1 too (the module docstring says why)
 AUDIT_EXIT_CONTRACT = (

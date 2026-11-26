@@ -85,6 +85,7 @@ from labkit.formats.gate import (
 from labkit.formats.repo import (
     rel_posix,
     GitError,
+    UNREAD_OBJECTS_WAY,
     blobs_now,
     files_at,
     git_root,
@@ -561,31 +562,44 @@ def _undone_in(
     return undone
 
 
-def change_sentences(found: Sequence[tuple[str, str]]) -> list[str]:
+@dataclass(frozen=True)
+class EvidenceChange:
+    """One finding of `change_findings`: WHY the sentence, FIX its way out,
+    COMPARED whether git could run the comparison — False for the one
+    finding that says it could not (`unread_finding`), where nothing says
+    the evidence changed."""
+
+    why: str
+    fix: str
+    compared: bool = True
+
+
+def change_sentences(found: Sequence[EvidenceChange]) -> list[str]:
     """FOUND (`change_findings`, read once into the area state) as
     sentences, each with its way out."""
-    return [with_way_out(why, fix) for why, fix in found]
+    return [with_way_out(c.why, c.fix) for c in found]
 
 
-def change_blockers(found: Sequence[tuple[str, str]]) -> list[GateFinding]:
+def change_blockers(found: Sequence[EvidenceChange]) -> list[GateFinding]:
     """FOUND (`change_findings`) as blockers, each with its restore as the
     way out — what a gate that releases on an area's records holds first:
     report-check (its first station, and so `labkit-next`), a replacement
     for its predecessor's area, an exploration's registered report. A
-    comparison git could not run (`unread_finding`, its way out UNREAD_WAY)
+    comparison git could not run (`unread_finding`, its `compared` False)
     is a check not executed: nothing says the evidence changed."""
     return [
-        # UNREAD_WAY is the way out only `unread_finding` gives
-        blocker(why, fix=fix, stated_outcome=NOT_EXECUTABLE, rule=TECHNICAL_RULE)
-        if fix == UNREAD_WAY
-        else blocker(why, fix=fix, rule=OPEN_RULE)
-        for why, fix in found
+        blocker(c.why, fix=c.fix, rule=OPEN_RULE)
+        if c.compared
+        else blocker(
+            c.why, fix=c.fix, stated_outcome=NOT_EXECUTABLE, rule=TECHNICAL_RULE
+        )
+        for c in found
     ]
 
 
-def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]]:
-    """Every change of AREA's evidence against HEAD that breaks its rule, as
-    (sentence, way out) — in the working tree, or STAGED in the index (what
+def change_findings(area: Path, *, staged: bool = False) -> list[EvidenceChange]:
+    """Every change of AREA's evidence against HEAD that breaks its rule, each
+    an `EvidenceChange` (sentence, way out) — in the working tree, or STAGED in the index (what
     a commit now would carry): a record changed beyond its decision lines,
     another audit file changed, a run HEAD holds closed whose files changed
     or went, a start file changed or deleted; and, STAGED only, a run the
@@ -601,26 +615,23 @@ def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]
         return []
     where = f"in the {'index' if staged else 'tree'} since HEAD"
     try:
-        return _change_findings(area, root, where, staged=staged)
+        return [
+            EvidenceChange(why, fix)
+            for why, fix in _change_findings(area, root, where, staged=staged)
+        ]
     except GitError as exc:
         return [unread_finding(f"the {'index' if staged else 'tree'}", "HEAD", exc)]
 
 
-#: the way back from evidence git cannot compare: the objects, then the check
-UNREAD_WAY = (
-    "restore the repository's missing objects (`git fsck` names them; a clone "
-    "that holds them `git fetch`es them), then run the check again"
-)
-
-
-def unread_finding(state: str, against: str, exc: GitError) -> tuple[str, str]:
-    """(sentence, way out) when git cannot read what comparing STATE with
-    AGAINST needs: the comparison did not run, so the evidence is not
-    known to stand."""
-    return (
+def unread_finding(state: str, against: str, exc: GitError) -> EvidenceChange:
+    """The finding when git cannot read what comparing STATE with AGAINST
+    needs: the comparison did not run (`compared` False), so the evidence
+    is not known to stand; its way out is `repo.UNREAD_OBJECTS_WAY`."""
+    return EvidenceChange(
         f"the area's evidence in {state} cannot be compared with {against}: "
         f"{' '.join(str(exc).split())} — whether it was changed cannot be told",
-        UNREAD_WAY,
+        UNREAD_OBJECTS_WAY,
+        compared=False,
     )
 
 
@@ -725,13 +736,10 @@ def commit_changes(area: Path, since: str) -> list[str]:
         try:
             out += _commit_broke(area, root, commit, parents[0], specs, undone_now)
         except GitError as exc:
-            out.append(
-                with_way_out(
-                    *unread_finding(
-                        f"commit {commit[:12]}", f"its parent {parents[0][:12]}", exc
-                    )
-                )
+            unread = unread_finding(
+                f"commit {commit[:12]}", f"its parent {parents[0][:12]}", exc
             )
+            out.append(with_way_out(unread.why, unread.fix))
     return out
 
 
@@ -916,7 +924,7 @@ class AreaEvidence:
         unreadable: Each record that does not read, its sentence
             (`findings.record_status`) — a broken file hides no other.
         changes: Every change of the committed evidence against HEAD that
-            breaks its rule, as (sentence, way out) (`evidence.change_findings`);
+            breaks its rule, each an `EvidenceChange` (`evidence.change_findings`);
             `change_sentences` and `change_blockers` render them.
         ignored: Every file labkit wrote that git ignores, with its way out
             (`evidence.ignored`).
@@ -942,7 +950,7 @@ class AreaEvidence:
     records: tuple[findings.Record, ...]
     gaps: tuple[str, ...]
     unreadable: tuple[str, ...]
-    changes: tuple[tuple[str, str], ...]
+    changes: tuple[EvidenceChange, ...]
     ignored: tuple[str, ...]
     reviews: tuple[reviews.Review, ...] = ()
     reviews_unread: str = ""

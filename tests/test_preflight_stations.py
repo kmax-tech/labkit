@@ -27,6 +27,7 @@ from labkit.formats.gate import (
 from labkit.formats.scope_sha import NothingToStamp, area_stamp
 from labkit.gates import preflight
 from protocol_fixture import declared_scope_area, head
+from repo_fixture import git, init_repo
 from state_fixture import area_evidence, audit_record
 
 
@@ -241,6 +242,35 @@ class TheGateFillsTheAreaSlots(unittest.TestCase):
             self.assertIn("an open finding", said)
             self.assertNotIn("<area>", said)
             self.assertRegex(said, r"`labkit-audit \S+/experiments/01 --decide`")
+
+
+class WorkingTreeStation(unittest.TestCase):
+    """Station 6 compares the tree with HEAD inside a git repository only:
+    outside one it says so, never `clean` for a tree nothing was compared
+    with."""
+
+    def told_of_the_station(self, *, committed: bool) -> str:
+        """The line the whole gate tells under its working-tree header;
+        COMMITTED: the area lies in a git repository holding every file."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name)
+        area = declared_scope_area(repo)
+        if committed:
+            init_repo(repo)
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "area")
+        told: list[str] = []
+        preflight.preflight_area(area, findings=Findings(tell=told.append))
+        return told[told.index("── working tree ──") + 1]
+
+    def test_outside_a_git_repository_the_tree_is_not_called_clean(self):
+        self.assertEqual(
+            self.told_of_the_station(committed=False), "  n/a — not a git repo"
+        )
+
+    def test_the_twin_a_committed_tree_is_clean(self):
+        self.assertEqual(self.told_of_the_station(committed=True), "  clean")
 
 
 class ScopeStampStation(unittest.TestCase):

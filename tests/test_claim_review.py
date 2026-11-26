@@ -457,9 +457,9 @@ class ADecisionIsNoEvidenceChange(unittest.TestCase):
             path.read_text(encoding="utf-8").replace("line = 11", "line = 4"),
             encoding="utf-8",
         )
-        ((why, fix),) = evidence.change_findings(lab.area)
-        self.assertIn("changed beyond its claims' decision lines", why)
-        self.assertIn("--decide N false-positive", fix)
+        (found,) = evidence.change_findings(lab.area)
+        self.assertIn("changed beyond its claims' decision lines", found.why)
+        self.assertIn("--decide N false-positive", found.fix)
 
 
 if __name__ == "__main__":

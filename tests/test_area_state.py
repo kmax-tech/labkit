@@ -221,7 +221,7 @@ class OneStateBuildPerCheckRun(_Repository):
         )
 
     def test_the_report_path_builds_the_state_and_the_evidence_once(self):
-        """`hold_reported` over a report discussing a run: the protocol's
+        """`hold_changed_paths` over a report discussing a run: the protocol's
         chain and the report's checks share one state build and one
         evidence read of the area (`report_hold.Sources.held_state`; the
         audit of 2026-11-08, F4 and F5)."""
@@ -251,14 +251,14 @@ class OneStateBuildPerCheckRun(_Repository):
 
         with mock.patch.object(evidence, "read_evidence", counting):
             builds = self._builds(
-                lambda: report_check.hold_reported(
+                lambda: report_check.hold_changed_paths(
                     [report], self.root, staged=False, tell=lines.append
                 )
             )
         self.assertEqual((builds, len(reads)), (1, 1), "\n".join(lines))
 
     def test_the_report_path_reads_each_protocols_text_once(self):
-        """`hold_reported` over a repository with two protocols and one
+        """`hold_changed_paths` over a repository with two protocols and one
         report: the hold reads each protocol's text from the file state once
         (`report_hold.repo_sources`), and the registered report, the newly
         adopted run, the former registrations and the protocol's own hold
@@ -322,7 +322,7 @@ class OneStateBuildPerCheckRun(_Repository):
             mock.patch.object(report_hold, "state_text", counting),
             mock.patch.object(registered_report, "state_text", counting),
         ):
-            report_check.hold_reported(
+            report_check.hold_changed_paths(
                 [report], self.root, staged=False, tell=lines.append
             )
         self.assertEqual(
@@ -330,13 +330,13 @@ class OneStateBuildPerCheckRun(_Repository):
         )
 
     def test_the_commits_gate_builds_the_state_once_per_protocol(self):
-        """`hold_reported` at the commit (STAGED): the one protocol the paths
+        """`hold_changed_paths` at the commit (STAGED): the one protocol the paths
         touch, one build of its area's state."""
         self._run(RUN)
         lines: list[str] = []
         self.assertEqual(
             self._builds(
-                lambda: report_check.hold_reported(
+                lambda: report_check.hold_changed_paths(
                     [self.proto], self.root, staged=True, tell=lines.append
                 )
             ),

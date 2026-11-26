@@ -2030,7 +2030,7 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
     def _if_reported(self, paths: list[Path]) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            code = report_check.hold_reported(paths, self.root, staged=True).exit
+            code = report_check.hold_changed_paths(paths, self.root, staged=True).exit
         return code, out.getvalue()
 
 
@@ -2080,7 +2080,7 @@ class ReportOwedByADeletedProtocol(_Repository):
     def _hold(self, paths: list[Path], *, staged: bool) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            code = report_check.hold_reported(paths, self.root, staged=staged).exit
+            code = report_check.hold_changed_paths(paths, self.root, staged=staged).exit
         return code, out.getvalue()
 
     def test_the_commit_and_the_stop_hold_the_deletion_of_a_protocol_that_owes(self):

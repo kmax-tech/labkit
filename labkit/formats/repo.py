@@ -108,6 +108,16 @@ def shown(path: Path, base: Path) -> str:
     return p.relative_to(b).as_posix() if p.is_relative_to(b) else p.as_posix()
 
 
+def path_beside(target: Path, file: Path) -> str:
+    """TARGET as a line inside FILE names it: relative to FILE's directory,
+    `/`-separated, `..` where TARGET lies outside it. Nothing is resolved —
+    a caller that wants links followed resolves both first
+    (`report_blocks.path_from_report`). The one spelling of a path a
+    report's block holds (the result block's owner, a handover block's
+    protocol, record and audits folder)."""
+    return Path(os.path.relpath(target, file.parent)).as_posix()
+
+
 def next_after_run(protocol: Path, run_id: str) -> str:
     """`commands.next_after_run` under the name the stamped measure scripts
     import (`from labkit.formats.repo import next_after_run`): one
@@ -527,6 +537,16 @@ def ever_committed(repo: Path, path: Path) -> bool:
     rel = own_path(path).relative_to(repo.resolve()).as_posix()
     r = git_run(["log", "-1", "--format=%H", "--", rel], repo)
     return r.returncode == 0 and bool(r.stdout.strip())
+
+
+#: the way back when git cannot read objects a check needs — a journal, an
+#: evidence comparison, a history: the objects first, then the check again.
+#: One sentence for every gate; whether a finding is a check not executed is
+#: said by the finding's own field, never read off this text
+UNREAD_OBJECTS_WAY = (
+    "restore the repository's missing objects (`git fsck` names them; a clone "
+    "that holds them `git fetch`es them), then run the check again"
+)
 
 
 def unreadable_at(repo: Path, path: Path, rev: str) -> str:

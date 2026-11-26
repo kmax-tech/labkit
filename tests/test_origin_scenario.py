@@ -407,7 +407,7 @@ class TwoProtocolsOfOneArea(_OriginStation):
         """`report-check --if-reported PATHS`, the stop's hold on the tree."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = report_check.hold_reported(
+            code = report_check.hold_changed_paths(
                 list(paths), self.lab.root, staged=False
             ).exit
         return code, out.getvalue()

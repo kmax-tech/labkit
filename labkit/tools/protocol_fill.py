@@ -45,6 +45,11 @@ command line.
                                                `[result]` withdrawn, a handover record
                                                under audits/handovers/, its handover
                                                block in the report (`handovers`)
+    protocol-fill PROTOCOL-x.md --freeze [RECORD]   the freeze, and its one writer: `frozen = true`
+                                               and `preflight_audit` naming the decided
+                                               record (default: the area's newest
+                                               preflight record), refused while the
+                                               freeze gate's checks do not pass
     protocol-fill PROTOCOL-x.md --withdraw --why "…" [--into REPORT.md]
                                                the declaration withdrawn: `[result]`
                                                gone, Recorded results and Limitation lines

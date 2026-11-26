@@ -289,7 +289,9 @@ class Lab:
         """The pre-commit's `report-check --if-reported --staged PATHS`."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            rc = report_check.hold_reported(list(paths), self.root, staged=True).exit
+            rc = report_check.hold_changed_paths(
+                list(paths), self.root, staged=True
+            ).exit
         return rc, out.getvalue()
 
 

@@ -28,7 +28,6 @@ from labkit.formats.repo import (
     GitError,
     blob_text,
     blobs_then,
-    commit_known,
     git_run,
     rel_posix,
     repo_protocols,
@@ -133,28 +132,20 @@ def as_measured(
     (`git fetch` brings it), git unable to read that commit's tree or the
     blob, or a patch that does not apply (git's own error), a tree without
     the protocol (untracked when the run started), a text whose block is
-    not the one the run recorded, a run started from a changed tree whose
-    uncommitted.patch is gone (`runs.patch_lost`: the commit alone is not what
-    it saw). A comparison that needs the text holds on None
+    not the one the run recorded; before these, every reason the run's
+    start point does not read back (`runs.start_point`: no record, no
+    commit, no repository, a patch gone, a commit this clone does not
+    hold). A comparison that needs the text holds on None
     (`unread_measurements`), never reads it as no change. ROLE opens each
     WHERE sentence before RD's id: "its first measurement" (the default),
     "run", "origin run" or "preparation run"."""
-    commit = runs.recorded_commit(rd.config) if rd.config is not None else None
-    if commit is None or root is None:
-        return None, f"{role} {rd.dir.name} recorded no commit"
-    if rd.config is not None and runs.patch_lost(rd):
-        return None, (
-            f"{role} {rd.dir.name} started from a tree with changes "
-            f"({rd.config.git}), and its uncommitted.patch is gone: the commit "
-            f"alone is not what it saw"
-        )
-    if not commit_known(root, commit):
-        return None, (
-            f"{role} {rd.dir.name} started at {commit[:12]}, a commit "
-            f"this clone does not hold — `git fetch` brings it"
-        )
-    patch_file = runs.patch_path(rd.dir)
-    patch = patch_file.read_text(encoding="utf-8") if patch_file.is_file() else ""
+    start = runs.start_point(rd, root, subject=f"{role} {rd.dir.name}")
+    if isinstance(start, str):
+        return None, start
+    root, commit = start.root, start.commit
+    # read whenever the file stands, also beside a record of a clean tree:
+    # the reading this function had; `code_then` differs (`runs.start_point`)
+    patch = runs.patch_text(rd.dir)
     pid = rd.config.protocol.id if rd.config is not None else None
     try:
         blob = blobs_then(root, commit, patch, [protocol])[protocol]

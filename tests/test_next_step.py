@@ -457,7 +457,7 @@ class ProgressAccount(unittest.TestCase):
         self.lab.git("add", "-A")
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            rc = report_check.hold_reported(
+            rc = report_check.hold_changed_paths(
                 [self.report, self.protocol], self.lab.root, staged=True
             ).exit
         self.assertEqual(rc, 0, out.getvalue())
@@ -661,7 +661,7 @@ class DiscussingReport(unittest.TestCase):
     def gate(self, *, staged: bool) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.chdir(self.lab.root), contextlib.redirect_stdout(out):
-            rc = report_check.hold_reported(
+            rc = report_check.hold_changed_paths(
                 [self.report], self.lab.root, staged=staged
             ).exit
         return rc, out.getvalue()

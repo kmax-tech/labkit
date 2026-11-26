@@ -226,7 +226,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
         return RecordGap(
             "`preflight_audit` names no record — the field is the file name of the "
             "decided preflight record under audits/ (`<minute>-preflight.toml`, "
-            f"printed by `{AUDIT_SLOT} --mode preflight` when it writes one); "
+            f"printed by `{AUDIT_SLOT} --mode {PREFLIGHT_AUDIT}` when it writes one); "
             "at high repeat cost a full run owes that audit, and nobody waives their "
             "own: run it and name its record; when the backend does not answer, "
             "labkit-audit records the failed attempt and a full run acknowledges "
@@ -241,7 +241,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
     if not path.is_file():
         return RecordGap(
             f"`preflight_audit` names {DIR}/{name}, and there is no such record in "
-            f"this area — name the one `{AUDIT_SLOT} --mode preflight` wrote",
+            f"this area — name the one `{AUDIT_SLOT} --mode {PREFLIGHT_AUDIT}` wrote",
             audit,
             LAB_015,
         )
@@ -266,7 +266,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
         return RecordGap(
             f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
             f"{now} — it changed after the audit, so the change owes a new audit "
-            f"(`{AUDIT_SLOT} --mode preflight`); naming another record "
+            f"(`{AUDIT_SLOT} --mode {PREFLIGHT_AUDIT}`); naming another record "
             f"without one is refused too{validation_note(area)}",
             audit,
             LAB_015,

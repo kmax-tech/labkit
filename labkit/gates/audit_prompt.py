@@ -70,7 +70,9 @@ from labkit.formats.scope_sha import (
 )
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
+    CLARITY,
     COMPUTE_KIND,
+    PREFLIGHT_AUDIT,
 )
 from labkit.gates import ways_out
 from labkit.gates.registration_hold import (
@@ -89,8 +91,22 @@ CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"
 REVIEW_AGENT = PACKAGE_DIR / "agents" / "decision-review.agent.md"
 REPORT_AGENT = PACKAGE_DIR / "agents" / "report-review.agent.md"
 CLAIM_AGENT = PACKAGE_DIR / "agents" / "claim-review.agent.md"
-CLARITY = "clarity"
 ANALYSIS = ANALYSIS_AUDIT  # its one spelling is standard_contract's
+#: the modes of the three reviews, spelled here where their instructions are
+#: looked up; `decision_review`, `report_review` and `claim_review` import them
+REVIEW = "review"
+REPORT_REVIEW = "report"
+CLAIM_REVIEW = "claim"
+#: the instructions each prompt mode is given — every mode stands here; a
+#: mode that does not is refused, never read as the preflight agent's
+AGENT_OF_MODE = {
+    PREFLIGHT_AUDIT: AGENT,
+    ANALYSIS_AUDIT: AGENT,
+    CLARITY: CLARITY_AGENT,
+    REVIEW: REVIEW_AGENT,
+    REPORT_REVIEW: REPORT_AGENT,
+    CLAIM_REVIEW: CLAIM_AGENT,
+}
 STANDARD_LABEL = (
     "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
 )
@@ -128,18 +144,21 @@ INLINE_NOTE = (
 )
 
 
-def instructions(mode: str = "preflight") -> str:
+def instructions(mode: str = PREFLIGHT_AUDIT) -> str:
     """The agent's instructions as shipped, without the provenance comment —
     the preflight agent for preflight and analysis, the clarity agent for
     clarity, the decision-review agent for `--review` (`decision_review`),
     the report-review agent for `--report-review` (`report_review`), the
-    claim-review agent for `--review` on a report review (`claim_review`)."""
-    agent = {
-        CLARITY: CLARITY_AGENT,
-        "review": REVIEW_AGENT,
-        "report": REPORT_AGENT,
-        "claim": CLAIM_AGENT,
-    }.get(mode, AGENT)
+    claim-review agent for `--review` on a report review (`claim_review`):
+    AGENT_OF_MODE. Raises ValueError naming MODE when it is none of these —
+    a misspelled mode would otherwise be given the preflight agent's
+    instructions."""
+    if mode not in AGENT_OF_MODE:
+        raise ValueError(
+            f"no instructions for mode {mode!r} — the modes are "
+            f"{', '.join(sorted(AGENT_OF_MODE))}"
+        )
+    agent = AGENT_OF_MODE[mode]
     return re.sub(
         r"^<!--.*?-->\n", "", agent.read_text(encoding="utf-8"), count=1, flags=re.S
     )
@@ -153,11 +172,11 @@ def review_brief() -> list[tuple[str, str]]:
     (`report_hold.review_fingerprint`): a corrected brief makes every
     earlier review stale, so a claim an old rule raised no longer holds
     the report."""
-    label, rules_text = standard_excerpt("report")
-    return [("BRIEF", instructions("report")), (f"FILE: {label}", rules_text)]
+    label, rules_text = standard_excerpt(REPORT_REVIEW)
+    return [("BRIEF", instructions(REPORT_REVIEW)), (f"FILE: {label}", rules_text)]
 
 
-def cited_rules(mode: str = "preflight") -> list[str]:
+def cited_rules(mode: str = PREFLIGHT_AUDIT) -> list[str]:
     """The `LAB-nnn` ids the instructions for MODE cite, in order of first
     mention — the part of the standard the auditor gets to read."""
     seen: list[str] = []
@@ -167,7 +186,7 @@ def cited_rules(mode: str = "preflight") -> list[str]:
     return seen
 
 
-def standard_excerpt(mode: str = "preflight") -> tuple[str, str]:
+def standard_excerpt(mode: str = PREFLIGHT_AUDIT) -> tuple[str, str]:
     """(label, text): the cited rules' blocks from the shipped standard, each
     from its head to the next. An id the ledger does not know, or whose text
     does not ship, raises — a missing rule must not pass as an audit without it."""

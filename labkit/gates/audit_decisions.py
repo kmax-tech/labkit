@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.gate import BLOCKER, WARNING
 from labkit.formats.decision_history import ReplacedDecision
 from labkit.formats.findings import EFFECT_GRADES
@@ -798,7 +799,9 @@ def _check_lines(
     check asks; none when F requires none."""
     if not f.check:
         return []
-    follow_up = audit_command(area, "--mode", "analysis", protocol=protocol, base=here)
+    follow_up = audit_command(
+        area, "--mode", ANALYSIS_AUDIT, protocol=protocol, base=here
+    )
     asked = findings.check_order(f.check, f.check_note)
     if f.grade != BLOCKER:
         # a follow-up is shown decided BLOCKERs only: "the follow-up

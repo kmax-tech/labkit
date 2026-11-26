@@ -154,7 +154,7 @@ def next_step(
     PROTOCOL must otherwise be the one the caller chose
     (`repo.choose_protocol`). CHAIN, what report-check's chain found for
     PROTOCOL in FILE_STATE when the caller ran it already
-    (`report_check.hold_reported`), is read instead of running it again —
+    (`report_check.hold_changed_paths`), is read instead of running it again —
     not while no run is adopted, where the step asks the chain without the
     stations the adoption writes. Raises `protocol_block.BlockError` on a head
     that does not read, ValueError for INDEX on a protocol the index does

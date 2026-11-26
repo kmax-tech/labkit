@@ -24,7 +24,7 @@ def main(argv: list[str]) -> int:
         staged = bool(rest) and rest[0] == "--staged"
         paths = [Path(a) for a in (rest[1:] if staged else rest)]
         repo = git_root(cwd) or cwd
-        reported = report_check.hold_reported(paths, repo, staged=staged)
+        reported = report_check.hold_changed_paths(paths, repo, staged=staged)
         if reported.exit != 0:
             # what to do is `next`'s step, from the state this gate judged
             # and the chains it ran

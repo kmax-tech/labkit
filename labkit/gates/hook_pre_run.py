@@ -35,6 +35,7 @@ import re
 import sys
 from pathlib import Path
 
+from labkit.formats.commands import repair_head_way
 from labkit.gates.hook_session import keep_stop_base
 from labkit.gates.hook_session import named_project_dir
 from labkit.formats.area_state import state_of
@@ -136,8 +137,7 @@ def before_run(
     except protocol_block.BlockError as exc:
         return False, with_way_out(
             f"{head}: protocol head unreadable — {exc}",
-            "repair the head as the sentence says (`protocol-check <PROTOCOL> "
-            "--contract` shows its fields)",
+            repair_head_way(None),
         )
     # which gate stands before a full run is the lane's answer: the
     # registration (low) or preflight (`standard_contract.lane`)
