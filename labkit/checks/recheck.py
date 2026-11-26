@@ -119,7 +119,6 @@ from labkit.checks.origin_check import origin_gap, origin_now
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
 #: records it)
 LABKIT_KEYS = frozenset({"duration_s", "llm_retries"})
-INTENT_KEY = promises.INTENT_KEY
 
 
 @dataclass(frozen=True)
@@ -579,8 +578,9 @@ def require_agreement(
     """metrics.json against the recomputation: SystemExit where they
     disagree, else the keys that grew.
     As LAB-041 Generate numbers, don't retype them states it: the
-    registered identifiers (`INTENT_KEY`) are compared exactly — on one side
-    only, or with another value, the check fails —, and so are the KEPT
+    registered identifiers (`promises.INTENT_KEY`) are compared exactly —
+    on one side only, or with another value, the check fails —, and so are
+    the KEPT
     keys (the protocol's `[kept]` key, `kept_keys`: the number it
     reports), on one side only failing as well; absent from both, this
     check passes it — finalize blocks a metrics.json that does not hold it
@@ -590,7 +590,7 @@ def require_agreement(
     (`runs.as_stored`): a tuple from evaluate() is the list in metrics.json,
     not a difference, and `1` is not `true`."""
     recomputed = json.loads(json.dumps(recomputed))
-    intent = {k for k in set(metrics) | set(recomputed) if INTENT_KEY.match(k)}
+    intent = {k for k in set(metrics) | set(recomputed) if promises.INTENT_KEY.match(k)}
     kept_one_sided = {
         k: [
             side

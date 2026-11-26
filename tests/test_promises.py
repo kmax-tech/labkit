@@ -221,9 +221,6 @@ class Alphabet(unittest.TestCase):
             {"criterion-1", "quality-check-2", "branch-1"},
         )
 
-    def test_one_alphabet_everywhere(self):
-        self.assertIs(recheck.INTENT_KEY, promises.INTENT_KEY)
-
     def test_prose_mismatch_both_directions(self):
         b = parsed(block(C1))
         self.assertEqual(
