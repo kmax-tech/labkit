@@ -27,14 +27,14 @@ The verdicts are written beside the records (`formats/reviews`,
 shown, the claim as judged (`reviews.claim_digest`: the Conclusion; the
 Recorded results and Limitation lines are shown as they render and are bound
 through the record and the run) and each decision as it stood
-(`findings.decision_digest`). Only `upheld` releases a decision;
+(`finding_decisions.decision_digest`). Only `upheld` releases a decision;
 `rejected` and `insufficient` do not, nor does a review of a decision or
 a claim since changed. The call is an attempt in the area's journal
 (`attempts.attempt`, mode `review`): the answer kept before it is read,
 the end naming the review file or why there is none — so a review
 deleted before the commit is named. After `rejected` the person decides
 again within the decisions the finding's subject allows
-(`findings.allowed_decisions`, `ways_out.rejected_way`): repair or supply
+(`finding_decisions.allowed_decisions`, `ways_out.rejected_way`): repair or supply
 counter-evidence, or hand over; a permitted limitation may narrow the
 claim or leave a registered promise not assessable. A new audit is due
 when its basis changes or the finding is
@@ -83,6 +83,7 @@ from labkit.formats import (
     console,
     evidence,
     findings,
+    finding_decisions,
     audit_records,
     finding_line,
     promises,
@@ -191,17 +192,17 @@ def reviewable(
     `false-positive` —
     report-check holds it until a review upholds that
     (`report_decisions.followup_findings`) —, a BLOCKER decided `false-positive`, its
-    first dismissal too (`findings.false_positive_blocker`), and a BLOCKER
-    on the Conclusion decided `fixed` (`findings.fixed_claim`: no follow-up
+    first dismissal too (`finding_decisions.false_positive_blocker`), and a BLOCKER
+    on the Conclusion decided `fixed` (`finding_decisions.fixed_claim`: no follow-up
     audit is shown a repaired claim)."""
     limited = {n for n, f in record.limits() if f.effect}
     return [
         (n, f)
         for n, f in enumerate(record.findings, 1)
         if n in limited
-        or findings.carried_and_closed(f)
-        or findings.false_positive_blocker(f)
-        or findings.fixed_claim(f)
+        or finding_decisions.carried_and_closed(f)
+        or finding_decisions.false_positive_blocker(f)
+        or finding_decisions.fixed_claim(f)
         or (
             f.status in findings.CLOSING
             and reviews.once_not_upheld(record, n, found) is not None
@@ -552,7 +553,10 @@ def review(
                 out.write_text(report, encoding="utf-8")
             decisions = [
                 reviews.Decision(
-                    n, findings.decision_digest(rec.findings[n - 1]), verdict, why
+                    n,
+                    finding_decisions.decision_digest(rec.findings[n - 1]),
+                    verdict,
+                    why,
                 )
                 for n, verdict, why in lines
             ]

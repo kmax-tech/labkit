@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from labkit.formats import findings, promises
+from labkit.formats import finding_decisions, findings, promises
 from labkit.formats.commands import handover_command, register_anew
 from labkit.formats.gate import AUDIT_SLOT
 from labkit.checks.audit_binding import AuditError
@@ -228,7 +228,7 @@ def blocker_routes(promised: bool) -> tuple[str, ...]:
 
 def rejected_way(finding: findings.Finding, promised: bool) -> str:
     """What a reviewed decision on FINDING owes first, within its allowed
-    decisions (`findings.allowed_decisions`). A permitted limitation may
+    decisions (`finding_decisions.allowed_decisions`). A permitted limitation may
     leave a promise not assessable only when PROMISED. A rejected `<ID> not
     assessable` is decided again as `stands`, repaired, or shown
     inapplicable: its effect no longer voids a verdict. No state is read
@@ -243,7 +243,7 @@ def rejected_way(finding: findings.Finding, promised: bool) -> str:
             "owed —, fix the fault and measure again, or supply counter-evidence "
             "for `false-positive`"
         )
-    elif findings.LIMITATION not in findings.allowed_decisions(finding):
+    elif findings.LIMITATION not in finding_decisions.allowed_decisions(finding):
         routes = (
             "complete the repair or required check the finding names, supply "
             "counter-evidence for `false-positive`, or hand the protocol over "

@@ -488,7 +488,7 @@ def field_at(text: str, place: str) -> "FieldLine":
     What each caller makes of an unknown place / an ambiguous or twice
     written one:
 
-    - `findings.corrected_field`: no correction (None, `field_or_none`) /
+    - `finding_decisions.corrected_field`: no correction (None, `field_or_none`) /
       raised;
     - finalize and the follow-up audit: — / an AuditError, a blocker
       (`ways_out.unclear_correction`);

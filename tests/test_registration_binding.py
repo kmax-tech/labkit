@@ -15,7 +15,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import audit_records, findings, promises, protocol_check, scope_sha  # noqa: E402
+from labkit.formats import (
+    audit_records,
+    finding_decisions,
+    findings,
+    promises,
+    protocol_check,
+    scope_sha,
+)  # noqa: E402
 from labkit.formats import audit_gaps, gate
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -217,7 +224,7 @@ class PreflightRecord(unittest.TestCase):
         self.assertIn("still `open`", gap.why)
         self.assertEqual(
             gap.fix,
-            findings.decide_way(
+            finding_decisions.decide_way(
                 self.area, findings.open_findings([audit_records.read(open_)])[0]
             ),
         )

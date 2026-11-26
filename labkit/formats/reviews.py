@@ -24,7 +24,7 @@ next to the records:
 
     [[decision]]
     finding = 2                      # as `--decide` numbers it
-    decision_sha = "3c1f9a0b2d4e"    # the decision as reviewed (`findings.decision_digest`)
+    decision_sha = "3c1f9a0b2d4e"    # the decision as reviewed (`finding_decisions.decision_digest`)
     verdict = "rejected"             # upheld | rejected | insufficient
     why = "…"
 
@@ -76,7 +76,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from labkit.formats import findings
+from labkit.formats import finding_decisions, findings
 from labkit.formats.findings import REVIEW_NAME, create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import reported_claim
@@ -102,7 +102,7 @@ def claim_digest(text: str) -> str:
 @dataclass(frozen=True)
 class Decision:
     """One reviewed decision: the finding's number in its record, the
-    decision as reviewed (`findings.decision_digest`), the verdict, the
+    decision as reviewed (`finding_decisions.decision_digest`), the verdict, the
     reviewer's sentence."""
 
     finding: int
@@ -352,7 +352,7 @@ def verdicts_on_state(
     """Every review's decision on finding N of RECORD as it is decided now,
     under the claim the protocol TEXT makes now — the decisions whose
     `decision_sha` is the digest of the finding as it stands
-    (`findings.decision_digest`) — oldest first; [] when never reviewed,
+    (`finding_decisions.decision_digest`) — oldest first; [] when never reviewed,
     reviewed as a different decision (a changed reason, effect or status,
     or the same words given again after a take-back)
     or under another claim. Every draw on one state counts, not the
@@ -367,7 +367,7 @@ def _on_state(
     record: findings.Record, n: int, reviews: list[Review], text: str
 ) -> list[tuple[Review, Decision]]:
     """`verdicts_on_state` with the review each verdict came from."""
-    now = findings.decision_digest(record.findings[n - 1])
+    now = finding_decisions.decision_digest(record.findings[n - 1])
     out: list[tuple[Review, Decision]] = []
     for r in reviews_of(record, reviews, text):
         d = r.of(n)

@@ -20,6 +20,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    finding_decisions,
     audit_records,
     finding_line,
     required_check,
@@ -101,9 +102,9 @@ def decision_lines(
     shift it), then the READ lines of REPORT apart: printed, not recorded,
     nothing to decide. A finding
     is offered only the decisions its subject allows
-    (`findings.allowed_decisions`): where `limitation` is refused, the line
+    (`finding_decisions.allowed_decisions`): where `limitation` is refused, the line
     in its place says why and names the ways that remain
-    (`findings.subject_refusal`). The effect `<ID> not assessable` is named
+    (`finding_decisions.subject_refusal`). The effect `<ID> not assessable` is named
     only where the protocol registers a promise (`may_leave_unassessed`).
     Under a finding stand the decisions a later one replaced, oldest first,
     one line each (`replaced_decision_line`)."""
@@ -191,9 +192,9 @@ def limitation_line(
     registers no promise; where F's subject refuses `limitation`, the
     decisions it allows and the refusal's ways out in its place (so the
     list never offers what `--decide` refuses); "" for a NOTE."""
-    refused = findings.subject_refusal(f, findings.LIMITATION)
+    refused = finding_decisions.subject_refusal(f, findings.LIMITATION)
     if refused is not None and f.grade in EFFECT_GRADES:
-        allowed = " / ".join(findings.allowed_decisions(f))
+        allowed = " / ".join(finding_decisions.allowed_decisions(f))
         return f"      {f.subject}: decide {allowed} — {refused}"
     if f.grade == BLOCKER:
         return (
@@ -832,11 +833,11 @@ def decision_lines_after(
 ) -> list[str]:
     """What `--decide` prints under the decision it recorded on finding N
     of REC (RECORD's file): what the status entails
-    (`findings.decision_entails`), under `fixed` what it means for this
+    (`finding_decisions.decision_entails`), under `fixed` what it means for this
     repair and that `labkit-next` names its step (`repair_hint`), under `limitation` the hint on a required check the
     run does not carry (`stands_check_hint`)."""
     decided = rec.findings[n - 1]
-    out = [findings.decision_entails(decided, area, record, protocol)]
+    out = [finding_decisions.decision_entails(decided, area, record, protocol)]
     if decided.status == findings.FIXED:
         out.append(repair_hint(area, record, protocol, decided))
     if decided.status == findings.LIMITATION:
@@ -894,14 +895,14 @@ def repair_hint(
     condition that holds only after the first measurement says so:
 
     - a field of what the number is about (`protocol_history.SCOPE_FIELDS`)
-      corrected in place (`findings.corrected_field`): after the first
+      corrected in place (`finding_decisions.corrected_field`): after the first
       measurement only a follow-up analysis audit's `resolved` on this
       finding, judged on the run that answers and exactly this text,
       releases the change;
     - the question (`protocol_history.UNCORRECTABLE_FIELDS`): after the
       first measurement it stands as registered
       (`protocol_history.STANDS_AS_REGISTERED`);
-    - a repaired Conclusion (`findings.fixed_claim`): the decision review
+    - a repaired Conclusion (`finding_decisions.fixed_claim`): the decision review
       judges it, and only its `upheld` releases the BLOCKER;
     - any other repair: a change of code, inputs or configuration is
       confirmed only by an analysis audit of a run the repaired code
@@ -922,7 +923,7 @@ def repair_hint(
         "is about, a promise — is no repair: finalize holds it, and a new "
         "measurement carries it rather than repairs it"
     )
-    if decided is not None and findings.fixed_claim(decided):
+    if decided is not None and finding_decisions.fixed_claim(decided):
         return (
             f"a repaired Conclusion: the decision review judges the Conclusion as it "
             f"stands, and only its `upheld` releases the BLOCKER, for exactly this "
@@ -942,7 +943,7 @@ def repair_hint(
                 else None
             )
             if hit is not None and hit.name in scope:
-                if findings.corrected_field(decided, path, text):
+                if finding_decisions.corrected_field(decided, path, text):
                     named = hit.label
                 elif not protocol_history.correctable(hit.label):
                     fixed_as_registered = hit.label

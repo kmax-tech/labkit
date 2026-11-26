@@ -672,7 +672,7 @@ def literal_decisions(source: str) -> list[int]:
 class NextComposesNoDecision(unittest.TestCase):
     """`labkit-next` names steps and chooses no scientific decision: a status
     in a `--decide` line it prints comes from the recorded finding — its
-    subject, through `findings.decision_after_restore` — never from the place
+    subject, through `finding_decisions.decision_after_restore` — never from the place
     or file name of a finding (docs/architecture.md, "Who does what")."""
 
     def test_next_step_passes_no_literal_status(self):
@@ -682,7 +682,7 @@ class NextComposesNoDecision(unittest.TestCase):
     def test_the_check_bites(self):
         chosen = 'decide_command(a, 1, "limitation", "why", "r.toml")\n'
         named = 'decide_command(a, 1, status="fixed", reason="", record="r")\n'
-        taken = "decide_command(a, 1, findings.decision_after_restore(f), '', 'r')\n"
+        taken = "decide_command(a, 1, finding_decisions.decision_after_restore(f), '', 'r')\n"
         self.assertEqual(literal_decisions(chosen + named + taken), [1, 2])
 
 

@@ -49,6 +49,7 @@ from labkit.formats import (
     audit_gaps,
     failed_attempts,
     findings,
+    finding_decisions,
     audit_records,
     required_check,
     followup,
@@ -1186,7 +1187,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
             reason="the limit",
             effect=findings.EFFECT_STANDS,
         )
-        said = findings.decision_entails(
+        said = finding_decisions.decision_entails(
             f, Path("experiments/01-x"), Path("experiments/01-x/audits/r.toml")
         )
         self.assertIn("a second auditor's review is owed", said)
@@ -1204,7 +1205,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
             status="open",
             reason="",
         )
-        said = findings.decision_entails(
+        said = finding_decisions.decision_entails(
             f, Path("experiments/01-x"), Path("experiments/01-x/audits/r.toml")
         )
         self.assertIn("a frozen protocol's preflight blocks on it", said)
@@ -1270,7 +1271,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
     def test_the_confirmation_says_what_the_status_entails(self):
         """The status words alone are misread, so under the decision one
         line says what the status entails
-        (`findings.decision_entails`); under `fixed`, a hint when nothing
+        (`finding_decisions.decision_entails`); under `fixed`, a hint when nothing
         the record binds has changed. The twin: the recorded decision is
         what was given, and a changed area draws no hint."""
         area = repo_with()
@@ -1560,7 +1561,7 @@ class FixVerdicts(unittest.TestCase):
         decided = audit_records.read(earlier).findings[0]
         self.assertEqual(
             (v.record, v.n, v.verdict, v.decision_sha),
-            (earlier.name, 1, "unresolved", findings.decision_digest(decided)),
+            (earlier.name, 1, "unresolved", finding_decisions.decision_digest(decided)),
         )
         self.assertIn(f"fix {ref}: unresolved — scripts/01_measure.py:9", out)
         # carried: the original's text under one prefix, open, counted
@@ -2003,10 +2004,10 @@ class RequiredCheck(unittest.TestCase):
         legacy = digests.digest(
             runs.as_stored(["BLOCKER", "x", "fixed", "r", ""]).encode("utf-8")
         )
-        self.assertEqual(findings.decision_digest(base), legacy)
+        self.assertEqual(finding_decisions.decision_digest(base), legacy)
         with_check = findings.Finding("BLOCKER", "x", "fixed", "r", "", "a_key")
         other = findings.Finding("BLOCKER", "x", "fixed", "r", "", "b_key")
-        seen = {findings.decision_digest(f) for f in (base, with_check, other)}
+        seen = {finding_decisions.decision_digest(f) for f in (base, with_check, other)}
         self.assertEqual(len(seen), 3)
 
     def test_a_check_changed_or_removed_later_stales_the_verdict(self):
@@ -2018,7 +2019,9 @@ class RequiredCheck(unittest.TestCase):
         text = earlier.read_text(encoding="utf-8")
 
         def digest_now() -> str:
-            return findings.decision_digest(audit_records.read(earlier).findings[0])
+            return finding_decisions.decision_digest(
+                audit_records.read(earlier).findings[0]
+            )
 
         self.assertEqual(digest_now(), v.decision_sha)
         for edited in (
@@ -2203,10 +2206,12 @@ class CheckNote(unittest.TestCase):
             )
 
         self.assertNotEqual(
-            findings.decision_digest(f("per seed")), findings.decision_digest(f("mean"))
+            finding_decisions.decision_digest(f("per seed")),
+            finding_decisions.decision_digest(f("mean")),
         )
         self.assertNotEqual(
-            findings.decision_digest(f("per seed")), findings.decision_digest(f(""))
+            finding_decisions.decision_digest(f("per seed")),
+            finding_decisions.decision_digest(f("")),
         )
 
     def test_a_decision_keeps_the_note(self):
@@ -3244,7 +3249,8 @@ class Carried(unittest.TestCase):
             "BLOCKER", "x", "limitation", "r", "stands", "", "", "a.toml#1"
         )
         self.assertNotEqual(
-            findings.decision_digest(base), findings.decision_digest(carried)
+            finding_decisions.decision_digest(base),
+            finding_decisions.decision_digest(carried),
         )
 
     def test_several_protocols_each_follow_up_its_own_records(self):
@@ -3556,14 +3562,14 @@ class FollowupGate(unittest.TestCase):
         v = findings.FixVerdict(
             r1.name,
             1,
-            findings.decision_digest(records[0].findings[0]),
+            finding_decisions.decision_digest(records[0].findings[0]),
             "not_assessable",
             "no check",
         )
         w = findings.FixVerdict(
             r1.name,
             1,
-            findings.decision_digest(records[0].findings[0]),
+            finding_decisions.decision_digest(records[0].findings[0]),
             "resolved",
             "gone",
         )

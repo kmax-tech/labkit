@@ -87,7 +87,7 @@ from labkit.formats.protocol_check import (
 from labkit.checks.run_record_check import (
     code_since_run,
 )
-from labkit.formats.findings import corrected_field
+from labkit.formats.finding_decisions import corrected_field
 from labkit.formats.followup import (
     Correction,
     awaited_corrections,
@@ -1374,7 +1374,7 @@ def resolved_corrections(
 ) -> dict[str, Correction]:
     """The fields of PROTOCOL (TEXT as it stands) a correction releases, by
     `field_name`: a finding that names the field as its place, decided
-    `fixed` (`findings.corrected_field`), with a `resolved` verdict bound to
+    `fixed` (`finding_decisions.corrected_field`), with a `resolved` verdict bound to
     that decision as it stands (`decision_digest`) in an analysis record
     that covers the area now — its code, promises, registration, the fields
     read before the run, RUN and what was shown of it
@@ -1403,7 +1403,7 @@ def resolved_corrections(
 def _correction_field(
     f: audit_findings.Finding, protocol: Path, text: str
 ) -> str | None:
-    """`findings.corrected_field`, its unclear place as an AuditError: which
+    """`finding_decisions.corrected_field`, its unclear place as an AuditError: which
     field the correction is bound to cannot be told, and the station that
     holds the change names that as its blocker."""
     try:
@@ -1419,7 +1419,7 @@ def awaiting_followup(
     follow-up analysis audit of the state now would be shown and judge, by
     `field_name`, each with the correction's ref (`<record>#<n>`): a
     finding decided `fixed` that names the field as its place
-    (`findings.corrected_field`), a head of its chain in a record that does
+    (`finding_decisions.corrected_field`), a head of its chain in a record that does
     not cover the area now — what `audit_prompt.earlier_of` shows, through
     the same `followup.earlier_blockers` and `earlier_corrections`. Empty
     when the area holds more than one protocol (no correction is shown

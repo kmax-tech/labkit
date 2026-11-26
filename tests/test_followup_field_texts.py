@@ -23,7 +23,7 @@ from pathlib import Path
 from protocol_fixture import protocol_id_of, registration_of
 from state_fixture import audit_record
 
-from labkit.formats import audit_records, findings, followup
+from labkit.formats import audit_records, finding_decisions, findings, followup
 from labkit.formats.protocol_history import ABSENT
 from labkit.gates import audit_prompt
 from labkit.gates.audit_reply import parse_fixes
@@ -182,7 +182,7 @@ class SeveralCorrectionsOfOneField(unittest.TestCase):
         fixes = parse_fixes(f"{reply}\nverdict: 0 blockers, 0 warnings, 0 notes", shown)
         self.assertEqual(
             [(v.ref, v.decision_sha) for v in fixes],
-            [(e.ref, findings.decision_digest(e.finding)) for e in entries],
+            [(e.ref, finding_decisions.decision_digest(e.finding)) for e in entries],
         )
         self.assertEqual(audit_prompt.decisions_moved(entries, area), [])
 

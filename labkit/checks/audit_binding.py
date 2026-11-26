@@ -696,7 +696,7 @@ def check_audit_findings_decided(
     protocol's to decide and holds nothing here; a change of the area's
     code is held for every protocol by its own audit coverage, not by this.
 
-    The station hands the way out in (`findings.decide_way` for its area and
+    The station hands the way out in (`finding_decisions.decide_way` for its area and
     protocol): the printed `--decide` line names the protocol where the
     area holds several, and `commands.audit_command`, the one home of that
     choice, lists the area to know."""

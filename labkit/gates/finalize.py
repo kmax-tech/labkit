@@ -185,6 +185,7 @@ from labkit.formats import (
     protocol_block,
     reference,
 )
+from labkit.formats import finding_decisions
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
@@ -471,7 +472,7 @@ def check_open_audit_findings(
         protocol_id=protocol_id,
         # the line names PROTOCOL only where the area holds several
         # (`commands.audit_command`)
-        way_out_of=partial(audit_findings.decide_way, area, protocol=protocol),
+        way_out_of=partial(finding_decisions.decide_way, area, protocol=protocol),
     )
     findings.take_all([*gone, *undecided])
     own = followup.records_of(held.records, protocol_id)

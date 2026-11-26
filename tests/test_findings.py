@@ -16,6 +16,7 @@ from labkit.formats import (
     decision_history,
     finding_line,
     findings,
+    finding_decisions,
     audit_records,
     gate,
     protocol_check,
@@ -648,14 +649,14 @@ class WriteDecision(unittest.TestCase):
         carried = findings.Finding(
             "BLOCKER", "x", status="false-positive", reason="r", carries="r.toml#1"
         )
-        self.assertTrue(findings.carried_and_closed(carried))
+        self.assertTrue(finding_decisions.carried_and_closed(carried))
         for twin in (
             findings.Finding("BLOCKER", "x", status="false-positive", reason="r"),
             findings.Finding(
                 "BLOCKER", "x", status="limitation", reason="r", carries="r.toml#1"
             ),
         ):
-            self.assertFalse(findings.carried_and_closed(twin))
+            self.assertFalse(finding_decisions.carried_and_closed(twin))
         head = self.record().read_text(encoding="utf-8").splitlines()[0]
         self.assertIn("--decide N STATUS --why REASON", head)
         self.assertNotIn("set status and reason here", head)
@@ -818,10 +819,12 @@ class Subject(unittest.TestCase):
     def test_the_decisions_a_finding_allows(self):
         rec = audit_records.read(self.record())
         impl, stat = rec.findings
-        self.assertEqual(findings.allowed_decisions(impl), ("fixed", "false-positive"))
-        self.assertEqual(findings.allowed_decisions(stat), findings.DECIDED)
-        self.assertIsNone(findings.decision_after_restore(impl))
-        decision = findings.decision_after_restore(stat)
+        self.assertEqual(
+            finding_decisions.allowed_decisions(impl), ("fixed", "false-positive")
+        )
+        self.assertEqual(finding_decisions.allowed_decisions(stat), findings.DECIDED)
+        self.assertIsNone(finding_decisions.decision_after_restore(impl))
+        decision = finding_decisions.decision_after_restore(stat)
         assert decision is not None
         self.assertEqual(decision[0], "limitation")
 
@@ -1022,8 +1025,10 @@ class Undetermined(unittest.TestCase):
                 path, 1, "limitation", "may count rows", "stands"
             )
         (f,) = audit_records.read(path).findings
-        self.assertEqual(findings.allowed_decisions(f), ("fixed", "false-positive"))
-        self.assertIsNone(findings.decision_after_restore(f))
+        self.assertEqual(
+            finding_decisions.allowed_decisions(f), ("fixed", "false-positive")
+        )
+        self.assertIsNone(finding_decisions.decision_after_restore(f))
         after = audit_records.write_decision(
             path, 1, "fixed", "writes denominator_source"
         )
@@ -1685,7 +1690,7 @@ class CorrectedField(unittest.TestCase):
     """A correction names its field: the grade line's place is the protocol's
     file and a label the protocol holds once — in full, or the one label it
     begins (`Finding.place`, `protocol_check.field_at`,
-    `findings.corrected_field`); no line number, no search in the finding's
+    `finding_decisions.corrected_field`); no line number, no search in the finding's
     text. A start several labels share raises: which field the correction is
     bound to cannot be told."""
 
@@ -1726,7 +1731,7 @@ class CorrectedField(unittest.TestCase):
                 f"WARNING · PROTOCOL-x.md:{place} · statement · LAB-015 Preflight audit before freezing · x · y"
             )
             self.assertEqual(
-                findings.corrected_field(f, self.PROTOCOL, self.TEXT), name
+                finding_decisions.corrected_field(f, self.PROTOCOL, self.TEXT), name
             )
 
     def test_the_twins_part_of_a_label_a_line_another_file_or_status_name_none(self):
@@ -1754,7 +1759,7 @@ class CorrectedField(unittest.TestCase):
         ):
             f = self.finding(line, status)
             self.assertIsNone(
-                findings.corrected_field(f, self.PROTOCOL, self.TEXT), line
+                finding_decisions.corrected_field(f, self.PROTOCOL, self.TEXT), line
             )
 
     def test_a_start_several_labels_share_raises(self):
@@ -1763,14 +1768,14 @@ class CorrectedField(unittest.TestCase):
             "WARNING · PROTOCOL-x.md:Data · statement · LAB-015 Preflight audit before freezing · x · y"
         )
         with self.assertRaises(protocol_check.FieldPlaceError) as caught:
-            findings.corrected_field(f, self.PROTOCOL, text)
+            finding_decisions.corrected_field(f, self.PROTOCOL, text)
         self.assertEqual(caught.exception.begun, ["data / scope", "data preparation"])
         # the twin: the full label is exact first, though it begins nothing else
         f = self.finding(
             "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y"
         )
         self.assertEqual(
-            findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
+            finding_decisions.corrected_field(f, self.PROTOCOL, text), "data / scope"
         )
 
     def test_a_field_written_twice_raises(self):
@@ -1779,7 +1784,7 @@ class CorrectedField(unittest.TestCase):
             "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y"
         )
         with self.assertRaises(protocol_check.FieldPlaceError):
-            findings.corrected_field(f, self.PROTOCOL, text)
+            finding_decisions.corrected_field(f, self.PROTOCOL, text)
 
     def test_the_question_is_no_corrected_field(self):
         text = "- **Question / hypothesis:** how many lines on average?\n" + self.TEXT
@@ -1787,13 +1792,15 @@ class CorrectedField(unittest.TestCase):
             f = self.finding(
                 f"WARNING · PROTOCOL-x.md:{place} · statement · LAB-015 Preflight audit before freezing · x · y"
             )
-            self.assertIsNone(findings.corrected_field(f, self.PROTOCOL, text), place)
+            self.assertIsNone(
+                finding_decisions.corrected_field(f, self.PROTOCOL, text), place
+            )
         # the twin: the other fields of the same text still are
         f = self.finding(
             "WARNING · PROTOCOL-x.md:Data / scope · statement · LAB-015 Preflight audit before freezing · x · y"
         )
         self.assertEqual(
-            findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
+            finding_decisions.corrected_field(f, self.PROTOCOL, text), "data / scope"
         )
 
 
@@ -1946,7 +1953,7 @@ class ReplacedDecisions(unittest.TestCase):
         first = audit_records.write_decision(
             path, 1, "fixed", "seed set", when=minute(1)
         )
-        digest_of = findings.decision_digest
+        digest_of = finding_decisions.decision_digest
         # spelled out, not computed by the function under test
         before_history = digest(
             as_stored(

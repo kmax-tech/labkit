@@ -231,7 +231,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     (
         "an open-finding walk",
         r"for \w+ in \w+\.open\b(?!\()",
-        {"findings", "audit_records"},
+        {"findings", "audit_records", "finding_decisions"},
     ),
     # the printed `--decide` line is built one way; `commands.decide_command`
     ("a decide command spelled by hand", r"--decide \{", {"commands"}),

@@ -31,6 +31,7 @@ from labkit.formats.protocol_check import prompt_blocks, unread_prompt_field
 from labkit.formats import (
     digests,
     findings,
+    finding_decisions,
     audit_records,
     required_check,
     followup,
@@ -1372,11 +1373,13 @@ def decisions_moved(earlier: list[followup.Member], area: Path) -> list[str]:
     showed — the record re-read now, gone or another digest. A verdict on a
     decision that changed while the auditor read it judges neither."""
     now = {
-        ref: findings.decision_digest(m.finding)
+        ref: finding_decisions.decision_digest(m.finding)
         for ref, m in followup.chain(audit_records.area_records(area)).members.items()
     }
     return [
-        e.ref for e in earlier if now.get(e.ref) != findings.decision_digest(e.finding)
+        e.ref
+        for e in earlier
+        if now.get(e.ref) != finding_decisions.decision_digest(e.finding)
     ]
 
 
@@ -1413,7 +1416,7 @@ def earlier_of(
 ) -> Followup:
     """The follow-up of PROTOCOL (stamped id PID) in AREA: the earlier
     decided BLOCKERs and corrections of a field of PROTOCOL
-    (`followup.earlier_corrections`, `findings.corrected_field`) of the
+    (`followup.earlier_corrections`, `finding_decisions.corrected_field`) of the
     area's records that name PID — those of a record that CURRENT does not
     tell as the state now audited — with the origin of each, each
     correction's change — a BLOCKER's too — (`FieldChange`: the field as
@@ -1429,9 +1432,9 @@ def earlier_of(
     def field_of(f: findings.Finding) -> str | None:
         """The field F corrects in PROTOCOL, or None. Raises AuditError
         when F's place begins several fields or means one written twice
-        (`findings.corrected_field`)."""
+        (`finding_decisions.corrected_field`)."""
         try:
-            return findings.corrected_field(f, protocol, text)
+            return finding_decisions.corrected_field(f, protocol, text)
         except protocol_check.FieldPlaceError as exc:
             raise ways_out.unclear_correction(f.one_line, protocol.name, exc) from exc
 

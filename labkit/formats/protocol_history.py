@@ -447,7 +447,7 @@ def correctable(label: str) -> bool:
     """Can a correction in place — a finding placed on the field, decided
     `fixed`, judged `resolved` — release a change of the field LABEL? Not
     for UNCORRECTABLE_FIELDS, compared by `field_name`. The one rule the
-    correction (`findings.corrected_field`), the hold and the decision's
+    correction (`finding_decisions.corrected_field`), the hold and the decision's
     line (`registration_hold.correction_way`) read. Pure."""
     return field_name(label) not in {field_name(f) for f in UNCORRECTABLE_FIELDS}
 

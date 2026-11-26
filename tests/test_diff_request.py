@@ -11,7 +11,13 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.checks.protocol_runs import diff_lines, diff_section
-from labkit.formats import finding_line, findings, followup, required_check
+from labkit.formats import (
+    finding_decisions,
+    finding_line,
+    findings,
+    followup,
+    required_check,
+)
 
 OLD = "2026-11-17T10-00-00_aa11"
 NEW = "2026-11-17T11-00-00_bb22"
@@ -186,7 +192,7 @@ def _verdict(
     return findings.FixVerdict(
         "a.toml",
         1,
-        findings.decision_digest(of),
+        finding_decisions.decision_digest(of),
         word,
         "the requested diff shows it",
         check=ASKING.check,

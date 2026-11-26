@@ -46,10 +46,10 @@ from labkit.formats.findings import (
     MODES,
     NO_RUN,
     Record,
-    decide_ways,
     names_preflight_record,
     open_findings,
 )
+from labkit.formats.finding_decisions import decide_ways
 from labkit.formats.audit_records import area_records, read, record_way
 
 
@@ -209,7 +209,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
     still open — each with its own way out (`RecordGap.fix`): a new
     audit where the record covers other code, another block or another
     registration (`audit_way`), the decisions where its findings are
-    still open (`findings.decide_ways`), the record restored where it does not
+    still open (`finding_decisions.decide_ways`), the record restored where it does not
     read (`audit_records.record_way`). One answer for runlog's freeze gate, `preflight`
     and `protocol-check`; the caller decides what an empty field and
     `low` mean. The record names its sha itself, so the head names the

@@ -180,7 +180,7 @@ def claim_refusal(kind: str, status: str) -> str | None:
     (`result`) or a contradicted statement true (`contradiction`) — and
     never `fixed` — a repair changes the report or a source, so the record
     no longer covers the state and a review of the new state judges it.
-    As `findings.subject_refusal` refuses a limitation on an
+    As `finding_decisions.subject_refusal` refuses a limitation on an
     implementation finding. Pure."""
     if status == findings.FIXED:
         return (
@@ -227,7 +227,7 @@ def claim_decision_digest(claim: ReportClaim) -> str:
     """The digest of CLAIM as decided — line, kind, why, status, reason —
     which a claim review binds to (`ClaimVerdict.decision_sha`): a changed
     reason is another decision, and a verdict on the old one says nothing
-    about it. As `findings.decision_digest`, without replaced decisions:
+    about it. As `finding_decisions.decision_digest`, without replaced decisions:
     a claim keeps none (`decision_history`)."""
     fields = [claim.line, claim.kind, claim.why, claim.status, claim.reason]
     return digest(as_stored(fields).encode("utf-8"))

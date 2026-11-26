@@ -94,7 +94,7 @@ class EverySite(unittest.TestCase):
 
 
 #: a field of an f-string way out that builds a command: its expression
-#: names one (`audit_command(…)`, `findings.decide_way(…)`, `measure`,
+#: names one (`audit_command(…)`, `finding_decisions.decide_way(…)`, `measure`,
 #: `preflight.contract_hint(…)`, `commands.register_anew(…)`)
 COMMAND_FIELD = (
     "command",

@@ -13,7 +13,7 @@ import unittest
 import pytest
 
 from check_guards import pure_call
-from labkit.formats import findings, followup, reviews
+from labkit.formats import finding_decisions, findings, followup, reviews
 from labkit.formats.commands import DECIDE, Command
 from labkit.formats.gate import (
     BLOCKER,
@@ -94,7 +94,7 @@ def review(
     earlier decision of it; AGAIN marks an `--again` draw."""
     decision = reviews.Decision(
         1,
-        findings.decision_digest(of or rec.findings[0]),
+        finding_decisions.decision_digest(of or rec.findings[0]),
         verdict,
         "the reviewer's why",
     )
@@ -505,7 +505,11 @@ class AnEarlierBlockerIsReleased(unittest.TestCase):
             run_id="r1",
             fix_verdicts=[
                 findings.FixVerdict(
-                    EARLIER, 1, findings.decision_digest(decided), "resolved", "gone"
+                    EARLIER,
+                    1,
+                    finding_decisions.decision_digest(decided),
+                    "resolved",
+                    "gone",
                 )
             ],
         )

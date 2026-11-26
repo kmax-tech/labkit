@@ -85,6 +85,7 @@ from labkit.formats.commands import (
 )
 from labkit.formats import (
     findings,
+    finding_decisions,
     finding_line,
     handovers,
     protocol_block,
@@ -557,7 +558,7 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
     field changed after the first measurement) while an analysis finding
     still open names the protocol as its place: what the auditor's subject
     of that finding leaves after the restore. A `statement` finding takes the
-    decision `findings.decision_after_restore` gives — or `fixed` for a
+    decision `finding_decisions.decision_after_restore` gives — or `fixed` for a
     correction a follow-up audit's `resolved` releases; an `implementation`
     finding is repaired in code or data, an `undetermined` one waits for
     the check it names, and `--findings` prints the ways out of either. One
@@ -590,7 +591,7 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
                 f"check it names to write and measure, the follow-up judges its "
                 f"value: `{ways}` prints its ways out"
             )
-        decision = findings.decision_after_restore(u.finding)
+        decision = finding_decisions.decision_after_restore(u.finding)
         # a statement finding: implementation and undetermined returned above
         assert decision is not None
         status, reason = decision

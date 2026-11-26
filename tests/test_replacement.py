@@ -24,7 +24,7 @@ from labkit.gates import registration_hold
 from labkit.tools import report_command
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import (  # noqa: E402
-    findings,
+    finding_decisions,
     audit_records,
     gate,
     handovers,
@@ -565,7 +565,10 @@ class Gate(_Areas):
             reviews.claim_digest(text),
             [
                 reviews.Decision(
-                    1, findings.decision_digest(rec.findings[0]), verdict, "a why"
+                    1,
+                    finding_decisions.decision_digest(rec.findings[0]),
+                    verdict,
+                    "a why",
                 )
             ],
             again=False,

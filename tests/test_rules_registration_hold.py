@@ -22,7 +22,7 @@ import pytest
 
 from check_guards import pure_call
 from labkit.checks.audit_binding import check_audited_runs_kept
-from labkit.formats import findings
+from labkit.formats import finding_decisions, findings
 from labkit.formats.commands import AUDIT, MEASURE, RESTORE, WITHDRAW, Command
 from labkit.formats.followup import (
     Correction,
@@ -101,7 +101,7 @@ def finding(
 
 def field_of(f: findings.Finding) -> str | None:
     """The field F corrects in TEXT, as the gate reads it."""
-    return findings.corrected_field(f, PROTOCOL, TEXT)
+    return finding_decisions.corrected_field(f, PROTOCOL, TEXT)
 
 
 def verdict(
@@ -112,7 +112,7 @@ def verdict(
     return findings.FixVerdict(
         AUDITED,
         n,
-        sha if sha is not None else findings.decision_digest(on),
+        sha if sha is not None else finding_decisions.decision_digest(on),
         said,
         "the field now says 3 documents, as the run read",
     )
@@ -182,7 +182,7 @@ class AResolvedCorrectionReleasesItsField(unittest.TestCase):
     def test_no_field_named_releases_nothing(self):
         """The place must name a field a correction can release: a line
         number, the question, a finding not decided `fixed` name none
-        (`findings.corrected_field`)."""
+        (`finding_decisions.corrected_field`)."""
         for why, f in (
             ("a line number", finding("2")),
             ("the question", finding("Question / hypothesis")),

@@ -16,6 +16,7 @@ from labkit.checks.audit_binding import AuditError
 from labkit.formats import markdown
 from labkit.formats import (
     findings,
+    finding_decisions,
     finding_line,
 )
 from labkit.formats.repo import (
@@ -71,7 +72,7 @@ FIX = re.compile(
 def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdict]:
     """The report's `FIX · <record>#<n> · <verdict> · <why>` entries before
     the last verdict line, each bound to the decision EARLIER showed for
-    that finding (`findings.decision_digest`) — labkit attaches the digest,
+    that finding (`finding_decisions.decision_digest`) — labkit attaches the digest,
     the auditor names the finding. The why is the FIX line's text and the
     lines right below it (`fix_block`), kept whole: the evidence an auditor
     lists under the line is the verdict's ground. Raises AuditError on a FIX line
@@ -122,7 +123,7 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
         verdict = findings.FixVerdict(
             e.record.path.name,
             e.n,
-            findings.decision_digest(e.finding),
+            finding_decisions.decision_digest(e.finding),
             f["verdict"],
             "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
             e.finding.check,

@@ -104,6 +104,7 @@ from labkit.formats import (
 )
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
+from labkit.formats import finding_decisions
 from labkit.formats import audit_records
 from labkit.formats import evidence
 from labkit.formats.area_state import state_of
@@ -518,7 +519,7 @@ def check_audit_records(
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
         _owed(findings, frozen, LAB_015)(
-            f"undecided in {u.line}", audit_findings.decide_way(area, u)
+            f"undecided in {u.line}", finding_decisions.decide_way(area, u)
         )
     if undecided:
         findings.note(

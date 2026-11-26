@@ -35,6 +35,7 @@ from labkit.formats.gate import (
 from labkit.formats.gate import LAB_015
 from labkit.formats import (
     findings,
+    finding_decisions,
     audit_records,
     followup,
     protocol_block,
@@ -339,7 +340,7 @@ def check_repaired_claims_upheld(
     review_way: Callable[[], str],
 ) -> list[GateFinding]:
     """Every BLOCKER of RECORD on the Conclusion decided `fixed`
-    (`findings.fixed_claim`) is upheld by a review among FOUND for the claim
+    (`finding_decisions.fixed_claim`) is upheld by a review among FOUND for the claim
     as it stands — else a BLOCKER: no follow-up audit is shown a repaired
     claim, so the decision review judges it. One a review once did not
     uphold is `check_contested_closings_upheld`'s; each is held once. FOUND,
@@ -347,7 +348,7 @@ def check_repaired_claims_upheld(
     out: list[GateFinding] = []
     for n, f in enumerate(record.findings, 1):
         if (
-            not findings.fixed_claim(f)
+            not finding_decisions.fixed_claim(f)
             or reviews.once_not_upheld(record, n, found) is not None
             or reviews.upholding(record, n, found, text)
         ):
@@ -377,7 +378,7 @@ def check_first_dismissals_upheld(
     review_way: Callable[[], str],
 ) -> list[GateFinding]:
     """Every BLOCKER of RECORD decided `false-positive`
-    (`findings.false_positive_blocker`) is upheld by a review among FOUND —
+    (`finding_decisions.false_positive_blocker`) is upheld by a review among FOUND —
     else a BLOCKER: the deciding agent's own decision would release a
     blocking finding. A carried one is `check_carried_closings_upheld`'s,
     one a review once did not uphold `check_contested_closings_upheld`'s;
@@ -386,7 +387,7 @@ def check_first_dismissals_upheld(
     out: list[GateFinding] = []
     for n, f in enumerate(record.findings, 1):
         if (
-            not findings.false_positive_blocker(f)
+            not finding_decisions.false_positive_blocker(f)
             or f.carries
             or reviews.once_not_upheld(record, n, found) is not None
             or reviews.upholding(record, n, found, text)
@@ -441,7 +442,7 @@ def check_carried_closings_upheld(
     review_way: Callable[[], str],
 ) -> list[GateFinding]:
     """Every carried finding of RECORD closed `false-positive`
-    (`findings.carried_and_closed`) is upheld by a review among FOUND as
+    (`finding_decisions.carried_and_closed`) is upheld by a review among FOUND as
     decided now — else a BLOCKER: the follow-up did not find the fault
     gone, so closing it is not settling it. FOUND, TEXT and REVIEW_WAY as
     `check_limits_upheld` takes them."""
@@ -455,7 +456,7 @@ def check_carried_closings_upheld(
             rule=LAB_015,
         )
         for n, f in enumerate(record.findings, 1)
-        if findings.carried_and_closed(f)
+        if finding_decisions.carried_and_closed(f)
         and not reviews.upholding(record, n, found, text)
     ]
 

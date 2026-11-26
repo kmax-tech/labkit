@@ -45,9 +45,8 @@ from labkit.formats.findings import (
     FindingsError,
     FixVerdict,
     Record,
-    decision_digest,
-    fixed_claim,
 )
+from labkit.formats.finding_decisions import decision_digest, fixed_claim
 from labkit.formats.audit_records import area_records
 from labkit.formats.required_check import REQUEST_CHECKS, check_order
 
@@ -254,7 +253,7 @@ def earlier_corrections(
 ) -> list[Member]:
     """The heads of another grade than BLOCKER, decided `fixed`, that
     FIELD_OF tells as a correction of a protocol field
-    (`findings.corrected_field`), in a record that is not of the state
+    (`finding_decisions.corrected_field`), in a record that is not of the state
     CURRENT tells — shown to a follow-up audit beside `earlier_blockers`,
     which judges each on the field's change: a description corrected in
     place is released by that `resolved` alone, at every grade
@@ -352,7 +351,7 @@ def release_holds(
     covering record is decided there and held by that record's gates; of
     those, one rule is this module's: a BLOCKER `fixed` in a covering
     record is held, since no follow-up has seen the repair — but for a
-    repaired Conclusion (`findings.fixed_claim`), which no follow-up is
+    repaired Conclusion (`finding_decisions.fixed_claim`), which no follow-up is
     shown and the decision review holds. Raises what `chain` raises."""
     c = chain(records)
     in_cover = {r.path.name for r in covering}
@@ -464,7 +463,7 @@ def released_corrections(
     field_of: Callable[[Finding], str | None],
 ) -> dict[str, Correction]:
     """The fields a correction in place releases, by the name FIELD_OF
-    gives (`findings.corrected_field`: a finding decided `fixed` that names
+    gives (`finding_decisions.corrected_field`: a finding decided `fixed` that names
     the field as its place): a `resolved` verdict, in a record of COVERING
     (the analysis records that cover the area now), on a finding of MEMBERS
     (`chain`), bound to that finding as it is decided now

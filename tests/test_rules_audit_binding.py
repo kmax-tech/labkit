@@ -18,7 +18,7 @@ from labkit.checks.audit_binding import (
     check_audit_records_read,
     check_audited_runs_kept,
 )
-from labkit.formats import findings
+from labkit.formats import finding_decisions, findings
 from labkit.formats.commands import HANDOVER, handover_command
 from labkit.formats.gate import (
     BLOCKER,
@@ -164,7 +164,7 @@ class AnAuditFindingIsDecided(unittest.TestCase):
             protocol_id=held,
             # a stand-in for the station's way out; whether the line names a
             # protocol is `commands.audit_command`'s, not this rule's
-            way_out_of=partial(findings.decide_way, AREA),
+            way_out_of=partial(finding_decisions.decide_way, AREA),
         )
 
     def test_an_open_blocker_blocks_with_its_decision_command(self):

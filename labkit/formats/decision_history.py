@@ -30,7 +30,7 @@ replaced is the first entry added (`history_kept`, held by
 between two commits have no witness and are taken as written.
 
 The history is part of the decision a review confirms
-(`findings.decision_digest`, through `digest_fields`): a decision taken
+(`finding_decisions.decision_digest`, through `digest_fields`): a decision taken
 back and given again word for word has a longer history, so it is another
 decision, and a review or a fix verdict of the earlier one says nothing
 about it. A finding without history has the digest it had before the
@@ -187,7 +187,7 @@ def history_kept(committed: DecidedFinding, now: DecidedFinding) -> bool:
 
 def digest_fields(entries: tuple[ReplacedDecision, ...]) -> list[str]:
     """What ENTRIES add to the digest of a finding's decision
-    (`findings.decision_digest`): nothing when there are none — a finding
+    (`finding_decisions.decision_digest`): nothing when there are none — a finding
     without history keeps its digest —, else KEY and every entry's status,
     reason, effect and minute in order. Pure."""
     if not entries:
