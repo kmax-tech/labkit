@@ -74,5 +74,5 @@ What these criteria do not show: whether an auditor reads the numbered layout as
 
 These are the author's.
 
-1. **Build it, or wait for a prompt that a model refuses or cuts?** Building costs one announced break and, per affected area, one new analysis audit. Waiting costs 8 % of the prompt in an area with four runs, growing with each further run.
+1. **Build it now, or keep the proposal and judge again later?** Building costs one announced break and, per affected area, one new analysis audit, once. Waiting costs 8 % of the prompt at every further audit of an area with four runs, growing with each further run. Which is cheaper depends on how many audits an affected area still runs and what their input costs; neither number is established here. As a rough bound for the measured area: if an audit's cost followed its input size alone, 8.4 % of 2.73 USD is 0.23 USD per audit, and the one new audit would be repaid after about twelve further audits. Reasons to judge again without a failed call: audit costs that keep rising, a context window that gets tight, or a change that makes the same records stop covering anyway (decision 2).
 2. **If built: in its own release or together with another change that already makes records stop covering?** Together, an affected area pays one new audit for both changes.
