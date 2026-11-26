@@ -78,7 +78,7 @@ The evaluation means the frozen criterion: earlier decisions are shown, and the 
 * A BLOCKER's verdict other than `resolved` carries the finding into the new record: open, origin text, check kept, `carries`, counted in `blockers` and `carried_blockers`.
 * Nothing is recorded for a FIX line that does not read, names a finding not shown, repeats one or carries another word, or when a shown decision changed during the call. A finding without a line stays unchecked.
 * A finding may require a diagnostic, named in the closing field of its line:
-  - The field is `· check: <metrics key>`, or `· check: file:<path>` for a file the run declares as a dependency.
+  - The field is `· check: <metrics key>`, or `· check: file:<path>` for a file the run declares as a dependency. Two further forms ask for evidence the follow-up is shown: `· check: diff:<run>..<run>` and `· check: code:<run>:<path>`, each optionally narrowed to a path or a line range (`required_check.CHECK_FORM`).
   - A note may follow the key, written as ` (<note>)` or as ` — <note>`, and runs to the line's end. Only the key is machine-read; the note is kept whole as `check_note`.
   - The key and the note are the auditor's: they are set from the finding line when the record is written, and no decision sets them. Every decision keeps both unchanged, and the decision's digest binds both (`finding_decisions.decision_digest`).
 * The prompt carries the diagnostic's whole value from the shown metrics.json, or the file shown whole as a `DEPENDENCY` piece. Each verdict records its presence: `check_present`, from that snapshot (`audit_binding.check_evidence`, the same lookup report-check makes); absent when none is required.
@@ -334,7 +334,7 @@ At both repeat costs, what binds for good is the promise given before the result
 * The duty hangs on the protocol, not on the report's path: the head may name another file, and the new target owes the delivery.
 * Held:
   - a head that registers none while that duty stands (restore, name another file, or hand over);
-  - a protocol id the area measured under that no protocol of the area carries now, while that id owed a report. One function finds it (`report_check.orphaned_duty_gaps`), and three callers hold it: report-check's chain; `report-check AREA` on an area without a protocol; the stop's and the commit's hold, on an area the change touches where no chain ran. Each caller passes the file state it judges (the working tree, or the index at the commit), and the ids carried now are read from the protocol texts of that state.
+  - a protocol id the area measured under that no protocol of the area carries now, while that id owed a report. One function finds it (`report_check.orphaned_duty_gaps`), and three gate callers hold it: report-check's chain; `report-check AREA` on an area without a protocol; the stop's and the commit's hold, on an area the change touches where no chain ran. `labkit-next` and `labkit-init exp` read the same function to name the duty; they hold nothing. Each gate caller passes the file state it judges (the working tree, or the index at the commit), and the ids carried now are read from the protocol texts of that state.
 * A deleted protocol that owed none is passed over.
 * A report entered after the first measurement starts no lasting duty. While the head names it, the checks of a registered report hold it. Taking it out ends those and nothing else: an adopted result, a written report and the audit records keep their own holds.
 * Where the first measurement's registration does not read, a head without a report is a check not executable, never "no duty". The registration does not read when:
@@ -501,7 +501,7 @@ An area that holds an audit BLOCKER nobody decided is held by both gates: the st
 * The areas are those the session touched or a staged file lies in. An area deleted whole with its protocol is found by its journal copy on the branch.
 * A lost or unreadable record or journal holds both too, except where a current handover binds that loss (`handovers.acknowledgement`) — an open BLOCKER never.
 * Three more findings hold both gates as well, and no handover acknowledges them:
-  - Committed evidence changed against git: a record beyond its decision lines, another audit file, a closed run's files. The state the gate checks is compared with HEAD: the working tree at the stop, the index at the commit. Each line names its `git checkout`.
+  - Committed evidence changed against git: a record beyond its decision lines, another audit file, a closed run's files. The state the gate checks is compared with HEAD: the working tree at the stop, the index at the commit. Each line names its `git checkout`; where git cannot read what the comparison needs, the comparison did not run, and the line names how to bring the objects back instead (`evidence.unread_finding`).
   - At the stop also: such a change that a commit of the session made against its parent and the working tree has not undone, and a closed run left behind in HEAD's reflog — a commit the reflog names since the session began held it, HEAD no longer holds that commit, and the tree lacks the run's files or holds them changed. Each line names its `git checkout`.
   - A file of labkit's that git ignores, so that no commit can carry it. Its line names `git check-ignore -v`.
 
@@ -523,7 +523,8 @@ Every model call of `labkit-audit` is an attempt journaled in `audits/attempts.j
   - A line the copy keeps that the journal lacks blocks too, and so does each file that the end of an attempt among those lines names and `audits/` lacks.
   - The copy is held as a set of lines: the order of the lines does not count, and a journal line the copy lacks passes.
   - So `audits/` deleted whole before a first commit is noticed.
-  - This does not hold on a detached HEAD (no copy is kept there), in a fresh clone or with the git directory gone.
+  - This does not hold on a detached HEAD (no copy is kept there), in a fresh clone, with the git directory gone, or for attempts made before the copy existed.
+  - The check at the commit does not compare the journal with the copy; it reads the copy only for the files an attempt's end names.
 * A current handover lets the stop and the commit pass on that loss, never the next audit or the adoption (`handovers.missing_paths` keeps its paths owed).
 * A running attempt refuses a second; the check and the start stand under one lock.
 
