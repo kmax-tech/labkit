@@ -369,6 +369,38 @@ class CheckOutcome(unittest.TestCase):
 
 
 class Reach(unittest.TestCase):
+    def test_a_type_annotation_is_no_call_a_call_beside_it_is(self) -> None:
+        """A parameter, a return value and a local annotated as `State` name
+        the class and call nothing; the one real call of it is a reference,
+        and stands for the class's methods too."""
+        typed = module(
+            "labkit.gates.typed",
+            """
+            class State:
+                def explain(self):
+                    raise SystemExit("no run")
+
+
+            def reads(state: State, others: list[State]) -> State:
+                kept: State = state
+                return kept
+
+
+            def builds():
+                return State()
+            """,
+        )
+        references = inv.unit_references([typed])
+        self.assertNotIn("labkit.gates.typed.reads", references)
+        self.assertEqual(
+            [(r.line, r.target) for r in references["labkit.gates.typed.builds"]],
+            [
+                (13, "labkit.gates.typed.State"),
+                (13, "labkit.gates.typed.State.explain"),
+            ],
+        )
+        self.assertNotIn("labkit.gates.typed.reads", inv.call_graph([typed]))
+
     def test_a_command_reaches_a_check_through_a_module_alias(self) -> None:
         graph = inv.call_graph([CHECKS, GATE])
         reach = inv.reaching_commands(

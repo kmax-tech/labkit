@@ -50,7 +50,8 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
   - its commands are the console scripts (`[project.scripts]`) whose code
     reaches its function by a static call graph: a call or reference by
     name, through an import or a module alias, a method through `self` or
-    its class's name. An estimate in both directions, not a trace
+    its class's name; a name in a type annotation is no reference
+    (`state: AreaState` calls nothing). An estimate in both directions, not a trace
     (`labkit-calltree` shows what one run did call); `—` where no command
     reaches it — code an area script calls (`recheck`, `lanes`) or nothing
 
@@ -825,6 +826,21 @@ def _referenced_unit(n: ast.AST, scope: _Scope) -> str | None:
     return target if target in scope.all_units else None
 
 
+def annotation_nodes(tree: ast.AST) -> set[int]:
+    """The ids of every node under TREE that stands inside a type
+    annotation — of a parameter, a return value or an annotated
+    assignment: names that say what a value is, not what the code calls."""
+    annotations: list[ast.AST] = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.arg) and n.annotation is not None:
+            annotations.append(n.annotation)
+        elif isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.returns:
+            annotations.append(n.returns)
+        elif isinstance(n, ast.AnnAssign):
+            annotations.append(n.annotation)
+    return {id(inner) for a in annotations for inner in ast.walk(a)}
+
+
 @dataclass(frozen=True)
 class UnitReference:
     """One place a unit calls or names another: LINE in the source file of
@@ -837,7 +853,8 @@ class UnitReference:
 def unit_references(modules: list[Module]) -> dict[str, list[UnitReference]]:
     """Unit → every place it calls or names another unit, in no fixed order
     (the module docstring says how far the estimate reaches). A class named
-    stands for itself and all its methods, each at the line of the name."""
+    stands for itself and all its methods, each at the line of the name; a
+    name inside a type annotation counts for nothing (`annotation_nodes`)."""
     known = {m.name for m in modules}
     all_units: dict[str, ast.AST] = {}
     for m in modules:
@@ -850,6 +867,7 @@ def unit_references(modules: list[Module]) -> dict[str, list[UnitReference]]:
     references: dict[str, list[UnitReference]] = defaultdict(list)
     for m in modules:
         imports = imported_names(m, known)
+        annotated = annotation_nodes(m.tree)
         for unit, node in units(m).items():
             parent = unit.rsplit(".", 1)[0]
             scope = _Scope(
@@ -861,6 +879,8 @@ def unit_references(modules: list[Module]) -> dict[str, list[UnitReference]]:
                 parent if parent in methods else None,
             )
             for n in ast.walk(node):
+                if id(n) in annotated:
+                    continue
                 target = _referenced_unit(n, scope)
                 if target is not None and target != unit:
                     line = n.lineno  # type: ignore[attr-defined] — a name and an attribute have one
