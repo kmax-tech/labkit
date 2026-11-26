@@ -59,6 +59,7 @@ from labkit.formats.scope_sha import (
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import promises, protocol_block
+from labkit.formats.gate import LAB_034
 from labkit.formats.gate import (
     GUARANTEED,
     NOT_EXECUTABLE,
@@ -68,7 +69,6 @@ from labkit.formats.gate import (
     WARNING,
     GateFinding,
     blocker,
-    cited_rule,
     outcome_of_failed_read,
 )
 from labkit.formats.gate import (
@@ -738,7 +738,7 @@ def null_lane_findings(kept: Sequence[KeptRows], area: Path) -> NullLanes:
                     f"own, e.g. its predictions against permuted gold, then "
                     f"{measure_anew(area)}",
                     evidence_kind=STATIC_EVIDENCE,
-                    rule=cited_rule("LAB-034 Null condition in the same run"),
+                    rule=LAB_034,
                 )
             )
     return NullLanes(out, examined)

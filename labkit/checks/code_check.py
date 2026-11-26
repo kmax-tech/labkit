@@ -96,7 +96,8 @@ from labkit.formats.commands import (
     list_command,
 )
 from labkit.formats.area_state import state_of
-from labkit.formats.gate import TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import CODE_016, LAB_004
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import LAB_018
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
@@ -147,7 +148,7 @@ from labkit.checks.prompt_check import check_parser_fixtures, check_prompt_drift
 #: id without a key literal (KEY_LITERAL_RULE). A promise block that does
 #: not parse and a declared scope that cannot be hashed bring their rule
 #: with the error (`promises.PromiseError.rule`)
-ID_RULE = cited_rule("LAB-004 Identifiers make the intent addressable")
+ID_RULE = LAB_004
 #: the rule a registered id without a key literal records: its text states
 #: the duty the check decides exactly ("Every registered key is set in the
 #: area script", as a literal string). ID_RULE states the contract on
@@ -155,7 +156,7 @@ ID_RULE = cited_rule("LAB-004 Identifiers make the intent addressable")
 #: The check is narrower than the duty — a literal in an imported helper
 #: or a keyword argument passes (`intent_check.code_keys`) —, so every
 #: finding is a breach of it and not every breach is found
-KEY_LITERAL_RULE = cited_rule("CODE-016 The experiment area reconstructs itself")
+KEY_LITERAL_RULE = CODE_016
 
 
 # --- gate-label extraction ------------------------------------------------

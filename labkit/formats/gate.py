@@ -249,8 +249,9 @@ NEW_CLASS_RULE = RuleAssignment(NEW_CLASS)
 #: the rules of the standard held as a constant named by the rule's id,
 #: each defined once, here: a module imports the constant (`from
 #: labkit.formats.gate import LAB_015`) and defines none of its own
-#: (`tests/test_one_home.py`). A rule cited under a role name
-#: (`ID_RULE = cited_rule(…)`) or at the finding site itself is not held.
+#: (`tests/test_one_home.py`). A role name is assigned the constant
+#: (`ID_RULE = LAB_004`), and no module outside this one writes
+#: `cited_rule("LAB-…")` itself.
 #: Imported by its bare name, so `check_inventory` reads the rule of a site
 #: through the import; `rules.check_refs` holds each line to the ledger
 CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
@@ -265,6 +266,7 @@ LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
 LAB_018 = cited_rule("LAB-018 Routine check after every implementation")
 LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
 LAB_027 = cited_rule("LAB-027 Model discipline")
+LAB_034 = cited_rule("LAB-034 Null condition in the same run")
 LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
 LAB_036 = cited_rule("LAB-036 Validate, don't trust a single run")
 LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")

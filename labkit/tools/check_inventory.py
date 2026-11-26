@@ -300,8 +300,12 @@ def short(text: str) -> str:
 
 
 def module_constants(modules: list[Module]) -> dict[str, list[str]]:
-    """`module.NAME` → the strings of a module-level assignment to NAME."""
+    """`module.NAME` → the strings of a module-level assignment to NAME. A
+    NAME assigned another constant's bare name — the module's own or an
+    imported one (`ID_RULE = LAB_004`) — has that constant's strings: one
+    step, so a rule cited under a role name reads as the rule."""
     out: dict[str, list[str]] = {}
+    renamed: list[tuple[Module, str, str]] = []
     for m in modules:
         skip = docstring_nodes(m.tree)
         for stmt in m.tree.body:
@@ -315,6 +319,14 @@ def module_constants(modules: list[Module]) -> dict[str, list[str]]:
             for t in targets:
                 if isinstance(t, ast.Name):
                     out[f"{m.name}.{t.id}"] = strings_in(stmt, skip)
+                    value = getattr(stmt, "value", None)
+                    if isinstance(value, ast.Name):
+                        renamed.append((m, t.id, value.id))
+    known = {m.name for m in modules}
+    first = dict(out)  # one step: a name of a name of a constant is not read
+    for m, name, other in renamed:
+        home = imported_names(m, known).get(other, f"{m.name}.{other}")
+        out[f"{m.name}.{name}"] = first.get(home, [])
     return out
 
 
@@ -819,13 +831,21 @@ def rule_uses(
     shipped: dict[str, str],
 ) -> list[RuleUse]:
     """Every rule of LEDGER_ROWS (`(id, title)`, the active ones) with the
-    SITES citing it, the other modules whose message strings cite it, and
-    the SHIPPED texts (name → text) citing it."""
+    SITES citing it, the other modules whose message strings cite it —
+    in a string of their own outside a site, or in a constant they import
+    (`from labkit.formats.gate import LAB_015`) —, and the SHIPPED texts
+    (name → text) citing it."""
     spans: dict[str, list[tuple[int, int]]] = defaultdict(list)
     for s in sites:
         spans[s.path].append((s.line, s.end_line))
     in_code: dict[str, set[str]] = defaultdict(set)
+    constants = module_constants(modules)
+    known = {m.name for m in modules}
     for m in modules:
+        for home in imported_names(m, known).values():
+            for text in constants.get(home, []):
+                for r in RULE_ID.findall(text):
+                    in_code[r].add(m.name)
         skip = docstring_nodes(m.tree)
         for n in ast.walk(m.tree):
             if (

@@ -49,6 +49,7 @@ from labkit.checks.protocol_runs import (
 )
 from labkit.formats.area_state import AreaState, gone_run_restore
 from labkit.formats.evidence import AreaEvidence
+from labkit.formats.gate import LAB_015
 from labkit.formats.gate import (
     BLOCKER,
     GUARANTEED,
@@ -56,7 +57,6 @@ from labkit.formats.gate import (
     WARNING,
     GateFinding,
     blocker,
-    cited_rule,
     with_way_out,
 )
 from labkit.formats.protocol_then import as_measured, bound_protocol_file
@@ -659,7 +659,7 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
 #: finalize's note on a NOTE, and the rule that owes the decision: the
 #: finding records it, the note cites it with `gate.with_rule`
 UNDECIDED = "undecided"
-UNDECIDED_RULE = cited_rule("LAB-015 Preflight audit before freezing")
+UNDECIDED_RULE = LAB_015
 
 
 def check_audit_records_read(

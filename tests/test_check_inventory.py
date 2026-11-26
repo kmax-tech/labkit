@@ -78,6 +78,28 @@ CHECKS = module(
     ''',
 )
 
+#: the home of a rule's constant, and a module that imports it and cites
+#: it under a role name of its own
+HOME = module(
+    "labkit.formats.demo_home",
+    """
+    LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
+    """,
+)
+IMPORTER = module(
+    "labkit.checks.demo_importer",
+    """
+    from labkit.formats.demo_home import LAB_015
+
+    FREEZE_ROLE = LAB_015
+
+
+    def held(out):
+        out.block("by its id", fix="x", rule=LAB_015)
+        out.block("by its role", fix="x", rule=FREEZE_ROLE)
+    """,
+)
+
 GATE = module(
     "labkit.gates.demo_gate",
     """
@@ -150,6 +172,18 @@ class RecordedRule(unittest.TestCase):
                 ("passed", "variable"),
                 ("none", inv.NOT_RECORDED),
             ],
+        )
+
+    def test_an_imported_constant_reads_as_its_rule_also_under_a_role_name(
+        self,
+    ) -> None:
+        """A rule's constant lives in one module; a site that records the
+        imported name, or a module constant assigned that name, records
+        the rule — not `variable`."""
+        sites = inv.finding_sites([HOME, IMPORTER])
+        self.assertEqual(
+            [(s.wording, s.assignment) for s in sites],
+            [("by its id", "LAB-015"), ("by its role", "LAB-015")],
         )
 
     def test_an_open_cause_is_every_open_rule_no_site_records_itself(self) -> None:
@@ -334,6 +368,23 @@ class RuleUses(unittest.TestCase):
         # the constant stands outside every site's call: other code
         freeze = uses["LAB-015 Preflight audit before freezing"]
         self.assertEqual(freeze.code_modules, ("labkit.checks.demo",))
+
+    def test_a_module_that_imports_a_rules_constant_is_named_beside_its_home(
+        self,
+    ) -> None:
+        """The column of other code names who cites a rule: the home of
+        its constant and each module that imports the constant."""
+        (use,) = inv.rule_uses(
+            [("LAB-015", "Preflight audit before freezing")],
+            inv.finding_sites([HOME, IMPORTER]),
+            [HOME, IMPORTER],
+            {},
+        )
+        self.assertEqual(
+            use.code_modules,
+            ("labkit.checks.demo_importer", "labkit.formats.demo_home"),
+        )
+        self.assertEqual([s.wording for s in use.sites], ["by its id", "by its role"])
 
 
 class ThePackage(unittest.TestCase):

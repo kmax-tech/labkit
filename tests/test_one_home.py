@@ -462,13 +462,20 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"[}\"]-(?:claim-)?review\"|-(?:claim-)?review\(\?:|\|(?:claim-)?review\)",
         {"findings"},
     ),
-    # a constant named by a rule's id (`LAB_015`, `CODE_016`) is defined once,
-    # in `gate`; a module imports it by its bare name, which the inventory
-    # reads a finding site's rule through. Not seen: the same rule cited
-    # under a role name or inline at the finding site (`cited_rule("LAB-…")`)
+    # a rule of the standard is cited once: its constant, named by its id
+    # (`LAB_015`, `CODE_016`), is defined in `gate` and nowhere else, and no
+    # other module writes the citation itself — a role name is assigned the
+    # constant (`ID_RULE = LAB_004`), a finding site passes it. Not seen: a
+    # rule text held as a plain string and cited later (`lanes`,
+    # `analysis_rule`)
     (
         "a cited rule's constant defined a second time",
         r"^(LAB|CODE)_\d{3}\b[^=\n]*=",
+        {"gate"},
+    ),
+    (
+        "a rule of the standard cited by hand",
+        r"cited_rule\(\s*[\"'](LAB|CODE)-\d",
         {"gate"},
     ),
 ]
@@ -838,6 +845,9 @@ class OneHome(unittest.TestCase):
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
             "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
             "a cited rule's constant defined a second time": 'LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")',
+            "a rule of the standard cited by hand": (
+                'rule=cited_rule("LAB-067 A prompt has one home, which the run freezes"),'
+            ),
             "a review's name part spelled by hand": 'name_minute(when) + "-claim-review",',
         }
         for what, shape, _ in RULES:
