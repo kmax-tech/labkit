@@ -83,6 +83,7 @@ from labkit.formats import (
     console,
     evidence,
     findings,
+    finding_line,
     promises,
     protocol_block,
     reviews,
@@ -109,8 +110,8 @@ from labkit.gates.ways_out import ANSWER_AGAIN, contested_way
 REVIEW = audit_prompt.REVIEW
 #: a decision line of the reviewer's report
 DECISION = re.compile(
-    findings.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + findings.SEP + r"\s*\**"
-    r"(upheld|rejected|insufficient)\**\s*" + findings.SEP + r"\s*(.*?)\s*$",
+    finding_line.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + finding_line.SEP + r"\s*\**"
+    r"(upheld|rejected|insufficient)\**\s*" + finding_line.SEP + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(
@@ -218,7 +219,7 @@ def named_files(
     out: list[Path] = []
     for _, f in decided:
         # the field after the grade, on the finding's first line
-        line = findings.tagged_line(f.text.splitlines()[0] if f.text else "")
+        line = finding_line.tagged_line(f.text.splitlines()[0] if f.text else "")
         if line is None or not line.fields or not line.fields[0]:
             continue
         name = line.fields[0].split()[0].split(":")[0].strip("`'\"()")

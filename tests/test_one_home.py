@@ -132,8 +132,12 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"install_hooks"},
     ),
     # the audit and both reviewers share the answer-line separator and the
-    # prompt's joining; `findings.SEP`, `findings.LEAD`, `prompts.prompt_body`
-    ("an answer-line separator spelled by hand", r"\(\?:·\|—\|–\|:\)", {"findings"}),
+    # prompt's joining; `finding_line.SEP`, `finding_line.LEAD`, `prompts.prompt_body`
+    (
+        "an answer-line separator spelled by hand",
+        r"\(\?:·\|—\|–\|:\)",
+        {"finding_line"},
+    ),
     (
         "a prompt joined by hand",
         r"\.join\(f\"===== \{|f\"\\n?===== FILE: \{",

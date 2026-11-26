@@ -12,7 +12,14 @@ from unittest import mock
 
 from labkit.formats.commands import step_command
 from labkit.gates import audit, audit_decisions, audit_reply
-from labkit.formats import decision_history, findings, gate, protocol_check, rules
+from labkit.formats import (
+    decision_history,
+    finding_line,
+    findings,
+    gate,
+    protocol_check,
+    rules,
+)
 from labkit.formats.decision_history import ReplacedDecision
 from labkit.formats.digests import digest
 from labkit.formats.runs import as_stored
@@ -749,7 +756,9 @@ class Subject(unittest.TestCase):
         return next((area / "audits").glob("*.toml"))
 
     def test_the_subject_is_read_from_the_line_and_stored(self):
-        self.assertEqual(findings.subject_of(self.IMPL), findings.IMPLEMENTATION)
+        self.assertEqual(
+            finding_line.subject_of(self.IMPL), finding_line.IMPLEMENTATION
+        )
         # read from the grade line alone, the evidence below it aside, in
         # each form the reply parser reads (a dash, a colon after the grade)
         for line, subject in (
@@ -761,7 +770,7 @@ class Subject(unittest.TestCase):
             ),
         ):
             with self.subTest(line=line):
-                self.assertEqual(findings.subject_of(line), subject)
+                self.assertEqual(finding_line.subject_of(line), subject)
         path = self.record()
         self.assertIn('subject = "implementation"', path.read_text(encoding="utf-8"))
         rec = findings.read(path)
@@ -851,17 +860,17 @@ class Rule(unittest.TestCase):
     def test_the_rule_is_read_by_what_the_field_says_and_stored(self):
         # the dash inside the free text shifts the positions; the field is
         # found by its content
-        self.assertEqual(findings.active_rule_of(self.ONE), "LAB-038")
-        self.assertEqual(findings.active_rule_of(self.NEW), gate.NEW_CLASS)
+        self.assertEqual(finding_line.active_rule_of(self.ONE), "LAB-038")
+        self.assertEqual(finding_line.active_rule_of(self.NEW), gate.NEW_CLASS)
         self.assertEqual(
-            findings.active_rule_of(
+            finding_line.active_rule_of(
                 "BLOCKER · a.py:1 · statement · x\n· `LAB-015 Preflight audit before freezing` · z"
             ),
             "LAB-015",
         )
         rec = findings.read(self.record())
         self.assertEqual(
-            [findings.stored_rule(f.rule) for f in rec.findings],
+            [finding_line.stored_rule(f.rule) for f in rec.findings],
             ["LAB-038", gate.NEW_CLASS],
         )
         # subject and rule are two fields, neither read from the other
@@ -871,7 +880,7 @@ class Rule(unittest.TestCase):
 
     def test_an_id_inside_a_sentence_names_no_rule(self):
         with self.assertRaisesRegex(ValueError, "without its rule"):
-            findings.active_rule_of(
+            finding_line.active_rule_of(
                 "BLOCKER · a.py:1 · statement · breaks LAB-015 here · z"
             )
 
@@ -884,7 +893,7 @@ class Rule(unittest.TestCase):
         ):
             with self.subTest(line=line):
                 with self.assertRaisesRegex(ValueError, words):
-                    findings.active_rule_of(line)
+                    finding_line.active_rule_of(line)
 
     def test_a_record_without_rules_does_not_read(self):
         path = self.record()
@@ -905,7 +914,7 @@ class Rule(unittest.TestCase):
         ]
         with mock.patch.object(rules, "load_ledger", return_value=retired):
             with self.assertRaisesRegex(ValueError, "LAB-038, retired"):
-                findings.active_rule_of(self.ONE)
+                finding_line.active_rule_of(self.ONE)
             rule = findings.read(path).findings[0].rule
             assert rule is not None
             # read back as the gate's value, the retired rule's name from the ledger
@@ -916,17 +925,19 @@ class Rule(unittest.TestCase):
         carries the ledger's name, and only a rule or the new class is
         stored; an open assignment or a technical contract is none an
         auditor gives."""
-        known = findings.recorded_rule("LAB-038")
+        known = finding_line.recorded_rule("LAB-038")
         assert known.name is not None
         self.assertEqual((known.kind, known.rule_id), (gate.KNOWN_RULE, "LAB-038"))
-        self.assertEqual(findings.stored_rule(known), "LAB-038")
-        self.assertEqual(findings.recorded_rule(gate.NEW_CLASS), gate.NEW_CLASS_RULE)
-        self.assertEqual(findings.stored_rule(gate.NEW_CLASS_RULE), gate.NEW_CLASS)
+        self.assertEqual(finding_line.stored_rule(known), "LAB-038")
+        self.assertEqual(
+            finding_line.recorded_rule(gate.NEW_CLASS), gate.NEW_CLASS_RULE
+        )
+        self.assertEqual(finding_line.stored_rule(gate.NEW_CLASS_RULE), gate.NEW_CLASS)
         for refused in (gate.OPEN_RULE, gate.TECHNICAL_RULE, None):
             with self.subTest(refused=refused), self.assertRaises(ValueError):
-                findings.stored_rule(refused)
+                finding_line.stored_rule(refused)
         with self.assertRaises(ValueError):
-            findings.recorded_rule("LAB-999")
+            finding_line.recorded_rule("LAB-999")
 
     def test_a_decision_keeps_the_rule(self):
         path = self.record()
@@ -1017,7 +1028,7 @@ class UndeterminedVerdict(unittest.TestCase):
         return findings.FixVerdict("r.toml", 1, "s", word, "why", "k", shown, subject)
 
     def test_the_value_shown_decides(self):
-        u = self.judged(findings.UNDETERMINED)
+        u = self.judged(finding_line.UNDETERMINED)
         for word, is_shown, subject, says in (
             ("resolved", True, "", None),
             ("unresolved", True, "implementation", None),
@@ -1038,7 +1049,7 @@ class UndeterminedVerdict(unittest.TestCase):
                     self.assertIn(says, problem or "")
 
     def test_the_twin_other_findings_keep_their_verdicts_and_subject(self):
-        for subject in (findings.IMPLEMENTATION, findings.STATEMENT, ""):
+        for subject in (finding_line.IMPLEMENTATION, finding_line.STATEMENT, ""):
             f = self.judged(subject)
             self.assertIsNone(
                 findings.undetermined_fix_problem(f, self.verdict("resolved", False))
@@ -1086,8 +1097,8 @@ class TemplatesNameTheTuples(unittest.TestCase):
         line = r"^([A-Z|]+) · <file>:<line> · ([a-z|]+) ·$"
         m = re.search(line, self.AUDITOR, re.M)
         assert m is not None
-        self.assertEqual(tuple(m.group(1).split("|")), findings.GRADES)
-        self.assertEqual(tuple(m.group(2).split("|")), findings.SUBJECTS)
+        self.assertEqual(tuple(m.group(1).split("|")), finding_line.GRADES)
+        self.assertEqual(tuple(m.group(2).split("|")), finding_line.SUBJECTS)
 
     def test_the_fix_lines_name_the_verdicts_and_the_settled_subjects(self):
         self.assertEqual(
@@ -1098,14 +1109,14 @@ class TemplatesNameTheTuples(unittest.TestCase):
             self.alternatives(
                 r"`FIX · <record>#<n> · unresolved · ([a-z|]+) · <why>`", self.AUDITOR
             ),
-            findings.SETTLED_SUBJECTS,
+            finding_line.SETTLED_SUBJECTS,
         )
 
     def test_the_stamped_agents_file_names_the_subjects(self):
         m = re.search(r"^Subjects: (.*?)\.\n", self.AGENTS, re.M | re.S)
         assert m is not None
         self.assertEqual(
-            tuple(re.findall(r"`([a-z]+)`\s+\(", m.group(1))), findings.SUBJECTS
+            tuple(re.findall(r"`([a-z]+)`\s+\(", m.group(1))), finding_line.SUBJECTS
         )
 
 
@@ -1622,7 +1633,7 @@ class OneGrammarOfTheGradeLine(unittest.TestCase):
             with self.subTest(line=line):
                 f = self.finding(line)
                 self.assertEqual(f.place, ("PROTOCOL-x.md", "Unit"))
-                self.assertEqual(findings.subject_of(f.text), "statement")
+                self.assertEqual(finding_line.subject_of(f.text), "statement")
 
     def test_the_twins_another_grade_no_colon_or_no_field_after_it(self):
         self.assertIsNone(
@@ -1638,14 +1649,14 @@ class OneGrammarOfTheGradeLine(unittest.TestCase):
         self.assertIsNone(self.finding("BLOCKER · PROTOCOL-x.md:Unit").place)
 
     def test_a_reading_hint_is_read_by_the_same_grammar(self):
-        line = findings.tagged_line(
+        line = finding_line.tagged_line(
             "READ · `PROTOCOL-x.md:Terms` · vague · add", ("READ",)
         )
         assert line is not None
         self.assertEqual(line.file_place, ("PROTOCOL-x.md", "Terms"))
-        self.assertIsNone(findings.tagged_line("BLOCKER · a:1 · b", ("READ",)))
+        self.assertIsNone(finding_line.tagged_line("BLOCKER · a:1 · b", ("READ",)))
         # text after the closing backtick is no part of the place
-        line = findings.tagged_line("READ · `a.md:12` (vague) · say it", ("READ",))
+        line = finding_line.tagged_line("READ · `a.md:12` (vague) · say it", ("READ",))
         assert line is not None
         self.assertEqual(line.file_place, ("a.md", "12"))
 

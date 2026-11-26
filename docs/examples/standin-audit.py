@@ -14,18 +14,25 @@ import sys
 from pathlib import Path
 
 from labkit.checks import audit_binding
-from labkit.formats import findings, promises, protocol_block, protocol_check, scope_sha
+from labkit.formats import (
+    finding_line,
+    findings,
+    promises,
+    protocol_block,
+    protocol_check,
+    scope_sha,
+)
 
 area = Path(sys.argv[1])
 run = sorted((area / "runs").iterdir())[-1]
 (protocol,) = area.glob("PROTOCOL-*.md")
 text = protocol.read_text(encoding="utf-8")
 found = []
-subject = sys.argv[4] if len(sys.argv) > 4 else findings.STATEMENT
-grade = "BLOCKER" if subject == findings.UNDETERMINED else "WARNING"
+subject = sys.argv[4] if len(sys.argv) > 4 else finding_line.STATEMENT
+grade = "BLOCKER" if subject == finding_line.UNDETERMINED else "WARNING"
 check = (
     " · check: hidden_files_counted — confirms if above 0, clears if 0"
-    if subject == findings.UNDETERMINED
+    if subject == finding_line.UNDETERMINED
     else ""
 )
 if len(sys.argv) > 2:

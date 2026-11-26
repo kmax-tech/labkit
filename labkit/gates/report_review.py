@@ -73,7 +73,7 @@ from labkit.checks.report_blocks import (
     ReportBlockError,
     discussions,
 )
-from labkit.formats import attempts, console, evidence, findings, report_reviews
+from labkit.formats import attempts, console, evidence, finding_line, report_reviews
 from labkit.formats.area_state import state_of
 from labkit.formats.report_reviews import ReportClaim, held_by
 from labkit.checks.report_review_inputs import review_keys, review_pieces
@@ -88,19 +88,19 @@ REPORT_REVIEW = audit_prompt.REPORT_REVIEW
 ATTEMPT_MODE = report_reviews.ATTEMPT_MODE
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
-    findings.LEAD
+    finding_line.LEAD
     + r"\**CLAIM\s*#(\d+)\**\s*"
-    + findings.SEP
+    + finding_line.SEP
     + r"\s*line\s*(\d+)\s*"
-    + findings.SEP
+    + finding_line.SEP
     + r"\s*\**(result|contradiction)\**\s*"
-    + findings.SEP
+    + finding_line.SEP
     + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(r"verdict:\s*(\d+)\s*claims?(?:\(s\))?", re.I)
 #: a line that announces a claim, whatever follows: held to CLAIM's form
-CLAIM_LEAD = re.compile(findings.LEAD + r"\**CLAIM\b", re.I)
+CLAIM_LEAD = re.compile(finding_line.LEAD + r"\**CLAIM\b", re.I)
 INLINE_NOTE = (
     "Everything you are told to read is inlined below; each part starts with "
     "a `===== <label> =====` line. Nothing else is in scope."

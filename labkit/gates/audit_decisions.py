@@ -20,6 +20,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    finding_line,
     required_check,
     promises,
     protocol_check,
@@ -242,7 +243,7 @@ def read_hints(report: str, area: Path, protocol: Path | None = None) -> ReadHin
     for ln in report.splitlines():
         if not READ_HINT.match(ln):
             continue
-        hint = findings.tagged_line(ln.strip(), (READ_TAG,))
+        hint = finding_line.tagged_line(ln.strip(), (READ_TAG,))
         at = hint.file_place if hint is not None else None
         if at is not None:
             file, place = at
@@ -814,7 +815,7 @@ def _check_lines(
         ]
     if f.check.startswith(required_check.REQUEST_CHECKS):
         # settled as a fault, the evidence was shown: the repair follows the subject
-        if f.subject != findings.UNDETERMINED:
+        if f.subject != finding_line.UNDETERMINED:
             return []
         return [f"      evidence asked: {asked}; decide `fixed` and run `{follow_up}`"]
     # where the decision is made: a check left unwritten has every

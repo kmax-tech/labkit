@@ -11,7 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.checks.protocol_runs import diff_lines, diff_section
-from labkit.formats import findings, followup, required_check
+from labkit.formats import finding_line, findings, followup, required_check
 
 OLD = "2026-11-17T10-00-00_aa11"
 NEW = "2026-11-17T11-00-00_bb22"
@@ -172,7 +172,7 @@ ASKING = findings.Finding(
     "open",
     "",
     check=f"diff:{OLD}..{NEW}",
-    subject=findings.UNDETERMINED,
+    subject=finding_line.UNDETERMINED,
 )
 
 
@@ -191,7 +191,7 @@ def _verdict(
         "the requested diff shows it",
         check=ASKING.check,
         check_present=present,
-        subject=findings.IMPLEMENTATION if word == "unresolved" else "",
+        subject=finding_line.IMPLEMENTATION if word == "unresolved" else "",
     )
 
 

@@ -85,6 +85,7 @@ from labkit.formats.commands import (
 )
 from labkit.formats import (
     findings,
+    finding_line,
     handovers,
     protocol_block,
     protocol_check,
@@ -575,14 +576,14 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
         if place is None or place[0] != ctx.protocol.name:
             continue
         named = f"; finding {u.number} of {u.record.path.name} names this protocol"
-        if u.finding.subject == findings.IMPLEMENTATION:
+        if u.finding.subject == finding_line.IMPLEMENTATION:
             ways = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
             return (
                 f"{named} as an implementation finding — the restore leaves the "
                 f"code or data to repair and measure anew: `{ways}` prints its "
                 "ways out"
             )
-        if u.finding.subject == findings.UNDETERMINED:
+        if u.finding.subject == finding_line.UNDETERMINED:
             ways = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
             return (
                 f"{named} as an undetermined finding — the restore leaves the "

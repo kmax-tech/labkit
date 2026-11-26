@@ -31,7 +31,15 @@ from protocol_fixture import (
     source_entry,
 )
 
-from labkit.formats import attempts, evidence, findings, promises, reviews, scope_sha
+from labkit.formats import (
+    attempts,
+    evidence,
+    finding_line,
+    findings,
+    promises,
+    reviews,
+    scope_sha,
+)
 from labkit.gates import audit, decision_review, report_check
 from labkit.run import llm_backends
 from labkit.tools import protocol_fill, protocol_result
@@ -713,10 +721,10 @@ class TheCall(unittest.TestCase):
     def test_rejected_false_positive_routes_follow_each_findings_subject(self):
         """A rejected false-positive offers only decisions the subject allows,
         both after the review and when a repeat review is refused."""
-        for subject in findings.SUBJECTS:
+        for subject in finding_line.SUBJECTS:
             with self.subTest(subject=subject):
                 line = BLOCKER[1].replace("· statement ·", f"· {subject} ·")
-                if subject == findings.UNDETERMINED:
+                if subject == finding_line.UNDETERMINED:
                     line += (
                         " · check: feature_count — clears if one, confirms otherwise"
                     )
@@ -730,7 +738,7 @@ class TheCall(unittest.TestCase):
                 (route,) = [ln for ln in out.splitlines() if "  rejected: " in ln]
                 rc, _, err, sent = run_review(area, UPHELD)
                 self.assertEqual((rc, sent), (2, []))
-                allowed = subject == findings.STATEMENT
+                allowed = subject == finding_line.STATEMENT
                 for hint in (route, err):
                     self.assertEqual("--decide N limitation" in hint, allowed, hint)
                     self.assertEqual("--not-assessable <ID>" in hint, allowed, hint)

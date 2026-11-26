@@ -86,6 +86,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    finding_line,
     followup,
     protocol_block,
 )
@@ -198,7 +199,7 @@ def stamp_facts(stamp: Stamp, grades: Sequence[str], counted_notes: int) -> str:
     at repeat cost low a tally only, never listed or recorded
     (`experiment-preflight.agent.md`, LAB-017 The number of audits follows
     the cost tier), so nothing to decide."""
-    b, w, n = (sum(1 for g in grades if g == grade) for grade in findings.GRADES)
+    b, w, n = (sum(1 for g in grades if g == grade) for grade in finding_line.GRADES)
     # the auditor counts notes loosely and no gate holds the tally
     # (`findings.verdict_disagrees`): fewer tallied than listed adds nothing
     unlisted = counted_notes - n

@@ -3,7 +3,7 @@ lines of a follow-up and the scope it says it read.
 
 Pure functions from the report text to data; an `AuditError` names the line
 that cannot be read. The line forms are the agent instructions'
-(`experiment-preflight.agent.md`); `findings.LEAD` and `findings.SEP` are
+(`experiment-preflight.agent.md`); `finding_line.LEAD` and `finding_line.SEP` are
 the pieces this module and the review gates build their line patterns from.
 """
 
@@ -16,13 +16,14 @@ from labkit.checks.audit_binding import AuditError
 from labkit.formats import markdown
 from labkit.formats import (
     findings,
+    finding_line,
 )
 from labkit.formats.repo import (
     rel_posix,
     area_protocols,
     layout_root,
 )
-from labkit.formats.findings import GRADE_HEAD, LEAD, SEP
+from labkit.formats.finding_line import GRADE_HEAD, LEAD, SEP
 from labkit.gates.audit_prompt import Followup
 from labkit.gates.ways_out import (
     ANSWER_AGAIN,
@@ -59,7 +60,7 @@ FIX = re.compile(
     + r"\s*`?(?P<verdict>[a-z_]+)`?\s*"
     + SEP
     + r"(?:\s*`?(?P<subject>"
-    + "|".join(findings.SETTLED_SUBJECTS)
+    + "|".join(finding_line.SETTLED_SUBJECTS)
     + r")`?\s*"
     + SEP
     + r")?"
@@ -361,4 +362,4 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
 READ_TAG = "READ"
 #: a READ line of the auditor's report: a reading hint, printed and never
 #: recorded (the record keeps what FINDING matches)
-READ_HINT = re.compile(findings.tag_head((READ_TAG,)))
+READ_HINT = re.compile(finding_line.tag_head((READ_TAG,)))

@@ -2068,7 +2068,7 @@ PILOT2 = (
 
 
 #: the rule an archived analysis answer is given where it names none: the
-#: pilots answered before the rule field (`findings.active_rule_of`)
+#: pilots answered before the rule field (`finding_line.active_rule_of`)
 ARCHIVED_RULE = "LAB-050 Analysis audit before reporting"
 
 

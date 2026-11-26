@@ -14,24 +14,43 @@ labkit does not carry legacy paths: a format or API change is a break, announced
 - **Internal names removed.** `report_reviews.verdict_counts` (call `reviews.counts_of`), `evidence._base`, and the second names `intent_check.ID_IN_PROTOCOL`, `intent_check.ID_KEY`, `intent_check.ids_in_prose`, `intent_check.reported_intent_ids` (import `ID_IN_PROTOCOL`, `ID_KEY`, `ids_in_prose`, `reported_ids` from `labkit.formats.promises`). Also `recheck.INTENT_KEY`, a second name of `promises.INTENT_KEY`. None was public API. Kept: `recheck.answering_run_dir` and `recheck.rows_of`, both public API.
 - **Internal names moved out of `labkit.formats.findings`.** The module held seven questions in one file; it keeps the data model (what a finding, a fix verdict and an audit record are, the statuses, which findings are open), and each other question has its own module, found by its name. The names below moved without a change to their code, and no forwarder is left: labkit's own code, tests and examples name the new module. `findings` still imports the few it uses itself, which is no second name to rely on; every other old path fails with `ImportError` or `AttributeError`. None is public API (`docs/architecture.md`, "Public API"), so no warning release precedes the move. `docs/examples/standin-audit.py`, to which `docs/stagekit-areas.md` points a lab for a trial without a model, changed its imports with them: a lab that copied the script follows the table. No format, fingerprint or written byte changed.
 
-  | Old import path                            | New import path                                  |
-  |--------------------------------------------|--------------------------------------------------|
-  | `labkit.formats.findings.CHECK_FIELD`      | `labkit.formats.required_check.CHECK_FIELD`      |
-  | `labkit.formats.findings.CHECK_KEY`        | `labkit.formats.required_check.CHECK_KEY`        |
-  | `labkit.formats.findings.FILE_CHECK`       | `labkit.formats.required_check.FILE_CHECK`       |
-  | `labkit.formats.findings.DIFF_CHECK`       | `labkit.formats.required_check.DIFF_CHECK`       |
-  | `labkit.formats.findings.CODE_CHECK`       | `labkit.formats.required_check.CODE_CHECK`       |
-  | `labkit.formats.findings.REQUEST_CHECKS`   | `labkit.formats.required_check.REQUEST_CHECKS`   |
-  | `labkit.formats.findings.CHECK_FORM`       | `labkit.formats.required_check.CHECK_FORM`       |
-  | `labkit.formats.findings.DIFF_SIDES`       | `labkit.formats.required_check.DIFF_SIDES`       |
-  | `labkit.formats.findings.DiffRequest`      | `labkit.formats.required_check.DiffRequest`      |
-  | `labkit.formats.findings.CodeRequest`      | `labkit.formats.required_check.CodeRequest`      |
-  | `labkit.formats.findings.diff_request`     | `labkit.formats.required_check.diff_request`     |
-  | `labkit.formats.findings.code_request`     | `labkit.formats.required_check.code_request`     |
-  | `labkit.formats.findings.evidence_request` | `labkit.formats.required_check.evidence_request` |
-  | `labkit.formats.findings.check_of`         | `labkit.formats.required_check.check_of`         |
-  | `labkit.formats.findings.request_words`    | `labkit.formats.required_check.request_words`    |
-  | `labkit.formats.findings.check_order`      | `labkit.formats.required_check.check_order`      |
+  | Old import path                                 | New import path                                     |
+  |-------------------------------------------------|-----------------------------------------------------|
+  | `labkit.formats.findings.CHECK_FIELD`           | `labkit.formats.required_check.CHECK_FIELD`         |
+  | `labkit.formats.findings.CHECK_KEY`             | `labkit.formats.required_check.CHECK_KEY`           |
+  | `labkit.formats.findings.FILE_CHECK`            | `labkit.formats.required_check.FILE_CHECK`          |
+  | `labkit.formats.findings.DIFF_CHECK`            | `labkit.formats.required_check.DIFF_CHECK`          |
+  | `labkit.formats.findings.CODE_CHECK`            | `labkit.formats.required_check.CODE_CHECK`          |
+  | `labkit.formats.findings.REQUEST_CHECKS`        | `labkit.formats.required_check.REQUEST_CHECKS`      |
+  | `labkit.formats.findings.CHECK_FORM`            | `labkit.formats.required_check.CHECK_FORM`          |
+  | `labkit.formats.findings.DIFF_SIDES`            | `labkit.formats.required_check.DIFF_SIDES`          |
+  | `labkit.formats.findings.DiffRequest`           | `labkit.formats.required_check.DiffRequest`         |
+  | `labkit.formats.findings.CodeRequest`           | `labkit.formats.required_check.CodeRequest`         |
+  | `labkit.formats.findings.diff_request`          | `labkit.formats.required_check.diff_request`        |
+  | `labkit.formats.findings.code_request`          | `labkit.formats.required_check.code_request`        |
+  | `labkit.formats.findings.evidence_request`      | `labkit.formats.required_check.evidence_request`    |
+  | `labkit.formats.findings.check_of`              | `labkit.formats.required_check.check_of`            |
+  | `labkit.formats.findings.request_words`         | `labkit.formats.required_check.request_words`       |
+  | `labkit.formats.findings.check_order`           | `labkit.formats.required_check.check_order`         |
+  | `labkit.formats.findings.GRADES`                | `labkit.formats.finding_line.GRADES`                |
+  | `labkit.formats.findings.LEAD`                  | `labkit.formats.finding_line.LEAD`                  |
+  | `labkit.formats.findings.SEP`                   | `labkit.formats.finding_line.SEP`                   |
+  | `labkit.formats.findings.tag_head`              | `labkit.formats.finding_line.tag_head`              |
+  | `labkit.formats.findings.GRADE_HEAD`            | `labkit.formats.finding_line.GRADE_HEAD`            |
+  | `labkit.formats.findings.TaggedLine`            | `labkit.formats.finding_line.TaggedLine`            |
+  | `labkit.formats.findings.tagged_line`           | `labkit.formats.finding_line.tagged_line`           |
+  | `labkit.formats.findings.IMPLEMENTATION`        | `labkit.formats.finding_line.IMPLEMENTATION`        |
+  | `labkit.formats.findings.STATEMENT`             | `labkit.formats.finding_line.STATEMENT`             |
+  | `labkit.formats.findings.UNDETERMINED`          | `labkit.formats.finding_line.UNDETERMINED`          |
+  | `labkit.formats.findings.SUBJECTS`              | `labkit.formats.finding_line.SUBJECTS`              |
+  | `labkit.formats.findings.SETTLED_SUBJECTS`      | `labkit.formats.finding_line.SETTLED_SUBJECTS`      |
+  | `labkit.formats.findings.SUBJECT_FORM`          | `labkit.formats.finding_line.SUBJECT_FORM`          |
+  | `labkit.formats.findings.subject_of`            | `labkit.formats.finding_line.subject_of`            |
+  | `labkit.formats.findings.RULE_FORM`             | `labkit.formats.finding_line.RULE_FORM`             |
+  | `labkit.formats.findings.active_rule_of`        | `labkit.formats.finding_line.active_rule_of`        |
+  | `labkit.formats.findings.recorded_rule`         | `labkit.formats.finding_line.recorded_rule`         |
+  | `labkit.formats.findings.stored_rule`           | `labkit.formats.finding_line.stored_rule`           |
+  | `labkit.formats.findings.recorded_rule_problem` | `labkit.formats.finding_line.recorded_rule_problem` |
 
 ### Added
 
