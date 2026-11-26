@@ -77,7 +77,10 @@ The evaluation means the frozen criterion: earlier decisions are shown, and the 
 * The auditor writes one `FIX · <record>#<n> · resolved | unresolved | not_assessable · <why>` entry per finding (the why may continue below the line up to a blank line or the next entry, kept whole; an entry naming another shown finding is refused). The entry is stored as `[[fix_verdict]]`, bound to the decision shown (`finding_decisions.decision_digest`).
 * A BLOCKER's verdict other than `resolved` carries the finding into the new record: open, origin text, check kept, `carries`, counted in `blockers` and `carried_blockers`.
 * Nothing is recorded for a FIX line that does not read, names a finding not shown, repeats one or carries another word, or when a shown decision changed during the call. A finding without a line stays unchecked.
-* A finding may require a diagnostic (`· check: <metrics key>`, or `· check: file:<path>` for a file the run declares as a dependency, optionally ` (<note>)` or ` — <note>` to the line's end, the note kept whole as `check_note`; the auditor's, kept by every decision and bound in the digest).
+* A finding may require a diagnostic, named in the closing field of its line:
+  - The field is `· check: <metrics key>`, or `· check: file:<path>` for a file the run declares as a dependency.
+  - A note may follow the key, written as ` (<note>)` or as ` — <note>`, and runs to the line's end. Only the key is machine-read; the note is kept whole as `check_note`.
+  - The key and the note are the auditor's: they are set from the finding line when the record is written, and no decision sets them. Every decision keeps both unchanged, and the decision's digest binds both (`finding_decisions.decision_digest`).
 * The prompt carries the diagnostic's whole value from the shown metrics.json, or the file shown whole as a `DEPENDENCY` piece. Each verdict records its presence: `check_present`, from that snapshot (`audit_binding.check_evidence`, the same lookup report-check makes); absent when none is required.
 
 - **Where:** `audit` in MODE analysis, `audit_reply.parse_fixes`, `followup.earlier_blockers`, `findings.FixVerdict`
@@ -142,7 +145,9 @@ A report presents as a result nothing the protocol has not adopted and nothing t
   - every run of the area in one line (state, kind, binding, what the report makes of it, the settings that vary across the protocol's measurements, scalar metrics — the history a silent search shows in);
   - every audit record with its decisions and failed attempts.
 * The review is recorded in `audits/report-reviews/` with the fingerprint of exactly the inputs it read and the brief it read them under (`report_hold.review_fingerprint`). Its own folder and the attempt journal are not among them. A corrected brief makes every earlier review stale.
-* report-check holds the report, per protocol its discussions name, until a review of its state — the report and protocol as the gate's state holds them, at the commit only records the index holds and the area's tree equal to the index — names no claim.
+* report-check holds the report, per protocol its discussions name, until a review of its state names no claim. The state is what the reviewer reads, with the report and the protocol as the gate's state holds them:
+  - At the stop the gate's state is the working tree.
+  - At the commit the gate's state is the index. Only the review records the index holds count, and the area's working tree must equal the index: a difference blocks the commit.
 * A committed report discussing a run of an area a change touches is held with the change (`report_hold.discussing_reports`).
 * A claim holds the state — an `--again` draw's as well — and a later clean draw (or `--again`) releases nothing.
 * A claim the reader got wrong is decided `false-positive` in its record (`limitation` and `fixed` are refused). The decision is bound to the record, the claim's number, the state and the decision's digest. It releases only once a second reviewer, shown the claim, the reason and the first reader's inputs, upholds it. A verdict other than `upheld` is outvoted by no further draw. A revised reason is a new decision with its own confirmation.
@@ -329,7 +334,7 @@ At both repeat costs, what binds for good is the promise given before the result
 * The duty hangs on the protocol, not on the report's path: the head may name another file, and the new target owes the delivery.
 * Held:
   - a head that registers none while that duty stands (restore, name another file, or hand over);
-  - a protocol id the area measured under that no protocol of the area carries now while it owed a report — by report-check's chain, by its area form on an area without a protocol, and by the stop's and the commit's hold (`report_check.orphaned_duty_gaps`, one reading in the file state each judges).
+  - a protocol id the area measured under that no protocol of the area carries now, while that id owed a report. One function finds it (`report_check.orphaned_duty_gaps`), and three callers hold it: report-check's chain; `report-check AREA` on an area without a protocol; the stop's and the commit's hold, on an area the change touches where no chain ran. Each caller passes the file state it judges (the working tree, or the index at the commit), and the ids carried now are read from the protocol texts of that state.
 * A deleted protocol that owed none is passed over.
 * A report entered after the first measurement starts no lasting duty. While the head names it, the checks of a registered report hold it. Taking it out ends those and nothing else: an adopted result, a written report and the audit records keep their own holds.
 * Where the first measurement's registration does not read, a head without a report is a check not executable, never "no duty". The registration does not read when:
@@ -495,7 +500,10 @@ An area that holds an audit BLOCKER nobody decided is held by both gates: the st
 
 * The areas are those the session touched or a staged file lies in. An area deleted whole with its protocol is found by its journal copy on the branch.
 * A lost or unreadable record or journal holds both too, except where a current handover binds that loss (`handovers.acknowledgement`) — an open BLOCKER never.
-* Committed evidence changed against git — a record beyond its decision lines, another audit file, a closed run's files — or a file of labkit's that git ignores holds both as well, in the state checked against HEAD, at the stop also by a session commit or left behind in HEAD's reflog, and no handover acknowledges it: each line names its `git checkout`.
+* Three more findings hold both gates as well, and no handover acknowledges them:
+  - Committed evidence changed against git: a record beyond its decision lines, another audit file, a closed run's files. The state the gate checks is compared with HEAD: the working tree at the stop, the index at the commit. Each line names its `git checkout`.
+  - At the stop also: such a change that a commit of the session made against its parent and the working tree has not undone, and a closed run left behind in HEAD's reflog — a commit the reflog names since the session began held it, HEAD no longer holds that commit, and the tree lacks the run's files or holds them changed. Each line names its `git checkout`.
+  - A file of labkit's that git ignores, so that no commit can carry it. Its line names `git check-ignore -v`.
 
 - **Where:** `undecided.undecided_blockers`, `evidence.AreaEvidence`, `findings.open_blockers`, `hook_session.committed_in_session`, `evidence.AreaEvidence.change_sentences`, `evidence.ignored`, `agent_hooks.session_evidence`, `evidence.change_blockers`
 - **Command:** `claude-hook stop`, `.githooks/pre-commit` (`claude-hook pre-commit`); the change against HEAD also `report-check AREA` and `labkit-next`
@@ -511,7 +519,11 @@ Every model call of `labkit-audit` is an attempt journaled in `audits/attempts.j
 * A call not made (a state already judged, a refusal before it) is no attempt, and a record older than the journal is named by none.
 * An attempt whose process holds no lock and has no end is marked interrupted by the next.
 * A file an ended attempt names, a file under `audits/` HEAD holds, or a journal line HEAD holds that is gone blocks the next audit, the stop and the commit, naming the attempt or the file. At the commit they are read as the index holds them, so a commit restoring a record HEAD lost passes; at the stop HEAD's journal is held to HEAD's files.
-* In the tree a journal line its copy in the git directory keeps (one per branch, held as a set of lines) that the journal lacks blocks too, with the files its end names — `audits/` deleted whole before a first commit is noticed (not on a detached HEAD, in a fresh clone or with the git directory gone).
+* The check of the tree (the next audit and the stop) also holds the journal to its copy in the git directory, where every journal line is written too, one file per branch and area:
+  - A line the copy keeps that the journal lacks blocks too, and so does each file that the end of an attempt among those lines names and `audits/` lacks.
+  - The copy is held as a set of lines: the order of the lines does not count, and a journal line the copy lacks passes.
+  - So `audits/` deleted whole before a first commit is noticed.
+  - This does not hold on a detached HEAD (no copy is kept there), in a fresh clone or with the git directory gone.
 * A current handover lets the stop and the commit pass on that loss, never the next audit or the adoption (`handovers.missing_paths` keeps its paths owed).
 * A running attempt refuses a second; the check and the start stand under one lock.
 
@@ -567,7 +579,7 @@ The key is bound by name, not by meaning.
 
 A computation's head may register the stated value its number is compared with (`[reference]`: value, tolerance, relation, source, compared on the `[kept]` key — `protocol_block.reference`).
 
-* It is refused on a kind with a bar naming the criterion (`protocol_check.reference_gap`) and stands in the registration stamp.
+* The `[reference]` table is refused on a kind with a bar: a fit or an apply, every kind but a computation (`protocol_check.reference_gap`). The refusal names the criterion as the place where such a kind compares its number. The table stands in the registration stamp as a digest (`protocol_check.registration_stamp`).
 * The run writes the verdict beside the number (`reference.reference_verdict`, one home; the compute skeleton's `metrics_of`): `compared` with `ref_met` and the distance, or `not comparable` — the key absent or no finite number.
 * `--check` recomputes it.
 * The Recorded results line and the result block carry it generated (`result_render.comparison_phrase`).
