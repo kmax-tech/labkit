@@ -49,9 +49,11 @@ rule cannot be counted for one. Read from the source (`ast`), never run:
     cause of a `variable` site carries an assignment
   - its commands are the console scripts (`[project.scripts]`) whose code
     reaches its function by a static call graph: a call or reference by
-    name, through an import or a module alias, a method through `self` or
-    its class's name; a name in a type annotation is no reference
-    (`state: AreaState` calls nothing). An estimate in both directions, not a trace
+    name, through an import or a module alias, a method through `self`,
+    its class's name, or an object whose class the annotations tell
+    (`method_receivers`); a class named stands for its `__dunder__`
+    methods, not for every method, and a name in a type annotation is no
+    reference (`state: AreaState` calls nothing). An estimate in both directions, not a trace
     (`labkit-calltree` shows what one run did call); `—` where no command
     reaches it — code an area script calls (`recheck`, `lanes`) or nothing
 
@@ -86,6 +88,7 @@ from labkit.formats.gate import (
     TECHNICAL_CONTRACT,
 )
 from labkit.formats.rules import CODE_RE, load_ledger
+from labkit.tools import method_receivers
 
 USAGE = (
     "usage: python -m labkit.tools.check_inventory [--records EXPERIMENTS] [--out FILE]"
@@ -841,6 +844,47 @@ def annotation_nodes(tree: ast.AST) -> set[int]:
     return {id(inner) for a in annotations for inner in ast.walk(a)}
 
 
+def _unnamed_methods(cls: str, package: method_receivers.UnitIndex) -> list[str]:
+    """Every `__dunder__` method of CLS and its bases, sorted: the methods
+    Python calls without their name being written — `__init__` where the
+    class is called, `__enter__` at a `with`, `__eq__` at `==`. The scan
+    does not tell which use a name of the class is, so each of them counts
+    wherever the class is named, also in `isinstance(x, CLS)`: an
+    over-count, kept because the call itself is never visible."""
+    return sorted(
+        unit
+        for c in method_receivers.class_and_bases(cls, package)
+        for unit, node in package.units.items()
+        if unit.rsplit(".", 1)[0] == c
+        and not isinstance(node, ast.ClassDef)
+        and unit.rsplit(".", 1)[1].startswith("__")
+        and unit.endswith("__")
+    )
+
+
+def _named_units(
+    unit: str,
+    node: ast.AST,
+    scope: _Scope,
+    package: method_receivers.UnitIndex,
+    skip: set[int],
+) -> list[tuple[int, str]]:
+    """(line, unit named) for every name in the unit UNIT (its NODE) that
+    SCOPE resolves to another unit; a class named brings the methods Python
+    calls unnamed (`_unnamed_methods`) at the same line. A node whose id is
+    in SKIP (inside a type annotation) counts for nothing."""
+    out: list[tuple[int, str]] = []
+    for n in ast.walk(node):
+        target = None if id(n) in skip else _referenced_unit(n, scope)
+        if target is None or target == unit:
+            continue
+        line = n.lineno  # type: ignore[attr-defined] — a name and an attribute have one
+        is_class = isinstance(scope.all_units[target], ast.ClassDef)
+        unnamed = _unnamed_methods(target, package) if is_class else []
+        out += [(line, t) for t in (target, *unnamed)]
+    return out
+
+
 @dataclass(frozen=True)
 class UnitReference:
     """One place a unit calls or names another: LINE in the source file of
@@ -853,8 +897,12 @@ class UnitReference:
 def unit_references(modules: list[Module]) -> dict[str, list[UnitReference]]:
     """Unit → every place it calls or names another unit, in no fixed order
     (the module docstring says how far the estimate reaches). A class named
-    stands for itself and all its methods, each at the line of the name; a
-    name inside a type annotation counts for nothing (`annotation_nodes`)."""
+    stands for itself and for every `__dunder__` method it has or inherits
+    — the ones Python calls without their name (`_unnamed_methods`) —, each
+    at the line of the name; any other method counts where it is named
+    (`Class.method`, `self.method`) or called on an object whose class the
+    annotations tell (`method_receivers.method_references`). A name inside
+    a type annotation counts for nothing (`annotation_nodes`)."""
     known = {m.name for m in modules}
     all_units: dict[str, ast.AST] = {}
     for m in modules:
@@ -864,30 +912,26 @@ def unit_references(modules: list[Module]) -> dict[str, list[UnitReference]]:
         parent = u.rsplit(".", 1)[0]
         if isinstance(all_units.get(parent), ast.ClassDef):
             methods[parent].add(u)
-    references: dict[str, list[UnitReference]] = defaultdict(list)
+    scopes: dict[str, _Scope] = {}
     for m in modules:
         imports = imported_names(m, known)
+        for unit in units(m):
+            parent = unit.rsplit(".", 1)[0]
+            cls = parent if parent in methods else None
+            scopes[unit] = _Scope(m.name, imports, known, all_units, methods, cls)
+    package = method_receivers.UnitIndex(
+        all_units, lambda unit: lambda n: _referenced_unit(n, scopes[unit])
+    )
+    references: dict[str, list[UnitReference]] = defaultdict(list)
+    for m in modules:
         annotated = annotation_nodes(m.tree)
         for unit, node in units(m).items():
-            parent = unit.rsplit(".", 1)[0]
-            scope = _Scope(
-                m.name,
-                imports,
-                known,
-                all_units,
-                methods,
-                parent if parent in methods else None,
+            found = _named_units(unit, node, scopes[unit], package, annotated)
+            found += method_receivers.method_references(
+                unit, scopes[unit].cls, package, annotated
             )
-            for n in ast.walk(node):
-                if id(n) in annotated:
-                    continue
-                target = _referenced_unit(n, scope)
-                if target is not None and target != unit:
-                    line = n.lineno  # type: ignore[attr-defined] — a name and an attribute have one
-                    references[unit] += [
-                        UnitReference(line, t)
-                        for t in (target, *sorted(methods.get(target, ())))
-                    ]
+            if found:  # a unit that names nothing gets no entry
+                references[unit] = [UnitReference(*place) for place in found]
     return references
 
 

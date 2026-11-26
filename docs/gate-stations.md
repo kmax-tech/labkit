@@ -4,7 +4,7 @@ Generated, do not edit: `python -m labkit.tools.gate_stations` writes this page 
 
 How to read it. A gate is a function that numbers its stations in comments; a station's title is that comment, which states when the station runs. *Calls* are the functions the station's code calls that tell a finding or reach one, each with the first sentence of its docstring. *At this station* lists the finding sites in the station's own code (the *Function* column then names the gate itself) and in those functions; *further down* lists the sites these functions reach through the call graph. *Tells* is the constant text of the site's message, every value as `{…}`, on one line and cut to 90 characters (`…` marks the cut). *Next* is the way out the site names as data — its constant text, or in backticks the expression that builds it; `—` where it names none that way (a BLOCKER always names one; a warning's message may still say what to do). *Rule* is the rule assignment the finding records as data: a rule of the standard by id and name, `technical contract` (a condition no rule of the standard covers), `open assignment` (the rule is not decided yet), `variable` (the cause passes the assignment in, so the scan cannot read it) or `not recorded` (an exit records none). *Commands whose code reaches it* counts labkit's console scripts only; a gate none of them reaches is called by an area's own script.
 
-Its limits. The call graph resolves names, not values: *further down* is a static estimate that names sites the station cannot reach at run time (a class named stands for all its methods) and misses a method called on an object and a function found by a computed name; a path back through the gate's own function is not followed. A site under several stations is listed under each. Which condition a site holds is established by reading its function; the tests that reach a site stand in [the checks overview](checks-overview.md). A gate that numbers no stations (`protocol-check`, `code-check`, `labkit-audit`) is not on this page. The order of the gates and what each holds: [The gates in order](architecture.md#the-gates-in-order).
+Its limits. The call graph resolves names, not values: *further down* is a static estimate that names sites the station cannot reach at run time (a function named is followed whether or not the branch that calls it runs; a class named counts for each of its `__dunder__` methods; a name given two classes in one function reaches the methods of both). A method called on an object is followed where annotations tell the object's class — a parameter, a return value, a dataclass field; a method called on any other object is missed, and so are a subclass's override of a method its annotated base has and a function found by a computed name; a path back through the gate's own function is not followed. A site under several stations is listed under each. Which condition a site holds is established by reading its function; the tests that reach a site stand in [the checks overview](checks-overview.md). A gate that numbers no stations (`protocol-check`, `code-check`, `labkit-audit`) is not on this page. The order of the gates and what each holds: [The gates in order](architecture.md#the-gates-in-order).
 
 ## `finalize.finalize_area` — `labkit/gates/finalize.py`
 
@@ -29,8 +29,6 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
 | `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
 
@@ -63,11 +61,12 @@ Calls:
 | `run_record_check.arm_findings` | WARNING | GUARANTEED | technical contract | arm `{…}`: the protocol names {…}, no such file under {…} | — |
 | `run_record_check.arm_findings` | WARNING | GUARANTEED | open assignment | arm `{…}`: the protocol names fingerprint {…}, the answering run recorded no such value —… | — |
 | `run_record_check.arm_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | arm `{…}`: the protocol names alias {…}, the answering run recorded no such alias | — |
+| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
+| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `finalize.choose_answering_run` | BLOCKER | GUARANTEED | LAB-043 Runs go through `runlog` | no stamped protocol id ([protocol] id) — no run is bound to it | stamp the area with `labkit-init exp <name> --kind …`, which writes a fresh id, and carry the protocol's text over |
 | `finalize.choose_answering_run` | WARNING | STATIC_EVIDENCE | open assignment | {…}: bound to this protocol and newer by name than the adopted run {…} — if one of them a… | — |
 | `finalize.unreportable_warnings` | WARNING | GUARANTEED | variable | the answering run {…}: {…} — its number cannot be reported (report-check refuses it) | — |
 | `finalize.declared_run_gaps` | BLOCKER | GUARANTEED | technical contract | {…} | `{…}` removes it; audit the run that answers, then `{…}` writes the table for it |
-| `batch.Ledger.require_complete` | exit | none | not recorded | {…}: the output does not balance its {…} input items — {…}. The run is NOT complete. | — |
 | `batch.Store.__enter__` | exit | none | not recorded | {…} exists — another run is writing this output: {…} {…} | — |
 
 ### finalize.finalize_area · 2. the registration as the first measurement recorded it — with a run
@@ -99,8 +98,6 @@ Calls:
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran | {…} (`git -C {…} cat-file blob {…} > {…}`) |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `area_state.unread_start_warning` | WARNING | GUARANTEED | technical contract | {…} — nothing is taken from a start file that does not read | restore the file from the commit that holds it (`git log --all -- <area>/run-starts/<run_id>.json` names it); where no commit holds it, leave it as it is: no value is written into a start file by hand, the protocol and the kind are read from the run's own record where that reads, and the start stays unknown |
 | `area_state.missing_start_warning` | WARNING | GUARANTEED | technical contract | {…} | `START_FILE_BACK` |
 | `area_state.unassigned_record_warning` | WARNING | GUARANTEED | technical contract | the record of run {…} does not read, and neither a start file nor the run index names it:… | `RECORD_BACK` |
@@ -334,16 +331,7 @@ Commands whose code reaches it: `claude-hook`, `codex-hook`, `preflight`.
 
 ### preflight.preflight_area · 0. protocol — the only exit 2
 
-Calls:
-
-- `area_state.state_of` — The state of AREA as FILE_STATE holds it (`AreaState`): the runs of the working tree (TREE, PROPOSED) or of git's index (INDEX), the runs a commit holds and that state lacks, the index-only ones, the ones only a start file names.
-
-**Further down (static estimate):**
-
-| Function | Grade | Evidence kind | Rule | Tells | Next |
-|---|---|---|---|---|---|
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
+Reaches no finding site.
 
 ### preflight.preflight_area · 1. protocol-check — the one early end: a head nobody can read
 
@@ -498,7 +486,6 @@ Commands whose code reaches it: `claude-hook`, `codex-hook`, `labkit-adopt`, `re
 
 Calls:
 
-- `area_state.state_of` — The state of AREA as FILE_STATE holds it (`AreaState`): the runs of the working tree (TREE, PROPOSED) or of git's index (INDEX), the runs a commit holds and that state lacks, the index-only ones, the ones only a start file names.
 - `report_check.orphaned_duty_gaps` — The report duties of protocols STATE's area measured under and no longer holds, in STATE's file state (`registered_report.orphaned_report_duties`, the ids carried read from the state's protocol texts) — the one reading for report-check's station, its area form on an area without a protocol (`protocol_verdict`), and the stop's and the commit's hold (`hold_changed_paths`).
 - `report_context.checked` — The context of one check: TEXT is the protocol as FILE_STATE holds it (read off the area's state when None); AREA_STATE the area's state when the caller built it already (one build per check run), else built here; AREA_EVIDENCE likewise (`evidence.read_evidence`, the index's for INDEX).
 
@@ -532,12 +519,20 @@ Commands whose code reaches it: `claude-hook`, `codex-hook`, `labkit-adopt`, `la
 Calls:
 
 - `report_check.cut_off_adoption_gaps` — A blocker while an adoption was cut off during its check: the head may hold a proposal no check passed (`repo.pending_adoption`); never on the proposal itself, which that adoption is checking.
+- `evidence.AreaEvidence.change_blockers` — CHANGES as blockers with their restore (`change_blockers`).
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
 | `report_check.cut_off_adoption_gaps` | BLOCKER | GUARANTEED | technical contract | {…}: an adoption was cut off during its check — the protocol may hold a proposal no check… | `{…}` puts it back first and adopts again |
+
+**Further down (static estimate):**
+
+| Function | Grade | Evidence kind | Rule | Tells | Next |
+|---|---|---|---|---|---|
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
 
 ### report_check.chain_gaps · 1. declaration
 
@@ -575,8 +570,6 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `area_state.unread_start_warning` | WARNING | GUARANTEED | technical contract | {…} — nothing is taken from a start file that does not read | restore the file from the commit that holds it (`git log --all -- <area>/run-starts/<run_id>.json` names it); where no commit holds it, leave it as it is: no value is written into a start file by hand, the protocol and the kind are read from the run's own record where that reads, and the start stays unknown |
 | `area_state.missing_start_warning` | WARNING | GUARANTEED | technical contract | {…} | `START_FILE_BACK` |
 | `area_state.unassigned_record_warning` | WARNING | GUARANTEED | technical contract | the record of run {…} does not read, and neither a start file nor the run index names it:… | `RECORD_BACK` |
@@ -637,8 +630,6 @@ Calls:
 | `result_render.render_gaps` | BLOCKER | GUARANTEED | LAB-015 Preflight audit before freezing | no "{…}" line — the limit's line belongs in the protocol | `{…}` writes it from the record |
 | `result_render.render_gaps` | BLOCKER | GUARANTEED | technical contract | "{…}" differs from the record and its decision reviews — a line written before the decisi… | `{…}` writes the record's line |
 | `result_render.render_gaps` | BLOCKER | GUARANTEED | LAB-015 Preflight audit before freezing | "{…}" names a limit no covering record decides — written by hand or from an older record | `{…}` drops it |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
 | `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
 | `report_check.analysis_audit_gap` | BLOCKER | GUARANTEED | technical contract | no answering run to hold it to — {…} | measure: `{…}`, then audit that run |
@@ -682,8 +673,6 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `report_decisions.check_decision_reviews_read` | WARNING | GUARANTEED | technical contract | a review nobody can read: {…} | — |
 | `report_decisions.check_limits_upheld` | variable | GUARANTEED | LAB-015 Preflight audit before freezing | {…}: `{…}` on a {…} decided limitation {…} — no decision review upholds that {…} | `fix` |
 | `report_decisions.check_contested_closings_upheld` | variable | GUARANTEED | LAB-015 Preflight audit before freezing | audit {…} #{…}: `{…}` on a {…} a review said {…} on ({…}) — closing a finding a reviewer … | {…} asks a second auditor whether the reason shows it {…} |
@@ -796,8 +785,6 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
-| `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `area_state.unread_start_warning` | WARNING | GUARANTEED | technical contract | {…} — nothing is taken from a start file that does not read | restore the file from the commit that holds it (`git log --all -- <area>/run-starts/<run_id>.json` names it); where no commit holds it, leave it as it is: no value is written into a start file by hand, the protocol and the kind are read from the run's own record where that reads, and the start stays unknown |
 | `area_state.missing_start_warning` | WARNING | GUARANTEED | technical contract | {…} | `START_FILE_BACK` |
 | `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |

@@ -34,8 +34,13 @@ run, and adds nothing to it:
 
 Its limits, which the page repeats: the call graph resolves names, not
 values, so `further down` names sites the station cannot reach at run time
-— a class named stands for all its methods — and misses a method called
-on an object and a function found by a computed name; a site under
+(a function named is followed whether or not the branch that calls it
+runs; a class named counts for each of its `__dunder__` methods; a name
+given two classes in one function reaches the methods of both). A method
+called on an object is followed where annotations tell the object's class
+(`method_receivers`); a method called on any other object is missed, and
+so are a subclass's override of a method its annotated base has and a
+function found by a computed name. A site under
 several stations is listed under each; which condition a site holds is
 established by reading its function.
 """
@@ -329,8 +334,14 @@ def render_stations(
         "",
         "Its limits. The call graph resolves names, not values: *further down* "
         "is a static estimate that names sites the station cannot reach at run "
-        "time (a class named stands for all its methods) and misses a method "
-        "called on an object and a function found by a computed name; a path "
+        "time (a function named is followed whether or not the branch that "
+        "calls it runs; a class named counts for each of its `__dunder__` "
+        "methods; a name given two classes in one function reaches the "
+        "methods of both). A method called on an object is followed where "
+        "annotations tell the object's class — a parameter, a return value, a "
+        "dataclass field; a method called on any other object is missed, and "
+        "so are a subclass's override of a method its annotated base has and "
+        "a function found by a computed name; a path "
         "back through the gate's own function is not followed. A site under several "
         "stations is listed under each. Which condition a site holds is "
         "established by reading its function; the tests that reach a site "

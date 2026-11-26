@@ -371,8 +371,8 @@ class CheckOutcome(unittest.TestCase):
 class Reach(unittest.TestCase):
     def test_a_type_annotation_is_no_call_a_call_beside_it_is(self) -> None:
         """A parameter, a return value and a local annotated as `State` name
-        the class and call nothing; the one real call of it is a reference,
-        and stands for the class's methods too."""
+        the class and call nothing; the one real call of it is a reference
+        to the class — not to a method nobody calls."""
         typed = module(
             "labkit.gates.typed",
             """
@@ -394,12 +394,178 @@ class Reach(unittest.TestCase):
         self.assertNotIn("labkit.gates.typed.reads", references)
         self.assertEqual(
             [(r.line, r.target) for r in references["labkit.gates.typed.builds"]],
-            [
-                (13, "labkit.gates.typed.State"),
-                (13, "labkit.gates.typed.State.explain"),
-            ],
+            [(13, "labkit.gates.typed.State")],
         )
         self.assertNotIn("labkit.gates.typed.reads", inv.call_graph([typed]))
+
+    def test_a_class_named_stands_for_the_methods_python_calls_unnamed(self) -> None:
+        """Naming `Store` counts its `__init__` and its base's
+        `__post_init__` — also where nothing is built (`isinstance`), the
+        over-count the scan keeps; `rows` counts only where it is called."""
+        built = module(
+            "labkit.run.built",
+            """
+            class Base:
+                def __post_init__(self):
+                    raise SystemExit("no path")
+
+
+            class Store(Base):
+                def __init__(self):
+                    pass
+
+                def rows(self):
+                    raise SystemExit("unreadable")
+
+
+            class Plain(Base):
+                pass
+
+
+            def opens():
+                return Store()
+
+
+            def checks(x):
+                return isinstance(x, Plain)
+            """,
+        )
+        # a class with no method of its own still brings its base's
+        self.assertEqual(
+            inv.call_graph([built])["labkit.run.built.checks"],
+            {"labkit.run.built.Plain", "labkit.run.built.Base.__post_init__"},
+        )
+        self.assertEqual(
+            inv.call_graph([built])["labkit.run.built.opens"],
+            {
+                "labkit.run.built.Store",
+                "labkit.run.built.Store.__init__",
+                "labkit.run.built.Base.__post_init__",
+            },
+        )
+
+    #: one module with every way an annotation tells an object's class
+    OBJECTS = module(
+        "labkit.gates.objects",
+        """
+        from dataclasses import dataclass
+
+
+        class Reply:
+            def explain(self):
+                raise SystemExit("no reply")
+
+            @property
+            def newest(self) -> "Reply":
+                return self
+
+
+        class Adopted(Reply):
+            pass
+
+
+        @dataclass
+        class State:
+            reply: Reply
+            replies: list[Reply]
+
+            def answering(self) -> Reply | None:
+                return self.reply
+
+            def told(self) -> tuple[Reply, str]:
+                return self.reply, ""
+
+
+        def state_of(area) -> State:
+            ...
+
+
+        def by_parameter(state: State):
+            return state.answering()
+
+
+        def by_return(area):
+            return state_of(area).answering().explain()
+
+
+        def by_field(state: State):
+            state.reply.explain()
+
+
+        def by_unpacking(area):
+            reply, _ = state_of(area).told()
+            reply.explain()
+
+
+        def by_loop(state: State):
+            return [r.explain() for r in state.replies]
+
+
+        def by_base(reply: Adopted):
+            reply.explain()
+
+
+        def by_construction():
+            reply = Reply()
+            reply.explain()
+
+
+        def unknown(reply, replies: dict[str, Reply]):
+            reply.explain()
+            replies["a"].explain()
+        """,
+    )
+
+    def test_a_method_on_an_object_is_followed_where_annotations_tell_its_class(
+        self,
+    ) -> None:
+        graph = inv.call_graph([self.OBJECTS])
+        o = "labkit.gates.objects"
+        self.assertEqual(graph[f"{o}.by_parameter"], {f"{o}.State.answering"})
+        self.assertEqual(
+            graph[f"{o}.by_return"],
+            {f"{o}.state_of", f"{o}.State.answering", f"{o}.Reply.explain"},
+        )
+        self.assertEqual(graph[f"{o}.by_field"], {f"{o}.Reply.explain"})
+        self.assertEqual(
+            graph[f"{o}.by_unpacking"],
+            {f"{o}.state_of", f"{o}.State.told", f"{o}.Reply.explain"},
+        )
+        self.assertEqual(graph[f"{o}.by_loop"], {f"{o}.Reply.explain"})
+        # the method an `Adopted` has is its base's
+        self.assertEqual(graph[f"{o}.by_base"], {f"{o}.Reply.explain"})
+        self.assertEqual(
+            graph[f"{o}.by_construction"], {f"{o}.Reply", f"{o}.Reply.explain"}
+        )
+
+    def test_a_method_on_an_object_of_no_known_class_is_not_followed(self) -> None:
+        """The limit the pages state: an unannotated parameter, a value out
+        of a dict and a quoted annotation tell no class."""
+        graph = inv.call_graph([self.OBJECTS])
+        self.assertNotIn("labkit.gates.objects.unknown", graph)
+        self.assertNotIn("labkit.gates.objects.Reply.newest", graph)
+
+    def test_the_package_follows_a_known_call_on_an_object(self) -> None:
+        """A known positive on the real source — `finalize` asks the
+        answering run through `state.measured_of(pid).told(text)` — and the
+        false path that building the area state reached every method of
+        the classes it names."""
+        graph = inv.call_graph(inv.read_modules(PACKAGE_DIR))
+        self.assertIn(
+            "labkit.formats.area_state.Measured.told",
+            graph["labkit.gates.finalize.choose_answering_run"],
+        )
+        self.assertIn(
+            "labkit.formats.answering_run.AnsweringRun.explain",
+            graph["labkit.formats.area_state.Measured.told"],
+        )
+        reached, waiting = set(), ["labkit.formats.area_state.state_of"]
+        while waiting:
+            unit = waiting.pop()
+            if unit not in reached:
+                reached.add(unit)
+                waiting += graph.get(unit, ())
+        self.assertNotIn("labkit.formats.answering_run.AnsweringRun.explain", reached)
 
     def test_a_command_reaches_a_check_through_a_module_alias(self) -> None:
         graph = inv.call_graph([CHECKS, GATE])
