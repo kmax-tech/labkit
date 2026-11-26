@@ -65,8 +65,9 @@ packages = [
 labkit = ["templates/*.template", "agents/*.agent.md", "docs/standard.md", "docs/rules.tsv", "docs/protocol-field-guide.md", "docs/agent-guide.md"]
 
 [tool.ruff]
-# a one-off extraction script kept as the evidence of a usability record —
-# frozen as it ran, not maintained code
+# the scripts kept as the evidence of a usability record, directly under
+# docs/usability/ and in its record folders (ruff's `*` crosses `/`) — frozen
+# as they ran, not maintained code
 extend-exclude = ["docs/usability/*.py"]
 
 [tool.ruff.lint]
