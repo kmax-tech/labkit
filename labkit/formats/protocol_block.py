@@ -1111,7 +1111,9 @@ class EvidenceFile:
     """One `[[evidence_file]]` table: a data or output file the protocol
     declares for the audit to read in full — PATH relative to the
     protocol's directory, lexically below it (a symlink on the way may
-    lead elsewhere, as a `data/` link does) — with the SHA256 of its bytes when
+    lead elsewhere in the repository, as a `data/` link to another area
+    does; one that leads out of it is refused where the file is read,
+    `scope_sha.evidence_target_outside_repo`) — with the SHA256 of its bytes when
     it was declared. Not a promise's `scope` (code a promise rests on, part
     of the registration) and not the area's committed audit evidence
     (`evidence`): neither the registration nor the promise block covers it."""

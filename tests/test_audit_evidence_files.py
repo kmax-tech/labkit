@@ -362,10 +362,9 @@ class SplitCannotBypass(_Area):
         self.assertIn("EVIDENCE FILE: experiments/01/data/split1.txt", self.prompt())
 
 
-class Fill(_Area):
-    """`protocol-fill --evidence-file PATH` writes the table the audit reads,
-    with the sha256 computed and the audit's own checks run on the protocol
-    as it would be; nothing declared is overwritten silently."""
+class _Filled(_Area):
+    """The area with `protocol-fill` run on its protocol, and a link in it
+    to another area's data."""
 
     def fill(self, *args: str) -> tuple[int, str, str]:
         """protocol-fill on the protocol with ARGS: (exit, stdout, stderr)."""
@@ -382,6 +381,20 @@ class Fill(_Area):
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(content, encoding="utf-8")
         return f
+
+    def linked_cases(self) -> None:
+        """`linked/` in the area, a link to another area's data holding
+        `cases.json`."""
+        shared = self.repo / "experiments" / "00" / "data"
+        shared.mkdir(parents=True)
+        (shared / "cases.json").write_text("[]\n", encoding="utf-8")
+        (self.area / "linked").symlink_to(Path("..") / "00" / "data")
+
+
+class Fill(_Filled):
+    """`protocol-fill --evidence-file PATH` writes the table the audit reads,
+    with the sha256 computed and the audit's own checks run on the protocol
+    as it would be; nothing declared is overwritten silently."""
 
     def test_a_new_file_is_declared_with_its_computed_sha256(self) -> None:
         f = self.write(UNDECLARED, "WORDCHECK\n")
@@ -406,14 +419,6 @@ class Fill(_Area):
         paths = [e.path for e in protocol_block.evidence_files(self.text())]
         self.assertEqual(paths[-1], "output/check.md")
         self.assertTrue((self.protocol.parent / paths[-1]).samefile(f))
-
-    def linked_cases(self) -> None:
-        """`linked/` in the area, a link to another area's data holding
-        `cases.json`."""
-        shared = self.repo / "experiments" / "00" / "data"
-        shared.mkdir(parents=True)
-        (shared / "cases.json").write_text("[]\n", encoding="utf-8")
-        (self.area / "linked").symlink_to(Path("..") / "00" / "data")
 
     def last_path(self) -> str:
         return protocol_block.evidence_files(self.text())[-1].path
@@ -637,6 +642,118 @@ class NotRead(_Area):
         self.assertEqual(code, 2)
         self.assertIn("cannot be read: experiments/01/output/locked.md", err.getvalue())
         self.assertEqual(self.protocol.read_bytes(), before)
+
+
+class OutsideRepo(_Filled):
+    """A declared path that leads out of the repository through a symlink
+    is refused when declared and when read, never shown; a link that stays
+    inside the repository is read as before."""
+
+    #: what the file outside the repository holds, never to reach a prompt
+    MARK = "OUTSIDE-REPOSITORY-MARK\n"
+
+    def outside_dir(self) -> Path:
+        """A folder beside the repository holding `secret.json`."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        outside = Path(tmp.name).resolve()
+        (outside / "secret.json").write_text(self.MARK, encoding="utf-8")
+        return outside
+
+    def link_to_the_file(self) -> str:
+        """`data/raw/out.json` in the area, a link to the file outside."""
+        (self.area / "data" / "raw" / "out.json").symlink_to(
+            self.outside_dir() / "secret.json"
+        )
+        return "data/raw/out.json"
+
+    def link_to_its_folder(self) -> str:
+        """`away/` in the area, a link to the folder outside: the declared
+        path `away/secret.json` is itself no link."""
+        (self.area / "away").symlink_to(self.outside_dir(), target_is_directory=True)
+        return "away/secret.json"
+
+    def declare_also(self, rel: str) -> None:
+        """The protocol written by hand with REL declared beside the
+        classification, its sha256 the outside file's own."""
+        self.declare(
+            evidence_table("data/raw/classification.json", sha256(CLASSIFICATION))
+            + "\n"
+            + evidence_table(rel, sha256(self.MARK))
+        )
+
+    def test_fill_refuses_a_link_out_of_the_repository_unwritten(self) -> None:
+        for what, link in (
+            ("the file is a link", self.link_to_the_file),
+            ("a folder on the way is a link", self.link_to_its_folder),
+        ):
+            with self.subTest(what=what):
+                rel = link()
+                before = self.protocol.read_bytes()
+                code, _, err = self.fill("--evidence-file", str(self.area / rel))
+                self.assertEqual(code, 2)
+                self.assertIn("lead out of the repository", err)
+                self.assertIn(f"experiments/01/{rel}", err)
+                self.assertEqual(self.protocol.read_bytes(), before)
+
+    def test_the_audit_refuses_a_declared_link_out_of_the_repository(self) -> None:
+        """Declared by hand with the matching sha256: refused when the
+        prompt is built, the file's content in no message."""
+        for what, link in (
+            ("the file is a link", self.link_to_the_file),
+            ("a folder on the way is a link", self.link_to_its_folder),
+        ):
+            with self.subTest(what=what):
+                rel = link()
+                self.declare_also(rel)
+                why = self.refusal()
+                self.assertIn("lead out of the repository", why)
+                self.assertIn(f"experiments/01/{rel}", why)
+                self.assertNotIn(self.MARK.strip(), why)
+
+    def test_the_command_refuses_it_before_the_model_is_called(self) -> None:
+        self.declare_also(self.link_to_the_file())
+        err = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete") as call,
+            contextlib.redirect_stderr(err),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            code = audit.main([str(self.area), "--mode", "preflight"])
+        self.assertEqual(code, 2)
+        call.assert_not_called()
+        self.assertIn("lead out of the repository", err.getvalue())
+
+    def test_the_twin_a_link_inside_the_repository_is_shown(self) -> None:
+        """A link to another area's data stays allowed: declared through
+        the command, its content stands in the prompt."""
+        self.linked_cases()
+        code, _, err = self.fill(
+            "--evidence-file", str(self.area / "linked" / "cases.json")
+        )
+        self.assertEqual(code, 0, err)
+        self.assertIn("EVIDENCE FILE: experiments/01/linked/cases.json", self.prompt())
+
+    def test_the_stamp_does_not_take_the_outside_files_content(self) -> None:
+        """The file outside is never read for the stamp: its content
+        changing leaves the stamp, and the stamp is not the one of the
+        same bytes held inside the repository."""
+        for what, link in (
+            ("a folder on the way is a link", self.link_to_its_folder),
+            ("the file is a link", self.link_to_the_file),
+        ):
+            with self.subTest(what=what):
+                rel = link()
+                self.declare_also(rel)
+                linked = scope_sha.area_stamp(self.area)[0]
+                target = (self.area / rel).resolve()
+                target.write_text("other content\n", encoding="utf-8")
+                self.assertEqual(scope_sha.area_stamp(self.area)[0], linked)
+        # the file link, declared last, replaced by a file of the repository
+        (self.area / rel).unlink()
+        (self.area / rel).write_text(self.MARK, encoding="utf-8")
+        self.assertNotEqual(scope_sha.area_stamp(self.area)[0], linked)
+        self.assertIn(f"EVIDENCE FILE: experiments/01/{rel}", self.prompt())
 
 
 if __name__ == "__main__":

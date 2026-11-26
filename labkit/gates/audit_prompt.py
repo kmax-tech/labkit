@@ -711,7 +711,9 @@ def checked_evidence_files(
     is not a file, or — while the path is a file — one that does not read.
     () without a declaration.
 
-    Raises AuditError naming each file it holds: a declared file that is
+    Raises AuditError naming each file it holds: a declared file whose
+    path leads out of the repository (`evidence_outside_repo_refusal`),
+    before anything else is asked of it; one that is
     not a file; one that does not read (`evidence_unreadable_refusal`);
     one whose sha256 is no longer the declared one; one over
     EVIDENCE_FILE_MAX_BYTES, or all together over EVIDENCE_FILES_MAX_BYTES
@@ -720,6 +722,14 @@ def checked_evidence_files(
     declared = protocol_block.evidence_files(text)
     if not declared:
         return ()
+    outside = [
+        (evidence_file_name(protocol, ef.path), target)
+        for ef in declared
+        if (target := scope_sha.evidence_target_outside_repo(protocol, ef.path))
+        is not None
+    ]
+    if outside:
+        raise evidence_outside_repo_refusal(protocol.name, outside)
     # (path as the prompt names it, declared sha256, the snapshot's bytes)
     found: list[tuple[str, str, bytes | None]] = [
         (
@@ -784,6 +794,24 @@ def evidence_file_name(protocol: Path, path: str) -> str:
     it: from the repository root."""
     where = shown(protocol.parent, layout_root(protocol.parent))
     return path if where == "." else f"{where}/{path}"
+
+
+def evidence_outside_repo_refusal(
+    protocol_name: str, outside: list[tuple[str, Path]]
+) -> AuditError:
+    """The refusal of declared evidence files whose path leads out of the
+    repository through a symlink (OUTSIDE: the file as `evidence_file_name`
+    gives it, and where it leads) — for the audit and for `protocol-fill
+    --evidence-file` alike. A link that stays inside the repository, as one
+    to another area's data, is not refused."""
+    return AuditError(
+        f"{protocol_name}: evidence file(s) that lead out of the repository: "
+        + ", ".join(f"{name} (leads to {target})" for name, target in outside)
+        + " — another clone of the repository does not hold the file, so the "
+        "audit does not read it",
+        fix="copy the file into the repository and declare the copy, or remove "
+        "its [[evidence_file]] table",
+    )
 
 
 def evidence_unreadable_refusal(protocol_name: str, names: list[str]) -> AuditError:

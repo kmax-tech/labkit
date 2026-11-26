@@ -650,8 +650,9 @@ def _evidence_file(args: argparse.Namespace, text: str) -> int:
     Exit 0 when written or already declared with this sha256 (the file
     untouched); exit 2, the
     file untouched, on a path declared with another sha256 without
-    --replace-evidence-file, a file the audit would refuse (missing,
-    changed, not UTF-8, over a limit) or a head that does not read."""
+    --replace-evidence-file, a file the audit would refuse (leading out
+    of the repository, missing, changed, not UTF-8, over a limit) or a
+    head that does not read."""
     try:
         done = protocol_evidence.declare_evidence_file(
             args.protocol,

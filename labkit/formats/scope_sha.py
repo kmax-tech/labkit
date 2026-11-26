@@ -71,6 +71,7 @@ from labkit.formats.repo import (
     AmbiguousArea,
     area_path,
     layout_root,
+    resolves_under,
     resolve_area,
     protocols_in,
     rel_posix,
@@ -610,7 +611,8 @@ def area_snapshot(
 #: entry names of the evidence-file basis start so, apart from every file key
 EVIDENCE_FILE_KEY = "evidence_file"
 #: what an evidence-file entry name ends with when the declared file is not
-#: a file (` \\ missing`) or does not read (` \\ unreadable`), its bytes
+#: a file (` \\ missing`), does not read (` \\ unreadable`) or leads out of
+#: the repository (` \\ outside the repository`), its bytes
 #: empty: `protocol_block.evidence_files` refuses a backslash in a path, so
 #: no declared file's own entry can carry this name, whatever its content
 EVIDENCE_NOT_READ = " \\ "
@@ -625,11 +627,13 @@ def evidence_file_basis(
     (`audit_prompt.evidence_file_pieces`) goes stale when one changes —
     every protocol's, as with declared scopes, so the stamp needs no
     choice. Per declared file two entries, named by the protocol and the
-    path as written (not resolved: a `data/` symlink that leaves the repo
-    puts no machine's path in the stamp): the declared sha256, and the
-    file's bytes — while it is not a file, or does not read, an entry of
+    path as written (not resolved: a `data/` link to another area's data
+    stays the link's path): the declared sha256, and the
+    file's bytes — while it is not a file, does not read, or leads out of
+    the repository (`evidence_target_outside_repo`; never read), an entry of
     its own instead (`EVIDENCE_NOT_READ`), so a missing file never stamps
-    like any content. CONTENTS maps each declared file that read,
+    like any content, and no machine's path stands in the stamp. CONTENTS
+    maps each declared file that read,
     resolved, to the bytes the entries took
     — what the prompt shows. Whether the bytes still have the declared
     digest is the audit's, not the stamp's. The audit shows only the
@@ -666,6 +670,10 @@ def evidence_file_basis(
                 entries.append((f"{name}{EVIDENCE_NOT_READ}missing", b""))
             elif isinstance(found, EvidenceUnreadable):
                 entries.append((f"{name}{EVIDENCE_NOT_READ}unreadable", b""))
+            elif isinstance(found, EvidenceOutsideRepo):
+                entries.append(
+                    (f"{name}{EVIDENCE_NOT_READ}outside the repository", b"")
+                )
             else:
                 entries.append((name, found.data))
                 contents[found.file] = found.data
@@ -689,16 +697,47 @@ class EvidenceUnreadable:
     why: str
 
 
+@dataclass(frozen=True)
+class EvidenceOutsideRepo:
+    """A declared evidence file whose path leads out of the repository
+    (`evidence_target_outside_repo`): TARGET where it leads. Never read."""
+
+    target: Path
+
+
+def evidence_target_outside_repo(protocol: Path, path: str) -> Path | None:
+    """Where the declared PATH of PROTOCOL leads, every symlink followed —
+    the file itself or a folder on the way — when that is outside
+    PROTOCOL's repository; None while it stays inside
+    (`repo.resolves_under`), as a link to another area's data does. The
+    repository is `layout_root` of PROTOCOL's directory: in a tree without
+    git, `CLAUDE.md` or `tests/` that is the directory itself, so there
+    every link out of it is refused. The one home of this rule and of its
+    root, for the stamp and the audit (`declared_evidence_bytes`,
+    `audit_prompt.checked_evidence_files`) and for `protocol-fill
+    --evidence-file`: a file another clone of the repository does not hold
+    is no evidence the protocol can declare. A link that leads nowhere
+    resolves to where it points, so it is judged by that place."""
+    declared = protocol.parent / path
+    root = layout_root(protocol.parent)
+    return None if resolves_under(root, declared) else declared.resolve()
+
+
 def declared_evidence_bytes(
     protocol: Path, text: str
 ) -> list[
-    tuple[protocol_block.EvidenceFile, EvidenceBytes | EvidenceUnreadable | None]
+    tuple[
+        protocol_block.EvidenceFile,
+        EvidenceBytes | EvidenceUnreadable | EvidenceOutsideRepo | None,
+    ]
 ]:
     """Each file TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`
     (`protocol_block.evidence_files`), in the order declared, with its
-    bytes read now — None while the path, resolved against PROTOCOL's
-    directory, is not a file, EvidenceUnreadable when it is one and its
-    read fails (an OSError, kept, never raised). The one read of declared evidence files: the
+    bytes read now — EvidenceOutsideRepo, unread, when the path leads out
+    of the repository (`evidence_target_outside_repo`); else None while the
+    path, resolved against PROTOCOL's directory, is not a file,
+    EvidenceUnreadable when it is one and its read fails (an OSError, kept,
+    never raised). The one read of declared evidence files: the
     stamp (`evidence_file_basis`) and `protocol-fill --evidence-file`,
     which checks a declaration before writing it
     (`audit_prompt.checked_evidence_files`), take the bytes from here.
@@ -706,10 +745,17 @@ def declared_evidence_bytes(
     Raises:
         protocol_block.BlockError: TEXT's block or a table is malformed."""
     out: list[
-        tuple[protocol_block.EvidenceFile, EvidenceBytes | EvidenceUnreadable | None]
+        tuple[
+            protocol_block.EvidenceFile,
+            EvidenceBytes | EvidenceUnreadable | EvidenceOutsideRepo | None,
+        ]
     ] = []
     for ef in protocol_block.evidence_files(text):
         f = protocol.parent / ef.path
+        outside = evidence_target_outside_repo(protocol, ef.path)
+        if outside is not None:
+            out.append((ef, EvidenceOutsideRepo(outside)))
+            continue
         if not f.is_file():
             out.append((ef, None))
             continue

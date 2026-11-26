@@ -7,7 +7,8 @@ audit resolves it: relative to the protocol's directory, lexically — a
 `data/` symlink on the way stays as written, as the stamp names it. The
 sha256 is computed from the file's bytes, never typed. Before anything is
 written, the protocol as it would be is put through the audit's own
-checks (`audit_prompt.checked_evidence_files`: a file, unchanged since
+checks (`audit_prompt.checked_evidence_files`: inside the repository
+whatever links the path goes through, a file, unchanged since
 its declaration, UTF-8, within the per-file and the total limit over
 every declared file), so a declaration this command writes is one the
 audit shows. A path already declared is never overwritten silently: with
@@ -27,11 +28,16 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats import digests, protocol_block
 from labkit.formats.protocol_block import EvidenceFile, toml_string
-from labkit.formats.scope_sha import EvidenceBytes, declared_evidence_bytes
+from labkit.formats.scope_sha import (
+    EvidenceBytes,
+    declared_evidence_bytes,
+    evidence_target_outside_repo,
+)
 from labkit.gates.audit_prompt import (
     CheckedEvidenceFile,
     checked_evidence_files,
     evidence_file_name,
+    evidence_outside_repo_refusal,
     evidence_unreadable_refusal,
 )
 
@@ -105,12 +111,19 @@ def declare_evidence_file(
             path declared with another sha256 and REPLACE not set; a table
             that does not read back as written.
         AuditError: The protocol as it would be fails the audit's checks
-            (`checked_evidence_files`) — a declared file missing, not
-            readable, changed, not UTF-8, over the per-file limit, or all of
-            them over the total limit; also GIVEN itself not readable.
+            (`checked_evidence_files`) — a declared file that leads out
+            of the repository, is missing, not readable, changed, not
+            UTF-8, over the per-file limit, or all of them over the total
+            limit; also GIVEN itself leading out of the repository (asked
+            before its bytes are read) or not readable.
         protocol_block.BlockError: TEXT's block or a table is malformed."""
     path = declared_path(protocol, given)
     f = protocol.parent / path
+    outside = evidence_target_outside_repo(protocol, path)
+    if outside is not None:
+        raise evidence_outside_repo_refusal(
+            protocol.name, [(evidence_file_name(protocol, path), outside)]
+        )
     if not f.is_file():
         raise ValueError(f"{given} is not a file")
     try:
