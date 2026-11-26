@@ -882,7 +882,7 @@ class ApplySkeleton(unittest.TestCase):
             )
 
     def test_apply_protocols_name_the_permuted_label_null(self):
-        for cost in ("low", "high"):
+        for cost in runs.REPEAT_COSTS:
             for report in (False, True):
                 with self.subTest(cost=cost, report=report):
                     text = scaffold.protocol_stamp(

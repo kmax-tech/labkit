@@ -18,8 +18,8 @@ from labkit.formats.gate import (
     TECHNICAL_RULE,
     WARNING,
     GateFinding,
-    cited_rule,
 )
+from labkit.formats.gate import CODE_016
 from labkit.formats.runs import CONFIG_FILE, MEASURE_SCRIPT
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files, readme_text, parse_source
 
@@ -78,9 +78,6 @@ ROUTE_STATIONS = (
     f"{MEASURE_SCRIPT.as_posix()}:evaluate_rows",
     CONFIG_FILE,
 )
-
-
-CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
 
 
 def readme_route(area: Path, protocol_name: str) -> list[GateFinding]:

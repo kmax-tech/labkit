@@ -350,7 +350,7 @@ def told(
     """`broken`'s findings in AREA (under ROOT) as (sentence, way out): WHERE
     says between which states ("in the tree since HEAD", "by commit …"),
     RESTORE the commit the way out restores from."""
-    base = _base(area, root)
+    base = rel_posix(area, root)
 
     def checkout(rel: str) -> str:
         return f"`{checkout_command(f'{base}/{rel}', restore)}`"
@@ -428,15 +428,10 @@ def _repo_of(area: Path) -> Path | None:
     return root
 
 
-def _base(area: Path, root: Path) -> str:
-    """AREA's path from ROOT, `/`-separated."""
-    return rel_posix(area, root)
-
-
 def _specs(area: Path, root: Path) -> list[str]:
     """The pathspecs of AREA's evidence: its `audits/`, its `runs/` and
     its runs' start files (`run_starts.START_FILES_DIR`)."""
-    base = _base(area, root)
+    base = rel_posix(area, root)
     return [
         f"{base}/{findings.DIR}",
         f"{base}/{RUNS_DIR}",
@@ -518,7 +513,7 @@ def original(root: Path, area: Path, rel: str) -> str | None:
     added the run's `completion.json` or `failure.json` — the run closed —,
     for an audit file the oldest that added the file. None when no commit
     on that line did. Raises GitError when git fails."""
-    base = _base(area, root)
+    base = rel_posix(area, root)
     run = run_of(rel)
     paths = (
         [f"{base}/{RUNS_DIR}/{run}/{name}" for name in (COMPLETION_FILE, FAILURE_FILE)]
@@ -539,7 +534,7 @@ def _undone_in(
     """Whether a path of AREA's evidence, in the state REV names (else the
     index when STAGED, else the tree), is back as labkit first committed it
     (`original`) — its bytes, a record's apart from its decision lines."""
-    base = _base(area, root)
+    base = rel_posix(area, root)
 
     def undone(rel: str) -> bool:
         first = original(root, area, rel)
@@ -641,7 +636,8 @@ def _change_findings(
     """`change_findings` in the repository ROOT. Raises GitError when git
     fails."""
     entries = _in_area(
-        _state_diff(root, "HEAD", _specs(area, root), staged=staged), _base(area, root)
+        _state_diff(root, "HEAD", _specs(area, root), staged=staged),
+        rel_posix(area, root),
     )
     # 2. what the commit would lack: only the index is asked
     unstaged = unstaged_start_files(area, root) if staged else []
@@ -753,7 +749,7 @@ def _commit_broke(
 ) -> list[str]:
     """`commit_changes` for one COMMIT against its PARENT. Raises GitError
     when git fails."""
-    base = _base(area, root)
+    base = rel_posix(area, root)
     closed = _closed_at(root, area, parent)
     tree_args = ["diff-tree", "-r", "-z", "--no-renames", "--name-status"]
     made = _in_area(_diff(root, [*tree_args, parent, commit, "--", *specs]), base)

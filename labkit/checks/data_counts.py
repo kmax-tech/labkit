@@ -22,7 +22,8 @@ from pathlib import Path
 
 from labkit.formats import runs
 from labkit.formats.area_state import AreaState
-from labkit.formats.gate import TECHNICAL_RULE, RuleAssignment, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE, RuleAssignment
+from labkit.formats.gate import LAB_041
 from labkit.formats.protocol_block import COUNTS, is_stamp_placeholder
 
 #: the label of the field the counts stand in
@@ -102,9 +103,6 @@ def with_counts(value: str, counts: str) -> str:
     if not flat or is_stamp_placeholder(flat):
         return counts
     return f"{flat.rstrip(' .;')} · {counts}"
-
-
-LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
 
 @dataclass(frozen=True)

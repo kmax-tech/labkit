@@ -8,6 +8,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from labkit.formats.protocol_block import PROTOCOL_KINDS
 from labkit.gates import hook_pre_run
 from labkit.formats import runs
 from labkit.formats import standard_contract as sc
@@ -191,7 +192,7 @@ class Described(unittest.TestCase):
     def test_the_before_run_line_says_which_gate_holds_which_list(self):
         # runlog checks the registration fields, the pre-commit hook every
         # must field
-        for kind in ("compute", "fit", "apply"):
+        for kind in PROTOCOL_KINDS:
             with self.subTest(kind=kind):
                 text = "\n".join(sc.describe("low", kind, False))
                 self.assertIn("runlog checks these; the pre-commit hook holds", text)

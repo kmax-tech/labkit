@@ -739,7 +739,7 @@ class HoldsOutputs(unittest.TestCase):
         run.mkdir(parents=True)
         cfg = run_record(
             {
-                "schema_version": 5,
+                "schema_version": runs.RUN_SCHEMA,
                 "run_kind": "measurement",
                 "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
             }

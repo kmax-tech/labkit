@@ -102,7 +102,8 @@ from labkit.formats.comment_blocks import (
     with_comment_block,
 )
 from labkit.formats.gate import TECHNICAL_RULE
-from labkit.formats.gate import RuleAssignment, cited_rule
+from labkit.formats.gate import RuleAssignment
+from labkit.formats.gate import LAB_104
 from labkit.formats.gate import STATIC_EVIDENCE, WARNING, GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.commands import (
@@ -115,8 +116,6 @@ from labkit.formats.commands import (
     path_word,
     stage_command,
 )
-
-LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 #: the block's opening and closing lines, each a line of its own
 OPEN = re.compile(

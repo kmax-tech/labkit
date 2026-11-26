@@ -87,7 +87,6 @@ the check would judge a state the commit does not hold.
 
 from __future__ import annotations
 
-import shlex
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, replace
@@ -96,6 +95,7 @@ from pathlib import Path
 from labkit.formats.repo import UNREAD_OBJECTS_WAY
 from labkit.formats import commands
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import LAB_003, LAB_010, LAB_011, LAB_041, LAB_104
 from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE
 from labkit.formats.runs import NO_GIT, RunDir
 from labkit.formats.gate import (
@@ -180,7 +180,6 @@ from labkit.formats.repo import (
     git_root,
     protocol_links,
     protocols_in,
-    shown,
 )
 from labkit.formats.commands import (
     ADOPT,
@@ -212,12 +211,6 @@ from labkit.gates.report_decisions import followup_findings, limit_gaps, review_
 from labkit.gates.report_replacement import replacement_gaps
 from labkit.gates.report_exploration import link_gaps, use_after_audit_findings
 
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-LAB_010 = cited_rule("LAB-010 Commit before the run")
-LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
-LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
-
 
 #: how long `--check` may take inside the gate
 CHECK_TIMEOUT_S = 300.0
@@ -232,8 +225,7 @@ def shown_check(area: Path, protocol: Path) -> str:
     """The check of PROTOCOL's result as report-check runs it
     (`standard_contract.check_command`), as a line to run from here."""
     script, *flags = check_command(area, protocol)
-    words = [shown(Path(script), Path.cwd()), *flags]
-    return ".venv/bin/python " + " ".join(shlex.quote(w) for w in words)
+    return commands.script_check_command(Path(script), *flags).line
 
 
 def check_analysis_script(area: Path, repo: Path, protocol: Path) -> str | None:

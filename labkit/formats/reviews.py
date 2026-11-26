@@ -222,7 +222,10 @@ def write_review(
             f"why = {_s(d.why)}",
         ]
     return create_file(
-        area / findings.DIR, f"{stamp}-review", ".toml", "\n".join(lines) + "\n"
+        area / findings.DIR,
+        f"{stamp}-{findings.REVIEW_WORD}",
+        ".toml",
+        "\n".join(lines) + "\n",
     )
 
 

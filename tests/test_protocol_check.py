@@ -24,6 +24,7 @@ REPO = Path(__file__).resolve().parent.parent
 TEMPLATE = REPO / "labkit" / "templates" / "experiment-protocol.md.template"
 
 sys.path.insert(0, str(REPO))
+from labkit.formats.runs import REPEAT_COSTS  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 from labkit.formats import (  # noqa: E402
     findings,
@@ -406,8 +407,8 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
     def test_each_occasion_names_what_the_check_holds_then(self):
         for repeat_cost, kind, model in (
             (cost, kind, model)
-            for cost in ("low", "high")
-            for kind in ("compute", "fit", "apply")
+            for cost in REPEAT_COSTS
+            for kind in protocol_block.PROTOCOL_KINDS
             for model in (None, "haiku")
         ):
             with self.subTest(repeat_cost=repeat_cost, kind=kind, model=model):
@@ -883,7 +884,7 @@ class TestStampedPromptBlock(unittest.TestCase):
         self.assertTrue(block.startswith("<the real prompt — "), block)
 
     def test_a_fresh_stamp_owes_its_prompt_at_both_costs(self):
-        for repeat_cost in ("low", "high"):
+        for repeat_cost in REPEAT_COSTS:
             with self.subTest(repeat_cost=repeat_cost):
                 text = self.stamp(repeat_cost)
                 report = protocol_check.check_fields(text)

@@ -246,6 +246,37 @@ OPEN_RULE = RuleAssignment(OPEN_ASSIGNMENT)
 TECHNICAL_RULE = RuleAssignment(TECHNICAL_CONTRACT)
 NEW_CLASS_RULE = RuleAssignment(NEW_CLASS)
 
+#: the rules of the standard held as a constant named by the rule's id,
+#: each defined once, here: a module imports the constant (`from
+#: labkit.formats.gate import LAB_015`) and defines none of its own
+#: (`tests/test_one_home.py`). A rule cited under a role name
+#: (`ID_RULE = cited_rule(…)`) or at the finding site itself is not held.
+#: Imported by its bare name, so `check_inventory` reads the rule of a site
+#: through the import; `rules.check_refs` holds each line to the ledger
+CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
+CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
+LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
+LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
+LAB_010 = cited_rule("LAB-010 Commit before the run")
+LAB_011 = cited_rule("LAB-011 Required-field check")
+LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
+LAB_016 = cited_rule("LAB-016 Resolution check before freezing")
+LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
+LAB_018 = cited_rule("LAB-018 Routine check after every implementation")
+LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
+LAB_027 = cited_rule("LAB-027 Model discipline")
+LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
+LAB_036 = cited_rule("LAB-036 Validate, don't trust a single run")
+LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
+LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
+LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
+LAB_057 = cited_rule("LAB-057 One area per idea")
+LAB_067 = cited_rule("LAB-067 A prompt has one home, which the run freezes")
+LAB_082 = cited_rule(
+    "LAB-082 In `notes/messung/`, every note carries its kind in the meta line"
+)
+LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
+
 
 #: the outcome of an exact check that found its condition, by the kind of
 #: its rule assignment (`derived_outcome`). VIOLATED needs a decided basis;

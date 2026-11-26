@@ -17,6 +17,7 @@ from pathlib import Path
 
 from protocol_fixture import recheck_without_git, run_record, head
 
+from labkit.formats.runs import RUN_SCHEMA
 from labkit.tools import protocol_result
 from labkit.formats.area_state import state_of
 from labkit.checks import recheck
@@ -58,7 +59,7 @@ class TwoProtocols(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 5,
+                        "schema_version": RUN_SCHEMA,
                         "run_kind": "measurement",
                         "protocol": {"id": pid, "path": "x"},
                     }

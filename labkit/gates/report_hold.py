@@ -23,7 +23,8 @@ from pathlib import Path, PurePosixPath
 from labkit.formats.commands import repair_head_way
 from labkit.checks.report_blocks import WHY_DOCUMENTS, block_protocol, discuss_command
 from labkit.formats.gate import OPEN_RULE
-from labkit.formats.gate import TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE
+from labkit.formats.gate import LAB_003, LAB_015, LAB_104
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import COMPLETION_FILE, RUNS_DIR, run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
@@ -87,10 +88,6 @@ from labkit.formats.commands import (
 )
 from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import area_test_globs, areas_touched
-
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
-LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 def held_place(repo: Path, path: Path) -> bool:

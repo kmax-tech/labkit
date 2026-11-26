@@ -30,8 +30,8 @@ from labkit.formats.gate import (
     TECHNICAL_RULE,
     GateFinding,
     RuleAssignment,
-    cited_rule,
 )
+from labkit.formats.gate import LAB_004, LAB_043
 from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.commands import Command, measure_command
 from labkit.formats.digests import digest
@@ -57,9 +57,6 @@ from labkit.formats.runs import (
     run_dirs,
     run_state,
 )
-
-LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
-LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
 
 
 @dataclass(frozen=True)

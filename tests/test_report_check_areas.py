@@ -680,7 +680,7 @@ class ReportCheck(unittest.TestCase):
         """Every skeleton stamps `02_analyze.py` (`standard_contract.CHECK_SCRIPT`),
         never a check inside `01_measure.py`, and station 4 names the one it
         is missing — at low repeat cost as at high."""
-        for cost in ("low", "high"):
+        for cost in runs.REPEAT_COSTS:
             with self.subTest(cost):
                 area = self._area(repeat_cost=cost, frozen=cost != "low")
                 repo = area.parent.parent

@@ -19,7 +19,6 @@ after it. The static check above does not see those files.
 
 from __future__ import annotations
 
-import shlex
 from collections.abc import Mapping
 import ast
 import re
@@ -27,7 +26,7 @@ from pathlib import Path
 
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.repo import file_text, shown
-from labkit.formats.commands import gate_command
+from labkit.formats.commands import gate_command, pytest_command
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, cited_rule
 from labkit.formats.scope_sha import (
@@ -96,8 +95,8 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     WARNING,
                     t.name,
                     f"cannot be parsed ({exc}) · which parsers it calls cannot be told",
-                    fix=f"repair it until `.venv/bin/python -m pytest "
-                    f"{shlex.quote(shown(t, Path.cwd()))}` collects it",
+                    fix=f"repair it until `{pytest_command(shown(t, Path.cwd()))}` "
+                    f"collects it",
                     evidence_kind=GUARANTEED,
                     stated_outcome=NOT_EXECUTABLE,
                     rule=TECHNICAL_RULE,

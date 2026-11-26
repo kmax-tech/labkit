@@ -78,7 +78,7 @@ class TheColdReader(unittest.TestCase):
     run)."""
 
     def test_named_at_low_for_every_kind(self):
-        for kind in ("compute", "fit", "apply"):
+        for kind in protocol_block.PROTOCOL_KINDS:
             with self.subTest(kind=kind):
                 hint = first_measurement_hint(
                     PROTOCOL, head(repeat_cost="low", kind=kind)

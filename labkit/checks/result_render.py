@@ -66,7 +66,7 @@ from labkit.formats import (
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats.gate import TECHNICAL_RULE
-from labkit.formats.gate import cited_rule
+from labkit.formats.gate import LAB_011, LAB_015
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.commands import render_command
 from labkit.formats.repo import git_root
@@ -80,9 +80,6 @@ from labkit.formats.protocol_check import (
     recorded_results_field,
     written_line,
 )
-
-LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 @dataclass(frozen=True)

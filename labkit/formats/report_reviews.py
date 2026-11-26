@@ -100,7 +100,6 @@ descend into it.
 
 from __future__ import annotations
 
-import re
 import shlex
 import time
 import tomllib
@@ -145,7 +144,7 @@ LAST_UNDECIDED_RELEASE = "0.112.0"
 SUPERSEDED = "superseded"
 #: a claim review's file name (`<minute>-claim-review[-n].toml`), beside
 #: the reviews whose decisions it judges
-CLAIM_REVIEW_NAME = re.compile(r"-claim-review(?:-\d+)?\.toml$")
+CLAIM_REVIEW_NAME = findings.name_ending(findings.CLAIM_REVIEW_WORD)
 #: the mode of a claim review's attempts in the area's journal; it names
 #: ATTEMPT_MODE, so a handover leaves its lines out as it does the report
 #: review's (`handovers.journal_digest`)
@@ -318,7 +317,7 @@ def write_report_review(
     target.parent.mkdir(exist_ok=True)
     return create_file(
         target,
-        name_minute(when) + "-review",
+        f"{name_minute(when)}-{findings.REVIEW_WORD}",
         ".toml",
         "\n".join(lines) + "\n",
     )
@@ -539,11 +538,6 @@ class ClaimReview:
         return next((v for v in self.verdicts if v.claim == n), None)
 
 
-def verdict_counts(verdicts: Sequence[ClaimVerdict]) -> tuple[int, ...]:
-    """(upheld, rejected, insufficient) over VERDICTS (`reviews.counts_of`)."""
-    return counts_of(verdicts)
-
-
 def write_claim_review(
     area: Path,
     *,
@@ -579,10 +573,7 @@ def write_claim_review(
         f"record = {_s(record)}",
         f"fingerprint = {_s(whole)}",
         f"again = {'true' if again else 'false'}",
-        *(
-            f"{kind} = {count}"
-            for kind, count in zip(VERDICTS, verdict_counts(verdicts))
-        ),
+        *(f"{kind} = {count}" for kind, count in zip(VERDICTS, counts_of(verdicts))),
     ]
     for v in verdicts:
         lines += [
@@ -596,7 +587,10 @@ def write_claim_review(
     target = folder(area)
     target.parent.mkdir(exist_ok=True)
     return create_file(
-        target, name_minute(when) + "-claim-review", ".toml", "\n".join(lines) + "\n"
+        target,
+        f"{name_minute(when)}-{findings.CLAIM_REVIEW_WORD}",
+        ".toml",
+        "\n".join(lines) + "\n",
     )
 
 
@@ -624,10 +618,10 @@ def read_claim_review(path: Path) -> ClaimReview:
         )
     verdicts = tuple(_verdict(path, i, row) for i, row in enumerate(rows, start=1))
     counts = tuple(table.get(kind) for kind in VERDICTS)
-    if counts != verdict_counts(verdicts):
+    if counts != counts_of(verdicts):
         raise ReportReviewError(
             f"{path}: [claim_review] counts {counts} are not the verdicts' "
-            f"{verdict_counts(verdicts)} (upheld, rejected, insufficient)"
+            f"{counts_of(verdicts)} (upheld, rejected, insufficient)"
         )
     return ClaimReview(
         path,

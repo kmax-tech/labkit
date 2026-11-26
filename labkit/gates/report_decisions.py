@@ -26,9 +26,13 @@ from labkit.formats.gate import (
     GateFinding,
     WARNING,
     blocker,
-    cited_rule,
     outcome_of_failed_read,
 )
+
+# the rule of a decision that does not release yet: a limitation carries
+# its effect on the verdicts, and a decision that releases a BLOCKER is
+# confirmed by a second auditor or judged by the follow-up analysis audit
+from labkit.formats.gate import LAB_015
 from labkit.formats import (
     findings,
     followup,
@@ -53,11 +57,6 @@ from labkit.formats.commands import (
 from labkit.formats.evidence import AreaEvidence
 from labkit.gates.report_context import Checked
 from labkit.gates.ways_out import contested_way, offers_not_assessable
-
-#: the rule of a decision that does not release yet: a limitation carries
-#: its effect on the verdicts, and a decision that releases a BLOCKER is
-#: confirmed by a second auditor or judged by the follow-up analysis audit
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 def limit_gaps(ctx: Checked) -> list[GateFinding]:

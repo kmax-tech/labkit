@@ -39,6 +39,7 @@ from typing import Iterable, Iterator, Mapping
 
 from labkit.formats import digests
 from labkit.formats import console, files, jsonl, runs
+from labkit.formats.commands import runlog_placeholder_command
 
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
@@ -267,7 +268,7 @@ def lock_holder_words(lock: Path, holder: str) -> str:
         return (
             f"A process still holds it — its writer ({who} when it took the lock) "
             f"or a process that writer started: that run is still writing — wait "
-            f"for it (`.venv/bin/runlog <area> --wait`), never delete its lock; a "
+            f"for it (`{runlog_placeholder_command(wait=True)}`), never delete its lock; a "
             f"second writer would append the same rows again."
         )
     marked = len(fields) >= 5 and fields[2] == LOCK_HELD_BY
@@ -281,14 +282,14 @@ def lock_holder_words(lock: Path, holder: str) -> str:
             f"The lock does not say that its writer holds it ({LOCK_HELD_BY}, "
             f"host): labkit 0.107.0 or earlier, a hand, or a writer cut short "
             f"wrote it, and whether a run still writes this output cannot be "
-            f"told from it — delete it only when `.venv/bin/runlog <area>` lists "
+            f"told from it — delete it only when `{runlog_placeholder_command()}` lists "
             f"no run writing this output."
         )
     if host != socket.gethostname():
         return (
             f"Its writer ({who}) took it on host {host}: a shared file system may "
             f"not carry its flock to this host, so whether it still writes cannot "
-            f"be told here — delete it only when `.venv/bin/runlog <area>` on "
+            f"be told here — delete it only when `{runlog_placeholder_command()}` on "
             f"{host} lists no run writing this output."
         )
     return (

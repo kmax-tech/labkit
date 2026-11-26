@@ -13,7 +13,7 @@ def _run(d: Path, name: str, **cfg: object) -> Path:
     run = d / "runs" / name
     run.mkdir(parents=True)
     base = {
-        "schema_version": 5,
+        "schema_version": runs.RUN_SCHEMA,
         "run_kind": "measurement",
         "experiment": "x",
         "script": "01_measure.py",

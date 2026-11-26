@@ -44,12 +44,12 @@ from __future__ import annotations
 
 import argparse
 import re
-import shlex
 from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, protocol_block, rules
+from labkit.formats.commands import HOOKS_INSTALL, PIP_INSTALL, lab_stamp_command
 from labkit.gates import install_hooks
 from labkit.formats.repo import (
     SKIP_DIRS,
@@ -304,7 +304,7 @@ def pin_line(pins: list[Pin], cwd: Path, offline: bool = False) -> Line:
             "pin",
             "; ".join(f"{p.file} pins {p.ref}" for p in pins),
             STALE,
-            ".venv/bin/pip install -r requirements.txt, then lock",
+            f"{PIP_INSTALL}, then lock",
         )
     pin = pins[0]
     files = " and ".join(p.file for p in pins)
@@ -336,7 +336,7 @@ def installed_line(pin: Pin | None, want: str | None, installed: str) -> Line:
         "installed",
         f"{installed}, the pin says {want}",
         STALE,
-        ".venv/bin/pip install -r requirements.txt",
+        PIP_INSTALL,
     )
 
 
@@ -368,7 +368,7 @@ def hook_line(repo: Path, installed: str) -> Line:
     hook = install_hooks.check(repo)
     if hook:
         more = f" (+{len(hook) - 1} more)" if len(hook) > 1 else ""
-        return Line("hook", hook[0] + more, STALE, ".venv/bin/labkit-hooks install")
+        return Line("hook", hook[0] + more, STALE, HOOKS_INSTALL)
     return Line(
         "hook", f".githooks/pre-commit and pre-merge-commit from labkit {installed}", OK
     )
@@ -389,7 +389,7 @@ def agents_line(repo: Path, installed: str) -> Line:
             "agents",
             "no AGENTS.md",
             STALE,
-            ".venv/bin/labkit-init lab . (writes only the files that are absent)",
+            f"{lab_stamp_command()} (writes only the files that are absent)",
         )
     text = path.read_text(encoding="utf-8")
     head = AGENTS_HEAD_RE.match(text.partition("\n")[0])
@@ -398,12 +398,12 @@ def agents_line(repo: Path, installed: str) -> Line:
         own = " and the repo's own lines below it" if text != stamp else ""
         return Line("agents", f"AGENTS.md as labkit {installed} stamps it{own}", OK)
     # Without --name the stamp's head would name the directory instead.
-    name = f" --name {shlex.quote(head.group(1))}" if head is not None else ""
+    name = head.group(1) if head is not None else None
     return Line(
         "agents",
         f"AGENTS.md differs from the one labkit {installed} stamps",
         STALE,
-        f"mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab .{name}, then "
+        f"mv AGENTS.md AGENTS.md.old && {lab_stamp_command(name)}, then "
         "append the repo's own lines from AGENTS.md.old below the stamp",
     )
 

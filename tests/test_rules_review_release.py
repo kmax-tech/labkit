@@ -72,10 +72,7 @@ class TheCountsOfVerdicts(unittest.TestCase):
             report_reviews.ClaimVerdict(1, "sha", INSUFFICIENT, "why"),
             report_reviews.ClaimVerdict(2, "sha", UPHELD, "why"),
         ]
-        self.assertEqual(report_reviews.verdict_counts(verdicts), (1, 0, 1))
-        self.assertEqual(
-            report_reviews.verdict_counts(verdicts), reviews.counts_of(verdicts)
-        )
+        self.assertEqual(reviews.counts_of(verdicts), (1, 0, 1))
 
 
 if __name__ == "__main__":

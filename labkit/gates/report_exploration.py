@@ -56,17 +56,14 @@ from labkit.formats.gate import (
     WARNING,
     GateFinding,
     blocker,
-    cited_rule,
 )
+from labkit.formats.gate import LAB_050
 from labkit.formats.protocol_block import ExploredIn
 from labkit.formats.protocol_then import last_held_with_id
 from labkit.formats.repo import git_root, shown
 from labkit.checks.audit_binding import covering_analysis
 from labkit.gates import ways_out
 from labkit.gates.report_context import Checked
-
-
-LAB_050 = cited_rule("LAB-050 Analysis audit before reporting")
 
 
 def audit_began(

@@ -21,9 +21,9 @@ from labkit.formats.gate import (
     BLOCKER,
     TECHNICAL_RULE,
     RuleAssignment,
-    cited_rule,
     with_way_out,
 )
+from labkit.formats.gate import LAB_015
 from labkit.formats.protocol_check import (
     INVALID,
     MISSING,
@@ -173,9 +173,6 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
             f"`open` — decide each ({DECIDED_LIST})"
         )
     return None
-
-
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 @dataclass(frozen=True)

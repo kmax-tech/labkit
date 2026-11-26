@@ -97,6 +97,7 @@ from labkit.formats.commands import (
 )
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import LAB_018
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
@@ -109,7 +110,7 @@ from labkit.formats.gate import (
     coded,
     outcome_of_failed_read,
 )
-from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
+from labkit.checks.intent_check import code_ids, code_keys
 from labkit.formats.repo import (
     GivenOnce,
     area_parser,
@@ -138,7 +139,6 @@ from labkit.checks.gate_label_scan import gate_labels
 from labkit.checks.import_check import stamp_coverage_findings
 from labkit.checks.prompt_check import check_parser_fixtures, check_prompt_drift
 
-LAB_018 = cited_rule("LAB-018 Routine check after every implementation")
 # --- source analysis ------------------------------------------------------
 
 
@@ -209,7 +209,7 @@ def _intent_id_findings(
     area: Path, protocol: Path, text: str, *, block_told: bool
 ) -> list[GateFinding]:
     findings = promise_block_findings(area, protocol, text, block_told=block_told)
-    registered = {m.group(1) for m in ID_IN_PROTOCOL.finditer(text)}
+    registered = {m.group(1) for m in promises.ID_IN_PROTOCOL.finditer(text)}
     if not registered:
         return findings
     in_code = code_ids(area)

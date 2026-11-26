@@ -50,7 +50,7 @@ def _run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 5,
+                    "schema_version": runs.RUN_SCHEMA,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",
@@ -395,7 +395,11 @@ class NewestCompleted(unittest.TestCase):
         d = area / "runs" / name
         d.mkdir(parents=True)
         (d / "config.json").write_text(
-            json.dumps(run_record({"schema_version": 5, "run_kind": "measurement"}))
+            json.dumps(
+                run_record(
+                    {"schema_version": runs.RUN_SCHEMA, "run_kind": "measurement"}
+                )
+            )
         )
         (d / "metrics.json").write_text("{}")
         (d / "completion.json").write_text("{}")

@@ -29,7 +29,11 @@ from __future__ import annotations
 from labkit.formats.commands import measure_slot_command, register_anew
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import AREA_SLOT
-from labkit.formats.gate import GateFinding, blocker, cited_rule
+from labkit.formats.gate import GateFinding, blocker
+
+# the registered comparison of a computation; the checks here reach the
+# reserved `ref_*` keys only, a comparison under another name is the audit's
+from labkit.formats.gate import LAB_035, LAB_041
 from labkit.formats.protocol_block import (
     AT_LEAST,
     AT_MOST,
@@ -39,10 +43,6 @@ from labkit.formats.protocol_block import (
 )
 from labkit.formats.runs import as_stored
 
-#: the registered comparison of a computation; the checks here reach the
-#: reserved `ref_*` keys only, a comparison under another name is the audit's
-LAB_035 = cited_rule("LAB-035 Thresholds belong to the run, not to the measure")
-LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
 
 #: the keys the verdict writes into metrics.json, beside the kept number's
 STATE_KEY = "ref_state"

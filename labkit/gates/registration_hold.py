@@ -30,9 +30,9 @@ from labkit.formats.gate import (
     GateFinding,
     RuleAssignment,
     blocker,
-    cited_rule,
     withdrawn_first,
 )
+from labkit.formats.gate import LAB_003, LAB_035
 from labkit.formats import (
     findings as audit_findings,
     promises,
@@ -63,7 +63,6 @@ from labkit.formats.area_state import (
 )
 from labkit.formats import protocol_history, protocol_then
 from labkit.formats.protocol_history import Workflow, type_of, workflow_registered
-from labkit.formats.reference import LAB_035
 from labkit.formats.repo import (
     rel_posix,
     area_protocols,
@@ -96,7 +95,6 @@ from labkit.formats.followup import (
     released_corrections,
 )
 
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 #: the parts of the head the scope hold compares that no sentence of a rule
 #: names, as `protocol_history.scope_differences` labels them
 UNNAMED_HEAD_PARTS = ("kind", "[kept]")

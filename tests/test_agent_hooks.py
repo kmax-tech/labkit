@@ -18,7 +18,7 @@ from labkit.gates import hook_post_change
 from labkit.formats.area_state import state_of
 from labkit.gates import hook_pre_run
 from labkit.gates import hook_session
-from labkit.formats.runs import RunKind
+from labkit.formats.runs import RunKind, RUN_SCHEMA
 
 import contextlib
 import io
@@ -785,7 +785,7 @@ class StopFixture(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 5,
+                        "schema_version": RUN_SCHEMA,
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,
@@ -811,7 +811,7 @@ class StopFixture(unittest.TestCase):
             )
         )
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 5, "run_kind": "measurement"})
+            json.dumps({"schema_version": RUN_SCHEMA, "run_kind": "measurement"})
         )
         if not (self.area / "audits").is_dir():
             findings.write(

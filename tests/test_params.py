@@ -15,6 +15,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record, PID, head
 
+from labkit.formats.runs import RUN_SCHEMA
 from labkit.formats import gate, promises
 from labkit.tools import params
 from command_fixture import run_main
@@ -63,7 +64,7 @@ def _run(
         json.dumps(
             run_record(
                 {
-                    "schema_version": 5,
+                    "schema_version": RUN_SCHEMA,
                     "run_kind": "measurement",
                     "script": "01_measure.py",
                     "pid": 1,
@@ -81,7 +82,7 @@ def _run(
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 5,
+                "schema_version": RUN_SCHEMA,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",

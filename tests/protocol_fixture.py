@@ -191,7 +191,7 @@ def run_record(
     the tests: a fixture that wrote a part of it would read as a record with
     defaults."""
     record: dict = {
-        "schema_version": 5,
+        "schema_version": runs.RUN_SCHEMA,
         "experiment": "x",
         "script": "01_measure.py",
         "protocol": {"id": None, "path": None},
@@ -264,7 +264,7 @@ def completed_run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 5,
+                    "schema_version": runs.RUN_SCHEMA,
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",

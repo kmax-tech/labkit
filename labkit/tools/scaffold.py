@@ -73,7 +73,15 @@ import os
 import re
 
 from labkit.formats import markdown
-from labkit.formats.commands import fill_command, report_fields_command, step_command
+from labkit.formats.commands import (
+    HOOKS_INSTALL,
+    LOCK_WRITE,
+    PIP_INSTALL,
+    fill_command,
+    pytest_command,
+    report_fields_command,
+    step_command,
+)
 from labkit.formats import runs
 from labkit.checks.readme_check import ROUTE_END, ROUTE_START
 from labkit.formats import console
@@ -357,7 +365,7 @@ def area_readme(
     skeleton, the one with a parser."""
     skeleton = sk is not standard_contract.COMPUTE
     nn = split_area_name(area_name)[0]
-    test = f"`.venv/bin/python -m pytest tests/{area_test_stem(nn, slug)}.py`"
+    test = f"`{pytest_command(f'tests/{area_test_stem(nn, slug)}.py')}`"
     if not skeleton:
         state = f"the area test green ({test})"
     elif sk is standard_contract.MODEL:
@@ -1765,9 +1773,9 @@ def main(argv: list[str]) -> int:
         log = stamp_lab(root, a.name or root.name, a.labkit_ref)
         print(f"Lab repo -> {root}\n" + "\n".join(log))
         print(
-            "\nnext: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"
-            " && .venv/bin/labkit-hooks install"
-            " && .venv/bin/pip freeze > requirements.lock  (the lock pins the environment every run records)"
+            f"\nnext: python3 -m venv .venv && {PIP_INSTALL}"
+            f" && {HOOKS_INSTALL}"
+            f" && {LOCK_WRITE}  (the lock pins the environment every run records)"
         )
         return 0
     # the nearest lab repo above the working directory, as git finds its

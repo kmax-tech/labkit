@@ -352,6 +352,20 @@ RULES: list[tuple[str, str, set[str]]] = [
     # detached start) escapes the console-command rule above:
     # `commands.gate_command`, `wait_command`, `detached_start_command`
     ("a runlog line spelled by hand", r"runlog (?:start )?\{", {"commands"}),
+    # a printed line that names a command in the repo's environment is built
+    # from `commands.VENV_BIN`: the fixed lines `HOOKS_INSTALL`, `PIP_INSTALL`
+    # and `LOCK_WRITE`, the builders `pytest_command`, `script_check_command`,
+    # `measure_command`, `runlog_placeholder_command`, `lab_stamp_command`.
+    # Not held: a comment line, Python's or a stamped file's (it prints no
+    # way out), the sample row of `labkit-check`'s docstring (`STALE — …`),
+    # and what the installed hooks run themselves (`claude-hook`,
+    # `labkit-init numbers`, `python -m unittest`)
+    (
+        "a .venv/bin command line spelled by hand",
+        r"^(?!\s*#).*(?<!STALE — )\.venv/bin/(?:labkit-hooks install|pip (?:install|freeze)"
+        r"|runlog\b|labkit-init lab|python (?:-m pytest|\{|\"))",
+        {"commands"},
+    ),
     # a protocol as a printed command names it — quoted, as the working
     # directory reaches it — is `commands.protocol_word`
     (
@@ -438,6 +452,24 @@ RULES: list[tuple[str, str, set[str]]] = [
         "a path beside a file spelled by hand",
         r"os\.path\.relpath\([^\n]*\)\)\.as_posix\(\)",
         {"repo"},
+    ),
+    # the word in a review's file name is `findings.REVIEW_WORD` or
+    # `findings.CLAIM_REVIEW_WORD`: a writer appends it to the minute, a
+    # reader builds its regex from it (`findings.name_ending`). Held: the
+    # word closing a string behind the minute, and the word inside a regex
+    (
+        "a review's name part spelled by hand",
+        r"[}\"]-(?:claim-)?review\"|-(?:claim-)?review\(\?:|\|(?:claim-)?review\)",
+        {"findings"},
+    ),
+    # a constant named by a rule's id (`LAB_015`, `CODE_016`) is defined once,
+    # in `gate`; a module imports it by its bare name, which the inventory
+    # reads a finding site's rule through. Not seen: the same rule cited
+    # under a role name or inline at the finding site (`cited_rule("LAB-…")`)
+    (
+        "a cited rule's constant defined a second time",
+        r"^(LAB|CODE)_\d{3}\b[^=\n]*=",
+        {"gate"},
     ),
 ]
 
@@ -794,6 +826,7 @@ class OneHome(unittest.TestCase):
             "a console command spelled by hand": 'fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "',
             "a staging spelled by hand": 'fix = f"stage it: `git add -- {outside_index[token]}`"',
             "a runlog line spelled by hand": 'print(f"status:  runlog {area}        wait:  runlog {area} --wait")',
+            "a .venv/bin command line spelled by hand": 'findings.note("  fix with  .venv/bin/labkit-hooks install")',
             "a protocol's word spelled by hand": "named = shlex.quote(shown(protocol, Path.cwd()))",
             "a discuss command spelled by hand": 'f"`protocol-fill {name} --discuss {run_id} --why …`"',
             "the measurement script named by hand": 'script = area / "scripts" / "01_measure.py"',
@@ -804,6 +837,8 @@ class OneHome(unittest.TestCase):
             "a protocol file name built by hand": 'protocol = area / f"PROTOCOL-{slug}.md"',
             "a repo-relative path spelled by hand": "rel = {f.relative_to(root).as_posix() for f in files}",
             "a repo-relative path spelled by hand (str form)": "runs = sorted(str(rd.dir.relative_to(repo)) for rd in found)",
+            "a cited rule's constant defined a second time": 'LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")',
+            "a review's name part spelled by hand": 'name_minute(when) + "-claim-review",',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

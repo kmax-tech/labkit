@@ -22,11 +22,11 @@ import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 
+from labkit.formats.protocol_block import PROTOCOL_KINDS
+from labkit.formats.runs import REPEAT_COSTS
 from labkit.tools import scaffold
 
 FORM_STAMPS = Path(__file__).parent / "form_stamps"
-KINDS = ("compute", "fit", "apply")
-COSTS = ("low", "high")
 MODELS: tuple[bool | str, ...] = (False, "haiku")
 FIXED_ID = "p-0000000000000000"
 PROTOCOL_ID = re.compile(r"p-[0-9a-f]{16}")
@@ -39,8 +39,8 @@ def model_word(model: bool | str) -> str:
 
 def stamp_cases() -> Iterator[tuple[str, str, bool | str, bool]]:
     """Every (cost, kind, model, report) the stamp is compared for: 24."""
-    for cost in COSTS:
-        for kind in KINDS:
+    for cost in REPEAT_COSTS:
+        for kind in PROTOCOL_KINDS:
             for model in MODELS:
                 for report in (False, True):
                     yield cost, kind, model, report
@@ -100,7 +100,7 @@ def write_form_stamps() -> None:
         for cost, kind, model, report in stamp_cases():
             text = stamped(root, cost, kind, model, report)
             stamp_file(cost, kind, model, report).write_text(text, encoding="utf-8")
-    for kind in KINDS:
+    for kind in PROTOCOL_KINDS:
         for model in MODELS:
             with tempfile.TemporaryDirectory() as tmp:
                 _, after = reported(lab(tmp), "high", kind, model)

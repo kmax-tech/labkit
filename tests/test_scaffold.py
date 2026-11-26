@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 from unittest import mock
 
+from labkit.formats.runs import REPEAT_COSTS
 from labkit.checks import readme_check
 from labkit.gates import next_step
 from labkit.tools import area_numbers
@@ -2411,7 +2412,7 @@ class OwedCut(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "lab"
             scaffold.stamp_lab(root, "lab")
-            for kind in ("compute", "fit", "apply"):
+            for kind in protocol_block.PROTOCOL_KINDS:
                 for model in (False, "haiku"):
                     with self.subTest(kind=kind, model=model):
                         low, high = (
@@ -2447,7 +2448,7 @@ class OwedCut(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "lab"
             scaffold.stamp_lab(root, "lab")
-            for cost in ("low", "high"):
+            for cost in REPEAT_COSTS:
                 with self.subTest(cost=cost):
                     stamped = scaffold.protocol_stamp(
                         root, "f", cost, "fit", "haiku", False

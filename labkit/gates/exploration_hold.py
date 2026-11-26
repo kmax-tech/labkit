@@ -48,10 +48,10 @@ from labkit.formats.gate import (
     GateFinding,
     blocker,
 )
+from labkit.formats.gate import LAB_003
 from labkit.formats.protocol_then import StepThen
 from labkit.formats.runs import RunDir, read_run_dir, run_path
 from labkit.gates.registration_hold import (
-    LAB_003,
     anew_way,
     awaiting_followup,
     by_cause,

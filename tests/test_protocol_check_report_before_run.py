@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from labkit.formats.area_state import state_of
 from labkit.checks import protocol_report  # noqa: E402
@@ -47,7 +48,7 @@ def completed_run(area: Path) -> None:
         json.dumps(
             run_record(
                 {
-                    "schema_version": 5,
+                    "schema_version": RUN_SCHEMA,
                     "run_kind": "measurement",
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                 }

@@ -42,7 +42,8 @@ from pathlib import Path
 from typing import Protocol
 
 from labkit.formats import markdown
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, RuleAssignment
+from labkit.formats.gate import LAB_003, LAB_004, LAB_011, LAB_015
 from labkit.formats import digests
 from labkit.formats.protocol_fields import (
     CONCLUSION_LABEL,
@@ -57,11 +58,6 @@ from labkit.formats import (
     standard_contract,
     answering_run,
 )
-
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
-LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
-LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
 
 
 @dataclass(frozen=True)

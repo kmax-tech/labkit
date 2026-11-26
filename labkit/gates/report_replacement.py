@@ -12,7 +12,8 @@ from pathlib import Path
 from labkit.formats.commands import gate_command
 from labkit.formats.area_state import AreaState, state_of
 from labkit.formats import evidence
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import LAB_003, LAB_015
 from labkit.formats.gate import (
     GateFinding,
     blocker,
@@ -31,9 +32,6 @@ from labkit.gates import ways_out
 from labkit.formats.repo import git_root
 from labkit.formats.commands import decide_command, handover_command
 from labkit.gates.report_context import Checked
-
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 
 
 def replacement_gaps(ctx: Checked) -> list[GateFinding]:

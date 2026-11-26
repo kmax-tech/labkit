@@ -28,7 +28,7 @@ from labkit.formats.gate import (
     GateFinding,
 )
 from labkit.gates.preflight import AreaTests, tell_test_run
-from labkit.formats.runs import LLM_CALLS_FILE
+from labkit.formats.runs import LLM_CALLS_FILE, RUN_SCHEMA
 from labkit.formats.scope_sha import SourceError
 from labkit.tools import scaffold
 
@@ -48,7 +48,7 @@ class Steps(unittest.TestCase):
             )
             (run / "metrics.json").write_text('{"criterion_1_pass": true}')
             (run / "completion.json").write_text(
-                json.dumps({"schema_version": 5, "run_kind": "measurement"})
+                json.dumps({"schema_version": RUN_SCHEMA, "run_kind": "measurement"})
             )
         return protocol
 
@@ -232,7 +232,7 @@ class ModelProvenanceFindings(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 5,
+                        "schema_version": RUN_SCHEMA,
                         "run_kind": "measurement",
                         "models_resolved": models_resolved,
                         "config": {},

@@ -37,6 +37,7 @@ import re
 import shlex
 
 from labkit.formats import console
+from labkit.formats.commands import HOOKS_INSTALL, PIP_INSTALL
 from pathlib import Path
 from typing import TypedDict
 
@@ -55,7 +56,7 @@ def labkit_version() -> str:
 def pre_commit() -> str:
     """The pre-commit script of this labkit version."""
     return f"""#!/bin/sh
-{MARK} {labkit_version()} — reinstall: .venv/bin/labkit-hooks install
+{MARK} {labkit_version()} — reinstall: {HOOKS_INSTALL}
 # Escape hatch for a deliberate exception: git commit --no-verify
 
 fail=0
@@ -69,7 +70,7 @@ staged=$(git diff --cached --name-only --no-renames)
 if [ -n "$staged" ]; then
     if [ ! -x .venv/bin/claude-hook ]; then
         echo "pre-commit: .venv/bin/claude-hook missing — labkit's gates on the staged files"
-        echo "cannot run; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
+        echo "cannot run; install labkit into .venv ({PIP_INSTALL})."
         fail=1
     elif ! .venv/bin/claude-hook pre-commit; then
         echo ""
@@ -85,7 +86,7 @@ staged_areas=$(git diff --cached --name-only -- experiments)
 if [ -n "$staged_areas" ]; then
     if [ ! -x .venv/bin/labkit-init ]; then
         echo "pre-commit: .venv/bin/labkit-init missing — the area numbers cannot be"
-        echo "checked; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
+        echo "checked; install labkit into .venv ({PIP_INSTALL})."
         fail=1
     else
         out=$(.venv/bin/labkit-init numbers --staged 2>&1) || {{
@@ -125,12 +126,12 @@ def pre_merge_commit() -> str:
     a text conflict can still bring a number reported on one branch and
     its analysis changed on the other together. A merge with conflicts is committed through pre-commit."""
     return f"""#!/bin/sh
-{MARK} {labkit_version()} — reinstall: .venv/bin/labkit-hooks install
+{MARK} {labkit_version()} — reinstall: {HOOKS_INSTALL}
 # Escape hatch for a deliberate exception: git merge --no-verify
 
 if [ ! -x .githooks/pre-commit ]; then
     echo "pre-merge-commit: .githooks/pre-commit missing — the merge's checks cannot"
-    echo "run; reinstall: .venv/bin/labkit-hooks install"
+    echo "run; reinstall: {HOOKS_INSTALL}"
     exit 1
 fi
 .githooks/pre-commit && exit 0
@@ -468,7 +469,7 @@ def _tell_check(repo: Path) -> int:
     for g in gaps:
         print(f"labkit-hooks: {g}")
     if gaps:
-        print("labkit-hooks: fix with  .venv/bin/labkit-hooks install")
+        print(f"labkit-hooks: fix with  {HOOKS_INSTALL}")
     return 1 if gaps else 0
 
 

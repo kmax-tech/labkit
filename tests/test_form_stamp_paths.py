@@ -19,9 +19,7 @@ import unittest
 import pytest
 
 from form_stamps_fixture import (
-    COSTS,
     FIXED_ID,
-    KINDS,
     MODELS,
     fixed_id,
     lab,
@@ -31,6 +29,8 @@ from form_stamps_fixture import (
     stamped,
 )
 from labkit.formats import protocol_check
+from labkit.formats.protocol_block import PROTOCOL_KINDS
+from labkit.formats.runs import REPEAT_COSTS
 from labkit.tools import protocol_cuts, scaffold
 
 pytestmark = pytest.mark.slow
@@ -38,7 +38,7 @@ pytestmark = pytest.mark.slow
 
 class ReportOnAnArea(unittest.TestCase):
     def test_low_repeat_cost_leaves_the_protocol_unchanged(self) -> None:
-        for kind in KINDS:
+        for kind in PROTOCOL_KINDS:
             for model in MODELS:
                 with self.subTest(kind=kind, model=model):
                     with tempfile.TemporaryDirectory() as tmp:
@@ -46,7 +46,7 @@ class ReportOnAnArea(unittest.TestCase):
                     self.assertEqual(after, before)
 
     def test_high_repeat_cost_matches_the_kept_file(self) -> None:
-        for kind in KINDS:
+        for kind in PROTOCOL_KINDS:
             for model in MODELS:
                 with self.subTest(kind=kind, model=model):
                     with tempfile.TemporaryDirectory() as tmp:
@@ -61,7 +61,7 @@ class ReportOnAnArea(unittest.TestCase):
     def test_the_fields_it_adds_are_the_full_forms(self) -> None:
         # a protocol without its report fields gains the full form's: the same
         # fields, each with the same placeholder (placed at its section's end)
-        for kind in KINDS:
+        for kind in PROTOCOL_KINDS:
             for model in MODELS:
                 with self.subTest(kind=kind, model=model):
                     with tempfile.TemporaryDirectory() as tmp:
@@ -91,11 +91,11 @@ class ReportOnAnArea(unittest.TestCase):
 
 class ChangeKind(unittest.TestCase):
     def test_an_unfilled_protocol_becomes_the_new_kinds_stamp(self) -> None:
-        for cost in COSTS:
+        for cost in REPEAT_COSTS:
             for model in MODELS:
                 for report in (False, True):
-                    for old in KINDS:
-                        for new in KINDS:
+                    for old in PROTOCOL_KINDS:
+                        for new in PROTOCOL_KINDS:
                             if old == new:
                                 continue
                             with self.subTest(

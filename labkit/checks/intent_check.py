@@ -49,7 +49,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.commands import measure_slot_command
-from labkit.formats.gate import AREA_SLOT, cited_rule
+from labkit.formats.gate import AREA_SLOT
+from labkit.formats.gate import LAB_004
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.commands import measure_anew
@@ -69,15 +70,6 @@ from labkit.formats.scope_sha import (
     imported_repo_helpers,
     read_source,
 )
-
-LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
-
-# The alphabet lives in `promises`; these names stay importable from here
-# because code_check and tools outside labkit (befundregister) use them.
-ID_IN_PROTOCOL = promises.ID_IN_PROTOCOL
-ID_KEY = promises.ID_KEY
-ids_in_prose = promises.ids_in_prose
-reported_intent_ids = promises.reported_ids
 
 
 #: the way out of a finding where protocol and run do not name the same
@@ -175,7 +167,7 @@ def _key_mismatch(
     """Registered ids without a key, keys without a registered id;
     REGISTERED_IN is how the sentences name the text that registers them
     (the protocol's path, or words for a text read back from git)."""
-    led = reported_intent_ids(metrics)
+    led = promises.reported_ids(metrics)
     return [
         f"{registered_in}: [{i}] registered, but {mpath.name} has no "
         f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key — the promise has no implementation "
@@ -274,7 +266,7 @@ def hold(
             [], [blocker(m, fix=INTENT_FIX, rule=LAB_004) for m in mismatch], ""
         )
 
-    reg = ids_in_prose(text)
+    reg = promises.ids_in_prose(text)
     if not reg:
         return Held(
             [],
@@ -410,7 +402,7 @@ def origin_intent_findings(
         block = promises.parse_block(text_then)
     except promises.PromiseError as exc:
         return [blocker(f"{told_as}: promise block: {exc}", fix=fix, rule=exc.rule)]
-    registered = ids_in_prose(text_then)
+    registered = promises.ids_in_prose(text_then)
     if not registered:
         return []
     mpath = metrics_path(run_dir)
@@ -600,7 +592,7 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     for key, where in code_keys(area).items():
         if suffixed_only and not promises.INTENT_KEY.match(key):
             continue
-        m = ID_KEY.match(key)
+        m = promises.ID_KEY.match(key)
         assert m is not None, f"code_keys returned a non-id key {key!r}"
         hits.setdefault(promises.id_of_stem(m.group(1)), []).extend(where)
     for locs in hits.values():
@@ -642,7 +634,7 @@ def code_keys(area: Path) -> dict[str, list[str]]:
                 key = (m.group(1) + (m.group(2) or "")).lower()
                 hits.setdefault(key, []).append(f"{_where(path, area, root)}:{lineno}")
         for name, lineno in _keyword_names(source, path):
-            if ID_KEY.match(name.lower()):
+            if promises.ID_KEY.match(name.lower()):
                 hits.setdefault(name.lower(), []).append(
                     f"{_where(path, area, root)}:{lineno}"
                 )

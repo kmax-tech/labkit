@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import intent_check, recheck  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
@@ -221,8 +222,6 @@ class Alphabet(unittest.TestCase):
         )
 
     def test_one_alphabet_everywhere(self):
-        self.assertIs(intent_check.ID_KEY, promises.ID_KEY)
-        self.assertIs(intent_check.ID_IN_PROTOCOL, promises.ID_IN_PROTOCOL)
         self.assertIs(recheck.INTENT_KEY, promises.INTENT_KEY)
 
     def test_prose_mismatch_both_directions(self):
@@ -313,7 +312,7 @@ class Chain(unittest.TestCase):
         (run.dir / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 5,
+                    "schema_version": RUN_SCHEMA,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",

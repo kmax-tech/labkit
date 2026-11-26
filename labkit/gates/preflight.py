@@ -67,19 +67,20 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from dataclasses import dataclass
-import shlex
 import subprocess
 import sys
 from pathlib import Path
 
 from labkit.formats.commands import repair_head_way
 from labkit.formats.commands import (
+    HOOKS_INSTALL,
     area_slots,
     audit_command,
     contract_command,
     fill_command,
     gate_command,
     preflight_command,
+    pytest_command,
 )
 from labkit.formats.repo import area_parser, resolve_area
 from labkit.formats.gate import (
@@ -89,8 +90,8 @@ from labkit.formats.gate import (
     STATIC_EVIDENCE,
     TECHNICAL_RULE,
     RuleAssignment,
-    cited_rule,
 )
+from labkit.formats.gate import LAB_004, LAB_010, LAB_011, LAB_015, LAB_016
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
     audit_gaps,
@@ -124,12 +125,6 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.scope_sha import AREA_GLOBS, NothingToStamp, area_stamp
-
-LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
-LAB_010 = cited_rule("LAB-010 Commit before the run")
-LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_015 = cited_rule("LAB-015 Preflight audit before freezing")
-LAB_016 = cited_rule("LAB-016 Resolution check before freezing")
 
 
 @dataclass(frozen=True)
@@ -689,7 +684,7 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
     for g in gaps:
         findings.warn(g, evidence_kind=GUARANTEED, rule=LAB_011)
     if gaps:
-        findings.note("  fix with  .venv/bin/labkit-hooks install")
+        findings.note(f"  fix with  {HOOKS_INSTALL}")
     else:
         findings.note(
             "  installed (this labkit's pre-commit and pre-merge-commit, "
@@ -723,13 +718,13 @@ def tell_test_run(
         for ln in tests.tail:
             findings.note(f"  {ln}")
         last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
-        files = " ".join(shlex.quote(shown(f, Path.cwd())) for f in tests.files)
+        run_tests = pytest_command(*(shown(f, Path.cwd()) for f in tests.files))
         if tests.state == "not run":
             findings.block(
                 f"{names} did not run{last} — {failed}",
                 fix=f"make them run (a collection or import error, a missing "
                 f"dependency, no test collected) until "
-                f"`.venv/bin/python -m pytest {files}` passes",
+                f"`{run_tests}` passes",
                 stated_outcome=NOT_EXECUTABLE,
                 rule=TECHNICAL_RULE,
             )
@@ -737,7 +732,7 @@ def tell_test_run(
         findings.block(
             f"{names} failed{last} — {failed}",
             fix=f"fix the code (or a test that asks the wrong thing) until "
-            f"`.venv/bin/python -m pytest {files}` passes; a test's expected "
+            f"`{run_tests}` passes; a test's expected "
             f"values are found apart from the run under test (by hand or from "
             f"an independent source), never copied from a run's output, which "
             f"tests only that the code repeats itself",

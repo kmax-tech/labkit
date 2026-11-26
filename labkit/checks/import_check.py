@@ -15,7 +15,10 @@ import re
 from pathlib import Path
 
 from labkit.formats.gate import STATIC_EVIDENCE
-from labkit.formats.gate import WARNING, GateFinding, cited_rule, coded
+from labkit.formats.gate import WARNING, GateFinding, coded
+
+# the rule every finding of this module records: what the stamp must cover
+from labkit.formats.gate import LAB_019
 from labkit.formats.repo import shown
 from labkit.formats.scope_sha import (
     LOCAL_ROOTS,
@@ -26,9 +29,6 @@ from labkit.formats.scope_sha import (
     parse_source,
 )
 from labkit.checks.code_scan import unreadable_source
-
-#: the rule every finding of this module records: what the stamp must cover
-LAB_019 = cited_rule("LAB-019 The stamp covers everything that determines the number")
 
 DYNAMIC_LOADERS = {
     "import_module",

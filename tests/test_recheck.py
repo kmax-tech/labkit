@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol_fixture import run_record, PID, head, recheck_without_git  # noqa: E402
 
+from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import recheck, result_render  # noqa: E402
 
 ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
@@ -37,13 +38,13 @@ class Area(unittest.TestCase):
         )
         self.run_dir = self.area / "runs" / "2026-10-05T19-00-00_ab12"
         self.run_dir.mkdir(parents=True)
-        # a current run: schema_version 5 plus a completion record — metrics
+        # a current run: the current schema_version plus a completion record — metrics
         # alone is never a completed run
         (self.run_dir / "config.json").write_text(
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 5,
+                        "schema_version": RUN_SCHEMA,
                         "run_kind": "measurement",
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                     }

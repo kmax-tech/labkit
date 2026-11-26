@@ -68,7 +68,7 @@ def make_run(
     )
     if completion:
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 5, "run_kind": "measurement"}),
+            json.dumps({"schema_version": runs.RUN_SCHEMA, "run_kind": "measurement"}),
             encoding="utf-8",
         )
     return d

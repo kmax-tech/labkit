@@ -1220,6 +1220,45 @@ class BuildersUnderAPathWithASpace(unittest.TestCase):
             [".venv/bin/python", "my lab/01 x/scripts/01_measure.py"],
         )
 
+    def test_the_lines_in_the_repos_environment(self):
+        """Every printed line that names a command under `.venv/bin`, as it
+        was spelled at its sites before it had one home."""
+        self.assertEqual(commands.HOOKS_INSTALL, ".venv/bin/labkit-hooks install")
+        self.assertEqual(
+            commands.PIP_INSTALL, ".venv/bin/pip install -r requirements.txt"
+        )
+        self.assertEqual(
+            commands.LOCK_WRITE, ".venv/bin/pip freeze > requirements.lock"
+        )
+        tests = commands.pytest_command("tests/test_01_x.py", "my lab/test_02_y.py")
+        self.assertEqual(
+            tests.line,
+            ".venv/bin/python -m pytest tests/test_01_x.py 'my lab/test_02_y.py'",
+        )
+        self.assertEqual(tests.name, commands.CHECK)
+        with self.assertRaises(ValueError):
+            commands.pytest_command()
+        check = commands.script_check_command(
+            Path.cwd() / "my lab" / "02_analyze.py", "--check", "--protocol", "P x.md"
+        )
+        self.assertEqual(
+            check.line,
+            ".venv/bin/python 'my lab/02_analyze.py' --check --protocol 'P x.md'",
+        )
+        self.assertEqual(check.name, commands.CHECK)
+        listed = commands.runlog_placeholder_command()
+        self.assertEqual(listed.line, ".venv/bin/runlog <area>")
+        self.assertEqual(listed.name, commands.CHECK)
+        waiting = commands.runlog_placeholder_command(wait=True)
+        self.assertEqual(waiting.line, ".venv/bin/runlog <area> --wait")
+        self.assertEqual(waiting.name, commands.WAIT)
+        self.assertEqual(
+            commands.lab_stamp_command().line, ".venv/bin/labkit-init lab ."
+        )
+        named = commands.lab_stamp_command("my lab")
+        self.assertEqual(named.line, ".venv/bin/labkit-init lab . --name 'my lab'")
+        self.assertEqual(named.name, commands.INIT)
+
     def test_a_stage_line_names_every_path_after_the_dashes(self):
         line = commands.stage_command(self.AREA / "a b.txt", self.AREA / "c.txt").line
         self.assertEqual(

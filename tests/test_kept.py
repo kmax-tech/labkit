@@ -112,13 +112,13 @@ class OwedByKind(unittest.TestCase):
                 self.assertEqual(self.rules(text), [protocol_check.LAB_011])
 
     def test_a_table_that_does_not_read_is_the_technical_contract(self):
-        for kind in ("compute", "fit", "apply"):
+        for kind in protocol_block.PROTOCOL_KINDS:
             with self.subTest(kind=kind):
                 text = with_table('key = "n"\n', kind=kind)
                 self.assertEqual(self.rules(text), [gate.TECHNICAL_RULE])
 
     def test_every_kind_without_the_table_owes_it(self):
-        for kind in ("compute", "fit", "apply"):
+        for kind in protocol_block.PROTOCOL_KINDS:
             with self.subTest(kind=kind):
                 text = head(repeat_cost="low", kind=kind, promises=None, kept=None)
                 (gap,) = self.gaps(text)
@@ -135,7 +135,7 @@ class OwedByKind(unittest.TestCase):
         self.assertIn("[kept] key", protocol_check.low_registration_missing(text))
 
     def test_the_twin_a_filled_table_owes_nothing_at_every_kind(self):
-        for kind in ("compute", "fit", "apply"):
+        for kind in protocol_block.PROTOCOL_KINDS:
             with self.subTest(kind=kind):
                 text = with_table('key = "score"\nunit = "1"\n', kind=kind)
                 self.assertEqual(self.gaps(text), [])

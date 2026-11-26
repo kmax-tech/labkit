@@ -7,7 +7,7 @@ ambiguity and silent overwrites, and leave every other byte alone.
 
 from labkit.formats import run_index
 from labkit.formats.repo import pending_adoption
-from labkit.formats.runs import RunKind
+from labkit.formats.runs import RunKind, RUN_SCHEMA
 
 import contextlib
 import io
@@ -816,7 +816,7 @@ class TestFromRun(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 5,
+                        "schema_version": RUN_SCHEMA,
                         "run_kind": "measurement",
                         "protocol": {"id": PID, "path": "PROTOCOL-count.md"},
                     }

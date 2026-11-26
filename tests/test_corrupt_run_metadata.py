@@ -36,7 +36,7 @@ def make_run(area: Path, name: str) -> Path:
         json.dumps(
             run_record(
                 {
-                    "schema_version": 5,
+                    "schema_version": runs.RUN_SCHEMA,
                     "run_kind": "measurement",
                     "script": "01_measure.py",
                     "pid": 1,
@@ -52,7 +52,7 @@ def make_run(area: Path, name: str) -> Path:
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 5,
+                "schema_version": runs.RUN_SCHEMA,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",

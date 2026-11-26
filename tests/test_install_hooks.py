@@ -488,6 +488,35 @@ class AreaNumbers(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
+class HookTextLines(unittest.TestCase):
+    """The installed hooks' text is a format: the lines built from
+    `commands.HOOKS_INSTALL` and `commands.PIP_INSTALL` stand in it as
+    spelled here, byte for byte."""
+
+    def test_the_lines_that_name_an_install(self):
+        mark = f"{install_hooks.MARK} {install_hooks.labkit_version()}"
+        reinstall = f"{mark} — reinstall: .venv/bin/labkit-hooks install\n"
+        pre_commit = install_hooks.pre_commit()
+        self.assertTrue(pre_commit.startswith("#!/bin/sh\n" + reinstall))
+        for missing in (
+            "        echo \"pre-commit: .venv/bin/claude-hook missing — labkit's "
+            'gates on the staged files"\n'
+            '        echo "cannot run; install labkit into .venv '
+            '(.venv/bin/pip install -r requirements.txt)."\n',
+            '        echo "pre-commit: .venv/bin/labkit-init missing — the area '
+            'numbers cannot be"\n'
+            '        echo "checked; install labkit into .venv '
+            '(.venv/bin/pip install -r requirements.txt)."\n',
+        ):
+            with self.subTest(missing=missing):
+                self.assertIn(missing, pre_commit)
+        pre_merge = install_hooks.pre_merge_commit()
+        self.assertTrue(pre_merge.startswith("#!/bin/sh\n" + reinstall))
+        self.assertIn(
+            '    echo "run; reinstall: .venv/bin/labkit-hooks install"\n', pre_merge
+        )
+
+
 class MergeChecks(unittest.TestCase):
     """A merge without a text conflict meets the commit's checks: a number
     reported on one branch and its analysis changed on the other merge

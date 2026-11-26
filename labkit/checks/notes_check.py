@@ -44,7 +44,8 @@ from collections.abc import Callable
 
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import OPEN_RULE
-from labkit.formats.gate import TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE
+from labkit.formats.gate import LAB_082
 from labkit.formats.gate import (
     GUARANTEED,
     STATIC_EVIDENCE,
@@ -56,10 +57,6 @@ from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
 from pathlib import Path
-
-LAB_082 = cited_rule(
-    "LAB-082 In `notes/messung/`, every note carries its kind in the meta line"
-)
 
 # The contract: kind tokens as they appear in meta lines. German on purpose —
 # the notes are German and the tokens are greppable prose, not identifiers.

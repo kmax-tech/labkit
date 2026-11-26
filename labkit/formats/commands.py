@@ -25,6 +25,22 @@ from labkit.formats.runs import MEASURE_SCRIPT
 #: the command that adopts a run — what every printed adoption line starts with
 ADOPT_TOOL = "labkit-adopt"
 
+#: where a lab repo's environment keeps its commands, as the repo root
+#: reaches it: a printed line names a command there when it may be read
+#: outside the activated environment — in a git hook, before the first
+#: install, from inside a run
+VENV_BIN = ".venv/bin"
+#: the repo's interpreter, which runs the area's scripts and tests
+VENV_PYTHON = f"{VENV_BIN}/python"
+#: the line that installs this labkit's hooks into the repo, or installs
+#: them again — the way out of every hook gap `install_hooks.check` names
+HOOKS_INSTALL = f"{VENV_BIN}/labkit-hooks install"
+#: the line that installs what `requirements.txt` pins into the repo's
+#: environment
+PIP_INSTALL = f"{VENV_BIN}/pip install -r requirements.txt"
+#: the line that writes the lock, the environment every run records
+LOCK_WRITE = f"{VENV_BIN}/pip freeze > requirements.lock"
+
 #: the kinds of a `Command`, fixed here so a reader of a finding's step —
 #: and the `--do` proposal, if it is ever triggered — has nothing to decide:
 #: MECHANICAL runs one of labkit's own checked writers (each refuses on its
@@ -181,20 +197,63 @@ def measure_command(area: Path) -> Command:
     skeleton has one) with the repo's interpreter, the script as the working
     directory reaches it; the script opens its run through runlog."""
     script = shown(area / MEASURE_SCRIPT, Path.cwd())
-    return Command(MEASURE, f".venv/bin/python {shlex.quote(script)}")
+    return Command(MEASURE, f"{VENV_PYTHON} {shlex.quote(script)}")
 
 
 def measure_slot_command(slot: str) -> Command:
     """`measure_command` for a check that does not know the working
     directory: SLOT (`gate.AREA_SLOT`) stands for the area, unquoted — the
     gate that knows the area fills it shell-quoted (`gate.Findings.take`)."""
-    return Command(MEASURE, f".venv/bin/python {slot}/{MEASURE_SCRIPT.as_posix()}")
+    return Command(MEASURE, f"{VENV_PYTHON} {slot}/{MEASURE_SCRIPT.as_posix()}")
 
 
 def measure_anew(area: Path) -> str:
     """The way out where a run cannot be held to its code, rows or record:
     a new run of AREA (`measure_command`), then its analysis audit."""
     return f"measure anew (`{measure_command(area)}`) and audit that run"
+
+
+def pytest_command(*files: str) -> Command:
+    """The `.venv/bin/python -m pytest FILE …` line that runs the test FILES
+    with the repo's interpreter (`VENV_PYTHON`): each file as the caller
+    names it — as the working directory reaches it (`shown`), or as the
+    repo root does in a stamped README —, shell-quoted here. Its kind is
+    CHECK: it writes nothing. Raises ValueError without a file: the line
+    would run every test the working directory holds."""
+    if not files:
+        raise ValueError("a pytest command names at least one test file")
+    return Command(CHECK, shlex.join([VENV_PYTHON, "-m", "pytest", *files]))
+
+
+def script_check_command(script: Path, *flags: str) -> Command:
+    """The line that runs SCRIPT with the repo's interpreter (`VENV_PYTHON`)
+    and FLAGS, where the flags make it a check that writes nothing
+    (`standard_contract.check_command`): the script as the working
+    directory reaches it (`shown`), every word shell-quoted. Not the
+    measurement's line, `measure_command`, which opens a run."""
+    words = [VENV_PYTHON, shown(script, Path.cwd()), *flags]
+    return Command(CHECK, shlex.join(words))
+
+
+def runlog_placeholder_command(*, wait: bool = False) -> Command:
+    """The `.venv/bin/runlog <area>` line (WAIT: `… --wait`) of a sentence
+    printed from inside a run, which knows its output file and no area:
+    `<area>` is a placeholder the reader replaces. Where the area is known
+    the line names it: `gate_command("runlog", area)` lists its runs,
+    `wait_command` waits for its open run."""
+    line = f"{VENV_BIN}/runlog <area>"
+    return Command(WAIT, f"{line} --wait") if wait else Command(CHECK, line)
+
+
+def lab_stamp_command(name: str | None = None) -> Command:
+    """The `.venv/bin/labkit-init lab .` line that stamps the lab repo's own
+    files into the working directory, writing only the files that are
+    absent; with NAME, shell-quoted, `--name NAME`: the project name the
+    stamped `AGENTS.md` carries instead of the directory's."""
+    line = f"{VENV_BIN}/labkit-init lab ."
+    if name is not None:
+        line += f" --name {shlex.quote(name)}"
+    return Command(INIT, line)
 
 
 def gate_command(tool: str, target: Path) -> Command:

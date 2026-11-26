@@ -17,6 +17,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.formats import console  # noqa: E402
 from labkit.formats import failed_attempts
@@ -90,7 +91,7 @@ def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "low") -
         json.dumps(
             run_record(
                 {
-                    "schema_version": 5,
+                    "schema_version": RUN_SCHEMA,
                     "run_kind": "measurement",
                     "protocol": {
                         "id": "p-0123456789abcdef",

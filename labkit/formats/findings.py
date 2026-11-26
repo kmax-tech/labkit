@@ -127,7 +127,13 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.commands import audit_command, decide_command
-from labkit.formats.runs import RUN_ID, as_stored, date_minute, name_minute
+from labkit.formats.runs import (
+    NAME_MINUTE,
+    RUN_ID,
+    as_stored,
+    date_minute,
+    name_minute,
+)
 from labkit.formats.digests import digest
 from labkit.formats import rules
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
@@ -139,10 +145,25 @@ JOURNAL = "attempts.jsonl"
 ANSWERS = "answers"
 #: the suffix of a failed attempt's file, never of a record of findings
 FAILED_SUFFIX = "-failed.toml"
+#: the word a review's file name holds where a record's holds its mode
+#: (`<minute>-<word>[-<n>].toml`) — a decision review's and a report
+#: review's, then a claim review's. The writers of a name and its readers
+#: (`name_ending`, `_WRITTEN_NAME`) take the word from here
+REVIEW_WORD = "review"
+CLAIM_REVIEW_WORD = "claim-review"
+
+
+def name_ending(word: str) -> re.Pattern[str]:
+    """How the name of a file ends that `create_file` wrote as
+    `<minute>-WORD` with the suffix `.toml`: `-WORD[-<n>].toml`
+    (`create_file` numbers a second file of the minute before the suffix)."""
+    return re.compile(rf"-{re.escape(word)}(?:-\d+)?\.toml$")
+
+
 #: the name of a decision review (`reviews`), written beside the records
-#: and never read as one: `<minute>-review[-<n>].toml` (`create_file`
-#: numbers a second file of the minute before the suffix)
-REVIEW_NAME = re.compile(r"-review(?:-\d+)?\.toml$")
+#: and never read as one: `<minute>-review[-<n>].toml`. A claim review's
+#: name ends the same way (`report_reviews.CLAIM_REVIEW_NAME` tells it)
+REVIEW_NAME = name_ending(REVIEW_WORD)
 #: what a person decided about a finding — the one spelling every reader
 #: compares a `status` with, and the word the record's TOML holds
 OPEN = "open"
@@ -2316,11 +2337,23 @@ def _head(r: Record) -> tuple:
     )  # fmt: skip
 
 
+#: the minute as `runs.name_minute` writes it, read off its format: four
+#: digits for the year, two for every other field
+_NAME_MINUTE_SHAPE = re.sub(
+    r"%[YmdHM]",
+    lambda field: r"\d{4}" if field.group() == "%Y" else r"\d{2}",
+    re.escape(NAME_MINUTE),
+)
+#: the words of the mode's place, the longer first: `claim-review` ends in
+#: `review`
+_WRITTEN_WORDS = "|".join(
+    re.escape(word) for word in (*MODES, CLAIM_REVIEW_WORD, REVIEW_WORD)
+)
 #: the name `create_file` gives a record, a failed attempt or a review (a
 #: decision review, a report review, a claim review under `report-reviews/`):
 #: `<minute>-<mode>[-<n>]` and its suffix, n counting the files of one minute
 _WRITTEN_NAME = re.compile(
-    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?P<mode>{'|'.join(MODES)}|claim-review|review)(?:-(?P<n>\d+))?"
+    rf"^({_NAME_MINUTE_SHAPE})-(?P<mode>{_WRITTEN_WORDS})(?:-(?P<n>\d+))?"
     rf"(?P<failed>{re.escape(FAILED_SUFFIX)})?(?(failed)|\.toml)$"
 )
 

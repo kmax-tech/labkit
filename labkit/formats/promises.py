@@ -67,10 +67,14 @@ from labkit.formats.gate import (
     OPEN_RULE,
     TECHNICAL_RULE,
     RuleAssignment,
-    cited_rule,
     NOT_EXECUTABLE,
     outcome_of_failed_read,
 )
+from labkit.formats.gate import LAB_003
+
+# the rule whose text states what a promise table carries and how a
+# branch's sentence lists its outcomes
+from labkit.formats.gate import LAB_004
 
 #: the kinds of promise — each one an id's stem: `criterion-1`
 PROMISE_KINDS = ("criterion", "quality-check", "branch")
@@ -160,7 +164,6 @@ _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 #: earlier format is told apart instead of reported as changed promises
 DIGEST_FORMAT = "promises-normalized-json"
 
-LAB_003 = cited_rule("LAB-003 No run without an intent paragraph")
 #: what an audit record names as the promise block of a protocol that
 #: declares no [[promise]] tables (a computation at low repeat cost)
 NO_BLOCK = "none"
@@ -215,11 +218,6 @@ def block_stamp(text: str) -> str:
     `parse_block` — an audit of promises nobody can read binds nothing."""
     block = parse_block(text)
     return NO_BLOCK if block is None else block.sha
-
-
-#: the rule whose text states what a promise table carries and how a
-#: branch's sentence lists its outcomes
-LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
 
 
 class PromiseError(ValueError):

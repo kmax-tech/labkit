@@ -66,6 +66,15 @@ from labkit.formats.gate import (
     cited_rule,
     outcome_of_failed_read,
 )
+from labkit.formats.gate import (
+    LAB_010,
+    LAB_017,
+    LAB_027,
+    LAB_036,
+    LAB_041,
+    LAB_057,
+    LAB_067,
+)
 from labkit.formats.runs import (
     CONFIG_FILE,
     DERIVED_RUN_CONTRACT,
@@ -106,14 +115,6 @@ from labkit.formats.repo import (
     tracked_under,
 )
 from labkit.formats.commands import gate_command, measure_anew, stage_command
-
-LAB_010 = cited_rule("LAB-010 Commit before the run")
-LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
-LAB_027 = cited_rule("LAB-027 Model discipline")
-LAB_036 = cited_rule("LAB-036 Validate, don't trust a single run")
-LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
-LAB_057 = cited_rule("LAB-057 One area per idea")
-LAB_067 = cited_rule("LAB-067 A prompt has one home, which the run freezes")
 
 
 CRITERION_N = promises.CRITERION_N_KEY

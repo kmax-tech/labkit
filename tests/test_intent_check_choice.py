@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
+from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import intent_check  # noqa: E402
 from protocol_fixture import run_record, PID, head  # noqa: E402
 from command_fixture import run_main
@@ -32,7 +33,7 @@ def _run(area: Path, rid: str, metrics: dict) -> Path:
                 {
                     "script": "01_measure.py",
                     "pid": 1,
-                    "schema_version": 5,
+                    "schema_version": RUN_SCHEMA,
                     "run_kind": "measurement",
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                 }
@@ -44,7 +45,7 @@ def _run(area: Path, rid: str, metrics: dict) -> Path:
     (rd / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 5,
+                "schema_version": RUN_SCHEMA,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",

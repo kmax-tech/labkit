@@ -157,10 +157,18 @@ from labkit.formats.gate import (
     GateFinding,
     RuleAssignment,
     blocker,
-    cited_rule,
     outcome_of_failed_read,
     with_rule,
     withdrawn_first,
+)
+from labkit.formats.gate import (
+    CODE_003,
+    CODE_016,
+    LAB_004,
+    LAB_011,
+    LAB_041,
+    LAB_043,
+    LAB_104,
 )
 from labkit.formats.runs import (
     metrics_path,
@@ -261,14 +269,6 @@ from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.files import ReadError
 from labkit.formats.scope_sha import SourceError
-
-CODE_003 = cited_rule("CODE-003 Test the functions that produce numbers")
-CODE_016 = cited_rule("CODE-016 The experiment area reconstructs itself")
-LAB_004 = cited_rule("LAB-004 Identifiers make the intent addressable")
-LAB_011 = cited_rule("LAB-011 Required-field check")
-LAB_041 = cited_rule("LAB-041 Generate numbers, don't retype them")
-LAB_043 = cited_rule("LAB-043 Runs go through `runlog`")
-LAB_104 = cited_rule("LAB-104 A number leaves the area only through its adoption")
 
 
 def choose_answering_run(

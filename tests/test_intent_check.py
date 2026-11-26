@@ -17,7 +17,9 @@ from pathlib import Path
 from protocol_fixture import run_record, PID, head
 
 REPO = Path(__file__).resolve().parent.parent
+from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import intent_check  # noqa: E402
+from labkit.formats import promises  # noqa: E402
 from command_fixture import run_main  # noqa: E402
 
 PROTOCOL = (
@@ -51,7 +53,7 @@ class _AreaWithRun(unittest.TestCase):
                     {
                         "script": "01_measure.py",
                         "pid": 1,
-                        "schema_version": 5,
+                        "schema_version": RUN_SCHEMA,
                         "run_kind": "measurement",
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                     }
@@ -63,7 +65,7 @@ class _AreaWithRun(unittest.TestCase):
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 5,
+                    "schema_version": RUN_SCHEMA,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",
@@ -83,7 +85,7 @@ class TestIntentCheck(_AreaWithRun):
     # -- extraction -------------------------------------------------------
     def test_ids_found_anywhere_in_free_structure(self):
         self.assertEqual(
-            intent_check.ids_in_prose(PROTOCOL),
+            promises.ids_in_prose(PROTOCOL),
             {
                 "criterion-1",
                 "criterion-2",
@@ -105,14 +107,14 @@ class TestIntentCheck(_AreaWithRun):
             REPO / "labkit" / "templates" / "experiment-protocol.md.template"
         ).read_text(encoding="utf-8")
         self.assertEqual(
-            intent_check.ids_in_prose(tmpl),
+            promises.ids_in_prose(tmpl),
             set(),
             "the template preamble must not contribute ids",
         )
 
     def test_reported_intent_ids_match_bare_and_suffixed(self):
         self.assertEqual(
-            intent_check.reported_intent_ids(
+            promises.reported_ids(
                 {
                     "criterion_1": True,
                     "quality_check_1_pass": True,
@@ -127,9 +129,7 @@ class TestIntentCheck(_AreaWithRun):
     def test_f1_score_is_no_intent_id(self):
         """Forks are W, not F: f1_score is a metric name, and in an F
         namespace it would satisfy a branchless fork."""
-        self.assertEqual(
-            intent_check.reported_intent_ids({"f1_score": 0.8, "f1": 0.8}), set()
-        )
+        self.assertEqual(promises.reported_ids({"f1_score": 0.8, "f1": 0.8}), set())
 
     # -- contract ---------------------------------------------------------
     def test_all_reported_passes(self):
@@ -370,8 +370,6 @@ class OneAnswerToRegistersPromises(unittest.TestCase):
     run holds a probe run alike."""
 
     def test_a_table_alone_registers_and_a_protocol_without_ids_does_not(self):
-        from labkit.formats import promises
-
         table_only = (
             '# P\n\n```toml\n[[promise]]\nid = "criterion-1"\n'
             'sentence = "the f1 holds"\nkeys = ["f1"]\n```\n'

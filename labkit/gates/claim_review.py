@@ -66,6 +66,7 @@ from labkit.formats.report_reviews import (
     ReportReview,
     ReportReviewError,
 )
+from labkit.formats.reviews import counts_of
 from labkit.gates import audit_call, audit_prompt, report_hold, report_review
 from labkit.gates.decision_review import parse_review
 
@@ -413,7 +414,7 @@ def review_claims(
     print(reply)  # 6
     if out:
         out.write_text(reply, encoding="utf-8")
-    counts = report_reviews.verdict_counts(verdicts)
+    counts = counts_of(verdicts)
     print()
     print(
         f"claim review: this draw{' (--again, it releases nothing)' if again else ''} "
