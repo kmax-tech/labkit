@@ -40,6 +40,11 @@ check of the file cannot tell who wrote them. labkit never decides.
 Reading is loud: an unknown status, a decided status without a reason, a
 file without its `[audit]` table raise `findings.FindingsError` naming the file and
 the field — a findings file nobody can read is not "no findings".
+
+Whether the head's counts agree with the BLOCKER and WARNING lines listed
+is decided in the data model, not here: `write` asks
+`findings.verdict_disagrees` (exactly those lines), reading asks
+`findings.counts_outrun` (no more counted than listed).
 """
 
 from __future__ import annotations
