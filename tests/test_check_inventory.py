@@ -125,6 +125,50 @@ class FindingSites(unittest.TestCase):
             s.wording, "{…}: not frozen (LAB-003 No run without an intent paragraph)"
         )
 
+    def test_a_site_records_the_way_out_it_names(self) -> None:
+        """A finding's `fix=`, an exit's second `with_way_out` argument; a
+        warning without a fix and an exit without the wrapper name none."""
+        self.assertEqual(
+            self.sites[("labkit.checks.demo.freeze_gap", "finding")].way_out,
+            "freeze it",
+        )
+        self.assertEqual(
+            self.sites[("labkit.checks.demo.drift", "finding")].way_out, ""
+        )
+        exits = [
+            s.way_out
+            for s in inv.finding_sites([CHECKS])
+            if s.unit == "labkit.checks.demo.start"
+        ]
+        self.assertEqual(exits, ["", "name its parent", ""])
+
+    def test_a_way_out_without_a_word_of_its_own_names_its_expression(self) -> None:
+        def text(expression: str) -> str:
+            return inv.way_out_text(ast.parse(expression, mode="eval").body, {})
+
+        self.assertEqual(
+            text("f'restore {path} | then `{again}`'"), "restore {…} \\| then `{…}`"
+        )
+        self.assertEqual(text("measure_anew(area)"), "`measure_anew(area)`")
+        self.assertEqual(text("f'{restore}; {again}'"), "`f'{restore}; {again}'`")
+        self.assertEqual(text("None"), "")
+
+    def test_a_gate_finding_built_by_position_gives_its_way_out_there(self) -> None:
+        import dataclasses
+
+        self.assertEqual(
+            [f.name for f in dataclasses.fields(gate.GateFinding)][
+                inv.GATE_FINDING_FIX_AT
+            ],
+            "fix",
+        )
+        call = ast.parse("GateFinding(BLOCKER, 'no', PREFIXED, None, 'do it')").body[0]
+        assert isinstance(call, ast.Expr)
+        self.assertEqual(
+            inv.way_out_text(inv._way_out_argument(call.value, "finding"), {}), "do it"
+        )
+        self.assertEqual(inv.way_out_text(None, {}), "")
+
     def test_a_warning_reads_its_local_message_and_the_module_constant(self) -> None:
         s = self.sites[("labkit.checks.demo.drift", "finding")]
         self.assertEqual(

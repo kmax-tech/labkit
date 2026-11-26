@@ -119,6 +119,10 @@ NOT_A_COLLECTOR = {"warnings", "logging", "logger", "log"}
 #: "cited outside the code"
 SHIPPED_TEXT_GLOBS = ("agents/*.md", "templates/*.template", "docs/*-guide.md")
 WORDING_WIDTH = 90
+#: where `gate.GateFinding` takes its way out by position: after grade,
+#: text, form and where (`tests/test_check_inventory.py` holds the index
+#: to the dataclass)
+GATE_FINDING_FIX_AT = 4
 
 
 @dataclass(frozen=True)
@@ -151,6 +155,11 @@ class FindingSite:
         outcome: The check outcome (`site_outcome`): one of
             `gate.OUTCOMES`, COMPUTED, `variable`, REFUSED, or `none` for
             an exit or a printed line.
+        way_out: What the site names as the next step (`way_out_text`):
+            the constant text of a gate finding's `fix=` or of the second
+            argument of an exit's `with_way_out`, on one line and uncut;
+            the expression in backticks where it has no constant text;
+            empty where the site names none.
     """
 
     unit: str
@@ -164,6 +173,7 @@ class FindingSite:
     wording: str
     assignment: str = ""
     outcome: str = "none"
+    way_out: str = ""
 
 
 #: a site that records no rule assignment as data
@@ -293,10 +303,29 @@ def wording(node: ast.AST | None, assigned: dict[str, list[ast.AST]]) -> str:
     return "{…}"
 
 
+def one_line(text: str) -> str:
+    """TEXT on one line, safe in a table cell."""
+    return " ".join(text.split()).replace("|", "\\|")
+
+
 def short(text: str) -> str:
     """TEXT on one line, cut to `WORDING_WIDTH`, safe in a table cell."""
-    one = " ".join(text.split()).replace("|", "\\|")
+    one = one_line(text)
     return one if len(one) <= WORDING_WIDTH else one[: WORDING_WIDTH - 1] + "…"
+
+
+def way_out_text(node: ast.AST | None, assigned: dict[str, list[ast.AST]]) -> str:
+    """The way out a site names, for a table cell: the constant text of the
+    expression NODE as `wording` reads it; the expression itself in
+    backticks where that text holds no word (a constant or a function of
+    another module builds the sentence — the cell then names its home);
+    empty for None, a site that names no way out."""
+    if node is None or (isinstance(node, ast.Constant) and node.value is None):
+        return ""
+    text = one_line(wording(node, assigned))
+    if any(c.isalpha() for c in text):
+        return text
+    return f"`{one_line(ast.unparse(node))}`"
 
 
 def module_constants(modules: list[Module]) -> dict[str, list[str]]:
@@ -581,6 +610,34 @@ def _refusal_message(n: ast.AST) -> ast.AST | None:
     return arg
 
 
+def _way_out_argument(n: ast.AST, channel: str) -> ast.AST | None:
+    """The expression a site of CHANNEL at node N gives as its way out: a
+    gate finding's `fix=` keyword, or the fifth argument of a `GateFinding`
+    built by position (the one constructor that takes it there), and the
+    second argument of `SystemExit(with_way_out(<message>, <fix>))`; None
+    for any other exit, a printed line and a finding that gives none."""
+    if channel == "finding" and isinstance(n, ast.Call):
+        by_position = (
+            n.args[GATE_FINDING_FIX_AT]
+            if _constructor(n) == "GateFinding" and len(n.args) > GATE_FINDING_FIX_AT
+            else None
+        )
+        return next((k.value for k in n.keywords if k.arg == "fix"), by_position)
+    if channel == "exit" and isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call):
+        arg = n.exc.args[0] if n.exc.args else None
+        if isinstance(arg, ast.Call) and len(arg.args) > 1:
+            called = (
+                arg.func.id
+                if isinstance(arg.func, ast.Name)
+                else arg.func.attr
+                if isinstance(arg.func, ast.Attribute)
+                else None
+            )
+            if called == WAY_OUT_WRAPPER:
+                return arg.args[1]
+    return None
+
+
 def _finding_parts(call: ast.Call, ctor: str) -> tuple[str, str, ast.AST | None]:
     """Grade, evidence kind and message of a call to the finding
     constructor CTOR."""
@@ -677,6 +734,7 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
                         wording=short(wording(msg, assigned)),
                         assignment=assignment,
                         outcome=outcome,
+                        way_out=way_out_text(_way_out_argument(n, channel), assigned),
                     )
                 )
     return out
@@ -767,9 +825,19 @@ def _referenced_unit(n: ast.AST, scope: _Scope) -> str | None:
     return target if target in scope.all_units else None
 
 
-def call_graph(modules: list[Module]) -> dict[str, set[str]]:
-    """Unit → the units it calls or names (the module docstring says how
-    far the estimate reaches). A class named stands for all its methods."""
+@dataclass(frozen=True)
+class UnitReference:
+    """One place a unit calls or names another: LINE in the source file of
+    the naming unit, TARGET the unit named."""
+
+    line: int
+    target: str
+
+
+def unit_references(modules: list[Module]) -> dict[str, list[UnitReference]]:
+    """Unit → every place it calls or names another unit, in no fixed order
+    (the module docstring says how far the estimate reaches). A class named
+    stands for itself and all its methods, each at the line of the name."""
     known = {m.name for m in modules}
     all_units: dict[str, ast.AST] = {}
     for m in modules:
@@ -779,7 +847,7 @@ def call_graph(modules: list[Module]) -> dict[str, set[str]]:
         parent = u.rsplit(".", 1)[0]
         if isinstance(all_units.get(parent), ast.ClassDef):
             methods[parent].add(u)
-    graph: dict[str, set[str]] = defaultdict(set)
+    references: dict[str, list[UnitReference]] = defaultdict(list)
     for m in modules:
         imports = imported_names(m, known)
         for unit, node in units(m).items():
@@ -795,8 +863,20 @@ def call_graph(modules: list[Module]) -> dict[str, set[str]]:
             for n in ast.walk(node):
                 target = _referenced_unit(n, scope)
                 if target is not None and target != unit:
-                    graph[unit].add(target)
-                    graph[unit] |= methods.get(target, set())
+                    line = n.lineno  # type: ignore[attr-defined] — a name and an attribute have one
+                    references[unit] += [
+                        UnitReference(line, t)
+                        for t in (target, *sorted(methods.get(target, ())))
+                    ]
+    return references
+
+
+def call_graph(modules: list[Module]) -> dict[str, set[str]]:
+    """Unit → the units it calls or names (`unit_references`, the places
+    left out)."""
+    graph: dict[str, set[str]] = defaultdict(set)
+    for unit, references in unit_references(modules).items():
+        graph[unit] |= {r.target for r in references}
     return graph
 
 
