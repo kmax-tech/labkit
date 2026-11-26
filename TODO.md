@@ -55,8 +55,8 @@ Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingu
 
 Nur gelesen und gemessen ([Notiz](docs/notes/2026-11-26-release-check-after-0.116.md)); das Veröffentlichen (`just release X.Y.Z`) und der Push bleiben beim Autor.
 
-1. **argmining27 zieht ohne Änderung um.** Auf einer Kopie gibt `finalize` für alle 15 Bereiche mit 0.116.0 und mit dem unveröffentlichten Stand bytegleich dasselbe aus. Nicht gefahren: `report-check`, `preflight`, `labkit-audit`, die Hooks.
-2. **Ältere Labore verlieren fast alle Patches.** In fünf Laboren mit Pin 0.25.0 bis 0.88.8 liest der neue Leser 533 von 540 Patches nicht mehr (von labkit bis 0.103.0 geschrieben). Vor dem Release: den Satz mit der Zahl in „In short“ des CHANGELOG-Eintrags aufnehmen; diese Labore behalten für solche Läufe ihren Pin.
+1. **argmining27: `finalize` urteilt vor und nach dem Umzug gleich.** Auf einer Kopie gibt `finalize` für alle 15 Bereiche mit 0.116.0 und mit dem unveröffentlichten Stand bytegleich dasselbe aus. Nicht gefahren: `report-check`, `preflight`, `labkit-audit`, die Hooks — „zieht ohne Änderung um“ ist damit nicht gezeigt.
+2. **Der neue Leser nimmt die Patches älterer Labore nicht mehr an.** Von 697 Patches mit Inhalt in den Laboren mit Pin 0.23.0 bis 0.99.0 liest er 690 nicht (von labkit bis 0.103.0 geschrieben). Die Dateien bleiben unverändert; diese Läufe werden mit dem bisherigen Pin ihres Labors geprüft und reproduziert. Der Eintrag unter „Breaking“ nennt die Zahl; beim Release denselben Satz in „In short“. Folge: Der Umzug ist je Labor eine Entscheidung, kein pauschales Upgrade — das betrifft die Zeile „Bestehende Labore umziehen“ in der Reihenfolge.
 3. **Zwei Labore rufen einen verschobenen Namen:** `twostage-argument-demo` (`findings.write`, jetzt `audit_records.write`) und `labkit-paper` mit seinen zwei Kopien (`lib/sandboxlab/standard_check.py`, braucht einen dritten Fall je labkit-Version). Beides Rollout, außerhalb dieses Repos.
 4. **`counterfactual-worlds` hat 14 Läufe mit verlorenem Patch** (`experiments/11-hong-repair`); sie waren schon bei zwei von drei Lesern abgelehnt.
 

@@ -4,19 +4,19 @@
 
 ## Result
 
-A lab pinned to 0.116.0 moves without a change in what `finalize` tells. A lab on an older pin that holds runs from a changed tree loses the code of nearly all of them: 533 of the 540 patches read in five such labs no longer apply. Two labs call a name that moved out of `labkit.formats.findings`.
+For the one lab pinned to 0.116.0, `finalize` tells the same before and after the move; its other gates were not run. In the labs on an older pin, the new reader does not accept 690 of the 697 patches with changes. The files stay as they are; the runs they belong to are checked and reproduced with the labkit version their lab pins, not with the new one. A move to the new version is therefore a decision per lab, not a general upgrade. Two labs call a name that moved out of `labkit.formats.findings`.
 
 ## What was counted
 
 26 repositories under `~/projects` hold run records (`experiments/*/runs/*/config.json`), 1 204 runs in all: 707 with changes in `uncommitted.patch`, 480 with an empty patch, 17 without one.
 
-| Break                                                     | Runs or places hit                                          | Where                                                              |
-|-----------------------------------------------------------|-------------------------------------------------------------|--------------------------------------------------------------------|
-| Changes in a patch beside a record of a clean tree        | 0 of 1 204 runs                                             | —                                                                  |
-| A changed tree whose patch is gone                        | 14 runs                                                     | `counterfactual-worlds`, `experiments/11-hong-repair` (pin 0.85.0) |
-| A patch is read only as a run writes it today             | 533 of 540 patches do not apply, in four of five older labs | table below                                                        |
-| Names moved out of `labkit.formats.findings`              | 2 labs                                                      | `twostage-argument-demo`, `labkit-paper` (and its two copies)      |
-| Names removed (`verdict_counts`, the `intent_check` ones) | 0 places                                                    | —                                                                  |
+| Break                                                     | Runs or places hit                                | Where                                                              |
+|-----------------------------------------------------------|---------------------------------------------------|--------------------------------------------------------------------|
+| Changes in a patch beside a record of a clean tree        | 0 of 1 204 runs                                   | —                                                                  |
+| A changed tree whose patch is gone                        | 14 runs                                           | `counterfactual-worlds`, `experiments/11-hong-repair` (pin 0.85.0) |
+| A patch is read only as a run writes it today             | 690 of 697 patches in the older labs do not apply | table below                                                        |
+| Names moved out of `labkit.formats.findings`              | 2 labs                                            | `twostage-argument-demo`, `labkit-paper` (and its two copies)      |
+| Names removed (`verdict_counts`, the `intent_check` ones) | 0 places                                          | —                                                                  |
 
 The patches were read with the reader of this state (`repo.tree_then`, the run's recorded commit and its patch), per lab:
 
@@ -29,7 +29,9 @@ The patches were read with the reader of this state (`repo.tree_then`, the run's
 | `uniagent`              | 0.88.8  | 60                   | 0    | 60           |
 | `fallacy-datasets`      | 0.25.0  | 33                   | 0    | 33           |
 
-Every failure is git's `corrupt patch at line N`: the patch was written stripped by labkit 0.103.0 or earlier, which the entry in the changelog names. Not read this way: the other labs with patches (`labkit-paper-main`, `labkit-paper-usage`, the probe repositories, 157 patches); nothing suggests they differ, and nothing shows it.
+The remaining labs, read the same way: `labkit-paper-main` 58 of 58, `labkit-paper-usage` 86 of 86 (both are copies of `labkit-paper` at other states, so their runs largely repeat its), the probe repositories, `fallacy-dataset-generation` and `paper-organization` together 13 of 13 — none reads. In all: 707 patches with changes, 17 read (10 in `argmining27`, 3 in `fallacy-detection`, 4 in `counterfactual-worlds`), 690 do not.
+
+Every failure is git's `corrupt patch at line N`: the patch was written stripped by labkit 0.103.0 or earlier, which the entry in the changelog names. No patch file is changed or removed by the new version; it refuses to rebuild the run's start from it.
 
 The two labs that call a moved name:
 
@@ -44,7 +46,7 @@ What this shows: for this lab none of the breaks changes a verdict of `finalize`
 
 ## For the release
 
-1. The entry "A run's patch is read as a run writes it" understates its reach when read alone: in a lab that started before 0.104.0 it is not some patches but nearly all of them. Such a lab keeps its pin for those runs, as the entry says; "In short" should say so in a sentence with the number.
+1. The entry "A run's patch is read as a run writes it" said such patches "may no longer apply"; it now carries the count, and that the files stay and the runs keep their lab's pin. "In short" of the release entry should repeat that sentence.
 2. `twostage-argument-demo` needs its one import changed when it moves; `docs/stagekit-areas.md` points labs to the script it copied.
 3. `labkit-paper` needs the third case in its standard check before an image carries the new labkit.
 4. `counterfactual-worlds` holds 14 runs whose patch is gone; they were refused by two of three readers before and are refused by all three now.
