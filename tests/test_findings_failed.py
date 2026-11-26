@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from labkit.formats import audit_records, findings
+from labkit.formats import audit_files, audit_records, findings
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
@@ -36,7 +36,7 @@ class WriteRead(unittest.TestCase):
 
     def test_roundtrip(self):
         path = attempt(self.area, now=1_700_000_000)
-        self.assertTrue(path.name.endswith(f"-preflight{findings.FAILED_SUFFIX}"))
+        self.assertTrue(path.name.endswith(f"-preflight{audit_files.FAILED_SUFFIX}"))
         got = failed_attempts.read_failed(path)
         self.assertEqual(
             (got.mode, got.model, got.scope_sha, got.block_sha, got.timeout_s),

@@ -42,6 +42,7 @@ from labkit.formats.runs import PROBE, RunKind, parse_run_kind
 from labkit.formats import (
     audit_records,
     findings,
+    audit_files,
     promises,
     protocol_block,
     protocol_check,
@@ -535,7 +536,7 @@ def _audit_unavailable(
                 f"{failed_attempts.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}",
                 f"run the audit: `{audit}`; "
                 "when the backend does not answer, it writes "
-                f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
+                f"audits/<date>-preflight{audit_files.FAILED_SUFFIX}, and this "
                 "acknowledgement rests on that file — and its number cannot be "
                 "reported either (report-check refuses it)",
             )
@@ -1117,7 +1118,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
                 "No other run yields a reported number: a probe (run_kind='probe') "
                 "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
                 "high repeat cost only over an audit the backend refused, "
-                f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
+                f"audits/*{audit_files.FAILED_SUFFIX} written by labkit-audit) are "
                 "recorded as such, and report-check refuses their numbers.",
             )
         )

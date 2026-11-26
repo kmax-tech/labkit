@@ -35,7 +35,7 @@ from labkit.formats import (
     attempts,
     evidence,
     finding_line,
-    findings,
+    audit_files,
     audit_records,
     promises,
     reviews,
@@ -1211,7 +1211,7 @@ class TheFile(unittest.TestCase):
                 area, "opus", "r.toml", "s", "h", "c", [d, d], again=False
             )
         self.assertEqual(
-            findings.written_order(path),
+            audit_files.written_order(path),
             ("".join(path.name.split("-review")[:1]), 1, path.name),
         )
         # a second review of the minute: numbered before the suffix, read as

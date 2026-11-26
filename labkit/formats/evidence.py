@@ -69,13 +69,14 @@ from labkit.formats.commands import checkout_command
 from labkit.formats import (
     decision_history,
     findings,
+    audit_files,
     audit_records,
     handovers,
     report_reviews,
     reviews,
 )
 from labkit.formats.attempts import evidence_gaps
-from labkit.formats.findings import JOURNAL
+from labkit.formats.audit_files import JOURNAL
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import (
     NOT_EXECUTABLE,
@@ -225,7 +226,7 @@ def is_report_review(rel: str) -> bool:
     parts = rel.split("/")
     return (
         len(parts) == 3
-        and parts[:2] == [findings.DIR, report_reviews.FOLDER]
+        and parts[:2] == [audit_files.DIR, report_reviews.FOLDER]
         and parts[2].endswith(".toml")
         and not report_reviews.CLAIM_REVIEW_NAME.search(parts[2])
     )
@@ -239,7 +240,7 @@ def moved_aside(rel: str, added: set[str], before: str | None) -> bool:
     (`report_reviews.is_undecided_format`) — the one record that may leave
     its place: this labkit reads no claim of it, so moving it lifts no
     hold. A record that reads stays where it was written. Pure."""
-    prefix = f"{findings.DIR}/"
+    prefix = f"{audit_files.DIR}/"
     moved = {
         prefix + name
         for path in added
@@ -290,7 +291,10 @@ def broken(
             if how == "deleted" or not undone(rel):
                 runs.setdefault(run, []).append((rel.split("/", 2)[2], how))
             continue
-        if rel.split("/")[0] != findings.DIR or rel == f"{findings.DIR}/{JOURNAL}":
+        if (
+            rel.split("/")[0] != audit_files.DIR
+            or rel == f"{audit_files.DIR}/{JOURNAL}"
+        ):
             continue
         if how == "deleted":
             if deletions and not moved_aside(rel, added, texts(rel)[0]):
@@ -331,7 +335,7 @@ def _changed_audit_file(
     decisions alone changed and none was lost (TEXTS reads the two
     versions)."""
     parts = rel.split("/")
-    is_record = len(parts) == 2 and findings.is_record_name(parts[1])
+    is_record = len(parts) == 2 and audit_files.is_record_name(parts[1])
     if not is_record and not is_report_review(rel):
         return "changed"
     before, after = texts(rel)
@@ -440,7 +444,7 @@ def _specs(area: Path, root: Path) -> list[str]:
     its runs' start files (`run_starts.START_FILES_DIR`)."""
     base = rel_posix(area, root)
     return [
-        f"{base}/{findings.DIR}",
+        f"{base}/{audit_files.DIR}",
         f"{base}/{RUNS_DIR}",
         f"{base}/{START_FILES_DIR}",
     ]
@@ -551,7 +555,9 @@ def _undone_in(
         now = _blob_now(root, path, rev=rev, staged=staged)
         if now is not None and now == _blob_at(root, first, path):
             return True
-        if run_of(rel) is not None or not findings.is_record_name(rel.split("/")[-1]):
+        if run_of(rel) is not None or not audit_files.is_record_name(
+            rel.split("/")[-1]
+        ):
             return False
         then = text_at(root, area / rel, first)
         later = (
@@ -886,7 +892,7 @@ def ignored(area: Path) -> list[str]:
         return []
     base = rel_posix(area, root)
     args = ["ls-files", "-z", "--others", "--ignored", "--exclude-standard"]
-    args += ["--", f"{base}/{findings.DIR}", f"{base}/{RUNS_DIR}"]
+    args += ["--", f"{base}/{audit_files.DIR}", f"{base}/{RUNS_DIR}"]
     r = git_run(args, root)
     if r.returncode != 0:
         raise GitError(f"git ls-files --ignored in {root}: {r.stderr.strip()}")
@@ -899,7 +905,7 @@ def ignored(area: Path) -> list[str]:
             run is not None
             and rel.count("/") == 2
             and (name in RUN_RECORD_FILES or name.startswith(_SCRIPT_COPY))
-        ) or (rel.startswith(f"{findings.DIR}/") and name.endswith(AUDIT_SUFFIXES))
+        ) or (rel.startswith(f"{audit_files.DIR}/") and name.endswith(AUDIT_SUFFIXES))
         if written:
             out.append(
                 with_way_out(
@@ -1005,7 +1011,7 @@ def read_evidence(area: Path, staged: bool) -> AreaEvidence:
         found_claim_reviews = tuple(report_reviews.area_claim_reviews(area))
     except (report_reviews.ReportReviewError, findings.FindingsError) as exc:
         # FindingsError: a file in the folder whose name tells no age
-        # (`findings.written_order`)
+        # (`audit_files.written_order`)
         found_report_reviews, found_claim_reviews = (), ()
         report_reviews_unread = str(exc)
     handed: frozenset[str] = frozenset()

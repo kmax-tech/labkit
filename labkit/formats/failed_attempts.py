@@ -21,7 +21,7 @@ an audit that could not run, not one nobody ran (`audit_unavailable`, held
 by runlog's freeze gate). labkit writes it, with the error the
 backend gave; a usage error (an unknown alias, an area that cannot be
 stamped) is not an unavailable audit and leaves none. A record of findings
-and a failed attempt never share a name (`findings.FAILED_SUFFIX`);
+and a failed attempt never share a name (`audit_files.FAILED_SUFFIX`);
 `audit_records.area_records` reads the records only.
 """
 
@@ -35,14 +35,8 @@ from pathlib import Path
 
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.runs import date_minute, name_minute
-from labkit.formats.findings import (
-    DIR,
-    FAILED_SUFFIX,
-    FindingsError,
-    MODES,
-    create_file,
-    written_order,
-)
+from labkit.formats.findings import FindingsError, MODES
+from labkit.formats.audit_files import DIR, FAILED_SUFFIX, create_file, written_order
 
 #: the low lane's `labkit-audit` gives its one call by default, and the least a
 #: failed attempt must have been given to count as one (`audit_unavailable`):
@@ -168,7 +162,7 @@ def read_failed(path: Path) -> Failed:
 
 
 def failed_attempts(area: Path) -> list[Failed]:
-    """Every failed attempt of AREA, oldest first (`findings.written_order`); a file
+    """Every failed attempt of AREA, oldest first (`audit_files.written_order`); a file
     that cannot be read raises."""
     folder = area / DIR
     if not folder.is_dir():

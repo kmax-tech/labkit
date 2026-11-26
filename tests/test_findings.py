@@ -16,6 +16,7 @@ from labkit.formats import (
     decision_history,
     finding_line,
     findings,
+    audit_files,
     finding_decisions,
     audit_records,
     gate,
@@ -1158,7 +1159,9 @@ class DecideCommand(unittest.TestCase):
 
     def test_the_newest_record_is_decided_and_named(self):
         area = area_with([("preflight", TWO), ("analysis", TWO)])
-        records = sorted((area / "audits").glob("*.toml"), key=findings.written_order)
+        records = sorted(
+            (area / "audits").glob("*.toml"), key=audit_files.written_order
+        )
         rc, out, err = self.run_main(
             [
                 str(area),
@@ -1179,7 +1182,9 @@ class DecideCommand(unittest.TestCase):
 
     def test_record_names_another_one_and_a_bad_decision_exits_2(self):
         area = area_with([("preflight", TWO), ("analysis", TWO)])
-        first = sorted((area / "audits").glob("*.toml"), key=findings.written_order)[0]
+        first = sorted((area / "audits").glob("*.toml"), key=audit_files.written_order)[
+            0
+        ]
         rc, _, err = self.run_main(
             [str(area), "--decide", "2", "fixed", "--why", "", "--record", str(first)]
         )
@@ -1324,7 +1329,7 @@ class AuditCoverage(unittest.TestCase):
 
     def test_a_decided_preflight_record_of_the_stamp_covers_it(self):
         area = area_with([("preflight", TWO)])
-        (path,) = sorted((area / findings.DIR).glob("*.toml"))
+        (path,) = sorted((area / audit_files.DIR).glob("*.toml"))
         set_status(path, 1, "fixed")
         set_status(path, 2, "limitation", "spread is a limit")
         self.assertIsNone(

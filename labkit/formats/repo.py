@@ -317,7 +317,7 @@ def protocol_file_name(slug: str) -> str:
 #: file of the lab — a protocol copied into `runs/<id>/` or shipped in
 #: `.venv/` is a record or a package, not a second protocol
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
-#: an area's audit evidence directory (`findings.DIR` reads it): records,
+#: an area's audit evidence directory (`audit_files.DIR` reads it): records,
 #: the attempt journal, reviews — no report stands there
 EVIDENCE_DIR = "audits"
 #: directories that hold no code of the lab: SKIP_DIRS and an area's

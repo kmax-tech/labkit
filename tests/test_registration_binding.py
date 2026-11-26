@@ -19,6 +19,7 @@ from labkit.formats import (
     audit_records,
     finding_decisions,
     findings,
+    audit_files,
     promises,
     protocol_check,
     scope_sha,
@@ -237,7 +238,7 @@ class PreflightRecord(unittest.TestCase):
 
     def test_a_record_without_the_registration_does_not_read(self):
         text = _protocol()
-        path = self.area / findings.DIR / self._record(text)
+        path = self.area / audit_files.DIR / self._record(text)
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
         path.write_text(
             "".join(ln for ln in lines if not ln.startswith("registration =")),

@@ -85,6 +85,9 @@ KNOWN_CROSSINGS = {
     # access: `start_check` read `record_way` through `findings` before the
     # split and reads nothing else of this module
     ("start_check", "audit_records"),  # audit_records.record_way
+    # likewise: the suffix of a failed attempt's file, read through
+    # `findings` before the split, and nothing else of this module
+    ("start_check", "audit_files"),  # audit_files.FAILED_SUFFIX
     (
         "start_check",
         "evidence",

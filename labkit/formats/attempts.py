@@ -100,7 +100,7 @@ from labkit.formats.files import (
     write_atomic,
     write_atomic_bytes,
 )
-from labkit.formats.findings import ANSWERS, DIR, JOURNAL
+from labkit.formats.audit_files import ANSWERS, DIR, JOURNAL
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     rel_posix,

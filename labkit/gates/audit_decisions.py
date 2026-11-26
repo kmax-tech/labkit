@@ -20,6 +20,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    audit_files,
     finding_limits,
     finding_decisions,
     audit_records,
@@ -320,11 +321,11 @@ def record_path(area: Path, record: Path) -> Path:
     <name>`), and an agent copies that name. FindingsError when neither
     exists, naming the records the area holds, so a guessed name is
     answered with the names, not a traceback."""
-    path = given_or_in(record, area / findings.DIR)
+    path = given_or_in(record, area / audit_files.DIR)
     if not path.is_file():
-        held = [r.name for r in sorted((area / findings.DIR).glob("*.toml"))]
+        held = [r.name for r in sorted((area / audit_files.DIR).glob("*.toml"))]
         raise findings.FindingsError(
-            f"{record}: no such audit record in {area / findings.DIR} — it holds "
+            f"{record}: no such audit record in {area / audit_files.DIR} — it holds "
             + (", ".join(held) if held else "none")
         )
     return path
@@ -638,7 +639,7 @@ def _print_problems(
     for a in listing.unrecorded:
         kept = ""
         if a.answer:
-            answer = area / findings.DIR / a.answer
+            answer = area / audit_files.DIR / a.answer
             kept = f"; its answer is kept in {shown(answer, Path.cwd())}"
         call = (
             f"attempt {a.id} ({a.mode}, {a.model}) ended without a record: "

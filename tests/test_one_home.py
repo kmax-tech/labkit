@@ -467,14 +467,14 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"os\.path\.relpath\([^\n]*\)\)\.as_posix\(\)",
         {"repo"},
     ),
-    # the word in a review's file name is `findings.REVIEW_WORD` or
-    # `findings.CLAIM_REVIEW_WORD`: a writer appends it to the minute, a
-    # reader builds its regex from it (`findings.name_ending`). Held: the
+    # the word in a review's file name is `audit_files.REVIEW_WORD` or
+    # `audit_files.CLAIM_REVIEW_WORD`: a writer appends it to the minute, a
+    # reader builds its regex from it (`audit_files.name_ending`). Held: the
     # word closing a string behind the minute, and the word inside a regex
     (
         "a review's name part spelled by hand",
         r"[}\"]-(?:claim-)?review\"|-(?:claim-)?review\(\?:|\|(?:claim-)?review\)",
-        {"findings"},
+        {"audit_files"},
     ),
     # a rule of the standard is cited once: its constant, named by its id
     # (`LAB_015`, `CODE_016`), is defined in `gate` and nowhere else, and no

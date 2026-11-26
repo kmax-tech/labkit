@@ -76,8 +76,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from labkit.formats import finding_decisions, findings
-from labkit.formats.findings import REVIEW_NAME, create_file, written_order
+from labkit.formats import audit_files, finding_decisions, findings
+from labkit.formats.audit_files import REVIEW_NAME, create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import reported_claim
 from labkit.formats.runs import as_stored, date_minute, name_minute
@@ -222,8 +222,8 @@ def write_review(
             f"why = {_s(d.why)}",
         ]
     return create_file(
-        area / findings.DIR,
-        f"{stamp}-{findings.REVIEW_WORD}",
+        area / audit_files.DIR,
+        f"{stamp}-{audit_files.REVIEW_WORD}",
         ".toml",
         "\n".join(lines) + "\n",
     )
@@ -296,9 +296,9 @@ def _decision(path: Path, i: int, row: object) -> Decision:
 
 
 def area_reviews(area: Path) -> list[Review]:
-    """Every review of AREA, oldest first (`findings.written_order`); a file
+    """Every review of AREA, oldest first (`audit_files.written_order`); a file
     that cannot be read raises."""
-    folder = area / findings.DIR
+    folder = area / audit_files.DIR
     if not folder.is_dir():
         return []
     paths = sorted(

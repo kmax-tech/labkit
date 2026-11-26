@@ -41,14 +41,13 @@ from labkit.formats.failed_attempts import unproven_attempts
 from labkit.formats.findings import (
     AuditedState,
     DECIDED_LIST,
-    DIR,
     FindingsError,
     MODES,
     NO_RUN,
     Record,
-    names_preflight_record,
     open_findings,
 )
+from labkit.formats.audit_files import DIR, names_preflight_record
 from labkit.formats.finding_decisions import decide_ways
 from labkit.formats.audit_records import area_records, read, record_way
 

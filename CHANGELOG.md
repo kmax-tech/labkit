@@ -86,6 +86,18 @@ labkit does not carry legacy paths: a format or API change is a break, announced
   | `labkit.formats.findings.UNCONFIRMED`            | `labkit.formats.finding_limits.UNCONFIRMED`               |
   | `labkit.formats.findings.limit_line`             | `labkit.formats.finding_limits.limit_line`                |
   | `labkit.formats.findings.answer_note`            | `labkit.formats.finding_limits.answer_note`               |
+  | `labkit.formats.findings.DIR`                    | `labkit.formats.audit_files.DIR`                          |
+  | `labkit.formats.findings.JOURNAL`                | `labkit.formats.audit_files.JOURNAL`                      |
+  | `labkit.formats.findings.ANSWERS`                | `labkit.formats.audit_files.ANSWERS`                      |
+  | `labkit.formats.findings.FAILED_SUFFIX`          | `labkit.formats.audit_files.FAILED_SUFFIX`                |
+  | `labkit.formats.findings.REVIEW_WORD`            | `labkit.formats.audit_files.REVIEW_WORD`                  |
+  | `labkit.formats.findings.CLAIM_REVIEW_WORD`      | `labkit.formats.audit_files.CLAIM_REVIEW_WORD`            |
+  | `labkit.formats.findings.name_ending`            | `labkit.formats.audit_files.name_ending`                  |
+  | `labkit.formats.findings.REVIEW_NAME`            | `labkit.formats.audit_files.REVIEW_NAME`                  |
+  | `labkit.formats.findings.create_file`            | `labkit.formats.audit_files.create_file`                  |
+  | `labkit.formats.findings.written_order`          | `labkit.formats.audit_files.written_order`                |
+  | `labkit.formats.findings.is_record_name`         | `labkit.formats.audit_files.is_record_name`               |
+  | `labkit.formats.findings.names_preflight_record` | `labkit.formats.audit_files.names_preflight_record`       |
 
 ### Added
 

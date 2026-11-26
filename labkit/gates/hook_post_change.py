@@ -38,7 +38,7 @@ from labkit.gates.hook_session import project_dir
 from labkit.gates.hook_session import session_repo
 from labkit.gates.hook_session import tell_context
 from labkit.formats import (
-    findings,
+    audit_files,
     runs,
 )
 from labkit.checks import notes_check, protocol_report
@@ -78,7 +78,7 @@ def _git_changed(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
 
 #: the directories of an area that hold its evidence: the audit files, the
 #: runs and the runs' start files
-EVIDENCE_DIRS = (findings.DIR, runs.RUNS_DIR, START_FILES_DIR)
+EVIDENCE_DIRS = (audit_files.DIR, runs.RUNS_DIR, START_FILES_DIR)
 
 
 def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:

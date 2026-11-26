@@ -86,6 +86,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    audit_files,
     audit_records,
     finding_line,
     followup,
@@ -614,7 +615,7 @@ def _refusal_without_record(
     ValueError — the answer's lines, refused by `audit_records.write`: the
     verdict count, a finding's field — ANSWER_AGAIN. ARGS gives the area
     and the protocol the command was run with."""
-    answer = args.area / findings.DIR / running.answer
+    answer = args.area / audit_files.DIR / running.answer
     kept = f"the answer is kept in {shown(answer, Path.cwd())}"
     listing = (
         f"`{audit_command(args.area, '--findings', protocol=args.protocol)}` "

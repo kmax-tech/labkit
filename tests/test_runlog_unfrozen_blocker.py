@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import audit_records, findings, promises, scope_sha  # noqa: E402
+from labkit.formats import audit_files, audit_records, promises, scope_sha  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import (
@@ -150,8 +150,8 @@ class UnfrozenBlocker(unittest.TestCase):
         self.assertIn("BLOCKER(s) nobody decided", str(cm.exception))
 
     def test_an_unreadable_record_refuses_loudly(self):
-        (self.tmp / findings.DIR).mkdir()
-        (self.tmp / findings.DIR / "2026-10-17T10-00-preflight.toml").write_text(
+        (self.tmp / audit_files.DIR).mkdir()
+        (self.tmp / audit_files.DIR / "2026-10-17T10-00-preflight.toml").write_text(
             "not = [toml\n", encoding="utf-8"
         )
         os.environ["LABKIT_UNFROZEN"] = "1"

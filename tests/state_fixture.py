@@ -20,7 +20,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 
-from labkit.formats import findings
+from labkit.formats import audit_files, findings
 from labkit.formats.answering_run import RunFacts
 from labkit.formats.area_state import TREE, AreaState, FileState, Measured
 from labkit.formats import evidence
@@ -127,7 +127,7 @@ def audit_record(
     fixed placeholders: what an audit was bound to bears on no check of
     which run a record names or which finding stands open."""
     return findings.Record(
-        path=area / findings.DIR / name,
+        path=area / audit_files.DIR / name,
         date="2026-11-10",
         mode=mode,
         model="test-model",

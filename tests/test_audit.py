@@ -49,6 +49,7 @@ from labkit.formats import (
     audit_gaps,
     failed_attempts,
     findings,
+    audit_files,
     finding_limits,
     finding_decisions,
     audit_records,
@@ -398,7 +399,7 @@ class Audit(unittest.TestCase):
         ):
             rc = audit.main([str(area), "--mode", "preflight", "--timeout", "1200"])
         self.assertEqual(rc, 2)
-        files = list((area / "audits").glob(f"*{findings.FAILED_SUFFIX}"))
+        files = list((area / "audits").glob(f"*{audit_files.FAILED_SUFFIX}"))
         self.assertEqual(len(files), 1, err.getvalue())
         self.assertIn(f"recorded as {files[0]}", err.getvalue())
         self.assertIn("LABKIT_UNFROZEN=1", err.getvalue())
@@ -412,7 +413,7 @@ class Audit(unittest.TestCase):
         self.assertEqual((attempt.outcome, attempt.file), ("failed", files[0].name))
         # no answer came, so none is kept
         self.assertEqual(attempt.answer, "")
-        self.assertFalse((area / "audits" / findings.ANSWERS).exists())
+        self.assertFalse((area / "audits" / audit_files.ANSWERS).exists())
         # `rm audits/*.toml` before a new attempt: the next audit names the
         # attempt whose evidence is gone and refuses before any call
         files[0].unlink()
@@ -2329,7 +2330,7 @@ class KeptAnswer(unittest.TestCase):
         attempt, path = self.kept(area)
         self.assertEqual(attempt.outcome, "none")
         self.assertIn("check field that does not read", attempt.error)
-        self.assertEqual(attempt.answer, f"{findings.ANSWERS}/{attempt.id}.txt")
+        self.assertEqual(attempt.answer, f"{audit_files.ANSWERS}/{attempt.id}.txt")
         self.assertEqual(path.read_text(encoding="utf-8"), answer)
 
     def test_an_answer_that_does_not_read_names_its_way_out(self):

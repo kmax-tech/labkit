@@ -16,6 +16,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.formats import findings as audit_findings
+from labkit.formats import audit_files
 from labkit.formats import protocol_block, protocol_check
 from labkit.formats.gate import (
     BLOCKER,
@@ -108,8 +109,8 @@ class PreflightStations(unittest.TestCase):
         self.assertEqual((f.grade, f.rule), (BLOCKER, preflight.LAB_011))
 
     def test_an_audit_record_that_does_not_read_blocks(self):
-        (self.area / audit_findings.DIR).mkdir()
-        (self.area / audit_findings.DIR / "2026-11-10T10-00-preflight.toml").write_text(
+        (self.area / audit_files.DIR).mkdir()
+        (self.area / audit_files.DIR / "2026-11-10T10-00-preflight.toml").write_text(
             "no = [toml\n"
         )
         found = Findings(tell=None)
@@ -150,8 +151,8 @@ class PreflightStations(unittest.TestCase):
                 self.assertIn("there is no such record", f.text)
 
     def test_a_named_record_that_does_not_read_is_the_technical_contract(self):
-        (self.area / audit_findings.DIR).mkdir()
-        (self.area / audit_findings.DIR / self.RECORD).write_text("no = [toml\n")
+        (self.area / audit_files.DIR).mkdir()
+        (self.area / audit_files.DIR / self.RECORD).write_text("no = [toml\n")
         (f,) = self._coverage(frozen=True).found
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
 

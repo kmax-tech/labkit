@@ -107,11 +107,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import audit_records, findings
+from labkit.formats import audit_files, audit_records, findings
 from labkit.formats.files import write_atomic
 from labkit.formats.gate import AUDIT_SLOT
 from labkit.formats.runs import as_stored, date_minute, name_minute
-from labkit.formats.findings import create_file, written_order
+from labkit.formats.audit_files import create_file, written_order
 from labkit.formats import protocol_block
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.digests import digest
@@ -144,7 +144,7 @@ LAST_UNDECIDED_RELEASE = "0.112.0"
 SUPERSEDED = "superseded"
 #: a claim review's file name (`<minute>-claim-review[-n].toml`), beside
 #: the reviews whose decisions it judges
-CLAIM_REVIEW_NAME = findings.name_ending(findings.CLAIM_REVIEW_WORD)
+CLAIM_REVIEW_NAME = audit_files.name_ending(audit_files.CLAIM_REVIEW_WORD)
 #: the mode of a claim review's attempts in the area's journal; it names
 #: ATTEMPT_MODE, so a handover leaves its lines out as it does the report
 #: review's (`handovers.journal_digest`)
@@ -251,7 +251,7 @@ class ReportReview:
 
 def folder(area: Path) -> Path:
     """`AREA/audits/report-reviews/`."""
-    return area / findings.DIR / FOLDER
+    return area / audit_files.DIR / FOLDER
 
 
 def fingerprint(parts: list[tuple[str, str]]) -> tuple[str, dict[str, str]]:
@@ -276,7 +276,7 @@ def write_report_review(
 ) -> Path:
     """Write the review of REPORT under PROTOCOL (both relative to the
     repo) into `AREA/audits/report-reviews/` and return its path
-    (`<minute>-review[-n].toml`, the name `findings.written_order` sorts,
+    (`<minute>-review[-n].toml`, the name `audit_files.written_order` sorts,
     never overwriting), every claim `open`. Refuses (ValueError) a claim
     of a kind outside CLAIM_KINDS, and one already decided: a review names
     claims, the person decides them (`write_claim_decision`)."""
@@ -317,7 +317,7 @@ def write_report_review(
     target.parent.mkdir(exist_ok=True)
     return create_file(
         target,
-        f"{name_minute(when)}-{findings.REVIEW_WORD}",
+        f"{name_minute(when)}-{audit_files.REVIEW_WORD}",
         ".toml",
         "\n".join(lines) + "\n",
     )
@@ -495,7 +495,7 @@ def _head(r: ReportReview) -> tuple:
 
 
 def area_report_reviews(area: Path) -> list[ReportReview]:
-    """Every report review of AREA, oldest first (`findings.written_order`);
+    """Every report review of AREA, oldest first (`audit_files.written_order`);
     a file that cannot be read raises. The claim reviews beside them are
     `area_claim_reviews`'s, the folder SUPERSEDED nobody's."""
     where = folder(area)
@@ -588,7 +588,7 @@ def write_claim_review(
     target.parent.mkdir(exist_ok=True)
     return create_file(
         target,
-        f"{name_minute(when)}-{findings.CLAIM_REVIEW_WORD}",
+        f"{name_minute(when)}-{audit_files.CLAIM_REVIEW_WORD}",
         ".toml",
         "\n".join(lines) + "\n",
     )
@@ -655,7 +655,7 @@ def _verdict(path: Path, i: int, row: object) -> ClaimVerdict:
 
 
 def area_claim_reviews(area: Path) -> list[ClaimReview]:
-    """Every claim review of AREA, oldest first (`findings.written_order`);
+    """Every claim review of AREA, oldest first (`audit_files.written_order`);
     a file that cannot be read raises."""
     where = folder(area)
     if not where.is_dir():

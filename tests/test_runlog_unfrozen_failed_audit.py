@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import audit_records, findings, promises, scope_sha  # noqa: E402
+from labkit.formats import audit_files, audit_records, promises, scope_sha  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
@@ -101,7 +101,7 @@ class FailedAudit(unittest.TestCase):
         self.assertIn("not one nobody ran", msg)
         self.assertIn("attempts: none", msg)
         self.assertIn("labkit-audit", msg)
-        self.assertIn(findings.FAILED_SUFFIX, msg)
+        self.assertIn(audit_files.FAILED_SUFFIX, msg)
 
     def test_the_owed_audit_names_the_bound_protocol_where_several(self):
         """In an area of several protocols the refusal's audit step names
@@ -152,11 +152,11 @@ class FailedAudit(unittest.TestCase):
         self.assertEqual(cfg["audit_failed"], newer.name)
 
     def test_a_hand_written_file_without_the_table_is_loud(self):
-        (self.tmp / findings.DIR).mkdir()
+        (self.tmp / audit_files.DIR).mkdir()
         (
             self.tmp
-            / findings.DIR
-            / f"2026-10-20T14-03-preflight{findings.FAILED_SUFFIX}"
+            / audit_files.DIR
+            / f"2026-10-20T14-03-preflight{audit_files.FAILED_SUFFIX}"
         ).write_text("[audit]\nmode = 'preflight'\n", encoding="utf-8")
         self.assertIn("no [failed] table", self._refused())
 

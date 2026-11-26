@@ -22,7 +22,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import audit_records, findings, promises, runs  # noqa: E402
+from labkit.formats import audit_files, audit_records, findings, promises, runs  # noqa: E402
 from labkit.gates import finalize, report_check  # noqa: E402
 from labkit.formats.gate import OPEN_RULE  # noqa: E402
 from protocol_fixture import (
@@ -133,8 +133,8 @@ class OpenFindings(unittest.TestCase):
         self.assertIn("all clear", out)
 
     def test_an_unreadable_record_is_a_blocker(self):
-        (self.area / findings.DIR).mkdir()
-        (self.area / findings.DIR / "2026-10-20T14-03-preflight.toml").write_text(
+        (self.area / audit_files.DIR).mkdir()
+        (self.area / audit_files.DIR / "2026-10-20T14-03-preflight.toml").write_text(
             "no = [toml\n"
         )
         code, out = _finalize(self.area)

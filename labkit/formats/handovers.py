@@ -49,6 +49,7 @@ from labkit.formats import digests
 from labkit.formats import (
     files,
     findings,
+    audit_files,
     jsonl,
     protocol_block,
     report_reviews,
@@ -175,7 +176,7 @@ def evidence(
     root = git_root(area)
     if root is None:
         raise HandoverError(f"{area}: handover evidence requires a git repository")
-    folder = area / findings.DIR
+    folder = area / audit_files.DIR
     try:
         if staged:
             held = indexed_blobs(root, folder)
@@ -198,7 +199,7 @@ def evidence(
             continue
         bound = (
             journal_digest(root, p, sha, staged=staged)
-            if rel == findings.JOURNAL
+            if rel == audit_files.JOURNAL
             else sha
         )
         if bound is not None:
@@ -212,7 +213,7 @@ def review_trace(rel: str) -> bool:
     (`answers/<id>.txt`, the id naming `report_reviews.ATTEMPT_MODE`)? Pure."""
     first, _, name = rel.partition("/")
     return first == report_reviews.FOLDER or (
-        first == findings.ANSWERS and f"-{report_reviews.ATTEMPT_MODE}-" in name
+        first == audit_files.ANSWERS and f"-{report_reviews.ATTEMPT_MODE}-" in name
     )
 
 
@@ -677,14 +678,14 @@ def write_record(path: Path, record: Handover) -> None:
 
 def new_path(area: Path) -> Path:
     """A fresh handover filename; it cannot be confused with a run id."""
-    return area / findings.DIR / DIRECTORY / f"handover-{secrets.token_hex(12)}.json"
+    return area / audit_files.DIR / DIRECTORY / f"handover-{secrets.token_hex(12)}.json"
 
 
 def record_paths(area: Path, *, staged: bool = False) -> list[Path]:
     """Handover records in tree/index; no file content is parsed or changed.
     Raises HandoverError when git cannot list the index."""
     area = area.resolve()
-    folder = area / findings.DIR / DIRECTORY
+    folder = area / audit_files.DIR / DIRECTORY
     if staged:
         root = git_root(area)
         if root is None:

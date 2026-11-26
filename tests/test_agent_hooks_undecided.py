@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import agent_hooks, claude_hooks  # noqa: E402
 from labkit.gates import undecided
-from labkit.formats import audit_records, findings, repo  # noqa: E402
+from labkit.formats import audit_files, audit_records, repo  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
 from repo_fixture import git as _git  # noqa: E402
 from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
@@ -252,8 +252,8 @@ class Undecided(unittest.TestCase):
             self.assertEqual(self._stop(active=True)[0], 0)
 
     def test_an_unreadable_record_is_loud(self):
-        (self.area / findings.DIR).mkdir()
-        (self.area / findings.DIR / "2026-10-20T14-03-preflight.toml").write_text(
+        (self.area / audit_files.DIR).mkdir()
+        (self.area / audit_files.DIR / "2026-10-20T14-03-preflight.toml").write_text(
             "no = [toml\n"
         )
         rc, _, err = self._stop()
@@ -386,7 +386,7 @@ class Undecided(unittest.TestCase):
 
     def test_a_record_the_index_cannot_read_is_named_as_the_index_holds_it(self):
         self._record(self.area, [BLOCKER])
-        bad = self.area / findings.DIR / "2026-10-20T14-03-preflight.toml"
+        bad = self.area / audit_files.DIR / "2026-10-20T14-03-preflight.toml"
         bad.write_text("no = [toml\n", encoding="utf-8")
         _git(self.root, "add", "-A")
         bad.unlink()  # the tree lost it, the commit carries it
