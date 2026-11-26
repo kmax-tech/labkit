@@ -1577,6 +1577,43 @@ def patch_lost(rd: RunDir) -> bool:
     return rd.config.git.endswith(DIRTY_MARK) and not patch_path(rd.dir).is_file()
 
 
+#: the way out of a patch with content beside a record of a clean tree
+#: (`patch_contradicts_record`): the person finds out which of the two
+#: holds; no command removes the patch or rewrites the mark
+PATCH_CONTRADICTION_WAY: Final = (
+    "find out which of the two holds, and change nothing before: a patch "
+    "left over from elsewhere is moved out of the run's directory, a record "
+    "changed by hand is restored from git or a backup; where neither can be "
+    "told, the run's start stays unknown and only a new measurement holds"
+)
+
+
+def patch_contradicts_record(rd: RunDir) -> str | None:
+    """The clause saying that run RD keeps changes in its
+    `uncommitted.patch` although its record says the tree was clean (its
+    `git` does not end in DIRTY_MARK), naming both files — or None where
+    the two agree. A run that starts from a clean tree leaves no patch or
+    an empty one (runlog reads the mark before the run's directory exists
+    and writes the patch after, when that directory alone makes the tree
+    differ), so a patch with content beside such a record is a
+    contradiction: a file left by something else, or a record changed
+    since. Which of the two is what the run started from is not known, so
+    no reader of a run's start picks one (`start_point`,
+    `run_record_check.code_since_run`); the way out is
+    PATCH_CONTRADICTION_WAY. RD's config must read."""
+    assert rd.config is not None, "a run whose config reads"
+    if rd.config.git.endswith(DIRTY_MARK) or not patch_text(rd.dir).strip():
+        return None
+    name, patch = rd.dir.name, patch_path(rd.dir).name
+    return (
+        f"keeps changes in {RUNS_DIR}/{name}/{patch} beside a record that says "
+        f"its tree was clean ({RUNS_DIR}/{name}/{CONFIG_FILE}: git "
+        f"{rd.config.git}, without {DIRTY_MARK}), and a run that starts from a "
+        f"clean tree keeps none: which of the two is what it started from is "
+        f"not known"
+    )
+
+
 @dataclass(frozen=True)
 class StartPoint:
     """What a run started from, readable in ROOT: COMMIT, the full sha its
@@ -1603,17 +1640,17 @@ def start_point(rd: RunDir, root: Path | None, *, subject: str) -> StartPoint | 
     3. ROOT is None: no repository to read the commit from.
     4. It started from a tree with changes and its patch is gone
        (`patch_lost`): the commit alone is not what it started from.
-    5. This clone does not hold the commit.
+    5. It keeps a patch with content beside a record of a clean tree
+       (`patch_contradicts_record`): which of the two holds is not known;
+       the sentence carries the way out (PATCH_CONTRADICTION_WAY), since
+       the callers' own ways out restore what is missing and here nothing
+       is.
+    6. This clone does not hold the commit.
 
     A run gone from the tree (`from_commit`) that started from a changed
-    tree is `code_then`'s own refusal, made before it asks here. The patch
-    itself is read by each caller, and the two differ in one case: an
-    `uncommitted.patch` beside a record that says the tree was clean, which
-    runlog does not write (it writes the patch when it sets the mark).
-    `as_measured` applies such a file, `code_then` passes it over. Which is
-    right — or whether the contradiction is to be refused — is an open
-    decision (`TODO.md`, the audit of 2026-11-26); until it is taken each
-    keeps the reading it had."""
+    tree is `code_then`'s own refusal, made before it asks here. A caller
+    that gets a `StartPoint` reads the patch exactly where CHANGED_TREE
+    says so: without the mark the patch is absent or empty."""
     if rd.config is None:
         return f"{subject} has no readable record"
     commit = recorded_commit(rd.config)
@@ -1627,6 +1664,9 @@ def start_point(rd: RunDir, root: Path | None, *, subject: str) -> StartPoint | 
             f"and its uncommitted.patch is gone: the commit alone is not what "
             f"it started from"
         )
+    contradiction = patch_contradicts_record(rd)
+    if contradiction is not None:
+        return f"{subject} {contradiction} — {PATCH_CONTRADICTION_WAY}"
     if not commit_known(root, commit):
         return (
             f"{subject} started at {commit[:12]}, a commit this clone does "

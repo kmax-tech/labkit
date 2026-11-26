@@ -50,7 +50,8 @@ def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
     `uncommitted.patch` applied (`repo.tree_then`). No tree, the reason in
     WHERE: every reason the run's start point does not read back
     (`runs.start_point`: no record, no commit, no repository, a patch
-    gone, a commit this clone does not hold), a run gone from the tree
+    gone, a patch beside a record of a clean tree, a commit this clone
+    does not hold), a run gone from the tree
     that started from a changed tree (its patch is read from its directory
     only), or a patch that does not apply. Never the tree as it stands now."""
     name = rd.dir.name
@@ -75,8 +76,6 @@ def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
     if isinstance(start, str):
         return CodeThen(name, None, start)
     commit = start.commit
-    # read only where the record says the tree had changes: the reading
-    # this function had; `as_measured` differs (`runs.start_point`)
     patch = runs.patch_text(rd.dir) if start.changed_tree else ""
     try:
         tree = tree_then(start.root, commit, patch)

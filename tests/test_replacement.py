@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import sys
 import tempfile
 import unittest
@@ -29,7 +30,9 @@ from labkit.formats import (  # noqa: E402
     promises,
     protocol_block,
     protocol_history,
+    repo,
     reviews,
+    runs,
     scope_sha,
 )
 from labkit.gates import report_check, report_hold  # noqa: E402
@@ -622,9 +625,11 @@ class ConflictingRegistrations(_Areas):
         )  # not committed: the second run at the same commit saw another block
         second = completed_run(self.a, self.A2_RUN, pid=A_ID, metrics=metrics)
         started_at(second, self.root)
-        (second / "uncommitted.patch").write_text(
-            _git(self.root, "diff", "HEAD") + "\n", encoding="utf-8"
-        )
+        record = second / "config.json"  # a changed tree, as a run marks it
+        data = json.loads(record.read_text(encoding="utf-8"))
+        data["git"] += runs.DIRTY_MARK
+        record.write_text(json.dumps(data), encoding="utf-8")
+        runs.patch_path(second).write_text(repo.tree_patch(self.root), encoding="utf-8")
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the margin raised, runs")
 
@@ -663,8 +668,8 @@ class ConflictingRegistrations(_Areas):
             )
         )
         (gap,) = self.gaps()
-        self.assertIn(f"its first measurement {self.A2_RUN} recorded block", gap)
-        self.assertIn("cannot be read back", gap)
+        self.assertIn(f"its first measurement {self.A2_RUN} started from", gap)
+        self.assertIn("its uncommitted.patch is gone", gap)
         self.assertRegex(
             gap,
             r"until they can, hand over: `protocol-fill \S+PROTOCOL-x\.md --handover",

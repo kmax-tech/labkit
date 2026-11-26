@@ -898,8 +898,6 @@ TREE_PATCH_ARGS = (
     "--dst-prefix=b/",
     "HEAD",
 )
-_COLOR = re.compile(r"\x1b\[[0-9;]*m")
-_PREFIXED = re.compile(r"^diff --git [a-z]/", re.M)
 
 
 def tree_patch(cwd: Path) -> str:
@@ -919,13 +917,11 @@ def blobs_then(
     from: COMMIT's tree with the part of PATCH (the run's `git diff HEAD`,
     "" when its tree was clean) that touches PATHS applied — read in a
     temporary index, the repository's own index untouched; the blobs land
-    in the object store, so `git cat-file blob <id>` restores one. A patch
-    not written with TREE_PATCH_ARGS is read as far as it can be: colour
-    codes dropped, hunk lengths recounted and a hunk not held to the file's
-    end (stripping cuts its last blank context lines), its path prefix taken
-    as written; a last added line's trailing whitespace the stripping took
-    is lost and reads as a change. None for a path that tree
-    lacks: untracked when the run started, or not yet there. PATHS lie in
+    in the object store, so `git cat-file blob <id>` restores one. PATCH
+    is read as `tree_patch` writes it (TREE_PATCH_ARGS, unstripped): a
+    patch in another form — coloured, without the a/ b/ prefixes, its
+    trailing blank lines stripped — is not applied and raises. None for a
+    path that tree lacks: untracked when the run started, or not yet there. PATHS lie in
     REPO's own tree. Raises GitError when COMMIT is no commit of REPO or
     the part of PATCH for PATHS does not apply to it."""
     rels = {rel_posix(p, repo): p for p in paths}
@@ -975,13 +971,29 @@ def _build_index_then(
     repo: Path, commit: str, patch: str, includes: list[str], last: list[str]
 ) -> str:
     """`_in_index_then`'s answer, built anew: the temporary index, PATCH
-    applied, LAST run on it."""
+    applied, LAST run on it. A PATCH with a file header that lacks the a/
+    b/ prefixes raises before git is asked: git would strip the first
+    folder of each path instead, and with INCLUDES apply nothing and say
+    nothing."""
+    unprefixed = [
+        line
+        for line in patch.split("\n")  # not splitlines: \f and \x85 end no line
+        if line.startswith("diff --git ")
+        and not line.startswith(("diff --git a/", 'diff --git "a/'))
+    ]
+    if unprefixed:
+        raise GitError(
+            f"git apply at {commit[:12]}: the patch is not as a run writes it "
+            f"(`{unprefixed[0]}` lacks the a/ b/ prefixes), so it is not applied"
+        )
     with tempfile.TemporaryDirectory() as tmp:
         env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
         steps: list[tuple[list[str], str | None]] = [(["read-tree", commit], None)]
         if patch.strip():
-            plain = _COLOR.sub("", patch).rstrip("\n") + "\n"
-            strip = "-p1" if _PREFIXED.search(plain) else "-p0"
+            # the two settings of the person's git a patch of `tree_patch`
+            # still depends on: `apply.whitespace` here at the reading, and
+            # `diff.context` at the writing (0 writes hunks without context,
+            # which git applies only with --unidiff-zero)
             steps.append(
                 (
                     [
@@ -989,13 +1001,11 @@ def _build_index_then(
                         "apply.whitespace=nowarn",
                         "apply",
                         "--cached",
-                        "--recount",
                         "--unidiff-zero",
-                        strip,
                         *includes,
                         "-",
                     ],
-                    plain,
+                    patch,
                 )
             )
         steps.append((last, None))

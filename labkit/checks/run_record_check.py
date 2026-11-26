@@ -31,10 +31,13 @@ from labkit.formats.runs import (
     COMPLETED,
     MEASUREMENT,
     NO_GIT,
+    PATCH_CONTRADICTION_WAY,
+    RunDir,
     completion_state,
     kept_script,
     metrics_path,
     output_file,
+    patch_contradicts_record,
     patch_text,
     script_copy_path,
     untracked_copy_differs,
@@ -155,8 +158,8 @@ def code_since_run(
     blocker that found a
     difference names its run as data (`GateFinding.changed_since`); one
     that could not compare (no script or commit recorded, a commit this
-    clone lacks, a helper uncommitted then, a script gone or ambiguous)
-    names none. Read-only. An extraction exception of the test model
+    clone lacks, a helper uncommitted then, a script gone or ambiguous,
+    changes in a patch beside a record of a clean tree) names none. Read-only. An extraction exception of the test model
     (docs/notes/2026-11-10-test-model.md): every condition here is an answer
     of git or of the run's kept copies, so the comparison stays one boundary,
     tested against real repositories (`tests/test_run_code.py`).
@@ -512,7 +515,10 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
 ) -> tuple[list[GateFinding], list[str]]:
     """(blockers, warnings) for HELPERS, the modules SCRIPT imports: one
     that differs from the run's tree or whose state then is not recorded
-    blocks; one in another repository is named, not compared."""
+    blocks; one in another repository is named, not compared. A patch
+    with content beside a record of a clean tree (`runs.patch_contradicts_record`)
+    blocks before any helper in git is compared: which tree the run
+    started from is then not known."""
     rid, here = run_dir.name, Path.cwd()
     out: list[GateFinding] = []
     warnings: list[str] = []
@@ -567,6 +573,17 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         if repo is not None and cfg.git == NO_GIT:
             return [*out, blocker(why, fix=fix, rule=LAB_010)], warnings
         return [*out, blocker(why, fix=fix, rule=TECHNICAL_RULE)], warnings
+    contradiction = patch_contradicts_record(RunDir(run_dir, cfg, None))
+    if contradiction is not None:
+        return [
+            *out,
+            blocker(
+                f"{rid} {contradiction}, so the helpers its script imports "
+                f"({names}) cannot be compared",
+                fix=f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}",
+                rule=TECHNICAL_RULE,
+            ),
+        ], warnings
     if not commit_known(repo, cfg.git_full):
         return [
             *out,

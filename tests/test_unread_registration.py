@@ -5,8 +5,8 @@ finalize holds the protocol, as the answering run saw it and as it stands,
 to what its first measurement registered, read back through git
 (`protocol_then.as_measured`). When git cannot read that text — a
 commit's tree or a blob missing from the object store, a recorded patch
-that does not apply — finalize does not pass over it as if the first
-measurement's registration stood, which would let a changed question
+that does not apply, a patch beside a record of a clean tree — finalize
+does not pass over it as if the first measurement's registration stood, which would let a changed question
 through. Each failure here is real: an object removed from the lab's repository, a patch that does not
 apply. The twin: the same area readable is held for its changed question;
 the recovery: the object restored, finalize holds as before."""
@@ -105,24 +105,58 @@ class UnreadFirstMeasurement(ChangedQuestion):
         self.remove_object(blob)
         self.assert_unread_blocks(self.finalized(), "cat-file")
 
-    def test_a_recorded_patch_that_does_not_apply_blocks(self):
+    def record_a_changed_tree(self) -> None:
+        """Run A's record says it started from a tree with changes."""
+        cfg_path = self.area / "runs" / self.run_a / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["git"] += "+dirty"
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+
+    def write_patch_that_does_not_apply(self) -> Path:
         rel = self.protocol.relative_to(self.lab.root).as_posix()
-        (self.area / "runs" / self.run_a / "uncommitted.patch").write_text(
+        patch = self.area / "runs" / self.run_a / "uncommitted.patch"
+        patch.write_text(
             f"diff --git a/{rel} b/{rel}\n--- a/{rel}\n+++ b/{rel}\n"
             "@@ -1,1 +1,1 @@\n-a line that is not there\n+x\n",
             encoding="utf-8",
         )
-        self.lab.commit("the patch run A recorded, as an older labkit wrote it")
+        return patch
+
+    def test_a_recorded_patch_that_does_not_apply_blocks(self):
+        self.record_a_changed_tree()
+        self.write_patch_that_does_not_apply()
+        self.lab.commit("run A recorded a changed tree, its patch does not apply")
         self.assert_unread_blocks(self.finalized(), "apply")
+
+    def test_changes_beside_a_clean_record_block_and_without_them_holds_again(self):
+        """Run A's record says its tree was clean, and a patch with changes
+        lies beside it: which of the two A started from is not known, so the comparison
+        does not run on either (`runs.patch_contradicts_record`) — the
+        patch is not applied (git's "apply" is never reached) and not
+        passed over. Emptied, the comparison holds as before."""
+        patch = self.write_patch_that_does_not_apply()
+        self.lab.commit("a patch beside run A's record of a clean tree")
+        out = self.finalized()
+        self.assert_unread_blocks(
+            out,
+            f"keeps changes in runs/{self.run_a}/uncommitted.patch beside a "
+            f"record that says its tree was clean (runs/{self.run_a}/config.json: "
+            f"git ",
+        )
+        self.assertIn("find out which of the two holds", out)
+        self.assertNotIn("git apply", out)
+        self.assertTrue(patch.is_file())  # nothing removed it
+        patch.write_text("", encoding="utf-8")  # as a clean start leaves it
+        self.lab.commit("the patch without the changes")
+        out = self.finalized()
+        self.assertIn(self.HELD, out)
+        self.assertNotIn(UNREAD, out)
 
     def test_a_lost_patch_of_a_changed_tree_blocks_and_restored_holds_again(self):
         """Run A started from a changed tree and its uncommitted.patch is
         gone: the commit alone is not what it saw, so the comparison does not
         run on it (`runs.patch_lost`)."""
-        cfg_path = self.area / "runs" / self.run_a / "config.json"
-        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-        cfg["git"] += "+dirty"
-        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+        self.record_a_changed_tree()
         patch = self.area / "runs" / self.run_a / "uncommitted.patch"
         patch.unlink(missing_ok=True)
         self.lab.commit("run A recorded a changed tree, its patch lost")

@@ -134,8 +134,8 @@ def as_measured(
     the protocol (untracked when the run started), a text whose block is
     not the one the run recorded; before these, every reason the run's
     start point does not read back (`runs.start_point`: no record, no
-    commit, no repository, a patch gone, a commit this clone does not
-    hold). A comparison that needs the text holds on None
+    commit, no repository, a patch gone, a patch beside a record of a
+    clean tree, a commit this clone does not hold). A comparison that needs the text holds on None
     (`unread_measurements`), never reads it as no change. ROLE opens each
     WHERE sentence before RD's id: "its first measurement" (the default),
     "run", "origin run" or "preparation run"."""
@@ -143,9 +143,7 @@ def as_measured(
     if isinstance(start, str):
         return None, start
     root, commit = start.root, start.commit
-    # read whenever the file stands, also beside a record of a clean tree:
-    # the reading this function had; `code_then` differs (`runs.start_point`)
-    patch = runs.patch_text(rd.dir)
+    patch = runs.patch_text(rd.dir) if start.changed_tree else ""
     pid = rd.config.protocol.id if rd.config is not None else None
     try:
         blob = blobs_then(root, commit, patch, [protocol])[protocol]

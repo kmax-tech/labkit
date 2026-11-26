@@ -81,9 +81,9 @@ class CodeSinceRun(unittest.TestCase):
     ) -> Path:
         """A run of SCRIPT (the area's 01_measure.py) as runlog leaves its
         record of the code: the script's hash, copy and command, the
-        commit, the tree's patch when it differs (`repo.tree_patch`, or
-        PATCH as an earlier labkit wrote it), and copies of UNTRACKED
-        siblings."""
+        commit, the tree's patch with the mark of a changed tree when it
+        differs (`repo.tree_patch`, or PATCH, a text written another
+        way), and copies of UNTRACKED siblings."""
         script = script or self.script
         d = runs.run_path(self.area, name)
         d.mkdir(parents=True, exist_ok=True)
@@ -99,6 +99,8 @@ class CodeSinceRun(unittest.TestCase):
             script=script.name,
             command=[str(script.relative_to(self.area))],
             script_sha=script_sha_of(script),
+            git=_git(self.repo, "rev-parse", "--short", "HEAD")
+            + (runs.DIRTY_MARK if patch else ""),
             git_full=_git(self.repo, "rev-parse", "HEAD"),
             untracked_sources=list(untracked),
             derived_from=derived_from,
@@ -211,14 +213,14 @@ class CodeSinceRun(unittest.TestCase):
         (line,) = self.held(run)
         self.assertIn("01_measure.py is gone", line)
 
-    def test_a_patch_an_earlier_labkit_wrote_still_reads(self) -> None:
-        """A patch an earlier labkit wrote is `git diff HEAD` as the user's
-        git printed it, stripped: a last hunk ending in blank lines lost
-        them, a colour setting coloured it, `diff.noprefix` dropped the a/ b/,
-        a dirty binary file had no full index line. Only the helpers' part is
-        applied, recounted, uncoloured, at its own prefix, so none of these
-        holds correct code; the user's `apply.whitespace` is not asked. Each run's helper is dirty, committed afterwards as it
-        ran: no blocker; changed again: one."""
+    def test_a_patch_reads_whatever_the_persons_git_settings(self) -> None:
+        """The patch a run writes (`repo.tree_patch`) applies again under
+        the person's git settings: colour, `diff.noprefix` and a binary
+        file are fixed at the writing; `diff.context=0` (hunks without
+        context) and `apply.whitespace=error` are met at the reading. Each
+        run's helper is dirty — an added line with trailing blanks, blank
+        lines at the file's end —, committed afterwards as it ran: no
+        blocker; changed again: one."""
         figure = self.area / "output" / "fig.png"
         figure.parent.mkdir()
         figure.write_bytes(b"\x89PNG\x00one")
@@ -228,30 +230,62 @@ class CodeSinceRun(unittest.TestCase):
         _git(self.repo, "add", "-A")
         _git(self.repo, "commit", "-qm", "a figure, blank lines at the end")
         _git(self.repo, "config", "apply.whitespace", "error")
-        for i, flags in enumerate(
-            ([], ["-c", "color.diff=always"], ["-c", "diff.noprefix=true"]), start=2
+        for i, setting in enumerate(
+            ("color.diff=always", "diff.noprefix=true", "diff.context=0"), start=2
         ):
-            with self.subTest(flags=flags):
-                # an added line with trailing blanks (apply.whitespace=error),
-                # and the hunk's last context blank lines, which stripping cuts
+            with self.subTest(setting=setting):
+                key, _, value = setting.partition("=")
+                _git(self.repo, "config", key, value)
                 self.helper.write_text(
                     f"def n(files):\n    x = {i}  \n    return {i} * len(files)\n\n\n\n"
                 )
                 figure.write_bytes(b"\x89PNG\x00" + bytes([i]))
-                old = subprocess.run(
-                    ["git", *flags, "diff", "HEAD"],
-                    cwd=self.area,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                ).stdout.strip()
-                run = self.run_now(patch=old)
+                run = self.run_now(name=f"2026-10-27T10-00-0{i}_ab12")
+                self.assertTrue(runs.patch_path(run).is_file())
+                self.assertIsNotNone(code_then(runs.read_run_dir(run), self.repo).tree)
                 _git(self.repo, "commit", "-qam", "commit what ran")
                 self.assertEqual(self.held(run), [])
                 self.helper.write_text(f"def n(files):\n    return {i}0 * len(files)\n")
                 (line,) = self.held(run)
                 self.assertIn("counting.py changed since", line)
                 _git(self.repo, "commit", "-qam", "changed again")
+
+    def test_a_patch_in_another_form_is_not_read(self) -> None:
+        """A patch that is not as a run writes it — here `git diff HEAD` as
+        the person's git prints it, coloured, without prefixes, or with
+        its trailing blank lines stripped — is not read as far as it goes:
+        git does not apply it, and both readers of the tree say so."""
+        self.helper.write_text(
+            "def n(files):\n    x = 0\n    return len(files)\n\n\n\n"
+        )
+        _git(self.repo, "commit", "-qam", "blank lines at the end")
+        self.helper.write_text(
+            "def n(files):\n    x = 2\n    return 2 * len(files)\n\n\n\n"
+        )
+        for i, (flags, strip) in enumerate(
+            (
+                (["-c", "color.diff=always"], False),
+                (["-c", "diff.noprefix=true"], False),
+                ([], True),
+            )
+        ):
+            with self.subTest(flags=flags, strip=strip):
+                other = subprocess.run(
+                    ["git", *flags, "diff", "HEAD"],
+                    cwd=self.repo,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout
+                run = self.run_now(
+                    name=f"2026-10-27T11-00-0{i}_cd34",
+                    patch=other.strip() if strip else other,
+                )
+                (line,) = self.held(run)
+                self.assertIn(f"the tree {run.name} started from cannot be read", line)
+                then = code_then(runs.read_run_dir(run), self.repo)
+                self.assertIsNone(then.tree)
+                self.assertIn("git apply", then.where)
 
     def test_a_script_in_a_subfolder_is_the_one_its_command_names(self) -> None:
         """A second script of the name runlog records, in scripts/llm/, is
@@ -547,29 +581,69 @@ class CodeSinceRun(unittest.TestCase):
             where, runs.start_point(rd, self.repo, subject=f"run {run.name}")
         )
 
-    def test_a_patch_beside_a_clean_record_is_passed_over_by_the_code_reader(
-        self,
-    ) -> None:
-        """The state no run of this labkit leaves — runlog writes the patch
-        exactly when it marks the tree changed: `code_then` passes such a
-        file over, even one that does not apply. The protocol reader
-        applies it (`tests/test_unread_registration.py`,
-        `test_a_recorded_patch_that_does_not_apply_blocks`). Held here as
-        it stands, so that the open decision (TODO, the audit of
-        2026-11-26: apply, pass over, or refuse the contradiction) is taken
-        knowingly and not by a refactoring."""
+    def test_a_patch_beside_a_clean_record_is_refused_by_every_reader(self) -> None:
+        """The state no run leaves — a run from a clean tree keeps no
+        changes in its patch: which of the two the run started from is not
+        known, so the code reader (`code_then`), the protocol reader
+        (`as_measured`) and the comparison of the helpers
+        (`code_since_run`) each refuse, naming the run, both files and the
+        way out, although the patch would apply. Neither file is touched.
+        The twins: an empty patch, as a run from a clean tree leaves it,
+        and the patch moved out — each reads again."""
         run = self.run_now()
-        cfg = runs.read_run_dir(run).config
+        read = runs.read_run_dir
+        cfg = read(run).config
         assert cfg is not None, "the fixture's record reads"
         self.assertFalse(cfg.git.endswith(runs.DIRTY_MARK))
-        clean = code_then(runs.read_run_dir(run), self.repo).tree
-        self.assertIsNotNone(clean)
-        runs.patch_path(run).write_text(
-            "diff --git a/none.py b/none.py\n--- a/none.py\n+++ b/none.py\n"
-            "@@ -1,1 +1,1 @@\n-a line that is not there\n+x\n",
-            encoding="utf-8",
+        self.helper.write_text("def n(files):\n    return 2 * len(files)\n")
+        applies = repo.tree_patch(self.repo)
+        _git(self.repo, "checkout", "-q", "--", "lib/counting.py")
+        record = (run / "config.json").read_bytes()
+        told = (
+            f"keeps changes in runs/{run.name}/uncommitted.patch beside a record "
+            f"that says its tree was clean (runs/{run.name}/config.json: git "
+            f"{cfg.git}, without +dirty)"
         )
-        self.assertEqual(code_then(runs.read_run_dir(run), self.repo).tree, clean)
+        runs.patch_path(run).write_text(applies, encoding="utf-8")
+        then = code_then(read(run), self.repo)
+        self.assertIsNone(then.tree)
+        self.assertIn(f"run {run.name} {told}", then.where)
+        self.assertIn(runs.PATCH_CONTRADICTION_WAY, then.where)
+        text, where = protocol_then.as_measured(
+            self.area / "PROTOCOL-x.md", read(run), self.repo, role="run"
+        )
+        self.assertIsNone(text)
+        self.assertEqual(where, then.where)
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertIn(f"{run.name} {told}", found.text)
+        self.assertIn("lib/counting.py) cannot be compared", found.text)
+        self.assertIn(runs.PATCH_CONTRADICTION_WAY, found.fix or "")
+        self.assertIn(measure_anew(self.area), found.fix or "")
+        self.assertIsNone(found.changed_since)
+        self.assertEqual(runs.patch_path(run).read_text("utf-8"), applies)
+        self.assertEqual((run / "config.json").read_bytes(), record)
+        runs.patch_path(run).write_text("", encoding="utf-8")
+        self.assertIsNotNone(code_then(read(run), self.repo).tree)
+        self.assertEqual(self.held(run), [])
+        runs.patch_path(run).unlink()
+        self.assertIsNotNone(code_then(read(run), self.repo).tree)
+        self.assertEqual(self.held(run), [])
+
+    def test_the_twin_a_changed_tree_with_its_patch_reads(self) -> None:
+        """A record with the mark and the patch that belongs to it: the
+        tree then is the commit with the patch, for both readers of it."""
+        clean = code_then(runs.read_run_dir(self.run_now()), self.repo)
+        self.helper.write_text("def n(files):\n    return 2 * len(files)\n")
+        run = self.run_now(name="2026-10-27T12-00-00_ef56")
+        rd = runs.read_run_dir(run)
+        assert rd.config is not None, "the fixture's record reads"
+        self.assertTrue(rd.config.git.endswith(runs.DIRTY_MARK))
+        then = code_then(rd, self.repo)
+        self.assertIsNotNone(then.tree)
+        self.assertNotEqual(then.tree, clean.tree)
+        self.assertIn("with its uncommitted.patch", then.where)
+        _git(self.repo, "commit", "-qam", "commit what ran")
+        self.assertEqual(self.held(run), [])
 
     def test_the_twin_a_start_that_reads_gives_commit_and_patch(self) -> None:
         run = self.run_now()
