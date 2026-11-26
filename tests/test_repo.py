@@ -1247,10 +1247,10 @@ class BuildersUnderAPathWithASpace(unittest.TestCase):
         )
         self.assertEqual(check.name, commands.CHECK)
         listed = commands.runlog_placeholder_command()
-        self.assertEqual(listed.line, ".venv/bin/runlog <area>")
+        self.assertEqual(listed.line, "runlog <area>")
         self.assertEqual(listed.name, commands.CHECK)
         waiting = commands.runlog_placeholder_command(wait=True)
-        self.assertEqual(waiting.line, ".venv/bin/runlog <area> --wait")
+        self.assertEqual(waiting.line, "runlog <area> --wait")
         self.assertEqual(waiting.name, commands.WAIT)
         self.assertEqual(
             commands.lab_stamp_command().line, ".venv/bin/labkit-init lab ."

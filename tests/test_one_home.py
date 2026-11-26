@@ -77,7 +77,12 @@ RULES: list[tuple[str, str, set[str]]] = [
     # the area with `repo.resolve_area`, which says the shared refusal
     ("an area refused by hand", r"no_such_area\(", {"repo"}),
     ("an area read off argv by hand", r"area_path\(argv\[", {"repo"}),
-    ("the run-id shape", r"\\d\{4\}-\\d\{2\}-\\d\{2\}T", {"runs"}),
+    # also as an rf-string spells it, each brace doubled (`\\d{{4}}`)
+    (
+        "the run-id shape",
+        r"\\d\{\{?4\}\}?-\\d\{\{?2\}\}?-\\d\{\{?2\}\}?T",
+        {"runs"},
+    ),
     # "relative to the repo, else absolute" has one answer; the conditional
     # form is held here, the try/except copy among the block rules
     ("a path shown relative by hand", r"\.is_relative_to\(", {"repo", "runs"}),
@@ -355,7 +360,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     # a printed line that names a command in the repo's environment is built
     # from `commands.VENV_BIN`: the fixed lines `HOOKS_INSTALL`, `PIP_INSTALL`
     # and `LOCK_WRITE`, the builders `pytest_command`, `script_check_command`,
-    # `measure_command`, `runlog_placeholder_command`, `lab_stamp_command`.
+    # `measure_command`, `lab_stamp_command`. labkit's own commands are
+    # printed by their bare name (`commands.VENV_BIN`).
     # Not held: a comment line, Python's or a stamped file's (it prints no
     # way out), the sample row of `labkit-check`'s docstring (`STALE — …`),
     # and what the installed hooks run themselves (`claude-hook`,
@@ -753,6 +759,21 @@ class OneHome(unittest.TestCase):
         for what, shape, _ in BLOCK_RULES:
             with self.subTest(what=what):
                 self.assertIsNotNone(re.compile(shape).search(samples[what]), shape)
+
+    def test_the_run_id_shape_is_seen_in_an_rf_string_too(self):
+        """An rf-string doubles each brace of a regex; the copy is the same
+        shape and is held like the plain one."""
+        (shape,) = [shape for what, shape, _ in RULES if what == "the run-id shape"]
+        for copy in (
+            'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
+            'RUN = re.compile(rf"{head}\\d{{4}}-\\d{{2}}-\\d{{2}}T")',
+        ):
+            with self.subTest(copy=copy):
+                self.assertIsNotNone(re.search(shape, copy))
+        # the twin: a date, no run id — no `T` after the day
+        self.assertIsNone(
+            re.search(shape, 'DATE = re.compile(rf"\\d{{4}}-\\d{{2}}-\\d{{2}}")')
+        )
 
     def test_the_rules_bite(self):
         """Each shape matches what it is written for (a rule that matches

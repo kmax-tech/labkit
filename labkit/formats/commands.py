@@ -26,9 +26,13 @@ from labkit.formats.runs import MEASURE_SCRIPT
 ADOPT_TOOL = "labkit-adopt"
 
 #: where a lab repo's environment keeps its commands, as the repo root
-#: reaches it: a printed line names a command there when it may be read
-#: outside the activated environment — in a git hook, before the first
-#: install, from inside a run
+#: reaches it. The convention of a printed way out: one of labkit's own
+#: commands (`runlog`, `finalize`, `labkit-adopt`, …) is printed by its
+#: bare name — the lab's environment is active, or the reader puts
+#: `.venv/bin/` before it (`docs/workflow.md`). A line names the command
+#: here only where no active environment can be assumed or the command is
+#: not labkit's: setting the environment up (the hooks, pip, the lock,
+#: `labkit-init lab .`), and the interpreter that runs a script or a test
 VENV_BIN = ".venv/bin"
 #: the repo's interpreter, which runs the area's scripts and tests
 VENV_PYTHON = f"{VENV_BIN}/python"
@@ -236,12 +240,13 @@ def script_check_command(script: Path, *flags: str) -> Command:
 
 
 def runlog_placeholder_command(*, wait: bool = False) -> Command:
-    """The `.venv/bin/runlog <area>` line (WAIT: `… --wait`) of a sentence
+    """The `runlog <area>` line (WAIT: `… --wait`) of a sentence
     printed from inside a run, which knows its output file and no area:
     `<area>` is a placeholder the reader replaces. Where the area is known
     the line names it: `gate_command("runlog", area)` lists its runs,
-    `wait_command` waits for its open run."""
-    line = f"{VENV_BIN}/runlog <area>"
+    `wait_command` waits for its open run. A line for a sentence only:
+    with `<area>` in it, it does not run as it stands."""
+    line = "runlog <area>"
     return Command(WAIT, f"{line} --wait") if wait else Command(CHECK, line)
 
 
@@ -249,7 +254,10 @@ def lab_stamp_command(name: str | None = None) -> Command:
     """The `.venv/bin/labkit-init lab .` line that stamps the lab repo's own
     files into the working directory, writing only the files that are
     absent; with NAME, shell-quoted, `--name NAME`: the project name the
-    stamped `AGENTS.md` carries instead of the directory's."""
+    stamped `AGENTS.md` carries instead of the directory's. Its name is
+    INIT like every `labkit-init` line, whose kind is DESTRUCTIVE
+    (`COMMAND_KIND`): the kind belongs to the step's name, and this line
+    itself overwrites nothing."""
     line = f"{VENV_BIN}/labkit-init lab ."
     if name is not None:
         line += f" --name {shlex.quote(name)}"
