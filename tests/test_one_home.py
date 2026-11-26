@@ -471,9 +471,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     # a rule of the standard is cited once: its constant, named by its id
     # (`LAB_015`, `CODE_016`), is defined in `gate` and nowhere else, and no
     # other module writes the citation itself — a role name is assigned the
-    # constant (`ID_RULE = LAB_004`), a finding site passes it. Not seen: a
-    # rule text held as a plain string and cited later (`lanes`,
-    # `analysis_rule`)
+    # constant (`ID_RULE = LAB_004`), a finding site passes it, and a table
+    # holds it as data (`standard_contract`, a lane's `analysis_rule`)
     (
         "a cited rule's constant defined a second time",
         r"^(LAB|CODE)_\d{3}\b[^=\n]*=",

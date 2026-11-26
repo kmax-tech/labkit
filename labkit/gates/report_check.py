@@ -94,7 +94,7 @@ from pathlib import Path
 
 from labkit.formats.repo import UNREAD_OBJECTS_WAY
 from labkit.formats import commands
-from labkit.formats.gate import TECHNICAL_RULE, cited_rule
+from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import LAB_003, LAB_010, LAB_011, LAB_041, LAB_104
 from labkit.formats.gate import GUARANTEED, NOT_EXECUTABLE
 from labkit.formats.runs import NO_GIT, RunDir
@@ -524,7 +524,7 @@ def analysis_audit_gap(
         )
     # the rule of the lane: at low the cost tier's, which owes this one
     # audit at the promotion of the number; else the analysis audit's
-    owed = cited_rule(lane(ctx.head.repeat_cost).analysis_rule)
+    owed = lane(ctx.head.repeat_cost).analysis_rule
     if link_unresolved and not covering:
         # the blocker stays: the one digest cannot tell the link from another
         # change. Only the audit is not offered — it would not release

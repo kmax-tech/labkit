@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import commands
+from labkit.formats.gate import LAB_017, LAB_050, RuleAssignment
 from labkit.formats.protocol_block import (
     DIMENSIONLESS,
     EXPLORATORY,
@@ -124,7 +125,7 @@ class Lane:
     freeze: bool
     registration: bool
     audits: tuple[str, ...]
-    analysis_rule: str
+    analysis_rule: RuleAssignment
     cut: str
     probe_allowed: bool
     foreground: bool
@@ -136,7 +137,7 @@ LOW_LANE = Lane(
     freeze=False,
     registration=True,
     audits=(ANALYSIS_AUDIT,),
-    analysis_rule="LAB-017 The number of audits follows the cost tier",
+    analysis_rule=LAB_017,
     cut=LOW_CUT,
     probe_allowed=False,
     foreground=True,
@@ -155,7 +156,7 @@ def lane(repeat_cost: str | None) -> Lane:
         freeze=True,
         registration=False,
         audits=(PREFLIGHT_AUDIT, ANALYSIS_AUDIT),
-        analysis_rule="LAB-050 Analysis audit before reporting",
+        analysis_rule=LAB_050,
         cut=FULL_FORM,
         probe_allowed=True,
         foreground=False,
