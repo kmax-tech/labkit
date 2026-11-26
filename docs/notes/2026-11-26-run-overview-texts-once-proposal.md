@@ -1,6 +1,6 @@
 # Proposal: the run overview of an analysis audit shows each registration text once (2026-11-26)
 
-> Status: a proposal. Nothing is built, and building it is not scheduled. The author asked for the proposal; whether and when to build is the author's decision (section "Decisions").
+> Status: a proposal, deferred by the author on 2026-11-26. Nothing is built. To be judged again when audit costs keep rising, when a context window gets tight, or when a change makes the same analysis records stop covering anyway (section "Decisions").
 
 ## The problem
 
