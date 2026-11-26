@@ -106,14 +106,14 @@ venvPath = "."
 venv = ".venv"
 # tests import their shared fixture module (tests/protocol_fixture.py) by name
 extraPaths = ["tests"]
-# a wheel build leaves a stale copy of the package in build/ (git-ignored);
-# checking it failed the pre-commit on code that no longer exists
-# a replay script kept as the evidence of a usability record, frozen as it
-# ran: it calls labkit as it was then (`findings.area_records`, since moved
-# to `audit_records`) and is rerun with the labkit its record pins
 exclude = [
+    # a wheel build leaves a stale copy of the package in build/ (git-ignored);
+    # checking it failed the pre-commit on code that no longer exists
     "build",
     "**/__pycache__",
     ".venv",
+    # a replay script kept as the evidence of a usability record, frozen as it
+    # ran: it calls labkit as it was then (`findings.area_records`, since moved
+    # to `audit_records`) and is rerun with the labkit its record pins
     "docs/usability/2026-10-26-fixed-followup-pilot-2/replay_pilot2.py",
 ]

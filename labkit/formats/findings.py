@@ -25,14 +25,9 @@ report fields written after the run; a preflight record also the fields
 read before the run (`protocol_check.AUDITED_FIELDS`), which an analysis
 record binds through what it was shown — and, in mode analysis, the
 answering run (`run_id`).
-A full run at `high` needs the preflight record the head names
-(`preflight_audit = "<minute>-preflight.toml"`) to be one of the code and
-the promises as they are now, every finding decided (`audit_gaps.audit_record_gap`,
-held by runlog's freeze gate and by `preflight`; `audit_gaps`); a reported number needs
-an analysis record of code, promises and the answering run as they are
-now (`report-check`); a record of the code alone would keep an audit
-valid for a promise rewritten after it or a later run under the same
-code. `preflight` reads every
+Whether a record still matches the code, the promises and the run as they
+are now is `audit_gaps`' question (`audit_gaps.audit_record_gap`), held by
+runlog's freeze gate, `preflight` and `report-check`. `preflight` reads every
 findings file of the area: a finding still `open`
 is a warning before the freeze and a blocker once `frozen = true`
 (LAB-015 Preflight audit before freezing: every finding is decided). A
@@ -54,14 +49,9 @@ follow-up audit settles the suspicion from its value, carrying a confirmed
 fault as `implementation` or `statement`; `limitation` — the
 finding is true and the number carries it as a Limitation line; `false-positive`
 — the auditor misread, the reason names the counter-evidence. A `limitation` on
-a BLOCKER or WARNING records its effect (`effect`): `stands` — the
-verdicts hold, read within the limit — unless `--not-assessable IDS` names
-the promises this run does not judge (`criterion-1 not assessable`). Which
-follows from what the promise's sentence claims — a threshold on these
-items, or a capability — not from the grade. The protocol carries each as a `Limitation (audit <record> #N)` line
-and a note in Recorded results (`protocol-fill --from-run` writes both from the
-record), and report-check holds them to it (`finding_limits.limit_line`, `finding_limits.answer_note`). Whether the
-named limit is enough stays the audit's question, not this check's.
+a BLOCKER or WARNING records its effect on the verdicts (`effect`); the
+forms of that effect and the Limitation line the protocol carries it in
+are `finding_limits`'.
 """
 
 from __future__ import annotations
