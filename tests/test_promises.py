@@ -28,12 +28,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import intent_check, recheck  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import completion_record, head  # noqa: E402
 from command_fixture import run_main
 
 MEASURE = """\
@@ -307,17 +306,7 @@ class Chain(unittest.TestCase):
     def complete(self, run: runlog.Run, metrics: dict) -> Path:
         (run.dir / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
         (run.dir / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
-                    "note": "",
-                }
-            ),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
         return run.dir
 

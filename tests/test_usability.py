@@ -21,7 +21,7 @@ from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.formats import console  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.probes import sab_cases, usability, usability_score  # noqa: E402
-from protocol_fixture import run_record, head  # noqa: E402
+from protocol_fixture import completion_record, run_record, head  # noqa: E402
 
 LOG = """\
 18:12:32 · read · CLAUDE.md
@@ -100,7 +100,9 @@ def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "low") -
         ),
         encoding="utf-8",
     )
-    (run / "completion.json").write_text("{}", encoding="utf-8")
+    (run / "completion.json").write_text(
+        json.dumps(completion_record()), encoding="utf-8"
+    )
     usability.sidecar(root, "probe.json").write_text(
         json.dumps(
             {

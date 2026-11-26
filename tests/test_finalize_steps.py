@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from protocol_fixture import PID, head, run_record  # noqa: E402
+from protocol_fixture import completion_record, PID, head, run_record  # noqa: E402
 from state_fixture import AREA, area_state
 from labkit.formats.area_state import state_of
 from labkit.gates import finalize
@@ -28,7 +28,7 @@ from labkit.formats.gate import (
     GateFinding,
 )
 from labkit.gates.preflight import AreaTests, tell_test_run
-from labkit.formats.runs import LLM_CALLS_FILE, RUN_SCHEMA
+from labkit.formats.runs import LLM_CALLS_FILE
 from labkit.formats.scope_sha import SourceError
 from labkit.tools import scaffold
 
@@ -48,7 +48,7 @@ class Steps(unittest.TestCase):
             )
             (run / "metrics.json").write_text('{"criterion_1_pass": true}')
             (run / "completion.json").write_text(
-                json.dumps({"schema_version": RUN_SCHEMA, "run_kind": "measurement"})
+                json.dumps(completion_record()), encoding="utf-8"
             )
         return protocol
 

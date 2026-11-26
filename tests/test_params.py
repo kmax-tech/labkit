@@ -13,9 +13,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record, PID, head
+from protocol_fixture import completion_record, run_record, PID, head
 
-from labkit.formats.runs import RUN_SCHEMA
 from labkit.formats import gate, promises
 from labkit.tools import params
 from command_fixture import run_main
@@ -78,17 +77,7 @@ def _run(
     )
     (d / "metrics.json").write_text('{"criterion_1_pass": true}', encoding="utf-8")
     (d / "completion.json").write_text(
-        json.dumps(
-            {
-                "schema_version": RUN_SCHEMA,
-                "run_kind": "measurement",
-                "finished": "x",
-                "git": "g",
-                "git_full": "g",
-                "note": "",
-            }
-        ),
-        encoding="utf-8",
+        json.dumps(completion_record()), encoding="utf-8"
     )
     return d
 

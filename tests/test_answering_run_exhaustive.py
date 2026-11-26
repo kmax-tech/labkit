@@ -23,7 +23,7 @@ import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-from protocol_fixture import run_record, head
+from protocol_fixture import completion_record, run_record, head
 
 from labkit.formats import console
 from labkit.formats.area_state import state_of
@@ -95,15 +95,7 @@ def _write(area: Path, name: str, kind: Kind) -> Path:
         (d / "metrics.json").write_text(json.dumps(kind.metrics), encoding="utf-8")
     if kind.completion:
         (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "x",
-                    "git": "g",
-                }
-            ),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
     return d
 

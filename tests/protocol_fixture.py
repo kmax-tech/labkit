@@ -223,6 +223,29 @@ def run_record(
     return out
 
 
+def completion_record(**fields: object) -> dict:
+    """A complete completion.json as runlog writes it at a run's clean end
+    (`runlog.Run._finalize`) — schema 5: finished one second after
+    `run_record` started, the end git state that record began with, no note,
+    no run continued. FIELDS replace what a test varies; a key the record
+    does not carry raises KeyError, so a test that names a field the
+    completion lost is found. A test of a damaged or minimal completion
+    writes its own. The one home for the record's shape in the tests; its
+    keys are held to a real run's in `tests/test_run_completion.py`."""
+    record: dict = {
+        "schema_version": runs.RUN_SCHEMA,
+        "finished": "2026-01-01T00:00:01",
+        "git": "g",
+        "git_full": "g",
+        "note": "",
+        "continues": [],
+    }
+    unknown = sorted(set(fields) - set(record))
+    if unknown:
+        raise KeyError(f"completion_record: no such field(s): {', '.join(unknown)}")
+    return {**record, **fields}
+
+
 def completed_run(
     area: Path,
     name: str,
@@ -262,16 +285,7 @@ def completed_run(
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
-                    "note": "",
-                }
-            ),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
     return d
 

@@ -33,7 +33,13 @@ from models_fixture import serve, toml
 from labkit.run import batch, llm, llm_backends, llm_cache, llm_specs, runlog
 from labkit.checks import prompt_check, recheck
 from labkit.formats import runs
-from protocol_fixture import PID, head, recheck_without_git, run_record
+from protocol_fixture import (
+    completion_record,
+    PID,
+    head,
+    recheck_without_git,
+    run_record,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -690,7 +696,9 @@ class AnsweringRun(unittest.TestCase):
             (d / "metrics.json").write_text(
                 json.dumps({"criterion_1_pass": True}), encoding="utf-8"
             )
-            (d / "completion.json").write_text("{}", encoding="utf-8")
+            (d / "completion.json").write_text(
+                json.dumps(completion_record()), encoding="utf-8"
+            )
 
     def chosen(self, adopted: str | None) -> str:
         self.protocol.write_text(head(result=adopted), encoding="utf-8")
@@ -746,7 +754,7 @@ class HoldsOutputs(unittest.TestCase):
         )
         (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         (run / "completion.json").write_text(
-            json.dumps({"status": "completed"}), encoding="utf-8"
+            json.dumps(completion_record()), encoding="utf-8"
         )
         (run / "metrics.json").write_text(
             json.dumps({"mean_n": 3.5, "n_labels": 2, "duration_s": 0.1}),

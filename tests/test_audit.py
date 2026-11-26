@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import (
+    completion_record,
     protocol_text_of,
     protocol_id_of,
     registration_of,
@@ -79,17 +80,7 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
         json.dumps([{"path": output, "sha256": None, "lines": None}]), encoding="utf-8"
     )
     (d / "completion.json").write_text(
-        json.dumps(
-            {
-                "schema_version": runs.RUN_SCHEMA,
-                "run_kind": "measurement",
-                "finished": "x",
-                "git": "g",
-                "git_full": "g",
-                "note": "",
-            }
-        ),
-        encoding="utf-8",
+        json.dumps(completion_record()), encoding="utf-8"
     )
     return d
 

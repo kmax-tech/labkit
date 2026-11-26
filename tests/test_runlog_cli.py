@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import completion_record, run_record  # noqa: E402
 from labkit.run import runlog_command  # noqa: E402
 from command_fixture import run_main
 
@@ -108,7 +108,9 @@ class TestCli(unittest.TestCase):
                 json.dumps(run_record()), encoding="utf-8"
             )
             (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
-            (run_dir / "completion.json").write_text("{}", encoding="utf-8")
+            (run_dir / "completion.json").write_text(
+                json.dumps(completion_record()), encoding="utf-8"
+            )
             code, out = self._run_main([d])
             self.assertEqual(code, 0)
             open_part, _, finished_part = out.partition("finished runs")

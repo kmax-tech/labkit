@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from protocol_fixture import run_record, PID, head  # noqa: E402
+from protocol_fixture import completion_record, run_record, PID, head  # noqa: E402
 
 from labkit.checks import recheck  # noqa: E402
 from labkit.probes import usability_score  # noqa: E402
@@ -68,8 +68,7 @@ def make_run(
     )
     if completion:
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": runs.RUN_SCHEMA, "run_kind": "measurement"}),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
     return d
 

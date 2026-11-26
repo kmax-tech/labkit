@@ -18,7 +18,7 @@ from labkit.gates import hook_post_change
 from labkit.formats.area_state import state_of
 from labkit.gates import hook_pre_run
 from labkit.gates import hook_session
-from labkit.formats.runs import RunKind, RUN_SCHEMA
+from labkit.formats.runs import RunKind
 
 import contextlib
 import io
@@ -40,6 +40,7 @@ from labkit.gates import agent_hooks, report_hold  # noqa: E402
 from labkit.tools import protocol_result
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
+    completion_record,
     source_entry,
     protocol_id_of,
     registration_of,
@@ -810,7 +811,7 @@ class StopFixture(unittest.TestCase):
             )
         )
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": RUN_SCHEMA, "run_kind": "measurement"})
+            json.dumps(completion_record()), encoding="utf-8"
         )
         if not (self.area / "audits").is_dir():
             findings.write(

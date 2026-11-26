@@ -23,7 +23,7 @@ from labkit.checks import intent_check  # noqa: E402
 from labkit.formats.area_state import state_of
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs  # noqa: E402
-from protocol_fixture import run_record, PID, head  # noqa: E402
+from protocol_fixture import completion_record, run_record, PID, head  # noqa: E402
 
 OLD = "2026-10-06T10-00-00_aaaa"
 NEW = "2026-10-06T11-00-00_bbbb"
@@ -48,17 +48,7 @@ def make_run(area: Path, name: str) -> Path:
         json.dumps({"criterion_1_pass": True}), encoding="utf-8"
     )
     (d / "completion.json").write_text(
-        json.dumps(
-            {
-                "schema_version": runs.RUN_SCHEMA,
-                "run_kind": "measurement",
-                "finished": "x",
-                "git": "g",
-                "git_full": "g",
-                "note": "",
-            }
-        ),
-        encoding="utf-8",
+        json.dumps(completion_record()), encoding="utf-8"
     )
     return d
 

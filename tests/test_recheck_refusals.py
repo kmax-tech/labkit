@@ -12,7 +12,13 @@ from pathlib import Path
 
 from labkit.checks import recheck
 from labkit.formats import runs
-from protocol_fixture import PID, head, recheck_without_git, run_record
+from protocol_fixture import (
+    completion_record,
+    PID,
+    head,
+    recheck_without_git,
+    run_record,
+)
 
 
 class RecheckRefuses(unittest.TestCase):
@@ -36,7 +42,7 @@ class RecheckRefuses(unittest.TestCase):
         run = runs.run_path(self.area, "r1")
         run.mkdir(parents=True)
         (run / "completion.json").write_text(
-            json.dumps({"schema_version": runs.RUN_SCHEMA, "finished": "x"})
+            json.dumps(completion_record()), encoding="utf-8"
         )
         (run / "config.json").write_text("{not json")
         said = self._refused(

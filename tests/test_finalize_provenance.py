@@ -23,6 +23,7 @@ from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
 from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
 from labkit.run import provenance  # noqa: E402
 from protocol_fixture import (
+    completion_record,
     PLAIN_ORIGIN,
     run_record,
     PID,
@@ -112,16 +113,7 @@ class Provenance(unittest.TestCase):
         (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
         (d / "metrics.json").write_text(json.dumps({"mean": 3.5}), encoding="utf-8")
         (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "x",
-                    "git": started[:7],
-                    "git_full": started,
-                    "note": "",
-                }
-            ),
+            json.dumps(completion_record(git=started[:7], git_full=started)),
             encoding="utf-8",
         )
         (d / "outputs.json").write_text(

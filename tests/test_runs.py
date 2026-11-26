@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import PLAIN_ORIGIN, run_record  # noqa: E402
+from protocol_fixture import completion_record, PLAIN_ORIGIN, run_record  # noqa: E402
 from labkit.formats import runs, answering_run
 from labkit.formats.area_state import state_of
 
@@ -36,7 +36,9 @@ class RunDirs(unittest.TestCase):
             (d / "config.json").write_text(config)
         if done:
             (d / "metrics.json").write_text("{}")
-            (d / "completion.json").write_text("{}")
+            (d / "completion.json").write_text(
+                json.dumps(completion_record()), encoding="utf-8"
+            )
         return d
 
     def test_no_runs_dir_is_an_empty_list(self):

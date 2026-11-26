@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import completion_record, run_record  # noqa: E402
 from labkit.formats import runs, answering_run
 from labkit.formats.answering_run import RunFacts
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
@@ -48,17 +48,7 @@ def _run(
     )
     if completion:
         (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
-                    "note": "",
-                }
-            ),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
     return d
 
@@ -396,7 +386,9 @@ class NewestCompleted(unittest.TestCase):
         d.mkdir(parents=True)
         (d / "config.json").write_text(json.dumps(run_record()))
         (d / "metrics.json").write_text("{}")
-        (d / "completion.json").write_text("{}")
+        (d / "completion.json").write_text(
+            json.dumps(completion_record()), encoding="utf-8"
+        )
         return d
 
     def test_the_newest_or_none(self):

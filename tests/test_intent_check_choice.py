@@ -15,9 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import intent_check  # noqa: E402
-from protocol_fixture import run_record, PID, head  # noqa: E402
+from protocol_fixture import completion_record, run_record, PID, head  # noqa: E402
 from command_fixture import run_main
 
 CRITERION = "- **Inference criterion:** [criterion-1] holds\n"
@@ -41,17 +40,7 @@ def _run(area: Path, rid: str, metrics: dict) -> Path:
     )
     (rd / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     (rd / "completion.json").write_text(
-        json.dumps(
-            {
-                "schema_version": RUN_SCHEMA,
-                "run_kind": "measurement",
-                "finished": "x",
-                "git": "g",
-                "git_full": "g",
-                "note": "",
-            }
-        ),
-        encoding="utf-8",
+        json.dumps(completion_record()), encoding="utf-8"
     )
     return rd / "metrics.json"
 

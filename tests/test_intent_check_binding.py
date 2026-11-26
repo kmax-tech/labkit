@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import intent_check  # noqa: E402
 from labkit.formats.area_state import state_of
 from labkit.formats import runs  # noqa: E402
-from protocol_fixture import run_record, head  # noqa: E402
+from protocol_fixture import completion_record, run_record, head  # noqa: E402
 from command_fixture import run_main
 
 A_ID = "p-aaaaaaaaaaaaaaaa"
@@ -76,17 +76,7 @@ def _run(
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
-                    "note": "",
-                }
-            ),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
     return d
 

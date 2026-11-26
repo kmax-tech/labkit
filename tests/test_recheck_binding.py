@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import recheck_without_git, run_record, head
+from protocol_fixture import completion_record, recheck_without_git, run_record, head
 
 from labkit.tools import protocol_result
 from labkit.formats.area_state import state_of
@@ -75,7 +75,9 @@ class TwoProtocols(unittest.TestCase):
                 ]
             )
         )
-        (r / "completion.json").write_text("{}")
+        (r / "completion.json").write_text(
+            json.dumps(completion_record()), encoding="utf-8"
+        )
 
     def test_the_run_bound_to_the_protocol_answers_not_the_newest(self):
         self.assertEqual(recheck.run_dir(self.area, self.a).name, RUN_A)

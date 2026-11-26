@@ -29,7 +29,14 @@ from unittest import mock
 
 from labkit.checks import recheck
 from labkit.formats import promises
-from protocol_fixture import C1_BLOCK, PID, head, run_record, started_at
+from protocol_fixture import (
+    completion_record,
+    C1_BLOCK,
+    PID,
+    head,
+    run_record,
+    started_at,
+)
 from repo_fixture import git as _git
 
 RUN_A = "2026-11-18T10-00-00_aaaa"
@@ -87,7 +94,9 @@ class AnOlderRunUnderItsOwnText(unittest.TestCase):
         )
         (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         started_at(d, self.repo)
-        (d / "completion.json").write_text(json.dumps({"status": "completed"}))
+        (d / "completion.json").write_text(
+            json.dumps(completion_record()), encoding="utf-8"
+        )
         (d / "metrics.json").write_text(json.dumps(evaluate(ROWS)))
         sha = hashlib.sha256(self.out.read_bytes()).hexdigest()[:16]
         (d / "outputs.json").write_text(

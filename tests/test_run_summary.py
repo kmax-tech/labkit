@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import completion_record, run_record  # noqa: E402
 from labkit.formats import runs
 
 
@@ -19,7 +19,9 @@ def _run(d: Path, name: str, **cfg: object) -> Path:
     }
     (run / "config.json").write_text(json.dumps(run_record({**base, **cfg})))
     (run / "metrics.json").write_text("{}")
-    (run / "completion.json").write_text("{}")
+    (run / "completion.json").write_text(
+        json.dumps(completion_record()), encoding="utf-8"
+    )
     return run
 
 

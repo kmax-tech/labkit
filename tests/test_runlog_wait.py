@@ -28,7 +28,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 from labkit.formats import findings, promises, protocol_check, runs, scope_sha  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import console  # noqa: E402
-from protocol_fixture import protocol_id_of, run_record, head, scope_file  # noqa: E402
+from protocol_fixture import (
+    completion_record,
+    protocol_id_of,
+    run_record,
+    head,
+    scope_file,
+)  # noqa: E402
 from command_fixture import run_main
 
 
@@ -56,7 +62,9 @@ class TestWait(unittest.TestCase):
             (done / "metrics.json").write_text(
                 '{"criterion_1_pass": true}', encoding="utf-8"
             )
-            (done / "completion.json").write_text("{}", encoding="utf-8")
+            (done / "completion.json").write_text(
+                json.dumps(completion_record()), encoding="utf-8"
+            )
             code, out = _run_main([d, "--wait", "--max-seconds", "1"])
             self.assertEqual(code, 0)
             self.assertIn("no open runs", out)

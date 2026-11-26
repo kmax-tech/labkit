@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import PLAIN_ORIGIN, run_record  # noqa: E402
+from protocol_fixture import completion_record, PLAIN_ORIGIN, run_record  # noqa: E402
 from labkit.checks import data_counts
 from labkit.formats.area_state import state_of
 from labkit.formats.gate import TECHNICAL_RULE
@@ -88,7 +88,7 @@ class HeldToTheRun(unittest.TestCase):
             encoding="utf-8",
         )
         (run / "completion.json").write_text(
-            json.dumps({"finished": "x"}), encoding="utf-8"
+            json.dumps(completion_record()), encoding="utf-8"
         )
         self.run_dir = run
 

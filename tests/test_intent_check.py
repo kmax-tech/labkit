@@ -14,10 +14,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record, PID, head
+from protocol_fixture import completion_record, run_record, PID, head
 
 REPO = Path(__file__).resolve().parent.parent
-from labkit.formats.runs import RUN_SCHEMA  # noqa: E402
 from labkit.checks import intent_check  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from command_fixture import run_main  # noqa: E402
@@ -61,17 +60,7 @@ class _AreaWithRun(unittest.TestCase):
         )
         (d / "metrics.json").write_text(json.dumps(data), encoding="utf-8")
         (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
-                    "note": "",
-                }
-            ),
-            encoding="utf-8",
+            json.dumps(completion_record()), encoding="utf-8"
         )
         return d / "metrics.json"
 

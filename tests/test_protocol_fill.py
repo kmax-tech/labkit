@@ -30,6 +30,7 @@ from labkit.checks import audit_binding  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import (  # noqa: E402
+    completion_record,
     protocol_id_of,
     registration_of,
     run_record,
@@ -823,7 +824,7 @@ class TestFromRun(unittest.TestCase):
             encoding="utf-8",
         )
         (run / "completion.json").write_text(
-            json.dumps({"status": "completed"}), encoding="utf-8"
+            json.dumps(completion_record()), encoding="utf-8"
         )
         (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
         (area / "PROTOCOL-count.md").write_text(self.PROTOCOL, encoding="utf-8")

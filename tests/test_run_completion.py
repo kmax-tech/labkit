@@ -30,7 +30,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import completion_record, run_record  # noqa: E402
 from labkit.formats import run_index
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs, answering_run  # noqa: E402
@@ -78,14 +78,12 @@ def _run_dir(
     if completion:
         (d / "completion.json").write_text(
             json.dumps(
-                {
-                    "schema_version": runs.RUN_SCHEMA,
-                    "run_kind": "measurement",
-                    "finished": "2026-09-26T21:00:00",
-                    "git": "abc1234",
-                    "git_full": "abc1234def",
-                    "note": "a note",
-                }
+                completion_record(
+                    finished="2026-09-26T21:00:00",
+                    git="abc1234",
+                    git_full="abc1234def",
+                    note="a note",
+                )
             ),
             encoding="utf-8",
         )
@@ -389,3 +387,27 @@ class TestDerivedRun(unittest.TestCase):
                 r.metrics(criterion_1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertIsNone(cfg["derived_from"])
+
+
+class TestCompletionFixture(unittest.TestCase):
+    """`protocol_fixture.completion_record` is the completion the other
+    test files write; it stands for a real one only while it carries the
+    fields a run writes."""
+
+    def test_the_fixture_carries_the_fields_a_run_writes(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d)
+            with contextlib.redirect_stdout(io.StringIO()):
+                with runlog.run("x", {}, base_dir=area) as r:
+                    r.metrics(criterion_1_pass=True)
+            written = runs.read_completion(r.dir)
+        fixture = completion_record()
+        self.assertEqual(list(fixture), list(written))
+        self.assertEqual(
+            {key: type(value) for key, value in fixture.items()},
+            {key: type(value) for key, value in written.items()},
+        )
+
+    def test_a_field_the_record_does_not_carry_is_refused(self):
+        with self.assertRaisesRegex(KeyError, "run_kind"):
+            completion_record(run_kind="measurement")

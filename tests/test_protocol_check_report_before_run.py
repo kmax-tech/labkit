@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from labkit.formats.area_state import state_of
 from labkit.checks import protocol_report  # noqa: E402
-from protocol_fixture import run_record, PID, head  # noqa: E402
+from protocol_fixture import completion_record, run_record, PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
 
 DID = "- **Did †:** Ran the 81-point grid and labelled the 55 test molecules.\n"
@@ -57,7 +57,7 @@ def completed_run(area: Path) -> None:
         json.dumps({"criterion_1_pass": True}), encoding="utf-8"
     )
     (run / "completion.json").write_text(
-        json.dumps({"status": "completed"}), encoding="utf-8"
+        json.dumps(completion_record()), encoding="utf-8"
     )
 
 

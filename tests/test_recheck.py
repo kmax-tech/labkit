@@ -13,7 +13,13 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from protocol_fixture import run_record, PID, head, recheck_without_git  # noqa: E402
+from protocol_fixture import (
+    completion_record,
+    run_record,
+    PID,
+    head,
+    recheck_without_git,
+)  # noqa: E402
 
 from labkit.checks import recheck, result_render  # noqa: E402
 
@@ -49,7 +55,7 @@ class Area(unittest.TestCase):
             )
         )
         (self.run_dir / "completion.json").write_text(
-            json.dumps({"status": "completed"})
+            json.dumps(completion_record()), encoding="utf-8"
         )
         self._record(evaluate(ROWS))
         self.note = self.area / "PROTOCOL-x.md"
