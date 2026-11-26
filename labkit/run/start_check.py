@@ -39,7 +39,14 @@ from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import PROBE, RunKind, parse_run_kind
 
-from labkit.formats import findings, promises, protocol_block, protocol_check, repo
+from labkit.formats import (
+    audit_records,
+    findings,
+    promises,
+    protocol_block,
+    protocol_check,
+    repo,
+)
 from labkit.formats import audit_gaps
 from labkit.formats.exploration_link import NotLinked, linked_exploration
 from labkit.formats import failed_attempts
@@ -451,7 +458,9 @@ def _undecided_findings(
     Raises SystemExit on a record nobody can read."""
     if held.unreadable:
         raise SystemExit(
-            with_way_out(f"runlog: {held.unreadable[0]}", findings.record_way(base_dir))
+            with_way_out(
+                f"runlog: {held.unreadable[0]}", audit_records.record_way(base_dir)
+            )
         )
     records = held.records
     blockers, lesser = [], []
@@ -498,7 +507,7 @@ def _audit_unavailable(
         )
     except findings.FindingsError as exc:
         raise SystemExit(
-            with_way_out(f"runlog: {exc}", findings.record_way(base_dir))
+            with_way_out(f"runlog: {exc}", audit_records.record_way(base_dir))
         ) from exc
     if failed is None:
         tried = failed_attempts.failed_attempts(base_dir)

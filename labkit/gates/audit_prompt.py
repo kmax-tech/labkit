@@ -31,6 +31,7 @@ from labkit.formats.protocol_check import prompt_blocks, unread_prompt_field
 from labkit.formats import (
     digests,
     findings,
+    audit_records,
     required_check,
     followup,
     promises,
@@ -1372,7 +1373,7 @@ def decisions_moved(earlier: list[followup.Member], area: Path) -> list[str]:
     decision that changed while the auditor read it judges neither."""
     now = {
         ref: findings.decision_digest(m.finding)
-        for ref, m in followup.chain(findings.area_records(area)).members.items()
+        for ref, m in followup.chain(audit_records.area_records(area)).members.items()
     }
     return [
         e.ref for e in earlier if now.get(e.ref) != findings.decision_digest(e.finding)
@@ -1439,7 +1440,7 @@ def earlier_of(
         blockers = followup.earlier_blockers(records, current)
         corrections = followup.earlier_corrections(records, current, field_of)
     except findings.FindingsError as exc:
-        raise AuditError(str(exc), fix=findings.record_way(area)) from exc
+        raise AuditError(str(exc), fix=audit_records.record_way(area)) from exc
     shown = blockers + corrections
     origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
     changes = {

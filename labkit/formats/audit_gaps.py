@@ -46,13 +46,11 @@ from labkit.formats.findings import (
     MODES,
     NO_RUN,
     Record,
-    area_records,
     decide_ways,
     names_preflight_record,
     open_findings,
-    read,
-    record_way,
 )
+from labkit.formats.audit_records import area_records, read, record_way
 
 
 #: how the writer's refusal names a must gap's state (`protocol_check.MustGap.state`)
@@ -212,7 +210,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
     audit where the record covers other code, another block or another
     registration (`audit_way`), the decisions where its findings are
     still open (`findings.decide_ways`), the record restored where it does not
-    read (`findings.record_way`). One answer for runlog's freeze gate, `preflight`
+    read (`audit_records.record_way`). One answer for runlog's freeze gate, `preflight`
     and `protocol-check`; the caller decides what an empty field and
     `low` mean. The record names its sha itself, so the head names the
     record. The refusal names the honest ways and offers no word to write

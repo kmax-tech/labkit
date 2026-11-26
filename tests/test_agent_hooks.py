@@ -38,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import report_blocks  # noqa: E402
 from labkit.gates import agent_hooks, report_hold  # noqa: E402
 from labkit.tools import protocol_result
-from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
+from labkit.formats import audit_records, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
     completion_record,
     source_entry,
@@ -271,7 +271,7 @@ class PreRun(unittest.TestCase):
         (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL, encoding="utf-8")
         _git(root, "add", "-A")
         _git(root, "commit", "-qm", "clean")
-        findings.write(
+        audit_records.write(
             area,
             "preflight",
             "opus",
@@ -814,7 +814,7 @@ class StopFixture(unittest.TestCase):
             json.dumps(completion_record()), encoding="utf-8"
         )
         if not (self.area / "audits").is_dir():
-            findings.write(
+            audit_records.write(
                 self.area,
                 "analysis",
                 "opus",

@@ -122,7 +122,7 @@ class PreflightStations(unittest.TestCase):
         """Station 3's closing lines for RECORDS, nothing open elsewhere."""
         told: list[str] = []
         with mock.patch.object(
-            preflight.audit_findings, "open_elsewhere", return_value=[]
+            preflight.audit_records, "open_elsewhere", return_value=[]
         ):
             preflight.check_handed_over_elsewhere(
                 Findings(tell=told.append), self.area, records
@@ -183,7 +183,7 @@ class PreflightStations(unittest.TestCase):
     def test_records_or_handovers_elsewhere_that_do_not_read_warn(self):
         found = Findings(tell=None)
         with mock.patch.object(
-            preflight.audit_findings,
+            preflight.audit_records,
             "open_elsewhere",
             side_effect=audit_findings.FindingsError("02-y/audits/a.toml: not TOML"),
         ):
@@ -200,7 +200,7 @@ class PreflightStations(unittest.TestCase):
         )
         with (
             mock.patch.object(
-                preflight.audit_findings,
+                preflight.audit_records,
                 "open_elsewhere",
                 return_value=[(other, record, finding)],
             ),

@@ -36,6 +36,7 @@ from labkit.formats import (
     evidence,
     finding_line,
     findings,
+    audit_records,
     promises,
     reviews,
     scope_sha,
@@ -115,7 +116,7 @@ def area_with(
     cfg.write_text(json.dumps(data), encoding="utf-8")
     if before_audit is not None:
         before_audit(area)
-    record = findings.write(
+    record = audit_records.write(
         area,
         "analysis",
         "opus",
@@ -133,7 +134,7 @@ def area_with(
         protocol_id=protocol_id_of(area),
     )
     for n, (status, reason, effect) in decide.items():
-        findings.write_decision(record, n, status, reason, effect)
+        audit_records.write_decision(record, n, status, reason, effect)
     # the result section as --from-run writes it: Recorded results with its
     # note, one Limitation line per decided limitation
     rendered, _ = protocol_result.render_result(proto.read_text(encoding="utf-8"), area)
@@ -145,7 +146,7 @@ def decide(record: Path, n: int, status: str, reason: str, effect: str = "") -> 
     """Decide finding N and write the result section again, as the person
     does after `--decide` (`protocol-fill --render`): a Limitation line of a
     closed finding would otherwise stand stale."""
-    findings.write_decision(record, n, status, reason, effect)
+    audit_records.write_decision(record, n, status, reason, effect)
     area = record.parent.parent
     proto = area / "PROTOCOL-x.md"
     rendered, _ = protocol_result.render_result(proto.read_text(encoding="utf-8"), area)
@@ -205,12 +206,12 @@ class Reviewable(unittest.TestCase):
                 4: ("limitation", "noted", ""),
             },
         )
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1, 2, 3])
 
     def test_named_files_resolve_against_the_repo_then_the_area(self):
         area, record = area_with([BLOCKER], {1: ("limitation", "r", "stands")})
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         files = decision_review.named_files(
             decision_review.reviewable(rec, []), area.parent.parent, area
         )
@@ -422,7 +423,7 @@ class TheCall(unittest.TestCase):
         rc, _, _, _ = run_review(area, UPHELD)
         self.assertEqual(rc, 0)
         (review,) = reviews.area_reviews(area)
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         self.assertEqual(review.record, record.name)
         self.assertEqual(
             (review.scope_sha, review.shown_sha), (rec.scope_sha, rec.shown_sha)
@@ -434,7 +435,7 @@ class TheCall(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertNotIn("decision review", out)
         # the review file is no findings record
-        self.assertEqual(len(findings.area_records(area)), 1)
+        self.assertEqual(len(audit_records.area_records(area)), 1)
 
     def test_a_rejected_review_does_not_release_and_the_gate_says_why(self):
         area, _ = area_with([BLOCKER], {1: ("limitation", "Finding noted", "stands")})
@@ -830,10 +831,10 @@ class TheCall(unittest.TestCase):
     def test_a_changed_decision_makes_the_review_stale(self):
         area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         run_review(area, UPHELD)
-        findings.write_decision(
+        audit_records.write_decision(
             record, 1, "limitation", "in-sample, and more", "stands"
         )
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         self.assertFalse(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
         self.assertEqual(
@@ -858,7 +859,7 @@ class TheCall(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         self.assertFalse(
             reviews.upholding(
                 rec, 1, reviews.area_reviews(area), proto.read_text(encoding="utf-8")
@@ -890,7 +891,7 @@ class TheCall(unittest.TestCase):
             )
             proto.write_text(text, encoding="utf-8")
             state = reviews.state(
-                findings.read(record), 1, reviews.area_reviews(area), text
+                audit_records.read(record), 1, reviews.area_reviews(area), text
             )
             self.assertTrue(
                 state.startswith(
@@ -926,7 +927,7 @@ class TheCall(unittest.TestCase):
         rc, out, _, sent = run_review(area, UPHELD, "--again")
         self.assertEqual((rc, len(sent)), (1, 1))
         self.assertIn("(--again, it releases nothing)", out)
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         found = reviews.area_reviews(area)
         self.assertTrue(found[0].again)
@@ -952,7 +953,7 @@ class TheCall(unittest.TestCase):
 
         def upheld() -> bool:
             return reviews.upholding(
-                findings.read(record), 1, reviews.area_reviews(area), text
+                audit_records.read(record), 1, reviews.area_reviews(area), text
             )
 
         self.assertTrue(upheld())
@@ -960,7 +961,7 @@ class TheCall(unittest.TestCase):
         self.assertTrue(upheld())
         decide(record, 1, "open", "the limit may not hold")
         decide(record, 1, *limit)
-        now = findings.read(record).findings[0]
+        now = audit_records.read(record).findings[0]
         self.assertEqual((now.status, now.reason, now.effect), limit)
         self.assertFalse(upheld())
         rc, out, _, _ = run_review(area, UPHELD)
@@ -984,7 +985,7 @@ class TheCall(unittest.TestCase):
         # the draw itself says upheld, the exit the state: held
         self.assertEqual((rc, len(sent)), (1, 1))
         self.assertIn("review state: held — finding(s) 1 not released", out)
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         found = reviews.area_reviews(area)
         self.assertEqual(len(found), 2)
@@ -998,7 +999,7 @@ class TheCall(unittest.TestCase):
         code, out = gate(area)
         self.assertIn("contested over 2 draws", out)
         # deciding again is a new state: one upheld review on it releases
-        findings.write_decision(
+        audit_records.write_decision(
             record,
             1,
             "limitation",
@@ -1007,7 +1008,7 @@ class TheCall(unittest.TestCase):
         )
         rc, _, _, sent = run_review(area, UPHELD)
         self.assertEqual((rc, len(sent)), (0, 1))
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
 
     def test_dismissed_after_insufficient_owes_a_review_of_its_own(self):
@@ -1057,7 +1058,7 @@ class TheCall(unittest.TestCase):
         code, out = gate(area)
         self.assertEqual(code, 1, out)
         self.assertIn("`false-positive` on a BLOCKER not reviewed", out)
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1])
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual(rc, 0, err)
@@ -1074,7 +1075,7 @@ class TheCall(unittest.TestCase):
         code, out = gate(area)
         self.assertEqual(code, 0, out)
         self.assertNotIn("decision review", out)
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         self.assertEqual(decision_review.reviewable(rec, []), [])
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual((rc, sent), (2, []))
@@ -1221,7 +1222,7 @@ class TheFile(unittest.TestCase):
         )
         self.assertTrue(second.name.endswith("-review-2.toml"), second.name)
         self.assertEqual([r.path for r in reviews.area_reviews(area)], [path, second])
-        self.assertEqual(findings.area_records(area), [])
+        self.assertEqual(audit_records.area_records(area), [])
 
 
 class ReviewsHaveOneFileState(unittest.TestCase):
@@ -1424,7 +1425,7 @@ class StandsCheckHint(unittest.TestCase):
         )
         self.assertIn("judges a reason the run does not show `insufficient`", out)
         self.assertIn("feature_count", out)
-        self.assertEqual(findings.read(record).findings[0].status, "limitation")
+        self.assertEqual(audit_records.read(record).findings[0].status, "limitation")
 
     def test_the_twins_a_key_the_run_carries_no_check_or_another_status(self):
         for rows, words, metrics in (

@@ -8,7 +8,13 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.formats import commands
-from labkit.formats import attempts, findings, protocol_check, standard_contract
+from labkit.formats import (
+    attempts,
+    audit_records,
+    findings,
+    protocol_check,
+    standard_contract,
+)
 from labkit.formats import failed_attempts
 from labkit.checks import protocol_report
 from labkit.gates import audit
@@ -147,7 +153,7 @@ class WorkflowOrientation(unittest.TestCase):
             registration = protocol_check.registration_stamp(
                 (area / "PROTOCOL-example.md").read_text(encoding="utf-8")
             )
-            findings.write(
+            audit_records.write(
                 area,
                 "preflight",
                 "auditor",
@@ -194,7 +200,7 @@ class WorkflowOrientation(unittest.TestCase):
                 block_sha="none",
                 protocol="PROTOCOL-example.md",
             )
-            covering = findings.write(
+            covering = audit_records.write(
                 area,
                 "analysis",
                 "auditor",

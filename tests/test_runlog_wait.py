@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit.formats import findings, promises, protocol_check, runs, scope_sha  # noqa: E402
+from labkit.formats import audit_records, promises, protocol_check, runs, scope_sha  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import console  # noqa: E402
 from protocol_fixture import (
@@ -1045,7 +1045,7 @@ class TestLongGate(unittest.TestCase):
             text = head(frozen=True, preflight_audit="x")
             # a decided record of this code and these promises, named in the
             # head: the field names an audit, `n/a` is refused
-            record = findings.write(
+            record = audit_records.write(
                 Path(d),
                 "preflight",
                 "opus",

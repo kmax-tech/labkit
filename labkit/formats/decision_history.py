@@ -1,7 +1,7 @@
 """decision_history — the decisions on an audit finding that a later one replaced.
 
 `labkit-audit AREA --decide N STATUS --why REASON` sets a finding's
-decision (`findings.write_decision`). A decision it replaces is kept in the
+decision (`audit_records.write_decision`). A decision it replaces is kept in the
 finding's table, oldest first, one entry per line:
 
     [[finding]]
@@ -116,7 +116,7 @@ def read_entries(value: object) -> tuple[ReplacedDecision, ...]:
     Raises DecisionHistoryError when VALUE is no array, an empty one, or an
     entry is not a table of exactly `status`, `reason`, `effect` and `until`
     as strings, `until` a minute. Whether a status is one a finding can
-    have and an effect fits it is the finding's check (`findings._finding`).
+    have and an effect fits it is the finding's check (`audit_records._finding`).
     Pure."""
     if value is None:
         return ()

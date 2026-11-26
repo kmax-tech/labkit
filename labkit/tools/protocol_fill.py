@@ -135,6 +135,7 @@ from labkit.formats import (
     console,
     files,
     findings,
+    audit_records,
     handovers,
     promises,
     protocol_block,
@@ -601,7 +602,7 @@ def _freeze_file(protocol: Path, text: str, named: str) -> int:
     try:
         if not record:
             records = [
-                r for r in findings.area_records(area) if r.mode == PREFLIGHT_AUDIT
+                r for r in audit_records.area_records(area) if r.mode == PREFLIGHT_AUDIT
             ]
             if not records:
                 console.refuse(

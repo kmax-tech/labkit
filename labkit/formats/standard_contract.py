@@ -16,7 +16,7 @@ declared itself a full run.
 This module reads no file, runs nothing and writes nothing. It takes facts
 a caller already holds and answers what is owed; reading the protocol, the
 run record or the audit records stays with their homes
-(`protocol_block.head`, `runs.read_run_config`, `findings.area_records`),
+(`protocol_block.head`, `runs.read_run_config`, `audit_records.area_records`),
 and the checks themselves stay with their modules — the contract says WHEN
 each is due, not HOW it is made.
 

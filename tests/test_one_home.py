@@ -228,7 +228,11 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("a tier rule read off the head", r"[=!]=\s*\{?\"low\"", {"standard_contract"}),
     # the walk over the records for `open` findings grades one way;
     # `findings.open_findings` holds the walk and the table of the gates' rules
-    ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
+    (
+        "an open-finding walk",
+        r"for \w+ in \w+\.open\b(?!\()",
+        {"findings", "audit_records"},
+    ),
     # the printed `--decide` line is built one way; `commands.decide_command`
     ("a decide command spelled by hand", r"--decide \{", {"commands"}),
     # the stop, the handover and --findings filter open findings to BLOCKERs

@@ -32,7 +32,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, protocol_block  # noqa: E402
+from labkit.formats import audit_records, protocol_block  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
 from test_end_to_end import CountCommands  # noqa: E402
@@ -218,7 +218,7 @@ class EachProtocolAdoptsItsOwn(CountCommands):
         self.assertEqual(rc, 0, said.getvalue())
         # without the protocol the confirmation cannot say what `fixed` owes
         self.assertNotIn("could not be read", said.getvalue())
-        self.assertEqual(findings.read(of_second).findings[0].status, "fixed")
+        self.assertEqual(audit_records.read(of_second).findings[0].status, "fixed")
 
     def test_a_change_of_the_shared_code_is_held_for_each_by_its_own_coverage(self):
         """Both protocols audited without a finding, the first adopted; then

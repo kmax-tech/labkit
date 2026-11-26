@@ -425,10 +425,10 @@ class StaleEvidence(Evidence):
         return share, text, Path(d) / "experiments" / "01-validation"
 
     def _record(self, share: Path, text: str) -> str:
-        from labkit.formats import findings, promises, scope_sha
+        from labkit.formats import audit_records, promises, scope_sha
 
         sha = scope_sha.area_stamp(share)[0]
-        return findings.write(
+        return audit_records.write(
             share,
             "preflight",
             "opus",

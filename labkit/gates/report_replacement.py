@@ -25,6 +25,7 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats import (
     findings,
+    audit_records,
     handovers,
     protocol_block,
 )
@@ -244,7 +245,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
         return [
             blocker(
                 f"the predecessor's audit records do not read: {exc}",
-                fix=findings.record_way(pred.parent, pred),
+                fix=audit_records.record_way(pred.parent, pred),
                 rule=TECHNICAL_RULE,
             )
         ]

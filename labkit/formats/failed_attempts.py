@@ -22,7 +22,7 @@ by runlog's freeze gate). labkit writes it, with the error the
 backend gave; a usage error (an unknown alias, an area that cannot be
 stamped) is not an unavailable audit and leaves none. A record of findings
 and a failed attempt never share a name (`findings.FAILED_SUFFIX`);
-`findings.area_records` reads the records only.
+`audit_records.area_records` reads the records only.
 """
 
 from __future__ import annotations

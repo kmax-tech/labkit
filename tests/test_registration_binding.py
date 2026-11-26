@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
+from labkit.formats import audit_records, findings, promises, protocol_check, scope_sha  # noqa: E402
 from labkit.formats import audit_gaps, gate
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -105,7 +105,7 @@ class PreflightRecord(unittest.TestCase):
         scope_file(self.area)
 
     def _record(self, text: str, *, audited: bool = True) -> str:
-        return findings.write(
+        return audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -196,7 +196,7 @@ class PreflightRecord(unittest.TestCase):
     def test_each_gap_carries_its_own_way_out(self):
         # an open finding is decided, not audited again; other code is
         text = _protocol()
-        open_ = findings.write(
+        open_ = audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -218,7 +218,7 @@ class PreflightRecord(unittest.TestCase):
         self.assertEqual(
             gap.fix,
             findings.decide_way(
-                self.area, findings.open_findings([findings.read(open_)])[0]
+                self.area, findings.open_findings([audit_records.read(open_)])[0]
             ),
         )
         name = self._record(text)
@@ -237,7 +237,7 @@ class PreflightRecord(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(findings.FindingsError, "run the audit again"):
-            findings.read(path)
+            audit_records.read(path)
 
 
 if __name__ == "__main__":

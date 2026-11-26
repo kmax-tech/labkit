@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks import report_blocks, result_render  # noqa: E402
 from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
-from labkit.formats import findings, promises, protocol_block, runs, scope_sha  # noqa: E402
+from labkit.formats import audit_records, promises, protocol_block, runs, scope_sha  # noqa: E402
 from labkit.tools import protocol_result
 from protocol_fixture import (
     protocol_id_of,
@@ -62,7 +62,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
             "WARNING · scripts/01_measure.py:1 · statement · one draw · x · LAB-019 r · z",
         )
     ]
-    path = findings.write(
+    path = audit_records.write(
         area,
         "analysis",
         "test",
@@ -76,7 +76,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         protocol_id=protocol_id_of(area),
     )
     if limit_reason is not None:
-        findings.write_decision(path, 1, "limitation", limit_reason, "stands")
+        audit_records.write_decision(path, 1, "limitation", limit_reason, "stands")
     return area, protocol
 
 
@@ -463,8 +463,8 @@ class ReportableVerdicts(unittest.TestCase):
 
     def test_the_rendering_leaves_the_runs_metrics_as_recorded(self):
         area, protocol = area_with_record(limit_reason=None)
-        rec = findings.area_records(area)[0]
-        findings.write_decision(
+        rec = audit_records.area_records(area)[0]
+        audit_records.write_decision(
             rec.path,
             1,
             "limitation",

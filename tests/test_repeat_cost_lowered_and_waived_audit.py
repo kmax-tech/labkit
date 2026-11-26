@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.formats import (
     audit_gaps,
     findings,
+    audit_records,
     promises,
     protocol_block,
     protocol_history,
@@ -247,7 +248,7 @@ class WaivedAudit(unittest.TestCase):
             self.area, "2026-10-07T10-00-preflight.toml", text
         )
         self.assertIn("there is no such record", gap.why if gap else "")
-        other = findings.write(
+        other = audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -261,7 +262,7 @@ class WaivedAudit(unittest.TestCase):
         gap = audit_gaps.audit_record_gap(self.area, other.name, text)
         self.assertIn("the code now stamps", gap.why if gap else "")
         sha = scope_sha.area_stamp(self.area)[0]
-        stale = findings.write(
+        stale = audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -274,7 +275,7 @@ class WaivedAudit(unittest.TestCase):
         )
         gap = audit_gaps.audit_record_gap(self.area, stale.name, text)
         self.assertIn("saw the promise block otherblock00", gap.why if gap else "")
-        open_ = findings.write(
+        open_ = audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -292,7 +293,7 @@ class WaivedAudit(unittest.TestCase):
         )
         gap = audit_gaps.audit_record_gap(self.area, open_.name, text)
         self.assertIn("still `open`", gap.why if gap else "")
-        good = findings.write(
+        good = audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -304,7 +305,7 @@ class WaivedAudit(unittest.TestCase):
             protocol_id=protocol_id_of(self.area),
         )
         self.assertIsNone(audit_gaps.audit_record_gap(self.area, good.name, text))
-        analysis = findings.write(
+        analysis = audit_records.write(
             self.area,
             "analysis",
             "opus",

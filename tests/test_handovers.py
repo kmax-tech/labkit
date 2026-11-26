@@ -19,7 +19,7 @@ import test_end_to_end as e2e
 from labkit.tools import report_command
 from labkit.formats.area_state import INDEX, state_of
 from labkit.formats import evidence
-from labkit.formats import attempts, findings, handovers, protocol_block
+from labkit.formats import attempts, audit_records, findings, handovers, protocol_block
 from labkit.checks import report_blocks
 from labkit.gates import audit
 from labkit.gates import undecided
@@ -123,7 +123,7 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("none has run yet", self.analysis_blocker(out))
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         written = record.path.read_bytes()
         record.path.unlink()
         rc, out = self.report_check()
@@ -166,7 +166,7 @@ class HandoverRecovery(cases._Chain):
         discussion still owes its review."""
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = protocol_fill.main(
@@ -215,7 +215,7 @@ class HandoverRecovery(cases._Chain):
         adoption and discussion, both owe an attempt."""
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         self.report.write_text(f"We looked at {self.run_id}.\n", encoding="utf-8")
         self.lab.git("add", "-A")
         rc, out = self.lab.pre_commit(self.report, self.protocol)
@@ -239,7 +239,7 @@ class HandoverRecovery(cases._Chain):
         record."""
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         self.lab.commit("the audit")
         record.path.unlink()
         rc, out = self.handover()
@@ -283,7 +283,7 @@ class HandoverRecovery(cases._Chain):
         # it passes saying "loss acknowledged", not in silence
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         record.path.unlink()
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
@@ -300,7 +300,7 @@ class HandoverRecovery(cases._Chain):
         # the original loss, so the agent does not write another.
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         record.path.unlink()
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
@@ -320,7 +320,7 @@ class HandoverRecovery(cases._Chain):
     def test_lost_record_can_be_handed_over_but_not_audited_or_adopted(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         original = record.path.read_bytes()
         record.path.unlink()
         self.assertTrue(attempts.area_gaps(self.area).blockers)
@@ -355,7 +355,7 @@ class HandoverRecovery(cases._Chain):
         and number; the listing names both before."""
         rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
         attempts.journal_path(self.area).write_text("not JSON\n")
         buf = io.StringIO()
@@ -700,10 +700,10 @@ class HandoverRecovery(cases._Chain):
     def test_a_bad_record_name_does_not_hide_its_readable_blocker(self):
         rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         renamed = record.path.with_name("renamed-analysis.toml")
         record.path.rename(renamed)
-        status = findings.record_status(self.area)
+        status = audit_records.record_status(self.area)
         self.assertTrue(status.errors)
         self.assertEqual(len(findings.open_findings(status.records)), 1)
         # the readable BLOCKER is not hidden: the handover records it open
@@ -716,13 +716,13 @@ class HandoverRecovery(cases._Chain):
     def test_a_staged_handover_cannot_leave_new_audit_evidence_unstaged(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         record.path.unlink()
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
         self.staged_release()
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
-        self.assertTrue(findings.record_status(self.area, staged=True).errors)
+        self.assertTrue(audit_records.record_status(self.area, staged=True).errors)
         self.assertFalse(
             handovers.valid(
                 self.area, state_of(self.area, file_state=INDEX), staged=True
@@ -754,7 +754,7 @@ class HandoverRecovery(cases._Chain):
         # in place of them
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         self.lab.commit("audited")
         record.path.unlink()
         broken = self.area / "audits" / "handovers" / "handover-broken.json"
@@ -792,10 +792,10 @@ class HandoverRecovery(cases._Chain):
     def test_a_staged_record_that_is_not_utf8_names_its_file(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         record.path.write_bytes(b"\xff\xfe")
         self.lab.git("add", "-A")
-        (error,) = findings.record_status(self.area, staged=True).errors
+        (error,) = audit_records.record_status(self.area, staged=True).errors
         self.assertIn(record.path.name, error)
 
     def test_two_areas_and_a_discussion_share_one_report(self):
@@ -838,7 +838,7 @@ class HandoverRecovery(cases._Chain):
     def test_the_block_names_each_unsettled_finding_by_record_and_number(self):
         rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
-        (record,) = findings.area_records(self.area)
+        (record,) = audit_records.area_records(self.area)
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
         named = f"{record.path.name} #1 (BLOCKER, open)"

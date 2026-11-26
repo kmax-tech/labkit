@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import audit_records, findings, promises, scope_sha  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
@@ -163,7 +163,7 @@ class FailedAudit(unittest.TestCase):
     def test_the_attempt_does_not_read_as_a_findings_record(self):
         """`area_records` sees the records only: the attempt is not an audit."""
         self._failed()
-        self.assertEqual(findings.area_records(self.tmp), [])
+        self.assertEqual(audit_records.area_records(self.tmp), [])
         self.assertEqual(len(failed_attempts.failed_attempts(self.tmp)), 1)
 
     def test_at_low_the_hatch_owes_no_attempt(self):

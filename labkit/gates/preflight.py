@@ -104,6 +104,7 @@ from labkit.formats import (
 )
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
+from labkit.formats import audit_records
 from labkit.formats import evidence
 from labkit.formats.area_state import state_of
 from labkit.formats.scope_sha import area_test_files
@@ -508,10 +509,10 @@ def check_audit_records(
     a blocker. Returns the records read, for the station's closing line —
     None when they could not be read (the blocker says why)."""
     try:
-        records = audit_findings.area_records(area)
+        records = audit_records.area_records(area)
     except audit_findings.FindingsError as exc:
         findings.block(
-            str(exc), fix=audit_findings.record_way(area), rule=TECHNICAL_RULE
+            str(exc), fix=audit_records.record_way(area), rule=TECHNICAL_RULE
         )
         return None
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
@@ -559,7 +560,7 @@ def check_handed_over_elsewhere(
     open; RECORDS None (they could not be read) closes it with nothing."""
     experiments = area.resolve().parent
     try:
-        elsewhere = audit_findings.open_elsewhere(area, experiments)
+        elsewhere = audit_records.open_elsewhere(area, experiments)
     except audit_findings.FindingsError as exc:
         findings.warn(str(exc), evidence_kind=GUARANTEED, rule=TECHNICAL_RULE)
         elsewhere = []

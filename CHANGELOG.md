@@ -51,6 +51,20 @@ labkit does not carry legacy paths: a format or API change is a break, announced
   | `labkit.formats.findings.recorded_rule`         | `labkit.formats.finding_line.recorded_rule`         |
   | `labkit.formats.findings.stored_rule`           | `labkit.formats.finding_line.stored_rule`           |
   | `labkit.formats.findings.recorded_rule_problem` | `labkit.formats.finding_line.recorded_rule_problem` |
+  | `labkit.formats.findings.REASON_FORM`           | `labkit.formats.audit_records.REASON_FORM`          |
+  | `labkit.formats.findings.write`                 | `labkit.formats.audit_records.write`                |
+  | `labkit.formats.findings.read`                  | `labkit.formats.audit_records.read`                 |
+  | `labkit.formats.findings.without_decisions`     | `labkit.formats.audit_records.without_decisions`    |
+  | `labkit.formats.findings.findings_in`           | `labkit.formats.audit_records.findings_in`          |
+  | `labkit.formats.findings.with_decision`         | `labkit.formats.audit_records.with_decision`        |
+  | `labkit.formats.findings.write_decision`        | `labkit.formats.audit_records.write_decision`       |
+  | `labkit.formats.findings.RecordStatus`          | `labkit.formats.audit_records.RecordStatus`         |
+  | `labkit.formats.findings.record_status`         | `labkit.formats.audit_records.record_status`        |
+  | `labkit.formats.findings.area_records`          | `labkit.formats.audit_records.area_records`         |
+  | `labkit.formats.findings.repo_records`          | `labkit.formats.audit_records.repo_records`         |
+  | `labkit.formats.findings.new_class_findings`    | `labkit.formats.audit_records.new_class_findings`   |
+  | `labkit.formats.findings.open_elsewhere`        | `labkit.formats.audit_records.open_elsewhere`       |
+  | `labkit.formats.findings.record_way`            | `labkit.formats.audit_records.record_way`           |
 
 ### Added
 

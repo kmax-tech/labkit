@@ -7,7 +7,7 @@ commit holds it, it stays as written:
 
     audits/<record>.toml   only its findings' decision lines change —
                            `status`, `reason`, `effect`, which `labkit-audit
-                           --decide` writes (`findings.without_decisions`) —
+                           --decide` writes (`audit_records.without_decisions`) —
                            and their replaced decisions are only added to:
                            a committed entry stays, a committed decision
                            that was replaced is kept as the next entry
@@ -69,6 +69,7 @@ from labkit.formats.commands import checkout_command
 from labkit.formats import (
     decision_history,
     findings,
+    audit_records,
     handovers,
     report_reviews,
     reviews,
@@ -162,13 +163,13 @@ def closed_runs(files: Iterable[str]) -> set[str]:
 def record_changed(before: str, after: str) -> bool:
     """Does AFTER, a record's text, differ from BEFORE, the version a commit
     holds, beyond what a decision writes? Yes when a line other than its
-    findings' decision lines differs (`findings.without_decisions`), or when
+    findings' decision lines differs (`audit_records.without_decisions`), or when
     a finding lost a decision BEFORE holds: an entry of its replaced
     decisions changed or gone, or BEFORE's decision replaced without being
     kept (`decision_history.history_kept`). A version whose findings lack
     the decision lines is compared whole. The histories are compared only
     when both versions read as records: one that does not is reported by
-    the record's own reader (`findings.read`), not here. Pure."""
+    the record's own reader (`audit_records.read`), not here. Pure."""
     stand = other_lines_stand(before, after)
     if stand is None:
         return before != after
@@ -177,9 +178,12 @@ def record_changed(before: str, after: str) -> bool:
 
 def other_lines_stand(before: str, after: str) -> bool | None:
     """Do BEFORE and AFTER, two versions of a record, agree in every line
-    but their findings' decision lines (`findings.without_decisions`)? None
+    but their findings' decision lines (`audit_records.without_decisions`)? None
     when the findings of one lack those lines. Pure."""
-    kept, now = findings.without_decisions(before), findings.without_decisions(after)
+    kept, now = (
+        audit_records.without_decisions(before),
+        audit_records.without_decisions(after),
+    )
     if kept is None or now is None:
         return None
     return kept == now
@@ -191,7 +195,10 @@ def decision_lost(before: str, after: str) -> bool:
     against the same finding of BEFORE. Asked of two versions that differ in
     their findings' decision lines alone; False when one of them does not
     read as a record or they hold different numbers of findings. Pure."""
-    committed, standing = findings.findings_in(before), findings.findings_in(after)
+    committed, standing = (
+        audit_records.findings_in(before),
+        audit_records.findings_in(after),
+    )
     if committed is None or standing is None or len(committed) != len(standing):
         return False
     return not all(
@@ -914,11 +921,11 @@ class AreaEvidence:
     read once).
 
     Attributes:
-        records: The audit records that read (`findings.record_status`).
+        records: The audit records that read (`audit_records.record_status`).
         gaps: Every record or attempt that is gone, or a journal that does
             not read, each with its restore (`attempts.evidence_gaps`).
         unreadable: Each record that does not read, its sentence
-            (`findings.record_status`) — a broken file hides no other.
+            (`audit_records.record_status`) — a broken file hides no other.
         changes: Every change of the committed evidence against HEAD that
             breaks its rule, each an `EvidenceChange` (`evidence.change_findings`);
             `change_sentences` and `change_blockers` render them.
@@ -983,7 +990,7 @@ def read_evidence(area: Path, staged: bool) -> AreaEvidence:
     records are the tree's in either state (their readers know no index),
     and a file that does not read is carried as its sentence, never
     raised. Raises RuntimeError when git fails."""
-    status = findings.record_status(area, staged=staged)
+    status = audit_records.record_status(area, staged=staged)
     found_reviews: tuple[reviews.Review, ...] = ()
     reviews_unread = ""
     try:

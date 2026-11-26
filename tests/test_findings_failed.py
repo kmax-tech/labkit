@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from labkit.formats import findings
+from labkit.formats import audit_records, findings
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
@@ -53,7 +53,7 @@ class WriteRead(unittest.TestCase):
 
     def test_records_and_attempts_are_read_apart(self):
         attempt(self.area)
-        findings.write(
+        audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -64,7 +64,7 @@ class WriteRead(unittest.TestCase):
             registration=registration_of(self.area),
             protocol_id=protocol_id_of(self.area),
         )
-        self.assertEqual(len(findings.area_records(self.area)), 1)
+        self.assertEqual(len(audit_records.area_records(self.area)), 1)
         self.assertEqual(len(failed_attempts.failed_attempts(self.area)), 1)
 
     def test_wrong_mode_refuses_to_write(self):

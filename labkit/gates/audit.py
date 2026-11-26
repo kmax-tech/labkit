@@ -86,6 +86,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    audit_records,
     finding_line,
     followup,
     protocol_block,
@@ -552,7 +553,7 @@ def _record(
         return 2
     b, w, _ = result["verdict"]
     try:
-        recorded = findings.write(
+        recorded = audit_records.write(
             args.area,
             args.mode,
             args.model,
@@ -592,7 +593,7 @@ def _record(
     # cut it off
     print()
     for line in decision_lines(
-        findings.read(recorded), args.area, report, args.protocol
+        audit_records.read(recorded), args.area, report, args.protocol
     ):
         print(line)
     for line in fix_lines(bound.earlier_repairs.entries, fixes):
@@ -609,8 +610,8 @@ def _refusal_without_record(
     the call and offers the handover. The first way by the cause: an
     AuditError's own fix (each raised in `_record` carries one); for an
     area record that does not read (FindingsError, from `audit_prompt.decisions_moved`)
-    `findings.record_way`, which names `--findings` itself; for any other
-    ValueError — the answer's lines, refused by `findings.write`: the
+    `audit_records.record_way`, which names `--findings` itself; for any other
+    ValueError — the answer's lines, refused by `audit_records.write`: the
     verdict count, a finding's field — ANSWER_AGAIN. ARGS gives the area
     and the protocol the command was run with."""
     answer = args.area / findings.DIR / running.answer
@@ -624,7 +625,7 @@ def _refusal_without_record(
         return with_way_out(exc.why, "; ".join(ways))
     if isinstance(exc, findings.FindingsError):
         return with_way_out(
-            str(exc), f"{findings.record_way(args.area, args.protocol)}; {kept}"
+            str(exc), f"{audit_records.record_way(args.area, args.protocol)}; {kept}"
         )
     return with_way_out(str(exc), f"{ANSWER_AGAIN}; {kept}; {listing}")
 
@@ -654,7 +655,7 @@ def _stamp_report(
     preflight the head field that names the record
     (`preflight_audit = "<record>"`, once every finding is decided); and a
     NOTE when the code changed while the auditor read it."""
-    grades = [f.grade for f in findings.read(recorded).findings]
+    grades = [f.grade for f in audit_records.read(recorded).findings]
     print(f"\nstamp: {stamp_facts(stamp, grades, verdict[2])}", file=sys.stderr)
     if mode == PREFLIGHT_AUDIT:
         print(

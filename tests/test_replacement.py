@@ -25,6 +25,7 @@ from labkit.tools import report_command
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import (  # noqa: E402
     findings,
+    audit_records,
     gate,
     handovers,
     promises,
@@ -405,7 +406,7 @@ class Gate(_Areas):
         self.assertTrue(any("in a circle" in g for g in self.gaps()), self.gaps())
 
     def test_the_predecessors_open_blocker_is_decided_first(self):
-        record = findings.write(
+        record = audit_records.write(
             self.a,
             "analysis",
             "opus",
@@ -431,7 +432,7 @@ class Gate(_Areas):
         self.assertIn("--handover", gap)
         # the twin: a handover of the predecessor that records the BLOCKER
         # releases the replacement; the finding stays open
-        (rec,) = findings.area_records(record.parent.parent)
+        (rec,) = audit_records.area_records(record.parent.parent)
         handovers.write_record(
             handovers.new_path(record.parent.parent),
             handovers.Handover(
@@ -452,7 +453,7 @@ class Gate(_Areas):
             ),
         )
         self.assertEqual(self.gaps(), [])
-        self.assertEqual(findings.read(record).findings[0].status, "open")
+        self.assertEqual(audit_records.read(record).findings[0].status, "open")
 
     def test_the_predecessors_record_changed_after_its_commit_is_held(self):
         """The predecessor's records are read from its own area, which
@@ -460,7 +461,7 @@ class Gate(_Areas):
         from a record a commit holds released the replacement. The twins:
         the record as committed names no change, and restored and decided
         `--decide`'s way the replacement passes."""
-        record = findings.write(
+        record = audit_records.write(
             self.a,
             "analysis",
             "opus",
@@ -493,7 +494,9 @@ class Gate(_Areas):
             f"git checkout HEAD -- experiments/01-a/audits/{record.name}", gap
         )
         record.write_text(kept, encoding="utf-8")
-        findings.write_decision(record, 1, "false-positive", "the leak is not measured")
+        audit_records.write_decision(
+            record, 1, "false-positive", "the leak is not measured"
+        )
         self.assertEqual(self.gaps(), [])
 
     def test_the_predecessors_verdict_is_rendered_first(self):
@@ -527,7 +530,7 @@ class Gate(_Areas):
         text = proto.read_text(encoding="utf-8")
         run = self.a / "runs" / A_RUN
         shown = shown_sha(self.a, run)
-        record = findings.write(
+        record = audit_records.write(
             self.a,
             "analysis",
             "opus",
@@ -545,14 +548,14 @@ class Gate(_Areas):
             registration=registration_of(self.a),
             protocol_id=protocol_id_of(self.a),
         )
-        findings.write_decision(
+        audit_records.write_decision(
             record,
             1,
             "limitation",
             "the null lane reused the gold order, so chance is unknown",
             "criterion-1 not assessable",
         )
-        rec = findings.read(record)
+        rec = audit_records.read(record)
         reviews.write_review(
             self.a,
             "opus",

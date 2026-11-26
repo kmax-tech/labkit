@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks.audit_binding import AuditError  # noqa: E402
 from labkit.checks.report_blocks import discussion_lines  # noqa: E402
-from labkit.formats import attempts, findings, report_reviews  # noqa: E402
+from labkit.formats import attempts, audit_records, report_reviews  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.gates import audit, audit_prompt, report_review  # noqa: E402
 from labkit.run import llm_backends  # noqa: E402
@@ -57,7 +57,7 @@ class Area:
             json.dumps({"criterion_1_score": 0.7795, "criterion_1_pass": True}),
             encoding="utf-8",
         )
-        rec = findings.write(
+        rec = audit_records.write(
             self.area,
             "analysis",
             "opus",
@@ -75,7 +75,7 @@ class Area:
             run_id=RUN,
             shown_sha="0" * 12,
         )
-        findings.write_decision(
+        audit_records.write_decision(
             rec, 1, "limitation", "the leak stays", "criterion-1 not assessable"
         )
         failed_attempts.write_failed(
@@ -374,7 +374,7 @@ class Command(unittest.TestCase):
             report_reviews.fingerprint(before), report_reviews.fingerprint(after)
         )
         # the folder is no record and no decision review to their readers
-        self.assertEqual(len(findings.area_records(self.a.area)), 1)
+        self.assertEqual(len(audit_records.area_records(self.a.area)), 1)
 
     def test_an_unreadable_reply_is_no_review(self):
         rc, _, _, _ = self.review(MARKED, "looks fine to me")

@@ -49,6 +49,7 @@ from labkit.formats import (
     audit_gaps,
     failed_attempts,
     findings,
+    audit_records,
     required_check,
     followup,
     promises,
@@ -404,7 +405,7 @@ class Audit(unittest.TestCase):
         self.assertEqual(tried.timeout_s, 1200)
         self.assertEqual(tried.scope_sha, scope_sha.area_stamp(area)[0])
         self.assertIn("--mode preflight --timeout 1200", tried.command)
-        self.assertEqual(findings.area_records(area), [])  # no findings were made
+        self.assertEqual(audit_records.area_records(area), [])  # no findings were made
         (attempt,) = attempts.read_journal(area)
         self.assertEqual((attempt.outcome, attempt.file), ("failed", files[0].name))
         # no answer came, so none is kept
@@ -819,7 +820,7 @@ class OneSnapshot(unittest.TestCase):
                 rc, err, sent = self.audit(area, **{name: edit})
                 self.assertEqual((rc, sent), (2, []), err)
                 self.assertIn("changed while it was read", err)
-                self.assertEqual(findings.area_records(area), [])
+                self.assertEqual(audit_records.area_records(area), [])
 
     def test_a_script_added_between_listing_and_snapshot_refuses(self):
         """A script added between the listing and the snapshot would stand
@@ -840,7 +841,7 @@ class OneSnapshot(unittest.TestCase):
             area, answer=lambda: lib.write_text("X = 999\n", encoding="utf-8")
         )
         self.assertEqual(rc, 0, err)
-        (record,) = findings.area_records(area)
+        (record,) = audit_records.area_records(area)
         self.assertIn("X = 0.7", sent[0])
         self.assertEqual(record.scope_sha, before)
         self.assertEqual(record.scope_sha, self.digest_of_the_prompt(sent[0], stamped))
@@ -852,7 +853,7 @@ class OneSnapshot(unittest.TestCase):
         stamped = self.stamped(area)
         rc, err, sent = self.audit(area)
         self.assertEqual(rc, 0, err)
-        (record,) = findings.area_records(area)
+        (record,) = audit_records.area_records(area)
         self.assertEqual(record.scope_sha, scope_sha.area_stamp(area)[0])
         self.assertEqual(record.scope_sha, self.digest_of_the_prompt(sent[0], stamped))
 
@@ -1080,7 +1081,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
             )
         self.assertEqual(rc, 0, decided.getvalue())  # a limit's verdicts stand
         self.assertEqual(
-            findings.area_records(promised)[-1].findings[0].effect, "stands"
+            audit_records.area_records(promised)[-1].findings[0].effect, "stands"
         )
         self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
@@ -1154,7 +1155,9 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 self.assertEqual(stop.exception.code, 2)
                 self.assertIn(f"labkit-audit: error: {said}\n", err.getvalue())
                 self.assertNotIn("unrecognized arguments", err.getvalue())
-        self.assertEqual(findings.area_records(area)[-1].findings[0].status, "open")
+        self.assertEqual(
+            audit_records.area_records(area)[-1].findings[0].status, "open"
+        )
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             rc = audit.main(
@@ -1169,7 +1172,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
             )
         self.assertEqual(rc, 0, out.getvalue())
         self.assertIn("finding 1: limitation (stands) — the limit", out.getvalue())
-        decided = findings.area_records(area)[-1].findings[0]
+        decided = audit_records.area_records(area)[-1].findings[0]
         self.assertEqual((decided.status, decided.effect), ("limitation", "stands"))
 
     def test_an_accepted_warning_is_told_its_review_warns_and_does_not_hold(self):
@@ -1215,7 +1218,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         undecided finding set to `open` owes no reason and keeps nothing."""
         area = repo_with()
         run(area, BLOCK)
-        record = findings.area_records(area)[-1].path
+        record = audit_records.area_records(area)[-1].path
 
         def main(*words: str) -> tuple[int, str, str]:
             out, err = io.StringIO(), io.StringIO()
@@ -1241,7 +1244,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         rc, _, err = main("--decide", "1", "false-positive", "--why", "a.py:1 reads b")
         self.assertEqual(rc, 0, err)
-        f = findings.read(record).findings[0]
+        f = audit_records.read(record).findings[0]
         self.assertEqual(
             [(d.status, d.reason) for d in f.replaced_decisions],
             [("fixed", long_reason.strip()), ("open", "the rows are still read")],
@@ -1273,7 +1276,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         area = repo_with()
         checked = BLOCK.replace(" · z\n", " · z · check: leak_rate (must be 0)\n")
         run(area, checked)
-        record = findings.area_records(area)[-1].path
+        record = audit_records.area_records(area)[-1].path
         old = Path.cwd()
         os.chdir(area.parents[1])
         try:
@@ -1323,7 +1326,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 "owes now.",
                 said,
             )
-            f = findings.read(record).findings[0]
+            f = audit_records.read(record).findings[0]
             self.assertEqual(
                 (f.status, f.reason, f.effect), ("fixed", "dropped the feature", "")
             )
@@ -1348,7 +1351,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 f"{review}",
                 said,
             )
-            f = findings.read(record).findings[0]
+            f = audit_records.read(record).findings[0]
             self.assertEqual(
                 (f.status, f.reason, f.effect), ("limitation", "the limit", "stands")
             )
@@ -1364,7 +1367,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 "command that decides it",
                 said,
             )
-            f = findings.read(record).findings[0]
+            f = audit_records.read(record).findings[0]
             self.assertEqual(
                 (f.status, f.reason, f.effect),
                 ("open", "taken back: the repair did not hold", ""),
@@ -1375,10 +1378,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 f"must uphold it before the number leaves: {review}",
                 decide("false-positive", "a.py:1 reads b"),
             )
-            f = findings.read(record).findings[0]
+            f = audit_records.read(record).findings[0]
             self.assertEqual((f.status, f.reason), ("false-positive", "a.py:1 reads b"))
             self.assertEqual(
-                len(findings.area_records(area)), 1
+                len(audit_records.area_records(area)), 1
             )  # nothing written beside
         finally:
             os.chdir(old)
@@ -1499,7 +1502,7 @@ class FixVerdicts(unittest.TestCase):
         """An area with an answering run and an earlier analysis record
         whose BLOCKER #1 (LINE, LEAK by default) is decided `fixed`."""
         area = OneSnapshot.area(OneSnapshot())
-        earlier = findings.write(
+        earlier = audit_records.write(
             area,
             "analysis",
             "opus",
@@ -1513,7 +1516,7 @@ class FixVerdicts(unittest.TestCase):
             shown_sha="2" * 12,
             now=0,
         )
-        findings.write_decision(earlier, 1, "fixed", "dropped poisson_ratio")
+        audit_records.write_decision(earlier, 1, "fixed", "dropped poisson_ratio")
         return area, earlier
 
     def audit(
@@ -1539,7 +1542,7 @@ class FixVerdicts(unittest.TestCase):
         return rc, out.getvalue(), err.getvalue(), sent
 
     def new_records(self, area: Path, earlier: Path) -> list[findings.Record]:
-        return [r for r in findings.area_records(area) if r.path != earlier]
+        return [r for r in audit_records.area_records(area) if r.path != earlier]
 
     def test_the_prompt_shows_each_fixed_blocker_and_the_verdict_is_bound(self):
         area, earlier = self.area()
@@ -1554,7 +1557,7 @@ class FixVerdicts(unittest.TestCase):
         )
         (record,) = self.new_records(area, earlier)
         (v,) = record.fix_verdicts
-        decided = findings.read(earlier).findings[0]
+        decided = audit_records.read(earlier).findings[0]
         self.assertEqual(
             (v.record, v.n, v.verdict, v.decision_sha),
             (earlier.name, 1, "unresolved", findings.decision_digest(decided)),
@@ -1668,7 +1671,7 @@ class FixVerdicts(unittest.TestCase):
         """Two fixed BLOCKERs shown; a continuation line naming the second
         leaves open which finding the verdict judges: no record."""
         area = OneSnapshot.area(OneSnapshot())
-        two = findings.write(
+        two = audit_records.write(
             area,
             "analysis",
             "opus",
@@ -1683,7 +1686,7 @@ class FixVerdicts(unittest.TestCase):
             now=0,
         )
         for n in (1, 2):
-            findings.write_decision(two, n, "fixed", "dropped poisson_ratio")
+            audit_records.write_decision(two, n, "fixed", "dropped poisson_ratio")
         answer = (
             f"FIX · {two.name}#1 · resolved · gone\n"
             f"- and {two.name}#2 is gone too\n\n{CLEAN}"
@@ -1715,7 +1718,7 @@ class FixVerdicts(unittest.TestCase):
         answer = f"FIX · {earlier.name}#1 · resolved · gone\n{CLEAN}"
 
         def redecide():
-            findings.write_decision(earlier, 1, "fixed", "dropped both features")
+            audit_records.write_decision(earlier, 1, "fixed", "dropped both features")
 
         rc, _, err, _ = self.audit(area, answer, during=redecide)
         self.assertEqual(rc, 2)
@@ -1726,7 +1729,7 @@ class FixVerdicts(unittest.TestCase):
         """limitation and false-positive are shown like fixed, with the
         decision; an open BLOCKER and a decided WARNING are not."""
         area, earlier = self.area()
-        findings.write_decision(earlier, 1, "limitation", "kept", "stands")
+        audit_records.write_decision(earlier, 1, "limitation", "kept", "stands")
         _, _, _, sent = self.audit(area, CLEAN)
         self.assertIn(
             f"{earlier.name}#1\n  finding: {self.LEAK}\n  subject: statement\n  decided: limitation "
@@ -1736,7 +1739,7 @@ class FixVerdicts(unittest.TestCase):
         for grade, status in (("BLOCKER", "open"), ("WARNING", "fixed")):
             with self.subTest(grade=grade, status=status):
                 area = OneSnapshot.area(OneSnapshot())
-                rec = findings.write(
+                rec = audit_records.write(
                     area,
                     "analysis",
                     "opus",
@@ -1751,7 +1754,7 @@ class FixVerdicts(unittest.TestCase):
                     now=0,
                 )
                 if status != "open":
-                    findings.write_decision(rec, 1, status, "gone")
+                    audit_records.write_decision(rec, 1, status, "gone")
                 rc, _, err, sent = self.audit(area, CLEAN)
                 if status == "open":
                     # refused before the call: a follow-up judges decided
@@ -1772,7 +1775,7 @@ class FixVerdicts(unittest.TestCase):
 
         def write(mode: str, verdicts: list[findings.FixVerdict]) -> Path:
             analysis = mode == "analysis"
-            return findings.write(
+            return audit_records.write(
                 area,
                 mode,
                 "opus",
@@ -1792,7 +1795,7 @@ class FixVerdicts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "second verdict"):
             write("analysis", [v, v])
         path = write("analysis", [v])
-        self.assertEqual(findings.read(path).fix_verdicts, (v,))
+        self.assertEqual(audit_records.read(path).fix_verdicts, (v,))
         text = path.read_text(encoding="utf-8")
         for edit, problem in (
             ('verdict = "resolved"', 'verdict = "fixed"'),
@@ -1802,7 +1805,7 @@ class FixVerdicts(unittest.TestCase):
             with self.subTest(problem):
                 path.write_text(text.replace(edit, problem), encoding="utf-8")
                 with self.assertRaises(findings.FindingsError):
-                    findings.read(path)
+                    audit_records.read(path)
 
 
 class RequiredCheck(unittest.TestCase):
@@ -1833,7 +1836,7 @@ class RequiredCheck(unittest.TestCase):
     def test_the_check_is_written_from_the_finding_line_and_kept_by_decisions(self):
         area, earlier = self.fv.area(self.CHECKED)
         self.assertIn('check = "feature_sources"', earlier.read_text(encoding="utf-8"))
-        (f,) = findings.read(earlier).findings
+        (f,) = audit_records.read(earlier).findings
         self.assertEqual((f.status, f.check), ("fixed", "feature_sources"))
 
     def test_the_decision_list_gives_the_check_as_a_work_order(self):
@@ -1842,7 +1845,7 @@ class RequiredCheck(unittest.TestCase):
         written and a follow-up can judge the repair. The twin: a finding
         without a check names none."""
         area, earlier = self.fv.area(self.CHECKED)
-        record = findings.read(earlier)
+        record = audit_records.read(earlier)
         lines = "\n".join(audit_decisions.decision_lines(record, area, ""))
         self.assertIn(
             "check owed before `fixed` holds: extend the measuring script so that its "
@@ -1856,7 +1859,9 @@ class RequiredCheck(unittest.TestCase):
         self.assertNotIn(
             "check owed",
             "\n".join(
-                audit_decisions.decision_lines(findings.read(plain_record), plain, "")
+                audit_decisions.decision_lines(
+                    audit_records.read(plain_record), plain, ""
+                )
             ),
         )
         # a WARNING with a check promises no follow-up: none judges it, so an
@@ -1888,7 +1893,9 @@ class RequiredCheck(unittest.TestCase):
             with self.subTest(subject=subject):
                 area, earlier = self.fv.area(line)
                 lines = "\n".join(
-                    audit_decisions.decision_lines(findings.read(earlier), area, "")
+                    audit_decisions.decision_lines(
+                        audit_records.read(earlier), area, ""
+                    )
                 )
                 self.assertNotIn("      limitation: the verdicts hold", lines)
                 self.assertIn(
@@ -1899,7 +1906,7 @@ class RequiredCheck(unittest.TestCase):
                 self.assertIn("--handover", lines)
         area, earlier = self.fv.area(FixVerdicts.LEAK)
         lines = "\n".join(
-            audit_decisions.decision_lines(findings.read(earlier), area, "")
+            audit_decisions.decision_lines(audit_records.read(earlier), area, "")
         )
         self.assertIn("      limitation: the verdicts hold", lines)
         self.assertNotIn("decide fixed / false-positive", lines)
@@ -2011,7 +2018,7 @@ class RequiredCheck(unittest.TestCase):
         text = earlier.read_text(encoding="utf-8")
 
         def digest_now() -> str:
-            return findings.decision_digest(findings.read(earlier).findings[0])
+            return findings.decision_digest(audit_records.read(earlier).findings[0])
 
         self.assertEqual(digest_now(), v.decision_sha)
         for edited in (
@@ -2055,7 +2062,7 @@ class RequiredCheck(unittest.TestCase):
             text.replace("check_present = false\n", ""), encoding="utf-8"
         )
         with self.assertRaises(findings.FindingsError):
-            findings.read(record.path)
+            audit_records.read(record.path)
 
 
 #: the answers of the second fixed-followup pilot, kept in the repo
@@ -2099,7 +2106,7 @@ class CheckNote(unittest.TestCase):
                 answer = (PILOT2 / f"{name}.report.txt").read_text(encoding="utf-8")
                 result = audit_reply.parse(answer)
                 area = repo_with()
-                path = findings.write(
+                path = audit_records.write(
                     area,
                     "analysis",
                     "opus",
@@ -2112,7 +2119,7 @@ class CheckNote(unittest.TestCase):
                     run_id="r",
                     shown_sha="s" * 12,
                 )
-                checked = [f for f in findings.read(path).findings if f.check]
+                checked = [f for f in audit_records.read(path).findings if f.check]
                 self.assertEqual(len(checked), 1)
                 (f,) = checked
                 self.assertTrue(f.check.startswith("a2_"), f.check)
@@ -2180,7 +2187,7 @@ class CheckNote(unittest.TestCase):
                 answer = f"{line}{ending}\nverdict: 1 blockers, 0 warnings, 0 notes"
                 rc, _, err, _ = run(area, answer)
                 self.assertEqual(rc, 1, err)
-                (record,) = findings.area_records(area)
+                (record,) = audit_records.area_records(area)
                 (f,) = record.findings
                 self.assertEqual(f.check, "interpretation_1_count")
                 self.assertTrue(
@@ -2207,7 +2214,7 @@ class CheckNote(unittest.TestCase):
         area, earlier = fv.area(
             FixVerdicts.LEAK + " · check: feature_sources (every column named)"
         )
-        (f,) = findings.read(earlier).findings
+        (f,) = audit_records.read(earlier).findings
         self.assertEqual(
             (f.status, f.check, f.check_note),
             ("fixed", "feature_sources", "every column named"),
@@ -2312,7 +2319,7 @@ class KeptAnswer(unittest.TestCase):
         answer = f"{BLOCK.splitlines()[0]} · check: a2 spread\nverdict: 1 blockers, 0 warnings, 0 notes"
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 2, err)
-        self.assertEqual(findings.area_records(area), [])
+        self.assertEqual(audit_records.area_records(area), [])
         attempt, path = self.kept(area)
         self.assertEqual(attempt.outcome, "none")
         self.assertIn("check field that does not read", attempt.error)
@@ -2360,7 +2367,7 @@ class KeptAnswer(unittest.TestCase):
     def test_a_record_that_does_not_read_names_its_restore_not_a_draw(self):
         """The refusal's first way follows its cause: a readable answer
         refused because another record of the area does not read is not
-        drawn again — the record is restored (`findings.record_way`)."""
+        drawn again — the record is restored (`audit_records.record_way`)."""
         area = repo_with()
         (area / "audits").mkdir()
         (area / "audits" / "2026-01-01T00-00-preflight.toml").write_text(
@@ -2371,7 +2378,7 @@ class KeptAnswer(unittest.TestCase):
         attempt, path = self.kept(area)
         self.assertEqual(attempt.outcome, "none")
         self.assertIn(
-            f". Next: {findings.record_way(area)}; the answer is kept in "
+            f". Next: {audit_records.record_way(area)}; the answer is kept in "
             f"{path.resolve().as_posix()}",
             err,
         )
@@ -2492,7 +2499,7 @@ class UnrecordedCall(unittest.TestCase):
         )
         rc, _, err, _ = run(area, WARN)
         self.assertEqual(rc, 1, err)
-        (other,) = findings.area_records(area)
+        (other,) = audit_records.area_records(area)
         self.assertNotEqual(other.block_sha, attempt.block_sha)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
@@ -2505,7 +2512,7 @@ class UnrecordedCall(unittest.TestCase):
             block_sha=attempt.block_sha,
             protocol=attempt.protocol,
         )
-        analysis = findings.write(
+        analysis = audit_records.write(
             area,
             "analysis",
             "opus",
@@ -2546,7 +2553,7 @@ class UnrecordedCall(unittest.TestCase):
         script.write_text(SCRIPT + "# corrected\n", encoding="utf-8")
         rc, _, err, _ = run(area, CLEAN)
         self.assertEqual(rc, 0, err)
-        (record,) = findings.area_records(area)
+        (record,) = audit_records.area_records(area)
         self.assertNotEqual(record.scope_sha, attempt.scope_sha)  # the code moved
         rc, out = findings_listing(area)
         self.assertEqual(rc, 0, out)
@@ -2822,7 +2829,7 @@ class WholeFinding(unittest.TestCase):
                 area = repo_with()
                 rc, out, err, _ = run(area, answer)
                 self.assertEqual(rc, 1, err)
-                (record,) = findings.area_records(area)
+                (record,) = audit_records.area_records(area)
                 got = record.findings[n - 1]
                 # every line the auditor wrote for the finding, in order:
                 # its effect, rule, repair and check note included
@@ -2841,7 +2848,7 @@ class WholeFinding(unittest.TestCase):
     def test_a_check_note_closed_by_a_period_on_its_own_line(self):
         area = repo_with()
         run(area, CHECK_BELOW)
-        second = findings.area_records(area)[0].findings[1]
+        second = audit_records.area_records(area)[0].findings[1]
         self.assertEqual(
             (second.check, second.check_note),
             ("interpretation_2_count", "per group; it must be zero"),
@@ -2868,7 +2875,7 @@ class WholeFinding(unittest.TestCase):
         self.assertEqual(rc, 2, err)
         self.assertIn("after the last finding, below a blank line", err)
         self.assertIn(f". Next: {ways_out.ANSWER_AGAIN}; the answer is kept", err)
-        self.assertEqual(findings.area_records(area), [])
+        self.assertEqual(audit_records.area_records(area), [])
         # the twins: directly below the last finding, or below a blank line
         # before another finding, the text is the finding's
         for answer, text in (
@@ -2883,7 +2890,9 @@ class WholeFinding(unittest.TestCase):
                 area = repo_with()
                 rc, _, err, _ = run(area, answer)
                 self.assertEqual(rc, 1, err)
-                self.assertEqual(findings.area_records(area)[0].findings[0].text, text)
+                self.assertEqual(
+                    audit_records.area_records(area)[0].findings[0].text, text
+                )
 
     def test_an_empty_fix_section_said_in_words_ends_the_last_finding(self):
         # "FIX lines: none — …" below a blank line opens the (empty) FIX
@@ -2928,7 +2937,7 @@ class WholeFinding(unittest.TestCase):
                 area = repo_with()
                 rc, _, err, _ = run(area, answer)
                 self.assertEqual(rc, 1, err)
-                (f,) = findings.area_records(area)[0].findings
+                (f,) = audit_records.area_records(area)[0].findings
                 self.assertEqual(
                     f.text,
                     "BLOCKER · a.py:1 · statement · LAB-015 Preflight audit before freezing · x · y:\n- evidence one\n- evidence two\n"
@@ -2942,7 +2951,7 @@ class WholeFinding(unittest.TestCase):
         answer = f"{line}\n{bullet}\n· more\nverdict: 1 blockers, 0 warnings, 0 notes"
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 1, err)
-        (f,) = findings.area_records(area)[0].findings
+        (f,) = audit_records.area_records(area)[0].findings
         self.assertEqual(f.text, f"{line}\n{bullet}\n· more")
 
     def test_the_check_closes_the_line_that_holds_it(self):
@@ -2956,7 +2965,7 @@ class WholeFinding(unittest.TestCase):
         )
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 1, err)
-        (f,) = findings.area_records(area)[0].findings
+        (f,) = audit_records.area_records(area)[0].findings
         self.assertEqual(
             (f.check, f.check_note), ("quality_check_2_spread", "each seed")
         )
@@ -2975,7 +2984,7 @@ class WholeFinding(unittest.TestCase):
         )
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 1, err)
-        (f,) = findings.area_records(area)[0].findings
+        (f,) = audit_records.area_records(area)[0].findings
         self.assertEqual(
             (f.check, f.check_note), ("quality_check_2_spread", "each seed")
         )
@@ -2990,7 +2999,7 @@ class WholeFinding(unittest.TestCase):
         )
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 1, err)
-        (record,) = findings.area_records(area)
+        (record,) = audit_records.area_records(area)
         (u,) = findings.open_blockers([record])
         self.assertEqual(
             u.finding.text,
@@ -3022,7 +3031,7 @@ class AuditorRefusal(unittest.TestCase):
                 self.assertIn(self.LINE.removeprefix("refused: "), err)
                 self.assertNotIn("no readable `verdict:` line", err)
                 self.assertEqual(len(sent), 1)  # no second call for the message
-                self.assertEqual(findings.area_records(area), [])
+                self.assertEqual(audit_records.area_records(area), [])
         attempt = attempts.read_journal(area)[-1]
         self.assertEqual(attempt.outcome, "none")
         self.assertIn("protocol not filled", attempt.error)
@@ -3033,7 +3042,7 @@ class AuditorRefusal(unittest.TestCase):
         self.assertEqual(rc, 2, err)
         self.assertIn("no readable `verdict:` line — not an audit", err)
         self.assertNotIn("refused", err)
-        self.assertEqual(findings.area_records(area), [])
+        self.assertEqual(audit_records.area_records(area), [])
 
 
 class Carried(unittest.TestCase):
@@ -3056,7 +3065,7 @@ class Carried(unittest.TestCase):
     def audit_with(self, area: Path, lines: str) -> findings.Record:
         rc, _, err, _ = self.fv.audit(area, f"{lines}\n\n{CLEAN}")
         self.assertIn(rc, (0, 1), err)
-        return findings.area_records(area)[-1]
+        return audit_records.area_records(area)[-1]
 
     def test_a_chain_over_three_audits_carries_once_and_keeps_the_origin_text(self):
         area, r1 = self.fv.area(
@@ -3070,7 +3079,7 @@ class Carried(unittest.TestCase):
             (f2.carries, f2.check, f2.check_note),
             (f"{r1.name}#1", "feature_sources", "every column"),
         )
-        findings.write_decision(
+        audit_records.write_decision(
             r2.path, n2, "limitation", "kept as a limit", "criterion-1 not assessable"
         )
         self.new_state(area, 2)
@@ -3085,14 +3094,14 @@ class Carried(unittest.TestCase):
         )
         self.assertIn(f"{r2.path.name}#{n2}\n", piece)
         self.assertNotIn(f"{r1.name}#1\n", piece)  # only the head is shown
-        r3 = findings.area_records(area)[-1]
+        r3 = audit_records.area_records(area)[-1]
         (f3,) = [f for f in r3.findings if f.carries]
         self.assertEqual(f3.carries, f"{r2.path.name}#{n2}")
         self.assertEqual(
             f3.text,
             f"carried from {r2.path.name}#{n2} (not_assessable): {FixVerdicts.LEAK} · check: feature_sources (every column)",
         )
-        c = followup.chain(findings.area_records(area))
+        c = followup.chain(audit_records.area_records(area))
         self.assertEqual(c.origin[f"{r3.path.name}#{len(r3.findings)}"], f"{r1.name}#1")
 
     def test_a_settled_suspicion_is_judged_by_its_recorded_subject_next_time(self):
@@ -3116,7 +3125,7 @@ class Carried(unittest.TestCase):
                 f"carried from {r1.name}#1 (unresolved as implementation): "
             )
         )
-        findings.write_decision(r2.path, n2, "fixed", "poisson_ratio dropped")
+        audit_records.write_decision(r2.path, n2, "fixed", "poisson_ratio dropped")
         self.new_state(area, 2)
         ref = f"{r2.path.name}#{n2}"
         rc, _, err, _ = self.fv.audit(
@@ -3138,7 +3147,7 @@ class Carried(unittest.TestCase):
             piece,
         )
         self.assertIn("\n  subject: implementation\n  decided: fixed", piece)
-        (f3,) = [f for f in findings.area_records(area)[-1].findings if f.carries]
+        (f3,) = [f for f in audit_records.area_records(area)[-1].findings if f.carries]
         self.assertEqual(f3.subject, "implementation")
 
     def test_resolved_carries_nothing(self):
@@ -3156,7 +3165,7 @@ class Carried(unittest.TestCase):
         area, r1 = self.fv.area()
         text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
         run = area / "runs" / "2026-01-01T00-00-00_0001"
-        same = findings.write(
+        same = audit_records.write(
             area,
             "analysis",
             "opus",
@@ -3170,7 +3179,7 @@ class Carried(unittest.TestCase):
             shown_sha=shown_sha(area, run),
             now=60,
         )
-        findings.write_decision(same, 1, "false-positive", "does not apply")
+        audit_records.write_decision(same, 1, "false-positive", "does not apply")
         _, _, _, sent = self.fv.audit(area, CLEAN)
         piece = (
             sent[0]
@@ -3194,9 +3203,11 @@ class Carried(unittest.TestCase):
                     text.replace(f'carries = "{r1.name}#1"', bad), encoding="utf-8"
                 )
                 with self.assertRaisesRegex(findings.FindingsError, why):
-                    followup.chain(findings.area_records(area))
+                    followup.chain(audit_records.area_records(area))
         r2.path.write_text(text, encoding="utf-8")
-        followup.chain(findings.area_records(area))  # the twin: as written, it holds
+        followup.chain(
+            audit_records.area_records(area)
+        )  # the twin: as written, it holds
 
     def test_two_carried_of_one_origin_in_one_record_are_refused(self):
         area, r1 = self.fv.area()
@@ -3211,7 +3222,7 @@ class Carried(unittest.TestCase):
         )
         r2.path.write_text(doubled, encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "carried once per record"):
-            followup.chain(findings.area_records(area))
+            followup.chain(audit_records.area_records(area))
 
     def test_the_counts_hold_the_carried_findings(self):
         area, r1 = self.fv.area()
@@ -3223,9 +3234,9 @@ class Carried(unittest.TestCase):
             with self.subTest(edit):
                 r2.path.write_text(text.replace(*edit, 1), encoding="utf-8")
                 with self.assertRaises(findings.FindingsError):
-                    findings.read(r2.path)
+                    audit_records.read(r2.path)
         r2.path.write_text(text, encoding="utf-8")
-        self.assertEqual(findings.read(r2.path).verdict[0], 1)
+        self.assertEqual(audit_records.read(r2.path).verdict[0], 1)
 
     def test_carries_is_part_of_the_digest(self):
         base = findings.Finding("BLOCKER", "x", "limitation", "r", "stands")
@@ -3245,7 +3256,7 @@ class Carried(unittest.TestCase):
         x1.write_text(
             fixture.head(id="p-1123456789abcdef") + PROTOCOL, encoding="utf-8"
         )
-        self.assertEqual(findings.read(r1).protocol_id, "p-0123456789abcdef")
+        self.assertEqual(audit_records.read(r1).protocol_id, "p-0123456789abcdef")
         rc, _, err, sent = self.fv.audit(area, CLEAN, protocol=area / "PROTOCOL-x0.md")
         self.assertEqual((rc, len(sent)), (0, 1), err)
         self.assertIn(r1.name, sent[0])
@@ -3267,7 +3278,7 @@ class Carried(unittest.TestCase):
         x1.write_text(
             fixture.head(id="p-1123456789abcdef") + PROTOCOL, encoding="utf-8"
         )
-        r1x = findings.write(
+        r1x = audit_records.write(
             area,
             "analysis",
             "opus",
@@ -3281,7 +3292,7 @@ class Carried(unittest.TestCase):
             shown_sha="2" * 12,
             now=60,
         )
-        findings.write_decision(r1x, 1, "fixed", "dropped poisson_ratio")
+        audit_records.write_decision(r1x, 1, "fixed", "dropped poisson_ratio")
 
         def shown(protocol: Path, pid: str) -> list[str]:
             return [
@@ -3325,7 +3336,7 @@ class Carried(unittest.TestCase):
             text.replace('protocol = "p-0123456789abcdef"\n', ""), encoding="utf-8"
         )
         with self.assertRaisesRegex(findings.FindingsError, "0.112.0 or earlier"):
-            findings.read(r1)
+            audit_records.read(r1)
 
     def test_a_printed_decide_line_runs_as_printed_where_several(self):
         """In an area of several protocols the `--decide` line is printed
@@ -3361,7 +3372,7 @@ class Carried(unittest.TestCase):
             (line,) = [
                 ln.strip()
                 for ln in audit_decisions.decision_lines(
-                    findings.read(r1), area, "", x0
+                    audit_records.read(r1), area, "", x0
                 )
                 if "--decide 1 " in ln
             ]
@@ -3385,7 +3396,7 @@ class Carried(unittest.TestCase):
         self.assertIn("name one with --protocol", err.getvalue())
         self.assertEqual(rc, 0, err.getvalue())
         self.assertEqual(
-            findings.read(r1).findings[0].effect, "criterion-1 not assessable"
+            audit_records.read(r1).findings[0].effect, "criterion-1 not assessable"
         )
 
     def test_past_the_operating_limit_the_audit_refuses(self):
@@ -3398,7 +3409,7 @@ class Carried(unittest.TestCase):
     def test_the_record_keeps_the_size_it_measured(self):
         area, _ = self.fv.area()
         self.fv.audit(area, CLEAN)
-        text = findings.area_records(area)[-1].path.read_text(encoding="utf-8")
+        text = audit_records.area_records(area)[-1].path.read_text(encoding="utf-8")
         self.assertRegex(text, r"followup = \{ entries = 1, bytes = \d+ \}")
 
 
@@ -3531,7 +3542,7 @@ class FollowupGate(unittest.TestCase):
     def test_a_decision_changed_after_the_follow_up_holds(self):
         area, r1 = self.fv.area()
         self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
-        findings.write_decision(r1, 1, "fixed", "dropped both columns")
+        audit_records.write_decision(r1, 1, "fixed", "dropped both columns")
         (line,) = self.gate(area)
         self.assertIn("judged another decision", line)
 
@@ -3541,7 +3552,7 @@ class FollowupGate(unittest.TestCase):
         open — its own gate. A hand-made covering record that judged the
         old head negative without carrying is held here."""
         area, r1 = self.fv.area()
-        records = findings.area_records(area)
+        records = audit_records.area_records(area)
         v = findings.FixVerdict(
             r1.name,
             1,
@@ -3558,7 +3569,7 @@ class FollowupGate(unittest.TestCase):
         )
 
         def record(verdict: findings.FixVerdict, minute: int) -> findings.Record:
-            path = findings.write(
+            path = audit_records.write(
                 area,
                 "analysis",
                 "opus",
@@ -3573,29 +3584,32 @@ class FollowupGate(unittest.TestCase):
                 fix_verdicts=[verdict],
                 now=minute * 60,
             )
-            return findings.read(path)
+            return audit_records.read(path)
 
         cover = [record(v, 5), record(w, 6)]
-        (h,) = followup.release_holds(findings.area_records(area), cover, None)
+        (h,) = followup.release_holds(audit_records.area_records(area), cover, None)
         self.assertIn("said not_assessable", h.why)
-        (h2,) = followup.release_holds(findings.area_records(area), cover[:1], None)
+        (h2,) = followup.release_holds(
+            audit_records.area_records(area), cover[:1], None
+        )
         self.assertEqual(
-            followup.release_holds(findings.area_records(area), cover[1:], None), []
+            followup.release_holds(audit_records.area_records(area), cover[1:], None),
+            [],
         )
 
     def test_fixed_in_the_state_reported_holds(self):
         area = OneSnapshot.area(OneSnapshot())
         self.fv.audit(area, BLOCK)
-        rec = findings.area_records(area)[-1]
-        findings.write_decision(rec.path, 1, "fixed", "repaired")
+        rec = audit_records.area_records(area)[-1]
+        audit_records.write_decision(rec.path, 1, "fixed", "repaired")
         (line,) = self.gate(area)
         self.assertIn("decided `fixed` in the state audited", line)
-        findings.write_decision(rec.path, 1, "limitation", "kept", "stands")
+        audit_records.write_decision(rec.path, 1, "limitation", "kept", "stands")
         self.assertEqual(self.gate(area), [])  # the twin: the review gate's now
 
     def test_an_old_accepted_limit_is_carried_and_renders_in_the_current_result(self):
         area, r1 = self.fv.area()
-        findings.write_decision(
+        audit_records.write_decision(
             r1, 1, "limitation", "kept", "criterion-1 not assessable"
         )
         self.assertEqual(self.gate(area), [])  # uncovered: the analysis gap's
@@ -3604,7 +3618,7 @@ class FollowupGate(unittest.TestCase):
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
-        findings.write_decision(
+        audit_records.write_decision(
             r2.path, n, "limitation", "kept as a limit", "criterion-1 not assessable"
         )
         self.assertEqual(self.gate(area), [])
@@ -3613,10 +3627,12 @@ class FollowupGate(unittest.TestCase):
         labels = [
             label for label, _, _ in result_render.limits_of(area, text, run, found=())
         ]
-        self.assertEqual(labels, [findings.limit_label(findings.read(r2.path), n)])
+        self.assertEqual(labels, [findings.limit_label(audit_records.read(r2.path), n)])
         # stands instead: the decision review is owed for it
-        findings.write_decision(r2.path, n, "limitation", "kept as a limit", "stands")
-        reviewed = decision_review.reviewable(findings.read(r2.path), [])
+        audit_records.write_decision(
+            r2.path, n, "limitation", "kept as a limit", "stands"
+        )
+        reviewed = decision_review.reviewable(audit_records.read(r2.path), [])
         self.assertIn(n, [k for k, _ in reviewed])
 
     def test_a_carried_finding_closed_holds_until_a_review_upholds_it(self):
@@ -3624,14 +3640,15 @@ class FollowupGate(unittest.TestCase):
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
-        findings.write_decision(
+        audit_records.write_decision(
             r2.path, n, "false-positive", "the column is no leak: never read"
         )
         (line,) = self.gate(area)
         self.assertIn("a carried finding", line)
         self.assertIn(f"--review --record {r2.path.name}", line)
         self.assertIn(
-            n, [k for k, _ in decision_review.reviewable(findings.read(r2.path), [])]
+            n,
+            [k for k, _ in decision_review.reviewable(audit_records.read(r2.path), [])],
         )
         with mock.patch.object(reviews, "upholding", lambda *a: True):
             self.assertEqual(self.gate(area), [])
@@ -3640,7 +3657,7 @@ class FollowupGate(unittest.TestCase):
         """The finding never applied: the follow-up says so with `resolved`
         and releases; a bare status change does not."""
         area, r1 = self.fv.area()
-        findings.write_decision(r1, 1, "false-positive", "the column is not read")
+        audit_records.write_decision(r1, 1, "false-positive", "the column is not read")
         self.fv.audit(area, CLEAN)
         self.assertEqual(len(self.gate(area)), 1)
         self.follow_up(
@@ -3656,7 +3673,7 @@ class FollowupGate(unittest.TestCase):
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n2, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
-        findings.write_decision(
+        audit_records.write_decision(
             r2.path, n2, "limitation", "kept", "criterion-1 not assessable"
         )
         for verdict, limits in (("unresolved", 1), ("resolved", 0)):
@@ -3669,7 +3686,7 @@ class FollowupGate(unittest.TestCase):
                 r3 = self.follow_up(area, f"FIX · {r2.path.name}#{n2} · {verdict} · x")
                 carried = [(n, f) for n, f in enumerate(r3.findings, 1) if f.carries]
                 for n, _ in carried:
-                    findings.write_decision(
+                    audit_records.write_decision(
                         r3.path, n, "limitation", "kept", "criterion-1 not assessable"
                     )
                 text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
@@ -3729,8 +3746,8 @@ class PilotRecords(unittest.TestCase):
         earlier.write_bytes(as_today((GATE / f"earlier-{case}.toml").read_bytes()))
         later = area / "audits" / "2026-10-26T18-00-analysis.toml"
         later.write_bytes(as_today(record.read_bytes()))
-        records = findings.area_records(area)
-        return followup.release_holds(records, [findings.read(later)], None)
+        records = audit_records.area_records(area)
+        return followup.release_holds(records, [audit_records.read(later)], None)
 
     def test_the_pilot_cases(self):
         (a,) = self.holds("A", PILOT2 / "A-1.record.toml")
@@ -3889,7 +3906,7 @@ class LabAuditAlias(unittest.TestCase):
             self.TOML + '[audit]\nmodel = "haiku"\n'
         )
         self.assertEqual(called, ["haiku"], err)
-        (record,) = findings.area_records(area)
+        (record,) = audit_records.area_records(area)
         self.assertEqual(record.model, "haiku")
 
     def test_without_an_audit_table_opus_stays_the_default(self):

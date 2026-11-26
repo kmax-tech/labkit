@@ -23,7 +23,7 @@ from pathlib import Path
 from protocol_fixture import protocol_id_of, registration_of
 from state_fixture import audit_record
 
-from labkit.formats import findings, followup
+from labkit.formats import audit_records, findings, followup
 from labkit.formats.protocol_history import ABSENT
 from labkit.gates import audit_prompt
 from labkit.gates.audit_reply import parse_fixes
@@ -154,7 +154,7 @@ class SeveralCorrectionsOfOneField(unittest.TestCase):
         area = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, area)
         for minute in range(3):
-            path = findings.write(
+            path = audit_records.write(
                 area,
                 "analysis",
                 "opus",
@@ -168,8 +168,8 @@ class SeveralCorrectionsOfOneField(unittest.TestCase):
                 shown_sha="1" * 12,
                 now=time.mktime((2026, 11, 24, 9, minute, 0, 0, 0, -1)),
             )
-            findings.write_decision(path, 1, "fixed", "Data / scope now counts 12")
-        members = followup.chain(findings.area_records(area)).members.values()
+            audit_records.write_decision(path, 1, "fixed", "Data / scope now counts 12")
+        members = followup.chain(audit_records.area_records(area)).members.values()
         entries = list(members)
         shown = audit_prompt.Followup(
             entries, None, {}, {e.ref: change() for e in entries}

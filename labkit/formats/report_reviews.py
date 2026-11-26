@@ -94,7 +94,7 @@ field. A record whose claims carry no `status` — written by labkit
 LAST_UNDECIDED_RELEASE or earlier — is not read; its refusal names the move
 that keeps it (`SUPERSEDED`, a folder no reader lists). The folder is
 beside the records, not among them: the readers of
-`audits/*.toml` (`findings.area_records`, `reviews.area_reviews`) do not
+`audits/*.toml` (`audit_records.area_records`, `reviews.area_reviews`) do not
 descend into it.
 """
 
@@ -107,7 +107,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import findings
+from labkit.formats import audit_records, findings
 from labkit.formats.files import write_atomic
 from labkit.formats.gate import AUDIT_SLOT
 from labkit.formats.runs import as_stored, date_minute, name_minute
@@ -443,10 +443,10 @@ def superseded_name(rel: str) -> str | None:
 
 def without_claim_decisions(text: str) -> str | None:
     """TEXT, a report review's, without its claims' decision lines
-    (`findings.without_decisions` on `[[claim]]`): what
+    (`audit_records.without_decisions` on `[[claim]]`): what
     `write_claim_decision` keeps byte for byte. None when a claim lacks
     them. Pure."""
-    return findings.without_decisions(text, CLAIM_HEADER, history=False)
+    return audit_records.without_decisions(text, CLAIM_HEADER, history=False)
 
 
 def write_claim_decision(path: Path, n: int, status: str, reason: str) -> ReportReview:
@@ -455,7 +455,7 @@ def write_claim_decision(path: Path, n: int, status: str, reason: str) -> Report
     the file. The lines are found by the record's structure (the N-th
     `[[claim]]` table), every other byte kept; the result is read back and
     the file replaced whole (`files.write_atomic`) only when exactly that
-    claim changed. As `findings.write_decision`. Raises ReportReviewError
+    claim changed. As `audit_records.write_decision`. Raises ReportReviewError
     — the file untouched — on a record that does not read, a number
     outside it, a status a claim cannot take (`claim_status_problem`), or
     a claim without the status and reason lines the review writes."""
@@ -471,7 +471,7 @@ def write_claim_decision(path: Path, n: int, status: str, reason: str) -> Report
         raise ReportReviewError(f"{path}: claim {n}: {problem}")
     decided = ReportClaim(old.line, old.kind, old.why, status, reason.strip())
     # decoded, not read as text: a CRLF record keeps its line endings
-    text = findings.with_decision(
+    text = audit_records.with_decision(
         path.read_bytes().decode("utf-8"), n, status, reason.strip(), CLAIM_HEADER
     )
     if text is None:

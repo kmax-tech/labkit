@@ -34,6 +34,7 @@ from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
     findings,
+    audit_records,
     required_check,
     followup,
     jsonl,
@@ -596,7 +597,7 @@ def run_shown(
     try:
         requests = followup.diff_requests(followup.protocol_records(area, pid), also)
     except findings.FindingsError as exc:
-        raise AuditError(str(exc), fix=findings.record_way(area)) from exc
+        raise AuditError(str(exc), fix=audit_records.record_way(area)) from exc
     pieces = tuple(
         [
             *run_rows(area, run_dir, why, requests),
@@ -652,7 +653,7 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     RUN (its rows and metrics as shown) as they are now (`analysis_now`).
     Raises what `analysis_now` raises, and FindingsError (a ValueError) on a
     findings file it cannot read."""
-    records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
+    records = [r for r in audit_records.area_records(area) if r.mode == ANALYSIS_AUDIT]
     return audit_gaps.covering_records(records, analysis_now(area, text, run))
 
 
@@ -669,11 +670,11 @@ def check_audit_records_read(
     """A blocker per audit record of EVIDENCE that does not read
     (`AreaEvidence.unreadable`, its sentence): a record nobody can read is not
     "no findings". The way out restores it or audits again
-    (`findings.record_way` for the area of STATE). [] when every record
+    (`audit_records.record_way` for the area of STATE). [] when every record
     reads. That a record reads is its format's condition, not the
     standard's (TECHNICAL_RULE)."""
     return [
-        blocker(why, fix=findings.record_way(state.area), rule=TECHNICAL_RULE)
+        blocker(why, fix=audit_records.record_way(state.area), rule=TECHNICAL_RULE)
         for why in evidence.unreadable
     ]
 

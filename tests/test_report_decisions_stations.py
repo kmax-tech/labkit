@@ -11,7 +11,7 @@ import dataclasses
 import unittest
 from unittest import mock
 
-from labkit.formats import findings, followup
+from labkit.formats import audit_records, findings, followup
 from labkit.formats.gate import (
     BLOCKER,
     NOT_EXECUTABLE,
@@ -171,7 +171,7 @@ class TheCarriedFindingsFormNoChain(unittest.TestCase):
             f.text.startswith("the carried findings of area do not form a chain: "),
             f.text,
         )
-        self.assertEqual(f.fix, findings.record_way(AREA, AREA / "PROTOCOL-x.md"))
+        self.assertEqual(f.fix, audit_records.record_way(AREA, AREA / "PROTOCOL-x.md"))
 
     def test_the_twin_a_chain_that_reads_holds_the_carried_closing_alone(self):
         earlier = audit_record(

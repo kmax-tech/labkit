@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console, findings, gate
+from labkit.formats import audit_records, console, gate
 from labkit.tools import check_inventory as inv
 from protocol_fixture import protocol_id_of, registration_of
 
@@ -450,7 +450,7 @@ class AuditRules(unittest.TestCase):
                 "WARNING · b.py:2 · statement · a claim wider than the run · y · new class · z",
             ),
         ]
-        findings.write(
+        audit_records.write(
             area,
             "preflight",
             "opus",

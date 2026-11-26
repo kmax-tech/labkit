@@ -81,6 +81,10 @@ KNOWN_CROSSINGS = {
     # registration and which lane owes the freeze, the audit or the foreground
     # — doctrine that refuses a run, sitting in the run writer's start check
     ("start_check", "findings"),  # findings.open_findings
+    # the same crossing under the names of the split of `findings`, no new
+    # access: `start_check` read `record_way` through `findings` before the
+    # split and reads nothing else of this module
+    ("start_check", "audit_records"),  # audit_records.record_way
     (
         "start_check",
         "evidence",
@@ -228,7 +232,7 @@ FIELD_READERS = {
     "bound_answering_run",  # answering_run, the choice over the run facts
     "bound_runs",  # answering_run, the completed bound runs and the rest
     "facts_of",  # answering_run, a record's state, binding and repeat
-    "record_status",  # findings, the audit records and their errors
+    "record_status",  # audit_records, the audit records and their errors
     "evidence_gaps",  # attempts, the records and attempts gone
     "change_findings",  # evidence, the committed evidence changed
     "area_reviews",  # reviews, the decision reviews

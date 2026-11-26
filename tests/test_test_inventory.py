@@ -66,7 +66,7 @@ class EntryLayer(unittest.TestCase):
             ("labkit.gates.finalize.check_reference", "gate"),
             ("labkit.gates.report_check.Checked.text", "gate"),
             ("labkit.checks.recheck.require_agreement", "check"),
-            ("labkit.formats.findings.read", "format"),
+            ("labkit.formats.audit_records.read", "format"),
             ("labkit.run.runlog.Run.__init__", "run"),
             ("labkit.console_line", "other"),
         ):

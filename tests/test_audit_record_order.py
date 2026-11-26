@@ -13,7 +13,7 @@ import time
 import unittest
 from pathlib import Path
 
-from labkit.formats import findings
+from labkit.formats import audit_records, findings
 from labkit.formats import failed_attempts
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
@@ -52,7 +52,7 @@ class WrittenOrder(unittest.TestCase):
 
     def test_records_of_one_minute_read_in_the_order_written(self) -> None:
         for n in (1, 2, 3, 10):
-            findings.write(
+            audit_records.write(
                 self.area,
                 "preflight",
                 "opus",
@@ -65,7 +65,7 @@ class WrittenOrder(unittest.TestCase):
                 protocol_id=protocol_id_of(self.area),
             )
         self.assertEqual(
-            [r.scope_sha for r in findings.area_records(self.area)],
+            [r.scope_sha for r in audit_records.area_records(self.area)],
             [f"{n:012d}" for n in (1, 2, 3, 10)],
         )
 
@@ -73,7 +73,7 @@ class WrittenOrder(unittest.TestCase):
         (self.area / "audits").mkdir()
         (self.area / "audits" / "my-notes.toml").write_text("x = 1\n")
         with self.assertRaisesRegex(findings.FindingsError, "my-notes.toml"):
-            findings.area_records(self.area)
+            audit_records.area_records(self.area)
 
 
 class Counts(unittest.TestCase):
@@ -87,7 +87,7 @@ class Counts(unittest.TestCase):
         for verdict in ((-1, 0, 0), (0, -2, 0), (0, 0, -3)):
             with self.subTest(verdict=verdict):
                 with self.assertRaisesRegex(ValueError, "non-negative"):
-                    findings.write(
+                    audit_records.write(
                         self.area,
                         "preflight",
                         "opus",
@@ -101,7 +101,7 @@ class Counts(unittest.TestCase):
                     )
 
     def test_a_negative_count_is_refused_on_read(self) -> None:
-        path = findings.write(
+        path = audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -115,10 +115,10 @@ class Counts(unittest.TestCase):
         )
         path.write_text(path.read_text().replace("blockers = 0", "blockers = -1"))
         with self.assertRaisesRegex(findings.FindingsError, "non-negative"):
-            findings.area_records(self.area)
+            audit_records.area_records(self.area)
 
     def test_twin_zero_counts_write_and_read(self) -> None:
-        findings.write(
+        audit_records.write(
             self.area,
             "preflight",
             "opus",
@@ -130,7 +130,7 @@ class Counts(unittest.TestCase):
             registration=registration_of(self.area),
             protocol_id=protocol_id_of(self.area),
         )
-        self.assertEqual(len(findings.area_records(self.area)), 1)
+        self.assertEqual(len(audit_records.area_records(self.area)), 1)
 
 
 if __name__ == "__main__":

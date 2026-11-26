@@ -76,7 +76,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console, finding_line, findings
+from labkit.formats import audit_records, console, finding_line, findings
 from labkit.formats import gate
 from labkit.formats.gate import (
     KNOWN_RULE,
@@ -989,7 +989,7 @@ def render_audit_rules(
     for _, record in records:
         for f in record.findings:
             per_rule[finding_line.stored_rule(f.rule)] += 1
-    new = findings.new_class_findings(records)
+    new = audit_records.new_class_findings(records)
     lines = [
         "",
         f"## Audit findings in {experiments}",
@@ -1051,7 +1051,7 @@ def main(argv: list[str]) -> int:
     if experiments is not None:
         if not experiments.is_dir():
             raise console.Refused("check_inventory", f"{experiments}: no such folder")
-        text += render_audit_rules(experiments, findings.repo_records(experiments))
+        text += render_audit_rules(experiments, audit_records.repo_records(experiments))
     if out is None:
         sys.stdout.write(text)
     else:

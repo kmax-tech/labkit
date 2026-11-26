@@ -501,12 +501,12 @@ class ProgressAccount(unittest.TestCase):
     def test_an_open_audit_blocker_still_holds_the_commit_beside_the_account(self):
         """Retained protection: the account changes the commit rule for the
         report only; an undecided audit BLOCKER still holds the commit."""
-        from labkit.formats import findings, promises, scope_sha
+        from labkit.formats import audit_records, promises, scope_sha
         from protocol_fixture import protocol_id_of, registration_of, shown_sha
 
         run_id = self.measure()
         self.account(run_id)
-        findings.write(
+        audit_records.write(
             self.area,
             sc.ANALYSIS_AUDIT,
             "test",

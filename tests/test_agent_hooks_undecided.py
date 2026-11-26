@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import agent_hooks, claude_hooks  # noqa: E402
 from labkit.gates import undecided
-from labkit.formats import findings, repo  # noqa: E402
+from labkit.formats import audit_records, findings, repo  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
 from repo_fixture import git as _git  # noqa: E402
 from test_agent_hooks import _dated, _run, _transcript  # noqa: E402
@@ -61,7 +61,7 @@ class Undecided(unittest.TestCase):
             _git(self.root, "commit", "-qm", "init")
 
     def _record(self, area: Path, rows) -> Path:
-        return findings.write(
+        return audit_records.write(
             area,
             "preflight",
             "opus",
@@ -340,7 +340,9 @@ class Undecided(unittest.TestCase):
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "audit")
         open_text = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "limitation", "measured in area 02", "stands")
+        audit_records.write_decision(
+            path, 1, "limitation", "measured in area 02", "stands"
+        )
         script = self._touch(self.area)
         _git(self.root, "add", str(script))
 
@@ -376,7 +378,9 @@ class Undecided(unittest.TestCase):
         self.assertIn("in the tree, not in the index", out)
         self.assertIn(f"git add -- experiments/01-x/audits/{path.name}", out)
         self.assertIn("a record a later change made outdated is staged too", out)
-        findings.write_decision(path, 1, "limitation", "measured in area 02", "stands")
+        audit_records.write_decision(
+            path, 1, "limitation", "measured in area 02", "stands"
+        )
         _git(self.root, "add", str(path))
         self.assertEqual(commit_gate(), (0, ""))
 

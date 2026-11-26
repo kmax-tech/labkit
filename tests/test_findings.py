@@ -16,6 +16,7 @@ from labkit.formats import (
     decision_history,
     finding_line,
     findings,
+    audit_records,
     gate,
     protocol_check,
     rules,
@@ -48,7 +49,7 @@ def area_with(
     area = at or Path(tempfile.mkdtemp()) / "experiments" / "01-x"
     area.mkdir(parents=True, exist_ok=True)
     for i, (mode, rows) in enumerate(records):
-        findings.write(
+        audit_records.write(
             area,
             mode,
             "opus",
@@ -106,7 +107,7 @@ class UndecidedFindings(unittest.TestCase):
                 ),
             ]
         )
-        records = findings.area_records(area)
+        records = audit_records.area_records(area)
         found = findings.open_findings(records)
         self.assertEqual([u.grade for u in found], ["BLOCKER", "WARNING", "NOTE"])
         self.assertEqual(found[0].line, f"{records[0].path.name}: {TWO[0][1]}")
@@ -126,7 +127,7 @@ class UndecidedFindings(unittest.TestCase):
                 ),
             ]
         )
-        records = findings.area_records(area)
+        records = audit_records.area_records(area)
         self.assertEqual(
             [u.grade for u in findings.open_findings(records, mode="preflight")],
             ["BLOCKER", "WARNING"],
@@ -138,9 +139,9 @@ class UndecidedFindings(unittest.TestCase):
 
     def test_a_decided_finding_is_not_undecided(self):
         area = area_with([("preflight", TWO)])
-        (rec,) = findings.area_records(area)
-        findings.write_decision(rec.path, 1, "fixed", "done")
-        (rec,) = findings.area_records(area)
+        (rec,) = audit_records.area_records(area)
+        audit_records.write_decision(rec.path, 1, "fixed", "done")
+        (rec,) = audit_records.area_records(area)
         self.assertEqual(
             [u.finding.text for u in findings.open_findings([rec])], [TWO[1][1]]
         )
@@ -152,7 +153,7 @@ class WriteRead(unittest.TestCase):
         files = sorted((area / "audits").glob("*.toml"))
         self.assertEqual(len(files), 1)
         self.assertTrue(files[0].name.endswith("-preflight.toml"))
-        rec = findings.read(files[0])
+        rec = audit_records.read(files[0])
         self.assertEqual(
             (
                 rec.mode,
@@ -185,7 +186,8 @@ class WriteRead(unittest.TestCase):
         code, out = run_main(audit.main, shlex.split(filled)[1:])
         self.assertEqual(code, 0, out)
         self.assertEqual(
-            [f.status for f in findings.read(path).findings], ["open", "false-positive"]
+            [f.status for f in audit_records.read(path).findings],
+            ["open", "false-positive"],
         )
 
     def test_quotes_and_unicode_survive(self):
@@ -202,7 +204,7 @@ class WriteRead(unittest.TestCase):
                 )
             ]
         )
-        rec = findings.area_records(area)[0]
+        rec = audit_records.area_records(area)[0]
         self.assertEqual(
             rec.findings[0].text,
             'NOTE · x · statement · LAB-015 Preflight audit before freezing · "quoted" · ä · \\ backslash',
@@ -210,7 +212,7 @@ class WriteRead(unittest.TestCase):
 
     def test_a_second_audit_in_the_same_minute_does_not_overwrite(self):
         area = Path(tempfile.mkdtemp())
-        a = findings.write(
+        a = audit_records.write(
             area,
             "preflight",
             "m",
@@ -222,7 +224,7 @@ class WriteRead(unittest.TestCase):
             registration=registration_of(area),
             protocol_id=protocol_id_of(area),
         )
-        b = findings.write(
+        b = audit_records.write(
             area,
             "preflight",
             "m",
@@ -235,7 +237,7 @@ class WriteRead(unittest.TestCase):
             protocol_id=protocol_id_of(area),
         )
         self.assertNotEqual(a, b)
-        self.assertEqual(len(findings.area_records(area)), 2)
+        self.assertEqual(len(audit_records.area_records(area)), 2)
 
     def test_audits_writing_at_once_keep_every_record(self):
         """Two audits at once never take one name: a free name looked for,
@@ -249,7 +251,7 @@ class WriteRead(unittest.TestCase):
         def one(i: int) -> None:
             start.wait()
             paths.append(
-                findings.write(
+                audit_records.write(
                     area,
                     "preflight",
                     "m",
@@ -269,14 +271,14 @@ class WriteRead(unittest.TestCase):
         for t in threads:
             t.join()
         self.assertEqual(len(set(paths)), 8)
-        shas = {r.scope_sha for r in findings.area_records(area)}
+        shas = {r.scope_sha for r in audit_records.area_records(area)}
         self.assertEqual(shas, {f"s{i}" for i in range(8)})
 
     def test_a_taken_name_is_skipped_not_overwritten(self):
         """The twin, without threads: a file already holding the first name
         stays as it was."""
         area = Path(tempfile.mkdtemp())
-        first = findings.write(
+        first = audit_records.write(
             area,
             "preflight",
             "m",
@@ -289,7 +291,7 @@ class WriteRead(unittest.TestCase):
             protocol_id=protocol_id_of(area),
         )
         before = first.read_bytes()
-        second = findings.write(
+        second = audit_records.write(
             area,
             "preflight",
             "m",
@@ -307,7 +309,7 @@ class WriteRead(unittest.TestCase):
     def test_wrong_mode_or_grade_refuses_to_write(self):
         area = Path(tempfile.mkdtemp())
         with self.assertRaises(ValueError):
-            findings.write(
+            audit_records.write(
                 area,
                 "clarity",
                 "m",
@@ -319,7 +321,7 @@ class WriteRead(unittest.TestCase):
                 protocol_id=protocol_id_of(area),
             )
         with self.assertRaises(ValueError):
-            findings.write(
+            audit_records.write(
                 area,
                 "preflight",
                 "m",
@@ -336,7 +338,7 @@ class WriteRead(unittest.TestCase):
         record would read as covered with nothing open."""
         area = Path(tempfile.mkdtemp())
         with self.assertRaises(ValueError) as cm:
-            findings.write(
+            audit_records.write(
                 area,
                 "preflight",
                 "m",
@@ -350,7 +352,7 @@ class WriteRead(unittest.TestCase):
         self.assertIn("counts 2 blocker(s)", str(cm.exception))
         self.assertEqual(list(area.glob("audits/*")), [])
         # notes are not held; a warning line under a 1-warning verdict is
-        findings.write(
+        audit_records.write(
             area,
             "preflight",
             "m",
@@ -374,7 +376,7 @@ class Decisions(unittest.TestCase):
         path = next((area / "audits").glob("*.toml"))
         set_status(path, 1, "fixed")
         set_status(path, 2, "limitation", "the reference line stays a limit")
-        rec = findings.read(path)
+        rec = audit_records.read(path)
         self.assertEqual(len(rec.open), 0)
         self.assertEqual(rec.findings[1].reason, "the reference line stays a limit")
 
@@ -386,14 +388,14 @@ class Decisions(unittest.TestCase):
         path = next((area / "audits").glob("*.toml"))
         set_status(path, 2, "deferred", "own task")
         with self.assertRaisesRegex(findings.FindingsError, "deferred"):
-            findings.read(path)
+            audit_records.read(path)
 
     def test_a_decided_status_without_reason_is_loud(self):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         set_status(path, 1, "limitation")
         with self.assertRaises(findings.FindingsError) as cm:
-            findings.read(path)
+            audit_records.read(path)
         self.assertIn("owes a reason", str(cm.exception))
         self.assertIn(path.name, str(cm.exception))
 
@@ -406,7 +408,7 @@ class Decisions(unittest.TestCase):
         text = path.read_text(encoding="utf-8")
         path.write_text(text.replace("blockers = 1", "blockers = 2"), encoding="utf-8")
         with self.assertRaises(findings.FindingsError) as cm:
-            findings.read(path)
+            audit_records.read(path)
         self.assertIn("counts 2 blocker(s) and 1 warning(s)", str(cm.exception))
         self.assertIn("carries 1 BLOCKER and 1 WARNING", str(cm.exception))
         self.assertIn(path.name, str(cm.exception))
@@ -420,27 +422,29 @@ class Decisions(unittest.TestCase):
         head, _, _ = text.partition("\n[[finding]]")
         path.write_text(head + "\n", encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "carries 0 BLOCKER"):
-            findings.read(path)
+            audit_records.read(path)
         # notes are not held, on read as on write
         path.write_text(text.replace("notes = 0", "notes = 5"), encoding="utf-8")
-        self.assertEqual(findings.read(path).verdict, (1, 1, 5))
+        self.assertEqual(audit_records.read(path).verdict, (1, 1, 5))
 
     def test_unknown_status_missing_table_and_bad_toml_are_loud(self):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         set_status(path, 1, "done", "x")
         with self.assertRaisesRegex(findings.FindingsError, "status 'done'"):
-            findings.read(path)
+            audit_records.read(path)
         path.write_text(
             '[[finding]]\ngrade = "NOTE"\ntext = "t"\nstatus = "open"\nreason = ""\n'
         )
         with self.assertRaisesRegex(findings.FindingsError, r"no \[audit\] table"):
-            findings.read(path)
+            audit_records.read(path)
         path.write_text("not = [toml\n")
         with self.assertRaisesRegex(findings.FindingsError, "not TOML"):
-            findings.read(path)
+            audit_records.read(path)
         with self.assertRaises(findings.FindingsError):
-            findings.area_records(area)  # the loud file stays loud through the listing
+            audit_records.area_records(
+                area
+            )  # the loud file stays loud through the listing
 
 
 class HandDecisions(unittest.TestCase):
@@ -466,7 +470,7 @@ class HandDecisions(unittest.TestCase):
             1,
         )
         path.write_text(decided, encoding="utf-8")
-        rec = findings.read(path)
+        rec = audit_records.read(path)
         self.assertEqual(
             [f.reason for f in rec.findings],
             ['the "inputs" root is fixed', 'a "quoted" word'],
@@ -482,7 +486,7 @@ class HandDecisions(unittest.TestCase):
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaises(findings.FindingsError) as cm:
-            findings.read(path)
+            audit_records.read(path)
         said = str(cm.exception)
         self.assertIn("not TOML", said)
         self.assertIn("line", said)
@@ -500,7 +504,7 @@ class ModelTextReadsBack(unittest.TestCase):
         )
         area = area_with([("preflight", [("NOTE", text)])])
         path = next((area / "audits").glob("*.toml"))
-        self.assertEqual(findings.read(path).findings[0].text, text)
+        self.assertEqual(audit_records.read(path).findings[0].text, text)
 
 
 class WriteDecision(unittest.TestCase):
@@ -514,10 +518,10 @@ class WriteDecision(unittest.TestCase):
 
     def test_one_finding_changes_and_nothing_else(self):
         path = self.record()
-        before = findings.read(path)
+        before = audit_records.read(path)
         text_before = path.read_text(encoding="utf-8")
         reason = 'the "inputs" root is fixed \\ checked\nall 12 rows'
-        after = findings.write_decision(path, 2, "limitation", reason)
+        after = audit_records.write_decision(path, 2, "limitation", reason)
         self.assertEqual(after.findings[1].status, "limitation")
         self.assertEqual(after.findings[1].reason, reason.strip())
         self.assertEqual(after.findings[0], before.findings[0])
@@ -531,7 +535,7 @@ class WriteDecision(unittest.TestCase):
                 before.verdict,
             ),
         )
-        self.assertEqual(findings.read(path), after)
+        self.assertEqual(audit_records.read(path), after)
         changed = [
             (a, b)
             for a, b in zip(text_before.splitlines(), path.read_text().splitlines())
@@ -555,10 +559,10 @@ class WriteDecision(unittest.TestCase):
                     text[:first] + hand + text[first + len('reason = ""') :]
                 )
                 self.assertEqual(
-                    findings.read(path).findings[0].reason,
+                    audit_records.read(path).findings[0].reason,
                     "checked by hand\nover two lines",
                 )
-                after = findings.write_decision(
+                after = audit_records.write_decision(
                     path, 1, "limitation", "the leak is named", "stands"
                 )
                 self.assertEqual(
@@ -597,8 +601,8 @@ class WriteDecision(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 at = text.index('reason = ""\n')
                 path.write_text(text[:at] + hand + text[at + len('reason = ""\n') :])
-                self.assertEqual(findings.read(path).findings[0].reason, value)
-                findings.write_decision(
+                self.assertEqual(audit_records.read(path).findings[0].reason, value)
+                audit_records.write_decision(
                     path, 1, "false-positive", "not a fault", when=minute(1)
                 )
                 after = path.read_text(encoding="utf-8")
@@ -620,11 +624,11 @@ class WriteDecision(unittest.TestCase):
         path = self.record()
         crlf = path.read_text(encoding="utf-8").replace("\n", "\r\n")
         path.write_bytes(crlf.encode("utf-8"))
-        findings.write_decision(path, 2, "limitation", "known", "stands")
+        audit_records.write_decision(path, 2, "limitation", "known", "stands")
         after = path.read_bytes().decode("utf-8")
         self.assertNotIn("\n", after.replace("\r\n", ""))
         self.assertEqual(after.count("\r\n"), crlf.count("\r\n") + 1)  # the effect line
-        self.assertEqual(findings.read(path).findings[1].effect, "stands")
+        self.assertEqual(audit_records.read(path).findings[1].effect, "stands")
 
     def test_a_record_without_the_written_lines_names_its_restore(self):
         path = self.record()
@@ -633,11 +637,11 @@ class WriteDecision(unittest.TestCase):
         path.write_text(
             text.replace('status = "open"', '"status" = "open"', 1), encoding="utf-8"
         )
-        self.assertEqual(findings.read(path).findings[0].status, "open")
+        self.assertEqual(audit_records.read(path).findings[0].status, "open")
         with self.assertRaisesRegex(
             findings.FindingsError, "changed by hand; restore it"
         ):
-            findings.write_decision(path, 1, "fixed", "")
+            audit_records.write_decision(path, 1, "fixed", "")
 
     def test_the_decided_statuses_and_the_carried_rule_have_one_home(self):
         self.assertEqual(findings.DECIDED_LIST, "fixed / limitation / false-positive")
@@ -666,11 +670,13 @@ class WriteDecision(unittest.TestCase):
         ):
             with self.subTest(status=status):
                 with self.assertRaises(findings.FindingsError):
-                    findings.write_decision(path, 1, status, reason)
-        findings.write_decision(path, 1, "open", "")  # the undecided start owes none
+                    audit_records.write_decision(path, 1, status, reason)
+        audit_records.write_decision(
+            path, 1, "open", ""
+        )  # the undecided start owes none
         self.assertEqual(path.read_text(encoding="utf-8"), before)
-        findings.write_decision(path, 1, "fixed", "")  # fixed owes no reason
-        self.assertEqual(findings.read(path).findings[0].status, "fixed")
+        audit_records.write_decision(path, 1, "fixed", "")  # fixed owes no reason
+        self.assertEqual(audit_records.read(path).findings[0].status, "fixed")
 
     def test_taking_a_decision_back_owes_a_reason(self):
         for status, reason, effect in (
@@ -680,16 +686,16 @@ class WriteDecision(unittest.TestCase):
         ):
             with self.subTest(status=status):
                 path = self.record()
-                findings.write_decision(path, 1, status, reason, effect)
+                audit_records.write_decision(path, 1, status, reason, effect)
                 decided = path.read_text(encoding="utf-8")
                 for no_reason in ("", "  "):
                     with self.assertRaisesRegex(
                         findings.FindingsError,
                         f"finding 1: taking the decision `{status}` back owes a reason",
                     ):
-                        findings.write_decision(path, 1, "open", no_reason)
+                        audit_records.write_decision(path, 1, "open", no_reason)
                 self.assertEqual(path.read_text(encoding="utf-8"), decided)
-                after = findings.write_decision(path, 1, "open", "does not hold")
+                after = audit_records.write_decision(path, 1, "open", "does not hold")
                 self.assertEqual(
                     (after.findings[0].status, after.findings[0].reason),
                     ("open", "does not hold"),
@@ -700,7 +706,7 @@ class WriteDecision(unittest.TestCase):
         for n in (0, 3, -1):
             with self.subTest(n=n):
                 with self.assertRaisesRegex(findings.FindingsError, "finding 1..2"):
-                    findings.write_decision(path, n, "fixed", "")
+                    audit_records.write_decision(path, n, "fixed", "")
 
     def test_a_broken_file_is_refused_and_left_as_it_is(self):
         path = self.record()
@@ -709,7 +715,7 @@ class WriteDecision(unittest.TestCase):
         )
         path.write_text(broken, encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "not TOML"):
-            findings.write_decision(path, 1, "fixed", "")
+            audit_records.write_decision(path, 1, "fixed", "")
         self.assertEqual(path.read_text(encoding="utf-8"), broken)
 
     def test_a_table_between_findings_does_not_shift_the_count(self):
@@ -722,8 +728,8 @@ class WriteDecision(unittest.TestCase):
         i = text.index("\n[[finding]]", text.index("[[finding]]") + 1)
         extra = '\n[finding.extra]\nnote = "x"\n'
         path.write_text(text[:i] + extra + text[i:], encoding="utf-8")
-        findings.write_decision(path, 1, "fixed", "")
-        rec = findings.read(path)
+        audit_records.write_decision(path, 1, "fixed", "")
+        rec = audit_records.read(path)
         self.assertEqual([f.status for f in rec.findings], ["fixed", "open", "open"])
 
     def test_a_status_written_over_two_lines_is_replaced_on_one(self):
@@ -734,7 +740,7 @@ class WriteDecision(unittest.TestCase):
             'status = "open"\nreason = ""', 'reason = ""\nstatus = """\nopen"""', 1
         )
         path.write_text(text, encoding="utf-8")
-        after = findings.write_decision(path, 1, "fixed", "")
+        after = audit_records.write_decision(path, 1, "fixed", "")
         self.assertEqual(after.findings[0].status, "fixed")
         self.assertIn(
             'reason = ""\nstatus = "fixed"\n', path.read_text(encoding="utf-8")
@@ -773,7 +779,7 @@ class Subject(unittest.TestCase):
                 self.assertEqual(finding_line.subject_of(line), subject)
         path = self.record()
         self.assertIn('subject = "implementation"', path.read_text(encoding="utf-8"))
-        rec = findings.read(path)
+        rec = audit_records.read(path)
         self.assertEqual(
             [f.subject for f in rec.findings], ["implementation", "statement"]
         )
@@ -794,21 +800,23 @@ class Subject(unittest.TestCase):
         with self.assertRaisesRegex(
             findings.FindingsError, "an implementation finding is no limitation"
         ):
-            findings.write_decision(
+            audit_records.write_decision(
                 path, 1, "limitation", "one draw is enough", "stands"
             )
         self.assertEqual(path.read_bytes(), before)  # the file untouched
-        after = findings.write_decision(path, 1, "fixed", "200 permutations now")
+        after = audit_records.write_decision(path, 1, "fixed", "200 permutations now")
         self.assertEqual(after.findings[0].subject, "implementation")
 
     def test_the_twin_a_statement_finding_takes_limitation(self):
         path = self.record()
-        after = findings.write_decision(path, 2, "limitation", "scope of the claim")
+        after = audit_records.write_decision(
+            path, 2, "limitation", "scope of the claim"
+        )
         self.assertEqual(after.findings[1].status, "limitation")
         self.assertEqual(after.findings[1].subject, "statement")
 
     def test_the_decisions_a_finding_allows(self):
-        rec = findings.read(self.record())
+        rec = audit_records.read(self.record())
         impl, stat = rec.findings
         self.assertEqual(findings.allowed_decisions(impl), ("fixed", "false-positive"))
         self.assertEqual(findings.allowed_decisions(stat), findings.DECIDED)
@@ -830,7 +838,7 @@ class Subject(unittest.TestCase):
         with self.assertRaisesRegex(
             findings.FindingsError, r"subject None — .*0\.112\.0 or earlier"
         ):
-            findings.read(path)
+            audit_records.read(path)
 
     def test_a_subject_outside_the_subjects_does_not_read(self):
         path = self.record()
@@ -840,7 +848,7 @@ class Subject(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(findings.FindingsError, "subject 'wording'"):
-            findings.read(path)
+            audit_records.read(path)
 
 
 class Rule(unittest.TestCase):
@@ -868,7 +876,7 @@ class Rule(unittest.TestCase):
             ),
             "LAB-015",
         )
-        rec = findings.read(self.record())
+        rec = audit_records.read(self.record())
         self.assertEqual(
             [finding_line.stored_rule(f.rule) for f in rec.findings],
             ["LAB-038", gate.NEW_CLASS],
@@ -902,7 +910,7 @@ class Rule(unittest.TestCase):
         with self.assertRaisesRegex(
             findings.FindingsError, r"no rule field — .*0\.112\.0 or earlier"
         ):
-            findings.read(path)
+            audit_records.read(path)
 
     def test_a_retired_rule_is_refused_when_written_and_read_in_a_record(self):
         """A record outlives its rule's retirement; only the writer holds
@@ -915,7 +923,7 @@ class Rule(unittest.TestCase):
         with mock.patch.object(rules, "load_ledger", return_value=retired):
             with self.assertRaisesRegex(ValueError, "LAB-038, retired"):
                 finding_line.active_rule_of(self.ONE)
-            rule = findings.read(path).findings[0].rule
+            rule = audit_records.read(path).findings[0].rule
             assert rule is not None
             # read back as the gate's value, the retired rule's name from the ledger
             self.assertEqual((rule.kind, rule.rule_id), (gate.KNOWN_RULE, "LAB-038"))
@@ -941,12 +949,16 @@ class Rule(unittest.TestCase):
 
     def test_a_decision_keeps_the_rule(self):
         path = self.record()
-        after = findings.write_decision(path, 2, "false-positive", "the run is right")
+        after = audit_records.write_decision(
+            path, 2, "false-positive", "the run is right"
+        )
         self.assertEqual(after.findings[1].rule, gate.NEW_CLASS_RULE)
 
     def test_new_class_findings_are_collected_with_their_record_and_number(self):
         area = self.record().parent.parent
-        collected = findings.new_class_findings(findings.repo_records(area.parent))
+        collected = audit_records.new_class_findings(
+            audit_records.repo_records(area.parent)
+        )
         self.assertEqual(
             [(a, n, f.grade) for a, _, n, f in collected], [(area, 2, "WARNING")]
         )
@@ -970,7 +982,7 @@ class Undetermined(unittest.TestCase):
         return next((area / "audits").glob("*.toml"))
 
     def test_it_is_written_with_its_check_and_note(self):
-        (f,) = findings.read(self.record()).findings
+        (f,) = audit_records.read(self.record()).findings
         self.assertEqual(
             (f.subject, f.check, f.check_note),
             (
@@ -999,18 +1011,22 @@ class Undetermined(unittest.TestCase):
             text[:start] + text[text.index("\n", start) + 1 :], encoding="utf-8"
         )
         with self.assertRaisesRegex(findings.FindingsError, "closes with the check"):
-            findings.read(path)
+            audit_records.read(path)
 
     def test_limitation_is_refused_and_fixed_means_the_check_is_built(self):
         path = self.record()
         with self.assertRaisesRegex(
             findings.FindingsError, "an undetermined finding is no limitation"
         ):
-            findings.write_decision(path, 1, "limitation", "may count rows", "stands")
-        (f,) = findings.read(path).findings
+            audit_records.write_decision(
+                path, 1, "limitation", "may count rows", "stands"
+            )
+        (f,) = audit_records.read(path).findings
         self.assertEqual(findings.allowed_decisions(f), ("fixed", "false-positive"))
         self.assertIsNone(findings.decision_after_restore(f))
-        after = findings.write_decision(path, 1, "fixed", "writes denominator_source")
+        after = audit_records.write_decision(
+            path, 1, "fixed", "writes denominator_source"
+        )
         self.assertEqual(after.findings[0].subject, "undetermined")
 
 
@@ -1151,9 +1167,9 @@ class DecideCommand(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         self.assertIn(records[-1].name, out)
         self.assertEqual(
-            findings.read(records[-1]).findings[0].status, "false-positive"
+            audit_records.read(records[-1]).findings[0].status, "false-positive"
         )
-        self.assertEqual(findings.read(records[0]).findings[0].status, "open")
+        self.assertEqual(audit_records.read(records[0]).findings[0].status, "open")
         self.assertIn("1 open", out)
 
     def test_record_names_another_one_and_a_bad_decision_exits_2(self):
@@ -1163,7 +1179,7 @@ class DecideCommand(unittest.TestCase):
             [str(area), "--decide", "2", "fixed", "--why", "", "--record", str(first)]
         )
         self.assertEqual(rc, 0, err)
-        self.assertEqual(findings.read(first).findings[1].status, "fixed")
+        self.assertEqual(audit_records.read(first).findings[1].status, "fixed")
         rc, out, err = self.run_main(
             [str(area), "--decide", "2", "limitation", "--why", ""]
         )
@@ -1202,7 +1218,7 @@ class DecisionList(unittest.TestCase):
         result = audit_reply.parse(self.REPORT)
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         area.mkdir(parents=True)
-        path = findings.write(
+        path = audit_records.write(
             area,
             "preflight",
             "opus",
@@ -1221,7 +1237,9 @@ class DecisionList(unittest.TestCase):
         from labkit.gates import audit
 
         area, path = self.recorded()
-        lines = audit_decisions.decision_lines(findings.read(path), area, self.REPORT)
+        lines = audit_decisions.decision_lines(
+            audit_records.read(path), area, self.REPORT
+        )
         text = "\n".join(lines)
         self.assertIn(str(path.name), text)
         self.assertRegex(text, r"\n  1 · BLOCKER · scripts/01_measure.py:12")
@@ -1247,7 +1265,7 @@ class DecisionList(unittest.TestCase):
                 contextlib.redirect_stderr(io.StringIO()),
             ):
                 self.assertEqual(audit.main(argv), 0)
-        rec = findings.read(path)
+        rec = audit_records.read(path)
         self.assertEqual([f.status for f in rec.findings], ["fixed", "false-positive"])
         self.assertEqual(rec.open, [])
 
@@ -1255,7 +1273,7 @@ class DecisionList(unittest.TestCase):
 
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         area.mkdir(parents=True)
-        path = findings.write(
+        path = audit_records.write(
             area,
             "preflight",
             "opus",
@@ -1268,7 +1286,7 @@ class DecisionList(unittest.TestCase):
         )
         report = "READ · README.md:3 · a stamped placeholder\nverdict: 0 blockers, 0 warnings\n"
         text = "\n".join(
-            audit_decisions.decision_lines(findings.read(path), area, report)
+            audit_decisions.decision_lines(audit_records.read(path), area, report)
         )
         self.assertIn("no findings to decide", text)
         self.assertNotIn("--decide", text)
@@ -1283,12 +1301,14 @@ class Repo(unittest.TestCase):
         there = area_with([("preflight", TWO)], at=root / "16-there")
         for area in (here, there):
             set_status(next((area / "audits").glob("*.toml")), 1, "fixed")
-        found = findings.open_elsewhere(here, root)
+        found = audit_records.open_elsewhere(here, root)
         self.assertEqual(
             [(a.name, f.text) for a, _, f in found], [("16-there", TWO[1][1])]
         )
-        self.assertEqual(findings.open_elsewhere(there, root)[0][0].name, "17-here")
-        self.assertEqual(findings.area_records(root / "99-none"), [])
+        self.assertEqual(
+            audit_records.open_elsewhere(there, root)[0][0].name, "17-here"
+        )
+        self.assertEqual(audit_records.area_records(root / "99-none"), [])
 
 
 class AuditCoverage(unittest.TestCase):
@@ -1432,7 +1452,7 @@ class Binding(unittest.TestCase):
     def test_the_run_is_owed_by_analysis_and_refused_by_preflight(self):
         area = Path(tempfile.mkdtemp())
         with self.assertRaisesRegex(ValueError, "names the run it read"):
-            findings.write(
+            audit_records.write(
                 area,
                 "analysis",
                 "m",
@@ -1444,7 +1464,7 @@ class Binding(unittest.TestCase):
                 protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "names none"):
-            findings.write(
+            audit_records.write(
                 area,
                 "preflight",
                 "m",
@@ -1457,7 +1477,7 @@ class Binding(unittest.TestCase):
                 protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "names what it was shown"):
-            findings.write(
+            audit_records.write(
                 area,
                 "analysis",
                 "m",
@@ -1470,7 +1490,7 @@ class Binding(unittest.TestCase):
                 protocol_id=protocol_id_of(area),
             )
         with self.assertRaisesRegex(ValueError, "is shown none"):
-            findings.write(
+            audit_records.write(
                 area,
                 "preflight",
                 "m",
@@ -1505,7 +1525,7 @@ class Binding(unittest.TestCase):
                 ),
             )
         # a record without a run is written as NO_RUN, and read so
-        path = findings.write(
+        path = audit_records.write(
             area,
             "analysis",
             "m",
@@ -1518,7 +1538,7 @@ class Binding(unittest.TestCase):
             registration=registration_of(area),
             protocol_id=protocol_id_of(area),
         )
-        self.assertEqual(findings.read(path).run_id, "none")
+        self.assertEqual(audit_records.read(path).run_id, "none")
         self.assertIn(
             "run none",
             audit_gaps.audit_coverage(
@@ -1535,23 +1555,23 @@ class Binding(unittest.TestCase):
         text = pre.read_text(encoding="utf-8")
         pre.write_text(text.replace(f'block_sha = "{BLOCK}"\n', ""), encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "block_sha is missing"):
-            findings.read(pre)
+            audit_records.read(pre)
         pre.write_text(text + f'run_id = "{RUN}"\n', encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "reads no run"):
-            findings.read(pre)
+            audit_records.read(pre)
         pre.write_text(text + f'shown_sha = "{SHOWN}"\n', encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "reads no run"):
-            findings.read(pre)
+            audit_records.read(pre)
         text = ana.read_text(encoding="utf-8")
         ana.write_text(text.replace(f'run_id = "{RUN}"\n', ""), encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "run_id is missing"):
-            findings.read(ana)
+            audit_records.read(ana)
         # an analysis record without shown_sha is not read
         ana.write_text(text.replace(f'shown_sha = "{SHOWN}"\n', ""), encoding="utf-8")
         with self.assertRaisesRegex(
             findings.FindingsError, "run the analysis audit again"
         ):
-            findings.read(ana)
+            audit_records.read(ana)
 
 
 class NumberOf(unittest.TestCase):
@@ -1601,12 +1621,12 @@ class AuditedStateMatch(unittest.TestCase):
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         area.mkdir(parents=True)
         reg = registration_of(area)
-        path = findings.write(
+        path = audit_records.write(
             area, "analysis", "m", "c", "b", (0, 0, 0), [],
             run_id=RUN, shown_sha=SHOWN, registration=reg,
             protocol_id=protocol_id_of(area),
         )  # fmt: skip
-        record = findings.read(path)
+        record = audit_records.read(path)
         now = findings.AuditedState("c", "b", reg, RUN, SHOWN)
         self.assertEqual(record.state, now)
         self.assertEqual(audit_gaps.covering_records([record], now), [record])
@@ -1788,19 +1808,23 @@ class ReplacedDecisions(unittest.TestCase):
 
     def taken_back_and_restored(self) -> Path:
         path = self.record()
-        findings.write_decision(path, 1, "fixed", "seed set", when=minute(1))
-        findings.write_decision(path, 1, "open", "set after the split", when=minute(2))
-        findings.write_decision(path, 1, "fixed", "seed set", when=minute(3))
+        audit_records.write_decision(path, 1, "fixed", "seed set", when=minute(1))
+        audit_records.write_decision(
+            path, 1, "open", "set after the split", when=minute(2)
+        )
+        audit_records.write_decision(path, 1, "fixed", "seed set", when=minute(3))
         return path
 
     def test_each_replaced_decision_is_kept_in_its_order(self):
         path = self.record()
         written = path.read_text(encoding="utf-8")
-        first = findings.write_decision(path, 1, "fixed", "seed set", when=minute(1))
+        first = audit_records.write_decision(
+            path, 1, "fixed", "seed set", when=minute(1)
+        )
         self.assertEqual(first.findings[0].replaced_decisions, ())
         self.assertNotIn(decision_history.KEY, path.read_text(encoding="utf-8"))
         path = self.taken_back_and_restored()
-        rec = findings.read(path)
+        rec = audit_records.read(path)
         self.assertEqual(
             rec.findings[0].replaced_decisions,
             (
@@ -1820,21 +1844,22 @@ class ReplacedDecisions(unittest.TestCase):
             text,
         )
         self.assertEqual(
-            findings.without_decisions(text), findings.without_decisions(written)
+            audit_records.without_decisions(text),
+            audit_records.without_decisions(written),
         )
 
     def test_the_same_decision_given_again_adds_no_entry(self):
         path = self.taken_back_and_restored()
         before = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "fixed", " seed set ", when=minute(9))
+        audit_records.write_decision(path, 1, "fixed", " seed set ", when=minute(9))
         self.assertEqual(path.read_text(encoding="utf-8"), before)
 
     def test_a_replaced_limit_keeps_its_effect(self):
         path = self.record()
-        findings.write_decision(
+        audit_records.write_decision(
             path, 1, "limitation", "known", "criterion-1 not assessable"
         )
-        after = findings.write_decision(
+        after = audit_records.write_decision(
             path, 1, "false-positive", "a.py:1 reads b", when=minute(4)
         )
         self.assertEqual(
@@ -1848,17 +1873,19 @@ class ReplacedDecisions(unittest.TestCase):
                 ),
             ),
         )
-        self.assertEqual(findings.read(path), after)
+        self.assertEqual(audit_records.read(path), after)
 
     def test_a_crlf_record_keeps_its_line_endings_in_the_history(self):
         path = self.record()
         path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
-        findings.write_decision(path, 1, "fixed", "seed set")
-        findings.write_decision(path, 1, "open", "does not hold")
-        findings.write_decision(path, 1, "fixed", "seed set in main")
+        audit_records.write_decision(path, 1, "fixed", "seed set")
+        audit_records.write_decision(path, 1, "open", "does not hold")
+        audit_records.write_decision(path, 1, "fixed", "seed set in main")
         after = path.read_bytes().decode("utf-8")
         self.assertNotIn("\n", after.replace("\r\n", ""))
-        self.assertEqual(len(findings.read(path).findings[0].replaced_decisions), 2)
+        self.assertEqual(
+            len(audit_records.read(path).findings[0].replaced_decisions), 2
+        )
 
     def test_an_entry_a_finding_cannot_hold_is_refused_by_name(self):
         path = self.taken_back_and_restored()
@@ -1879,7 +1906,7 @@ class ReplacedDecisions(unittest.TestCase):
                 with self.assertRaisesRegex(
                     findings.FindingsError, f"finding 1: {decision_history.KEY} {said}"
                 ):
-                    findings.read(path)
+                    audit_records.read(path)
         path.write_text(
             text[: text.index("replaced_decisions = [")]
             + "replaced_decisions = []\n"
@@ -1889,7 +1916,7 @@ class ReplacedDecisions(unittest.TestCase):
         with self.assertRaisesRegex(
             findings.FindingsError, "not an array of at least one entry"
         ):
-            findings.read(path)
+            audit_records.read(path)
 
     def test_an_array_set_on_one_line_by_hand_reads_and_is_not_decided(self):
         """TOML reads the array on one line too, but the writer finds only
@@ -1900,12 +1927,14 @@ class ReplacedDecisions(unittest.TestCase):
         one_line = " ".join(text[first:end].split()) + " ]\n"
         by_hand = text[:first] + one_line + text[end + 2 :]
         path.write_text(by_hand, encoding="utf-8")
-        self.assertEqual(len(findings.read(path).findings[0].replaced_decisions), 2)
+        self.assertEqual(
+            len(audit_records.read(path).findings[0].replaced_decisions), 2
+        )
         with self.assertRaisesRegex(
             findings.FindingsError,
             "do not stand one entry per line .* changed by hand; restore it",
         ):
-            findings.write_decision(path, 1, "open", "does not hold")
+            audit_records.write_decision(path, 1, "open", "does not hold")
         self.assertEqual(path.read_text(encoding="utf-8"), by_hand)
 
     def test_a_decision_restored_word_for_word_is_another_decision(self):
@@ -1914,7 +1943,9 @@ class ReplacedDecisions(unittest.TestCase):
         had before the history existed, and deciding again unchanged keeps
         it."""
         path = self.record()
-        first = findings.write_decision(path, 1, "fixed", "seed set", when=minute(1))
+        first = audit_records.write_decision(
+            path, 1, "fixed", "seed set", when=minute(1)
+        )
         digest_of = findings.decision_digest
         # spelled out, not computed by the function under test
         before_history = digest(
@@ -1923,10 +1954,16 @@ class ReplacedDecisions(unittest.TestCase):
             ).encode("utf-8")
         )
         self.assertEqual(digest_of(first.findings[0]), before_history)
-        again = findings.write_decision(path, 1, "fixed", "seed set", when=minute(2))
+        again = audit_records.write_decision(
+            path, 1, "fixed", "seed set", when=minute(2)
+        )
         self.assertEqual(digest_of(again.findings[0]), digest_of(first.findings[0]))
-        findings.write_decision(path, 1, "open", "set after the split", when=minute(3))
-        restored = findings.write_decision(path, 1, "fixed", "seed set", when=minute(4))
+        audit_records.write_decision(
+            path, 1, "open", "set after the split", when=minute(3)
+        )
+        restored = audit_records.write_decision(
+            path, 1, "fixed", "seed set", when=minute(4)
+        )
         self.assertEqual(
             (restored.findings[0].status, restored.findings[0].reason),
             (first.findings[0].status, first.findings[0].reason),
@@ -1939,14 +1976,16 @@ class ReplacedDecisions(unittest.TestCase):
 
     def test_an_array_that_never_closes_has_no_decision_lines(self):
         text = self.taken_back_and_restored().read_text(encoding="utf-8")
-        self.assertIsNotNone(findings.without_decisions(text))
+        self.assertIsNotNone(audit_records.without_decisions(text))
         self.assertIsNone(
-            findings.without_decisions(text.replace("]\nstatus", "status"))
+            audit_records.without_decisions(text.replace("]\nstatus", "status"))
         )
 
     def test_the_findings_of_a_text_read_or_are_none(self):
         path = self.taken_back_and_restored()
         text = path.read_text(encoding="utf-8")
-        self.assertEqual(findings.findings_in(text), findings.read(path).findings)
-        self.assertIsNone(findings.findings_in(text.replace('"fixed"', '"done"')))
-        self.assertIsNone(findings.findings_in("not = [toml"))
+        self.assertEqual(
+            audit_records.findings_in(text), audit_records.read(path).findings
+        )
+        self.assertIsNone(audit_records.findings_in(text.replace('"fixed"', '"done"')))
+        self.assertIsNone(audit_records.findings_in("not = [toml"))

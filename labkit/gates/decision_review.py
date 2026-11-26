@@ -83,6 +83,7 @@ from labkit.formats import (
     console,
     evidence,
     findings,
+    audit_records,
     finding_line,
     promises,
     protocol_block,
@@ -450,8 +451,8 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     """RECORD read, or the area's newest analysis record; FindingsError when
     there is none."""
     if record is not None:
-        return findings.read(audit_decisions.record_path(area, record))
-    analysis = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
+        return audit_records.read(audit_decisions.record_path(area, record))
+    analysis = [r for r in audit_records.area_records(area) if r.mode == ANALYSIS_AUDIT]
     if not analysis:
         raise findings.FindingsError(f"{area}: no analysis record — nothing to review")
     return analysis[-1]

@@ -369,10 +369,10 @@ class Freeze(unittest.TestCase):
         return area, protocol
 
     def _record(self, area: Path, rows: list[tuple[str, str]]) -> Path:
-        from labkit.formats import findings, promises, scope_sha
+        from labkit.formats import audit_records, promises, scope_sha
 
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
-        return findings.write(
+        return audit_records.write(
             area,
             "preflight",
             "opus",
@@ -965,7 +965,7 @@ class Adopt(unittest.TestCase):
 
     def _area(self, *, run_kind: RunKind = "measurement", audited: bool = True) -> Path:
 
-        from labkit.formats import findings, promises, scope_sha
+        from labkit.formats import audit_records, promises, scope_sha
         from protocol_fixture import (
             C1_BLOCK,
             C1_PROSE,
@@ -1009,7 +1009,7 @@ class Adopt(unittest.TestCase):
         data["data"] = {"cases": source_entry(src)}
         cfg.write_text(json.dumps(data), encoding="utf-8")
         if audited:
-            findings.write(
+            audit_records.write(
                 area,
                 "analysis",
                 "opus",

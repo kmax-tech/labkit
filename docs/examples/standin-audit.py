@@ -16,7 +16,7 @@ from pathlib import Path
 from labkit.checks import audit_binding
 from labkit.formats import (
     finding_line,
-    findings,
+    audit_records,
     promises,
     protocol_block,
     protocol_check,
@@ -43,7 +43,7 @@ if len(sys.argv) > 2:
             f"LAB-015 Preflight audit before freezing{check}",
         )
     ]
-path = findings.write(
+path = audit_records.write(
     area,
     "analysis",
     "walkthrough-stand-in",

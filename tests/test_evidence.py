@@ -29,7 +29,7 @@ from labkit.gates import hook_post_change
 from labkit.gates import hook_session
 from datetime import datetime, timezone  # noqa: E402
 
-from labkit.formats import evidence, findings, run_starts  # noqa: E402
+from labkit.formats import audit_records, evidence, run_starts  # noqa: E402
 from labkit.formats.area_state import INDEX, state_of  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
@@ -53,7 +53,7 @@ OPEN = "2026-10-28T11-00-00_cd34"
 
 
 def _record(area: Path) -> Path:
-    return findings.write(
+    return audit_records.write(
         area,
         "preflight",
         "opus",
@@ -85,12 +85,13 @@ class Rules(unittest.TestCase):
     def test_a_decision_leaves_the_record_as_written_besides_its_lines(self):
         path = _record(self.area)
         before = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(path, 1, "limitation", "noted", "stands")
         after = path.read_text(encoding="utf-8")
         self.assertNotEqual(before, after)
         self.assertFalse(evidence.record_changed(before, after))
         self.assertEqual(
-            findings.without_decisions(before), findings.without_decisions(after)
+            audit_records.without_decisions(before),
+            audit_records.without_decisions(after),
         )
 
     def test_a_finding_rewritten_by_hand_is_a_change(self):
@@ -101,13 +102,13 @@ class Rules(unittest.TestCase):
 
     def test_a_committed_decision_replaced_and_kept_is_no_change(self):
         path = _record(self.area)
-        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(path, 1, "limitation", "noted", "stands")
         committed = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "open", "the limit does not hold")
+        audit_records.write_decision(path, 1, "open", "the limit does not hold")
         taken_back = path.read_text(encoding="utf-8")
         self.assertIn('{ status = "limitation", reason = "noted"', taken_back)
         self.assertFalse(evidence.record_changed(committed, taken_back))
-        findings.write_decision(path, 1, "false-positive", "a.py:9 sets the seed")
+        audit_records.write_decision(path, 1, "false-positive", "a.py:9 sets the seed")
         decided_again = path.read_text(encoding="utf-8")
         # against the commit, and against a later commit that holds the take-back
         self.assertFalse(evidence.record_changed(committed, decided_again))
@@ -118,18 +119,18 @@ class Rules(unittest.TestCase):
         kept — replaced by hand without its entry, or its entry edited or
         removed afterwards."""
         path = _record(self.area)
-        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(path, 1, "limitation", "noted", "stands")
         committed = path.read_text(encoding="utf-8")
         by_hand = committed.replace('reason = "noted"', 'reason = "noted twice"')
         self.assertNotEqual(by_hand, committed)
         self.assertTrue(evidence.record_changed(committed, by_hand))
-        findings.write_decision(path, 1, "open", "the limit does not hold")
+        audit_records.write_decision(path, 1, "open", "the limit does not hold")
         taken_back = path.read_text(encoding="utf-8")
         entry = taken_back.index("replaced_decisions = [")
         without_entry = (
             taken_back[:entry] + taken_back[taken_back.index("status =", entry + 60) :]
         )
-        read = findings.findings_in(without_entry)
+        read = audit_records.findings_in(without_entry)
         assert read is not None
         self.assertEqual(read[0].replaced_decisions, ())
         self.assertTrue(evidence.record_changed(committed, without_entry))
@@ -146,7 +147,7 @@ class Rules(unittest.TestCase):
         path = _record(self.area)
         rel = f"audits/{path.name}"
         first = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(path, 1, "limitation", "noted", "stands")
         decided = path.read_text(encoding="utf-8")
         for texts, restored, told in (
             ((decided, first), True, [(rel, evidence.DECISION_LOST)]),
@@ -167,14 +168,14 @@ class Rules(unittest.TestCase):
 
     def test_a_version_that_does_not_read_is_left_to_the_records_reader(self):
         path = _record(self.area)
-        findings.write_decision(path, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(path, 1, "limitation", "noted", "stands")
         committed = path.read_text(encoding="utf-8")
         unread = committed.replace('status = "limitation"', 'status = "done"')
-        self.assertIsNone(findings.findings_in(unread))
+        self.assertIsNone(audit_records.findings_in(unread))
         self.assertFalse(evidence.record_changed(committed, unread))
 
     def test_a_record_without_decision_lines_is_compared_whole(self):
-        self.assertIsNone(findings.without_decisions("[[finding]]\ntext = 'x'\n"))
+        self.assertIsNone(audit_records.without_decisions("[[finding]]\ntext = 'x'\n"))
         self.assertTrue(evidence.record_changed("[[finding]]\n", "[[finding]]\n#\n"))
 
     def test_a_run_is_closed_by_its_completion_or_its_failure(self):
@@ -220,7 +221,7 @@ class Committed(unittest.TestCase):
         _git(self.root, "commit", "-qm", "evidence")
 
     def test_a_decision_through_decide_is_no_change_in_tree_or_index(self):
-        findings.write_decision(self.record, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(self.record, 1, "limitation", "noted", "stands")
         self.assertEqual(
             evidence.change_sentences(evidence.change_findings(self.area)), []
         )
@@ -231,10 +232,10 @@ class Committed(unittest.TestCase):
         )
 
     def test_a_committed_decision_taken_back_is_kept_and_its_entry_held(self):
-        findings.write_decision(self.record, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(self.record, 1, "limitation", "noted", "stands")
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "decided")
-        findings.write_decision(self.record, 1, "open", "the limit does not hold")
+        audit_records.write_decision(self.record, 1, "open", "the limit does not hold")
         self.assertEqual(
             evidence.change_sentences(evidence.change_findings(self.area)), []
         )
@@ -561,7 +562,7 @@ class Session(unittest.TestCase):
         self.assertEqual(rc, 0, err)
 
     def test_a_decision_committed_in_the_session_passes(self):
-        findings.write_decision(self.record, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(self.record, 1, "limitation", "noted", "stands")
         self._commit("decide")
         rc, err = self._stop()
         self.assertEqual(rc, 0, err)
@@ -805,7 +806,7 @@ class Told(unittest.TestCase):
         self.assertNotIn("never completed", ctx)
 
     def test_a_decision_and_a_new_run_are_silent(self):
-        findings.write_decision(self.record, 1, "limitation", "noted", "stands")
+        audit_records.write_decision(self.record, 1, "limitation", "noted", "stands")
         _run_dir(self.area, OPEN, closed=False)
         self.assertEqual(self._told(), "")
 

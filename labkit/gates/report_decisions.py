@@ -35,6 +35,7 @@ from labkit.formats.gate import (
 from labkit.formats.gate import LAB_015
 from labkit.formats import (
     findings,
+    audit_records,
     followup,
     protocol_block,
     reviews,
@@ -180,7 +181,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         return [
             blocker(
                 f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
-                fix=findings.record_way(ctx.area, ctx.protocol),
+                fix=audit_records.record_way(ctx.area, ctx.protocol),
                 rule=TECHNICAL_RULE,
             )
         ]

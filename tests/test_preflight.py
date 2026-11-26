@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, handovers, promises  # noqa: E402
+from labkit.formats import audit_records, handovers, promises  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from labkit.formats.gate import Findings  # noqa: E402
 from protocol_fixture import protocol_id_of, registration_of, head  # noqa: E402
@@ -444,7 +444,7 @@ class TestAuditFindings(unittest.TestCase):
     def _recorded(self, d, frozen=False):
         text = _protocol(frozen=True) if frozen else CLEAN_PROTOCOL
         area, _ = _area(d, text)
-        path = findings.write(
+        path = audit_records.write(
             area,
             "preflight",
             "opus",
@@ -481,7 +481,7 @@ class TestAuditFindings(unittest.TestCase):
         with _area_dir() as d:
             area, _ = _area(d, _protocol(frozen=True, preflight_audit="x"))
             p = area / "PROTOCOL-x.md"
-            stale = findings.write(
+            stale = audit_records.write(
                 area,
                 "preflight",
                 "opus",
@@ -503,7 +503,7 @@ class TestAuditFindings(unittest.TestCase):
                 f'--decide 1 STATUS --why "<why>" --record {stale.name}', line
             )
             self.assertNotIn("audit this code and promise block", line)
-            other = findings.write(
+            other = audit_records.write(
                 area,
                 "preflight",
                 "opus",
@@ -547,7 +547,7 @@ class TestAuditFindings(unittest.TestCase):
 
         with _area_dir() as d:
             area, _ = _area(d, _protocol(frozen=True, preflight_audit="x"))
-            path = findings.write(
+            path = audit_records.write(
                 area,
                 "preflight",
                 "opus",
@@ -568,7 +568,7 @@ class TestAuditFindings(unittest.TestCase):
             )
             sha = scope_sha.area_stamp(area)[0]
             path.unlink()
-            good = findings.write(
+            good = audit_records.write(
                 area,
                 "preflight",
                 "opus",
@@ -600,7 +600,7 @@ class TestAuditFindings(unittest.TestCase):
             area, _ = _area(root / "17-here")
             other = root / "16-there"
             other.mkdir()
-            findings.write(
+            audit_records.write(
                 other,
                 "preflight",
                 "opus",
@@ -617,7 +617,7 @@ class TestAuditFindings(unittest.TestCase):
             self.assertNotIn("16-there", out)
             # a handover of that area that records it sets it aside: told,
             # the area ended without a result
-            (record,) = findings.area_records(other)
+            (record,) = audit_records.area_records(other)
             handovers.write_record(
                 handovers.new_path(other),
                 handovers.Handover(

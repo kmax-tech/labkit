@@ -33,7 +33,7 @@ from protocol_fixture import (
 )
 
 from labkit.formats import (
-    findings,
+    audit_records,
     gate,
     promises,
     runs,
@@ -81,7 +81,7 @@ class ReportCheck(unittest.TestCase):
         block = promises.block_stamp(
             (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         )
-        findings.write(
+        audit_records.write(
             area,
             "analysis",
             "opus",

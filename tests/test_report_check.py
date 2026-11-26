@@ -50,7 +50,7 @@ from protocol_fixture import (
 )
 
 from labkit.formats import (
-    findings,
+    audit_records,
     handovers,
     promises,
     protocol_block,
@@ -152,7 +152,7 @@ class IfReported(unittest.TestCase):
         data["data"] = {"cases": source_entry(src)}
         cfg.write_text(json.dumps(data), encoding="utf-8")
         if audited:
-            findings.write(
+            audit_records.write(
                 area,
                 "analysis",
                 "opus",

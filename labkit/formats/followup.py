@@ -45,10 +45,10 @@ from labkit.formats.findings import (
     FindingsError,
     FixVerdict,
     Record,
-    area_records,
     decision_digest,
     fixed_claim,
 )
+from labkit.formats.audit_records import area_records
 from labkit.formats.required_check import REQUEST_CHECKS, check_order
 
 #: the statuses under which a BLOCKER is earlier evidence to follow up:
@@ -92,8 +92,8 @@ def protocol_records(area: Path, pid: str | None) -> list[Record]:
     """The records of AREA that audited the protocol with stamped id PID,
     oldest first — in an area of several protocols, the findings on that
     one's question; none for PID None (a protocol without an id has no
-    record, `findings.write` refuses one). Raises FindingsError when a
-    record does not read (`findings.area_records`) or the area's records
+    record, `audit_records.write` refuses one). Raises FindingsError when a
+    record does not read (`audit_records.area_records`) or the area's records
     do not form a chain (`chain`: a carry across protocols among them)."""
     records = area_records(area)
     chain(records)
@@ -109,7 +109,7 @@ def records_of(records: Iterable[Record], pid: str | None) -> list[Record]:
 
 
 def chain(records: list[Record]) -> Chain:
-    """The chain of RECORDS, oldest first as `findings.area_records` gives
+    """The chain of RECORDS, oldest first as `audit_records.area_records` gives
     them. Raises FindingsError on a `carries` that names no finding of
     RECORDS, a finding of the same or a later record, a finding that is no
     BLOCKER, a finding of a record on another protocol; on a loop; on two

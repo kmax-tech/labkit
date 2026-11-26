@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import audit_records, findings, promises, scope_sha  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import (
@@ -63,7 +63,7 @@ class UnfrozenBlocker(unittest.TestCase):
         os.environ.pop("LABKIT_UNFROZEN", None)
 
     def _record(self, rows) -> Path:
-        return findings.write(
+        return audit_records.write(
             self.tmp,
             "preflight",
             "haiku",

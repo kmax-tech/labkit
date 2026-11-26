@@ -27,7 +27,7 @@ sys.path.insert(0, str(REPO))
 from labkit.formats.runs import REPEAT_COSTS  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 from labkit.formats import (  # noqa: E402
-    findings,
+    audit_records,
     promises,
     protocol_block,
     protocol_check,
@@ -477,7 +477,7 @@ class TestFixtures(unittest.TestCase):
             scope_file(area)
             sha = scope_sha.area_stamp(area)[0]
             p = area / "PROTOCOL-x.md"
-            record = findings.write(
+            record = audit_records.write(
                 area,
                 "preflight",
                 "opus",

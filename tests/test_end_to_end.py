@@ -51,7 +51,7 @@ from labkit.formats import (
     answering_run,
     run_index,
     run_starts,
-    findings,
+    audit_records,
     promises,
     protocol_block,
     protocol_check,
@@ -228,7 +228,7 @@ class Lab:
         """A decided audit record of the area as it is now: `labkit-audit`'s
         file without its model call. Returns the scope sha it saw."""
         sha = scope_sha.area_stamp(area)[0]
-        findings.write(
+        audit_records.write(
             area,
             mode,
             "test",
@@ -1577,7 +1577,9 @@ class Withdraw(CountCommands):
             p: p.read_bytes() for p in (self.area / "audits").rglob("*") if p.is_file()
         }
         self.assertEqual(after, audits)
-        self.assertEqual([f.status for f in findings.read(blocking).findings], ["open"])
+        self.assertEqual(
+            [f.status for f in audit_records.read(blocking).findings], ["open"]
+        )
         # and it opens no way to a result: the open BLOCKER still holds the adoption
         rc, out = self.lab.adopt(self.protocol, run_a)
         self.assertEqual(rc, 1, out)
@@ -2049,7 +2051,7 @@ class Judge(unittest.TestCase):
     def _blocker(self) -> Path:
         """A second analysis record of the kept run, holding one BLOCKER."""
         self._adopted()
-        return findings.write(
+        return audit_records.write(
             self.area,
             sc.ANALYSIS_AUDIT,
             "test",
@@ -2112,7 +2114,7 @@ class Judge(unittest.TestCase):
         )
         self.assertEqual(rc, 0, out)
         self.assertEqual(
-            findings.read(record).findings[0].effect, "criterion-1 not assessable"
+            audit_records.read(record).findings[0].effect, "criterion-1 not assessable"
         )
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)  # the record says so, the protocol not yet
@@ -2177,7 +2179,7 @@ class Judge(unittest.TestCase):
         rc, out = self._decide(record, "fixed", "")
         self.assertEqual(rc, 0, out)
         # the decision holds no effect line; the limits it replaced keep theirs
-        decided = findings.read(record).findings[0]
+        decided = audit_records.read(record).findings[0]
         self.assertEqual((decided.status, decided.effect), ("fixed", ""))
         self.assertEqual(
             [
@@ -2217,7 +2219,7 @@ class Judge(unittest.TestCase):
         WARNING may name its effect; named, it reaches the result."""
         self._adopted()
         lab = type(self).lab
-        record = findings.write(
+        record = audit_records.write(
             self.area,
             sc.ANALYSIS_AUDIT,
             "test",

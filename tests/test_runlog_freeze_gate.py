@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
+from labkit.formats import audit_records, promises, protocol_check, scope_sha  # noqa: E402
 from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import protocol_id_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
@@ -104,7 +104,7 @@ class FreezeGate(unittest.TestCase):
         sha = scope_sha.area_stamp(self.tmp)[0]
         text = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, **fields)
         if record:
-            written = findings.write(
+            written = audit_records.write(
                 self.tmp,
                 "preflight",
                 "opus",
@@ -181,7 +181,7 @@ class FreezeGate(unittest.TestCase):
         code: the new sha stamped after fixing the findings, without a
         second audit."""
         text = self._audited(record=False)
-        old = findings.write(
+        old = audit_records.write(
             self.tmp,
             "preflight",
             "opus",
@@ -221,7 +221,7 @@ class FreezeGate(unittest.TestCase):
     def test_an_open_finding_of_the_covering_audit_is_refused(self):
         text = self._audited(record=False)
         sha = scope_sha.area_stamp(self.tmp)[0]
-        open_ = findings.write(
+        open_ = audit_records.write(
             self.tmp,
             "preflight",
             "opus",

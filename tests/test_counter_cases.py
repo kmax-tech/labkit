@@ -31,7 +31,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.tools import report_command
-from labkit.formats import findings, protocol_block  # noqa: E402
+from labkit.formats import audit_records, protocol_block  # noqa: E402
 from protocol_fixture import decide_words  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.gates import report_context
@@ -167,7 +167,9 @@ class RepairUnderUnchangedPromises(_Chain):
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
         )
         self.assertEqual(rc, 1, out)
-        (record,) = [r for r in findings.area_records(self.area) if r.run_id == first]
+        (record,) = [
+            r for r in audit_records.area_records(self.area) if r.run_id == first
+        ]
         e2e._replace(self.measure_script, [(SWAPPED, RIGHT)])
         self.decide(record.path, "fixed", "ANSWERS maps Yes to causal again")
         self.lab.commit("the labels fixed")
@@ -205,7 +207,9 @@ class SupersededCallReleasesNothing(_Chain):
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
         )
         self.assertEqual(rc, 1, out)
-        (record,) = [r for r in findings.area_records(self.area) if r.run_id == first]
+        (record,) = [
+            r for r in audit_records.area_records(self.area) if r.run_id == first
+        ]
         e2e._replace(self.measure_script, [(SWAPPED, RIGHT)])
         self.decide(record.path, "fixed", "ANSWERS maps Yes to causal again")
         self.lab.commit("the labels fixed")

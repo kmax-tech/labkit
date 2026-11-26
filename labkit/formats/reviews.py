@@ -63,7 +63,7 @@ same way (`report_decisions.review_findings`).
 
 Reading is loud: a file without its `[review]` table, a verdict outside
 VERDICTS, counts that are not the decisions' raise ReviewError naming the
-file and the field. `findings.area_records` skips these files by their
+file and the field. `audit_records.area_records` skips these files by their
 name (REVIEW_NAME).
 """
 

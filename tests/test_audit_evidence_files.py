@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks.audit_binding import AuditError  # noqa: E402
 from labkit.formats import (  # noqa: E402
     audit_gaps,
-    findings,
+    audit_records,
     promises,
     protocol_block,
     protocol_check,
@@ -89,7 +89,7 @@ class _Area(unittest.TestCase):
 
     def _record(self) -> str:
         text = self.protocol.read_text(encoding="utf-8")
-        return findings.write(
+        return audit_records.write(
             self.area,
             "preflight",
             "opus",

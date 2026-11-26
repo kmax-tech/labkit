@@ -20,6 +20,7 @@ from labkit.formats import (
     console,
     failed_attempts,
     findings,
+    audit_records,
     finding_line,
     required_check,
     promises,
@@ -329,7 +330,7 @@ def record_path(area: Path, record: Path) -> Path:
 
 def _newest_record(area: Path) -> Path:
     """The area's newest findings record; FindingsError when it has none."""
-    records = findings.area_records(area)
+    records = audit_records.area_records(area)
     if not records:
         raise findings.FindingsError(
             f"{area}: no findings record — run the audit first"
@@ -416,7 +417,7 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     changed = (*held.change_sentences(), *held.ignored)
     if record is not None:
         try:
-            read = findings.read(record_path(area, record))
+            read = audit_records.read(record_path(area, record))
             return _Listing([read], errors, 0, changed=changed)
         except findings.FindingsError as exc:
             return _Listing([], [*errors, str(exc)], 0, changed=changed)
@@ -740,7 +741,7 @@ def decide(
     protocol: Path | None = None,
 ) -> int:
     """`--decide`: store the person's decision on one finding of RECORD (the
-    area's newest record without it) through `findings.write_decision`. A
+    area's newest record without it) through `audit_records.write_decision`. A
     `limitation` on a BLOCKER or WARNING records its effect: `stands`, or the
     ids NOT_ASSESSABLE names (`<ids> not assessable`), held to the promises
     the protocol registers; `--not-assessable` with another status is
@@ -760,7 +761,7 @@ def decide(
                 f"--not-assessable goes with limit, not with {status}"
             )
         if status == findings.LIMITATION:
-            rec_before = findings.read(record)
+            rec_before = audit_records.read(record)
             n = int(n_text)
             grade = (
                 rec_before.findings[n - 1].grade
@@ -773,7 +774,7 @@ def decide(
                 _registered(area, protocol, effect)
             elif grade in findings.EFFECT_GRADES:
                 effect = findings.EFFECT_STANDS
-        rec = findings.write_decision(record, int(n_text), status, reason, effect)
+        rec = audit_records.write_decision(record, int(n_text), status, reason, effect)
     except findings.FindingsError as exc:
         why = str(exc)
         # an effect missing or malformed: its form's example is a promise id

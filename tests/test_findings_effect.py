@@ -12,12 +12,12 @@ import unittest
 from pathlib import Path
 
 from labkit.tools import protocol_result
-from labkit.formats import findings
+from labkit.formats import audit_records, findings
 from protocol_fixture import protocol_id_of, registration_of  # noqa: E402
 
 
 def record(area: Path) -> Path:
-    return findings.write(
+    return audit_records.write(
         area,
         "analysis",
         "test",
@@ -73,7 +73,7 @@ class Decide(unittest.TestCase):
     def test_an_accepted_blocker_owes_its_effect(self):
         before = self.path.read_bytes()
         with self.assertRaisesRegex(findings.FindingsError, "owes its effect"):
-            findings.write_decision(self.path, 1, "limitation", "kept")
+            audit_records.write_decision(self.path, 1, "limitation", "kept")
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_a_refusal_of_the_effects_form_is_told_apart(self):
@@ -84,18 +84,20 @@ class Decide(unittest.TestCase):
                 self.subTest(effect=effect),
                 self.assertRaises(findings.EffectFormError),
             ):
-                findings.write_decision(self.path, 1, "limitation", "kept", effect)
+                audit_records.write_decision(self.path, 1, "limitation", "kept", effect)
         with self.assertRaises(findings.FindingsError) as caught:
-            findings.write_decision(self.path, 1, "false-positive", "no", "stands")
+            audit_records.write_decision(self.path, 1, "false-positive", "no", "stands")
         self.assertNotIsInstance(caught.exception, findings.EffectFormError)
 
     def test_the_effect_is_stored_and_read_back(self):
-        rec = findings.write_decision(
+        rec = audit_records.write_decision(
             self.path, 1, "limitation", "kept", "criterion-1 not assessable"
         )
         self.assertEqual(rec.findings[0].effect, "criterion-1 not assessable")
         self.assertEqual(rec.limits(), [(1, rec.findings[0])])
-        again = findings.write_decision(self.path, 1, "limitation", "kept", "stands")
+        again = audit_records.write_decision(
+            self.path, 1, "limitation", "kept", "stands"
+        )
         self.assertEqual(again.findings[0].effect, "stands")
         lines = self.path.read_text(encoding="utf-8").splitlines()
         self.assertEqual(
@@ -108,12 +110,14 @@ class Decide(unittest.TestCase):
         )
 
     def test_an_accepted_warning_may_name_an_effect_and_is_then_a_limit(self):
-        rec = findings.write_decision(self.path, 2, "limitation", "a cue", "stands")
+        rec = audit_records.write_decision(
+            self.path, 2, "limitation", "a cue", "stands"
+        )
         self.assertEqual(rec.findings[1].effect, "stands")
         self.assertEqual([n for n, _ in rec.limits()], [2])  # the BLOCKER is still open
 
     def test_an_accepted_warning_without_an_effect_is_no_limit(self):
-        rec = findings.write_decision(self.path, 2, "limitation", "noted")
+        rec = audit_records.write_decision(self.path, 2, "limitation", "noted")
         self.assertEqual(rec.findings[1].effect, "")
         self.assertEqual(rec.limits(), [])  # the BLOCKER is still open
 
@@ -121,11 +125,11 @@ class Decide(unittest.TestCase):
         with self.assertRaisesRegex(
             findings.FindingsError, "BLOCKER or WARNING decided limitation"
         ):
-            findings.write_decision(self.path, 1, "false-positive", "no", "stands")
+            audit_records.write_decision(self.path, 1, "false-positive", "no", "stands")
         with self.assertRaisesRegex(
             findings.FindingsError, "BLOCKER or WARNING decided limitation"
         ):
-            findings.write_decision(self.path, 1, "fixed", "", "stands")
+            audit_records.write_decision(self.path, 1, "fixed", "", "stands")
 
     def test_the_answer_note_counts_the_limits(self):
         """One note however many limits, not a "read within" tail for each.
@@ -150,7 +154,7 @@ class Decide(unittest.TestCase):
         )  # fmt: skip
         self.path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "finding 1: effect"):
-            findings.read(self.path)
+            audit_records.read(self.path)
 
     def test_an_accepted_blocker_decided_by_hand_without_effect_reads(self):
         """report-check asks for the effect; the record itself stays readable."""
@@ -158,7 +162,7 @@ class Decide(unittest.TestCase):
             'status = "open"\nreason = ""', 'status = "limitation"\nreason = "k"', 1
         )
         self.path.write_text(text, encoding="utf-8")
-        self.assertEqual(findings.read(self.path).findings[0].effect, "")
+        self.assertEqual(audit_records.read(self.path).findings[0].effect, "")
 
 
 if __name__ == "__main__":
