@@ -17,7 +17,9 @@ numbers.
                                    state, note, the runs this one continues
     runs/<run_id>/script-source.py  the script AS IT RAN (untracked or dirty
                                    code is in no commit and in no diff)
-    runs/<run_id>/uncommitted.patch  the diff, IF the repo was dirty (tracked files only)
+    runs/<run_id>/uncommitted.patch  the tracked files' diff against the commit;
+                                   empty when only untracked files differed
+                                   (the run's own directory is one)
     runs/<run_id>/source-untracked/  untracked files next to the script, verbatim
     runs/<run_id>/code.json        the code the run imported, per git repository:
                                    commit, patch, untracked files copied to
@@ -708,6 +710,10 @@ class Run:
             self.dir / CONFIG_FILE, json.dumps(frozen, ensure_ascii=False, indent=2)
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
+        # Asked after the run's directory exists, which is untracked: true for
+        # a run from a clean tree too, whose patch is then empty — a reader
+        # takes an empty patch beside a clean record as no change
+        # (`runs.patch_contradicts_record`).
         if repo.head_sha(self.base) and repo.tree_dirty(self.base):
             write_atomic(patch_path(self.dir), repo.tree_patch(self.base))
         code_repos.write_code(self.dir, self._code)

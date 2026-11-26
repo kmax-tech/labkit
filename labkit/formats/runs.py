@@ -417,8 +417,10 @@ def script_copy_path(run_dir: Path, suffix: str) -> Path:
 
 
 def patch_path(run_dir: Path) -> Path:
-    """RUN_DIR's `uncommitted.patch`: the tree's `git diff HEAD` at the
-    start, written only when tracked files differed from the commit."""
+    """RUN_DIR's `uncommitted.patch`: the tracked files' `git diff HEAD` at
+    the start. runlog writes it whenever the tree differs from the commit
+    then, untracked files counted — the run's own new directory is one, so
+    nearly every run keeps the file, empty where no tracked file differed."""
     return run_dir / "uncommitted.patch"
 
 
@@ -1218,7 +1220,7 @@ class RunSummary:
     derived_from: str | None  # the run whose rows this one re-evaluated
     models: tuple[str, ...]  # model aliases the run resolved; () when none
     git: str  # the commit at start, "+dirty" when the tree was not clean (untracked files count)
-    uncommitted_bytes: int  # size of uncommitted.patch; 0 when the tree was clean
+    uncommitted_bytes: int  # size of uncommitted.patch; 0: no tracked file differed
     command: str | None  # the command line that started it; None: not recorded
 
 
