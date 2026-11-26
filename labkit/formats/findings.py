@@ -1,11 +1,22 @@
-"""findings — an audit's findings as data the person decides, not as prose.
+"""findings — what a finding, a fix verdict and an audit record are, the
+statuses a person decides, and which findings are still open.
 
-`labkit-audit` writes what it found into the area, one file per audit
-(`audit_records`: the file's layout, its writer, its loud reader and the
-decision stored in place).
+An audit's findings are data the person decides, not prose. `labkit-audit`
+writes them into the area, one file per audit; this module holds what such
+a file means, and each further question has its own module:
+
+    audit_records      the file: its layout, writer, loud reader, the
+                       decision stored in place, the records of an area
+    finding_line       the grammar of an auditor's line: tag, fields,
+                       subject, rule
+    required_check     the check a finding requires for its repair
+    finding_decisions  which decision a finding may take, what it entails
+                       and owes
+    finding_limits     a limitation's effect and its line in the protocol
+    audit_files        the names and the order of the files under audits/
 
 When the backend does not answer, `labkit-audit` writes no findings but
-a failed attempt beside them (`failed_attempts`); `area_records` reads the
+a failed attempt beside them (`failed_attempts`); `audit_records.area_records` reads the
 records only.
 A record binds what the auditor read: the code (`scope_sha`), the promise
 block (`block_sha`), the registration it judged — the kind and the
@@ -49,7 +60,7 @@ the promises this run does not judge (`criterion-1 not assessable`). Which
 follows from what the promise's sentence claims — a threshold on these
 items, or a capability — not from the grade. The protocol carries each as a `Limitation (audit <record> #N)` line
 and a note in Recorded results (`protocol-fill --from-run` writes both from the
-record), and report-check holds them to it (`limit_line`, `answer_note`). Whether the
+record), and report-check holds them to it (`finding_limits.limit_line`, `finding_limits.answer_note`). Whether the
 named limit is enough stays the audit's question, not this check's.
 """
 
@@ -110,7 +121,7 @@ class FindingsError(ValueError):
 
 class EffectFormError(FindingsError):
     """A decision's effect missing where it is owed (a BLOCKER decided limitation) or
-    not in EFFECT_FORM — the refusals whose example is a promise id, which
+    not in `finding_limits.EFFECT_FORM` — the refusals whose example is a promise id, which
     `labkit-audit --decide` completes for a protocol without promises."""
 
 
@@ -125,7 +136,7 @@ class Finding:
     text: str
     status: str
     reason: str
-    effect: str = ""  # limit: EFFECT_STANDS or "<ids> not assessable"
+    effect: str = ""  # limit: `finding_limits.EFFECT_STANDS` or "<ids> not assessable"
     # the diagnostic the auditor requires to show a repair: a metrics.json
     # key, set from the finding line when the record is written, never by
     # a decision ("" when none is required)
@@ -138,18 +149,18 @@ class Finding:
     # never by a person ("" for the auditor's own findings); its origin is
     # found by following the chain (`followup.chain`)
     carries: str = ""
-    # SUBJECTS: the auditor's third field, read when the record is written
-    # (`subject_of`) and carried with the finding, never set by a decision;
-    # every record names it (`_auditor_fields`)
+    # `finding_line.SUBJECTS`: the auditor's third field, read when the record is written
+    # (`finding_line.subject_of`) and carried with the finding, never set by a decision;
+    # every record names it (`audit_records._auditor_fields`)
     subject: str = ""
-    # the rule the auditor assigned (`active_rule_of`), as the gate's value
+    # the rule the auditor assigned (`finding_line.active_rule_of`), as the gate's value
     # (`gate.RuleAssignment`): a known rule with the ledger's name, or the
     # new class; read when the record is written, never set by a decision;
     # apart from the subject and the place, and never inferred from them.
     # None only for a finding not read from a record (a test's)
     rule: RuleAssignment | None = None
     # the decisions a later one replaced, oldest first (`decision_history`):
-    # added by `write_decision` alone, never copied to a carried finding
+    # added by `audit_records.write_decision` alone, never copied to a carried finding
     replaced_decisions: tuple[ReplacedDecision, ...] = ()
 
     @property
@@ -170,7 +181,7 @@ class Finding:
     def place(self) -> tuple[str, str] | None:
         """(file, place) of the grade line as the instructions write it,
         `<GRADE> · <file>:<place> · <subject> · …`, read by the one grammar
-        (`tagged_line`, its fields parted at a dot or a dash as `subject_of`
+        (`tagged_line`, its fields parted at a dot or a dash as `finding_line.subject_of`
         reads them): the file's name and what follows its first colon; None
         for a line of another grade, or without a field after the place.
         Read from that one field, never searched for in the text."""
@@ -203,7 +214,7 @@ FIX_VERDICTS = ("resolved", "unresolved", "not_assessable")
 class FixVerdict:
     """An analysis audit's verdict on one earlier decided BLOCKER: the
     record and number it stands in, the decision as it was shown
-    (`decision_digest`), the verdict and its why. Bound to that decision:
+    (`finding_decisions.decision_digest`), the verdict and its why. Bound to that decision:
     a changed status or reason is another decision, which this verdict
     says nothing about."""
 

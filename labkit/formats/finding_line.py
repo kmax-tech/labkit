@@ -87,7 +87,7 @@ def tagged_line(line: str, tags: Sequence[str] = GRADES) -> TaggedLine | None:
     """LINE read as `<TAG> · <field> · <field> · …` (`TaggedLine`): the lead
     and the separator as `tag_head` takes them, the fields parted at a dot
     or a dash; None for a line that does not open with one of TAGS. The
-    one reading of a grade line's fields — its place (`Finding.place`), its
+    one reading of a grade line's fields — its place (`findings.Finding.place`), its
     subject (`subject_of`), the file a review is shown
     (`decision_review.named_files`) — and of a reading hint's place
     (`audit_decisions.read_hints`)."""
@@ -103,15 +103,15 @@ def tagged_line(line: str, tags: Sequence[str] = GRADES) -> TaggedLine | None:
 #: its line (`<GRADE> · <file>:<place> · <subject> · …`). `implementation`: the
 #: code, the data handling or the run does not do what the registration
 #: says or a correct measurement needs — the repair changes them and
-#: measures anew, so `limitation` is refused for it (`subject_refusal`).
+#: measures anew, so `limitation` is refused for it (`finding_decisions.subject_refusal`).
 #: `statement`: the run does what it should, and the finding is about what
 #: the registered text, the result or the report says — a limit of the
 #: claim (`limitation`) or a description corrected in place (`fixed`).
 #: `undetermined`: a concrete suspicion of a fault the auditor cannot settle
 #: from what it was shown — the finding requires the check that settles it
-#: and says what its value must show (`undetermined_finding_problem`); `limitation`
+#: and says what its value must show (`findings.undetermined_finding_problem`); `limitation`
 #: is refused, and the follow-up settles it on the check's value
-#: (`undetermined_fix_problem`).
+#: (`findings.undetermined_fix_problem`).
 IMPLEMENTATION = "implementation"
 STATEMENT = "statement"
 UNDETERMINED = "undetermined"
@@ -135,7 +135,7 @@ def subject_of(text: str) -> str:
     its fields parted by a dot or a dash as the parser reads them (`LEAD`,
     `SEP`).
     Raises ValueError, quoting the line, when the field is not one of
-    SUBJECTS: which decisions a finding allows rests on it (`subject_refusal`),
+    SUBJECTS: which decisions a finding allows rests on it (`finding_decisions.subject_refusal`),
     and a guess would decide it."""
     first = text.splitlines()[0] if text else ""
     # fields[0] is `<file>:<place>`, fields[1] the subject (`tagged_line`)
@@ -152,9 +152,9 @@ def subject_of(text: str) -> str:
 
 #: NEW_CLASS (`gate.NEW_CLASS`, the one home of the rule kinds' words) is the
 #: rule field of a finding the standard has no rule for — collected for the
-#: author to review (`new_class_findings`), never a rule of its own until a
+#: author to review (`audit_records.new_class_findings`), never a rule of its own until a
 #: decision with its grounds makes one. A record stores `LAB-nnn` or
-#: NEW_CLASS; `Finding.rule` holds it as the gate's `RuleAssignment`
+#: NEW_CLASS; `findings.Finding.rule` holds it as the gate's `RuleAssignment`
 #: (`recorded_rule`, `stored_rule`)
 RULE_FORM = (
     "a finding line names the rule it holds in its sixth field: "

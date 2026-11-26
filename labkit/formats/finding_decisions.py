@@ -226,7 +226,7 @@ def decision_digest(f: Finding) -> str:
     the required check and its note, the finding a carried one continues
     and the decisions this one replaced when there are — which a review and
     a fix verdict
-    bind to (`reviews.Decision.decision_sha`, `FixVerdict.decision_sha`): a
+    bind to (`reviews.Decision.decision_sha`, `findings.FixVerdict.decision_sha`): a
     changed reason, effect or check is another decision, and a verdict on
     the old one says nothing about it. So is a decision taken back and
     given again word for word: its replaced decisions differ
