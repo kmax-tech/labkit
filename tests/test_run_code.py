@@ -629,6 +629,46 @@ class CodeSinceRun(unittest.TestCase):
         self.assertIsNotNone(code_then(read(run), self.repo).tree)
         self.assertEqual(self.held(run), [])
 
+    def test_a_lost_patch_of_a_changed_tree_is_refused_by_every_reader(self) -> None:
+        """The record says the tree had changes and the patch is gone: the
+        commit alone is not what the run started from, so neither reader
+        of the tree (`code_then`, `as_measured`) nor the comparison of the
+        helpers (`code_since_run`) reads the commit as that tree — the
+        helper, committed since as it ran, would otherwise read as changed
+        since the run, or a helper restored to the commit as unchanged.
+        The twin: the patch restored, the comparison passes."""
+        self.helper.write_text("def n(files):\n    return 2 * len(files)\n")
+        run = self.run_now()
+        kept = runs.patch_path(run).read_bytes()
+        _git(self.repo, "commit", "-qam", "commit what ran")
+        self.assertEqual(self.held(run), [])
+        runs.patch_path(run).unlink()
+        rd = runs.read_run_dir(run)
+        self.assertTrue(runs.patch_lost(rd))
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertIn(f"{run.name} started from a tree with changes (", found.text)
+        self.assertIn("its uncommitted.patch is gone", found.text)
+        self.assertIn("lib/counting.py) cannot be compared", found.text)
+        self.assertIn("uncommitted.patch from git or a backup", found.fix or "")
+        self.assertIn(measure_anew(self.area), found.fix or "")
+        self.assertIsNone(found.changed_since)
+        then = code_then(rd, self.repo)
+        self.assertIsNone(then.tree)
+        self.assertIn("its uncommitted.patch is gone", then.where)
+        text, where = protocol_then.as_measured(
+            self.area / "PROTOCOL-x.md", rd, self.repo, role="run"
+        )
+        self.assertIsNone(text)
+        self.assertEqual(where, then.where)
+        # the state the missing blocker let through: the helper put back to
+        # the commit reads as the run's code, though the run ran the patch
+        _git(self.repo, "checkout", "-q", "HEAD~1", "--", "lib/counting.py")
+        (found,) = code_since_run(self.area, run)[0]
+        self.assertIn("its uncommitted.patch is gone", found.text)
+        _git(self.repo, "checkout", "-q", "HEAD", "--", "lib/counting.py")
+        runs.patch_path(run).write_bytes(kept)
+        self.assertEqual(self.held(run), [])
+
     def test_the_twin_a_changed_tree_with_its_patch_reads(self) -> None:
         """A record with the mark and the patch that belongs to it: the
         tree then is the commit with the patch, for both readers of it."""

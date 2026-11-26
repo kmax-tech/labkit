@@ -1647,6 +1647,9 @@ def start_point(rd: RunDir, root: Path | None, *, subject: str) -> StartPoint | 
        is.
     6. This clone does not hold the commit.
 
+    Steps 4 and 5 are also the helpers comparison's own blockers
+    (`run_record_check.code_since_run`), which reads the same patch.
+
     A run gone from the tree (`from_commit`) that started from a changed
     tree is `code_then`'s own refusal, made before it asks here. A caller
     that gets a `StartPoint` reads the patch exactly where CHANGED_TREE
