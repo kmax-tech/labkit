@@ -73,13 +73,13 @@ from labkit.formats.repo import git_root
 from labkit.formats.answer_reading import read_answer_reading
 from labkit.formats.protocol_check import (
     display_label,
-    CONCLUSION_LABEL,
     QUESTION_LABEL,
     RECORDED_RESULTS_LABEL,
     fields,
     recorded_results_field,
     written_line,
 )
+from labkit.formats.protocol_fields import CONCLUSION_LABEL
 
 
 @dataclass(frozen=True)

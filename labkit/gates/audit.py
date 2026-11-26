@@ -120,7 +120,6 @@ from labkit.gates.audit_decisions import (
 )
 from labkit.gates.audit_prompt import (
     ANALYSIS,
-    CLARITY,
     BoundPrompt,
     Source,
     Stamp,
@@ -133,6 +132,7 @@ from labkit.gates.audit_prompt import (
     render,
     shown_after,
 )
+from labkit.formats.standard_contract import CLARITY
 from labkit.gates.audit_reply import parse, parse_clarity, parse_fixes, scope_mismatch
 from labkit.gates.ways_out import (
     ANSWER_AGAIN,

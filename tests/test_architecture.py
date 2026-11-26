@@ -690,6 +690,142 @@ class NextComposesNoDecision(unittest.TestCase):
         self.assertEqual(literal_decisions(chosen + named + taken), [1, 2])
 
 
+def _from_labkit(node: ast.AST) -> bool:
+    """Is NODE a `from labkit… import …`?"""
+    return (
+        isinstance(node, ast.ImportFrom)
+        and node.module is not None
+        and (node.module == "labkit" or node.module.startswith("labkit."))
+    )
+
+
+def passed_through(tree: ast.Module) -> set[str]:
+    """The names the module TREE has only because it imports them from
+    labkit at its top level — a function, a constant or another module —
+    and does not define itself: what a reader of `module.name` would look
+    for in this module and not find."""
+    defined: set[str] = set()
+    imported: set[str] = set()
+    for n in tree.body:
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            defined.add(n.name)
+        elif isinstance(n, ast.Assign):
+            # `A, B = …` binds each name; `d[k] = …` binds none
+            for t in n.targets:
+                parts = t.elts if isinstance(t, (ast.Tuple, ast.List)) else [t]
+                defined.update(x.id for x in parts if isinstance(x, ast.Name))
+        elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
+            defined.add(n.target.id)
+        elif _from_labkit(n):
+            assert isinstance(n, ast.ImportFrom)
+            imported.update(a.asname or a.name for a in n.names)
+    return imported - defined
+
+
+def module_aliases(tree: ast.Module, known: set[str]) -> dict[str, str]:
+    """Local name → the labkit module of KNOWN it stands for in TREE:
+    `from labkit.formats import runs`, the same `as r`, and
+    `import labkit.formats.runs as r`."""
+    out: dict[str, str] = {}
+    for n in ast.walk(tree):
+        if _from_labkit(n):
+            assert isinstance(n, ast.ImportFrom)
+            out.update({a.asname or a.name: a.name for a in n.names if a.name in known})
+        elif isinstance(n, ast.Import):
+            out.update(
+                {
+                    a.asname: a.name.split(".")[-1]
+                    for a in n.names
+                    if a.asname
+                    and a.name.startswith("labkit.")
+                    and a.name.split(".")[-1] in known
+                }
+            )
+    return out
+
+
+def reads_through(
+    tree: ast.Module, passed: dict[str, set[str]]
+) -> list[tuple[int, str, str]]:
+    """(line, module, name) for every place the module TREE takes a name
+    from a labkit module that only passes it through (PASSED: module → its
+    `passed_through`): `from labkit.x.module import name`, and `module.name`
+    where `module` is the labkit module imported under that name."""
+    out: list[tuple[int, str, str]] = []
+    alias = module_aliases(tree, set(passed))
+    for n in ast.walk(tree):
+        if _from_labkit(n):
+            assert isinstance(n, ast.ImportFrom) and n.module is not None
+            source = n.module.split(".")[-1]
+            out += [
+                (n.lineno, source, a.name)
+                for a in n.names
+                if a.name in passed.get(source, ())
+            ]
+        elif (
+            isinstance(n, ast.Attribute)
+            and isinstance(n.value, ast.Name)
+            and n.attr in passed.get(alias.get(n.value.id, ""), ())
+        ):
+            out.append((n.lineno, alias[n.value.id], n.attr))
+    return sorted(out)
+
+
+class ANameIsTakenWhereItIsDefined(unittest.TestCase):
+    """No module of the package takes a name from a module that only
+    imports it: `protocol_check.field_name` reads as if `protocol_check`
+    answered, while `protocol_fields` does. Held for the package's own
+    code. Not held for the tests — a test replaces a name in the module
+    that uses it (`audit.llm`) — and not for code outside the package,
+    which may read a name the public API lists under the module that
+    passes it on (`docs/architecture.md`, "Public API"). Seen are
+    `from labkit.x.module import name` and `module.name` under the name the
+    module was imported as; not seen are the dotted path written out
+    (`labkit.formats.module.name`), a path through the folder
+    (`formats.module.name`) and `import *` — the package uses none of
+    them for its own modules today, which no test holds."""
+
+    def test_no_module_takes_a_name_through_one_that_only_imports_it(self):
+        trees = {
+            m: ast.parse(path.read_text(encoding="utf-8"))
+            for m, path in module_paths().items()
+        }
+        passed = {m: passed_through(tree) for m, tree in trees.items()}
+        found = {
+            f"{m}:{line} takes {name} through {source}"
+            for m, tree in trees.items()
+            for line, source, name in reads_through(tree, passed)
+        }
+        self.assertEqual(found, set())
+
+    def test_the_check_bites(self):
+        home = ast.parse("LABEL = 'x'\ndef field_name(): ...\n")
+        middle = ast.parse(
+            "from labkit.formats.home import LABEL, field_name\n"
+            "from labkit.formats import home\n"
+            "def own(): ...\n"
+        )
+        passed = {"home": passed_through(home), "middle": passed_through(middle)}
+        self.assertEqual(
+            passed, {"home": set(), "middle": {"LABEL", "field_name", "home"}}
+        )
+        reader = ast.parse(
+            "from labkit.formats import middle as m, home\n"
+            "from labkit.formats.middle import LABEL, own\n"
+            "import labkit.formats.middle as mid\n"
+            "def f():\n"
+            "    return m.field_name(), mid.home, m.own(), home.LABEL\n"
+        )
+        self.assertEqual(
+            reads_through(reader, passed),
+            [
+                (2, "middle", "LABEL"),
+                (5, "middle", "field_name"),
+                (5, "middle", "home"),
+            ],
+        )
+
+
 class OneNameOneThing(unittest.TestCase):
     def test_no_public_name_in_two_modules(self):
         where: dict[str, list[str]] = defaultdict(list)

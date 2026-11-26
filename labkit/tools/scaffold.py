@@ -88,7 +88,13 @@ from labkit.formats import console
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import promises, protocol_block, protocol_check, standard_contract
+from labkit.formats import (
+    promises,
+    protocol_block,
+    protocol_check,
+    protocol_fields,
+    standard_contract,
+)
 from labkit.tools.area_numbers import (
     area_dirs_on_disk,
     areas_elsewhere,
@@ -1044,7 +1050,7 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
     declared = protocol_block.model(old)
     model = stamp_model(old)
     report = any(
-        f.name == protocol_check.field_name(REPORT_FIELD)
+        f.name == protocol_fields.field_name(REPORT_FIELD)
         for f in protocol_check.fields(old)
     )
     rc = head.repeat_cost

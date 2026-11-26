@@ -50,10 +50,10 @@ from labkit.formats.commands import (
 from labkit.formats.protocol_check import (
     FieldPlaceError,
     field_at,
-    field_name,
     field_or_none,
     fields,
 )
+from labkit.formats.protocol_fields import field_name
 from labkit.formats.protocol_history import HELD_FIELDS
 from labkit.formats.runs import (
     MetricsError,

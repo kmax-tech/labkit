@@ -25,11 +25,11 @@ from labkit.formats.protocol_check import (
     FieldPlaceError,
     field_lines,
     field_meant,
-    field_name,
     fields,
     placeholder_fields,
     replace_lines,
 )
+from labkit.formats.protocol_fields import field_name
 
 
 def field_for(text: str, field: str, line_no: int | None = None) -> str:

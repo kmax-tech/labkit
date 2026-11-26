@@ -29,12 +29,12 @@ from labkit.formats.protocol_then import (
 )
 from labkit.formats.protocol_check import (
     REGISTERED_FIELDS,
-    field_name,
     field_values,
     line_list,
     low_registration_missing,
     repeated_fields,
 )
+from labkit.formats.protocol_fields import field_name
 
 if TYPE_CHECKING:
     from labkit.formats.runs import RunDir

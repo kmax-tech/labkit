@@ -82,8 +82,8 @@ from labkit.formats.commands import register_anew
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.formats.protocol_check import (
     FieldPlaceError,
-    field_name,
 )
+from labkit.formats.protocol_fields import field_name
 from labkit.checks.run_record_check import (
     code_since_run,
 )

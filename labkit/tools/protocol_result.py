@@ -34,7 +34,6 @@ from labkit.formats.protocol_check import (
     BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
     field_lines,
-    field_name,
     field_region_end,
     fields,
     insert_line,
@@ -45,6 +44,7 @@ from labkit.formats.protocol_check import (
     PromptBlock,
     field_prompt_blocks,
 )
+from labkit.formats.protocol_fields import field_name
 from labkit.tools.protocol_edit import fill
 
 

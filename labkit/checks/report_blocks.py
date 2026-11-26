@@ -88,7 +88,10 @@ from pathlib import Path
 from labkit.formats.repo import path_beside
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
-from labkit.formats.protocol_check import CONCLUSION_LABEL, QUESTION_LABEL
+from labkit.formats.protocol_check import (
+    QUESTION_LABEL,
+)
+from labkit.formats.protocol_fields import CONCLUSION_LABEL
 from labkit.formats.comment_blocks import (
     BLOCK_OPEN,
     HEAD_END,

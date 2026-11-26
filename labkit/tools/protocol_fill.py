@@ -158,11 +158,11 @@ from labkit.gates.next_step import fill_line
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
     adoption_owes,
-    field_name,
     fields,
     not_owed,
     placeholder_fields,
 )
+from labkit.formats.protocol_fields import field_name
 from labkit.checks.audit_binding import AuditError
 from labkit.tools import protocol_evidence, protocol_exploration, protocol_step
 from labkit.tools.protocol_edit import (

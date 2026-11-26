@@ -46,7 +46,11 @@ from labkit.probes.cold_reader import (
     read_verdict,
     verdict_matches,
 )
-from labkit.formats.protocol_check import RECORDED_RESULTS_LABEL, field_name, fields
+from labkit.formats.protocol_check import (
+    RECORDED_RESULTS_LABEL,
+    fields,
+)
+from labkit.formats.protocol_fields import field_name
 
 #: what a reader of the Summary should not have to decode
 SUMMARY_CODES = re.compile(  # an id in prose, an intent key, a run id — from their homes

@@ -20,7 +20,10 @@ from labkit.formats import decision_history
 from labkit.formats.commands import audit_command, decide_command
 from labkit.formats.digests import digest
 from labkit.formats.gate import BLOCKER
-from labkit.formats.protocol_check import CONCLUSION_LABEL, field_name, field_or_none
+from labkit.formats.protocol_check import (
+    field_or_none,
+)
+from labkit.formats.protocol_fields import CONCLUSION_LABEL, field_name
 from labkit.formats.protocol_history import correctable
 from labkit.formats.repo import is_protocol_name
 from labkit.formats.runs import as_stored

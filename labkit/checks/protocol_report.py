@@ -61,10 +61,8 @@ from labkit.formats.protocol_history import (
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_check import (
     BARE_REFERENCE,
-    CONCLUSION_LABEL,
     DASHES_ONLY,
     FIELDS,
-    HTML_COMMENT,
     PROTOCOL_TEMPLATE,
     REPEATED_WAY_OUT,
     RUNS_PLACEHOLDER,
@@ -81,6 +79,7 @@ from labkit.formats.protocol_check import (
     template_text,
     written_before_run,
 )
+from labkit.formats.protocol_fields import CONCLUSION_LABEL, HTML_COMMENT
 
 
 def unreported(text: str, head: protocol_block.Head) -> list[str]:

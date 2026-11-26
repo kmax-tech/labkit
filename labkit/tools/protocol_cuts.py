@@ -18,7 +18,11 @@ from pathlib import Path
 from labkit.formats import markdown
 from labkit.formats import promises, protocol_block
 from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND, has_bar
-from labkit.formats.protocol_check import field_name, in_form, label_line
+from labkit.formats.protocol_check import (
+    in_form,
+    label_line,
+)
+from labkit.formats.protocol_fields import field_name
 from labkit.formats.repo import (
     repo_protocols,
 )

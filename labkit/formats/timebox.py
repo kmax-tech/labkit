@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from labkit.formats import protocol_check
+from labkit.formats import protocol_check, protocol_fields
 
 #: the units a Timebox may start with, in seconds
 UNITS = {
@@ -61,7 +61,7 @@ def seconds_of(protocol_text: str) -> tuple[int | None, str]:
     found = [
         f
         for f in protocol_check.fields(protocol_text)
-        if f.name == protocol_check.field_name(FIELD)
+        if f.name == protocol_fields.field_name(FIELD)
     ]
     if not found:
         return None, f"no {FIELD} field — no budget projection"
