@@ -791,6 +791,52 @@ class HoldsOutputs(unittest.TestCase):
             recheck.holds_outputs(self.area, self.outs, self.recompute, self.note)
 
 
+class RowsOf(unittest.TestCase):
+    """`recheck.rows_of`: the data rows of a row file, in order — every
+    non-empty line an object, `_meta` lines left out; a line that is not
+    JSON or no object raises naming file and line."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.out = Path(tmp.name) / "rows.jsonl"
+
+    def test_the_rows_come_without_the_header(self) -> None:
+        rows = [{"id": "a", "n": 4}, {"id": "b", "n": 3}]
+        batch.write_dataset(
+            self.out,
+            rows,
+            about="one item per row",
+            fields={"id": "unique per row", "n": "a count"},
+            producer="t",
+        )
+        self.assertEqual(recheck.rows_of(self.out), rows)
+
+    def test_blank_lines_and_a_meta_line_anywhere_are_left_out(self) -> None:
+        self.out.write_text(
+            '{"id": "a"}\n\n{"_meta": {"about": "x"}}\n{"id": "b"}\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(recheck.rows_of(self.out), [{"id": "a"}, {"id": "b"}])
+
+    def test_a_line_that_is_no_row_raises_naming_file_and_line(self) -> None:
+        where = re.escape(f"{self.out}:2:")
+        for second in ("[1, 2]", '{"id": "b", "n":'):  # no object; torn
+            with self.subTest(second=second):
+                self.out.write_text(f'{{"id": "a"}}\n{second}', encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, where):
+                    recheck.rows_of(self.out)
+
+    def test_bytes_that_are_not_utf8_raise_valueerror(self) -> None:
+        self.out.write_bytes(b'{"id": "\xff"}\n')
+        with self.assertRaises(ValueError):
+            recheck.rows_of(self.out)
+
+    def test_a_missing_file_raises_oserror(self) -> None:
+        with self.assertRaises(OSError):
+            recheck.rows_of(self.out)
+
+
 class RegisteredTemplates(unittest.TestCase):
     """`prompt_check.require_registered_templates`: a template registered
     verbatim passes; one that differs, and one no block is named after,

@@ -532,8 +532,12 @@ def block_unchanged(run: Path, area: Path, *, state: AreaState | None = None) ->
 
 
 def rows_of(out: Path) -> list[dict]:
-    """One JSON object per line; a leading `_meta` header line is skipped
-    (`jsonl.data_rows_of`)."""
+    """The data rows of the row file OUT, in order: one JSON object per
+    non-empty line, every `_meta` header line left out
+    (`jsonl.data_rows_of`). Public API (`docs/architecture.md`): the
+    stamped analysis script calls it. Raises OSError when OUT cannot be
+    read; ValueError for a line that is not JSON or no object, naming the
+    file and the line, and for bytes that are not UTF-8."""
     return jsonl.data_rows_of(out)
 
 
