@@ -41,7 +41,7 @@ Code and registration may be developed together before measurement. What may cha
 
 **Command and output:** edit the code, run the area tests, then `code-check AREA`. That command reads the code and promises and writes nothing unless a bundle is requested.
 
-**Done / way out:** correct tests pass and required structural references are present. Fix missing keys, prompt declarations or parser fixtures as named. Structural checks do not establish scientific meaning. At `high`, complete the instrument probe where the skeleton provides one before freezing. Details: [checks and their limits](architecture.md#the-chain).
+**Done / way out:** correct tests pass and required structural references are present. Fix missing keys, prompt declarations or parser fixtures as named. Structural checks do not establish scientific meaning. At `high`, complete the instrument probe where the skeleton provides one before freezing. Details: [checks and their limits](chain.md).
 
 ## 2. The registration
 
@@ -57,7 +57,7 @@ A valid report draft can be committed before measurement; it owes no result bloc
 
 **Between the runs of an exploratory protocol:** the question, the data, a filter, the analysis or a criterion may change. Declare the change before the next run: `protocol-fill PROTOCOL --builds-on RUN_ID --step-id STEP --occasion observation --why "REASON"` (the occasion is `observation`, `planned` or `repair`). `RUN_ID` is the basis, a completed run of this protocol that is no repeat; the command writes `[builds_on]` and computes the changed parts from the basis run's own text and the protocol as it stands. `finalize` holds a run measured under a change no step declares; the way on is the step and a new run. Once the protocol adopts a run, it stands as that run's text; withdraw the adoption to go on exploring. A confirmatory protocol that tests what an exploration of this repository found names it before its first measurement: `protocol-fill PROTOCOL --explored-in EXPLORATION_PROTOCOL`. Details: [agent guide](../labkit/docs/agent-guide.md#choose-the-experiment-three-separate-decisions).
 
-See [the promise format](promise-block.md#the-block) for technical fields and [the chain](architecture.md#the-chain) for registration binding. A missed registered criterion is a valid result; it does not justify changing the bar.
+See [the promise format](promise-block.md#the-block) for technical fields and [the chain](chain.md) for registration binding. A missed registered criterion is a valid result; it does not justify changing the bar.
 
 ## 3. The run
 
@@ -77,7 +77,7 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **Command and output:** `finalize AREA` checks the selected answering run, registration, code, provenance (at repeat cost low only: each data input against the bytes its run recorded), input origins (each input that names an origin run is still that run's registered output), outputs, promises, area tests and audit evidence. It prints findings and writes no result declaration.
 
-**Done / way out:** no blocker remains. This permits the next checks; it does not release a result. A real implementation repair needs a new run and affected follow-up checks. Restore source only for accidental changes. The [answering-run rules](protocol-run-binding.md#the-answering-run) select the run; [the chain](architecture.md#the-chain) lists the exact checks.
+**Done / way out:** no blocker remains. This permits the next checks; it does not release a result. A real implementation repair needs a new run and affected follow-up checks. Restore source only for accidental changes. The [answering-run rules](protocol-run-binding.md#the-answering-run) select the run; [the chain](chain.md) lists the exact checks.
 
 ## 5. The analysis audit and the decisions
 
@@ -89,7 +89,7 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **What the auditor reads:** the protocol, the area's `scripts/*.py` and `analysis/*.py`, the files the promises declare as `scope` and the repo modules these import directly, in full; deeper modules as an index. A data or output file the audit must check — a classification a repair rests on, an output file — is shown only when the protocol declares it in an `[[evidence_file]]` table (`path` relative to the protocol, `sha256` of its bytes), written by `protocol-fill PROTOCOL --evidence-file PATH`, which refuses what the audit would refuse; a changed file's new digest only with `--replace-evidence-file`. It then appears in full under `===== EVIDENCE FILE: <path> (sha256 <hex>) =====`. The audit refuses before the call when a declared file leads out of the repository through a symlink (a link to another area's data inside it is read), is missing, unreadable, changed since its declaration, not UTF-8 text, over 200 000 bytes, or when all declared files together exceed 400 000 bytes. The stamp covers each declared file, so a record stops covering the area once one changes. The declaration is not part of the registration.
 
-**Done / way out:** required decisions and follow-up evidence cover the current state. `fixed` records a repair decision, not proof that the old run is corrected. Earlier undecided BLOCKERs must be decided before the next analysis audit. A limitation must state what claims remain supported or which promises cannot be assessed. See [audit and follow-up contracts](architecture.md#the-chain) and [decision guidance](../labkit/docs/agent-guide.md#4-finalize-audit-and-decide).
+**Done / way out:** required decisions and follow-up evidence cover the current state. `fixed` records a repair decision, not proof that the old run is corrected. Earlier undecided BLOCKERs must be decided before the next analysis audit. A limitation must state what claims remain supported or which promises cannot be assessed. See [audit and follow-up contracts](chain.md) and [decision guidance](../labkit/docs/agent-guide.md#4-finalize-audit-and-decide).
 
 ## 6. The decision review — when a decision releases a BLOCKER
 
@@ -99,7 +99,7 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **Command and output:** write the Conclusion through `protocol-fill`, then run `labkit-audit AREA --review [--record FILE]`. It writes the second reviewer's verdicts under `audits/`.
 
-**Done / way out:** required decisions are upheld. On `rejected`, change the claim, decision or faulty work; on `insufficient`, add the missing evidence to the decision's reason (`--decide` again) or the Conclusion, then review again. Repeated draws do not erase a rejection. Details and exceptional cases: [decision review in the chain](architecture.md#the-chain). An accepted WARNING with `stands` does not carry the general BLOCKER review duty.
+**Done / way out:** required decisions are upheld. On `rejected`, change the claim, decision or faulty work; on `insufficient`, add the missing evidence to the decision's reason (`--decide` again) or the Conclusion, then review again. Repeated draws do not erase a rejection. Details and exceptional cases: [decision review in the chain](chain.md). An accepted WARNING with `stands` does not carry the general BLOCKER review duty.
 
 ## 7. The adoption
 
@@ -121,7 +121,7 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **Done / way out:** generated blocks match their sources and any required review names no unsupported claim. A registered report takes its final form with a result block, a handover block or — for a measurement protocol whose runs an adopted analysis of the same area reads — a reported-through block (`protocol-fill PROTOCOL --reported-through RUN_ID --into REPORT.md`; it shows no number, decides no finding), and still owes review of its final text. Before the adoption, a discussion of the run the gates hold the protocol to is its progress account: the commit takes it without a review; it releases no result. Any other discussion, and a discussion in a report the head does not register, owes review under the applicable report rules. Correct the text or evidence and review the changed state. Do not redraw an unchanged claimed state until it passes. A missing registered report after measurement holds the stop.
 
-The block guarantees exact rendering of bound values, not the meaning of prose beside it. Numbers outside blocks are static hints. Exact report, review, citation and file rules are in [the chain](architecture.md#the-chain).
+The block guarantees exact rendering of bound values, not the meaning of prose beside it. Numbers outside blocks are static hints. Exact report, review, citation and file rules are in [the chain](chain.md).
 
 ## 9. The gate — at the stop and the commit
 
@@ -197,6 +197,6 @@ A derived run without the declaration has its parent's whole script compared wit
 ## The questions a reader should be able to answer
 
 - **Which run supplies this number?** The protocol's declared result must be its [answering run](protocol-run-binding.md#the-answering-run).
-- **Which decision still needs review?** Follow the finding's printed command; the [chain](architecture.md#the-chain) states the review rules.
+- **Which decision still needs review?** Follow the finding's printed command; the [chain](chain.md) states the review rules.
 - **What does `--from-run` change?** The protocol only. `labkit-adopt` additionally writes the registered report block and checks the chain.
 - **What remains scientific judgement?** Whether the method and claim are justified. Matching records and generated values establish narrower facts.

@@ -1,9 +1,9 @@
 """labkit — the shared helpers every experiment repo imports.
 
 Stdlib only. Each layer is a package: `formats` (read-only answers),
-`run` (writing a run), `checks`, `gates`, `tools`, `probes`; modules,
-layers and the one home of each question: `docs/architecture.md`;
-console commands: README.
+`run` (writing a run), `checks`, `gates`, `tools`, `probes`; modules and
+layers: `docs/architecture.md`; the one home of each question:
+`docs/one-home.md`; console commands: README.
 
     from labkit.run import runlog, llm, batch
 

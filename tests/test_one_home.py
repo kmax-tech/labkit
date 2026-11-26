@@ -1,6 +1,6 @@
 """One home per question — held by grep, not by memory.
 
-`docs/architecture.md` names the home of every recurring question and says
+`docs/one-home.md` names the home of every recurring question and says
 a second answer is drift. Copies of the same kinds — a hand-spelled
 sha256, a `git` run outside `repo`, a `PROTOCOL-*.md` scan, the id letters,
 a fence regex — come back while memory alone holds them. This test greps

@@ -603,8 +603,9 @@ def doc_references(path: Path | None = None) -> list[tuple[int, str, str]]:
 class EveryNamedHomeExists(unittest.TestCase):
     """Every `module.name` the doc names is defined in that module: a rename
     without the doc's line fails here instead of leaving the map naming a
-    home that is gone (the gates in order, the chain and the one-home table
-    are prose)."""
+    home that is gone (the gates in order is prose; the chain and the
+    one-home list stand in `docs/chain.md` and `docs/one-home.md`, which the
+    second test reads)."""
 
     def test_every_reference_resolves(self):
         names: dict[str, set[str]] = {}
