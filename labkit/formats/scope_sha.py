@@ -17,7 +17,9 @@ and calls itself confirmatory, the stamp also covers the predecessor's
 evidence (`predecessor_basis`: its id and the records of its runs); where a
 protocol names `[explored_in]`, the exploration it builds on
 (`exploration_basis`: the records and outputs of the runs the link names,
-the run that exploration adopts and its Conclusion). NOT covered otherwise:
+the run that exploration adopts and its Conclusion); where a protocol
+declares `[[evidence_file]]` tables, each declared file's bytes and its
+declared sha256 (`evidence_file_basis`). NOT covered otherwise:
 data files, prompt files, models.toml, the protocol — an unchanged stamp
 says the CODE is the same, not the inputs. Sibling:
 `promises.declared_scope_sha` is the same idea per promise, over its
@@ -502,6 +504,9 @@ class Snapshot:
             its predecessor's run records (`predecessor_basis`), and one
             per confirmation for the exploration it names
             (`exploration_basis`); () when there is none of them.
+        evidence_files: Resolved path → the bytes the sha covers of each
+            file a protocol of the area declares in `[[evidence_file]]`
+            and that stands (`evidence_file_basis`); empty without one.
     """
 
     sha: str
@@ -509,6 +514,7 @@ class Snapshot:
     contents: Mapping[Path, bytes]
     pin: tuple[str, str] | None
     validation: tuple[str, ...] = ()
+    evidence_files: Mapping[Path, bytes] = MappingProxyType({})
 
     def text(self, path: Path) -> str:
         """The snapshot's text of PATH. Raises KeyError naming a path the
@@ -583,11 +589,13 @@ def area_snapshot(
     basis, told = validation_basis(area)
     before, told_before = predecessor_basis(area)
     explored, told_explored = exploration_basis(area)
+    declared_whole, evidence_bytes = evidence_file_basis(area)
     # appended after the files and only when declared: an area without an
-    # `annotation_validity`, a confirmatory successor or an `[explored_in]`
-    # keeps the stamp it had
+    # `annotation_validity`, a confirmatory successor, an `[explored_in]` or
+    # an `[[evidence_file]]` keeps the stamp it had
     sha = tree_digest(
-        [*entries, *basis, *before, *explored], trailer=[pin[1]] if pin else []
+        [*entries, *basis, *before, *explored, *declared_whole],
+        trailer=[pin[1]] if pin else [],
     )
     return Snapshot(
         sha,
@@ -595,7 +603,128 @@ def area_snapshot(
         MappingProxyType(contents),
         pin,
         told + told_before + told_explored,
+        MappingProxyType(evidence_bytes),
     )
+
+
+#: entry names of the evidence-file basis start so, apart from every file key
+EVIDENCE_FILE_KEY = "evidence_file"
+#: what an evidence-file entry name ends with when the declared file is not
+#: a file (` \\ missing`) or does not read (` \\ unreadable`), its bytes
+#: empty: `protocol_block.evidence_files` refuses a backslash in a path, so
+#: no declared file's own entry can carry this name, whatever its content
+EVIDENCE_NOT_READ = " \\ "
+
+
+def evidence_file_basis(
+    area: Path,
+) -> tuple[list[tuple[str, bytes]], dict[Path, bytes]]:
+    """(entries, contents): what the area stamp covers of the files the
+    protocols of AREA declare in `[[evidence_file]]`
+    (`protocol_block.evidence_files`), so an audit shown them
+    (`audit_prompt.evidence_file_pieces`) goes stale when one changes —
+    every protocol's, as with declared scopes, so the stamp needs no
+    choice. Per declared file two entries, named by the protocol and the
+    path as written (not resolved: a `data/` symlink that leaves the repo
+    puts no machine's path in the stamp): the declared sha256, and the
+    file's bytes — while it is not a file, or does not read, an entry of
+    its own instead (`EVIDENCE_NOT_READ`), so a missing file never stamps
+    like any content. CONTENTS maps each declared file that read,
+    resolved, to the bytes the entries took
+    — what the prompt shows. Whether the bytes still have the declared
+    digest is the audit's, not the stamp's. The audit shows only the
+    audited protocol's files (`audit_prompt.evidence_file_pieces`): a file
+    another protocol of the area declares is stamped and not shown, so its
+    change stales the audit of every protocol of the area — the reach of
+    a declared scope. Each declared file is read whole here; the size
+    limit is the prompt's, not the stamp's.
+
+    Raises:
+        OSError: A protocol does not read (a declared file that does not
+            read is stamped as such; the audit refuses it,
+            `audit_prompt.checked_evidence_files`).
+        protocol_block.BlockError: An `[[evidence_file]]` table of a block
+            that reads is malformed (a ValueError): a declaration nobody
+            can read is refused, never stamped as if absent; every caller
+            of `area_snapshot` meets it, as it meets a malformed promise
+            block. A block that
+            does not read at all is skipped, as by the other bases — the
+            head check names it."""
+    root = layout_root(area)
+    entries: list[tuple[str, bytes]] = []
+    contents: dict[Path, bytes] = {}
+    for p in area_protocols(area):
+        text = p.read_text(encoding="utf-8")
+        try:
+            protocol_block.parse_toml_block(text)
+        except protocol_block.BlockError:
+            continue  # a block that does not read: the head check names it
+        for ef, found in declared_evidence_bytes(p, text):
+            name = f"{EVIDENCE_FILE_KEY} of {_key(p, root)}: {ef.path}"
+            entries.append((f"{name} declared", ef.sha256.encode("utf-8")))
+            if found is None:
+                entries.append((f"{name}{EVIDENCE_NOT_READ}missing", b""))
+            elif isinstance(found, EvidenceUnreadable):
+                entries.append((f"{name}{EVIDENCE_NOT_READ}unreadable", b""))
+            else:
+                entries.append((name, found.data))
+                contents[found.file] = found.data
+    return entries, contents
+
+
+@dataclass(frozen=True)
+class EvidenceBytes:
+    """A declared evidence file as read: FILE resolved, DATA its bytes."""
+
+    file: Path
+    data: bytes
+
+
+@dataclass(frozen=True)
+class EvidenceUnreadable:
+    """A declared evidence file that is a file and does not read: FILE
+    resolved, WHY the error (`PermissionError: …`)."""
+
+    file: Path
+    why: str
+
+
+def declared_evidence_bytes(
+    protocol: Path, text: str
+) -> list[
+    tuple[protocol_block.EvidenceFile, EvidenceBytes | EvidenceUnreadable | None]
+]:
+    """Each file TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`
+    (`protocol_block.evidence_files`), in the order declared, with its
+    bytes read now — None while the path, resolved against PROTOCOL's
+    directory, is not a file, EvidenceUnreadable when it is one and its
+    read fails (an OSError, kept, never raised). The one read of declared evidence files: the
+    stamp (`evidence_file_basis`) and `protocol-fill --evidence-file`,
+    which checks a declaration before writing it
+    (`audit_prompt.checked_evidence_files`), take the bytes from here.
+
+    Raises:
+        protocol_block.BlockError: TEXT's block or a table is malformed."""
+    out: list[
+        tuple[protocol_block.EvidenceFile, EvidenceBytes | EvidenceUnreadable | None]
+    ] = []
+    for ef in protocol_block.evidence_files(text):
+        f = protocol.parent / ef.path
+        if not f.is_file():
+            out.append((ef, None))
+            continue
+        try:
+            out.append((ef, EvidenceBytes(f.resolve(), f.read_bytes())))
+        except OSError as exc:
+            out.append(
+                (
+                    ef,
+                    EvidenceUnreadable(
+                        f.resolve(), f"{type(exc).__name__}: {exc.strerror}"
+                    ),
+                )
+            )
+    return out
 
 
 #: entry names of the validation basis start so, apart from every file key
@@ -676,9 +805,12 @@ def predecessor_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
             continue
         name = f"{PREDECESSOR_KEY} of {_key(p, root)}"
         entries.append((name, rep.protocol.encode("utf-8")))
-        if ids is None:
-            ids = protocol_block.repo_protocol_ids(area)
-        hits = ids.get(rep.protocol, [])
+        # the repo's ids, read at the first protocol that needs them; `known`
+        # is never None (repo_protocol_ids returns a dict) — the type checker
+        # does not narrow `ids` itself across the loop
+        known = ids if ids is not None else protocol_block.repo_protocol_ids(area)
+        ids = known
+        hits = known.get(rep.protocol, [])
         if len(hits) != 1:
             told.append(
                 f"{_key(p, root)} replaces {rep.protocol}, no one protocol of the repo"
@@ -736,9 +868,12 @@ def exploration_basis(area: Path) -> tuple[list[tuple[str, bytes]], tuple[str, .
             continue
         name = f"{EXPLORED_IN_KEY} of {_key(p, root)}"
         entries.append((name, f"{link.protocol} {link.run}".encode("utf-8")))
-        if ids is None:
-            ids = protocol_block.repo_protocol_ids(area)
-        hits = ids.get(link.protocol, [])
+        # the repo's ids, read at the first protocol that needs them; `known`
+        # is never None (repo_protocol_ids returns a dict) — the type checker
+        # does not narrow `ids` itself across the loop
+        known = ids if ids is not None else protocol_block.repo_protocol_ids(area)
+        ids = known
+        hits = known.get(link.protocol, [])
         if len(hits) != 1:
             told.append(
                 f"{_key(p, root)} names the exploration {link.protocol}, no one "
@@ -843,9 +978,12 @@ def _validation_refs(
         if ref.key != "protocol":
             yield p, ref, None
             continue
-        if ids is None:
-            ids = protocol_block.repo_protocol_ids(area)
-        hits = ids.get(ref.value, [])
+        # the repo's ids, read at the first protocol that needs them; `known`
+        # is never None (repo_protocol_ids returns a dict) — the type checker
+        # does not narrow `ids` itself across the loop
+        known = ids if ids is not None else protocol_block.repo_protocol_ids(area)
+        ids = known
+        hits = known.get(ref.value, [])
         yield p, ref, hits[0] if len(hits) == 1 else None
 
 

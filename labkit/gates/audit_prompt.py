@@ -17,7 +17,7 @@ import difflib
 import json
 import os
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -120,7 +120,9 @@ INLINE_NOTE = (
     "names its exploration (`[explored_in]`) that exploration's registration, "
     "its adopted run and Conclusion, the runs the adopted run rests on and "
     "the inputs both protocols' runs recorded under `===== EXPLORATION: … "
-    "=====` lines, and the area's "
+    "=====` lines, every data or output file the protocol declares in "
+    "`[[evidence_file]]`, in full, under an `===== EVIDENCE FILE: <path> (sha256 "
+    "<hex>) =====` line, and the area's "
     "earlier decided BLOCKERs and corrections under one `===== EARLIER DECIDED "
     "BLOCKERS AND CORRECTIONS =====` line. Nothing else is in scope."
 )
@@ -290,12 +292,15 @@ class Source(NamedTuple):
     validation stales the record — a DOI by its string only) and, for a
     confirmatory successor, its predecessor (`predecessor_evidence`), and
     for a confirmation that names its exploration, that state
-    (`exploration_evidence`)."""
+    (`exploration_evidence`), and the files the protocol declares in
+    `[[evidence_file]]` (`evidence_file_pieces`; covered through
+    `scope_sha.evidence_file_basis`)."""
 
     protocol_text: str
     read: Callable[[Path], str]
     run: tuple[tuple[str, str], ...] = ()
-    evidence: tuple[tuple[str, str], ...] = ()  # validity, predecessor, exploration
+    # validity, predecessor, exploration, declared evidence files
+    evidence: tuple[tuple[str, str], ...] = ()
     fixes: tuple[tuple[str, str], ...] = ()  # `earlier_piece`, MODE analysis
 
 
@@ -655,6 +660,168 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
         )
     )
     return tuple(pieces)
+
+
+#: how a declared evidence file's piece opens: `EVIDENCE FILE: <path> (sha256 <hex>)`
+EVIDENCE_FILE_LABEL = "EVIDENCE FILE: "
+#: operating limits of the declared evidence files, not thresholds of
+#: meaning: past either the audit refuses before the call, naming each file
+#: and its size, rather than show a cut file (set 2026-11-25 above the
+#: largest file the motivating area declares, 135 kB, and its 160 kB total)
+EVIDENCE_FILE_MAX_BYTES = 200_000
+EVIDENCE_FILES_MAX_BYTES = 400_000
+
+
+@dataclass(frozen=True)
+class CheckedEvidenceFile:
+    """A declared evidence file that passed `checked_evidence_files`: NAME
+    its path as the prompt shows it (from the repository root), SHA256 the
+    declared digest (its bytes' digest), TEXT its whole content."""
+
+    name: str
+    sha256: str
+    text: str
+
+
+def evidence_file_pieces(
+    protocol: Path, text: str, snap: scope_sha.Snapshot
+) -> tuple[tuple[str, str], ...]:
+    """The files TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`
+    as prompt pieces, in the order declared, each in full under
+    `EVIDENCE FILE: <path> (sha256 <hex>)` — the bytes of SNAP, the ones the
+    record's sha covers (`scope_sha.evidence_file_basis`). () without a
+    declaration. Raises AuditError, before any model call, as
+    `checked_evidence_files` does."""
+    return tuple(
+        (f"{EVIDENCE_FILE_LABEL}{ef.name} (sha256 {ef.sha256})", ef.text)
+        for ef in checked_evidence_files(protocol, text, snap.evidence_files)
+    )
+
+
+def checked_evidence_files(
+    protocol: Path, text: str, contents: Mapping[Path, bytes]
+) -> tuple[CheckedEvidenceFile, ...]:
+    """The files TEXT (the text of PROTOCOL) declares in `[[evidence_file]]`,
+    in the order declared, checked as the audit shows them — the one home
+    of these checks, for the audit (`evidence_file_pieces`) and for
+    `protocol-fill --evidence-file`, which runs them on the protocol as it
+    would be written. CONTENTS maps each declared file that is a file,
+    resolved, to its bytes (`scope_sha.evidence_file_basis`,
+    `scope_sha.declared_evidence_bytes`); a declared file missing from it
+    is not a file, or — while the path is a file — one that does not read.
+    () without a declaration.
+
+    Raises AuditError naming each file it holds: a declared file that is
+    not a file; one that does not read (`evidence_unreadable_refusal`);
+    one whose sha256 is no longer the declared one; one over
+    EVIDENCE_FILE_MAX_BYTES, or all together over EVIDENCE_FILES_MAX_BYTES
+    (`evidence_size_refusal`); one that is not UTF-8 text. Nothing is
+    dropped or cut. BlockError on a malformed table."""
+    declared = protocol_block.evidence_files(text)
+    if not declared:
+        return ()
+    # (path as the prompt names it, declared sha256, the snapshot's bytes)
+    found: list[tuple[str, str, bytes | None]] = [
+        (
+            evidence_file_name(protocol, ef.path),
+            ef.sha256,
+            contents.get((protocol.parent / ef.path).resolve()),
+        )
+        for ef in declared
+    ]
+    unread = [
+        evidence_file_name(protocol, ef.path)
+        for ef, (_, _, data) in zip(declared, found)
+        if data is None and (protocol.parent / ef.path).is_file()
+    ]
+    if unread:
+        raise evidence_unreadable_refusal(protocol.name, unread)
+    gone = [name for name, _, data in found if data is None]
+    if gone:
+        raise AuditError(
+            f"{protocol.name} declares evidence file(s) that are not a file: "
+            f"{', '.join(gone)}",
+            fix="write the file, or remove its [[evidence_file]] table",
+        )
+    held = [(name, sha, data) for name, sha, data in found if data is not None]
+    changed = [
+        f"{name} (declared sha256 {sha}, now {digests.digest(data, None)})"
+        for name, sha, data in held
+        if digests.digest(data, None) != sha
+    ]
+    if changed:
+        raise AuditError(
+            f"{protocol.name}: evidence file(s) changed after their declaration: "
+            f"{'; '.join(changed)} — the auditor would read other bytes than "
+            f"the ones declared",
+            fix="restore the declared file, or check that the file as it stands "
+            "is the one the audit is to read and write its sha256 into the "
+            "table's `sha256`",
+        )
+    too_large = evidence_size_refusal(
+        protocol.name, [(name, len(data)) for name, _, data in held]
+    )
+    if too_large is not None:
+        raise too_large
+    checked: list[CheckedEvidenceFile] = []
+    unreadable: list[str] = []
+    for name, sha, data in held:
+        try:
+            checked.append(CheckedEvidenceFile(name, sha, data.decode("utf-8")))
+        except UnicodeDecodeError:
+            unreadable.append(name)
+    if unreadable:
+        raise AuditError(
+            f"{protocol.name}: evidence file(s) not UTF-8 text: "
+            f"{', '.join(unreadable)} — the prompt shows text only",
+            fix="declare a text form of the file (JSON, CSV, Markdown)",
+        )
+    return tuple(checked)
+
+
+def evidence_file_name(protocol: Path, path: str) -> str:
+    """The declared PATH of PROTOCOL as the prompt and every refusal name
+    it: from the repository root."""
+    where = shown(protocol.parent, layout_root(protocol.parent))
+    return path if where == "." else f"{where}/{path}"
+
+
+def evidence_unreadable_refusal(protocol_name: str, names: list[str]) -> AuditError:
+    """The refusal of declared evidence files (NAMES, as
+    `evidence_file_name` gives them) that are files and do not read — a
+    permission, an I/O error — for the audit and for `protocol-fill
+    --evidence-file` alike."""
+    return AuditError(
+        f"{protocol_name}: evidence file(s) that cannot be read: "
+        f"{', '.join(names)} — the auditor would be shown nothing of them",
+        fix="make the file readable (its permissions), or remove its "
+        "[[evidence_file]] table",
+    )
+
+
+def evidence_size_refusal(
+    protocol_name: str, sizes: list[tuple[str, int]]
+) -> AuditError | None:
+    """The refusal of declared evidence files past the operating limits —
+    one of SIZES (file as shown, bytes) over EVIDENCE_FILE_MAX_BYTES, or
+    their sum over EVIDENCE_FILES_MAX_BYTES — naming each file over the
+    limit and every file's size; None within both."""
+    large = [f"{name} ({n} bytes)" for name, n in sizes if n > EVIDENCE_FILE_MAX_BYTES]
+    total = sum(n for _, n in sizes)
+    if not large and total <= EVIDENCE_FILES_MAX_BYTES:
+        return None
+    return AuditError(
+        f"{protocol_name}: evidence past the audit's operating limit "
+        f"({EVIDENCE_FILE_MAX_BYTES} bytes a file, {EVIDENCE_FILES_MAX_BYTES} "
+        f"in all): "
+        + (f"{', '.join(large)}; " if large else "")
+        + f"{total} bytes in all ("
+        + ", ".join(f"{name} {n}" for name, n in sizes)
+        + ") — no evidence is cut from what the auditor reads, so the audit "
+        "does not run",
+        fix="declare a smaller file that holds what the audit must read, or "
+        "raise the limit in labkit with the measured sizes",
+    )
 
 
 def render(
@@ -1395,7 +1562,9 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     the record binds what the prompt shows. The code is one snapshot: its
     bytes render the prompt, its sha goes in the record, and every stamped
     file the reading does not take in full is indexed — so the prompt shows
-    each file the stamp covers, no more and no fewer. The promise block and
+    each file the stamp covers, no more and no fewer (an `[[evidence_file]]`
+    another protocol of the area declares is stamped, not shown:
+    `scope_sha.evidence_file_basis`). The promise block and
     the registration (`protocol_check.registration_stamp`) come from the one
     protocol text the prompt carries; in MODE analysis
     the run is chosen once, and what the prompt shows of it is one snapshot
@@ -1468,7 +1637,8 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
                 shown.pieces if shown else (),
                 validity_evidence(area, text)
                 + predecessor_evidence(area, text)
-                + exploration_evidence(area, text),
+                + exploration_evidence(area, text)
+                + evidence_file_pieces(protocol, text, snap),
                 earlier_piece(earlier_repairs) if mode == ANALYSIS else (),
             ),
         )

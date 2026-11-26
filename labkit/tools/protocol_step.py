@@ -91,24 +91,9 @@ def with_step(text: str, step: BuildsOn) -> str:
     change tables removed, STEP's written at the end of the TOML block.
     Every other byte stays. Raises ValueError without a TOML block, and
     when the block does not read back with STEP."""
-    span = protocol_block.toml_block_span(text)
-    if span is None:
-        raise ValueError("no ```toml block — the step is written into the head")
-    start, end = span
-    lines = text.split("\n")
-    kept: list[str] = []
-    in_step = False
-    for line in lines[start:end]:
-        if _STEP_HEADER.match(line) or _CHANGE_HEADER.match(line):
-            in_step = True
-        elif protocol_block.TABLE_HEADER.match(line):
-            in_step = False
-        if not in_step:
-            kept.append(line)
-    while kept and not kept[-1].strip():
-        kept.pop()
-    body = [*kept, "", *step_toml(step)]
-    new = "\n".join([*lines[:start], *body, *lines[end:]])
+    new = protocol_block.with_tables_at_block_end(
+        text, (_STEP_HEADER, _CHANGE_HEADER), step_toml(step)
+    )
     if protocol_block.builds_on(new) != step:
         raise ValueError("[builds_on] did not read back as written")
     return new

@@ -79,6 +79,15 @@ command line.
                                                protocol's id and the run it has adopted
                                                (`protocol_exploration`); an earlier link replaced
 
+    protocol-fill PROTOCOL-x.md --evidence-file PATH [--replace-evidence-file]
+                                               a data or output file the audit reads
+                                               in full: `[[evidence_file]]` with its
+                                               path (relative to the protocol) and
+                                               its sha256, computed; checked as the
+                                               audit checks it (`protocol_evidence`);
+                                               a path declared with another sha256
+                                               only with --replace-evidence-file
+
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
 
@@ -148,7 +157,8 @@ from labkit.formats.protocol_check import (
     not_owed,
     placeholder_fields,
 )
-from labkit.tools import protocol_exploration, protocol_step
+from labkit.checks.audit_binding import AuditError
+from labkit.tools import protocol_evidence, protocol_exploration, protocol_step
 from labkit.tools.protocol_edit import (
     HEAD_HINTS,
     as_filled,
@@ -633,6 +643,42 @@ def _link_file(protocol: Path, text: str, exploration: Path) -> int:
     return 0
 
 
+def _evidence_file(args: argparse.Namespace, text: str) -> int:
+    """`--evidence-file`: the file ARGS.evidence_file declared in the
+    protocol's `[[evidence_file]]` (`protocol_evidence`), the protocol as
+    it would be held to the audit's checks over every declared file first.
+    Exit 0 when written or already declared with this sha256 (the file
+    untouched); exit 2, the
+    file untouched, on a path declared with another sha256 without
+    --replace-evidence-file, a file the audit would refuse (missing,
+    changed, not UTF-8, over a limit) or a head that does not read."""
+    try:
+        done = protocol_evidence.declare_evidence_file(
+            args.protocol,
+            text,
+            args.evidence_file,
+            replace=args.replace_evidence_file,
+        )
+    except (ValueError, OSError, protocol_block.BlockError) as exc:
+        console.refuse("protocol-fill", f"no evidence file declared — {exc}")
+        return 2
+    except AuditError as exc:
+        console.refuse(
+            "protocol-fill",
+            with_way_out(f"no evidence file declared — {exc.why}", exc.fix),
+        )
+        return 2
+    # the one write, after every check passed; whole or not at all
+    if done.outcome is not protocol_evidence.Outcome.UNCHANGED:
+        files.write_atomic(args.protocol, done.text)
+    was = f" (was {done.previous_sha256})" if done.previous_sha256 else ""
+    print(
+        f"evidence file {done.entry.path}: {done.outcome.value}{was} — sha256 "
+        f"{done.entry.sha256}; {len(done.checked)} declared, {done.total_bytes} bytes in all"
+    )
+    return 0
+
+
 def _step_file(args: argparse.Namespace, text: str) -> int:
     """`--builds-on`: the step on ARGS.builds_on written as the protocol's
     one `[builds_on]` (`protocol_step`). Refused with exit 2, the file
@@ -914,6 +960,7 @@ COMPANION_FLAGS: dict[str, str] = {
     "force": "--force",
     "line": "--line",
     "prompt_file": "--prompt-file",
+    "replace_evidence_file": "--replace-evidence-file",
 }
 
 
@@ -1013,6 +1060,12 @@ OPERATIONS: tuple[Operation, ...] = (
         "--explored-in", "explored_in", "--explored-in EXPLORATION_PROTOCOL goes alone"
     ),
     _op(
+        "--evidence-file",
+        "evidence_file",
+        "--evidence-file PATH goes with --replace-evidence-file only",
+        takes="replace_evidence_file",
+    ),
+    _op(
         "--freeze",
         "freeze",
         "--freeze goes alone: it writes frozen and preflight_audit",
@@ -1083,13 +1136,15 @@ OPERATION_HANDLERS: dict[str, Callable[[argparse.Namespace, str], int]] = {
     "from_run": _write_back,
     "builds_on": _step_file,
     "explored_in": lambda a, t: _link_file(a.protocol, t, a.explored_in),
+    "evidence_file": _evidence_file,
 }
 
 
 def _run_operation(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the operation ARGS name (--freeze, --withdraw,
     --data-counts, --handover, --list, --prompts, --render, --discuss,
-    --reported-through, --into, --from-run, --builds-on, --explored-in), or
+    --reported-through, --into, --from-run, --builds-on, --explored-in,
+    --evidence-file), or
     None when they name none or a field fill (FIELD), which main does. At
     most one operation reaches it — `operation_refusal` refuses two before
     the file is read — and it is looked up by name in OPERATION_HANDLERS,
@@ -1262,6 +1317,27 @@ def main(argv: list[str]) -> int:
         "has adopted now; refused unless that protocol's first measurements "
         "were exploratory and the run is its completed, adopted measurement; "
         "an earlier link is replaced",
+    )
+    ap.add_argument(
+        "--evidence-file",
+        dest="evidence_file",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="declare PATH as a file the audit reads in full: an [[evidence_file]] "
+        "table with its path relative to the protocol's directory and its sha256, "
+        "computed; refused, the file untouched, when the audit would refuse it "
+        "(not a file, not UTF-8, over the per-file or the total limit of all "
+        "declared files); a path already declared with this sha256 is left as it "
+        "is, with another one refused without --replace-evidence-file",
+    )
+    ap.add_argument(
+        "--replace-evidence-file",
+        dest="replace_evidence_file",
+        action="store_true",
+        help="with --evidence-file: write the file's sha256 now over the one its "
+        "path is declared with — when the file as it stands is the one the audit "
+        "is to read",
     )
     ap.add_argument(
         "--line",

@@ -55,24 +55,9 @@ def with_link(text: str, link: ExploredIn) -> str:
     LINK's written at the end of the TOML block. Every other byte stays.
     Raises ValueError without a TOML block, and when the block does not
     read back with LINK."""
-    span = protocol_block.toml_block_span(text)
-    if span is None:
-        raise ValueError("no ```toml block — the link is written into the head")
-    start, end = span
-    lines = text.split("\n")
-    kept: list[str] = []
-    in_link = False
-    for line in lines[start:end]:
-        if _LINK_HEADER.match(line):
-            in_link = True
-        elif protocol_block.TABLE_HEADER.match(line):
-            in_link = False
-        if not in_link:
-            kept.append(line)
-    while kept and not kept[-1].strip():
-        kept.pop()
-    body = [*kept, "", *protocol_block.explored_in_toml(link).splitlines()]
-    new = "\n".join([*lines[:start], *body, *lines[end:]])
+    new = protocol_block.with_tables_at_block_end(
+        text, (_LINK_HEADER,), protocol_block.explored_in_toml(link).splitlines()
+    )
     if protocol_block.explored_in(new) != link:
         raise ValueError("[explored_in] did not read back as written")
     return new
