@@ -1,6 +1,6 @@
 # Repo audit: clarity, doubled homes, drift between prose and code
 
-2026-11-26, at commit `6e58d579` (0.116.0 plus 18 unreleased commits). The author asked whether labkit is clear and logical and whether each piece of logic has one home. This note is the register of what was found; nothing was fixed. The open decisions stand in `TODO.md`.
+2026-11-26, at commit `6e58d579` (0.116.0 plus 18 unreleased commits). The author asked whether labkit is clear and logical and whether each piece of logic has one home. This note is the register of what was found, as it stood before anything was changed. On the same day the author ordered nine of the ten open points built; what was built and what was left, each with its reason, stands in `TODO.md` (section of this audit) and in `CHANGELOG.md` under "Unreleased". The line numbers below are those of commit `6e58d579`.
 
 ## How it was read
 
