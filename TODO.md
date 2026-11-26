@@ -51,6 +51,15 @@ Diese Punkte sind keine neue Audit-Welle und keine automatischen Release-Bedingu
 2. **`docs/checks-overview.md` ist auf dem Stand des Codes.** Das Test-Inventar lief am 26.11. neu (rund 8 Minuten); keine Meldestelle liest mehr „not in the last trace“, keine ist unerreicht. Nach der nächsten neuen oder umformulierten Meldestelle wieder: `python -m labkit.tools.test_inventory --reach docs/checks-reach.tsv` (allein), danach `just overview`.
 3. **Im Paket nimmt kein Modul mehr einen Namen über ein Modul, das ihn nur importiert** (`tests/test_architecture.py`, `ANameIsTakenWhereItIsDefined`). 17 Stellen in 15 Dateien umgestellt, 16 davon holten `field_name`, `CONCLUSION_LABEL` oder `HTML_COMMENT` über `protocol_check` statt aus `protocol_fields`. Offen: Die Regel gilt nicht für die Tests — dort 235 Stellen in 66 Dateien, die meisten ersetzen für den Test einen Namen im benutzenden Modul (`audit.llm`); welche davon bloße Umwege sind (etwa `finalize.LAB_104`), ist nicht getrennt. Die Regel sieht `from … import name` und `modul.name`; den ausgeschriebenen Pfad (`labkit.formats.modul.name`) und `import *` sieht sie nicht — das Paket benutzt beides heute nicht für eigene Module. Unabhängig gelesen (`code-clarity`, Diff von Punkt 1 und 3, nichts gefahren): sieben Befunde, alle eingearbeitet oder als Grenze in Docstring und Seite benannt; die Kürzung dieser Datei hat ein Agent geschrieben, gegengelesen ist sie nur in Stichproben.
 
+### Release nach `v0.116.0`: geprüft am 26.11., nicht veröffentlicht
+
+Nur gelesen und gemessen ([Notiz](docs/notes/2026-11-26-release-check-after-0.116.md)); das Veröffentlichen (`just release X.Y.Z`) und der Push bleiben beim Autor.
+
+1. **argmining27 zieht ohne Änderung um.** Auf einer Kopie gibt `finalize` für alle 15 Bereiche mit 0.116.0 und mit dem unveröffentlichten Stand bytegleich dasselbe aus. Nicht gefahren: `report-check`, `preflight`, `labkit-audit`, die Hooks.
+2. **Ältere Labore verlieren fast alle Patches.** In fünf Laboren mit Pin 0.25.0 bis 0.88.8 liest der neue Leser 533 von 540 Patches nicht mehr (von labkit bis 0.103.0 geschrieben). Vor dem Release: den Satz mit der Zahl in „In short“ des CHANGELOG-Eintrags aufnehmen; diese Labore behalten für solche Läufe ihren Pin.
+3. **Zwei Labore rufen einen verschobenen Namen:** `twostage-argument-demo` (`findings.write`, jetzt `audit_records.write`) und `labkit-paper` mit seinen zwei Kopien (`lib/sandboxlab/standard_check.py`, braucht einen dritten Fall je labkit-Version). Beides Rollout, außerhalb dieses Repos.
+4. **`counterfactual-worlds` hat 14 Läufe mit verlorenem Patch** (`experiments/11-hong-repair`); sie waren schon bei zwei von drei Lesern abgelehnt.
+
 ### Fragen an den Autor
 
 1. **Gates ohne nummerierte Stationen** (`protocol-check`, `code-check`, `labkit-audit`) stehen nicht auf der Stationsseite. Sollen sie Nummern bekommen? Das ändert nur Kommentare, ist aber je Gate zu lesen; eine Zweitmeinung rät: nur wo ein Gate wirklich getrennte Prüfschritte hat.
