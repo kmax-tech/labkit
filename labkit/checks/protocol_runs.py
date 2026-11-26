@@ -13,7 +13,7 @@ lasts; past it the list names the diff not shown in full, with an excerpt
 and the rest unread (`labkit-run-diff` prints it for a person). A finding
 asks for such a diff, one path's section of it or lines of one file's
 side, with a `diff:` check, and for a file as a run started from it with a
-`code:` check (`findings.evidence_request`); once it is decided, every
+`code:` check (`required_check.evidence_request`); once it is decided, every
 later audit shows it as a REQUESTED DIFF or REQUESTED CODE piece, taken
 from the budget before any other, until a follow-up judged it on the text
 shown (`requested_pieces`). The pieces are in the digest the audit record binds
@@ -32,7 +32,7 @@ from pathlib import Path
 from labkit.formats import runs
 from labkit.formats.area_state import Measured, state_of
 from labkit.formats.digests import digest
-from labkit.formats.findings import (
+from labkit.formats.required_check import (
     CODE_CHECK,
     DIFF_CHECK,
     CodeRequest,

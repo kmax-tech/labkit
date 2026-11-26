@@ -31,6 +31,7 @@ from labkit.formats.protocol_check import prompt_blocks, unread_prompt_field
 from labkit.formats import (
     digests,
     findings,
+    required_check,
     followup,
     promises,
     protocol_block,
@@ -1018,17 +1019,19 @@ def required_check_line(f: findings.Finding, metrics: dict | None) -> str:
         return ""
     note = f" ({f.check_note})" if f.check_note else ""
     present = metrics is not None and f.check in metrics
-    if present and f.check.startswith((findings.FILE_CHECK, *findings.REQUEST_CHECKS)):
+    if present and f.check.startswith(
+        (required_check.FILE_CHECK, *required_check.REQUEST_CHECKS)
+    ):
         return f"required check `{f.check}`{note}: shown above under `{(metrics or {})[f.check]}`"
     if present:
         value = json.dumps((metrics or {})[f.check], ensure_ascii=False)
         return f"required check `{f.check}`{note} = {value}"
-    if f.check.startswith(findings.REQUEST_CHECKS):
+    if f.check.startswith(required_check.REQUEST_CHECKS):
         return (
             f"required check `{f.check}`: not shown — its `REQUESTED` "
             f"piece above says why"
         )
-    if f.check.startswith(findings.FILE_CHECK):
+    if f.check.startswith(required_check.FILE_CHECK):
         return (
             f"required check `{f.check}`: not among the answering run's "
             f"dependencies shown whole"
@@ -1593,7 +1596,7 @@ def shown_after(
         for v in fixes
         if v.verdict in followup.JUDGING
         and v.check_present
-        and v.check.startswith(findings.REQUEST_CHECKS)
+        and v.check.startswith(required_check.REQUEST_CHECKS)
     ]
     if not judging or bound.state.shown_sha is None:
         return bound.state.shown_sha

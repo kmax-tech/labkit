@@ -35,14 +35,14 @@ class TemplateTies(unittest.TestCase):
 
     def test_the_guide_states_a_required_check_as_the_decision_list_does(self):
         """The work order of a finding's `check:` is one wording: the
-        decision list and the follow-up's holds print `findings.check_order`,
+        decision list and the follow-up's holds print `required_check.check_order`,
         the agent guide states it — another wording can leave the check
         unwritten."""
-        from labkit.formats import findings
+        from labkit.formats import required_check
 
         guide = TEMPLATES.parent / "docs" / "agent-guide.md"
         agents = " ".join(guide.read_text(encoding="utf-8").split())
-        self.assertIn(findings.check_order("<key>", "what it must show"), agents)
+        self.assertIn(required_check.check_order("<key>", "what it must show"), agents)
 
     def test_models_toml_defines_the_audit_default_alias(self):
         text = (TEMPLATES / "models.toml.template").read_text(encoding="utf-8")

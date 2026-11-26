@@ -1,5 +1,5 @@
 """A finding's request for a code diff the audit had no room for: the
-`diff:` check read (`findings.diff_request`, `findings.check_of`), the
+`diff:` check read (`required_check.diff_request`, `required_check.check_of`), the
 section of a unified diff it names (`protocol_runs.diff_section`), and
 which requests a later audit serves (`followup.diff_requests`). The way
 on real commands: `tests/test_protocol_runs.py`, `RequestedDiff`."""
@@ -11,7 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.checks.protocol_runs import diff_lines, diff_section
-from labkit.formats import findings, followup
+from labkit.formats import findings, followup, required_check
 
 OLD = "2026-11-17T10-00-00_aa11"
 NEW = "2026-11-17T11-00-00_bb22"
@@ -28,11 +28,11 @@ DIFF = (
 class Read(unittest.TestCase):
     def test_the_whole_diff_and_a_section(self):
         self.assertEqual(
-            findings.diff_request(f"diff:{OLD}..{NEW}"),
-            findings.DiffRequest(OLD, NEW, None),
+            required_check.diff_request(f"diff:{OLD}..{NEW}"),
+            required_check.DiffRequest(OLD, NEW, None),
         )
         self.assertEqual(
-            findings.diff_request(f"diff:{OLD}..{NEW}:lib/weights.py").path,
+            required_check.diff_request(f"diff:{OLD}..{NEW}:lib/weights.py").path,
             "lib/weights.py",
         )
 
@@ -45,7 +45,7 @@ class Read(unittest.TestCase):
             f"diff:{OLD}..{NEW}:lib/../../x.py",
         ):
             with self.subTest(bad), self.assertRaises(ValueError):
-                findings.diff_request(bad)
+                required_check.diff_request(bad)
 
     def test_the_finding_line_carries_it_as_its_check(self):
         line = (
@@ -53,11 +53,11 @@ class Read(unittest.TestCase):
             f"check: diff:{OLD}..{NEW}:lib — confirms if a filter stands there"
         )
         self.assertEqual(
-            findings.check_of(line),
+            required_check.check_of(line),
             (f"diff:{OLD}..{NEW}:lib", "confirms if a filter stands there"),
         )
         with self.assertRaises(ValueError):
-            findings.check_of(line.replace(NEW, "latest"))
+            required_check.check_of(line.replace(NEW, "latest"))
 
     def test_its_fixed_is_named_as_evidence_supplied_only(self):
         """The one wording of the decision list, the decide output and the
@@ -65,29 +65,30 @@ class Read(unittest.TestCase):
         supplied, never that code or claim is confirmed."""
         for check in (f"diff:{OLD}..{NEW}", f"code:{NEW}:lib/w.py:1-9"):
             with self.subTest(check):
-                said = findings.check_order(check, "")
+                said = required_check.check_order(check, "")
                 self.assertIn("`fixed` says only: evidence supplied", said)
                 self.assertIn("confirms neither the code nor the claim", said)
 
     def test_a_line_range_of_one_side_of_a_file(self):
         self.assertEqual(
-            findings.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:new:120-260"),
-            findings.DiffRequest(OLD, NEW, "lib/w.py", "new", (120, 260)),
+            required_check.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:new:120-260"),
+            required_check.DiffRequest(OLD, NEW, "lib/w.py", "new", (120, 260)),
         )
         self.assertEqual(
-            findings.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:old:7-7").lines, (7, 7)
+            required_check.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:old:7-7").lines,
+            (7, 7),
         )
         for bad in ("new:20-10", "mid:1-2", "new:0-3", "new:5"):
             with self.subTest(bad), self.assertRaises(ValueError):
-                findings.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:{bad}")
+                required_check.diff_request(f"diff:{OLD}..{NEW}:lib/w.py:{bad}")
 
     def test_a_run_s_code_as_it_started_whole_or_a_range(self):
         self.assertEqual(
-            findings.code_request(f"code:{NEW}:area/scripts/01_measure.py"),
-            findings.CodeRequest(NEW, "area/scripts/01_measure.py", None),
+            required_check.code_request(f"code:{NEW}:area/scripts/01_measure.py"),
+            required_check.CodeRequest(NEW, "area/scripts/01_measure.py", None),
         )
         self.assertEqual(
-            findings.code_request(f"code:{NEW}:lib/w.py:5-9").lines, (5, 9)
+            required_check.code_request(f"code:{NEW}:lib/w.py:5-9").lines, (5, 9)
         )
         for bad in (
             "code:latest:lib/w.py",
@@ -98,14 +99,14 @@ class Read(unittest.TestCase):
             f"code:{NEW}:lib/w.py:9-5",
         ):
             with self.subTest(bad), self.assertRaises(ValueError):
-                findings.code_request(bad)
+                required_check.code_request(bad)
         line = (
             f"BLOCKER · a.py:1 · undetermined · x · y · new class · z · "
             f"check: code:{NEW}:lib/w.py:5-9 — confirms if the weight is 0"
         )
-        self.assertEqual(findings.check_of(line)[0], f"code:{NEW}:lib/w.py:5-9")
+        self.assertEqual(required_check.check_of(line)[0], f"code:{NEW}:lib/w.py:5-9")
         with self.assertRaises(ValueError):
-            findings.check_of(line.replace(":5-9", ":9-5"))
+            required_check.check_of(line.replace(":5-9", ":9-5"))
 
 
 #: one file's section: lines 1–6 of the old file, 1–7 of the new

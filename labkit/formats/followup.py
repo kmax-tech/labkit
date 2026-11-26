@@ -39,7 +39,6 @@ from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.gate import AUDIT_SLOT, BLOCKER
 from labkit.formats.findings import (
     DECIDED,
-    REQUEST_CHECKS,
     FIXED,
     OPEN,
     Finding,
@@ -47,10 +46,10 @@ from labkit.formats.findings import (
     FixVerdict,
     Record,
     area_records,
-    check_order,
     decision_digest,
     fixed_claim,
 )
+from labkit.formats.required_check import REQUEST_CHECKS, check_order
 
 #: the statuses under which a BLOCKER is earlier evidence to follow up:
 #: every decided one (`findings.DECIDED`)
@@ -199,7 +198,7 @@ JUDGING = ("resolved", "unresolved")
 
 @dataclass(frozen=True)
 class DiffAsked:
-    """A `diff:` check (`findings.diff_request`) an analysis audit is shown
+    """A `diff:` check (`required_check.diff_request`) an analysis audit is shown
     for: CHECK, and JUDGED — "" while it is owed whole, else
     `<ref> found `<verdict>`` naming the verdict that judged it."""
 

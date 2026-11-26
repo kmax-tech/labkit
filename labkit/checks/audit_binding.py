@@ -34,6 +34,7 @@ from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
     findings,
+    required_check,
     followup,
     jsonl,
     promises,
@@ -439,7 +440,7 @@ def shown_files(pieces: Iterable[tuple[str, str]]) -> dict[str, str]:
             continue
         if label.startswith(DEPENDENCY_LABEL):
             recorded = label.removeprefix(DEPENDENCY_LABEL).split(" (", 1)[0]
-            out[f"{findings.FILE_CHECK}{recorded}"] = label
+            out[f"{required_check.FILE_CHECK}{recorded}"] = label
         elif (asked := label_check(label)) is not None:
             out[asked] = label
     return out

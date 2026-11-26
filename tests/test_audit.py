@@ -49,6 +49,7 @@ from labkit.formats import (
     audit_gaps,
     failed_attempts,
     findings,
+    required_check,
     followup,
     promises,
     reviews,
@@ -2145,7 +2146,7 @@ class CheckNote(unittest.TestCase):
         }
         for line, want in cases.items():
             with self.subTest(line):
-                self.assertEqual(findings.check_of(line), want)
+                self.assertEqual(required_check.check_of(line), want)
 
     def test_the_forms_that_do_not_read(self):
         for line in (
@@ -2161,7 +2162,7 @@ class CheckNote(unittest.TestCase):
         ):
             with self.subTest(line):
                 with self.assertRaises(ValueError):
-                    findings.check_of(line)
+                    required_check.check_of(line)
 
     def test_a_period_after_the_note_records_the_whole_answer(self):
         """A line in the shape labkit's auditor writes: a note in parentheses
@@ -2248,14 +2249,16 @@ class FileCheck(unittest.TestCase):
 
     def test_the_file_form_reads_and_a_loose_one_refuses(self):
         self.assertEqual(
-            findings.check_of(self.CHECKED),
+            required_check.check_of(self.CHECKED),
             (f"file:{self.MODEL}", "std holds standard deviations"),
         )
         with self.assertRaises(ValueError):
-            findings.check_of(FixVerdicts.LEAK + " · check: file: data/model.json")
+            required_check.check_of(
+                FixVerdicts.LEAK + " · check: file: data/model.json"
+            )
 
     def test_the_work_order_asks_to_declare_the_file(self):
-        order = findings.check_order(f"file:{self.MODEL}", "std holds sds")
+        order = required_check.check_order(f"file:{self.MODEL}", "std holds sds")
         self.assertIn(f"declare `{self.MODEL}` (std holds sds)", order)
         self.assertIn("PREDICTOR_FILES", order)
         self.assertNotIn("metrics.json", order)
