@@ -1,0 +1,678 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 46 and seed 2775342699040858911 with 4 workers on 11 cores with 8192MB heap and 64MB offheap memory [pid: 21236] (Mac OS X 26.6.2 aarch64, Homebrew 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/tmp/claude-501/-Users-max-projects-labkit/a2c9681f-9192-43c5-b93b-580c38fcd4a4/scratchpad/AreaLifecycle.tla
+Parsing file /private/var/folders/dr/0yc90r590w1123s1wvj7mjhc0000gn/T/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module AreaLifecycle
+Starting... (2026-11-27 18:48:21)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-27 18:48:26.
+Error: Invariant CommittedNumberFromAreaDataAsRun is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ areaData = 0
+/\ regVer = 0
+/\ runs = 0
+/\ reportReviewed = FALSE
+/\ preflight = "none"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "none",
+  regCommitted |-> FALSE,
+  preflightDecided |-> FALSE ]
+/\ frozen = FALSE
+/\ code = 0
+/\ reg = "open"
+/\ audit = "none"
+/\ run = "none"
+/\ report = "none"
+/\ adopted = 0
+
+State 2: <WriteRegistration line 119, col 5 to line 124, col 39 of module AreaLifecycle>
+/\ areaData = 0
+/\ regVer = 0
+/\ runs = 0
+/\ reportReviewed = FALSE
+/\ preflight = "none"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "none",
+  regCommitted |-> FALSE,
+  preflightDecided |-> FALSE ]
+/\ frozen = FALSE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "none"
+/\ report = "none"
+/\ adopted = 0
+
+State 3: <PreflightAudit line 128, col 5 to line 132, col 39 of module AreaLifecycle>
+/\ areaData = 0
+/\ regVer = 0
+/\ runs = 0
+/\ reportReviewed = FALSE
+/\ preflight = "findings"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "none",
+  regCommitted |-> FALSE,
+  preflightDecided |-> FALSE ]
+/\ frozen = FALSE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "none"
+/\ report = "none"
+/\ adopted = 0
+
+State 4: <DecidePreflight line 136, col 5 to line 140, col 39 of module AreaLifecycle>
+/\ areaData = 0
+/\ regVer = 0
+/\ runs = 0
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "none",
+  regCommitted |-> FALSE,
+  preflightDecided |-> FALSE ]
+/\ frozen = FALSE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "none"
+/\ report = "none"
+/\ adopted = 0
+
+State 5: <Freeze line 144, col 5 to line 148, col 39 of module AreaLifecycle>
+/\ areaData = 0
+/\ regVer = 0
+/\ runs = 0
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "none",
+  regCommitted |-> FALSE,
+  preflightDecided |-> FALSE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "none"
+/\ report = "none"
+/\ adopted = 0
+
+State 6: <StartMeasurement line 187, col 21 to line 187, col 65 of module AreaLifecycle>
+/\ areaData = 0
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "running"
+/\ report = "none"
+/\ adopted = 0
+
+State 7: <EditAreaData line 168, col 5 to line 172, col 39 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "running"
+/\ report = "none"
+/\ adopted = 0
+
+State 8: <RunCompletes line 193, col 5 to line 196, col 39 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 0]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "none"
+/\ run = "completed"
+/\ report = "none"
+/\ adopted = 0
+
+State 9: <AnalysisAudit line 206, col 5 to line 212, col 63 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 1]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "findings"
+/\ run = "completed"
+/\ report = "none"
+/\ adopted = 0
+
+State 10: <Decide line 216, col 5 to line 221, col 72 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 1]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "decided"
+/\ run = "completed"
+/\ report = "none"
+/\ adopted = 0
+
+State 11: <Adopt line 234, col 5 to line 240, col 68 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = FALSE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 1]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "decided"
+/\ run = "completed"
+/\ report = "result"
+/\ adopted = 1
+
+State 12: <ReportReview line 244, col 5 to line 248, col 31 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = TRUE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 1]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "open",
+  regVer |-> 0,
+  preflight |-> "none",
+  frozen |-> FALSE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  runs |-> 0,
+  run |-> "none",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> FALSE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "none",
+        regCommitted |-> FALSE,
+        preflightDecided |-> FALSE ],
+  audit |-> "none",
+  auditAt |-> [code |-> 0, run |-> 0],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 0,
+  report |-> "none",
+  reportReviewed |-> FALSE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "decided"
+/\ run = "completed"
+/\ report = "result"
+/\ adopted = 1
+
+State 13: <Commit line 273, col 5 to line 276, col 21 of module AreaLifecycle>
+/\ areaData = 1
+/\ regVer = 0
+/\ runs = 1
+/\ reportReviewed = TRUE
+/\ preflight = "decided"
+/\ auditAt = [code |-> 0, run |-> 1]
+/\ reviewOwed = FALSE
+/\ reviewed = FALSE
+/\ cm = [ reg |-> "written",
+  regVer |-> 0,
+  preflight |-> "decided",
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 1,
+  runs |-> 1,
+  run |-> "completed",
+  runAt |->
+      [ reg |-> 0,
+        frozen |-> TRUE,
+        code |-> 0,
+        data |-> 0,
+        areaData |-> 0,
+        kind |-> "measurement",
+        regCommitted |-> FALSE,
+        preflightDecided |-> TRUE ],
+  audit |-> "decided",
+  auditAt |-> [code |-> 0, run |-> 1],
+  reviewOwed |-> FALSE,
+  reviewed |-> FALSE,
+  adopted |-> 1,
+  report |-> "result",
+  reportReviewed |-> TRUE ]
+/\ data = 0
+/\ runAt = [ reg |-> 0,
+  frozen |-> TRUE,
+  code |-> 0,
+  data |-> 0,
+  areaData |-> 0,
+  kind |-> "measurement",
+  regCommitted |-> FALSE,
+  preflightDecided |-> TRUE ]
+/\ frozen = TRUE
+/\ code = 0
+/\ reg = "written"
+/\ audit = "decided"
+/\ run = "completed"
+/\ report = "result"
+/\ adopted = 1
+
+1042405 states generated, 418924 distinct states found, 261292 states left on queue.
+The depth of the complete state graph search is 13.
+The average outdegree of the complete state graph is 3 (minimum is 0, the maximum 11 and the 95th percentile is 7).
+Finished in 06s at (2026-11-27 18:48:27)

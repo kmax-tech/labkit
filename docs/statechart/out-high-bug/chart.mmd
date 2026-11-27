@@ -1,0 +1,56 @@
+---
+title: "One labkit area: commands, gates, last commit"
+---
+stateDiagram-v2
+  direction LR
+  state "Legend" as legend {
+    lg0: Breaks CommittedNumberFromDataAsRun
+    lg1: Path to the CommittedNumberFromDataAsRun bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  state "At the same time" as all {
+    state "Work" as r0 {
+      s0: Registration open
+      s1: Registered, nothing measured
+      s2: Preflight findings undecided
+      s3: Preflight decided, not frozen
+      s4: Frozen, nothing measured
+      s5: Measurement in progress
+      s6: Measured, not audited
+      s7: Audit findings undecided
+      s8: Ready to adopt
+      s9: Adopted, input changed since the run
+      [*] --> s0
+      s0 --> s1: protocol-fill writes the registration
+      s1 --> s2: labkit-audit --mode preflight
+      s2 --> s3: labkit-audit --decide (preflight)
+      s3 --> s4: protocol-fill --freeze
+      s4 --> s5: you start a measurement
+      s5 --> s6: the run completes
+      s6 --> s7: labkit-audit --mode analysis
+      s7 --> s8: labkit-audit --decide
+      s8 --> s9: labkit-adopt
+    }
+    --
+    state "Last commit" as r1 {
+      s10: Commit: nothing registered
+      s11: Commit: number on changed input
+      [*] --> s10
+      s10 --> s11: git commit (hook passes) [when Adopted, input changed since the run]
+    }
+  }
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s1 bugPath
+  class s2 bugPath
+  class s3 bugPath
+  class s4 bugPath
+  class s5 bugPath
+  class s6 bugPath
+  class s7 bugPath
+  class s8 bugPath
+  class s9 bugPath
+  class s10 bugPath
+  class s11 breaks
+  class s11 bugPath

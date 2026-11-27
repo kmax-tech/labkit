@@ -17,7 +17,7 @@ Each action is a command an author runs. Its guard is what that command checks, 
 | `git commit`               | `report_check.hold_changed_paths`, for the areas `scope_sha.areas_touched` reaches                                       |
 | finalize, inside the chain | answering run, registration, code, provenance (low only)                                                                 |
 
-The thirteen INVARIANTs are the promises of `docs/workflow.md`. Except for one, they are stated on the last commit, because the commit hook is where labkit promises them. The exception, `NoMeasurementWithoutRegistration`, is stated on the working state.
+The fourteen INVARIANTs are the promises of `docs/workflow.md`. Except for one, they are stated on the last commit, because the commit hook is where labkit promises them. The exception, `NoMeasurementWithoutRegistration`, is stated on the working state.
 
 ## What it leaves out
 
@@ -33,21 +33,27 @@ The model is not the code. A path that breaks a rule here counts as a finding on
 
 ## Result
 
-| Config                                | States    | Result                                                                                                                   |
-|---------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------|
-| `low-overview.cfg` (1 run, no edits)  | 743       | all 13 rules hold; chart `out-low/chart.mmd`                                                                             |
-| `high-overview.cfg` (1 run, no edits) | 4 649     | all 13 rules hold; chart `out-high/chart.mmd`                                                                            |
-| `high-full.cfg` (2 runs, 1 edit each) | 5 957 963 | all 13 rules hold (`out-high/tlc-high-full.log`)                                                                         |
-| `low-full.cfg` (2 runs, 1 edit each)  | 667 419   | `CommittedNumberFromDataAsRun` breaks (`out-low-bug/`); the other 12 hold (`out-low/tlc-low-full-without-data-rule.log`) |
+Each data rule states the requirement at every repeat cost: an adopted number stays bound to the inputs it was measured on. The protection is a separate matter. finalize's byte comparison (provenance) runs at low only (`labkit/gates/finalize.py:1338`, "the agent audit covers provenance there"), and the model keeps that guard as the code has it.
 
-The broken rule has this path: adopt, commit, change a data file that lies outside the area and outside every promise's scope, commit again. The hook lets the second commit through, because `areas_touched` does not read the inputs a run recorded.
+| Config                                | Rule or rules                      | States     | Result                                |
+|---------------------------------------|------------------------------------|------------|---------------------------------------|
+| `low-overview.cfg` (1 run, no edits)  | all 14                             | 743        | hold; chart `out-low/chart.mmd`       |
+| `high-overview.cfg` (1 run, no edits) | all 14                             | 4 649      | hold; chart `out-high/chart.mmd`      |
+| `low-full.cfg` (2 runs, 1 edit each)  | `CommittedNumberFromDataAsRun`     | —          | breaks (`out-low-bug/`)               |
+| `low-full.cfg`                        | `CommittedNumberFromAreaDataAsRun` | 3 050 849  | holds (`out-low/tlc-area-low.log`)    |
+| `low-full.cfg`                        | the other 12                       | 3 050 849  | hold (`out-low/tlc-rest-low.log`)     |
+| `high-full.cfg` (2 runs, 1 edit each) | `CommittedNumberFromDataAsRun`     | —          | breaks (`out-high-bug/`)              |
+| `high-full.cfg`                       | `CommittedNumberFromAreaDataAsRun` | —          | breaks (`out-high/tlc-area-high.log`) |
+| `high-full.cfg`                       | the other 12                       | 28 232 777 | hold (`out-high/tlc-rest-high.log`)   |
 
-Replayed on the count walkthrough (`docs/examples/count-walkthrough.sh`), whose run reads `data/raw/cases.jsonl` at the lab root:
+Two gaps, each replayed against the real commands:
 
-- Dropping the last case and committing that file alone exits 0 through the pre-commit hook.
-- `report-check experiments/01-docs-per-case` then exits 1 with two blockers: provenance, and `02_analyze.py --check`.
+1. **The reach.** `areas_touched` does not read the inputs a run recorded. So a commit that changes only a data file outside the area does not reach the area. Replayed on the count walkthrough at low (`docs/examples/count-walkthrough.sh`, whose run reads `data/raw/cases.jsonl` at the lab root):
+   - Dropping the last case and committing that file alone exits 0 through the pre-commit hook.
+   - `report-check experiments/01-docs-per-case` then exits 1 with two blockers: provenance, and `02_analyze.py --check`.
+2. **The comparison at high.** At high, finalize compares no input bytes, so a changed input passes even when the gates reach the area. Replayed on the high scenario of `tests/test_end_to_end.py` (`Estimator`: preflight, freeze, measurement, adoption, commit). One gold label was flipped in the area's write-protected `data/prepared/points_v1.jsonl`, and in the lab's `data/raw/points.jsonl`. For both files, pre-commit and `report-check AREA` exit 0 with "frozen, finalized, audited, checked" and 0 blockers. The stop hook also exits 0, but in that fixture it had no stop base, so it says nothing. The throwaway test and its log are kept outside this repo, in `labkit-evidence/2026-11-27-statechart-replay/`.
 
-The finding is entered in `TODO.md` under "Bekannte Grenzen".
+Both gaps are entered in `TODO.md`, under "Bekannte Grenzen" 17 and "Offene Entscheidungen" 10. The model checks recorded inputs only. That a run recorded every input it read is not shown by it.
 
 Mutation check: four guards were weakened, and TLC reported a broken rule each time:
 

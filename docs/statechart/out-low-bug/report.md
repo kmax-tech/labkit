@@ -18,5 +18,5 @@ The shortest path has 11 steps:
 11. git commit (hook passes): Work Adopted, input changed since the run, Last commit Commit: number on changed input
 
 ## Rules not checked
-CommittedNumberFromCompletedNewestRun, CommittedNumberFromMeasurement, CommittedNumberFromCodeAsRun, CommittedNumberUnderItsRegistration, CommittedNumberOnCommittedRegistration, CommittedNumberMeasuredFrozen, CommittedNumberAudited, CommittedReleasedBlockerReviewed, CommittedReportNumberAdopted, CommittedResultReportReviewed, CommittedMeasurementHasReport, NoMeasurementWithoutRegistration
+CommittedNumberFromCompletedNewestRun, CommittedNumberFromMeasurement, CommittedNumberFromCodeAsRun, CommittedNumberFromAreaDataAsRun, CommittedNumberUnderItsRegistration, CommittedNumberOnCommittedRegistration, CommittedNumberMeasuredFrozen, CommittedNumberAudited, CommittedReleasedBlockerReviewed, CommittedReportNumberAdopted, CommittedResultReportReviewed, CommittedMeasurementHasReport, NoMeasurementWithoutRegistration
 After the first break, each TLC run stops at 100,000 distinct states. A run reached that bound before it checked these rules in every state.

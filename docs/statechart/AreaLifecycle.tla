@@ -25,6 +25,7 @@ VARIABLES
     frozen,         \* the protocol's `frozen = true` (high)
     code,           \* version of the measurement code (area scripts, lib/ helpers)
     data,           \* version of a data input outside the area, not in a promise's scope
+    areaData,       \* version of a data input inside the area (data/prepared/)
     runs,           \* number of runs started; the newest is the answering run
     run,            \* "none" | "running" | "completed" | "crashed": the newest run
     runAt,          \* what the newest run was started under
@@ -37,22 +38,23 @@ VARIABLES
     reportReviewed, \* the report review of its final text named no claim
     cm              \* the last commit: a snapshot of the above
 
-work == <<reg, regVer, preflight, frozen, code, data, runs, run, runAt, audit,
+work == <<reg, regVer, preflight, frozen, code, data, areaData, runs, run, runAt, audit,
           auditAt, reviewOwed, reviewed, adopted, report, reportReviewed>>
 vars == <<work, cm>>
 
 Snap == [reg |-> reg, regVer |-> regVer, preflight |-> preflight,
-         frozen |-> frozen, code |-> code, data |-> data, runs |-> runs,
+         frozen |-> frozen, code |-> code, data |-> data, areaData |-> areaData,
+         runs |-> runs,
          run |-> run, runAt |-> runAt, audit |-> audit, auditAt |-> auditAt,
          reviewOwed |-> reviewOwed, reviewed |-> reviewed, adopted |-> adopted,
          report |-> report, reportReviewed |-> reportReviewed]
 
-NoRun == [kind |-> "none", code |-> 0, data |-> 0, reg |-> 0,
+NoRun == [kind |-> "none", code |-> 0, data |-> 0, areaData |-> 0, reg |-> 0,
           frozen |-> FALSE, regCommitted |-> FALSE, preflightDecided |-> FALSE]
 
 Init ==
     /\ reg = "open" /\ regVer = 0 /\ preflight = "none" /\ frozen = FALSE
-    /\ code = 0 /\ data = 0
+    /\ code = 0 /\ data = 0 /\ areaData = 0
     /\ runs = 0 /\ run = "none" /\ runAt = NoRun
     /\ audit = "none" /\ auditAt = [run |-> 0, code |-> 0]
     /\ reviewOwed = FALSE /\ reviewed = FALSE
@@ -78,7 +80,8 @@ FinalizeClean ==
     /\ run = "completed"          \* 1. answering run
     /\ runAt.reg = regVer         \* 2. the registration as the first measurement recorded it
     /\ runAt.code = code          \* 4. the run's code and the declared scopes
-    /\ (Lane = "low" => runAt.data = data)   \* 6. provenance, at low only
+    /\ (Lane = "low" => runAt.data = data /\ runAt.areaData = areaData)
+                                  \* 6. provenance, at low only (finalize.py:1338)
 
 \* report_check.chain_gaps for a declared run D (labkit/gates/report_check.py)
 ChainClean(D, withReport) ==
@@ -116,7 +119,7 @@ WriteRegistration ==
     /\ IF runs = 0 THEN reg = "open" ELSE regVer < MaxEdits
     /\ reg' = "written"
     /\ regVer' = IF runs > 0 THEN regVer + 1 ELSE regVer
-    /\ UNCHANGED <<preflight, frozen, code, data, runs, run, runAt, audit,
+    /\ UNCHANGED <<preflight, frozen, code, data, areaData, runs, run, runAt, audit,
                    auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -124,7 +127,7 @@ WriteRegistration ==
 PreflightAudit ==
     /\ Lane = "high" /\ reg = "written" /\ ~frozen /\ preflight = "none"
     /\ preflight' = "findings"
-    /\ UNCHANGED <<reg, regVer, frozen, code, data, runs, run, runAt, audit,
+    /\ UNCHANGED <<reg, regVer, frozen, code, data, areaData, runs, run, runAt, audit,
                    auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -132,7 +135,7 @@ PreflightAudit ==
 DecidePreflight ==
     /\ preflight = "findings"
     /\ preflight' = "decided"
-    /\ UNCHANGED <<reg, regVer, frozen, code, data, runs, run, runAt, audit,
+    /\ UNCHANGED <<reg, regVer, frozen, code, data, areaData, runs, run, runAt, audit,
                    auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -140,7 +143,7 @@ DecidePreflight ==
 Freeze ==
     /\ Lane = "high" /\ reg = "written" /\ preflight = "decided" /\ ~frozen
     /\ frozen' = TRUE
-    /\ UNCHANGED <<reg, regVer, preflight, code, data, runs, run, runAt, audit,
+    /\ UNCHANGED <<reg, regVer, preflight, code, data, areaData, runs, run, runAt, audit,
                    auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -148,7 +151,7 @@ Freeze ==
 EditCode ==
     /\ code < MaxEdits
     /\ code' = code + 1
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, data, runs, run, runAt,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, data, areaData, runs, run, runAt,
                    audit, auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -156,7 +159,15 @@ EditCode ==
 EditOutsideData ==
     /\ data < MaxEdits
     /\ data' = data + 1
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, runs, run, runAt,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, areaData, runs, run, runAt,
+                   audit, auditAt, reviewOwed, reviewed, adopted, report,
+                   reportReviewed, cm>>
+
+\* a data file inside the area that the run reads (write-protected, lifted on purpose)
+EditAreaData ==
+    /\ areaData < MaxEdits
+    /\ areaData' = areaData + 1
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run, runAt,
                    audit, auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -165,10 +176,11 @@ StartAs(kind) ==
     /\ runs < MaxRuns
     /\ runs' = runs + 1
     /\ run' = "running"
-    /\ runAt' = [kind |-> kind, code |-> code, data |-> data, reg |-> regVer,
+    /\ runAt' = [kind |-> kind, code |-> code, data |-> data,
+                 areaData |-> areaData, reg |-> regVer,
                  frozen |-> frozen, regCommitted |-> RegCommitted,
                  preflightDecided |-> preflight = "decided"]
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, audit, auditAt,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, audit, auditAt,
                    reviewOwed, reviewed, adopted, report, reportReviewed, cm>>
 
 \* the measuring script with run_kind = "measurement"; runlog's start check
@@ -179,13 +191,13 @@ StartProbe == StartAs("probe")
 
 RunCompletes ==
     /\ run = "running" /\ run' = "completed"
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, runAt,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, runAt,
                    audit, auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
 RunCrashes ==
     /\ run = "running" /\ run' = "crashed"
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, runAt,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, runAt,
                    audit, auditAt, reviewOwed, reviewed, adopted, report,
                    reportReviewed, cm>>
 
@@ -196,7 +208,7 @@ AnalysisAudit ==
     /\ audit' = "findings"
     /\ auditAt' = [run |-> runs, code |-> code]
     /\ reviewOwed' = FALSE /\ reviewed' = FALSE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, adopted, report, reportReviewed, cm>>
 
 \* labkit-audit AREA --decide N STATUS; a released BLOCKER owes a review
@@ -205,14 +217,14 @@ Decide ==
     /\ audit' = "decided"
     /\ reviewOwed' \in BOOLEAN
     /\ reviewed' = FALSE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, auditAt, adopted, report, reportReviewed, cm>>
 
 \* labkit-audit AREA --review
 DecisionReview ==
     /\ reviewOwed /\ ~reviewed
     /\ reviewed' = TRUE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, audit, auditAt, reviewOwed, adopted, report,
                    reportReviewed, cm>>
 
@@ -224,14 +236,14 @@ Adopt ==
     /\ adopted' = runs
     /\ report' = "result"
     /\ reportReviewed' = FALSE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, audit, auditAt, reviewOwed, reviewed, cm>>
 
 \* labkit-audit AREA --report-review REPORT
 ReportReview ==
     /\ report = "result" /\ ~reportReviewed
     /\ reportReviewed' = TRUE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, audit, auditAt, reviewOwed, reviewed, adopted,
                    report, cm>>
 
@@ -239,21 +251,21 @@ ReportReview ==
 ProgressAccount ==
     /\ runs > 0 /\ adopted = 0 /\ report /= "progress"
     /\ report' = "progress" /\ reportReviewed' = FALSE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, audit, auditAt, reviewOwed, reviewed, adopted, cm>>
 
 \* protocol-fill PROTOCOL --withdraw --into REPORT
 Withdraw ==
     /\ adopted /= 0
     /\ adopted' = 0 /\ report' = "none" /\ reportReviewed' = FALSE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, audit, auditAt, reviewOwed, reviewed, cm>>
 
 \* protocol-fill PROTOCOL --handover --into REPORT
 Handover ==
     /\ runs > 0 /\ adopted = 0 /\ report /= "handover"
     /\ report' = "handover" /\ reportReviewed' = FALSE
-    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, runs, run,
+    /\ UNCHANGED <<reg, regVer, preflight, frozen, code, data, areaData, runs, run,
                    runAt, audit, auditAt, reviewOwed, reviewed, adopted, cm>>
 
 \* git commit of every change; the pre-commit hook holds
@@ -265,7 +277,7 @@ Commit ==
 
 Next ==
     \/ WriteRegistration \/ PreflightAudit \/ DecidePreflight \/ Freeze
-    \/ EditCode \/ EditOutsideData
+    \/ EditCode \/ EditOutsideData \/ EditAreaData
     \/ StartMeasurement \/ StartProbe \/ RunCompletes \/ RunCrashes
     \/ AnalysisAudit \/ Decide \/ DecisionReview
     \/ Adopt \/ ReportReview \/ ProgressAccount \/ Withdraw \/ Handover
@@ -289,10 +301,13 @@ CommittedNumberFromMeasurement ==
 CommittedNumberFromCodeAsRun ==
     cm.adopted /= 0 => cm.runAt.code = cm.code
 
-\* step 4: provenance, "each data input against the bytes its run recorded"
-\* (at repeat cost low only)
+\* the requirement, at every repeat cost: an adopted number stays bound to the
+\* inputs it was measured on (the protection, step 4's provenance, is low only)
 CommittedNumberFromDataAsRun ==
-    (Lane = "low" /\ cm.adopted /= 0) => cm.runAt.data = cm.data
+    cm.adopted /= 0 => cm.runAt.data = cm.data
+
+CommittedNumberFromAreaDataAsRun ==
+    cm.adopted /= 0 => cm.runAt.areaData = cm.areaData
 
 \* "A confirmatory protocol is held to the registration of its first measurement."
 CommittedNumberUnderItsRegistration ==
