@@ -1107,7 +1107,9 @@ def area_stamp(
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `scope-sha`: the stamp over an area's code, as a record's `scope_sha` names it."""
     if console.asks_help(argv):
-        print((__doc__ or "").strip().splitlines()[0])
+        # the module docstring's first paragraph, joined to one line: its first
+        # line alone stops mid-phrase
+        print(" ".join((__doc__ or "").strip().split("\n\n")[0].split()))
         print(
             "usage: scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]"
         )
@@ -1118,7 +1120,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         )
         print(
             "  FILE ...         extra files that determine the number; the "
-            "repo-local lib/ modules the scripts import are included already"
+            f"repo-local {' and '.join(r + '/' for r in LOCAL_ROOTS)} modules "
+            "the scripts import are included already"
         )
         print("  --no-pin         do not include the labkit pin line")
         return 0

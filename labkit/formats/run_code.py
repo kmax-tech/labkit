@@ -16,16 +16,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import runs
+from labkit.formats.scope_sha import LOCAL_ROOTS
 from labkit.formats.repo import (
     GitError,
     rel_posix,
     tree_diff,
     tree_then,
 )
-
-#: the repository folders beside the area whose modules an area imports
-#: (`scope_sha`: the repo-local helpers)
-SHARED_CODE = ("lib", "src")
 
 
 @dataclass(frozen=True)
@@ -88,13 +85,13 @@ def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
 def code_scope(area: Path, root: Path) -> list[str]:
     """The pathspecs two runs of AREA are compared within: every Python
     file of AREA outside its `runs/`, and ROOT's shared code folders
-    (SHARED_CODE) — the code `scope_sha` stamps, not the area's outputs,
+    (`scope_sha.LOCAL_ROOTS`) — the code `scope_sha` stamps, not the area's outputs,
     data, prompts or protocols. AREA lies under ROOT."""
     rel = rel_posix(area, root)
     base = "" if rel in ("", ".") else f"{rel}/"
     return [
         f":(glob){base}**/*.py",
-        *SHARED_CODE,
+        *LOCAL_ROOTS,
         f":(exclude){base}{runs.RUNS_DIR}",
     ]
 
