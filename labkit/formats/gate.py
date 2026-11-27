@@ -378,7 +378,7 @@ class GateFinding:
             derived one (`derived_outcome`), and refused otherwise.
         changed_since: The run whose code or declared scope this blocker
             found changed since it ran — set where the comparison found the
-            difference (`run_record_check.code_since_run`,
+            difference (`run_code_check.code_since_run`,
             `finalize.station_declared_scopes`); None for every other finding,
             also for code that could not be compared. Callers order their
             advice by it, never by the words

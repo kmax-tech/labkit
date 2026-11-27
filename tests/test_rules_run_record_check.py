@@ -1,9 +1,10 @@
 """Rule tests of `run_record_check`'s pure checks: each condition from typed
 data in memory, its violation and its valid twin (docs/architecture.md,
 "Checks and their tests"). The gate that composes them is finalize
-(`tests/test_finalize_steps.py` for its stations); the denominator's cases
-stand in `tests/test_rules_kept_number_check.py`, the null lane's in
-`tests/test_rules_row_check.py`, the model's in `tests/test_rules_model_check.py`.
+(`tests/test_finalize_steps.py` for its stations). The other checks of a
+finished run have their own rule tests: `tests/test_rules_run_code_check.py`,
+`tests/test_rules_model_check.py`, `tests/test_rules_row_check.py`,
+`tests/test_rules_kept_number_check.py`.
 """
 
 from __future__ import annotations
@@ -15,14 +16,11 @@ import pytest
 
 from check_guards import pure_call
 from labkit.checks.run_record_check import (
-    answer_reading_gaps,
     output_record_findings,
     SourceNow,
     source_finding,
 )
 from labkit.formats.gate import (
-    LAB_041,
-    LAB_067,
     BLOCKER,
     DEVIATION,
     GUARANTEED,
@@ -192,44 +190,3 @@ class ASourceIsTheBytesTheRunRead(unittest.TestCase):
 
     def test_the_twin_a_tracked_source_with_its_bytes_passes(self):
         self.assertEqual(self._decided(kind="file"), (None, None))
-
-
-class ADeclaredAnswerReadingHoldsPromptsAndAnswers(unittest.TestCase):
-    """A derived run that declares its answer reading re-reads its parent's
-    answers under the same prompts: the prompts field exact, the shared
-    answer file with the parent's sha256, at least one shared file."""
-
-    TEXT = "Count  the lines."
-    OUT = Path("output/answers.jsonl")
-    ANEW = "measure anew (`python scripts/01_measure.py`) and audit that run"
-
-    def gaps(self, prompts: tuple, parent: str, child: str) -> list:
-        outputs = (
-            [OutputEntry(path=self.OUT, sha256=parent, lines=3)],
-            [OutputEntry(path=self.OUT, sha256=child, lines=3)],
-        )
-        return pure_call(answer_reading_gaps, "A", "D", prompts, outputs, self.ANEW)
-
-    def test_the_same_prompts_and_answers_pass(self) -> None:
-        self.assertEqual(self.gaps((self.TEXT, self.TEXT), "abc", "abc"), [])
-
-    def test_a_changed_prompt_holds_even_in_whitespace(self) -> None:
-        for now in (self.TEXT.replace("  ", " "), None):
-            with self.subTest(now=now):
-                (found,) = self.gaps((self.TEXT, now), "abc", "abc")
-                self.assertEqual(found.grade, BLOCKER)
-                self.assertEqual(found.rule, LAB_067)
-                self.assertIn("differs from the text A was measured under", found.text)
-                self.assertIn(self.ANEW, found.line)
-
-    def test_answers_registered_with_other_bytes_hold(self) -> None:
-        (found,) = self.gaps((self.TEXT, self.TEXT), "abc", "abd")
-        self.assertEqual(found.rule, LAB_041)
-        self.assertIn("the answers changed after A ran", found.text)
-
-    def test_no_shared_answer_file_holds(self) -> None:
-        outputs = ([OutputEntry(path=self.OUT, sha256="abc", lines=3)], [])
-        (found,) = pure_call(
-            answer_reading_gaps, "A", "D", (self.TEXT, self.TEXT), outputs, self.ANEW
-        )
-        self.assertIn("registered none of the files A registered", found.text)

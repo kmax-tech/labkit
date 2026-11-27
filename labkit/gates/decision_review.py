@@ -76,7 +76,7 @@ from typing import NamedTuple
 
 from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
-from labkit.checks.run_record_check import script_as_run
+from labkit.checks.run_code_check import script_as_run
 from labkit.checks.result_render import left_unjudged, rendering
 from labkit.formats import (
     attempts,
@@ -288,7 +288,7 @@ def measuring_script(
     """The piece the review shows of the script RUN_DIR ran, when no
     finding under review names a code file — a finding placed in the
     protocol would leave the reviewer no code. The script
-    as the run ran it (`run_record_check.script_as_run`): the area's file
+    as the run ran it (`run_code_check.script_as_run`): the area's file
     from SNAP when its digest is the one the run recorded, else the run's
     own copy, labelled as such; else one piece saying why none is shown. A
     script changed since the run never stands in for the one it ran.

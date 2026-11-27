@@ -1607,7 +1607,7 @@ def patch_contradicts_record(rd: RunDir) -> str | None:
     contradiction: a file left by something else, or a record changed
     since. Which of the two is what the run started from is not known, so
     no reader of a run's start picks one (`start_point`,
-    `run_record_check.code_since_run`); the way out is
+    `run_code_check.code_since_run`); the way out is
     PATCH_CONTRADICTION_WAY. RD's config must read."""
     assert rd.config is not None, "a run whose config reads"
     if rd.config.git.endswith(DIRTY_MARK) or not patch_text(rd.dir).strip():
@@ -1656,7 +1656,7 @@ def start_point(rd: RunDir, root: Path | None, *, subject: str) -> StartPoint | 
     6. This clone does not hold the commit.
 
     Steps 4 and 5 are also the helpers comparison's own blockers
-    (`run_record_check.code_since_run`), which reads the same patch.
+    (`run_code_check.code_since_run`), which reads the same patch.
 
     A run gone from the tree (`from_commit`) that started from a changed
     tree is `code_then`'s own refusal, made before it asks here. A caller

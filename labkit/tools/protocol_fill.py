@@ -152,7 +152,7 @@ from labkit.formats.commands import (
     measure_command,
 )
 from labkit.checks import data_counts, recheck, report_blocks
-from labkit.checks.run_record_check import code_since_run
+from labkit.checks.run_code_check import code_since_run
 from labkit.gates import report_check, report_hold
 from labkit.gates.next_step import fill_line
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants

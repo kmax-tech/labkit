@@ -5,7 +5,7 @@ A derived run (`derived_from`) re-reads its parent's rows and makes no model
 call. When it declares the module that turns a row's answer into what the
 evaluation counts, the parent's code is compared only in that module and
 the repo-local modules it imports, not in the whole script
-(`run_record_check.code_since_run`): a fix to the evaluation after the
+(`run_code_check.code_since_run`): a fix to the evaluation after the
 parent ran needs no new measurement, a change to the answer reading still
 does. Whether all of the answer reading lies in that module is the
 analysis audit's question, not this file's.

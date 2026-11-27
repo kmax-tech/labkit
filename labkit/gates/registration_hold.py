@@ -84,9 +84,7 @@ from labkit.formats.protocol_check import (
     FieldPlaceError,
 )
 from labkit.formats.protocol_fields import field_name
-from labkit.checks.run_record_check import (
-    code_since_run,
-)
+from labkit.checks.run_code_check import code_since_run
 from labkit.formats.finding_decisions import corrected_field
 from labkit.formats.followup import (
     Correction,

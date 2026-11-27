@@ -1,5 +1,5 @@
 """The code that produced a run's number is the code here now (finalize
-station 3, `run_record_check.code_since_run`).
+station 3, `run_code_check.code_since_run`).
 
 The case: the script counted `len(files) + 1`, the run kept 4.5, the
 script was fixed to `len(files)`, and the old number is not adopted — the
@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import recheck  # noqa: E402
-from labkit.checks.run_record_check import code_since_run  # noqa: E402
+from labkit.checks.run_code_check import code_since_run  # noqa: E402
 from labkit.formats import gate, protocol_then, repo, runs  # noqa: E402
 from labkit.formats.commands import measure_anew  # noqa: E402
 from labkit.formats.answer_reading import (  # noqa: E402

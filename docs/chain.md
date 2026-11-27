@@ -99,7 +99,7 @@ A limit states its effect. The cases below say which decisions need a second, co
   - the finding and the reason;
   - the finding's required check with its value in the run or that it is missing (`audit_prompt.required_check_line`, the follow-up's wording);
   - the protocol (registration and reported claim);
-  - the files the findings name as the auditor read them — when none names a code file, the reviewed run's measuring script as it ran (`run_record_check.script_as_run`: the area's file when its digest is the run's `script_sha`, else the run's own copy, labelled; else a line why none is shown);
+  - the files the findings name as the auditor read them — when none names a code file, the reviewed run's measuring script as it ran (`run_code_check.script_as_run`: the area's file when its digest is the run's `script_sha`, else the run's own copy, labelled; else a line why none is shown);
   - what the auditor was shown of the run.
 * The second auditor says per decision `upheld`, `rejected` or `insufficient`. Only `upheld` releases, and only when every draw on the decision as decided and claimed now says so. A contested state is settled by deciding again, never by another draw.
 * A changed decision or a rewritten Conclusion makes the review stale. The Recorded results and Limitation lines are generated and bound through the record and the run.
@@ -304,7 +304,7 @@ At every repeat cost, each input whose record names an origin run (`origin_run`,
 
 for the answering run and each run it derives from: the measurement script (the path its command names) unchanged since the run (its recorded `script_sha`), and every module it imports — beside it, under `lib/` or `src/` (`scope_sha.measured_code`) — as the tree the run started from held it (its commit with the part of its `uncommitted.patch` for that module, read in a temporary index); a module in another repository a warning; analysis code and the pin not compared; a change made and undone in between, and code loaded another way, not seen
 
-- **Where:** `run_record_check.code_since_run`, `repo.tree_patch`, `repo.blobs_then`, `repo.blobs_now`
+- **Where:** `run_code_check.code_since_run`, `repo.tree_patch`, `repo.blobs_then`, `repo.blobs_now`
 - **Command:** `finalize`, `report-check`
 - **Tier:** guaranteed
 - **When:** before reporting

@@ -19,8 +19,8 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest import mock
 
-from labkit.checks.run_record_check import LAB_041
-from labkit.formats.gate import TECHNICAL_RULE, blocker, withdrawn_first
+
+from labkit.formats.gate import LAB_041, TECHNICAL_RULE, blocker, withdrawn_first
 from labkit.formats import area_state
 from labkit.formats.commands import withdraw_command
 from labkit.gates import report_check, report_context
@@ -48,7 +48,7 @@ class HeldDeclaration(unittest.TestCase):
         return report_check.held_declaration(context(self.PROTOCOL, state), list(found))
 
     def changed(self, text: str, run: str = RUN):
-        # the rule of the comparison that finds it (`run_record_check._run_code`)
+        # the rule of the comparison that finds it (`run_code_check._run_code`)
         return replace(blocker(text, fix="`x`", rule=LAB_041), changed_since=run)
 
     def test_a_reworded_change_still_puts_the_withdrawal_first(self):
@@ -75,7 +75,7 @@ class HeldDeclaration(unittest.TestCase):
         unread = withdrawn_first(
             [
                 # as the comparison records code it could not read
-                # (`run_record_check._run_code`, a technical contract)
+                # (`run_code_check._run_code`, a technical contract)
                 blocker(
                     f"finalize: {RUN} started at a commit this clone lacks",
                     fix="`x`",

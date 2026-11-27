@@ -112,7 +112,7 @@ from labkit.formats.repo import (
     the_protocol,
 )
 from labkit.formats.commands import adopt_command
-from labkit.checks import run_record_check
+from labkit.checks import run_code_check, run_record_check
 from labkit.checks.origin_check import origin_gap, origin_now
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
@@ -258,7 +258,7 @@ def protocol_named(area: Path, name: str | None) -> Path:
 
 def script_module(area: Path, run: Path) -> ModuleType:
     """The script RUN ran, imported from where it stands in AREA now
-    (`run_record_check.script_of`): its evaluation is the one a
+    (`run_code_check.script_of`): its evaluation is the one a
     recalculation of RUN owes, whichever protocol of the area RUN answers.
     Whether that file is still the code the run ran is `require_run_code`'s
     question, asked inside `holds`. Raises SystemExit when RUN's record
@@ -274,7 +274,7 @@ def script_module(area: Path, run: Path) -> ModuleType:
     script = (
         "it has no record of the script it ran"
         if cfg is None
-        else run_record_check.script_of(area, cfg)
+        else run_code_check.script_of(area, cfg)
     )
     if isinstance(script, str):
         raise NotVerifiable(
@@ -428,7 +428,7 @@ def require_run_code(run: Path, area: Path) -> None:
     """Refuse a recalculation of RUN unless the code here now is shown to
     be the code it ran. The code is the run's script and the modules it
     imports, for the run and each run it derives from
-    (`run_record_check.code_since_run`, the comparison finalize makes).
+    (`run_code_check.code_since_run`, the comparison finalize makes).
     Where that found a difference, SystemExit: a recomputation with other
     code can agree by chance and would be read as a recalculation of that
     run. Where it could not compare — no script or commit recorded, a
@@ -436,7 +436,7 @@ def require_run_code(run: Path, area: Path) -> None:
     `NotVerifiable` with each reason and the two ways out: the proof is
     missing, and agreeing with today's code would not supply it. Declared
     scopes are `scopes_unchanged`'s, before this. Reads files and git."""
-    blockers, warnings = run_record_check.code_since_run(area, run)
+    blockers, warnings = run_code_check.code_since_run(area, run)
     changed = [b.text for b in blockers if b.changed_since is not None]
     if changed:
         raise SystemExit(

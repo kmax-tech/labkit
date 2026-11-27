@@ -79,25 +79,25 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `run_record_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: its runs cannot be followed ({…}) | `measure_anew(answering_run.parent.parent)` |
-| `run_record_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | restore {…} as runlog wrote it (`{…}` where git holds it), or {…} |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be compared with what {…} ran: the area lies in no git repository now | `measure_anew(area)` |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(area)` |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be read now: {…} | repair what the error names, then `{…}` |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} no longer imports it, so it is not what reads the answers | `measure_anew(area)` |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…} recorded no script — the code behind its number cannot be compared | `measure_anew(area)` |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | {…}, with the script where it is now; only when it was moved or deleted by mistake, restore it from {…} |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it — its number came from other code | {…} (`cp {…} {…}`) |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | technical contract | the code {…} ran cannot be read now: {…} | repair what the error names, then `{…}` |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it (it was untracked; the run kept it as {…}) | {…} (`cp {…} {…}`) |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-010 Commit before the run | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started from a tree with changes ({…}), and its uncommitted.patch is gone: the commit… | restore {…} from git or a backup, or {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}"` |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started at commit {…}, which this clone does not hold | fetch it (`git fetch --unshallow` in a shallow clone) or {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran | {…} (`git -C {…} cat-file blob {…} > {…}`) |
+| `run_code_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: its runs cannot be followed ({…}) | `measure_anew(answering_run.parent.parent)` |
+| `run_code_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | restore {…} as runlog wrote it (`{…}` where git holds it), or {…} |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be compared with what {…} ran: the area lies in no git repository now | `measure_anew(area)` |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(area)` |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be read now: {…} | repair what the error names, then `{…}` |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} no longer imports it, so it is not what reads the answers | `measure_anew(area)` |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…} recorded no script — the code behind its number cannot be compared | `measure_anew(area)` |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | {…}, with the script where it is now; only when it was moved or deleted by mistake, restore it from {…} |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it — its number came from other code | {…} (`cp {…} {…}`) |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | technical contract | the code {…} ran cannot be read now: {…} | repair what the error names, then `{…}` |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it (it was untracked; the run kept it as {…}) | {…} (`cp {…} {…}`) |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-010 Commit before the run | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started from a tree with changes ({…}), and its uncommitted.patch is gone: the commit… | restore {…} from git or a backup, or {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}"` |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started at commit {…}, which this clone does not hold | fetch it (`git fetch --unshallow` in a shallow clone) or {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran | {…} (`git -C {…} cat-file blob {…} > {…}`) |
 | `area_state.unread_start_warning` | WARNING | GUARANTEED | technical contract | {…} — nothing is taken from a start file that does not read | restore the file from the commit that holds it (`git log --all -- <area>/run-starts/<run_id>.json` names it); where no commit holds it, leave it as it is: no value is written into a start file by hand, the protocol and the kind are read from the run's own record where that reads, and the start stays unknown |
 | `area_state.missing_start_warning` | WARNING | GUARANTEED | technical contract | {…} | `START_FILE_BACK` |
 | `area_state.unassigned_record_warning` | WARNING | GUARANTEED | technical contract | the record of run {…} does not read, and neither a start file nor the run index names it:… | `RECORD_BACK` |
@@ -149,9 +149,9 @@ Calls:
 
 Calls:
 
-- `finalize.station_run_code` — Station 4, first half: the code that produced the answering run's number, and that of every run it derives from, is the code here now (`run_record_check.code_since_run`), for every kind — a fix after the run with no new run would leave the old code's number standing.
+- `finalize.station_run_code` — Station 4, first half: the code that produced the answering run's number, and that of every run it derives from, is the code here now (`run_code_check.code_since_run`), for every kind — a fix after the run with no new run would leave the old code's number standing.
 - `finalize.station_declared_scopes` — Station 4, second half: a promise's declared scope edited after the run: today's code is not the code that produced the number.
-- `finalize.station_answer_reading` — Station 4, third part: each run of the answering run's lineage that declares its answer reading (`answer_reading`) is held to its parent beyond the code (`run_record_check.answer_reading_gaps`): the prompts field of PROTOCOL as each run started under it, and the answer file both registered.
+- `finalize.station_answer_reading` — Station 4, third part: each run of the answering run's lineage that declares its answer reading (`answer_reading`) is held to its parent beyond the code (`run_code_check.answer_reading_gaps`): the prompts field of PROTOCOL as each run started under it, and the answer file both registered.
 
 **At this station:**
 
@@ -167,28 +167,28 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `run_record_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: its runs cannot be followed ({…}) | `measure_anew(answering_run.parent.parent)` |
-| `run_record_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | restore {…} as runlog wrote it (`{…}` where git holds it), or {…} |
-| `run_record_check.answer_reading_gaps` | BLOCKER | GUARANTEED | LAB-067 A prompt has one home, which the run freezes | {…} re-reads the answers of {…}, but the prompts field differs from the text {…} was meas… | `anew` |
-| `run_record_check.answer_reading_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} registered none of the files {…} registered as its output — a derived run re-reads it… | register the answer file {…} wrote in the derived run (`r.output(...)`), or {…} |
-| `run_record_check.answer_reading_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…}: {…} registered sha256 {…}, {…} {…} — the answers changed after {…} ran | restore the file as {…} registered it (`git log -- {…}` names its commits), or {…} |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be compared with what {…} ran: the area lies in no git repository now | `measure_anew(area)` |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(area)` |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be read now: {…} | repair what the error names, then `{…}` |
-| `run_record_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} no longer imports it, so it is not what reads the answers | `measure_anew(area)` |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…} recorded no script — the code behind its number cannot be compared | `measure_anew(area)` |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | {…}, with the script where it is now; only when it was moved or deleted by mistake, restore it from {…} |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it — its number came from other code | {…} (`cp {…} {…}`) |
-| `run_record_check._run_code` | BLOCKER | GUARANTEED | technical contract | the code {…} ran cannot be read now: {…} | repair what the error names, then `{…}` |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it (it was untracked; the run kept it as {…}) | {…} (`cp {…} {…}`) |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-010 Commit before the run | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started from a tree with changes ({…}), and its uncommitted.patch is gone: the commit… | restore {…} from git or a backup, or {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}"` |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started at commit {…}, which this clone does not hold | fetch it (`git fetch --unshallow` in a shallow clone) or {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran | {…} (`git -C {…} cat-file blob {…} > {…}`) |
+| `run_code_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: its runs cannot be followed ({…}) | `measure_anew(answering_run.parent.parent)` |
+| `run_code_check.code_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | restore {…} as runlog wrote it (`{…}` where git holds it), or {…} |
+| `run_code_check.answer_reading_gaps` | BLOCKER | GUARANTEED | LAB-067 A prompt has one home, which the run freezes | {…} re-reads the answers of {…}, but the prompts field differs from the text {…} was meas… | `anew` |
+| `run_code_check.answer_reading_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} registered none of the files {…} registered as its output — a derived run re-reads it… | register the answer file {…} wrote in the derived run (`r.output(...)`), or {…} |
+| `run_code_check.answer_reading_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…}: {…} registered sha256 {…}, {…} {…} — the answers changed after {…} ran | restore the file as {…} registered it (`git log -- {…}` names its commits), or {…} |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be compared with what {…} ran: the area lies in no git repository now | `measure_anew(area)` |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(area)` |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…} cannot be read now: {…} | repair what the error names, then `{…}` |
+| `run_code_check._reading_since_run` | BLOCKER | GUARANTEED | technical contract | {…}: {…} no longer imports it, so it is not what reads the answers | `measure_anew(area)` |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…} recorded no script — the code behind its number cannot be compared | `measure_anew(area)` |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | {…}, with the script where it is now; only when it was moved or deleted by mistake, restore it from {…} |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it — its number came from other code | {…} (`cp {…} {…}`) |
+| `run_code_check._run_code` | BLOCKER | GUARANTEED | technical contract | the code {…} ran cannot be read now: {…} | repair what the error names, then `{…}` |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran it (it was untracked; the run kept it as {…}) | {…} (`cp {…} {…}`) |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-010 Commit before the run | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started from a tree with changes ({…}), and its uncommitted.patch is gone: the commit… | restore {…} from git or a backup, or {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}"` |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started at commit {…}, which this clone does not hold | fetch it (`git fetch --unshallow` in a shallow clone) or {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
+| `run_code_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | {…} changed since {…} ran | {…} (`git -C {…} cat-file blob {…} > {…}`) |
 | `finalize.run_file_unread` | BLOCKER | GUARANTEED | technical contract | {…} | make the run's files readable (path and permissions), then `{…}` |
 | `finalize.run_file_unread` | BLOCKER | GUARANTEED | technical contract | {…} | measure anew (`{…}`) and audit that run; the run's own files stay as they are |
 

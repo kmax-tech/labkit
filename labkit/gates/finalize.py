@@ -254,9 +254,8 @@ from labkit.checks.model_check import (
     single_draw,
 )
 from labkit.checks.row_check import null_lane_findings, row_provenance_findings
+from labkit.checks.run_code_check import answer_reading_gaps, code_since_run
 from labkit.checks.run_record_check import (
-    answer_reading_gaps,
-    code_since_run,
     output_record_findings,
     provenance_findings,
 )
@@ -542,7 +541,7 @@ def station_run_code(
 ) -> None:
     """Station 4, first half: the code that produced the answering run's
     number, and that of every run it derives from, is the code here now
-    (`run_record_check.code_since_run`), for every kind — a fix after the
+    (`run_code_check.code_since_run`), for every kind — a fix after the
     run with no new run would leave the old code's number standing. A module in
     another repository is a warning. HELD_BY, the protocol that declares the
     answering run (None: none does), puts the withdrawal first in each
@@ -564,7 +563,7 @@ def station_answer_reading(
 ) -> None:
     """Station 4, third part: each run of the answering run's lineage that
     declares its answer reading (`answer_reading`) is held to its parent
-    beyond the code (`run_record_check.answer_reading_gaps`): the prompts
+    beyond the code (`run_code_check.answer_reading_gaps`): the prompts
     field of PROTOCOL as each run started under it, and the answer file
     both registered. A protocol text that cannot be read back blocks, as
     does an outputs.json that does not read. A note names the declaration
