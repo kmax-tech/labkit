@@ -822,10 +822,10 @@ class ApplySkeleton(unittest.TestCase):
     def test_the_scored_lanes_are_the_ones_finalize_reads(self):
         # the skeleton's lane names and finalize's null-lane station must
         # agree, or the station holds nothing
-        from labkit.checks import run_record_check
+        from labkit.checks import row_check
 
         _, measure = self.measure_module("apply")
-        self.assertEqual(measure.SCORED_LANES, run_record_check.NULL_LANES)
+        self.assertEqual(measure.SCORED_LANES, row_check.NULL_LANES)
 
     def test_each_skeleton_reads_its_kept_key_from_the_head(self):
         """The key is the head's, read at import, never a constant of the

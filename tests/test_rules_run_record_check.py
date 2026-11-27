@@ -2,7 +2,8 @@
 data in memory, its violation and its valid twin (docs/architecture.md,
 "Checks and their tests"). The gate that composes them is finalize
 (`tests/test_finalize_steps.py` for its stations); the denominator's cases
-stand in `tests/test_rules_kept_number_check.py`.
+stand in `tests/test_rules_kept_number_check.py`, the null lane's in
+`tests/test_rules_row_check.py`.
 """
 
 from __future__ import annotations
@@ -19,7 +20,6 @@ from labkit.checks.run_record_check import (
     StoringRun,
     call_log_model_findings,
     stand_in_findings,
-    null_lane_findings,
     output_record_findings,
     SourceNow,
     source_finding,
@@ -31,17 +31,14 @@ from labkit.formats.gate import (
     BLOCKER,
     DEVIATION,
     GUARANTEED,
-    KNOWN_RULE,
     NOT_EXECUTABLE,
     OPEN_RULE,
     TECHNICAL_RULE,
     cited_rule,
-    STATIC_EVIDENCE,
     WARNING,
     RuleAssignment,
 )
 from labkit.formats.runs import (
-    KeptRows,
     ModelCall,
     OutputEntry,
     OutputNow,
@@ -50,55 +47,6 @@ from labkit.formats.runs import (
 pytestmark = pytest.mark.rule
 
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
-
-
-def _lanes(null_pred) -> list[dict[str, object]]:
-    """Two lanes over four items; the null lane's answer as given, gold kept."""
-    gold = [0, 1, 0, 1]
-    return [
-        {"lane": "registered", "item": str(i), "pred": g, "gold": g}
-        for i, g in enumerate(gold)
-    ] + [
-        {"lane": "null", "item": str(i), "pred": null_pred(g), "gold": g}
-        for i, g in enumerate(gold)
-    ]
-
-
-class TheNullLaneMoved(unittest.TestCase):
-    """LAB-034 Null condition in the same run: a kept output whose null lane
-    answers what the registered lane answers on every item measures no noise
-    floor — a warning, static evidence (`null_lane_findings`)."""
-
-    AREA = Path("area")
-
-    def _held(self, rows: list[dict[str, object]]):
-        kept = [KeptRows(OutputEntry(Path("out/rows.jsonl"), None, len(rows)), rows)]
-        return pure_call(null_lane_findings, kept, self.AREA)
-
-    def test_an_unmoved_null_lane_warns(self):
-        held = self._held(_lanes(lambda g: g))
-        self.assertEqual(held.examined, 1)
-        (f,) = held.unmoved
-        self.assertEqual(
-            (f.grade, f.evidence_kind, f.rule),
-            (
-                WARNING,
-                STATIC_EVIDENCE,
-                RuleAssignment(KNOWN_RULE, "LAB-034", "Null condition in the same run"),
-            ),
-        )
-        self.assertTrue(
-            f.text.startswith("rows.jsonl: the null lane's answer and gold equal")
-        )
-        self.assertIn("permuted gold", f.fix or "")
-
-    def test_the_twin_a_moved_null_lane_passes(self):
-        held = self._held(_lanes(lambda g: 0))
-        self.assertEqual((held.examined, held.unmoved), (1, []))
-
-    def test_an_output_without_both_lanes_is_not_examined(self):
-        held = self._held([{"item": "1", "n": 3}])
-        self.assertEqual((held.examined, held.unmoved), (0, []))
 
 
 class AnOutputIsTheFileTheRunRecorded(unittest.TestCase):

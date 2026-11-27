@@ -254,7 +254,7 @@ Not proven: that every answer the run used was logged — answers read past labk
 
 rows that carry their code (`_instrument.code_sha`), continued from a run whose script differs from the answering run's: a blocker — the number is that code's; a model's answers re-read after a parser fix pass
 
-- **Where:** `run_record_check.row_provenance_findings`
+- **Where:** `row_check.row_provenance_findings`
 - **Command:** `finalize`
 - **Tier:** guaranteed
 - **When:** before the number leaves the area
@@ -263,7 +263,7 @@ rows that carry their code (`_instrument.code_sha`), continued from a run whose 
 
 an output the run kept with a registered and a null lane: the null answers otherwise on some item, gold included — read from the kept rows, not from the editable script
 
-- **Where:** `run_record_check.null_lane_findings`
+- **Where:** `row_check.null_lane_findings`
 - **Command:** `finalize`
 - **Tier:** static evidence
 - **When:** after the run

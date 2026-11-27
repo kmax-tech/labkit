@@ -216,7 +216,7 @@ SEED = 0
 # instrument's version (estimator_sha): a changed line is a changed config.
 ESTIMATOR = "TODO: e.g. RandomForestClassifier(n_estimators=500, random_state=seed)"
 #: the two lanes every labelled item is scored in, in the same run — the
-#: names finalize reads the kept rows by (`run_record_check.NULL_LANES`)
+#: names finalize reads the kept rows by (`row_check.NULL_LANES`)
 SCORED_LANES = ("registered", "null")
 LANES = (*SCORED_LANES, "test")
 

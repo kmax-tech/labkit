@@ -42,6 +42,10 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
+| `row_check.row_provenance_findings` | BLOCKER | GUARANTEED | technical contract | row provenance: the lineage of {…} is broken — {…} | `measure_anew(answering_run.parent.parent)` |
+| `row_check.row_provenance_findings` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(answering_run.parent.parent)` |
+| `row_check.row_provenance_findings` | BLOCKER | GUARANTEED | LAB-057 One area per idea | {…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file … | {…}, into an output file of its own — a new name for the output in the measuring script, e.g. `{…}`; keep {…} and its runs, never delete it: those rows are the other runs' evidence |
+| `row_check._continued_with_other_code` | BLOCKER | GUARANTEED | open assignment | {…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s … | measure anew into an output file of its own — a new name for the output in the measuring script, e.g. `{…}` — keep {…} and its runs, then audit that run |
 | `run_record_check.single_draw` | WARNING | GUARANTEED | technical contract | the draws of {…} cannot be counted: {…} | — |
 | `run_record_check.single_draw` | WARNING | GUARANTEED | LAB-036 Validate, don't trust a single run | {…} is one draw — no spread: `scripts/01_measure.py --repeat-of {…}` draws it again, `02_… | — |
 | `run_record_check._own_record_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` ({…}), but its models_resolved does not name `{…}… | `_name_alias_fix(alias)` |
@@ -54,10 +58,6 @@ Calls:
 | `run_record_check.model_provenance_findings` | WARNING | GUARANTEED | technical contract | model provenance: the stand-ins behind {…} cannot be counted — {…}; the result line canno… | restore the named record as runlog wrote it, or {…} |
 | `run_record_check._metrics_model_findings` | WARNING | GUARANTEED | technical contract | model provenance: the lineage of {…} is broken — {…} | — |
 | `run_record_check._metrics_model_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | {…} called a model, but no run in its lineage recorded models_resolved — record the alias… | — |
-| `run_record_check.row_provenance_findings` | BLOCKER | GUARANTEED | technical contract | row provenance: the lineage of {…} is broken — {…} | `measure_anew(answering_run.parent.parent)` |
-| `run_record_check.row_provenance_findings` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(answering_run.parent.parent)` |
-| `run_record_check.row_provenance_findings` | BLOCKER | GUARANTEED | LAB-057 One area per idea | {…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file … | {…}, into an output file of its own — a new name for the output in the measuring script, e.g. `{…}`; keep {…} and its runs, never delete it: those rows are the other runs' evidence |
-| `run_record_check._continued_with_other_code` | BLOCKER | GUARANTEED | open assignment | {…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s … | measure anew into an output file of its own — a new name for the output in the measuring script, e.g. `{…}` — keep {…} and its runs, then audit that run |
 | `run_record_check.arm_findings` | WARNING | GUARANTEED | technical contract | arm `{…}`: the protocol names {…}, no such file under {…} | — |
 | `run_record_check.arm_findings` | WARNING | GUARANTEED | open assignment | arm `{…}`: the protocol names fingerprint {…}, the answering run recorded no such value —… | — |
 | `run_record_check.arm_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | arm `{…}`: the protocol names alias {…}, the answering run recorded no such alias | — |
@@ -298,7 +298,7 @@ Calls:
 |---|---|---|---|---|---|
 | `kept_number_check._criterion_n_warning` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
 | `kept_number_check.kept_number_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th… | write `{…}` as a finite number from evaluate_rows() (the skeleton reads the key from the head's [kept]), then {…}; when [kept] names the wrong number, set it before the first measurement — after it, {…} |
-| `run_record_check.null_lane_findings` | WARNING | STATIC_EVIDENCE | LAB-034 Null condition in the same run | {…}: the null lane's answer and gold equal the registered lane's on every item — if the n… | if the null should differ, give the instrument a null of its own, e.g. its predictions against permuted gold, then {…} |
+| `row_check.null_lane_findings` | WARNING | STATIC_EVIDENCE | LAB-034 Null condition in the same run | {…}: the null lane's answer and gold equal the registered lane's on every item — if the n… | if the null should differ, give the instrument a null of its own, e.g. its predictions against permuted gold, then {…} |
 | `run_record_check.output_record_findings` | BLOCKER | GUARANTEED | variable | {…}: not the file run {…} recorded — {…} | `_output_way_out(o, drift, area)` |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | LAB-035 Thresholds belong to the run, not to the measure | metrics.json carries {…} and the head registers no [reference] — a comparison is register… | register the stated value in the head's [reference] table (value, tolerance, relation, source), or drop the keys from evaluate_rows(); then `{…}` |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | technical contract | the head registers [reference] on `{…}`, and the run recorded no verdict (no `{…}` in met… | write the verdict from the head after evaluate_rows() — the compute skeleton's `metrics_of()` does (`reference.with_verdict`) — then measure anew and audit that run |

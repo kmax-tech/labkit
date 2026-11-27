@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 
 from protocol_fixture import run_record  # noqa: E402
-from labkit.checks.run_record_check import row_provenance_findings
+from labkit.checks.row_check import row_provenance_findings
 from labkit.formats import runs
 from labkit.tools import params
 

@@ -944,7 +944,7 @@ class FirstMeasurementLost(CountCommands):
         registration station compares as before and warns of the lost run.
         What needs the lost run's own evidence is held by its own check:
         the output file holds the lost run's rows, and the row provenance
-        station (`run_record_check.row_provenance_findings`) blocks A's
+        station (`row_check.row_provenance_findings`) blocks A's
         number over them."""
         run_a = self.measure()
         later = self.measure()

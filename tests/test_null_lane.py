@@ -19,7 +19,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.checks import run_record_check
+from labkit.checks import row_check
 from labkit.formats.runs import OUTPUTS_FILE, kept_jsonl_rows
 
 
@@ -44,23 +44,23 @@ def rows(null_pred, null_gold=None) -> list[dict]:
 
 class NullLane(unittest.TestCase):
     def test_a_null_that_answers_the_registered_lane_did_not_move(self):
-        self.assertTrue(run_record_check.null_lane_unmoved(rows(lambda i, g: g)))
+        self.assertTrue(row_check.null_lane_unmoved(rows(lambda i, g: g)))
 
     def test_a_fitted_null_that_predicts_otherwise_moved(self):
-        self.assertFalse(run_record_check.null_lane_unmoved(rows(lambda i, g: 0)))
+        self.assertFalse(row_check.null_lane_unmoved(rows(lambda i, g: 0)))
 
     def test_a_null_on_permuted_gold_moved(self):
         # the local apply's null: the same predictions, the gold permuted
         permuted = rows(lambda i, g: g, null_gold=lambda i, g: 1 - g)
-        self.assertFalse(run_record_check.null_lane_unmoved(permuted))
+        self.assertFalse(row_check.null_lane_unmoved(permuted))
 
     def test_rows_without_two_lanes_say_nothing(self):
-        self.assertFalse(run_record_check.null_lane_unmoved([{"item": "1", "n": 3}]))
+        self.assertFalse(row_check.null_lane_unmoved([{"item": "1", "n": 3}]))
 
     def test_the_kept_rows_are_read_through_the_runs_outputs(self):
         """The reader: every registered JSONL output that stands, with its
         rows; another suffix and a gone file are left out. The judgement
-        of the rows is a rule test (`tests/test_rules_run_record_check.py`)."""
+        of the rows is a rule test (`tests/test_rules_row_check.py`)."""
         with tempfile.TemporaryDirectory() as d:
             run = Path(d) / "runs" / "2026-10-27T10-00-00_ab12"
             run.mkdir(parents=True)

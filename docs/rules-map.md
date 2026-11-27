@@ -165,11 +165,11 @@ Its limits. A rule no site records is listed as such: nothing follows from that 
 - The rule: `labkit/docs/standard.md`.
 - The chain (`docs/chain.md`), sections naming a function of its sites: *run → report (the null lane)*.
 - Shipped texts citing it: `labkit/templates/measure-estimator-script.py.template`, `labkit/templates/measure-script.py.template`.
-- Other code strings citing it: `labkit.checks.run_record_check`, `labkit.formats.gate`.
+- Other code strings citing it: `labkit.checks.row_check`, `labkit.formats.gate`.
 
 | Function | File | Grade | Evidence kind | Outcome | Stations (static estimate) | Tests that reached it | Tells |
 |---|---|---|---|---|---|---|---|
-| `run_record_check.null_lane_findings` | `labkit/checks/run_record_check.py` | WARNING | STATIC_EVIDENCE | suspected | finalize.finalize_area · 9 (further down) | 2 (1 marked rule): `tests/test_finalize_steps.py`, `tests/test_rules_run_record_check.py` | {…}: the null lane's answer and gold equal the registered lane's on every item — if the n… |
+| `row_check.null_lane_findings` | `labkit/checks/row_check.py` | WARNING | STATIC_EVIDENCE | suspected | finalize.finalize_area · 9 (further down) | 2 (1 marked rule): `tests/test_finalize_steps.py`, `tests/test_rules_run_record_check.py` | {…}: the null lane's answer and gold equal the registered lane's on every item — if the n… |
 
 ### LAB-035 Thresholds belong to the run, not to the measure
 
@@ -243,11 +243,11 @@ Its limits. A rule no site records is listed as such: nothing follows from that 
 - The rule: `labkit/docs/standard.md`.
 - The chain (`docs/chain.md`), sections naming a function of its sites: *run → report (continued rows)*.
 - Shipped texts citing it: —.
-- Other code strings citing it: `labkit.checks.run_record_check`, `labkit.formats.gate`.
+- Other code strings citing it: `labkit.checks.row_check`, `labkit.formats.gate`.
 
 | Function | File | Grade | Evidence kind | Outcome | Stations (static estimate) | Tests that reached it | Tells |
 |---|---|---|---|---|---|---|---|
-| `run_record_check.row_provenance_findings` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 9 (0 marked rule): `tests/test_end_to_end.py`, `tests/test_exploration_hold.py`, `tests/test_repair_guidance.py`, `tests/test_row_provenance.py`, `tests/test_withdrawal_order.py` | {…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file … |
+| `row_check.row_provenance_findings` | `labkit/checks/row_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 9 (0 marked rule): `tests/test_end_to_end.py`, `tests/test_exploration_hold.py`, `tests/test_repair_guidance.py`, `tests/test_row_provenance.py`, `tests/test_withdrawal_order.py` | {…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file … |
 
 ### LAB-067 A prompt has one home, which the run freezes
 
@@ -424,6 +424,8 @@ A condition a format or a check needs before it can answer — a file that reads
 | `result_render.render_gaps` | `labkit/checks/result_render.py` | BLOCKER | GUARANTEED | violated | report_check.chain_gaps · 5 (further down) | 11 (0 marked rule): 7 files, [checks overview](checks-overview.md) | the Recorded results line differs from its rendering (the run's metrics.json, the stand-i… |
 | `result_render.render_gaps` | `labkit/checks/result_render.py` | BLOCKER | GUARANTEED | violated | report_check.chain_gaps · 5 (further down) | 1 (0 marked rule): `tests/test_result_render.py` | "{…}" is written {…} times — one generated line per label |
 | `result_render.render_gaps` | `labkit/checks/result_render.py` | BLOCKER | GUARANTEED | violated | report_check.chain_gaps · 5 (further down) | 5 (0 marked rule): `tests/test_decision_review.py`, `tests/test_result_render.py` | "{…}" differs from the record and its decision reviews — a line written before the decisi… |
+| `row_check.row_provenance_findings` | `labkit/checks/row_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 2 (0 marked rule): `tests/test_lineage.py`, `tests/test_registration_committed.py` | row provenance: the lineage of {…} is broken — {…} |
+| `row_check.row_provenance_findings` | `labkit/checks/row_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_row_provenance.py` | {…}: {…} |
 | `run_record_check.code_since_run` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 2 (further down), finalize.finalize_area · 4 (further down) | 2 (0 marked rule): `tests/test_registration_committed.py`, `tests/test_run_code.py` | {…}: its runs cannot be followed ({…}) |
 | `run_record_check.code_since_run` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | computed | finalize.finalize_area · 2 (further down), finalize.finalize_area · 4 (further down) | 1 (0 marked rule): `tests/test_run_code.py` | {…}: {…} |
 | `run_record_check._reading_since_run` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 2 (further down), finalize.finalize_area · 4 (further down) | 1 (0 marked rule): `tests/test_run_code.py` | {…} cannot be compared with what {…} ran: the area lies in no git repository now |
@@ -448,8 +450,6 @@ A condition a format or a check needs before it can answer — a file that reads
 | `run_record_check.model_provenance_findings` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_finalize_steps.py` | model provenance: {…} has no config.json — which model it recorded cannot be read |
 | `run_record_check.model_provenance_findings` | `labkit/checks/run_record_check.py` | WARNING | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 9 (0 marked rule): `tests/test_finalize_provenance.py`, `tests/test_finalize_steps.py`, `tests/test_origin_scenario.py`, `tests/test_registration_committed.py` | model provenance: the stand-ins behind {…} cannot be counted — {…}; the result line canno… |
 | `run_record_check._metrics_model_findings` | `labkit/checks/run_record_check.py` | WARNING | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_finalize_steps.py` | model provenance: the lineage of {…} is broken — {…} |
-| `run_record_check.row_provenance_findings` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 2 (0 marked rule): `tests/test_lineage.py`, `tests/test_registration_committed.py` | row provenance: the lineage of {…} is broken — {…} |
-| `run_record_check.row_provenance_findings` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_row_provenance.py` | {…}: {…} |
 | `run_record_check.arm_findings` | `labkit/checks/run_record_check.py` | WARNING | GUARANTEED | violated | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_arm_lines.py` | arm `{…}`: the protocol names {…}, no such file under {…} |
 | `area_state.unread_start_warning` | `labkit/formats/area_state.py` | WARNING | GUARANTEED | not executable | finalize.finalize_area · 2 (further down), report_check.chain_gaps · 2 (further down), runlog.Run.__init__ · 2 (further down) | 3 (1 marked rule): `tests/test_end_to_end.py`, `tests/test_registration_committed.py`, `tests/test_rules_registration_hold.py` | {…} — nothing is taken from a start file that does not read |
 | `area_state.missing_start_warning` | `labkit/formats/area_state.py` | WARNING | GUARANTEED | not executable | finalize.finalize_area · 2 (further down), report_check.chain_gaps · 2 (further down), runlog.Run.__init__ · 2 (further down) | 6 (2 marked rule): `tests/test_end_to_end.py`, `tests/test_registration_committed.py`, `tests/test_rules_registration_hold.py` | {…} |
@@ -534,7 +534,7 @@ The site records that its rule is not decided: no sentence of the standard state
 | `notes_check.check_file` | `labkit/checks/notes_check.py` | WARNING | GUARANTEED | deviation | — | 1 (0 marked rule): `tests/test_notes_check.py` | {…}:{…}: warning: no date in the meta line |
 | `notes_check.check_file` | `labkit/checks/notes_check.py` | WARNING | GUARANTEED | deviation | — | 1 (0 marked rule): `tests/test_notes_check.py` | {…}:{…}: warning: none of the named scripts resolve in the repo ({…}{…}) — code paths may… |
 | `notes_check.check_file` | `labkit/checks/notes_check.py` | WARNING | GUARANTEED | deviation | — | 1 (0 marked rule): `tests/test_notes_check.py` | {…}:{…}: warning: filename says related-* but the declared kind is {…} |
-| `run_record_check._continued_with_other_code` | `labkit/checks/run_record_check.py` | BLOCKER | GUARANTEED | deviation | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_row_provenance.py` | {…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s … |
+| `row_check._continued_with_other_code` | `labkit/checks/row_check.py` | BLOCKER | GUARANTEED | deviation | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_row_provenance.py` | {…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s … |
 | `run_record_check.arm_findings` | `labkit/checks/run_record_check.py` | WARNING | GUARANTEED | deviation | finalize.finalize_area · 1 (further down) | 1 (0 marked rule): `tests/test_arm_lines.py` | arm `{…}`: the protocol names fingerprint {…}, the answering run recorded no such value —… |
 | `finalize.choose_answering_run` | `labkit/gates/finalize.py` | WARNING | STATIC_EVIDENCE | suspected | finalize.finalize_area · 1 (further down) | 9 (0 marked rule): `tests/test_end_to_end.py`, `tests/test_exploration_hold.py`, `tests/test_finalize_steps.py`, `tests/test_protocol_runs.py`, `tests/test_repair_guidance.py`, `tests/test_withdrawal_order.py` | {…}: bound to this protocol and newer by name than the adopted run {…} — if one of them a… |
 | `registered_report.report_binding_gap` | `labkit/gates/registered_report.py` | BLOCKER | GUARANTEED | deviation | report_check.chain_gaps · 2 (further down) | 14 (0 marked rule): `tests/test_registration_committed.py` | {…} registered {…} as its report {…}, and its head now registers none — the report a meas… |
