@@ -54,10 +54,13 @@ from labkit.formats.runs import (
     CONFIG_FILE,
     OUTPUTS_FILE,
     ArtefactError,
+    RunConfigError,
     metrics_path,
     outputs_now,
     patch_path,
+    read_data,
     recorded_runs,
+    resolve_recorded,
     run_dirs,
     run_path,
 )
@@ -409,7 +412,10 @@ def areas_touched(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
     determines the number though no code imports it — every area whose
     stamp covers the path as bound validation evidence
     (`validation_sources`: a changed validation stales the audit of the
-    computation resting on it), and for a path under
+    computation resting on it), every area whose adopted run recorded the
+    path, or a directory holding it, as an input (`adopted_inputs`: a data
+    file changed under an adopted number reopens it wherever it lies), and
+    for a path under
     a LOCAL_ROOT every area whose code imports it (`import_reach`): a
     shared helper changed or deleted reopens the numbers that rest on it as
     a script in the area does. The protocols are the file state's
@@ -429,26 +435,76 @@ def areas_touched(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
     for area in sorted({p.parent for p in every}):
         if area in out:
             continue
-        try:
-            declared = declared_scope_files([p for p in every if p.parent == area])
-        except (ValueError, OSError):
+        own = [p for p in every if p.parent == area]
+        if reached_from_outside(area, own, changed, shared, root):
             out.append(area)
+    return out
+
+
+def reached_from_outside(
+    area: Path,
+    protocols: list[Path],
+    changed: set[Path],
+    shared: list[Path],
+    root: Path,
+) -> bool:
+    """Whether CHANGED paths outside AREA reach it, in this order: a file
+    its PROTOCOLS' promises declare in scope, bound validation evidence its
+    stamp covers, an input its adopted runs recorded (the file, or one under
+    a recorded directory), and — for the SHARED paths under a LOCAL_ROOT
+    of ROOT — a module its code imports. True as well when what decides
+    cannot be read (a promise block, a protocol or its `[result]` table,
+    an adopted run's record, the area's code): the gate is the safer answer (`areas_touched`)."""
+    try:
+        declared = declared_scope_files(protocols)
+    except (ValueError, OSError):
+        return True
+    if changed.intersection(declared):
+        return True
+    if changed.intersection(f.resolve() for f in validation_sources(area)):
+        return True
+    try:
+        inputs = adopted_inputs(area, protocols)
+    except (
+        protocol_block.BlockError,
+        ArtefactError,
+        RunConfigError,
+        OSError,
+        UnicodeError,
+    ):
+        return True
+    if any(p == i or i in p.parents for p in changed for i in inputs):
+        return True
+    if not shared:
+        return False
+    try:
+        reach = import_reach(area, root)
+    except SourceError:
+        return True
+    return any(p in reach for p in shared)
+
+
+def adopted_inputs(area: Path, protocols: list[Path]) -> list[Path]:
+    """The inputs the runs PROTOCOLS of AREA have adopted (`[result] run`)
+    recorded in `data=` — files and directories, resolved, each once, in
+    order. A protocol without an adopted run, and an adopted run whose
+    directory holds no record, give none: the chain names a missing run
+    where it reads the declaration. Reads the protocols and the runs'
+    records, writes nothing. Raises OSError or UnicodeError when a
+    protocol does not read, BlockError when its `[result]` table does not
+    (`protocol_block.declared_run`), RunConfigError when an adopted run's
+    record does not, ArtefactError when its `data=` does not
+    (`runs.read_data`)."""
+    out: list[Path] = []
+    for protocol in protocols:
+        run_id = protocol_block.declared_run(protocol.read_text(encoding="utf-8"))
+        if run_id is None:
             continue
-        if changed.intersection(declared):
-            out.append(area)
-            continue
-        if changed.intersection(f.resolve() for f in validation_sources(area)):
-            out.append(area)
-            continue
-        if not shared:
-            continue
-        try:
-            reach = import_reach(area, root)
-        except SourceError:
-            out.append(area)
-            continue
-        if any(p in reach for p in shared):
-            out.append(area)
+        run_dir = run_path(area, run_id)
+        for entry in read_data(run_dir) or []:
+            path = resolve_recorded(entry.recorded, run_dir).resolve()
+            if path not in out:
+                out.append(path)
     return out
 
 
