@@ -60,12 +60,12 @@ class ProtocolLinks(unittest.TestCase):
         self.protocol.symlink_to(target)
 
     def held(self, *, staged: bool) -> tuple[bool, int, str]:
-        """(refused by repo_sources, hold_declared's exit, its output)."""
+        """(refused by repo_sources, hold_declared_result's exit, its output)."""
         sources = report_hold.repo_sources(self.root, staged=staged)
         refused = REFUSED in sources.unreadable.get(self.protocol, "")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_check.hold_declared(
+            rc = report_check.hold_declared_result(
                 self.protocol,
                 self.root,
                 report_hold.Sources.blank(self.root, staged=staged),

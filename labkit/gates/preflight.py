@@ -318,10 +318,10 @@ def preflight_area(
         block_told=any(gap.block_unread for gap in report.must_gaps),
     )
 
-    # 5. scope-sha — always; a stamp that cannot be computed blocks: a scope
-    #    file or promise block that is missing or does not read only while
-    #    no earlier blocker holds the gate (told beside it), git or another
-    #    file always
+    # 5. scope-sha — always. A stamp that cannot be computed blocks, with one
+    #    exception: a scope file or promise block that is missing or does not
+    #    read is only told when an earlier station already blocked (the same
+    #    cause, said once); git failing or another file always blocks
     findings.header("scope-sha")
     check_scope_stamp(findings, area, protocol)
 

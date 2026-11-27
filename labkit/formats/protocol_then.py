@@ -57,7 +57,8 @@ def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     rename or a move (docs/protocol-run-binding.md); the head is read as
     TOML only, since an
     older commit holds an older standard `protocol_block.head` refuses.
-    Raises GitError when git cannot run."""
+    Raises GitError when git cannot run or COMMIT names no state of ROOT
+    (`repo.protocols_at`)."""
     # the files a repo-wide scan reads: a copy such as PROTOCOL-a.txt or one
     # under runs/ with the same id would sort first and be read as the protocol
     for path in protocols_at(root, commit):

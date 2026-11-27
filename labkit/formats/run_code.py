@@ -52,9 +52,9 @@ def code_then(rd: runs.RunDir, root: Path | None) -> CodeThen:
     that started from a changed tree (its patch is read from its directory
     only), or a patch that does not apply. Never the tree as it stands now."""
     name = rd.dir.name
-    # this reader's own refusal, where it stood before the shared ones for a
-    # lost patch and an unknown commit: a run read at a commit has no
-    # directory to read its patch from
+    # before `runs.start_point`: a run gone from the tree, read at a commit,
+    # has no directory to read its patch from, and `runs.patch_lost` would
+    # call the patch lost; this sentence says how to get it back instead
     if (
         rd.config is not None
         and runs.recorded_commit(rd.config) is not None

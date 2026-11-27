@@ -232,7 +232,7 @@ def staged_area_gap(
     (who reads the tree: "the stations read", "the report review of
     REPORT.md reads") would judge bytes the commit does not hold. None
     when the tree is what the commit would hold. The one home of this hold
-    for report-check's declared branch (`report_check.hold_declared`), the
+    for report-check's declared branch (`report_check.hold_declared_result`), the
     report review (`review_gap`) and `next --staged`'s row
     (`next_step._staged_area_step`), so the hold and the step agree; its
     step stages the whole area and each differing test file
@@ -323,7 +323,7 @@ def registering_protocols(
     (`Sources.registered`, from `repo_sources`) is not read again. A
     protocol the state does not hold, a link, or
     a head that does not read registers nothing here: its own hold names
-    the error where it is among the paths (`report_check.hold_declared`).
+    the error where it is among the paths (`report_check.hold_declared_result`).
     Raises ValueError when SOURCES were read from the other file state."""
     if sources is not None and sources.staged != staged:
         raise ValueError(
@@ -359,7 +359,7 @@ def head_report(text: str) -> str | None:
     """The report the head of the protocol TEXT registers
     (`protocol_block.Head.report`), None for none — and for a head that
     does not read: it registers nothing, and the protocol's own hold names
-    the error (`report_check.hold_declared`)."""
+    the error (`report_check.hold_declared_result`)."""
     try:
         return protocol_block.head(text).report
     except protocol_block.BlockError:
@@ -377,7 +377,7 @@ def newly_declared(
     HEAD's version of the same protocol did not — run id → the protocols
     newly declaring it. A protocol HEAD does not hold declares everything
     newly; one whose head does not read in either state names nothing
-    here (`hold_declared` holds it). Empty outside a repository or before
+    here (`hold_declared_result` holds it). Empty outside a repository or before
     the first commit: no committed state to differ from. The gate's side is
     the text SOURCES hold where they read the protocol already
     (`Sources.text_of`); HEAD's side is always read from git. Raises

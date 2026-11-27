@@ -453,7 +453,7 @@ This check reads a changed or staged Markdown file citing a run (not a protocol,
 * Before any measurement and with no answering run or adoption, a valid report draft owes no result block.
 * A report not yet written owes nothing. A protocol registering none holds no file to this. The protocols registering a file among the paths are selected though it lies in no area.
 
-- **Where:** `report_check.hold_changed_paths`, `report_hold.hold_report`, `report_hold.undeclared_findings`, `report_hold.promotions`, `report_blocks.block_gaps`, `report_blocks.cited_gaps`, `report_blocks.blocks_owed`, `report_blocks.discussions`, `report_blocks.discussion_gaps`, `report_hold.discussion_sources`, `registered_report.report_owed`, `report_hold.registering_protocols`, `report_check.report_findings`, `report_check.hold_registered`
+- **Where:** `report_check.hold_changed_paths`, `report_hold.hold_report`, `report_hold.undeclared_findings`, `report_hold.promotions`, `report_blocks.block_gaps`, `report_blocks.cited_gaps`, `report_blocks.blocks_owed`, `report_blocks.discussions`, `report_blocks.discussion_gaps`, `report_hold.discussion_sources`, `registered_report.report_owed`, `report_hold.registering_protocols`, `report_check.report_findings`, `report_check.hold_registered_report`
 - **Command:** `claude-hook stop`, `.githooks/pre-commit` (the report as the index holds it), `report-check` (station 8)
 - **Tier:** guaranteed
 - **When:** ending the turn, committing, reporting

@@ -15,7 +15,8 @@
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
 This module holds the protocol's release stations and the entry points
-(`hold_changed_paths`, `hold_declared`; the command line is `tools.report_command`): the order and the conditions of
+(`hold_changed_paths`, `hold_declared_result`; the command line is
+`tools.report_command`): the order and the conditions of
 what runs stand here. The context every station reads is
 `report_context.checked`; the replacement station lives in
 `report_replacement`, the stations on the audit decisions (limits, reviews,
@@ -49,7 +50,7 @@ is held and blocks. A protocol whose head registers a report file
 (`report = "REPORT.md"`) owes that file its result once the file is
 delivered — in the tree at the stop, in the index at the commit —: the
 result block of the declared run or the protocol's handover block,
-declared or not (`registered_report.report_owed`, `hold_registered`); a
+declared or not (`registered_report.report_owed`, `hold_registered_report`); a
 report with the run id removed, a run id typed in, or a discussion block
 releases nothing.
 The protocols registering a file among the paths are selected too
@@ -1025,7 +1026,7 @@ def chain_gaps(
     ln = lane(ctx.head.repeat_cost)
     # finalize reads the protocol as the tree holds it — the text CTX holds
     # in every state but the proposal an adoption checks: for INDEX the
-    # tree equals the index, since `hold_declared` and `next_step` hold an
+    # tree equals the index, since `hold_declared_result` and `next_step` hold an
     # area whose tree differs from it before the chain (`staged_area_gap`)
     on_proposal = ctx.file_state == PROPOSED
     # 0. evidence — an adoption cut off, then committed evidence changed
@@ -1368,7 +1369,7 @@ def hold_changed_paths(
     reported is held to the whole chain; a protocol declaring none is not
     held to the chain (an exploration may end with no reported result),
     but its registered report, once delivered, is held all the same
-    (`hold_registered`). A report
+    (`hold_registered_report`). A report
     that is a symbolic link is refused alone, naming the copy that replaces
     it; its other checks wait for that copy. A report's generated blocks
     are held to the protocols they name, which the stations hold too, its
@@ -1385,13 +1386,14 @@ def hold_changed_paths(
     head registers a file among PATHS as its report is held too
     (`registering_protocols`): the report lies in no area, and a change
     of it reaches the protocol that owes it its result
-    (`registered_report.report_owed`, through `hold_declared`). An area
+    (`registered_report.report_owed`, through `hold_declared_result`). An area
     PATHS touch that measured under a protocol it no longer holds is held
     to the report that protocol owed (`orphaned_duty_gaps`), with or
     without a protocol left in it. Every line goes through TELL. Returns the worst exit code and the chains that ran
     (`HoldVerdict`)."""
     touched = reached_by(paths, repo, staged=staged)
-    protocols, reports = touched.protocols, touched.reports
+    # a copy: the protocols the reports reach are appended below
+    protocols, reports = list(touched.protocols), touched.reports
     reached = reached_reports(
         protocols, reports, repo, staged=staged, sources=touched.sources
     )
@@ -1410,7 +1412,7 @@ def hold_changed_paths(
     worst = 0
     chains: dict[Path, ReleaseChain] = {}
     for protocol in protocols:
-        released = hold_declared(protocol, repo, sources, tell=tell)
+        released = hold_declared_result(protocol, repo, sources, tell=tell)
         worst = max(worst, released.exit)
         if released.chain is not None:
             chains[protocol] = released.chain
@@ -1443,12 +1445,12 @@ def hold_changed_paths(
     return HoldVerdict(worst, chains)
 
 
-def hold_declared(
+def hold_declared_result(
     protocol: Path, repo: Path, sources: Sources, *, tell: Tell = print
 ) -> ProtocolVerdict:
     """`report-check` on PROTOCOL when its head declares a result, as the
     state holds it (the index when STAGED); for an exploration only its
-    registered report's obligation (`hold_registered`); exit 0 for a
+    registered report's obligation (`hold_registered_report`); exit 0 for a
     protocol the commit does not hold, 2 for one that cannot be read or is
     a symbolic link in that state (`repo.protocol_links`). Every line goes
     through TELL, a refusal to stderr. The chain is the declared branch's
@@ -1476,7 +1478,7 @@ def hold_declared(
         # delivered, is owed the handover or the result all the same
         try:
             return ProtocolVerdict(
-                hold_registered(protocol, text, repo, sources, tell=tell),
+                hold_registered_report(protocol, text, repo, sources, tell=tell),
                 None,
             )
         except protocol_block.BlockError as exc:  # a refusal, never a traceback
@@ -1504,7 +1506,7 @@ def hold_declared(
     )
 
 
-def hold_registered(
+def hold_registered_report(
     protocol: Path, text: str, repo: Path, sources: Sources, *, tell: Tell = print
 ) -> int:
     """The registered report's obligation of PROTOCOL, a protocol that

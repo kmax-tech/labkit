@@ -419,7 +419,7 @@ Calls:
 | `prompt_check.check_prompt_drift` | WARNING | GUARANTEED | technical contract | {…} is not statically readable (a call or a format spec this check does not compute) · pr… | — |
 | `prompt_check.check_prompt_drift` | BLOCKER | GUARANTEED | LAB-067 A prompt has one home, which the run freezes | prompt block drifted from {…}: {…} of {…} fixed line(s) missing, e.g. {…} | paste the rendered `--show` output, not a transcript |
 
-### preflight.preflight_area · 5. scope-sha — always; a stamp that cannot be computed blocks: a scope file or promise block that is missing or does not read only while no earlier blocker holds the gate (told beside it), git or another file always
+### preflight.preflight_area · 5. scope-sha — always. A stamp that cannot be computed blocks, with one exception: a scope file or promise block that is missing or does not read is only told when an earlier station already blocked (the same cause, said once); git failing or another file always blocks
 
 Calls:
 

@@ -135,8 +135,9 @@ FIX_FIRST = (
 def code_since_run(
     area: Path, answering_run: Path
 ) -> tuple[list[GateFinding], list[str]]:
-    """(blockers, warnings): the code that produced ANSWERING_RUN's number
-    is not the code here now. For the run and each
+    """(blockers, warnings): compare the code each run behind ANSWERING_RUN's
+    number ran with the code here now — a blocker where it differs or
+    cannot be compared, a warning where it is not compared. For the run and each
     run it derives from (`runs.lineage`: a re-evaluation rests on
     its parent's rows): its script against the hash the run recorded
     (`script_sha`), and each module the script imports
@@ -516,14 +517,23 @@ def script_as_run(area: Path, run: Path) -> tuple[Path | None, str]:
 def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can differ
     helpers: list[Path], script: Path, repo: Path | None, run_dir: Path, cfg: RunConfig
 ) -> tuple[list[GateFinding], list[str]]:
-    """(blockers, warnings) for HELPERS, the modules SCRIPT imports: one
-    that differs from the run's tree or whose state then is not recorded
-    blocks; one in another repository is named, not compared. Before any
-    helper in git is compared, two states of the run's patch block, since
-    the tree the run started from is then not known: a record of a changed
-    tree whose patch is gone (`runs.patch_lost` — the commit alone is not
-    that tree), and a patch with content beside a record of a clean tree
-    (`runs.patch_contradicts_record`)."""
+    """(blockers, warnings) for HELPERS, the modules SCRIPT imports, in
+    this order:
+
+    1. a helper the run kept a copy of (untracked then) against that copy;
+       a helper in another repository is a warning, not compared;
+    2. the rest, the helpers in git, only when the tree the run started
+       from is known — else one blocker for all and the comparison ends:
+       no commit recorded or the area in no repository (LAB-010 Commit
+       before the run, when the run started outside git); the run's patch gone after a changed tree
+       (`runs.patch_lost`); a patch with content beside a record of a clean
+       tree (`runs.patch_contradicts_record`); a commit this clone lacks;
+       that tree unreadable;
+    3. each helper in git against that tree: one not in it (untracked then)
+       or changed since blocks.
+
+    The early blockers repeat the conditions of `runs.start_point` and
+    keep their own sentences, since the first of them picks its rule."""
     rid, here = run_dir.name, Path.cwd()
     out: list[GateFinding] = []
     warnings: list[str] = []

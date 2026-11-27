@@ -137,9 +137,9 @@ Register: [Audit 27.11.](docs/notes/2026-11-27-repo-audit.md). Frischer Klon unt
 1. ~~Erzeugte Seite `docs/gate-stations.md` hängt an der Python-Version~~ — erledigt am 27.11. (CHANGELOG „Fixed“).
 2. ~~Drift in Texten richtigziehen~~ — erledigt am 27.11. (nur Prosa, kein Verhalten).
 3. ~~Ordner mit gemeinsamem Code (`lib`, `src`) an eine Stelle~~ — erledigt am 27.11. (CHANGELOG „Fixed“).
-4. **Was im Text als Zahl gilt:** zwei Regeln in `report_blocks` und `recheck`, mit verschiedenem Zweck. Entscheiden, ob eine gemeinsame Maske (Lauf-ID, Datum) eine Heimat bekommt; wenn ja, sehen beide Prüfungen dieselben Ausnahmen.
-5. **Kleinere doppelte Heimaten** (TOML-Kopf der Kommentarblöcke dreimal, Protokolle eines Commits, Regel-ID-Form und Namenskarte, `output/` als Literal an fünf Stellen): jetzt sammeln oder erst bei Anlass.
-6. **Klarheitspunkte im Diff seit 0.116.0** (zwei Docstrings, die anders ordnen als der Code, vier `hold_*`-Namen, ein Stationskommentar in `preflight`): vor dem nächsten Release beheben oder liegen lassen.
+4. ~~Was im Text als Zahl gilt~~ — erledigt am 27.11.: gemeinsam nur Lauf-ID und Datum (`runs.RUN_ID_OR_DATE`); die übrigen Masken der Berichtsprüfung bleiben ihre.
+5. ~~Kleinere doppelte Heimaten~~ — erledigt am 27.11. (CHANGELOG „Changed“). Dabei gefunden und behoben: `repo.files_at` lieferte für den Repo-Wurzelordner eine leere Menge (CHANGELOG „Fixed“).
+6. ~~Klarheitspunkte im Diff seit 0.116.0~~ — erledigt am 27.11. (CHANGELOG „Changed“); der Klarheitsleser hatte nur eine Stichprobe des Diffs gelesen.
 
 ### Patch eines Laufs neben seinem Datensatz: ungeprüfte Fälle
 
