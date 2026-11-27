@@ -128,6 +128,10 @@ A second answer to any of these questions is drift: move the caller to the home,
 
 `llm.model_entry` (the same lookup as the spec loader, `llm_specs.alias_tables`; the audit's evidence of a bound validation's alias)
 
+## Which configuration served an openai alias, and did it change during the run?
+
+`served_instrument.read_instrument` (each endpoint's vllm-swap `GET /health`: at resolution in `llm._load_spec`, after the first answer, at the end in `llm.served_readings`); `served_instrument.instrument_changes` decides the end of a run (`runlog`); `served_instrument.agreed_value` is the one rule for several endpoints, also for ollama's weights digest
+
 ## Where do a protocol's `## ` sections begin and end?
 
 `markdown.section_starts`, `markdown.section_end` (outside every fence; the prose count, the Runs list, the cuts, the reading probe)

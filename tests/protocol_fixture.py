@@ -227,7 +227,7 @@ def completion_record(**fields: object) -> dict:
     """A complete completion.json as runlog writes it at a run's clean end
     (`runlog.Run._finalize`) — schema 5: finished one second after
     `run_record` started, the end git state that record began with, no note,
-    no run continued. FIELDS replace what a test varies; a key the record
+    no run continued, no openai alias behind a vllm-swap proxy. FIELDS replace what a test varies; a key the record
     does not carry raises KeyError, so a test that names a field the
     completion lost is found. A test of a damaged or minimal completion
     writes its own. The one home for the record's shape in the tests; its
@@ -239,6 +239,7 @@ def completion_record(**fields: object) -> dict:
         "git_full": "g",
         "note": "",
         "continues": [],
+        "served_instruments": {},
     }
     unknown = sorted(set(fields) - set(record))
     if unknown:

@@ -62,6 +62,17 @@ alias is first resolved):
                                       # must run --reasoning-parser so the trace
                                       # arrives in its own field; an answer whose
                                       # content carries no trace field fails loud
+    instrument_digest = "3f2a9c01b7de"  # optional pin: the configuration digest a
+                                      # vllm-swap proxy must report for `model`
+                                      # (GET /health, instruments.<model>.digest);
+                                      # another one, or none, refuses the alias
+
+Behind a vllm-swap proxy (https://github.com/kmax-tech/vllm-swap) an openai
+alias records which configuration served it: resolution reads `/health` and
+records `served_digest` ("not reported" from a server without that /health:
+plain vLLM, sglang); the first answer reads the running vLLM version; the end
+of a run reads both again (`served_readings`), and runlog refuses to complete
+a run whose instrument changed (`served_instrument`).
 
 Two servers, SAME model: list both names — completions round-robin across
 them and fail over when one drops. Model identity and serving endpoint are
@@ -107,7 +118,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from labkit.run import endpoint_lease
+from labkit.run import endpoint_lease, served_instrument
 from labkit.formats import console
 from labkit.formats.repo import MODELS_TOML, lab_root
 from labkit.formats.runs import JsonObject
@@ -116,6 +127,7 @@ from labkit.run.llm_specs import (
     alias_tables,
     ClaudeCliSpec,
     OllamaSpec,
+    OpenAISpec,
     parse_spec,
     record,
 )
@@ -384,7 +396,15 @@ def audit_alias(fallback: str) -> str:
 
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
-    freezes. For ollama the weights' digest is probed on every endpoint."""
+    freezes. For ollama the weights' digest is probed on every endpoint;
+    for openai the served configuration digest (`served_digest`) is read
+    from every endpoint's vllm-swap `/health`.
+
+    Raises ValueError when an openai alias pins `instrument_digest` and
+    the endpoints report another digest, none (`not reported`), or
+    disagree (`MISMATCH:…`): the pin names the instrument a protocol was
+    registered with, and an answer from another one, or from one nobody
+    can name, would be measured under its name."""
     path, data = _models_data()
     table, names = alias_tables(str(path), data, alias)
     parsed = parse_spec(alias, table, names, str(path))
@@ -401,6 +421,20 @@ def _load_spec(alias: str) -> BackendSpec:
             {ep: _ollama_digest(ep, parsed.model, auth) for ep in parsed.endpoints}
         )
         parsed = dataclasses.replace(parsed, model_digest=digest)
+    if isinstance(parsed, OpenAISpec):
+        served = served_instrument.read_instrument(
+            parsed.endpoints, parsed.model, auth_headers(parsed)
+        ).digest
+        pinned = parsed.instrument_digest
+        if pinned is not None and served != pinned:
+            raise ValueError(
+                f"{path} [models.{alias}]: instrument_digest = {pinned!r}, but "
+                f"the endpoints' /health for {parsed.model!r} says {served!r} "
+                f"(a digest, 'not reported', or MISMATCH of several) — serve "
+                f"the configuration the pin names, or declare the change and "
+                f"pin the new digest"
+            )
+        parsed = dataclasses.replace(parsed, served_digest=served)
     return parsed
 
 
@@ -411,12 +445,7 @@ def _aggregate_digests(per_endpoint: dict[str, str]) -> str:
     "unavailable". Disagreement -> "MISMATCH:..." — visible in every
     config.json, because a mixed-weights run must not look clean.
     """
-    seen = sorted({d for d in per_endpoint.values() if d != "unavailable"})
-    if not seen:
-        return "unavailable"
-    if len(seen) == 1:
-        return seen[0]
-    return "MISMATCH:" + ",".join(seen)
+    return served_instrument.agreed_value(list(per_endpoint.values()), "unavailable")
 
 
 def _digest_from_tags(tags: dict, model: str) -> str:
@@ -519,6 +548,66 @@ def provenance(alias: str) -> dict:
         if prompt_only:
             prov["cli_sent"] = CLI_PROMPT_ONLY_SENT
     return prov
+
+
+# alias -> the vLLM version read right after its first answer in this
+# process; an alias whose start digest was not reported is never read
+_FIRST_VERSION: dict[str, str] = {}
+_FIRST_VERSION_LOCK = threading.Lock()
+
+
+def _read_first_version(used: OpenAISpec) -> None:
+    """After USED's first answer in this process, read the running vLLM
+    version from its proxy once: at resolution the alias is often not
+    loaded yet (the proxy starts a model on its first request), right after
+    an answer it is. Nothing for a server that reported no digest. A
+    reading of NOT_REPORTED (a proxy before the version field) is kept as
+    well and not read again: the end then has no version to compare with."""
+    if used.served_digest == served_instrument.NOT_REPORTED:
+        return
+    with _FIRST_VERSION_LOCK:
+        if used.alias in _FIRST_VERSION:
+            return
+        _FIRST_VERSION[used.alias] = served_instrument.read_instrument(
+            used.endpoints, used.model, auth_headers(used)
+        ).vllm_version
+
+
+@dataclasses.dataclass(frozen=True)
+class ServedAtEnd:
+    """One openai alias at the end of a run: the digest read at resolution
+    (`start_digest`), the vLLM version read after the first answer
+    (`first_version`, NOT_REPORTED when none came), and the reading now
+    (`end`)."""
+
+    start_digest: str
+    first_version: str
+    end: served_instrument.ServedReading
+
+
+def served_readings() -> dict[str, ServedAtEnd]:
+    """Every openai alias this process resolved whose start digest was
+    reported — process-wide, so also one resolved for an earlier run or
+    only recorded, never called —, read once more now — what runlog compares and records at the
+    end of a run (`served_instrument.instrument_changes`). Reads each
+    alias's endpoints' `/health`; makes no model call. {} when no such
+    alias was resolved."""
+    with _FROZEN_LOCK:
+        frozen = list(_FROZEN.values())
+    with _FIRST_VERSION_LOCK:
+        first = dict(_FIRST_VERSION)
+    return {
+        used.alias: ServedAtEnd(
+            used.served_digest,
+            first.get(used.alias, served_instrument.NOT_REPORTED),
+            served_instrument.read_instrument(
+                used.endpoints, used.model, auth_headers(used)
+            ),
+        )
+        for used in frozen
+        if isinstance(used, OpenAISpec)
+        and used.served_digest != served_instrument.NOT_REPORTED
+    }
 
 
 #: the token cap ollama and openai send when the caller names none — a
@@ -781,7 +870,7 @@ def _complete_once(
             stop=stop,
             max_tokens=max_tokens,
         )
-    return complete_openai(
+    text = complete_openai(
         used,
         prompt,
         system=system,
@@ -791,3 +880,5 @@ def _complete_once(
         stop=stop,
         max_tokens=max_tokens,
     )
+    _read_first_version(used)
+    return text

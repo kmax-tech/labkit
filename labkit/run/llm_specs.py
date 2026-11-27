@@ -15,8 +15,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal, TypeAlias, cast
 
+import re
+
 from labkit.formats.repo import MODELS_TOML
 from labkit.formats.runs import JsonObject
+from labkit.run.served_instrument import NOT_REPORTED
 
 
 #: what a claude-cli call sends besides the prompt. `harness`: the CLI's
@@ -63,7 +66,13 @@ class OllamaSpec:
 class OpenAISpec:
     """Any OpenAI-compatible server (vLLM, sglang). `reasoning` declares a
     model that thinks before answering (the server must split the trace
-    off); None when models.toml does not say."""
+    off); None when models.toml does not say. Two digests of one kind,
+    both vllm-swap's configuration digest (served model id plus launch
+    command, not the weights as ollama's `model_digest`):
+    `instrument_digest` is the one models.toml PINS (None: no pin, the
+    proxy's own name for it); `served_digest` the one the endpoints'
+    `/health` REPORTED at resolution (`llm` reads it; `served_instrument.NOT_REPORTED` from a
+    server without that `/health`)."""
 
     alias: str
     model: str
@@ -71,6 +80,8 @@ class OpenAISpec:
     api_key_env: str | None = None
     api_key: str | None = None
     reasoning: bool | None = None
+    instrument_digest: str | None = None
+    served_digest: str = NOT_REPORTED
     backend: Literal["openai"] = "openai"
 
 
@@ -86,9 +97,21 @@ OPTIONS: dict[str, frozenset[str]] = {
         {"backend", "model", "endpoints", "num_ctx", "api_key_env", "api_key"}
     ),
     "openai": frozenset(
-        {"backend", "model", "endpoints", "api_key_env", "api_key", "reasoning"}
+        {
+            "backend",
+            "model",
+            "endpoints",
+            "api_key_env",
+            "api_key",
+            "reasoning",
+            "instrument_digest",
+        }
     ),
 }
+
+#: a vllm-swap configuration digest: the first 12 hex digits of a sha256
+#: (vllm-swap `instrument_digest`), the form a pin in models.toml must have
+INSTRUMENT_DIGEST = re.compile(r"[0-9a-f]{12}")
 
 
 def alias_tables(
@@ -186,8 +209,27 @@ def parse_spec(
                 f"alias '{alias}': num_ctx must be a positive integer, got {num_ctx!r}"
             )
         return OllamaSpec(alias, model, endpoints, num_ctx, key_env, key)
-    reasoning = _optional_bool(where, table, "reasoning")
-    return OpenAISpec(alias, model, endpoints, key_env, key, reasoning)
+    return OpenAISpec(
+        alias,
+        model,
+        endpoints,
+        key_env,
+        key,
+        _optional_bool(where, table, "reasoning"),
+        _instrument_pin(where, table),
+    )
+
+
+def _instrument_pin(where: str, table: Mapping[str, object]) -> str | None:
+    """The `instrument_digest` an openai table pins, None without one.
+    Raises ValueError naming WHERE for a value that is no vllm-swap digest."""
+    pinned = _optional_str(where, table, "instrument_digest")
+    if pinned is not None and not INSTRUMENT_DIGEST.fullmatch(pinned):
+        raise ValueError(
+            f"{where}: instrument_digest = {pinned!r} — 12 lowercase hex digits, "
+            f"as vllm-swap's GET /health names it under instruments.<alias>.digest"
+        )
+    return pinned
 
 
 def _optional_str(where: str, table: Mapping[str, object], key: str) -> str | None:
@@ -242,7 +284,8 @@ def record(spec: BackendSpec) -> JsonObject:
     """The spec as a run records it (`models_resolved`, a run's config):
     backend, model, alias, `controls_temperature`, and for a served backend
     `endpoints` (a fresh list) with `endpoint` its first entry, the digest
-    for ollama, and each option models.toml set. A new dict every call: no
+    for ollama, the served configuration digest for openai
+    (`served_digest`), and each option models.toml set. A new dict every call: no
     caller reaches the frozen spec through it."""
     out: JsonObject = {
         "backend": spec.backend,
@@ -262,7 +305,11 @@ def record(spec: BackendSpec) -> JsonObject:
         if spec.num_ctx is not None:
             out["num_ctx"] = spec.num_ctx
         out["model_digest"] = spec.model_digest
-    if isinstance(spec, OpenAISpec) and spec.reasoning is not None:
-        out["reasoning"] = spec.reasoning
+    if isinstance(spec, OpenAISpec):
+        if spec.reasoning is not None:
+            out["reasoning"] = spec.reasoning
+        if spec.instrument_digest is not None:
+            out["instrument_digest"] = spec.instrument_digest
+        out["served_digest"] = spec.served_digest
     out["controls_temperature"] = controls_temperature(spec)
     return out

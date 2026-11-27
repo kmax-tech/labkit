@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import unittest
+import urllib.error
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
@@ -46,6 +47,8 @@ class _Base(unittest.TestCase):
         llm.spec = lambda alias: spec_of(self.SPEC)
 
         def fake_urlopen(req, timeout=None):
+            if req.data is None:  # the GET /health of resolution: no proxy here
+                raise urllib.error.URLError("no /health in this fake")
             self.sent["url"] = req.full_url
             self.sent["headers"] = dict(req.header_items())
             self.sent["payload"] = json.loads(req.data.decode("utf-8"))

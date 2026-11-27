@@ -52,15 +52,20 @@ A run directory says for itself whether it finished: complete when `metrics.json
   "git": "a1b2c3d+dirty",
   "git_full": "a1b2c3d4e5f6...",
   "note": "swap held, 4 anchors out of band",
-  "continues": []
+  "continues": [],
+  "served_instruments": {
+    "judge": {"start_digest": "3f2a9c01b7de", "first_vllm_version": "0.11.0",
+              "digest": "3f2a9c01b7de", "tool": "start-swap.sh=fe51baa6c6a4,swap_proxy.py=b3a2afc3cd05",
+              "vllm_version": "0.11.0"}
+  }
 }
 ```
 
-`git`/`git_full` are the state at the END of the run, as the index column carries it; the state at the start stays in `config.json`. `continues` names the runs whose rows a resumed output already held (below).
+`git`/`git_full` are the state at the END of the run, as the index column carries it; the state at the start stays in `config.json`. `continues` names the runs whose rows a resumed output already held (below). `served_instruments` holds, per `openai` alias served through a [vllm-swap](https://github.com/kmax-tech/vllm-swap) proxy, what its `GET /health` said: the configuration digest at resolution (`start_digest`, also in `config.json` as the alias's `served_digest`), the vLLM version right after the first answer, and digest, proxy files and vLLM version at the end; `{}` when the run used no such alias. A field the proxy did not report says `not reported`; the vLLM version is reported only while the alias is loaded.
 
-The run writes, in this order: `outputs.json` and `metrics.json` (the results), `completion.json`, the index row. A failure therefore says which step it hit:
+The run writes, in this order: `outputs.json` and `metrics.json` (the results), the comparison of the served instruments, `completion.json`, the index row. A failure therefore says which step it hit:
 
-- **`metrics.json` without `completion.json`**: finalization broke off. The numbers may be there, the run is not finished, nothing may report it — `unfinalized`.
+- **`metrics.json` without `completion.json`**: finalization broke off. The numbers may be there, the run is not finished, nothing may report it — `unfinalized`. One cause is labkit's own: when an `openai` alias's proxy reports another configuration digest at the end than at resolution, none at the end, or another vLLM version than after the first answer, the run writes `failure.json` (`ServedInstrumentChanged`) and stops here, because its answers may come from two instruments. A swap to another alias and back between the readings is not seen.
 - **`completion.json` without `metrics.json`**: a completion record over results that are gone — `corrupt`. A completion marker never covers for missing results, which is why both files are required.
 - **Both, but no index row**: a complete run the index missed, fully reconstructible — `runlog reindex` repairs it.
 

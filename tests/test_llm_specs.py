@@ -298,6 +298,7 @@ class Record(unittest.TestCase):
                 "endpoint": "http://a:1",
                 "api_key_env": "K",
                 "reasoning": False,
+                "served_digest": "not reported",
                 "controls_temperature": True,
             },
         )

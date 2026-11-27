@@ -138,7 +138,7 @@ from labkit.formats.runs import (
     patch_path,
     run_path,
 )
-from labkit.run import batch, code_repos, detached, llm
+from labkit.run import batch, code_repos, detached, llm, served_instrument
 from labkit.formats.answer_reading import AnswerReading, write_answer_reading
 from labkit.run.detached import DetachedStart
 from labkit.formats import console, repo
@@ -780,12 +780,24 @@ class Run:
         self._note = text
 
     def _finalize(self) -> None:
-        """outputs.json, metrics.json, code.json completed with the modules
-        imported during the run, completion.json, the index row — in that
-        order (a break after metrics leaves `unfinalized`). An output problem
-        (file absent at the end, a damaged row) is a NOTE in outputs.json and
-        does not stop completion: `completed` vouches for the run's record,
-        not for its outputs — `finalize` reads outputs.json and holds them."""
+        """outputs.json, metrics.json, the served instruments compared,
+        code.json completed with the modules imported during the run,
+        completion.json, the index row — in that order (a break after
+        metrics leaves `unfinalized`). An output problem (file absent at the
+        end, a damaged row) is a NOTE in outputs.json and does not stop
+        completion: `completed` vouches for the run's record, not for its
+        outputs — `finalize` reads outputs.json and holds them.
+
+        A run that is not derived reads, for every openai alias this PROCESS
+        resolved behind a vllm-swap proxy — not only the aliases this run
+        called: an alias resolved for an earlier run of the same process is
+        compared too —, its `/health` once more (`llm.served_readings`).
+        When the configuration digest changed or the end reports none, or
+        when both the first answer and the end name a vLLM version and they
+        differ (`served_instrument.instrument_changes`), the run writes failure.json
+        and raises ServedInstrumentChanged: it stays `unfinalized`, its
+        numbers on disk, because `completed` would vouch for one instrument.
+        Otherwise completion.json records the readings (`served_instruments`)."""
         self._metrics.setdefault("duration_s", round(time.monotonic() - self._t0, 1))
         continues: set[str] = set()
         if self._outputs:
@@ -840,6 +852,28 @@ class Run:
             metrics_path(self.dir),
             json.dumps(self._metrics, ensure_ascii=False, indent=2),
         )
+        # a derived run makes no model call: an alias the process resolved
+        # for another run is not this run's instrument
+        served = llm.served_readings() if self.derived_from is None else {}
+        changes = [
+            f"{alias}: {change}"
+            for alias, at_end in served.items()
+            for change in served_instrument.instrument_changes(
+                at_end.start_digest, at_end.first_version, at_end.end
+            )
+        ]
+        if changes:
+            changed = served_instrument.ServedInstrumentChanged(
+                with_way_out(
+                    f"runlog: the served instrument of {self.run_id} changed during "
+                    f"the run — {'; '.join(changes)}. The run stays unfinalized, "
+                    f"its numbers on disk: the answers may come from two instruments",
+                    "serve one configuration for the whole run (one vllm-swap "
+                    "session, swap-models.toml unchanged), then run it again",
+                )
+            )
+            write_failure(self.dir, type(changed), changed)
+            raise changed
         # Order matters, and this is the reason for it: results first, then
         # the confirmed completion, then the index. A break after metrics
         # leaves `unfinalized` (numbers on disk, run not finished); a break
@@ -860,6 +894,18 @@ class Run:
                     "git_full": repo.head_sha(self.base),
                     "note": self._note,
                     "continues": sorted(continues),
+                    # per openai alias behind vllm-swap: start digest, first
+                    # vLLM version, and the reading at the end
+                    "served_instruments": {
+                        alias: {
+                            "start_digest": at_end.start_digest,
+                            "first_vllm_version": at_end.first_version,
+                            "digest": at_end.end.digest,
+                            "tool": at_end.end.tool,
+                            "vllm_version": at_end.end.vllm_version,
+                        }
+                        for alias, at_end in sorted(served.items())
+                    },
                 },
                 ensure_ascii=False,
                 indent=2,
