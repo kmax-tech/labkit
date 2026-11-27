@@ -1,5 +1,5 @@
 ---
-title: "One labkit area at repeat cost low: commands, gates, last commit"
+title: "One labkit area: commands, gates, last commit"
 ---
 stateDiagram-v2
   direction LR
@@ -13,7 +13,7 @@ stateDiagram-v2
     state "Work" as r0 {
       s0: Registration open
       s1: Registered, nothing measured
-      s2: Run in progress
+      s2: Measurement in progress
       s3: Measured, not audited
       s4: Audit findings undecided
       s5: Ready to adopt
@@ -22,7 +22,7 @@ stateDiagram-v2
       s8: Adopted, input changed since the run
       [*] --> s0
       s0 --> s1: protocol-fill writes the registration
-      s1 --> s2: you start the run
+      s1 --> s2: you start a measurement [when Commit: registration]
       s2 --> s3: the run completes
       s3 --> s4: labkit-audit --mode analysis
       s4 --> s5: labkit-audit --decide
@@ -32,12 +32,14 @@ stateDiagram-v2
     }
     --
     state "Last commit" as r1 {
-      s9: Commit: nothing measured
-      s10: Commit: adopted number, reviewed
-      s11: Commit: number on changed input
+      s9: Commit: nothing registered
+      s10: Commit: registration
+      s11: Commit: adopted number, reviewed
+      s12: Commit: number on changed input
       [*] --> s9
-      s9 --> s10: git commit (hook passes) [when Adopted, report reviewed]
-      s10 --> s11: git commit (hook passes) [when Adopted, input changed since the run]
+      s9 --> s10: git commit (hook passes) [when Registered, nothing measured]
+      s10 --> s11: git commit (hook passes) [when Adopted, report reviewed]
+      s11 --> s12: git commit (hook passes) [when Adopted, input changed since the run]
     }
   }
   classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
@@ -52,5 +54,6 @@ stateDiagram-v2
   class s8 bugPath
   class s9 bugPath
   class s10 bugPath
-  class s11 breaks
   class s11 bugPath
+  class s12 breaks
+  class s12 bugPath

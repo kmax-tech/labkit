@@ -1,0 +1,65 @@
+---
+title: "One labkit area: commands, gates, last commit"
+---
+stateDiagram-v2
+  direction LR
+  state "At the same time" as all {
+    state "Work" as r0 {
+      s0: Registration open
+      s1: Registered, nothing measured
+      s2: Probe in progress
+      s3: Probe completed
+      s4: Newest run crashed
+      s5: Measurement in progress
+      s6: Measured, not audited
+      s7: Audit findings undecided
+      s8: Ready to adopt
+      s9: Decision review owed
+      s10: Adopted, report review owed
+      s11: Adopted, report reviewed
+      [*] --> s0
+      s0 --> s1: protocol-fill writes the registration
+      s0 --> s2: you start a probe
+      s1 --> s2: you start a probe
+      s2 --> s3: the run completes
+      s2 --> s4: the run crashes
+      s1 --> s5: you start a measurement [when Commit: registration]
+      s5 --> s6: the run completes
+      s5 --> s4: the run crashes
+      s6 --> s7: labkit-audit --mode analysis
+      s7 --> s8: labkit-audit --decide
+      s7 --> s9: labkit-audit --decide
+      s8 --> s7: labkit-audit --mode analysis
+      s8 --> s10: labkit-adopt
+      s9 --> s7: labkit-audit --mode analysis
+      s9 --> s8: labkit-audit --review
+      s10 --> s8: protocol-fill --withdraw
+      s10 --> s11: labkit-audit --report-review
+      s10 --> s7: protocol-fill --withdraw
+      s11 --> s8: protocol-fill --withdraw
+      s10 --> s9: protocol-fill --withdraw
+      s11 --> s7: protocol-fill --withdraw
+      s11 --> s9: protocol-fill --withdraw
+    }
+    --
+    state "Last commit" as r1 {
+      s12: Commit: nothing registered
+      s13: Commit: registration
+      s14: Commit: handover
+      s15: Commit: progress account
+      s16: Commit: adopted number, reviewed
+      [*] --> s12
+      s12 --> s13: git commit (hook passes) [when Registered, nothing measured]
+      s12 --> s14: git commit (hook passes) [unless Registered, nothing measured or Registration open]
+      s12 --> s15: git commit (hook passes) [unless Registered, nothing measured or Registration open]
+      s14 --> s15: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+      s15 --> s14: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+      s13 --> s14: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed or Registered, nothing measured]
+      s13 --> s15: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed or Registered, nothing measured]
+      s13 --> s16: git commit (hook passes) [when Adopted, report reviewed]
+      s14 --> s16: git commit (hook passes) [when Adopted, report reviewed]
+      s15 --> s16: git commit (hook passes) [when Adopted, report reviewed]
+      s16 --> s14: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+      s16 --> s15: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+    }
+  }

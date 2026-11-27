@@ -1,0 +1,75 @@
+---
+title: "One labkit area: commands, gates, last commit"
+---
+stateDiagram-v2
+  direction LR
+  state "At the same time" as all {
+    state "Work" as r0 {
+      s0: Registration open
+      s1: Registered, nothing measured
+      s2: Probe in progress
+      s3: Preflight findings undecided
+      s4: Probe completed
+      s5: Newest run crashed
+      s6: Preflight decided, not frozen
+      s7: Frozen, nothing measured
+      s8: Measurement in progress
+      s9: Measured, not audited
+      s10: Audit findings undecided
+      s11: Ready to adopt
+      s12: Decision review owed
+      s13: Adopted, report review owed
+      s14: Adopted, report reviewed
+      [*] --> s0
+      s0 --> s1: protocol-fill writes the registration
+      s0 --> s2: you start a probe
+      s1 --> s3: labkit-audit --mode preflight
+      s1 --> s2: you start a probe
+      s2 --> s4: the run completes
+      s2 --> s5: the run crashes
+      s3 --> s6: labkit-audit --decide (preflight)
+      s3 --> s2: you start a probe
+      s6 --> s7: protocol-fill --freeze
+      s6 --> s2: you start a probe
+      s7 --> s8: you start a measurement
+      s7 --> s2: you start a probe
+      s8 --> s9: the run completes
+      s8 --> s5: the run crashes
+      s9 --> s10: labkit-audit --mode analysis
+      s10 --> s11: labkit-audit --decide
+      s10 --> s12: labkit-audit --decide
+      s11 --> s10: labkit-audit --mode analysis
+      s11 --> s13: labkit-adopt
+      s12 --> s10: labkit-audit --mode analysis
+      s12 --> s11: labkit-audit --review
+      s13 --> s11: protocol-fill --withdraw
+      s13 --> s14: labkit-audit --report-review
+      s13 --> s10: protocol-fill --withdraw
+      s14 --> s11: protocol-fill --withdraw
+      s13 --> s12: protocol-fill --withdraw
+      s14 --> s10: protocol-fill --withdraw
+      s14 --> s12: protocol-fill --withdraw
+    }
+    --
+    state "Last commit" as r1 {
+      s15: Commit: nothing registered
+      s16: Commit: registration
+      s17: Commit: handover
+      s18: Commit: progress account
+      s19: Commit: adopted number, reviewed
+      [*] --> s15
+      s15 --> s16: git commit (hook passes) [when Frozen, nothing measured or Preflight decided, not frozen or Preflight findings undecided or Registered, nothing measured]
+      s15 --> s17: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed or Frozen, nothing measured or Preflight decided, not frozen or Preflight findings undecided or Registered, nothing measured or Registration open]
+      s15 --> s18: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed or Frozen, nothing measured or Preflight decided, not frozen or Preflight findings undecided or Registered, nothing measured or Registration open]
+      s17 --> s18: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+      s18 --> s17: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+      s16 --> s17: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed or Frozen, nothing measured or Preflight decided, not frozen or Preflight findings undecided or Registered, nothing measured]
+      s16 --> s18: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed or Frozen, nothing measured or Preflight decided, not frozen or Preflight findings undecided or Registered, nothing measured]
+      s15 --> s19: git commit (hook passes) [when Adopted, report reviewed]
+      s16 --> s19: git commit (hook passes) [when Adopted, report reviewed]
+      s17 --> s19: git commit (hook passes) [when Adopted, report reviewed]
+      s18 --> s19: git commit (hook passes) [when Adopted, report reviewed]
+      s19 --> s17: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+      s19 --> s18: git commit (hook passes) [unless Adopted, report review owed or Adopted, report reviewed]
+    }
+  }

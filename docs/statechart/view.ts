@@ -3,10 +3,18 @@
 
 type V = { [k: string]: any };
 
-const work = (v: V): string => {
+const before = (v: V): string => {
   if (v.reg === "open") return "Registration open";
-  if (v.run === "running") return "Run in progress";
-  if (v.runs === 0) return "Registered, nothing measured";
+  if (v.preflight === "findings") return "Preflight findings undecided";
+  if (v.frozen) return "Frozen, nothing measured";
+  if (v.preflight === "decided") return "Preflight decided, not frozen";
+  return "Registered, nothing measured";
+};
+
+const work = (v: V): string => {
+  if (v.runs === 0) return before(v);
+  if (v.run === "running")
+    return v.runAt.kind === "probe" ? "Probe in progress" : "Measurement in progress";
   if (v.run === "crashed") return "Newest run crashed";
   if (v.adopted !== 0) {
     if (v.runAt.code !== v.code) return "Adopted, code changed since the run";
@@ -14,6 +22,7 @@ const work = (v: V): string => {
     if (v.runAt.reg !== v.regVer) return "Adopted, registration changed";
     return v.reportReviewed ? "Adopted, report reviewed" : "Adopted, report review owed";
   }
+  if (v.runAt.kind === "probe") return "Probe completed";
   const current = v.auditAt.run === v.runs && v.auditAt.code === v.code;
   if (!current || v.audit === "none") return "Measured, not audited";
   if (v.audit === "findings") return "Audit findings undecided";
@@ -22,7 +31,7 @@ const work = (v: V): string => {
 };
 
 const commit = (c: V): string => {
-  if (c.runs === 0) return "Commit: nothing measured";
+  if (c.runs === 0) return c.reg === "written" ? "Commit: registration" : "Commit: nothing registered";
   if (c.adopted !== 0) {
     if (c.runAt.code !== c.code) return "Commit: number on changed code";
     if (c.runAt.data !== c.data) return "Commit: number on changed input";
@@ -37,9 +46,13 @@ export const state = (v: V) => ({ Work: work(v), "Last commit": commit(v.cm) });
 
 const LABELS: { [action: string]: string } = {
   WriteRegistration: "protocol-fill writes the registration",
+  PreflightAudit: "labkit-audit --mode preflight",
+  DecidePreflight: "labkit-audit --decide (preflight)",
+  Freeze: "protocol-fill --freeze",
   EditCode: "you change the code",
   EditOutsideData: "you change a data file outside the area",
-  StartRun: "you start the run",
+  StartMeasurement: "you start a measurement",
+  StartProbe: "you start a probe",
   RunCompletes: "the run completes",
   RunCrashes: "the run crashes",
   AnalysisAudit: "labkit-audit --mode analysis",
@@ -53,6 +66,10 @@ const LABELS: { [action: string]: string } = {
   Commit: "git commit (hook passes)",
 };
 
-export const step = (action: string) => LABELS[action] ?? action;
+// TLC names both starts by their shared operator StartAs; the run's kind tells them apart
+export const step = (action: string, _from: V, to: V) =>
+  action === "StartAs"
+    ? to.runAt.kind === "probe" ? LABELS.StartProbe : LABELS.StartMeasurement
+    : LABELS[action] ?? action;
 
-export const title = "One labkit area at repeat cost low: commands, gates, last commit";
+export const title = "One labkit area: commands, gates, last commit";
