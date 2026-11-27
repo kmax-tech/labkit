@@ -42,25 +42,25 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
+| `model_check.single_draw` | WARNING | GUARANTEED | technical contract | the draws of {…} cannot be counted: {…} | — |
+| `model_check.single_draw` | WARNING | GUARANTEED | LAB-036 Validate, don't trust a single run | {…} is one draw — no spread: `scripts/01_measure.py --repeat-of {…}` draws it again, `02_… | — |
+| `model_check._own_record_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` ({…}), but its models_resolved does not name `{…}… | `_name_alias_fix(alias)` |
+| `model_check._derived_run_calls` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…} — yet its call log holds {…} call{…} of alias `{…}` that asked the model | `_fresh_run_fix(alias, parent)` |
+| `model_check._derived_run_calls` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…} — yet its call log holds {…} of alias `{…}` stored outside any run{…}, which no recor… | `_fresh_run_fix(alias, parent)` |
+| `model_check._stored_answer_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` stored by run {…}, but {…} — no record says which… | `repair + ( _fresh_run_fix(alias, None) if derived_from is not None else _name_alias_fix(alias) )` |
+| `model_check.stand_in_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | {…}: fixed answers stored with `llm_cache.store_stand_in`, not answers of a model — its n… | — |
+| `model_check.model_provenance_findings` | BLOCKER | GUARANTEED | technical contract | model provenance: the call log of {…} does not read — {…} | restore the file as the cache wrote it (`{…}` where git holds it), or {…} |
+| `model_check.model_provenance_findings` | BLOCKER | GUARANTEED | technical contract | model provenance: {…} has no config.json — which model it recorded cannot be read | restore the run record as runlog wrote it (`{…}` where git holds it), or {…} |
+| `model_check.model_provenance_findings` | WARNING | GUARANTEED | technical contract | model provenance: the stand-ins behind {…} cannot be counted — {…}; the result line canno… | restore the named record as runlog wrote it, or {…} |
+| `model_check._metrics_model_findings` | WARNING | GUARANTEED | technical contract | model provenance: the lineage of {…} is broken — {…} | — |
+| `model_check._metrics_model_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | {…} called a model, but no run in its lineage recorded models_resolved — record the alias… | — |
+| `model_check.arm_findings` | WARNING | GUARANTEED | technical contract | arm `{…}`: the protocol names {…}, no such file under {…} | — |
+| `model_check.arm_findings` | WARNING | GUARANTEED | open assignment | arm `{…}`: the protocol names fingerprint {…}, the answering run recorded no such value —… | — |
+| `model_check.arm_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | arm `{…}`: the protocol names alias {…}, the answering run recorded no such alias | — |
 | `row_check.row_provenance_findings` | BLOCKER | GUARANTEED | technical contract | row provenance: the lineage of {…} is broken — {…} | `measure_anew(answering_run.parent.parent)` |
 | `row_check.row_provenance_findings` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | `measure_anew(answering_run.parent.parent)` |
 | `row_check.row_provenance_findings` | BLOCKER | GUARANTEED | LAB-057 One area per idea | {…}: {…} row(s) from {…} — a run this run neither is, continues nor derives from; a file … | {…}, into an output file of its own — a new name for the output in the measuring script, e.g. `{…}`; keep {…} and its runs, never delete it: those rows are the other runs' evidence |
 | `row_check._continued_with_other_code` | BLOCKER | GUARANTEED | open assignment | {…}: {…} row(s) come from {…}, which ran other code (script {…}, this run's {…}) — {…}'s … | measure anew into an output file of its own — a new name for the output in the measuring script, e.g. `{…}` — keep {…} and its runs, then audit that run |
-| `run_record_check.single_draw` | WARNING | GUARANTEED | technical contract | the draws of {…} cannot be counted: {…} | — |
-| `run_record_check.single_draw` | WARNING | GUARANTEED | LAB-036 Validate, don't trust a single run | {…} is one draw — no spread: `scripts/01_measure.py --repeat-of {…}` draws it again, `02_… | — |
-| `run_record_check._own_record_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` ({…}), but its models_resolved does not name `{…}… | `_name_alias_fix(alias)` |
-| `run_record_check._derived_run_calls` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…} — yet its call log holds {…} call{…} of alias `{…}` that asked the model | `_fresh_run_fix(alias, parent)` |
-| `run_record_check._derived_run_calls` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…} — yet its call log holds {…} of alias `{…}` stored outside any run{…}, which no recor… | `_fresh_run_fix(alias, parent)` |
-| `run_record_check._stored_answer_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` stored by run {…}, but {…} — no record says which… | `repair + ( _fresh_run_fix(alias, None) if derived_from is not None else _name_alias_fix(alias) )` |
-| `run_record_check.stand_in_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | {…}: fixed answers stored with `llm_cache.store_stand_in`, not answers of a model — its n… | — |
-| `run_record_check.model_provenance_findings` | BLOCKER | GUARANTEED | technical contract | model provenance: the call log of {…} does not read — {…} | restore the file as the cache wrote it (`{…}` where git holds it), or {…} |
-| `run_record_check.model_provenance_findings` | BLOCKER | GUARANTEED | technical contract | model provenance: {…} has no config.json — which model it recorded cannot be read | restore the run record as runlog wrote it (`{…}` where git holds it), or {…} |
-| `run_record_check.model_provenance_findings` | WARNING | GUARANTEED | technical contract | model provenance: the stand-ins behind {…} cannot be counted — {…}; the result line canno… | restore the named record as runlog wrote it, or {…} |
-| `run_record_check._metrics_model_findings` | WARNING | GUARANTEED | technical contract | model provenance: the lineage of {…} is broken — {…} | — |
-| `run_record_check._metrics_model_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | {…} called a model, but no run in its lineage recorded models_resolved — record the alias… | — |
-| `run_record_check.arm_findings` | WARNING | GUARANTEED | technical contract | arm `{…}`: the protocol names {…}, no such file under {…} | — |
-| `run_record_check.arm_findings` | WARNING | GUARANTEED | open assignment | arm `{…}`: the protocol names fingerprint {…}, the answering run recorded no such value —… | — |
-| `run_record_check.arm_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | arm `{…}`: the protocol names alias {…}, the answering run recorded no such alias | — |
 | `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
 | `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
 | `finalize.choose_answering_run` | BLOCKER | GUARANTEED | LAB-043 Runs go through `runlog` | no stamped protocol id ([protocol] id) — no run is bound to it | stamp the area with `labkit-init exp <name> --kind …`, which writes a fresh id, and carry the protocol's text over |

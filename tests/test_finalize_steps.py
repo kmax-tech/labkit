@@ -12,8 +12,8 @@ from protocol_fixture import completion_record, PID, head, run_record  # noqa: E
 from state_fixture import AREA, area_state
 from labkit.formats.area_state import state_of
 from labkit.gates import finalize
-from labkit.checks import run_record_check, readme_check
-from labkit.formats import protocol_block, repo, standard_contract
+from labkit.checks import model_check, readme_check
+from labkit.formats import gate, protocol_block, repo, standard_contract
 from labkit.formats.gate import (
     BLOCKER,
     GUARANTEED,
@@ -109,7 +109,7 @@ class Steps(unittest.TestCase):
         self.assertIn("is one draw — no spread", warned[1].text)
         self.assertEqual(
             [f.rule for f in warned],
-            [run_record_check.LAB_027, run_record_check.LAB_036],
+            [gate.LAB_027, gate.LAB_036],
         )
 
     def test_station_1_forwards_the_arms_lines_as_guaranteed_warnings(self):
@@ -263,13 +263,13 @@ class ModelProvenanceFindings(unittest.TestCase):
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"criterion_1_pass": True, "llm_retries": 0}, {})
-            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            (gap,) = model_check.model_provenance_findings(Path(d), run)
             self.assertEqual(gap.grade, WARNING)
             self.assertIn(
                 "called a model, but no run in its lineage recorded models_resolved",
                 gap.text,
             )
-            self.assertEqual(gap.rule, run_record_check.LAB_027)
+            self.assertEqual(gap.rule, gate.LAB_027)
 
     def test_a_model_run_whose_lineage_is_broken_is_named(self):
         # the parent `derived_from` names is gone: whether a run above
@@ -280,7 +280,7 @@ class ModelProvenanceFindings(unittest.TestCase):
             cfg = json.loads((run / "config.json").read_text(encoding="utf-8"))
             cfg["derived_from"] = "2026-10-07T10-00-00_bbbb"
             (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
-            found = run_record_check.model_provenance_findings(Path(d), run)
+            found = model_check.model_provenance_findings(Path(d), run)
             (broken,) = [f for f in found if "is broken" in f.text]
             self.assertIn(f"model provenance: the lineage of {run.name}", broken.text)
             self.assertEqual((broken.grade, broken.rule), (WARNING, TECHNICAL_RULE))
@@ -291,16 +291,12 @@ class ModelProvenanceFindings(unittest.TestCase):
             run = self._run(
                 d, {"criterion_1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
             )
-            self.assertEqual(
-                run_record_check.model_provenance_findings(Path(d), run), []
-            )
+            self.assertEqual(model_check.model_provenance_findings(Path(d), run), [])
 
     def test_a_run_without_model_calls_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"criterion_1_pass": True, "n_rows": 4}, {})
-            self.assertEqual(
-                run_record_check.model_provenance_findings(Path(d), run), []
-            )
+            self.assertEqual(model_check.model_provenance_findings(Path(d), run), [])
 
     def test_a_call_log_without_its_alias_in_the_record_blocks(self):
         # the a997 case: no call count in metrics.json, two replayed stand-in
@@ -308,7 +304,7 @@ class ModelProvenanceFindings(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             calls = [self._stand_in_hit(), self._stand_in_hit()]
             run = self._run(d, {"unique_rank_share": 0.6}, {}, calls)
-            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            (gap,) = model_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.evidence_kind), (BLOCKER, GUARANTEED))
             self.assertIn(
                 "alias `standin` (2 stored outside any run, not marked as stand-ins)",
@@ -323,9 +319,7 @@ class ModelProvenanceFindings(unittest.TestCase):
                 {"standin": {"backend": "ollama"}},
                 [self._stand_in_hit(), self._stand_in_hit()],
             )
-            self.assertEqual(
-                run_record_check.model_provenance_findings(Path(d), run), []
-            )
+            self.assertEqual(model_check.model_provenance_findings(Path(d), run), [])
 
     def test_marked_stand_ins_are_named_beside_a_record_that_names_the_alias(self):
         # what `llm_cache.store_stand_in` leaves in the call log: the
@@ -341,7 +335,7 @@ class ModelProvenanceFindings(unittest.TestCase):
                 {"standin": {"backend": "openai"}},
                 [marked, marked],
             )
-            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            (gap,) = model_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.evidence_kind), (WARNING, GUARANTEED))
             self.assertIn(
                 "read stand-in answers (2 logged uses of alias `standin`)", gap.text
@@ -350,7 +344,7 @@ class ModelProvenanceFindings(unittest.TestCase):
             other = self._run(
                 tempfile.mkdtemp(dir=d), {"unique_rank_share": 0.6}, {}, [marked]
             )
-            blocked, named = run_record_check.model_provenance_findings(Path(d), other)
+            blocked, named = model_check.model_provenance_findings(Path(d), other)
             self.assertEqual((blocked.grade, named.grade), (BLOCKER, WARNING))
             self.assertIn("(1 stand-in)", blocked.text)  # own record: counted by kind
 
@@ -362,7 +356,7 @@ class ModelProvenanceFindings(unittest.TestCase):
             cfg = json.loads((run / "config.json").read_text(encoding="utf-8"))
             cfg["derived_from"] = "2026-10-07T10-00-00_bbbb"
             (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
-            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            (gap,) = model_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.rule), (WARNING, TECHNICAL_RULE))
             self.assertIn("the stand-ins behind", gap.text)
             self.assertIn("cannot be counted", gap.text)
@@ -371,14 +365,14 @@ class ModelProvenanceFindings(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"n_rows": 4}, {}, [self._stand_in_hit()])
             (run / "config.json").unlink()
-            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            (gap,) = model_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.rule), (BLOCKER, TECHNICAL_RULE))
             self.assertIn("has no config.json", gap.text)
 
     def test_a_call_log_that_does_not_read_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"n_rows": 4}, {}, [{"alias": "standin"}])
-            (gap,) = run_record_check.model_provenance_findings(Path(d), run)
+            (gap,) = model_check.model_provenance_findings(Path(d), run)
             self.assertEqual((gap.grade, gap.rule), (BLOCKER, TECHNICAL_RULE))
             self.assertIn(f"{LLM_CALLS_FILE}:1", gap.text)
 
@@ -439,7 +433,7 @@ class ModelRecordsByRunKind(unittest.TestCase):
         }
 
     def _found(self, run: Path):
-        return run_record_check.model_provenance_findings(self.area, run)
+        return model_check.model_provenance_findings(self.area, run)
 
     def test_a_repeat_records_its_own_model_and_is_held_to_it(self):
         self._run(self.BASIS, self.NAMED)
@@ -987,7 +981,7 @@ class AnUnlistedHistoryComesBeforeTheOtherHolds(unittest.TestCase):
 class CriterionNStation(unittest.TestCase):
     """finalize's criterion-n station reads a run's inputs and outputs only
     when its metrics.json holds a denominator; a record that does not read
-    then blocks (the condition itself: `tests/test_rules_run_record_check.py`)."""
+    then blocks (the condition itself: `tests/test_rules_kept_number_check.py`)."""
 
     def _run(self, d: str, metrics: dict) -> Path:
         run = Path(d) / "runs" / "r1"
@@ -1017,7 +1011,7 @@ class CriterionNStation(unittest.TestCase):
 class NullLaneStation(unittest.TestCase):
     """finalize's null-lane station (station 9) hands on what the kept rows
     show: the warning of an unmoved null lane reaches the findings (the
-    condition itself: `tests/test_rules_run_record_check.py`). The reader of
+    condition itself: `tests/test_rules_row_check.py`). The reader of
     the run's outputs is given."""
 
     def _found(self, null_pred) -> Findings:

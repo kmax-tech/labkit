@@ -245,7 +245,7 @@ The run's call log agrees with the model records: each line of `llm-calls.jsonl`
 
 Not proven: that every answer the run used was logged — answers read past labkit's cache leave no line.
 
-- **Where:** `runs.read_model_calls`, `runs.run_dir_in_lab`, `run_record_check.call_log_model_findings`, `run_record_check.model_provenance_findings`, `run_record_check.stand_in_findings`
+- **Where:** `runs.read_model_calls`, `runs.run_dir_in_lab`, `model_check.call_log_model_findings`, `model_check.model_provenance_findings`, `model_check.stand_in_findings`
 - **Command:** `finalize`
 - **Tier:** guaranteed
 - **When:** after the run

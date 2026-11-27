@@ -1,7 +1,7 @@
 """Stand-ins through real runs: fixed answers stored with
 `llm_cache.store_stand_in`, read by a runlog run through the replay cache
 (no model asked), then a run derived from it and a later replay. finalize's
-model station (`run_record_check.model_provenance_findings`) and the result
+model station (`model_check.model_provenance_findings`) and the result
 label (`result_render.stand_in_label`) read the same call logs: the derived
 run, which logs no call itself, is labelled and warned about through its
 parent, and the warning says the uses are the parent's, not its own calls.
@@ -20,7 +20,7 @@ import pytest
 import ollama_fixture
 from models_fixture import serve
 
-from labkit.checks import result_render, run_record_check
+from labkit.checks import model_check, result_render
 from labkit.formats.gate import WARNING
 from labkit.run import llm_cache, runlog
 
@@ -67,9 +67,9 @@ class StandInsThroughRealRuns(unittest.TestCase):
         later = self.replay()
         self.assertEqual(self.handler.chats, 0, "no model was asked")
 
-        (own,) = run_record_check.model_provenance_findings(self.area, parent)
-        (through,) = run_record_check.model_provenance_findings(self.area, derived)
-        (again,) = run_record_check.model_provenance_findings(self.area, later)
+        (own,) = model_check.model_provenance_findings(self.area, parent)
+        (through,) = model_check.model_provenance_findings(self.area, derived)
+        (again,) = model_check.model_provenance_findings(self.area, later)
         self.assertEqual({own.grade, through.grade, again.grade}, {WARNING})
         self.assertIn(
             f"{parent.name} read stand-in answers (2 logged uses of alias `o`):",

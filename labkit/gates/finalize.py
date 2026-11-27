@@ -248,15 +248,17 @@ from labkit.checks.kept_number_check import (
     criterion_ns,
     kept_number_gaps,
 )
+from labkit.checks.model_check import (
+    arm_findings,
+    model_provenance_findings,
+    single_draw,
+)
 from labkit.checks.row_check import null_lane_findings, row_provenance_findings
 from labkit.checks.run_record_check import (
     answer_reading_gaps,
-    arm_findings,
     code_since_run,
-    model_provenance_findings,
     output_record_findings,
     provenance_findings,
-    single_draw,
 )
 from labkit.checks.audit_binding import (
     UNDECIDED,

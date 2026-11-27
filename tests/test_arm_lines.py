@@ -14,7 +14,8 @@ import unittest
 from pathlib import Path
 
 from protocol_fixture import head, run_record  # noqa: E402
-from labkit.checks import run_record_check
+from labkit.checks import model_check
+from labkit.formats import gate
 from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
 
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
@@ -67,7 +68,7 @@ class ArmLines(unittest.TestCase):
                 profiles=("a.toml", "b.toml"),
                 fingerprints={"before": SHA_B, "after": SHA_A},
             )
-            self.assertEqual(run_record_check.arm_findings(TEXT, area, run), [])
+            self.assertEqual(model_check.arm_findings(TEXT, area, run), [])
 
     def test_a_fingerprint_the_run_did_not_record_is_named(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -76,7 +77,7 @@ class ArmLines(unittest.TestCase):
                 profiles=("a.toml", "b.toml"),
                 fingerprints={"before": SHA_B, "after": "0000deadbeef"},
             )
-            got = run_record_check.arm_findings(TEXT, area, run)
+            got = model_check.arm_findings(TEXT, area, run)
             self.assertEqual(len(got), 1)
             self.assertIn(
                 f"arm `after`: the protocol names fingerprint {SHA_A}", got[0].text
@@ -93,7 +94,7 @@ class ArmLines(unittest.TestCase):
                 'alias = "haiku"\n\n[model.arms.after]',
                 1,
             )
-            got = run_record_check.arm_findings(text, area, run)
+            got = model_check.arm_findings(text, area, run)
             rules = {
                 g.rule
                 for g in got
@@ -105,13 +106,13 @@ class ArmLines(unittest.TestCase):
                 for g in got
                 if "arm `before`: the protocol names alias haiku" in g.text
             }
-            self.assertEqual(rules, {run_record_check.LAB_027}, got)
+            self.assertEqual(rules, {gate.LAB_027}, got)
 
     def test_no_arm_line_claims_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area, run = _repo(d, profiles=(), fingerprints={})
             self.assertEqual(
-                run_record_check.arm_findings(
+                model_check.arm_findings(
                     head(repeat_cost="low", model="haiku"), area, run
                 ),
                 [],

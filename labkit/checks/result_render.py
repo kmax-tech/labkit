@@ -48,7 +48,7 @@ from labkit.checks.audit_binding import (
     source_protocol_then,
 )
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.checks.run_record_check import (
+from labkit.checks.model_check import (
     StandInUse,
     logged_uses,
     stand_in_calls,
@@ -336,7 +336,7 @@ def stand_in_label(run: Path) -> str:
     """One clause per alias (`stand_in_clause`, joined by ` · `) for the
     stand-ins in the call logs of RUN and of every run it rests on
     (`runs.source_runs`: `derived_from`, continued rows, the origin runs of
-    its inputs; read by `run_record_check.stand_in_calls`, as finalize's
+    its inputs; read by `model_check.stand_in_calls`, as finalize's
     warning reads them), counted together (`stand_in_uses`); "" without
     stand-ins. N counts logged uses — call-log lines marked as stand-ins,
     not distinct answers: a stand-in read by two of those runs counts

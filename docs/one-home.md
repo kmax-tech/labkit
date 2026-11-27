@@ -230,7 +230,7 @@ A second answer to any of these questions is drift: move the caller to the home,
 
 ## What does the result section say when it says what its sources say — and does it?
 
-`result_render.rendering` (the Recorded results line from the declared run's metrics.json with its note, opened by a stand-in label per alias when the run or a run it rests on read stand-in answers — `result_render.stand_in_label`, counted from the call logs `run_record_check.stand_in_calls` reads, the same lines finalize's warning counts —, one Limitation line per decided limitation of the covering records), `result_render.render_gaps` (exact equality, each difference named; report-check's analysis stage, `protocol-fill --from-run` and `--render` write it)
+`result_render.rendering` (the Recorded results line from the declared run's metrics.json with its note, opened by a stand-in label per alias when the run or a run it rests on read stand-in answers — `result_render.stand_in_label`, counted from the call logs `model_check.stand_in_calls` reads, the same lines finalize's warning counts —, one Limitation line per decided limitation of the covering records), `result_render.render_gaps` (exact equality, each difference named; report-check's analysis stage, `protocol-fill --from-run` and `--render` write it)
 
 ## Does a report outside the protocol show a reported number as its sources render it?
 
