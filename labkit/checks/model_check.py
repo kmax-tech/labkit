@@ -1,13 +1,13 @@
 """model_check — the model a finished run asked, held to its record.
 
-A model that answered named in the record: each line of the run's call log
-backed by a record naming its alias — the run's own, or that of the run
-that stored the answer (`call_log_model_findings`,
-`model_provenance_findings`); answers that are stand-ins, not a model's,
-named (`stand_in_findings`, counted by `stand_in_calls`); a single draw
-where a model was asked (`single_draw`); every arm the protocol names
-present in the answering run (`arm_findings`). Each returns findings
-graded where they are made. Read-only.
+Every model that answered must be named in a record: each line of the
+run's call log is backed by a record naming its alias — the run's own, or
+that of the run that stored the answer (`call_log_model_findings`,
+`model_provenance_findings`). Answers that are stand-ins, not a model's,
+are named (`stand_in_findings`, counted by `stand_in_calls`); a single draw
+where a model was asked is warned (`single_draw`); every arm the protocol
+names must be present in the answering run (`arm_findings`). Each returns
+findings graded where they are made. Read-only.
 """
 
 from __future__ import annotations

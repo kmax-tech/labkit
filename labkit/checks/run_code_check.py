@@ -1,4 +1,4 @@
-"""run_code_check — the code behind a finished run's number, held to the code now.
+"""run_code_check — the code and the answers behind a finished run's number.
 
 The script and the modules it imports of the answering run and of each run
 it derives from, compared with the code here now (`code_since_run`): a
