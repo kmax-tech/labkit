@@ -268,7 +268,7 @@ def first_sentence(node: ast.AST | None) -> str:
 
 
 def _short_unit(unit: str) -> str:
-    """UNIT without the package and layer: `finalize.check_run_code`."""
+    """UNIT without the package and layer: `finalize.station_run_code`."""
     return unit.removeprefix("labkit.").split(".", 1)[-1]
 
 

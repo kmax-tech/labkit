@@ -151,7 +151,7 @@ class TellTestRun(unittest.TestCase):
             ["E   assert 0 == 1", "1 failed, 2 passed in 0.1s"],
         )
         found = Findings(tell=None)
-        preflight.check_tests_owed(found, tests, frozen=False)
+        preflight.station_tests_owed(found, tests, frozen=False)
         (blocker,) = found.blocked
         self.assertIn("test_01_x.py failed (1 failed, 2 passed in 0.1s)", blocker)
 
@@ -160,7 +160,7 @@ class TellTestRun(unittest.TestCase):
             "tests/test_01_x.py", [Path("test_01_x.py")], "ok", []
         )
         found = Findings(tell=None)
-        preflight.check_tests_owed(found, tests, frozen=True)
+        preflight.station_tests_owed(found, tests, frozen=True)
         self.assertEqual(found.blocked, [])
 
 

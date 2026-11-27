@@ -33,7 +33,7 @@ from labkit.gates.registration_hold import (
 )
 
 
-def station_changes(
+def workflow_and_holds(
     area: Path,
     protocol: Path,
     pid: str | None,
@@ -74,7 +74,7 @@ def station_changes(
     )
 
 
-def check_registration(
+def station_registration(
     findings: Findings,
     area: Path,
     protocol: Path,
@@ -84,7 +84,7 @@ def check_registration(
     held: evidence.AreaEvidence,
 ) -> None:
     """Hold the answering RUN to its workflow's registration
-    (`station_changes`, read from STATE, the area's state built once); a
+    (`workflow_and_holds`, read from STATE, the area's state built once); a
     note when it holds — what the workflow held —, and one per field a
     correction released (`corrected_in_place`), so the release names what
     changed and why. With a stamped id PID, the runs without a record that
@@ -95,7 +95,7 @@ def check_registration(
     unknown protocol, the confirmatory note names the first measurement as
     the first that reads and says that an earlier one is not excluded.
     HELD is the area's audit evidence, read once at the entry."""
-    flow, changes = station_changes(area, protocol, pid, run, state, held)
+    flow, changes = workflow_and_holds(area, protocol, pid, run, state, held)
     findings.take_all(changes)
     unassigned: tuple[str, ...] = ()
     if pid is not None:

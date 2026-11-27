@@ -232,7 +232,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
     def test_preflight_refuses_it_with_the_check_to_run_again(self):
         found = Findings(tell=None)
         text = self.protocol.read_text(encoding="utf-8")
-        preflight.check_protocol_fields(
+        preflight.station_protocol_fields(
             found,
             self.protocol,
             text,
@@ -272,7 +272,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
     def test_finalize_refuses_it_at_the_field_station(self):
         found = Findings(tell=None)
         text = self.protocol.read_text(encoding="utf-8")
-        finalize.check_open_fields(
+        finalize.station_open_fields(
             found, self.protocol, text, protocol_block.head(text), state_of(self.area)
         )
         (line,) = [f.line for f in found.found if "written 2 times" in f.line]
@@ -300,7 +300,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         problems = start_check._freeze_findings(self.area, bound, state_of(self.area))
         self.assertFalse(any("written 2 times" in p for p in problems), problems)
         found = Findings(tell=None)
-        finalize.check_open_fields(
+        finalize.station_open_fields(
             found,
             self.protocol,
             self.clean,

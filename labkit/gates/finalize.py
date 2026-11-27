@@ -50,11 +50,11 @@ each step's condition):
                     skipped only when neither registers an id
   4. run code and declared scopes  the script and the helpers it imports,
                     the run's and its lineage's, are the code here now
-                    (blocker, `check_run_code`; a module in another
+                    (blocker, `station_run_code`; a module in another
                     repository warns), every declared promise scope is
                     unchanged since the run, and a derived run that
                     declares its answer reading is held to its parent
-                    beyond the code (`check_answer_reading`)
+                    beyond the code (`station_answer_reading`)
   5. open fields    protocol fields still holding a placeholder — a
                     warning, a must field's too (preflight blocks that
                     before the freeze); a bound field written twice and
@@ -89,7 +89,7 @@ each step's condition):
                     its resolution check), a missing one no finding here
   9. registered outputs  every output the run registered is the file it
                     recorded — path and sha256 from outputs.json; gone or
-                    other bytes is a blocker (`check_registered_outputs`)
+                    other bytes is a blocker (`station_registered_outputs`)
      criterion n    every `criterion_<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
@@ -216,7 +216,7 @@ from labkit.formats.commands import (
     withdraw_command,
 )
 from labkit.gates.registration_hold import standing_adoption
-from labkit.gates.registration_station import check_registration
+from labkit.gates.registration_station import station_registration
 from labkit.gates.ways_out import PROTOCOL_NAMED
 from labkit.formats.commands import register_anew
 from labkit.checks.intent_check import NoRunChosen
@@ -367,7 +367,7 @@ def _hold_declaration(
         findings.note(f"  {note}")
 
 
-def check_answering_run(
+def station_answering_run(
     findings: Findings,
     area: Path,
     protocol: Path,
@@ -440,7 +440,7 @@ def unreportable_warnings(answering_run: Path) -> list[GateFinding]:
     ]
 
 
-def check_open_audit_findings(
+def station_open_audit_findings(
     findings: Findings,
     area: Path,
     state: AreaState,
@@ -489,7 +489,7 @@ def check_open_audit_findings(
         )
 
 
-def check_intent_keys_in_metrics(
+def station_intent_keys_in_metrics(
     findings: Findings,
     protocol: Path,
     text: str,
@@ -534,7 +534,7 @@ def check_intent_keys_in_metrics(
         findings.note(f"  {intent.summary}")
 
 
-def check_run_code(
+def station_run_code(
     findings: Findings, area: Path, answering_run: Path, held_by: Path | None
 ) -> None:
     """Station 4, first half: the code that produced the answering run's
@@ -556,7 +556,7 @@ def check_run_code(
         )
 
 
-def check_answer_reading(
+def station_answer_reading(
     findings: Findings, area: Path, protocol: Path, answering_run: Path
 ) -> None:
     """Station 4, third part: each run of the answering run's lineage that
@@ -567,7 +567,7 @@ def check_answer_reading(
     does an outputs.json that does not read. A note names the declaration
     and what of the parent's code was compared (`code_since_run`). Says
     nothing where no run declares one; a broken lineage and a declaration
-    that does not read are `check_run_code`'s blockers."""
+    that does not read are `station_run_code`'s blockers."""
     try:
         chain = lineage(answering_run)
     except ValueError:
@@ -577,7 +577,7 @@ def check_answer_reading(
         try:
             declared = read_answer_reading(child)
         except ArtefactError:
-            continue  # `check_run_code` blocks on it, and compares the parent whole
+            continue  # `station_run_code` blocks on it, and compares the parent whole
         if declared is None:
             continue
         findings.note(
@@ -617,7 +617,7 @@ def check_answer_reading(
             )
 
 
-def check_declared_scopes(
+def station_declared_scopes(
     findings: Findings,
     area: Path,
     answering_run: Path,
@@ -682,7 +682,7 @@ def check_declared_scopes(
         )
 
 
-def check_open_fields(
+def station_open_fields(
     findings: Findings,
     protocol: Path,
     text: str,
@@ -693,7 +693,7 @@ def check_open_fields(
     a field owed as a must under LAB_011, in any other as an open
     assignment —, a bound field written twice (a blocker), the README's
     placeholders (CODE-016 The experiment area reconstructs itself) and
-    route block, and the generated data counts (`check_data_counts`). The
+    route block, and the generated data counts (`station_data_counts`). The
     note "all fields filled, README and data counts clean" stands only when
     every one of these found nothing."""
     must_holes, soft_holes = must_and_soft_holes(text, head)
@@ -741,12 +741,12 @@ def check_open_fields(
             findings.take_all(route)
             route_clean = not route
         readme_clean = not stale and route_clean
-    counted = check_data_counts(findings, protocol, text, state)
+    counted = station_data_counts(findings, protocol, text, state)
     if not holes and not repeated and readme_clean and counted:
         findings.note("  all fields filled, README and data counts clean")
 
 
-def check_data_counts(
+def station_data_counts(
     findings: Findings, protocol: Path, text: str, state: AreaState
 ) -> bool:
     """Station 5, the generated counts of Data / scope: where the field
@@ -768,7 +768,7 @@ def check_data_counts(
     return False
 
 
-def check_provenance(findings: Findings, area: Path, answering_run: Path) -> None:
+def station_provenance(findings: Findings, area: Path, answering_run: Path) -> None:
     """Station 6: every source the run read frozen in its record, its bytes
     the ones the record names, and tracked in git or kept outside it — by
     an ignore rule, or lying outside the repository; the outputs tracked,
@@ -786,7 +786,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
         )
 
 
-def check_input_origins(
+def station_input_origins(
     findings: Findings,
     area: Path,
     answering_run: Path,
@@ -804,7 +804,7 @@ def check_input_origins(
     the run was bound to a protocol and that text cannot be read back, a
     blocker (`source_protocol_finding`) — the audit of this run cannot be
     shown the text its source was bound to; a run bound to no protocol
-    owes none and is a note (`check_source_protocols` holds a bound one to
+    owes none and is a note (`station_source_protocols` holds a bound one to
     its text's promises, a preparation to none). PROVENANCE_HOLDS_BYTES:
     station 6 ran and holds every input's bytes, so changed bytes and a
     record that does not read are its blockers, told here as a note — one
@@ -846,10 +846,10 @@ def check_input_origins(
             findings.take(origin_finding(state.gap, area))
     # an origin whose promise fails is named above, once; its protocol is
     # read back only where the run itself stands
-    check_source_protocols(findings, area, origins_ok)
+    station_source_protocols(findings, area, origins_ok)
 
 
-def check_source_protocols(
+def station_source_protocols(
     findings: Findings, area: Path, origin_runs: list[str]
 ) -> None:
     """Station 7, second part, only for ORIGIN_RUNS — those
@@ -896,7 +896,7 @@ def check_source_protocols(
                 findings.note(f"  {run_id}, held to that text: no mismatch")
 
 
-def check_area_tests(findings: Findings, area: Path) -> None:
+def station_area_tests(findings: Findings, area: Path) -> None:
     """Station 8: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
     tier, low included, where preflight is not owed. A
@@ -941,7 +941,7 @@ def run_file_unread(text: str, exc: BaseException, answering_run: Path) -> GateF
     )
 
 
-def check_null_lane(findings: Findings, answering_run: Path) -> None:
+def station_null_lane(findings: Findings, answering_run: Path) -> None:
     """Station 9: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
@@ -963,7 +963,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
         findings.note(f"  the null lane moved in {null_lane.examined} kept output(s)")
 
 
-def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
+def station_registered_outputs(findings: Findings, answering_run: Path) -> None:
     """Station 9: every output the run registered is the file the run
     recorded (`output_record_findings`) — the number's rows and the
     deliverable of an external task, held by path and sha256 from
@@ -991,7 +991,7 @@ def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
         )
 
 
-def check_reference(
+def station_reference(
     findings: Findings,
     protocol: Path,
     text: str,
@@ -1072,7 +1072,7 @@ def check_reference(
         )
 
 
-def check_kept_number(
+def station_kept_number(
     findings: Findings,
     protocol: Path,
     text: str,
@@ -1136,7 +1136,7 @@ def runs_metrics(answering_run: Path) -> dict:
     return read_metrics(metrics_path(answering_run))
 
 
-def check_criterion_n(findings: Findings, answering_run: Path) -> None:
+def station_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 9: a criterion's denominator that matches no recorded input
     count (`run_record_check.criterion_n_input_mismatches`). The run's
     inputs and outputs are read only when metrics.json holds a denominator;
@@ -1246,10 +1246,10 @@ def finalize_area(
     3. intent-check — always; with an answering run it reads its metrics,
        without one it holds the promise block alone (step 1 names the run).
     4. the run's code and the declared scopes — only with a run: the code
-       that produced the number is the code here now (`check_run_code`),
-       each declared scope as the run saw it (`check_declared_scopes`), and
+       that produced the number is the code here now (`station_run_code`),
+       each declared scope as the run saw it (`station_declared_scopes`), and
        a derived run that declares its answer reading holds its parent's
-       prompts and answer file (`check_answer_reading`).
+       prompts and answer file (`station_answer_reading`).
     5. open fields — always: protocol placeholders and stamped `<…>`
        placeholders left in the area's README warn; a bound field written
        twice and data counts typed by hand or stale block.
@@ -1271,7 +1271,7 @@ def finalize_area(
        protocol blocks; one on another protocol of the area does not. An
        audit record that does not read is the station's one blocker: the
        runs gone behind a record and the open findings are then not
-       checked (`check_open_audit_findings`).
+       checked (`station_open_audit_findings`).
 
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
@@ -1303,18 +1303,20 @@ def finalize_area(
 
     # 1. answering run — the run every later step examines
     findings.header(f"answering run: {chosen.name}")
-    answering_run = check_answering_run(findings, area, chosen, text, head.id, state)
+    answering_run = station_answering_run(findings, area, chosen, text, head.id, state)
 
     # 2. the registration as the first measurement recorded it — with a run
     findings.header("registration since the first measurement")
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_registration(findings, area, chosen, head.id, answering_run, state, held)
+        station_registration(
+            findings, area, chosen, head.id, answering_run, state, held
+        )
 
     # 3. intent-check — always
     findings.header("intent-check")
-    check_intent_keys_in_metrics(findings, chosen, text, answering_run, state)
+    station_intent_keys_in_metrics(findings, chosen, text, answering_run, state)
 
     # 4. the run's code and the declared scopes — only with a run
     findings.header("the run's code and declared scopes")
@@ -1323,13 +1325,13 @@ def finalize_area(
     else:
         # the protocol that declares this very run: its holds withdraw first
         held_by = standing_adoption(chosen, text, answering_run, state)
-        check_run_code(findings, area, answering_run, held_by)
-        check_declared_scopes(findings, area, answering_run, text, held_by)
-        check_answer_reading(findings, area, chosen, answering_run)
+        station_run_code(findings, area, answering_run, held_by)
+        station_declared_scopes(findings, area, answering_run, text, held_by)
+        station_answer_reading(findings, area, chosen, answering_run)
 
     # 5. open fields — always
     findings.header(f"open fields: {chosen.name}")
-    check_open_fields(findings, chosen, text, head, state)
+    station_open_fields(findings, chosen, text, head, state)
 
     # 6. provenance — at low repeat cost, and only with a run
     findings.header("provenance")
@@ -1340,7 +1342,7 @@ def finalize_area(
     elif answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_provenance(findings, area, answering_run)
+        station_provenance(findings, area, answering_run)
 
     # 7. input origins — on every repeat cost, only with a run
     findings.header("input origins")
@@ -1350,8 +1352,8 @@ def finalize_area(
         # an input that is no longer its origin's recorded output blocks;
         # at repeat_cost = low station 6 holds every input's bytes and the
         # `data=` record, so changed bytes and an unreadable record are
-        # notes here (`check_input_origins`)
-        check_input_origins(
+        # notes here (`station_input_origins`)
+        station_input_origins(
             findings,
             area,
             answering_run,
@@ -1360,7 +1362,7 @@ def finalize_area(
 
     # 8. area tests — always
     findings.header("area tests")
-    check_area_tests(findings, area)
+    station_area_tests(findings, area)
 
     # 9. registered outputs, criterion n, the null lane and the reference
     #    comparison — only with a run
@@ -1368,20 +1370,20 @@ def finalize_area(
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_registered_outputs(findings, answering_run)
+        station_registered_outputs(findings, answering_run)
         findings.header("criterion n")
-        check_criterion_n(findings, answering_run)
+        station_criterion_n(findings, answering_run)
         findings.header("null lane")
-        check_null_lane(findings, answering_run)
+        station_null_lane(findings, answering_run)
         findings.header("kept number")
-        check_kept_number(findings, chosen, text, head, answering_run)
+        station_kept_number(findings, chosen, text, head, answering_run)
         findings.header("reference comparison")
-        check_reference(findings, chosen, text, head, answering_run)
+        station_reference(findings, chosen, text, head, answering_run)
 
     # 10. audit findings — always; a head without an id has no record, and
     # a record that does not read ends the station with that blocker
     findings.header("audit findings")
-    check_open_audit_findings(findings, area, state, held, chosen, head.id)
+    station_open_audit_findings(findings, area, state, held, chosen, head.id)
 
     return report(findings)  # 1 if any step found a blocker, else 0
 

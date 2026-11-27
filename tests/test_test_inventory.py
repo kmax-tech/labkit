@@ -63,7 +63,7 @@ class EntryLayer(unittest.TestCase):
 
     def test_the_twin_any_other_function_is_its_folders_layer(self):
         for entry, layer in (
-            ("labkit.gates.finalize.check_reference", "gate"),
+            ("labkit.gates.finalize.station_reference", "gate"),
             ("labkit.gates.report_check.Checked.text", "gate"),
             ("labkit.checks.recheck.require_agreement", "check"),
             ("labkit.formats.audit_records.read", "format"),

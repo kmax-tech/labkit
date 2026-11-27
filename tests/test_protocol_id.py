@@ -169,7 +169,9 @@ class TestUniqueness(unittest.TestCase):
                 report = protocol_check.check_fields(text)
                 assert report.head is not None
                 found = Findings(tell=None)
-                preflight.check_protocol_fields(found, first, text, report, report.head)
+                preflight.station_protocol_fields(
+                    found, first, text, report, report.head
+                )
                 grades = [f.grade for f in found.found if "DUPLICATE" in f.line]
                 self.assertEqual(grades, [BLOCKER], found.found)
 

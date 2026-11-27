@@ -379,7 +379,7 @@ class GateFinding:
         changed_since: The run whose code or declared scope this blocker
             found changed since it ran — set where the comparison found the
             difference (`run_record_check.code_since_run`,
-            `finalize.check_declared_scopes`); None for every other finding,
+            `finalize.station_declared_scopes`); None for every other finding,
             also for code that could not be compared. Callers order their
             advice by it, never by the words
             (`report_check.held_declaration`).

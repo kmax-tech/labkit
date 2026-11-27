@@ -732,7 +732,7 @@ class CodeSinceRun(unittest.TestCase):
         self.assertIn("lies in another repository", warnings[0])
         # finalize's station tells each as a guaranteed warning, rule open
         told = gate.Findings(tell=None)
-        finalize.check_run_code(told, self.area, run, None)
+        finalize.station_run_code(told, self.area, run, None)
         self.assertEqual(
             [(f.grade, f.rule) for f in told.found],
             [(gate.WARNING, gate.TECHNICAL_RULE)] * 2,
@@ -857,7 +857,7 @@ class FinalizeStation(unittest.TestCase):
 
 
 class ThePromptsOfADeclaredReading(unittest.TestCase):
-    """`finalize.check_answer_reading`: a derived run that declares its
+    """`finalize.station_answer_reading`: a derived run that declares its
     answer reading is held to the prompts field its parent was measured
     under, so the protocol text each of the two runs saw must read back."""
 
@@ -903,7 +903,7 @@ class ThePromptsOfADeclaredReading(unittest.TestCase):
             derived, AnswerReading(module="lib/counting.py", labkit="9.9.9")
         )
         found = gate.Findings(tell=None)
-        finalize.check_answer_reading(found, self.area, self.protocol, derived)
+        finalize.station_answer_reading(found, self.area, self.protocol, derived)
         return [f for f in found.found if f.grade == gate.BLOCKER]
 
     def test_a_parent_whose_protocol_text_cannot_be_read_back_holds(self) -> None:

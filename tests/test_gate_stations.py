@@ -268,10 +268,10 @@ class TheCheckedInPage(unittest.TestCase):
         page = (REPO / gs.STATIONS).read_text(encoding="utf-8")
         station = page.split("### finalize.finalize_area · 3. intent-check — always")[1]
         station = station.split("\n### ")[0]
-        self.assertIn("- `finalize.check_intent_keys_in_metrics` — ", station)
+        self.assertIn("- `finalize.station_intent_keys_in_metrics` — ", station)
         self.assertRegex(
             station,
-            r"\| `finalize.check_intent_keys_in_metrics` \| BLOCKER \| GUARANTEED \| "
+            r"\| `finalize.station_intent_keys_in_metrics` \| BLOCKER \| GUARANTEED \| "
             r"[^|]+ \| [^|]+ \| repair what the sentence names; `\{…\}` holds it alone \|",
         )
 

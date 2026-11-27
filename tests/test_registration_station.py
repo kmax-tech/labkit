@@ -3,7 +3,7 @@ workflow it reads from the first measurements' own type
 (`registration_hold.workflow`) and which holds follow, and that the
 follow-up audit's prompt compares a corrected field with the text the hold
 compares (`registration_hold.run_compared_with`, read by
-`registration_station.check_registration` and `audit_prompt._field_change`)
+`registration_station.station_registration` and `audit_prompt._field_change`)
 — and that an untold first measurement, which leaves the station with its
 one hold, does not exchange the text of the run audited in that prompt.
 
@@ -96,7 +96,7 @@ class _TwoRuns(unittest.TestCase):
         answering run the context chooses."""
         ctx = report_context.checked(self.area, self.protocol)
         assert ctx.run is not None
-        flow, holds = registration_station.station_changes(
+        flow, holds = registration_station.workflow_and_holds(
             ctx.area, ctx.protocol, PID, ctx.run, ctx.area_state, ctx.evidence
         )
         return flow, [h.line for h in holds], ctx
@@ -138,7 +138,7 @@ class WorkflowOfTheFirstMeasurement(_TwoRuns):
         later = self.run_under("exploratory", "4 documents", LATER)
         ctx = report_context.checked(self.area, self.protocol)
         self.assertEqual(
-            registration_station.station_changes(
+            registration_station.workflow_and_holds(
                 ctx.area, ctx.protocol, None, later, ctx.area_state, ctx.evidence
             ),
             (Workflow.UNDECIDED, []),
@@ -586,7 +586,7 @@ class FirstMeasurementsOnTwoBranches(_TwoRuns):
         """(workflow, the holds of station 2 whose text opens with SPLIT)."""
         ctx = report_context.checked(self.area, self.protocol)
         assert ctx.run is not None
-        flow, holds = registration_station.station_changes(
+        flow, holds = registration_station.workflow_and_holds(
             ctx.area, ctx.protocol, PID, ctx.run, ctx.area_state, ctx.evidence
         )
         return flow, [h for h in holds if h.text.startswith(self.SPLIT)]

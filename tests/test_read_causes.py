@@ -400,7 +400,7 @@ class FinalizeStation(unittest.TestCase):
 
     def found(self) -> list[gate.GateFinding]:
         findings = gate.Findings(None)
-        finalize.check_registered_outputs(findings, self.run_dir)
+        finalize.station_registered_outputs(findings, self.run_dir)
         return findings.found
 
     def test_no_outputs_file_and_a_sound_one_pass(self) -> None:

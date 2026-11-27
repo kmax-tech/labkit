@@ -480,7 +480,7 @@ the one path that writes the declaration: the lines from the run's metrics.json 
 
 every finding still `open` in the audit records of the protocol finalize holds (`followup.records_of`), any mode: a BLOCKER blocks, a WARNING warns, each with its file; a finding on another protocol of the area holds nothing here
 
-- **Where:** `finalize.check_open_audit_findings`, `audit_records.area_records`
+- **Where:** `finalize.station_open_audit_findings`, `audit_records.area_records`
 - **Command:** `finalize`
 - **Tier:** guaranteed
 - **When:** after the run
@@ -571,7 +571,7 @@ Every head names its kept number (`[kept]`: key, unit — `protocol_block.kept`)
 
 The key is bound by name, not by meaning.
 
-- **Where:** `protocol_block.kept`, `protocol_check.kept_gaps`, `run_record_check.kept_number_gaps`, `finalize.check_kept_number`, `result_render`
+- **Where:** `protocol_block.kept`, `protocol_check.kept_gaps`, `run_record_check.kept_number_gaps`, `finalize.station_kept_number`, `result_render`
 - **Command:** `labkit-init exp --kept --unit`, `protocol-fill kept.key=… kept.unit=…`, `finalize`, `labkit-adopt`
 - **Tier:** guaranteed
 - **When:** registering, before reporting
@@ -587,7 +587,7 @@ A computation's head may register the stated value its number is compared with (
 * finalize blocks a verdict the run could not make, a `ref_*` key without a registered reference, and a reference changed after the run (`reference.comparison_gaps`).
 * `not met` is a valid outcome. Without the table no `ref_*` key is written and nothing is owed.
 
-- **Where:** `protocol_block.reference`, `reference`, `result_render`, `finalize.check_reference`
+- **Where:** `protocol_block.reference`, `reference`, `result_render`, `finalize.station_reference`
 - **Command:** `labkit-init exp --reference`, `02_analyze.py --check`, `protocol-fill --from-run`, `finalize`
 - **Tier:** guaranteed
 - **When:** registering, the run, before reporting

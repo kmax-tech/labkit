@@ -130,6 +130,13 @@ Befunde: [Audit 25.11.](docs/notes/2026-11-25-repo-audit.md), [Audit 26.11.](doc
 11. Jede gedruckte Kommandozeile ohne aktive Laborumgebung ausführbar machen (alle Auswege mit `.venv/bin/…`): nur der Umfang geschätzt (33 Erzeuger in `commands.py`, rund 240 Stellen im Fließtext, rund 100 Testdateien). Eigener Bedienungsumbau, erst auf einen Anlass.
 12. Nach der Suchprobe: Ein Leser vermutete die Ablehnung einer Wirkungsangabe an einer NOTE im Einstieg `gates/audit_decisions.py`; sie steht in `audit_records._hold_effect`. Die drei Berichte der Suchprobe liegen nur im Scratchpad der Sitzung und sind nicht gesichert.
 
+### Regel → Prüfung → Funktion: Aufwand geschätzt am 27.11., nicht geplant
+
+Ziel des Autors: genau beschreibbar, klare Zuständigkeit, eine Heimat je Logik, und für jede Regel sagen können, welche Prüfstellen sie umsetzen und wo sie auftreten.
+
+1. **Der fehlende Teil ist die Zuordnung, nicht die Modulgröße.** `python -m labkit.tools.check_inventory` listet schon je Regel die Prüfstellen mit `pfad:zeile`; aber nur 99 von 360 Stellen nennen ihre Regel als Daten (116 technischer Vertrag, 17 offen, 33 von außen übergeben, 95 Ausstiege und Ausgaben ohne Regel), und 19 von 97 aktiven Regeln haben überhaupt eine Stelle. Viele Regeln sind nicht mechanisch prüfbar (Agenten-Audit, Konstruktion); das stünde je Regel als Stufe da. Vorschlag, nicht entschieden: eine erzeugte Seite `docs/rules-map.md` je Regel mit Stufe, Prüfstellen (Funktion), aufrufender Gate-Station und erreichenden Tests, aus `check_inventory`, `gate_stations` und `docs/checks-reach.tsv`; geschätzt ein Tag. Die offenen Zuordnungen ([Notiz](docs/notes/2026-11-11-open-assignments.md)) sind Forschungsentscheidungen des Autors.
+2. **Modulschnitt lohnt nur, wo viele Prüfstellen liegen:** `checks/run_record_check.py` (1 995 Zeilen, 54 Stellen, 7 importierende Module, 17 Testdateien) zerfällt in klare Gruppen — Code seit dem Lauf, Quellen und Ausgaben, Modellaufrufe und Ersatzantworten, Zeilen, Arme, Null-Lane, Nenner und behaltene Zahl —, geschätzt ein halber Tag je abgetrenntem Modul samt Tests, Schichtentabelle, `docs/chain.md` und neu verfolgter Spur. `report_hold`, `registration_hold`, `report_check` (16–24 Stellen) danach. `formats/runs.py` und `formats/repo.py` (0 Stellen, von 69 und 80 Modulen importiert) nicht schneiden: viel Umstellung, kein Gewinn für das Ziel.
+
 ### Audit 2026-11-27: offene Punkte
 
 Register: [Audit 27.11.](docs/notes/2026-11-27-repo-audit.md). Frischer Klon unter Python 3.15.2: ein Test rot, sonst grün. Jeder Punkt ist ein eigener Schritt mit Auftrag.

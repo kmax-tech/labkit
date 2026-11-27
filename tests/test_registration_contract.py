@@ -259,7 +259,7 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
                 run = self._run(area, None)
                 findings = finalize.Findings()
                 with contextlib.redirect_stdout(io.StringIO()):
-                    finalize.check_declared_scopes(findings, area, run)
+                    finalize.station_declared_scopes(findings, area, run)
                 self.assertTrue(
                     any(
                         "recorded no promise block" in b

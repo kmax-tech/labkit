@@ -78,7 +78,7 @@ class PreflightStations(unittest.TestCase):
             repeated=[],
         )
         found = Findings(tell=None)
-        preflight.check_protocol_fields(found, protocol, text, report, parsed)
+        preflight.station_protocol_fields(found, protocol, text, report, parsed)
         return found
 
     def test_a_field_not_owed_as_a_must_warns_as_an_open_assignment(self):
@@ -114,7 +114,9 @@ class PreflightStations(unittest.TestCase):
             "no = [toml\n"
         )
         found = Findings(tell=None)
-        self.assertIsNone(preflight.check_audit_records(found, self.area, frozen=False))
+        self.assertIsNone(
+            preflight.station_audit_records(found, self.area, frozen=False)
+        )
         (f,) = found.found
         self.assertEqual((f.grade, f.rule), (BLOCKER, TECHNICAL_RULE))
         self.assertIn("not TOML", f.text)
@@ -125,7 +127,7 @@ class PreflightStations(unittest.TestCase):
         with mock.patch.object(
             preflight.audit_records, "open_elsewhere", return_value=[]
         ):
-            preflight.check_handed_over_elsewhere(
+            preflight.station_handed_over_elsewhere(
                 Findings(tell=told.append), self.area, records
             )
         return told
@@ -140,7 +142,9 @@ class PreflightStations(unittest.TestCase):
 
     def _coverage(self, *, frozen: bool) -> Findings:
         found = Findings(tell=None)
-        preflight.check_audit_coverage(found, self.area, self.RECORD, "", frozen=frozen)
+        preflight.station_audit_coverage(
+            found, self.area, self.RECORD, "", frozen=frozen
+        )
         return found
 
     def test_a_named_record_that_is_not_there_breaks_the_audit_rule(self):
@@ -161,7 +165,7 @@ class PreflightStations(unittest.TestCase):
         for frozen, grade in ((True, BLOCKER), (False, WARNING)):
             with self.subTest(frozen=frozen):
                 found = Findings(tell=None)
-                preflight.check_tests_owed(found, tests, frozen=frozen)
+                preflight.station_tests_owed(found, tests, frozen=frozen)
                 (f,) = found.found
                 self.assertEqual((f.grade, f.rule), (grade, preflight.LAB_016))
 
@@ -170,14 +174,14 @@ class PreflightStations(unittest.TestCase):
             "tests/test_01_x.py", [Path("test_01_x.py")], "failed", ["1 failed"]
         )
         found = Findings(tell=None)
-        preflight.check_tests_owed(found, tests, frozen=False)
+        preflight.station_tests_owed(found, tests, frozen=False)
         (f,) = found.found
         self.assertEqual((f.grade, f.rule), (BLOCKER, preflight.LAB_016))
 
     def test_the_twin_no_record_blocks_nothing(self):
         found = Findings(tell=None)
         self.assertEqual(
-            preflight.check_audit_records(found, self.area, frozen=True), []
+            preflight.station_audit_records(found, self.area, frozen=True), []
         )
         self.assertEqual(found.found, [])
 
@@ -188,7 +192,7 @@ class PreflightStations(unittest.TestCase):
             "open_elsewhere",
             side_effect=audit_findings.FindingsError("02-y/audits/a.toml: not TOML"),
         ):
-            preflight.check_handed_over_elsewhere(found, self.area, [])
+            preflight.station_handed_over_elsewhere(found, self.area, [])
         other = self.area.parent / "02-y"
         finding = audit_findings.Finding(
             "BLOCKER", "BLOCKER · x · statement · new class · y", "open", ""
@@ -207,7 +211,7 @@ class PreflightStations(unittest.TestCase):
             ),
             mock.patch.object(preflight.evidence, "read_evidence", return_value=unread),
         ):
-            preflight.check_handed_over_elsewhere(found, self.area, [])
+            preflight.station_handed_over_elsewhere(found, self.area, [])
         self.assertEqual(
             [(f.grade, f.rule, f.text) for f in found.found],
             [
@@ -235,7 +239,7 @@ class TheGateFillsTheAreaSlots(unittest.TestCase):
 
             out = io.StringIO()
             with (
-                mock.patch.object(preflight, "check_scope_stamp", slot_blocker),
+                mock.patch.object(preflight, "station_scope_stamp", slot_blocker),
                 contextlib.redirect_stdout(out),
             ):
                 self.assertEqual(preflight.preflight_area(area), 1)
@@ -296,7 +300,7 @@ class ScopeStampStation(unittest.TestCase):
         if held:
             found.block("an earlier station's blocker", fix="`x`", rule=TECHNICAL_RULE)
             told.clear()
-        preflight.check_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
+        preflight.station_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
         return told, found.blocked[1:] if held else found.blocked
 
     def script(self, text: str) -> Path:
@@ -311,7 +315,7 @@ class ScopeStampStation(unittest.TestCase):
         self.script("def broken(:\n")
         (self.area / "PROTOCOL-y.md").write_text("# y\n")
         found = Findings(tell=None)
-        preflight.check_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
+        preflight.station_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
         (fix,) = [f.fix for f in found.found if f.fix]
         self.assertIn("--protocol", fix)
         self.assertIn("PROTOCOL-x.md", fix)
@@ -319,7 +323,7 @@ class ScopeStampStation(unittest.TestCase):
     def test_the_twin_with_one_protocol_its_way_out_names_none(self):
         self.script("def broken(:\n")
         found = Findings(tell=None)
-        preflight.check_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
+        preflight.station_scope_stamp(found, self.area, self.area / "PROTOCOL-x.md")
         (fix,) = [f.fix for f in found.found if f.fix]
         self.assertIn("`preflight ", fix)
         self.assertNotIn("--protocol", fix)

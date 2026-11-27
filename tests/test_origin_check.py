@@ -55,7 +55,7 @@ from labkit.formats.runs import (
     UnreadableRun,
 )
 from labkit.gates import finalize
-from labkit.gates.finalize import check_input_origins
+from labkit.gates.finalize import station_input_origins
 from labkit.run import runlog
 from labkit.run.input_origins import AreaRun
 
@@ -249,7 +249,7 @@ class _Area(unittest.TestCase):
         """(blockers, told) of the input-origins station on RUN_DIR (the reader)."""
         told: list[str] = []
         findings = Findings(told.append)
-        check_input_origins(
+        station_input_origins(
             findings,
             self.area,
             run_dir or self.reader,
@@ -350,7 +350,7 @@ class SourceHeldAtTheStation(_Area):
         told: list[str] = []
         findings = Findings(told.append)
         with mock.patch.object(finalize, "source_protocol_then", return_value=then):
-            finalize.check_source_protocols(findings, self.area, [self.writer.run_id])
+            finalize.station_source_protocols(findings, self.area, [self.writer.run_id])
         return findings.blocked, "\n".join(told)
 
     def test_a_source_that_does_not_report_its_texts_promise_blocks(self) -> None:

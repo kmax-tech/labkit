@@ -33,7 +33,7 @@ class SameRoot(unittest.TestCase):
             )
             findings = finalize.Findings()
             with contextlib.redirect_stdout(io.StringIO()):
-                finalize.check_area_tests(findings, area)
+                finalize.station_area_tests(findings, area)
             self.assertEqual(len(findings.blocked), 1)
 
 

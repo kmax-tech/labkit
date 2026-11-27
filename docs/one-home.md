@@ -290,7 +290,7 @@ the head's `report` (`protocol_block.Head.report`, read by `protocol_block.repor
 
 ## Does a hold withdraw a declared result first?
 
-`gate.GateFinding.changed_since`, set by the comparison that found a difference — `run_record_check.code_since_run` (the script or a helper of the run or of a run it derives from) and `finalize.check_declared_scopes` (a declared scope) — never where the code could not be compared; `report_check.held_declaration` reads it and `chain_gaps` puts the withdrawal before every later hold — never read off a finding's words
+`gate.GateFinding.changed_since`, set by the comparison that found a difference — `run_record_check.code_since_run` (the script or a helper of the run or of a run it derives from) and `finalize.station_declared_scopes` (a declared scope) — never where the code could not be compared; `report_check.held_declaration` reads it and `chain_gaps` puts the withdrawal before every later hold — never read off a finding's words
 
 ## Which of finalize's findings does report-check's chain hold at a station of its own and tell once?
 

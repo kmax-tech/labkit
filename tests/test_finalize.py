@@ -434,7 +434,7 @@ class IntentCheckRefused(unittest.TestCase):
             run = completed_run(area, "r1", metrics={"criterion_1_pass": True})
             (run / "metrics.json").write_text("{")
             found = gate.Findings(tell=None)
-            finalize.check_intent_keys_in_metrics(
+            finalize.station_intent_keys_in_metrics(
                 found, protocol, CLEAN_PROTOCOL, run, state_of(area)
             )
             (f,) = found.found
@@ -443,7 +443,7 @@ class IntentCheckRefused(unittest.TestCase):
             self.assertEqual(f.rule, gate.TECHNICAL_RULE)
             (run / "metrics.json").write_text('{"criterion_1_pass": true}')
             twin = gate.Findings(tell=None)
-            finalize.check_intent_keys_in_metrics(
+            finalize.station_intent_keys_in_metrics(
                 twin, protocol, CLEAN_PROTOCOL, run, state_of(area)
             )
             self.assertFalse(any("unreadable" in g.text for g in twin.found))
@@ -461,7 +461,7 @@ class DeclaredScopeWithoutADigestNow(unittest.TestCase):
             run = completed_run(area, "r1", metrics={"criterion_1_pass": True})
             (area / "scripts" / "01_measure.py").unlink()
             found = gate.Findings(tell=None)
-            finalize.check_declared_scopes(found, area, run, CLEAN_PROTOCOL)
+            finalize.station_declared_scopes(found, area, run, CLEAN_PROTOCOL)
         self.assertTrue(found.found)
         for f in found.found:
             self.assertTrue(
@@ -486,12 +486,12 @@ class DeclaredScopeSinceTheRun(unittest.TestCase):
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
             run = completed_run(area, "r1", metrics={"criterion_1_pass": True})
             same = gate.Findings(tell=None)
-            finalize.check_declared_scopes(same, area, run, CLEAN_PROTOCOL)
+            finalize.station_declared_scopes(same, area, run, CLEAN_PROTOCOL)
             self.assertEqual(same.found, [])
             script = area / "scripts" / "01_measure.py"
             script.write_text(script.read_text() + "# edited after the run\n")
             edited = gate.Findings(tell=None)
-            finalize.check_declared_scopes(edited, area, run, CLEAN_PROTOCOL)
+            finalize.station_declared_scopes(edited, area, run, CLEAN_PROTOCOL)
         self.assertTrue(edited.found)
         for f in edited.found:
             self.assertTrue(

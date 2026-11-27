@@ -668,7 +668,7 @@ class AHistoryGitCannotList(_Repository):
         blockers) for the area as it is."""
         ctx = report_context.checked(self.area, self.proto)
         assert ctx.run is not None, ctx.why
-        _, station = registration_station.station_changes(
+        _, station = registration_station.workflow_and_holds(
             ctx.area, ctx.protocol, ctx.head.id, ctx.run, ctx.area_state, ctx.evidence
         )
         duty = report_check.report_binding_gaps(ctx)
@@ -764,7 +764,7 @@ class ARunLostBesideAFirstMeasurement(_Repository):
         ctx = report_context.checked(self.area, self.proto)
         assert ctx.run is not None, ctx.why
         station = Findings(tell=None)
-        registration_station.check_registration(
+        registration_station.station_registration(
             station,
             ctx.area,
             ctx.protocol,

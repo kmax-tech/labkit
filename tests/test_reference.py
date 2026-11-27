@@ -198,7 +198,7 @@ class FinalizeForwardsTheHeadsGaps(unittest.TestCase):
         from labkit.gates import finalize
 
         found = Findings(tell=None)
-        finalize.check_reference(
+        finalize.station_reference(
             found, self.PROTOCOL, text, protocol_block.head(text), self.RUN
         )
         return found.found
@@ -241,9 +241,9 @@ class TheKeptNumberStationHoldsWhatTheReferenceStationLeaves(unittest.TestCase):
         head_ = protocol_block.head(text)
         notes: list[str] = []
         compared = Findings(tell=notes.append)
-        finalize.check_reference(compared, self.PROTOCOL, text, head_, self.RUN)
+        finalize.station_reference(compared, self.PROTOCOL, text, head_, self.RUN)
         kept = Findings(tell=None)
-        finalize.check_kept_number(kept, self.PROTOCOL, text, head_, self.RUN)
+        finalize.station_kept_number(kept, self.PROTOCOL, text, head_, self.RUN)
         return notes, compared.found, kept.found
 
     def test_a_kept_table_gap_is_the_kept_number_stations_blocker(self):

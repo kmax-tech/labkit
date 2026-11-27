@@ -208,7 +208,7 @@ def registration_changes(
     stamped id PID, or a block in the records. That is the confirmatory
     workflow's hold — and the hold of an undecided type; which workflow
     binds the runs is the station's choice
-    (`registration_station.station_changes`, `workflow`). Raises
+    (`registration_station.workflow_and_holds`, `workflow`). Raises
     RuntimeError when git fails."""
     if pid is None or run is None:
         return []
@@ -299,7 +299,7 @@ def workflow(
 ) -> WorkflowRead:
     """Which workflow binds the runs of PROTOCOL (stamped id PID) in AREA
     — the one reading: finalize's station 2
-    (`registration_station.station_changes`) and the follow-up audit's
+    (`registration_station.workflow_and_holds`) and the follow-up audit's
     prompt (`audit_prompt`) both take it from here. The types are the ones
     the first measurements of MEASURED registered, read from their own
     texts (`protocol_history.first_texts`) — the head as it stands names

@@ -94,7 +94,7 @@ class Steps(unittest.TestCase):
             )
             text = protocol.read_text(encoding="utf-8")
             found = Findings(tell=None)
-            run = finalize.check_answering_run(
+            run = finalize.station_answering_run(
                 found,
                 protocol.parent,
                 protocol,
@@ -128,7 +128,7 @@ class Steps(unittest.TestCase):
                     for line in lines
                 ]
                 with mock.patch.object(finalize, "arm_findings", return_value=built):
-                    finalize.check_answering_run(
+                    finalize.station_answering_run(
                         found,
                         protocol.parent,
                         protocol,
@@ -528,7 +528,7 @@ class ReadmePlaceholders(unittest.TestCase):
             protocol = area / "PROTOCOL-a.md"
             protocol.write_text(text, encoding="utf-8")
             found = Findings(tell=None)
-            finalize.check_open_fields(
+            finalize.station_open_fields(
                 found,
                 protocol,
                 text,
@@ -547,7 +547,7 @@ class ReadmePlaceholders(unittest.TestCase):
             protocol = Path(d) / "PROTOCOL-a.md"
             protocol.write_text(text, encoding="utf-8")
             found = Findings(tell=None)
-            finalize.check_open_fields(
+            finalize.station_open_fields(
                 found,
                 protocol,
                 text,
@@ -683,7 +683,7 @@ class ReadmeRoute(unittest.TestCase):
                 protocol = area / "PROTOCOL-a.md"
                 protocol.write_text(text, encoding="utf-8")
                 found = Findings(tell=None)
-                finalize.check_open_fields(
+                finalize.station_open_fields(
                     found,
                     protocol,
                     text,
@@ -735,7 +735,7 @@ class DataCountsStation(unittest.TestCase):
     def _station(self, scope: str) -> tuple[bool, Findings]:
         found = Findings(tell=None)
         text = f"- **Data / scope:** {scope}\n"
-        held = finalize.check_data_counts(found, self.PROTOCOL, text, area_state())
+        held = finalize.station_data_counts(found, self.PROTOCOL, text, area_state())
         return held, found
 
     def test_counts_of_a_run_the_area_lacks_block(self):
@@ -767,7 +767,7 @@ class WaysOutUnderAPathWithASpace(unittest.TestCase):
         found = Findings(tell=None)
         text = "- **Data / scope:** data/x.csv · counts (prepare run r9): 4 items\n"
         state = area_state(area=protocol.parent)
-        self.assertFalse(finalize.check_data_counts(found, protocol, text, state))
+        self.assertFalse(finalize.station_data_counts(found, protocol, text, state))
         (f,) = found.found
         return f.fix
 
@@ -785,7 +785,7 @@ class WaysOutUnderAPathWithASpace(unittest.TestCase):
     def _repeated_fix(self, area: Path) -> str:
         text = head(repeat_cost="low") + "- **Unit:** one\n- **Unit:** two\n"
         found = Findings(tell=None)
-        finalize.check_open_fields(
+        finalize.station_open_fields(
             found,
             area / "PROTOCOL-x.md",
             text,
@@ -937,7 +937,7 @@ class AnExplorationReleaseThatCannotBeChecked(unittest.TestCase):
 
 
 class AnUnlistedHistoryComesBeforeTheOtherHolds(unittest.TestCase):
-    """Station 2 (`registration_station.station_changes`): a history git
+    """Station 2 (`registration_station.workflow_and_holds`): a history git
     could not list is the one finding, before the hold on a start file
     that is found nowhere — that check did not run on the commits' files.
     The twin, a history that was listed, leaves the other hold its turn.
@@ -954,7 +954,7 @@ class AnUnlistedHistoryComesBeforeTheOtherHolds(unittest.TestCase):
 
         measured = Measured(AREA, PID, (), (), (), (), missing_starts=(self.MISSING,))
         state = area_state(history_unread=history_unread, measured={PID: measured})
-        flow, holds = registration_station.station_changes(
+        flow, holds = registration_station.workflow_and_holds(
             AREA,
             AREA / "PROTOCOL-x.md",
             PID,
@@ -1000,7 +1000,7 @@ class CriterionNStation(unittest.TestCase):
     def test_a_denominator_over_a_record_that_does_not_read_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             found = Findings(tell=None)
-            finalize.check_criterion_n(found, self._run(d, {"criterion_1_n": 12}))
+            finalize.station_criterion_n(found, self._run(d, {"criterion_1_n": 12}))
             (f,) = found.found
             self.assertIn("the record of r1 does not read", f.text)
             self.assertEqual(f.rule, TECHNICAL_RULE)
@@ -1008,7 +1008,9 @@ class CriterionNStation(unittest.TestCase):
     def test_the_twin_without_a_denominator_the_record_is_not_read(self):
         with tempfile.TemporaryDirectory() as d:
             found = Findings(tell=None)
-            finalize.check_criterion_n(found, self._run(d, {"criterion_1_pass": True}))
+            finalize.station_criterion_n(
+                found, self._run(d, {"criterion_1_pass": True})
+            )
             self.assertEqual(found.found, [])
 
 
@@ -1030,7 +1032,7 @@ class NullLaneStation(unittest.TestCase):
         kept = [KeptRows(OutputEntry(Path("out/rows.jsonl"), None, len(rows)), rows)]
         found = Findings(tell=None)
         with mock.patch.object(finalize, "kept_jsonl_rows", return_value=kept):
-            finalize.check_null_lane(found, AREA / "runs" / "r1")
+            finalize.station_null_lane(found, AREA / "runs" / "r1")
         return found
 
     def test_an_unmoved_null_lane_reaches_the_findings_as_a_warning(self):

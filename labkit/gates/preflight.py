@@ -280,7 +280,7 @@ def preflight_area(
         )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
-    check_protocol_fields(findings, protocol, text, report, head)
+    station_protocol_fields(findings, protocol, text, report, head)
 
     # the facts every later station reads, read once
     lane = standard_contract.lane(head.repeat_cost)
@@ -289,7 +289,7 @@ def preflight_area(
     git_repo = git_root(area)
 
     if lane.freeze and not frozen:  # 1, the sentences the freeze owes: a warning
-        check_promise_sentences(findings, protocol, text, head)
+        station_promise_sentences(findings, protocol, text, head)
 
     # 2. repeat cost — told, never counted
     findings.header("repeat cost")
@@ -302,14 +302,16 @@ def preflight_area(
     # 3. audit findings — the records always; the line's coverage where the
     #    lane owes the freeze and a line is stamped; handed over elsewhere always
     findings.header("audit findings")
-    records = check_audit_records(findings, area, frozen=frozen)
+    records = station_audit_records(findings, area, frozen=frozen)
     if lane.freeze and head.preflight_audit:
-        check_audit_coverage(findings, area, head.preflight_audit, text, frozen=frozen)
-    check_handed_over_elsewhere(findings, area, records)
+        station_audit_coverage(
+            findings, area, head.preflight_audit, text, frozen=frozen
+        )
+    station_handed_over_elsewhere(findings, area, records)
 
     # 4. code-check — always
     findings.header("code-check: intent ids, stamp coverage")
-    check_code(
+    station_code(
         findings,
         area,
         protocol,
@@ -323,7 +325,7 @@ def preflight_area(
     #    read is only told when an earlier station already blocked (the same
     #    cause, said once); git failing or another file always blocks
     findings.header("scope-sha")
-    check_scope_stamp(findings, area, protocol)
+    station_scope_stamp(findings, area, protocol)
 
     # 6. working tree — only inside a git repo: outside one no commit holds
     # anything, and `tree_dirty` would answer False for a tree nobody compared
@@ -331,24 +333,24 @@ def preflight_area(
     if git_repo is None:
         findings.note("  n/a — not a git repo")
     else:
-        check_working_tree(findings, repo)
+        station_working_tree(findings, repo)
 
     # 7. hooks — only inside a git repo
     findings.header("hooks")
     if git_repo is None:
         findings.note("  n/a — not a git repo")
     else:
-        check_hooks(findings, git_repo)
+        station_hooks(findings, git_repo)
 
     # 8. area tests — always; frozen = true owes the file
     findings.header("tests")
-    check_tests_owed(findings, area_tests(area, repo), frozen=frozen)
+    station_tests_owed(findings, area_tests(area, repo), frozen=frozen)
 
     # 9. summary
     return findings.report("preflight", "freezing")  # 1 with a blocker, else 0
 
 
-def check_protocol_fields(
+def station_protocol_fields(
     findings: Findings,
     protocol: Path,
     text: str,
@@ -418,7 +420,7 @@ def check_protocol_fields(
         findings.note("  ok")
 
 
-def check_promise_sentences(
+def station_promise_sentences(
     findings: Findings, protocol: Path, text: str, head: "protocol_block.Head"
 ) -> None:
     """Station 1, the sentences the freeze owes: every [[promise]] table of
@@ -500,7 +502,7 @@ def _owed(
     )
 
 
-def check_audit_records(
+def station_audit_records(
     findings: Findings, area: Path, *, frozen: bool
 ) -> list[audit_findings.Record] | None:
     """Station 3, the records: every finding still `open` in the area's
@@ -530,7 +532,7 @@ def check_audit_records(
     return records
 
 
-def check_audit_coverage(
+def station_audit_coverage(
     findings: Findings, area: Path, audit_line: str, text: str, *, frozen: bool
 ) -> None:
     """Station 3, the record: why the record the head's AUDIT_LINE names
@@ -548,7 +550,7 @@ def check_audit_coverage(
         )
 
 
-def check_handed_over_elsewhere(
+def station_handed_over_elsewhere(
     findings: Findings, area: Path, records: list[audit_findings.Record] | None
 ) -> None:
     """Station 3, the reminder: every open finding of another area of the
@@ -596,7 +598,7 @@ def check_handed_over_elsewhere(
         findings.note(f"  all decided ({len(records)} audit(s) recorded)")
 
 
-def check_code(
+def station_code(
     findings: Findings,
     area: Path,
     protocol: Path,
@@ -618,7 +620,7 @@ def check_code(
         findings.note("  ok")
 
 
-def check_scope_stamp(findings: Findings, area: Path, protocol: Path) -> None:
+def station_scope_stamp(findings: Findings, area: Path, protocol: Path) -> None:
     """Station 5: the audit stamp of the area's input scope
     (`scope_sha.area_stamp`), or why there is none; a way out reruns
     preflight for PROTOCOL (`commands.preflight_command`). A stamp that cannot be
@@ -665,7 +667,7 @@ def check_scope_stamp(findings: Findings, area: Path, protocol: Path) -> None:
         findings.note(f"  {sha}")
 
 
-def check_working_tree(findings: Findings, repo: Path) -> None:
+def station_working_tree(findings: Findings, repo: Path) -> None:
     """Station 6: uncommitted changes under REPO, a git repository, warn —
     the number would rest on code no commit holds."""
     if tree_dirty(repo):
@@ -678,7 +680,7 @@ def check_working_tree(findings: Findings, repo: Path) -> None:
         findings.note("  clean")
 
 
-def check_hooks(findings: Findings, git_repo: Path) -> None:
+def station_hooks(findings: Findings, git_repo: Path) -> None:
     """Station 7: the gates that do not depend on the agent remembering —
     every gap `install_hooks.check` names in GIT_REPO warns: a repo without
     the hooks (or with an older labkit's) runs on good intentions only."""
@@ -742,7 +744,7 @@ def tell_test_run(
         )
 
 
-def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> None:
+def station_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> None:
     """Station 8: what running the area's tests found (TESTS, from
     `area_tests`). No file: a warning, a blocker once FROZEN — frozen means
     every gap is owed (protocol-check's graduation), and the permanent

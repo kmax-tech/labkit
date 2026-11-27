@@ -733,7 +733,7 @@ class Workflow(enum.Enum):
     is undecided or split, the holds are the confirmatory ones, the most,
     never the least; where nothing could be read — no stamped id, or a
     first measurement left untold — no registration was compared at all
-    (`registration_station.station_changes` says which of its cases
+    (`registration_station.workflow_and_holds` says which of its cases
     hold what)."""
 
     EXPLORATORY = EXPLORATORY

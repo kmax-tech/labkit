@@ -36,7 +36,7 @@ Calls:
 
 Calls:
 
-- `finalize.check_answering_run` — Station 1: the run every later station holds the protocol to — chosen from STATE (the area's state, `area_state.Measured.answering`), shown, and held to the run the head declares (`[result] run`).
+- `finalize.station_answering_run` — Station 1: the run every later station holds the protocol to — chosen from STATE (the area's state, `area_state.Measured.answering`), shown, and held to the run the head declares (`[result] run`).
 
 **Further down (static estimate):**
 
@@ -73,7 +73,7 @@ Calls:
 
 Calls:
 
-- `registration_station.check_registration` — Hold the answering RUN to its workflow's registration (`station_changes`, read from STATE, the area's state built once); a note when it holds — what the workflow held —, and one per field a correction released (`corrected_in_place`), so the release names what changed and why.
+- `registration_station.station_registration` — Hold the answering RUN to its workflow's registration (`workflow_and_holds`, read from STATE, the area's state built once); a note when it holds — what the workflow held —, and one per field a correction released (`corrected_in_place`), so the release names what changed and why.
 
 **Further down (static estimate):**
 
@@ -124,13 +124,13 @@ Calls:
 
 Calls:
 
-- `finalize.check_intent_keys_in_metrics` — Station 3: every registered intent id reports as a key of the answering run's metrics.json, a branch as one of its registered outcomes (intent-check).
+- `finalize.station_intent_keys_in_metrics` — Station 3: every registered intent id reports as a key of the answering run's metrics.json, a branch as one of its registered outcomes (intent-check).
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `finalize.check_intent_keys_in_metrics` | BLOCKER | GUARANTEED | technical contract | intent-check: {…} | repair what the sentence names; `{…}` holds it alone |
+| `finalize.station_intent_keys_in_metrics` | BLOCKER | GUARANTEED | technical contract | intent-check: {…} | repair what the sentence names; `{…}` holds it alone |
 
 **Further down (static estimate):**
 
@@ -149,19 +149,19 @@ Calls:
 
 Calls:
 
-- `finalize.check_run_code` — Station 4, first half: the code that produced the answering run's number, and that of every run it derives from, is the code here now (`run_record_check.code_since_run`), for every kind — a fix after the run with no new run would leave the old code's number standing.
-- `finalize.check_declared_scopes` — Station 4, second half: a promise's declared scope edited after the run: today's code is not the code that produced the number.
-- `finalize.check_answer_reading` — Station 4, third part: each run of the answering run's lineage that declares its answer reading (`answer_reading`) is held to its parent beyond the code (`run_record_check.answer_reading_gaps`): the prompts field of PROTOCOL as each run started under it, and the answer file both registered.
+- `finalize.station_run_code` — Station 4, first half: the code that produced the answering run's number, and that of every run it derives from, is the code here now (`run_record_check.code_since_run`), for every kind — a fix after the run with no new run would leave the old code's number standing.
+- `finalize.station_declared_scopes` — Station 4, second half: a promise's declared scope edited after the run: today's code is not the code that produced the number.
+- `finalize.station_answer_reading` — Station 4, third part: each run of the answering run's lineage that declares its answer reading (`answer_reading`) is held to its parent beyond the code (`run_record_check.answer_reading_gaps`): the prompts field of PROTOCOL as each run started under it, and the answer file both registered.
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `finalize.check_run_code` | WARNING | GUARANTEED | technical contract | {…} | — |
-| `finalize.check_answer_reading` | BLOCKER | GUARANTEED | technical contract | the prompts {…} re-reads with cannot be held to {…}'s: {…} | restore what the sentence names, or {…} |
-| `finalize.check_declared_scopes` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} recorded no promise block: {…} — a run records the block it was measured under, so th… | a block added after the run is a new registration: {…} |
-| `finalize.check_declared_scopes` | BLOCKER | GUARANTEED | variable | declared scope cannot be compared with what {…} recorded: {…} | {…}, then `{…}` |
-| `finalize.check_declared_scopes` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | declared scope changed since {…}: {…} | rerun before reporting: `{…}`, then audit that run |
+| `finalize.station_run_code` | WARNING | GUARANTEED | technical contract | {…} | — |
+| `finalize.station_answer_reading` | BLOCKER | GUARANTEED | technical contract | the prompts {…} re-reads with cannot be held to {…}'s: {…} | restore what the sentence names, or {…} |
+| `finalize.station_declared_scopes` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} recorded no promise block: {…} — a run records the block it was measured under, so th… | a block added after the run is a new registration: {…} |
+| `finalize.station_declared_scopes` | BLOCKER | GUARANTEED | variable | declared scope cannot be compared with what {…} recorded: {…} | {…}, then `{…}` |
+| `finalize.station_declared_scopes` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | declared scope changed since {…}: {…} | rerun before reporting: `{…}`, then audit that run |
 
 **Further down (static estimate):**
 
@@ -196,16 +196,16 @@ Calls:
 
 Calls:
 
-- `finalize.check_open_fields` — Station 5: fields of the protocol still empty or a placeholder — in a field owed as a must under LAB_011, in any other as an open assignment —, a bound field written twice (a blocker), the README's placeholders (CODE-016 The experiment area reconstructs itself) and route block, and the generated data counts (`check_data_counts`).
+- `finalize.station_open_fields` — Station 5: fields of the protocol still empty or a placeholder — in a field owed as a must under LAB_011, in any other as an open assignment —, a bound field written twice (a blocker), the README's placeholders (CODE-016 The experiment area reconstructs itself) and route block, and the generated data counts (`station_data_counts`).
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `finalize.check_open_fields` | WARNING | GUARANTEED | variable | {…}:{…}: {…} | — |
-| `finalize.check_open_fields` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | {…}; then `{…}` |
-| `finalize.check_open_fields` | BLOCKER | GUARANTEED | technical contract | {…} | repair README.md as UTF-8 text or remove it, then `{…}` |
-| `finalize.check_open_fields` | WARNING | STATIC_EVIDENCE | CODE-016 The experiment area reconstructs itself | {…} — a stamped placeholder, fill or delete the line | — |
+| `finalize.station_open_fields` | WARNING | GUARANTEED | variable | {…}:{…}: {…} | — |
+| `finalize.station_open_fields` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | {…}; then `{…}` |
+| `finalize.station_open_fields` | BLOCKER | GUARANTEED | technical contract | {…} | repair README.md as UTF-8 text or remove it, then `{…}` |
+| `finalize.station_open_fields` | WARNING | STATIC_EVIDENCE | CODE-016 The experiment area reconstructs itself | {…} — a stamped placeholder, fill or delete the line | — |
 
 **Further down (static estimate):**
 
@@ -217,13 +217,13 @@ Calls:
 | `readme_check.readme_route` | WARNING | GUARANTEED | technical contract | README.md route: does not name {…} | — |
 | `readme_check.readme_route` | WARNING | GUARANTEED | CODE-016 The experiment area reconstructs itself | README.md route: scripts/01_measure.py does not exist | — |
 | `readme_check.readme_route` | WARNING | GUARANTEED | CODE-016 The experiment area reconstructs itself | README.md route: scripts/01_measure.py defines no evaluate_rows | — |
-| `finalize.check_data_counts` | BLOCKER | GUARANTEED | variable | {…} | `{…}` writes them from the run — never typed |
+| `finalize.station_data_counts` | BLOCKER | GUARANTEED | variable | {…} | `{…}` writes them from the run — never typed |
 
 ### finalize.finalize_area · 6. provenance — at low repeat cost, and only with a run
 
 Calls:
 
-- `finalize.check_provenance` — Station 6: every source the run read frozen in its record, its bytes the ones the record names, and tracked in git or kept outside it — by an ignore rule, or lying outside the repository; the outputs tracked, an untracked one a warning (`provenance_findings`).
+- `finalize.station_provenance` — Station 6: every source the run read frozen in its record, its bytes the ones the record names, and tracked in git or kept outside it — by an ignore rule, or lying outside the repository; the outputs tracked, an untracked one a warning (`provenance_findings`).
 
 **Further down (static estimate):**
 
@@ -242,7 +242,7 @@ Calls:
 
 Calls:
 
-- `finalize.check_input_origins` — Station 7: each input of the answering run whose record names an origin run is that run's registered output, its bytes as both records hold them (`origin_check.origin_gap`) — the first part that fails is a blocker naming the input, the origin and the condition, with the way out that restores evidence (`origin_finding`).
+- `finalize.station_input_origins` — Station 7: each input of the answering run whose record names an origin run is that run's registered output, its bytes as both records hold them (`origin_check.origin_gap`) — the first part that fails is a blocker naming the input, the origin and the condition, with the way out that restores evidence (`origin_finding`).
 
 **Further down (static estimate):**
 
@@ -264,7 +264,7 @@ Calls:
 
 Calls:
 
-- `finalize.check_area_tests` — Station 8: the area's own tests.
+- `finalize.station_area_tests` — Station 8: the area's own tests.
 
 **Further down (static estimate):**
 
@@ -278,19 +278,19 @@ Calls:
 
 Calls:
 
-- `finalize.check_registered_outputs` — Station 9: every output the run registered is the file the run recorded (`output_record_findings`) — the number's rows and the deliverable of an external task, held by path and sha256 from outputs.json, on every lane.
-- `finalize.check_criterion_n` — Station 9: a criterion's denominator that matches no recorded input count (`run_record_check.criterion_n_input_mismatches`).
-- `finalize.check_null_lane` — Station 9: the kept rows' null lane moved (`null_lane_findings`) — a gate over the run's own output, not the editable script's guard.
-- `finalize.check_kept_number` — Station 9: the kept number — the key the head's `[kept]` names, at every kind — held as a finite number in the answering run's metrics.json (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check the agent cannot edit away, where the skeleton's own check sits in its script.
-- `finalize.check_reference` — Station 9: the comparison with the stated value the head registers (`[reference]`, a computation's), held to the answering run's metrics.json (`reference.comparison_gaps`, each a guaranteed blocker): a table that does not read, or one on a kind with a bar (`reference_gap`), blocks too; metrics that do not read block as the other stations' do.
+- `finalize.station_registered_outputs` — Station 9: every output the run registered is the file the run recorded (`output_record_findings`) — the number's rows and the deliverable of an external task, held by path and sha256 from outputs.json, on every lane.
+- `finalize.station_criterion_n` — Station 9: a criterion's denominator that matches no recorded input count (`run_record_check.criterion_n_input_mismatches`).
+- `finalize.station_null_lane` — Station 9: the kept rows' null lane moved (`null_lane_findings`) — a gate over the run's own output, not the editable script's guard.
+- `finalize.station_kept_number` — Station 9: the kept number — the key the head's `[kept]` names, at every kind — held as a finite number in the answering run's metrics.json (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check the agent cannot edit away, where the skeleton's own check sits in its script.
+- `finalize.station_reference` — Station 9: the comparison with the stated value the head registers (`[reference]`, a computation's), held to the answering run's metrics.json (`reference.comparison_gaps`, each a guaranteed blocker): a table that does not read, or one on a kind with a bar (`reference_gap`), blocks too; metrics that do not read block as the other stations' do.
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `finalize.check_reference` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | repair the head as the sentence says, then `{…}` |
-| `finalize.check_reference` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | repair the [reference] and [kept] tables as the sentence says; `{…}` shows them |
-| `finalize.check_kept_number` | BLOCKER | GUARANTEED | variable | {…}: {…}{…} | `f"`{fill_command(protocol, f'kept.{gap.label.removeprefix("[kept] ")}=<value>')}`" if unfilled else f"repair the head as the sentence says, then " f"`{gate_command('finalize', protocol.parent)}`"` |
+| `finalize.station_reference` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | repair the head as the sentence says, then `{…}` |
+| `finalize.station_reference` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | repair the [reference] and [kept] tables as the sentence says; `{…}` shows them |
+| `finalize.station_kept_number` | BLOCKER | GUARANTEED | variable | {…}: {…}{…} | `f"`{fill_command(protocol, f'kept.{gap.label.removeprefix("[kept] ")}=<value>')}`" if unfilled else f"repair the head as the sentence says, then " f"`{gate_command('finalize', protocol.parent)}`"` |
 
 **Further down (static estimate):**
 
@@ -312,7 +312,7 @@ Calls:
 
 Calls:
 
-- `finalize.check_open_audit_findings` — Station 10: every finding still `open` in the audit records of PROTOCOL (those that name PROTOCOL_ID, `followup.records_of`), any mode (`findings.open_findings`, with the table of the gates' rules) — a BLOCKER blocks, a WARNING warns, a NOTE is printed — each with its file; a finding on another protocol of the area holds nothing here, and a head without an id (PROTOCOL_ID None) has no record to hold it.
+- `finalize.station_open_audit_findings` — Station 10: every finding still `open` in the audit records of PROTOCOL (those that name PROTOCOL_ID, `followup.records_of`), any mode (`findings.open_findings`, with the table of the gates' rules) — a BLOCKER blocks, a WARNING warns, a NOTE is printed — each with its file; a finding on another protocol of the area holds nothing here, and a head without an id (PROTOCOL_ID None) has no record to hold it.
 
 **Further down (static estimate):**
 
@@ -337,21 +337,21 @@ Reaches no finding site.
 
 Calls:
 
-- `preflight.check_protocol_fields` — Station 1: the field report of protocol-check (REPORT: the owed fields by cut, the graduation at frozen = true), the stamped id against the repo's others and the bound annotation evidence (`check_annotation_validity`), a repeat cost lowered since the first commit.
-- `preflight.check_promise_sentences` — Station 1, the sentences the freeze owes: every [[promise]] table of TEXT whose `sentence` is still the stamp's `<…>` placeholder (`promises.placeholder_sentences`), a warning where the kind registers (`protocol_check.kind_registers`) — the freeze refuses them (`promises.promise_tables_owed`, a must gap of the field report once frozen = true), so the gate before the freeze names them first.
+- `preflight.station_protocol_fields` — Station 1: the field report of protocol-check (REPORT: the owed fields by cut, the graduation at frozen = true), the stamped id against the repo's others and the bound annotation evidence (`check_annotation_validity`), a repeat cost lowered since the first commit.
+- `preflight.station_promise_sentences` — Station 1, the sentences the freeze owes: every [[promise]] table of TEXT whose `sentence` is still the stamp's `<…>` placeholder (`promises.placeholder_sentences`), a warning where the kind registers (`protocol_check.kind_registers`) — the freeze refuses them (`promises.promise_tables_owed`, a must gap of the field report once frozen = true), so the gate before the freeze names them first.
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
 | `preflight.preflight_area` | BLOCKER | GUARANTEED | variable | HEAD (must): {…} | `repair_head_way(protocol)` |
-| `preflight.check_protocol_fields` | BLOCKER | GUARANTEED | variable | {…} | {…} in {…}; {…} |
-| `preflight.check_protocol_fields` | BLOCKER | GUARANTEED | technical contract | REPEATED (must): {…} | {…}; then `{…}` |
-| `preflight.check_protocol_fields` | BLOCKER | GUARANTEED | LAB-011 Required-field check | {…}:{…}: PLACEHOLDER (must): {…} | replace the placeholder with this protocol's own text; {…} |
-| `preflight.check_protocol_fields` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
-| `preflight.check_protocol_fields` | WARNING | GUARANTEED | open assignment | missing (should): {…} | `rename_way(text, label)` |
-| `preflight.check_protocol_fields` | WARNING | GUARANTEED | open assignment | {…}:{…}: placeholder (should): {…} | — |
-| `preflight.check_promise_sentences` | WARNING | GUARANTEED | LAB-004 Identifiers make the intent addressable | [[promise]] {…} still carries the stamp's `<…>` sentence — frozen = true refuses it | state each promise explicitly in one sentence in its table (`{…}`); {…} |
+| `preflight.station_protocol_fields` | BLOCKER | GUARANTEED | variable | {…} | {…} in {…}; {…} |
+| `preflight.station_protocol_fields` | BLOCKER | GUARANTEED | technical contract | REPEATED (must): {…} | {…}; then `{…}` |
+| `preflight.station_protocol_fields` | BLOCKER | GUARANTEED | LAB-011 Required-field check | {…}:{…}: PLACEHOLDER (must): {…} | replace the placeholder with this protocol's own text; {…} |
+| `preflight.station_protocol_fields` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
+| `preflight.station_protocol_fields` | WARNING | GUARANTEED | open assignment | missing (should): {…} | `rename_way(text, label)` |
+| `preflight.station_protocol_fields` | WARNING | GUARANTEED | open assignment | {…}:{…}: placeholder (should): {…} | — |
+| `preflight.station_promise_sentences` | WARNING | GUARANTEED | LAB-004 Identifiers make the intent addressable | [[promise]] {…} still carries the stamp's `<…>` sentence — frozen = true refuses it | state each promise explicitly in one sentence in its table (`{…}`); {…} |
 
 **Further down (static estimate):**
 
@@ -369,17 +369,17 @@ Reaches no finding site.
 
 Calls:
 
-- `preflight.check_audit_records` — Station 3, the records: every finding still `open` in the area's audit records, each with its file — a warning before the freeze, a blocker once FROZEN (frozen = true owes every decision, LAB-015 Preflight audit before freezing).
-- `preflight.check_audit_coverage` — Station 3, the record: why the record the head's AUDIT_LINE names does not cover a full run of this code and the promise block TEXT carries now (`audit_gaps.audit_record_gap`, the same answer runlog's freeze gate gives — preflight must not pass a state the run refuses), with the gap's own way out (`RecordGap.fix`: a new audit, or the decisions where the record's findings are still open).
-- `preflight.check_handed_over_elsewhere` — Station 3, the reminder: every open finding of another area of the repo that a handover of that area records (`handovers.handed_over`) — set aside there unresolved, it may be this area's ("its own task").
+- `preflight.station_audit_records` — Station 3, the records: every finding still `open` in the area's audit records, each with its file — a warning before the freeze, a blocker once FROZEN (frozen = true owes every decision, LAB-015 Preflight audit before freezing).
+- `preflight.station_audit_coverage` — Station 3, the record: why the record the head's AUDIT_LINE names does not cover a full run of this code and the promise block TEXT carries now (`audit_gaps.audit_record_gap`, the same answer runlog's freeze gate gives — preflight must not pass a state the run refuses), with the gap's own way out (`RecordGap.fix`: a new audit, or the decisions where the record's findings are still open).
+- `preflight.station_handed_over_elsewhere` — Station 3, the reminder: every open finding of another area of the repo that a handover of that area records (`handovers.handed_over`) — set aside there unresolved, it may be this area's ("its own task").
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `preflight.check_audit_records` | BLOCKER | GUARANTEED | technical contract | {…} | `audit_records.record_way(area)` |
-| `preflight.check_handed_over_elsewhere` | WARNING | GUARANTEED | technical contract | {…} | — |
-| `preflight.check_handed_over_elsewhere` | WARNING | GUARANTEED | technical contract | {…} | — |
+| `preflight.station_audit_records` | BLOCKER | GUARANTEED | technical contract | {…} | `audit_records.record_way(area)` |
+| `preflight.station_handed_over_elsewhere` | WARNING | GUARANTEED | technical contract | {…} | — |
+| `preflight.station_handed_over_elsewhere` | WARNING | GUARANTEED | technical contract | {…} | — |
 
 **Further down (static estimate):**
 
@@ -394,7 +394,7 @@ Calls:
 
 Calls:
 
-- `preflight.check_code` — Station 4: code-check's automated checks (`code_check.code_findings`: intent ids, parser fixtures, prompt drift, stamp coverage), each with its grade as data and counted once — here, not again by code-check.
+- `preflight.station_code` — Station 4: code-check's automated checks (`code_check.code_findings`: intent ids, parser fixtures, prompt drift, stamp coverage), each with its grade as data and counted once — here, not again by code-check.
 
 **Further down (static estimate):**
 
@@ -423,44 +423,44 @@ Calls:
 
 Calls:
 
-- `preflight.check_scope_stamp` — Station 5: the audit stamp of the area's input scope (`scope_sha.area_stamp`), or why there is none; a way out reruns preflight for PROTOCOL (`commands.preflight_command`).
+- `preflight.station_scope_stamp` — Station 5: the audit stamp of the area's input scope (`scope_sha.area_stamp`), or why there is none; a way out reruns preflight for PROTOCOL (`commands.preflight_command`).
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `preflight.check_scope_stamp` | BLOCKER | GUARANTEED | technical contract | cannot stamp the area's scope: {…} | repair the file or promise block the sentence names, then `{…}` |
-| `preflight.check_scope_stamp` | BLOCKER | GUARANTEED | technical contract | cannot stamp the area's scope: {…} | make the file readable (or git work on the repository), then `{…}` |
+| `preflight.station_scope_stamp` | BLOCKER | GUARANTEED | technical contract | cannot stamp the area's scope: {…} | repair the file or promise block the sentence names, then `{…}` |
+| `preflight.station_scope_stamp` | BLOCKER | GUARANTEED | technical contract | cannot stamp the area's scope: {…} | make the file readable (or git work on the repository), then `{…}` |
 
 ### preflight.preflight_area · 6. working tree — only inside a git repo: outside one no commit holds anything, and `tree_dirty` would answer False for a tree nobody compared
 
 Calls:
 
-- `preflight.check_working_tree` — Station 6: uncommitted changes under REPO, a git repository, warn — the number would rest on code no commit holds.
+- `preflight.station_working_tree` — Station 6: uncommitted changes under REPO, a git repository, warn — the number would rest on code no commit holds.
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `preflight.check_working_tree` | WARNING | GUARANTEED | LAB-010 Commit before the run | uncommitted changes in {…} (commit or stash before the run) | — |
+| `preflight.station_working_tree` | WARNING | GUARANTEED | LAB-010 Commit before the run | uncommitted changes in {…} (commit or stash before the run) | — |
 
 ### preflight.preflight_area · 7. hooks — only inside a git repo
 
 Calls:
 
-- `preflight.check_hooks` — Station 7: the gates that do not depend on the agent remembering — every gap `install_hooks.check` names in GIT_REPO warns: a repo without the hooks (or with an older labkit's) runs on good intentions only.
+- `preflight.station_hooks` — Station 7: the gates that do not depend on the agent remembering — every gap `install_hooks.check` names in GIT_REPO warns: a repo without the hooks (or with an older labkit's) runs on good intentions only.
 
 **At this station:**
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `preflight.check_hooks` | WARNING | GUARANTEED | LAB-011 Required-field check | {…} | — |
+| `preflight.station_hooks` | WARNING | GUARANTEED | LAB-011 Required-field check | {…} | — |
 
 ### preflight.preflight_area · 8. area tests — always; frozen = true owes the file
 
 Calls:
 
-- `preflight.check_tests_owed` — Station 8: what running the area's tests found (TESTS, from `area_tests`).
+- `preflight.station_tests_owed` — Station 8: what running the area's tests found (TESTS, from `area_tests`).
 
 **Further down (static estimate):**
 

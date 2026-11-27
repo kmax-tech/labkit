@@ -1,4 +1,4 @@
-# traced: 4798 passed, 4 skipped, 7952 subtests passed in 459.84s (0:07:39)
+# traced: 4808 passed, 4 skipped, 7961 subtests passed in 469.86s (0:07:49)
 unit	channel	nth	wording	standing	tests	rule_tests	test_files
 labkit.checks.audit_binding.check_audit_findings_decided	finding	1	{…} — {…}	direct	10	1	tests/test_adopt_per_protocol.py tests/test_end_to_end.py tests/test_finalize_open_findings.py tests/test_handovers.py tests/test_next_step.py tests/test_protocol_runs.py tests/test_rules_audit_binding.py
 labkit.checks.audit_binding.check_audit_findings_decided	finding	2	{…} — {…}	direct	2	1	tests/test_finalize_open_findings.py tests/test_rules_audit_binding.py
@@ -173,43 +173,43 @@ labkit.gates.exploration_hold.step_gap_hold	finding	1	run {…} made the step "{
 labkit.gates.exploration_hold.unknown_step_hold	finding	1	the step a run was measured under cannot be told: {…}{…} — the comparison with its basis …	only through commands	1	0	tests/test_exploration_hold.py
 labkit.gates.exploration_hold.unstepped_holds	finding	1	run {…} was measured without a step, and its registration differs from the first measurem…	direct	5	0	tests/test_exploration_hold.py tests/test_registration_station.py
 labkit.gates.finalize._refuse	finding	1	{…}	direct	3	0	tests/test_finalize.py
-labkit.gates.finalize.check_answer_reading	finding	1	the prompts {…} re-reads with cannot be held to {…}'s: {…}	direct	1	0	tests/test_run_code.py
-labkit.gates.finalize.check_data_counts	finding	1	{…}	direct	3	0	tests/test_finalize_steps.py
-labkit.gates.finalize.check_declared_scopes	finding	1	declared scope cannot be compared with what {…} recorded: {…}	direct	1	0	tests/test_finalize.py
-labkit.gates.finalize.check_declared_scopes	finding	1	declared scope changed since {…}: {…}	direct	3	0	tests/test_finalize.py tests/test_promises.py
-labkit.gates.finalize.check_declared_scopes	finding	1	{…} recorded no promise block: {…} — a run records the block it was measured under, so th…	direct	2	0	tests/test_audit.py tests/test_registration_contract.py
-labkit.gates.finalize.check_intent_keys_in_metrics	finding	1	intent-check: {…}	direct	1	0	tests/test_finalize.py
-labkit.gates.finalize.check_kept_number	finding	1	{…}: {…}{…}	direct	2	0	tests/test_kept.py tests/test_reference.py
-labkit.gates.finalize.check_open_fields	finding	1	{…}	direct	1	0	tests/test_finalize.py
-labkit.gates.finalize.check_open_fields	finding	1	{…} — a stamped placeholder, fill or delete the line	direct	42	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_obligations_scenario.py
-labkit.gates.finalize.check_open_fields	finding	1	{…}: {…}	direct	5	0	tests/test_field_values.py tests/test_finalize_steps.py tests/test_report_check_areas.py
-labkit.gates.finalize.check_open_fields	finding	1	{…}:{…}: {…}	direct	20	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_high_compute_workflow.py tests/test_report_blocks.py
-labkit.gates.finalize.check_reference	finding	1	{…}: {…}	direct	1	0	tests/test_reference.py
-labkit.gates.finalize.check_reference	finding	2	{…}: {…}	direct	1	0	tests/test_reference.py
-labkit.gates.finalize.check_run_code	finding	1	{…}	direct	1	0	tests/test_run_code.py
 labkit.gates.finalize.choose_answering_run	finding	1	no stamped protocol id ([protocol] id) — no run is bound to it	direct	2	0	tests/test_finalize.py tests/test_finalize_steps.py
 labkit.gates.finalize.choose_answering_run	finding	1	{…}: bound to this protocol and newer by name than the adopted run {…} — if one of them a…	direct	9	0	tests/test_end_to_end.py tests/test_exploration_hold.py tests/test_finalize_steps.py tests/test_protocol_runs.py tests/test_repair_guidance.py tests/test_withdrawal_order.py
 labkit.gates.finalize.declared_run_gaps	finding	1	{…}	direct	8	0	tests/test_end_to_end.py tests/test_finalize_steps.py tests/test_migration_bar.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_report_check_stations.py
 labkit.gates.finalize.run_file_unread	finding	1	{…}	direct	1	0	tests/test_read_causes.py
 labkit.gates.finalize.run_file_unread	finding	2	{…}	direct	4	0	tests/test_finalize_steps.py tests/test_origin_check.py tests/test_read_causes.py tests/test_reference.py
+labkit.gates.finalize.station_answer_reading	finding	1	the prompts {…} re-reads with cannot be held to {…}'s: {…}	direct	1	0	tests/test_run_code.py
+labkit.gates.finalize.station_data_counts	finding	1	{…}	direct	3	0	tests/test_finalize_steps.py
+labkit.gates.finalize.station_declared_scopes	finding	1	declared scope cannot be compared with what {…} recorded: {…}	direct	1	0	tests/test_finalize.py
+labkit.gates.finalize.station_declared_scopes	finding	1	declared scope changed since {…}: {…}	direct	3	0	tests/test_finalize.py tests/test_promises.py
+labkit.gates.finalize.station_declared_scopes	finding	1	{…} recorded no promise block: {…} — a run records the block it was measured under, so th…	direct	2	0	tests/test_audit.py tests/test_registration_contract.py
+labkit.gates.finalize.station_intent_keys_in_metrics	finding	1	intent-check: {…}	direct	1	0	tests/test_finalize.py
+labkit.gates.finalize.station_kept_number	finding	1	{…}: {…}{…}	direct	2	0	tests/test_kept.py tests/test_reference.py
+labkit.gates.finalize.station_open_fields	finding	1	{…}	direct	1	0	tests/test_finalize.py
+labkit.gates.finalize.station_open_fields	finding	1	{…} — a stamped placeholder, fill or delete the line	direct	42	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_obligations_scenario.py
+labkit.gates.finalize.station_open_fields	finding	1	{…}: {…}	direct	5	0	tests/test_field_values.py tests/test_finalize_steps.py tests/test_report_check_areas.py
+labkit.gates.finalize.station_open_fields	finding	1	{…}:{…}: {…}	direct	20	0	tests/test_counter_cases.py tests/test_end_to_end.py tests/test_finalize.py tests/test_finalize_steps.py tests/test_handovers.py tests/test_high_compute_workflow.py tests/test_report_blocks.py
+labkit.gates.finalize.station_reference	finding	1	{…}: {…}	direct	1	0	tests/test_reference.py
+labkit.gates.finalize.station_reference	finding	2	{…}: {…}	direct	1	0	tests/test_reference.py
+labkit.gates.finalize.station_run_code	finding	1	{…}	direct	1	0	tests/test_run_code.py
 labkit.gates.finalize.unreportable_warnings	finding	1	the answering run {…}: {…} — its number cannot be reported (report-check refuses it)	direct	14	0	tests/test_agent_hooks.py tests/test_end_to_end.py tests/test_finalize_open_findings.py tests/test_promises.py tests/test_protocol_fill.py tests/test_report_blocks.py tests/test_report_check.py tests/test_report_check_areas.py tests/test_report_check_stations.py
 labkit.gates.preflight._owed	finding	1	{…}	direct	18	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py
 labkit.gates.preflight._owed	finding	2	{…}	direct	37	0	tests/test_agent_hooks.py tests/test_explored_in.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
-labkit.gates.preflight.check_audit_records	finding	1	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
-labkit.gates.preflight.check_handed_over_elsewhere	finding	1	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
-labkit.gates.preflight.check_handed_over_elsewhere	finding	2	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
-labkit.gates.preflight.check_hooks	finding	1	{…}	direct	42	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_high_compute_workflow.py tests/test_next_step.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_repeat_cost_lowered_and_waived_audit.py
-labkit.gates.preflight.check_promise_sentences	finding	1	[[promise]] {…} still carries the stamp's `<…>` sentence — frozen = true refuses it	direct	2	0	tests/test_agent_hooks.py tests/test_promise_preflight.py
-labkit.gates.preflight.check_protocol_fields	finding	1	REPEATED (must): {…}	direct	1	0	tests/test_field_values.py
-labkit.gates.preflight.check_protocol_fields	finding	1	missing (should): {…}	direct	36	0	tests/test_agent_hooks.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_protocol_id.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
-labkit.gates.preflight.check_protocol_fields	finding	1	{…}	direct	38	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_explored_in.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
-labkit.gates.preflight.check_protocol_fields	finding	2	{…}	direct	1	0	tests/test_repeat_cost_lowered_and_waived_audit.py
-labkit.gates.preflight.check_protocol_fields	finding	1	{…}:{…}: PLACEHOLDER (must): {…}	direct	3	0	tests/test_agent_hooks.py tests/test_preflight_stations.py
-labkit.gates.preflight.check_protocol_fields	finding	1	{…}:{…}: placeholder (should): {…}	direct	3	0	tests/test_agent_hooks.py tests/test_preflight_stations.py
-labkit.gates.preflight.check_scope_stamp	finding	1	cannot stamp the area's scope: {…}	direct	6	0	tests/test_preflight_stations.py
-labkit.gates.preflight.check_scope_stamp	finding	2	cannot stamp the area's scope: {…}	direct	2	0	tests/test_explored_in.py tests/test_preflight_stations.py
-labkit.gates.preflight.check_working_tree	finding	1	uncommitted changes in {…} (commit or stash before the run)	direct	20	0	tests/test_agent_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py
 labkit.gates.preflight.preflight_area	finding	1	HEAD (must): {…}	direct	4	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_audit_records	finding	1	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_handed_over_elsewhere	finding	1	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_handed_over_elsewhere	finding	2	{…}	direct	2	0	tests/test_preflight.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_hooks	finding	1	{…}	direct	42	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_high_compute_workflow.py tests/test_next_step.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_repeat_cost_lowered_and_waived_audit.py
+labkit.gates.preflight.station_promise_sentences	finding	1	[[promise]] {…} still carries the stamp's `<…>` sentence — frozen = true refuses it	direct	2	0	tests/test_agent_hooks.py tests/test_promise_preflight.py
+labkit.gates.preflight.station_protocol_fields	finding	1	REPEATED (must): {…}	direct	1	0	tests/test_field_values.py
+labkit.gates.preflight.station_protocol_fields	finding	1	missing (should): {…}	direct	36	0	tests/test_agent_hooks.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_protocol_id.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
+labkit.gates.preflight.station_protocol_fields	finding	1	{…}	direct	38	0	tests/test_agent_hooks.py tests/test_codex_hooks.py tests/test_explored_in.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_promise_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py tests/test_runlog_freeze_gate.py tests/test_scope_sha.py tests/test_unreadable_source.py
+labkit.gates.preflight.station_protocol_fields	finding	2	{…}	direct	1	0	tests/test_repeat_cost_lowered_and_waived_audit.py
+labkit.gates.preflight.station_protocol_fields	finding	1	{…}:{…}: PLACEHOLDER (must): {…}	direct	3	0	tests/test_agent_hooks.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_protocol_fields	finding	1	{…}:{…}: placeholder (should): {…}	direct	3	0	tests/test_agent_hooks.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_scope_stamp	finding	1	cannot stamp the area's scope: {…}	direct	6	0	tests/test_preflight_stations.py
+labkit.gates.preflight.station_scope_stamp	finding	2	cannot stamp the area's scope: {…}	direct	2	0	tests/test_explored_in.py tests/test_preflight_stations.py
+labkit.gates.preflight.station_working_tree	finding	1	uncommitted changes in {…} (commit or stash before the run)	direct	20	0	tests/test_agent_hooks.py tests/test_end_to_end.py tests/test_explored_in.py tests/test_preflight.py tests/test_repeat_cost_lowered_and_waived_audit.py
 labkit.gates.preflight.tell_test_run	finding	1	pytest is not installed in this interpreter — tests not run	direct	1	0	tests/test_finalize_steps.py
 labkit.gates.preflight.tell_test_run	finding	1	{…} did not run{…} — {…}	direct	2	0	tests/test_finalize_steps.py tests/test_read_causes.py
 labkit.gates.preflight.tell_test_run	finding	1	{…} failed{…} — {…}	direct	12	0	tests/test_agent_hooks.py tests/test_area_tests_root.py tests/test_end_to_end.py tests/test_finalize.py tests/test_finalize_steps.py tests/test_preflight.py tests/test_preflight_stations.py tests/test_read_causes.py tests/test_reference_end_to_end.py
@@ -332,7 +332,7 @@ labkit.run.start_check.completed_parent	exit	1	runlog: {…}={…} names no comp
 labkit.run.start_check.completed_parent	exit	1	runlog: {…}={…}: {…}	direct	2	0	tests/test_repeats.py
 labkit.run.start_check.foreground_timeout	exit	1	runlog: {…}={…} is not a number of seconds >= 0	direct	1	0	tests/test_runlog_freeze_gate.py
 labkit.run.start_check.freeze_gate	exit	1	runlog: {…}, and a preflight audit found BLOCKER(s) nobody decided — not an unfrozen prot…	direct	2	0	tests/test_runlog_unfrozen_blocker.py
-labkit.run.start_check.freeze_gate	exit	1	runlog: {…}, but its protocol is not ready for one: {…}	direct	23	0	tests/test_exploration_hold.py tests/test_obligations_scenario.py tests/test_run_record_atomic.py tests/test_runlog_freeze_gate.py tests/test_runlog_unfrozen_failed_audit.py
+labkit.run.start_check.freeze_gate	exit	1	runlog: {…}, but its protocol is not ready for one: {…}	direct	22	0	tests/test_exploration_hold.py tests/test_obligations_scenario.py tests/test_runlog_freeze_gate.py tests/test_runlog_unfrozen_failed_audit.py
 labkit.run.start_check.prepare	exit	1	runlog: run_kind='probe' is not allowed at repeat_cost='low' — this repeat cost has no se…	direct	3	0	tests/test_registration_contract.py tests/test_run_kind.py tests/test_runlog_freeze_gate.py
 labkit.run.start_check.protocol_binding	exit	1	runlog: protocol={…} is not one of the PROTOCOL-*.md in the run's area ({…}): {…}	direct	1	0	tests/test_run_start_refusals.py
 labkit.run.start_check.protocol_binding	exit	1	runlog: {…} protocols in {…} — nothing would say which one this run belongs to: {…}	direct	2	0	tests/test_run_start_refusals.py tests/test_run_starts.py
@@ -343,7 +343,7 @@ labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading = {�
 labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading declares what a derived run re-reads its parent's answers with — i…	direct	1	0	tests/test_answer_reading_start.py
 labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading: the code {…} imports cannot be read: {…}	direct	1	0	tests/test_run_start_refusals.py
 labkit.run.start_check.require_answer_reading	exit	1	runlog: answer_reading: {…} lies in no git repository, so the module cannot be compared w…	direct	1	0	tests/test_run_start_refusals.py
-labkit.run.start_check.require_detached	exit	1	runlog: this run declares run_kind='measurement' and sits in a foreground shell an agent …	direct	5	0	tests/test_audit_robustness.py tests/test_runlog_freeze_gate.py tests/test_runlog_wait.py
+labkit.run.start_check.require_detached	exit	1	runlog: this run declares run_kind='measurement' and sits in a foreground shell an agent …	direct	6	0	tests/test_audit_robustness.py tests/test_run_record_atomic.py tests/test_runlog_freeze_gate.py tests/test_runlog_wait.py
 labkit.run.start_check.require_exploration_link	exit	1	runlog: this is the first measurement of {…}, and its [explored_in] is no valid link to a…	direct	2	0	tests/test_explored_in.py
 labkit.run.start_check.require_exploration_link	exit	1	runlog: {…}	direct	1	0	tests/test_explored_in.py
 labkit.run.start_check.require_registration	exit	1	runlog: {…}: {…}	direct	3	0	tests/test_registration_contract.py tests/test_runlog_freeze_gate.py
