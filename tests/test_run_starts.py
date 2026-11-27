@@ -4,7 +4,8 @@ is there, read strictly or refused, left alone by `runlog reindex`, and
 never made up for a run that has none. It says which run started with
 which protocol, when and as what; which runs reached completion stays the
 run index's (tests/test_runs_index.py). What holds a committed start file
-against change: tests/test_evidence_start_files.py.
+against change: tests/test_evidence.py (`CommittedStartFile`,
+`TheCommitCarriesTheStartFile`).
 """
 
 from __future__ import annotations

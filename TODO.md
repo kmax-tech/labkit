@@ -134,9 +134,9 @@ Befunde: [Audit 25.11.](docs/notes/2026-11-25-repo-audit.md), [Audit 26.11.](doc
 
 Register: [Audit 27.11.](docs/notes/2026-11-27-repo-audit.md). Frischer Klon unter Python 3.15.2: ein Test rot, sonst grün. Jeder Punkt ist ein eigener Schritt mit Auftrag.
 
-1. **Erzeugte Seite `docs/gate-stations.md` hängt an der Python-Version.** Unter 3.15 setzt `ast.unparse` bei verschachtelten f-Strings andere Anführungszeichen als unter 3.12; der Test ist dann rot und der Push-Hook sperrt. Wenn behoben: die Seite ist unter jeder unterstützten Version gleich (z. B. Code-Ausdrücke aus dem Quelltext statt aus `ast.unparse`), oder die Python-Version wird festgelegt.
-2. **Drift in Texten richtigziehen** (Docstring `code_scan`, README zu `recheck.rows_of`, CHANGELOG-Zeile zu `findings.REVIEW_WORD`, `scope-sha --help`, Startreihenfolge in `docs/architecture.md`, toter Verweis in `tests/test_run_starts.py`, `just guard` in AGENTS.md, „Planned“-Spalte). Wenn gemacht: Prosa sagt, was der Code tut; kein Verhalten ändert sich.
-3. **Ordner mit gemeinsamem Code (`lib`, `src`) an eine Stelle:** `run_code.SHARED_CODE` aus `scope_sha.LOCAL_ROOTS` importieren. Wenn gemacht: ein dritter Ordner kann nicht mehr nur im Audit-Stempel und nicht in der Codeprüfung des Laufs landen.
+1. ~~Erzeugte Seite `docs/gate-stations.md` hängt an der Python-Version~~ — erledigt am 27.11. (CHANGELOG „Fixed“).
+2. ~~Drift in Texten richtigziehen~~ — erledigt am 27.11. (nur Prosa, kein Verhalten).
+3. ~~Ordner mit gemeinsamem Code (`lib`, `src`) an eine Stelle~~ — erledigt am 27.11. (CHANGELOG „Fixed“).
 4. **Was im Text als Zahl gilt:** zwei Regeln in `report_blocks` und `recheck`, mit verschiedenem Zweck. Entscheiden, ob eine gemeinsame Maske (Lauf-ID, Datum) eine Heimat bekommt; wenn ja, sehen beide Prüfungen dieselben Ausnahmen.
 5. **Kleinere doppelte Heimaten** (TOML-Kopf der Kommentarblöcke dreimal, Protokolle eines Commits, Regel-ID-Form und Namenskarte, `output/` als Literal an fünf Stellen): jetzt sammeln oder erst bei Anlass.
 6. **Klarheitspunkte im Diff seit 0.116.0** (zwei Docstrings, die anders ordnen als der Code, vier `hold_*`-Namen, ein Stationskommentar in `preflight`): vor dem nächsten Release beheben oder liegen lassen.

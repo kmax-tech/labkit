@@ -1,9 +1,8 @@
 """code_scan — what an area's script source says, read with `ast`.
 
 The fields a script writes and reads (`scan`, a Load or Store context
-told apart, never a regex over text), the keys of the materialized data
-(`data_keys`), the producer and consumer stages of an area
-(`split_stages`), and the one sentence for a script that does not parse
+told apart, never a regex over text), the producer and consumer stages
+of an area (`split_stages`), and the one sentence for a script that does not parse
 (`unreadable_source`). The base the code checks read; it imports none of
 them.
 """
