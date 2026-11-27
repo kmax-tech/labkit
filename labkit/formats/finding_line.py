@@ -24,6 +24,7 @@ from labkit.formats.gate import (
     NOTE,
     WARNING,
     RuleAssignment,
+    rule_id_pattern,
 )
 from labkit.formats import rules
 
@@ -162,7 +163,7 @@ RULE_FORM = (
     "when none fits"
 )
 # a field may open with the separator of a wrapped line (`· LAB-015 …`)
-_RULE_FIELD = re.compile(r'^[·—–`*"\'\s]*(LAB-\d{3})\b')
+_RULE_FIELD = re.compile(rf'^[·—–`*"\'\s]*({rule_id_pattern(("LAB",))})\b')
 _NEW_CLASS_FIELD = re.compile(r'^[·—–`*"\'\s]*new class\b', re.I)
 
 

@@ -44,21 +44,27 @@ from typing import NamedTuple
 from labkit import PACKAGE_DIR
 from labkit.formats import markdown
 from labkit.formats import console
+from labkit.formats.gate import rule_id_pattern
 
 STANDARD = PACKAGE_DIR / "docs" / "standard.md"
-LEDGER = PACKAGE_DIR / "docs" / "rules.tsv"
+#: the ledger, relative to the package directory
+LEDGER_NAME = Path("docs") / "rules.tsv"
+LEDGER = PACKAGE_DIR / LEDGER_NAME
 REGISTRY_HEADER = ("id", "alias", "title", "status")
 PREFIXES = ("LAB", "LOCAL", "CODE")
 STATUSES = ("active", "retired")  # plus moved:<where>
 
-RULE_ID_RE = re.compile(r"^(LAB|LOCAL|CODE)-(\d{3})$")
-RULE_HEAD_RE = re.compile(r"^(?:- |### |## )?\*{0,2}((?:LAB|LOCAL|CODE)-\d{3}) · (.*)$")
+
+RULE_ID_RE = re.compile(rf"^{rule_id_pattern(PREFIXES)}$")
+RULE_HEAD_RE = re.compile(
+    rf"^(?:- |### |## )?\*{{0,2}}({rule_id_pattern(PREFIXES)}) · (.*)$"
+)
 # the English standard writes "was", a German house standard "war"
 ALIAS_MARK_RE = re.compile(r"\s*\*\((?:was|war) (§[^)]+)\)\*")
 TRAIL_DATE_RE = re.compile(r"\s*\([^)]*\d{4}-\d{2}-\d{2}[^)]*\)\s*$")
 HEADING_RE = re.compile(r"^#{1,3} ")
 REGISTER_START, REGISTER_END = "<!-- register:start", "<!-- register:end"
-CODE_RE = re.compile(r"\b((?:LAB|LOCAL|CODE)-\d{3})\b")
+CODE_RE = re.compile(rf"\b({rule_id_pattern(PREFIXES)})\b")
 LEGACY_ID_RE = re.compile(r"§\d+\.[A-Z]?\d+[a-z]?|§\d+\.[A-Z]\b")
 ALIAS_IN_TEXT_RE = re.compile(r"\((?:was|war) §[^)]+\)")
 CLAUSE_CUT_RE = re.compile(r"[:,;—]| – | \(")

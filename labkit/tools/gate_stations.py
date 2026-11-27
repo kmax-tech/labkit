@@ -58,7 +58,6 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import console
 from labkit.formats.gate import OPEN_ASSIGNMENT, TECHNICAL_CONTRACT
-from labkit.formats.rules import load_ledger, rule_heads
 from labkit.tools.check_inventory import (
     NOT_RECORDED,
     WORDING_WIDTH,
@@ -71,10 +70,11 @@ from labkit.tools.check_inventory import (
     one_line,
     reaching_commands,
     read_modules,
+    rule_names,
     unit_references,
     units,
 )
-from labkit.tools.check_overview import CODE_STANDARD, write_or_compare
+from labkit.tools.check_overview import write_or_compare
 
 USAGE = "usage: python -m labkit.tools.gate_stations [--check]"
 #: the page, relative to the checkout
@@ -417,11 +417,7 @@ def stations_page(package_dir: Path) -> str:
     shown = gate_units | {u for t in told.values() for u in t.called}
     purposes = {u: first_sentence(nodes.get(u)) for u in shown}
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
-    names = {r.id: r.title for r in load_ledger(package_dir / "docs" / "rules.tsv")}
-    names |= {
-        h.id: h.title
-        for h in rule_heads((root / CODE_STANDARD).read_text(encoding="utf-8"))
-    }
+    names = rule_names(package_dir)
     return render_stations(
         found, told, purposes, reaching_commands(graph, entry_points(pyproject)), names
     )

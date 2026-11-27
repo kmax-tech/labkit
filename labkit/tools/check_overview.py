@@ -37,7 +37,6 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console
-from labkit.formats.rules import load_ledger, rule_heads
 from labkit.tools import test_inventory
 from labkit.tools.check_inventory import (
     FindingSite,
@@ -46,14 +45,13 @@ from labkit.tools.check_inventory import (
     finding_sites,
     read_modules,
     reaching_commands,
+    rule_names,
 )
 
 USAGE = "usage: python -m labkit.tools.check_overview [--check]"
 #: the page and the trace's reach, relative to the checkout
 OVERVIEW = Path("docs") / "checks-overview.md"
 REACH = Path("docs") / "checks-reach.tsv"
-#: the code standard, whose heads name the `CODE-nnn` rules a site records
-CODE_STANDARD = Path("docs") / "coding-style.md"
 #: what the page says of a site the reach file holds no row for
 NOT_IN_TRACE = "not in the last trace"
 #: what it says of a site of the `printed` channel, which no run traces
@@ -173,13 +171,7 @@ def overview(package_dir: Path, reach_text: str, reach_name: str) -> str:
     """
     modules = read_modules(package_dir)
     pyproject = (package_dir.parent / "pyproject.toml").read_text(encoding="utf-8")
-    # a rule is cited with its name: the standard's from its ledger, the
-    # code standard's (`CODE-nnn`) from the heads of its text
-    names = {r.id: r.title for r in load_ledger(package_dir / "docs" / "rules.tsv")}
-    code_standard = package_dir.parent / CODE_STANDARD
-    names |= {
-        h.id: h.title for h in rule_heads(code_standard.read_text(encoding="utf-8"))
-    }
+    names = rule_names(package_dir)  # a rule is cited with its name
     return render_overview(
         finding_sites(modules),
         reaching_commands(call_graph(modules), entry_points(pyproject)),

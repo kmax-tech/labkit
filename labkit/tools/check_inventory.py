@@ -87,7 +87,7 @@ from labkit.formats.gate import (
     OPEN_ASSIGNMENT,
     TECHNICAL_CONTRACT,
 )
-from labkit.formats.rules import CODE_RE, load_ledger
+from labkit.formats.rules import CODE_RE, LEDGER_NAME, load_ledger, rule_heads
 from labkit.tools import method_receivers
 
 USAGE = (
@@ -956,6 +956,21 @@ def call_graph(modules: list[Module]) -> dict[str, set[str]]:
     return graph
 
 
+#: the code standard beside the package, whose heads name the `CODE-nnn`
+#: rules a site records
+CODE_STANDARD = Path("docs") / "coding-style.md"
+
+
+def rule_names(package_dir: Path) -> dict[str, str]:
+    """Rule id → name of every rule a finding site may cite: the lab
+    standard's from the ledger of the package at PACKAGE_DIR (active or
+    retired), the code standard's from the heads of CODE_STANDARD beside
+    it. Raises OSError when either file does not read."""
+    names = {r.id: r.title for r in load_ledger(package_dir / LEDGER_NAME)}
+    code_standard = (package_dir.parent / CODE_STANDARD).read_text(encoding="utf-8")
+    return names | {h.id: h.title for h in rule_heads(code_standard)}
+
+
 def entry_points(pyproject: str) -> dict[str, str]:
     """Console script → its unit, from `[project.scripts]`
     (`labkit.gates.finalize:cli` → `labkit.gates.finalize.cli`)."""
@@ -1117,7 +1132,7 @@ def inventory(package_dir: Path) -> str:
     sites = finding_sites(modules)
     ledger = [
         (r.id, r.title)
-        for r in load_ledger(package_dir / "docs" / "rules.tsv")
+        for r in load_ledger(package_dir / LEDGER_NAME)
         if r.status == "active"
     ]
     shipped = {

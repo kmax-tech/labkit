@@ -68,6 +68,20 @@ class HelpStatesTheExitContract(unittest.TestCase):
 
 
 class RuleCitation(unittest.TestCase):
+    def test_a_rule_id_is_a_family_prefix_and_three_digits(self):
+        import re
+
+        shape = gate.rule_id_pattern(("LAB", "CODE"))
+        for text, holds in (
+            ("LAB-015", True),
+            ("CODE-011", True),
+            ("LOCAL-100", False),  # a family the caller did not name
+            ("LAB-15", False),
+            ("LAB-0155", False),
+        ):
+            with self.subTest(text):
+                self.assertEqual(bool(re.fullmatch(shape, text)), holds)
+
     """The rule a finding records is cited in its line from the datum
     (`gate.with_rule`), in every form and in the summary: a site types no
     citation, so the line cannot name another rule than the one counted."""

@@ -154,9 +154,19 @@ OPEN_ASSIGNMENT = "open assignment"
 TECHNICAL_CONTRACT = "technical contract"
 NEW_CLASS = "new class"
 RULE_KINDS = (KNOWN_RULE, OPEN_ASSIGNMENT, TECHNICAL_CONTRACT, NEW_CLASS)
+
+
+def rule_id_pattern(prefixes: tuple[str, ...]) -> str:
+    """The shape of a rule id of the families PREFIXES — the prefix, a
+    hyphen, three digits (`LAB-015`) — as a regex without anchors or
+    groups: the one spelling every pattern of a rule id builds on
+    (`rules.RULE_ID_RE`, `rules.CODE_RE`, the finding line's rule field)."""
+    return rf"(?:{'|'.join(prefixes)})-\d{{3}}"
+
+
 #: a rule id a finding site records: a rule of the lab standard (`LAB-nnn`) or
 #: of the code standard (`CODE-nnn`, docs/coding-style.md)
-_RULE_ID = r"(?:LAB|CODE)-\d{3}"
+_RULE_ID = rule_id_pattern(("LAB", "CODE"))
 #: how a cited rule reads: `LAB-nnn <its name>`, `CODE-nnn <its name>`
 _CITED_RULE = re.compile(rf"^({_RULE_ID}) (\S.*)$")
 
