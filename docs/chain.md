@@ -287,7 +287,7 @@ At every repeat cost, each input whose record names an origin run (`origin_run`,
   - its `outputs.json` holds the input's path with the sha256 the input's record holds;
   - the file's bytes are those now.
 * The first part that fails is a blocker naming the input, the origin and the condition. Its way out restores the bytes or the origin's record from existing evidence, or measures anew; it never rewrites a recorded sha256 or origin.
-* At `low` changed bytes are the provenance station's blocker and a note here.
+* Changed bytes are the provenance station's blocker, on every repeat cost, and a note here; so is, at `low`, a record that does not read.
 * A plain input and the runs the lookup skipped are notes.
 * The analysis audit is shown the same facts as an `INPUT ORIGINS` piece, with a `SOURCE PROTOCOL <run>` piece per origin run: its protocol as that run started under it (`audit_binding.source_protocol_pieces`).
 * An origin run bound to a protocol whose text then cannot be read back is a blocker, with the way out restoring that evidence or measuring anew. The text then is commit and patch; a changed tree without its patch counts as lost. An origin run bound to no protocol is a note (`audit_binding.source_protocol_finding`).
@@ -422,12 +422,12 @@ At every repeat cost, all of these hold at the end.
 A protocol whose TOML head declares a result goes through report-check at the stop and the commit.
 
 * The declaration is `[result] run = "<run_id>"`, written by `protocol-fill --from-run`, never typed — the one declaration that a result is reported.
-* With it goes every other protocol of an area a changed, deleted or staged path touches: a path in the area, a file its promises declare in scope, or a shared helper under `lib/`/`src/` its code imports. A script changed or removed under a reported number reopens it; at the commit the protocols are the index's.
+* With it goes every other protocol of an area a changed, deleted or staged path touches: a path in the area, a file its promises declare in scope, a file or directory its adopted run recorded as an input (`data=`), or a shared helper under `lib/`/`src/` its code imports. A script changed or removed under a reported number reopens it; at the commit the protocols are the index's.
 * A protocol declaring none owes nothing (an exploration ends with no reported result).
 * A `[result]` that does not read (a typed id, a stray key) is a blocker where it stands.
 * An Recorded results written under no declaration is a warning.
 
-- **Where:** `report_check.hold_changed_paths`, `report_check.reached_by` (the one reader of the protocols a change reaches, for the gate and for the step printed beside its hold), `report_check.affected_protocols`, `scope_sha.areas_touched`, `protocol_block.declared_run`, `finalize.declared_run_gaps`, `protocol_check.recorded_results_without_run`
+- **Where:** `report_check.hold_changed_paths`, `report_check.reached_by` (the one reader of the protocols a change reaches, for the gate and for the step printed beside its hold), `report_check.affected_protocols`, `scope_sha.areas_touched`, `scope_sha.adopted_inputs`, `protocol_block.declared_run`, `finalize.declared_run_gaps`, `protocol_check.recorded_results_without_run`
 - **Command:** `claude-hook stop`, `.githooks/pre-commit` (`report-check --if-reported --staged`: the answer as the index holds it, the area's tree equal to the index), `protocol-check`
 - **Tier:** guaranteed (the warning: static evidence)
 - **When:** ending the turn, committing

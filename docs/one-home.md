@@ -70,7 +70,7 @@ A second answer to any of these questions is drift: move the caller to the home,
 
 ## Which areas do changed or staged paths touch?
 
-`scope_sha.areas_touched` (the nearest area above each path — `repo.areas_of` — and every area whose promises declare a changed path or whose code imports a changed shared helper; the stop's reported numbers and the commit's undecided findings read the same answer)
+`scope_sha.areas_touched` (the nearest area above each path — `repo.areas_of` — and every area whose promises declare a changed path, whose adopted run recorded it as an input, or whose code imports a changed shared helper; the stop's reported numbers and the commit's undecided findings read the same answer)
 
 ## Where is the repo? Where is the lab?
 

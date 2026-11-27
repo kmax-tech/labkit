@@ -219,11 +219,12 @@ Calls:
 | `readme_check.readme_route` | WARNING | GUARANTEED | CODE-016 The experiment area reconstructs itself | README.md route: scripts/01_measure.py defines no evaluate_rows | — |
 | `finalize.station_data_counts` | BLOCKER | GUARANTEED | variable | {…} | `{…}` writes them from the run — never typed |
 
-### finalize.finalize_area · 6. provenance — at low repeat cost, and only with a run
+### finalize.finalize_area · 6. provenance — only with a run: the recorded bytes on every repeat cost, the whole record and git's half at low repeat cost
 
 Calls:
 
 - `finalize.station_provenance` — Station 6: every source the run read frozen in its record, its bytes the ones the record names, and tracked in git or kept outside it — by an ignore rule, or lying outside the repository; the outputs tracked, an untracked one a warning (`provenance_findings`).
+- `finalize.station_recorded_bytes` — Station 6 where the lane owes no provenance record (repeat_cost = high): each input the run recorded in `data=` is still at its path with the bytes the record names (`recorded_bytes_findings`).
 
 **Further down (static estimate):**
 

@@ -75,7 +75,7 @@ See [the promise format](promise-block.md#the-block) for technical fields and [t
 
 **Allowed changes:** none through this command; it only reads evidence.
 
-**Command and output:** `finalize AREA` checks the selected answering run, registration, code, provenance (at repeat cost low only: each data input against the bytes its run recorded), input origins (each input that names an origin run is still that run's registered output), outputs, promises, area tests and audit evidence. It prints findings and writes no result declaration.
+**Command and output:** `finalize AREA` checks the selected answering run, registration, code, provenance (each data input the run recorded against the bytes it recorded; at repeat cost low also that every input is recorded and that git tracks it or an ignore rule keeps it out), input origins (each input that names an origin run is still that run's registered output), outputs, promises, area tests and audit evidence. It prints findings and writes no result declaration.
 
 **Done / way out:** no blocker remains. This permits the next checks; it does not release a result. A real implementation repair needs a new run and affected follow-up checks. Restore source only for accidental changes. The [answering-run rules](protocol-run-binding.md#the-answering-run) select the run; [the chain](chain.md) lists the exact checks.
 

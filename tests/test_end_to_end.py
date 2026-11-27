@@ -545,6 +545,32 @@ class Count(unittest.TestCase):
         self.assertNotIn("report-check", out)
         lab.git("checkout", "HEAD", "--", str(self.protocol))
 
+    def test_06_an_input_outside_the_area_changed_under_the_number_reopens_it(self):
+        """The documents lie outside the area and in no promise's scope; the
+        adopted run recorded them, so a commit of one changed document
+        alone reaches the area, and the stop holds it too (twin: restored,
+        both pass)."""
+        self._committed()
+        lab = type(self).lab
+        doc = lab.root / "data" / "raw" / "docs" / "a.txt"
+        doc.write_text("x\nx\n", encoding="utf-8")
+        lab.git("add", str(doc))
+        rc, out = lab.pre_commit(doc)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("is not the bytes the run read", out)
+        rc, err = lab.stop_hook()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("is not the bytes the run read", err)
+        lab.git("reset", "-q", "HEAD", "--", str(doc))
+        lab.git("checkout", "--", str(doc))
+        lab.git("add", str(doc))
+        rc, out = lab.pre_commit(doc)
+        self.assertEqual(rc, 0, out)
+        # reached, and clean
+        self.assertIn(f"its head has adopted {self._adopted()}", out)
+        rc, err = lab.stop_hook()
+        self.assertEqual(rc, 0, err)
+
 
 def _strip_promise_placeholders(protocol: Path) -> None:
     """The stamp's `<…>` promise sentences, written as the sentences they
@@ -2590,6 +2616,35 @@ class Estimator(unittest.TestCase):
         self.assertIn("read from the index", out)
         lab.commit("the verdict, adopted")
         self._the_class_counts_reach_the_report_block_and_are_held()
+        self._a_changed_input_holds_the_adopted_number()
+
+    def _a_changed_input_holds_the_adopted_number(self) -> None:
+        """At high repeat cost too, the adopted run's recorded input holds
+        its bytes: one gold label flipped in the write-protected prepared
+        file blocks the commit and report-check; restored, both pass."""
+        lab = type(self).lab
+        lab.commit("the report")
+        prepared = self.area / "data" / "prepared" / "points_v1.jsonl"
+        text = prepared.read_text(encoding="utf-8")
+        mode = prepared.stat().st_mode
+        prepared.chmod(0o644)  # a deliberate edit lifts the protection first
+        prepared.write_text(
+            text.replace('"gold": "pos"', '"gold": "neg"', 1), encoding="utf-8"
+        )
+        lab.git("add", str(prepared))
+        rc, out = lab.pre_commit(prepared)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("is not the bytes the run read", out)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            rc = report_command.main([str(self.area)])
+        self.assertEqual(rc, 1, buf.getvalue())
+        self.assertIn("is not the bytes the run read", buf.getvalue())
+        prepared.write_text(text, encoding="utf-8")
+        prepared.chmod(mode)
+        lab.git("add", str(prepared))
+        rc, out = lab.pre_commit(prepared)
+        self.assertEqual(rc, 0, out)
 
     def _a_repeat_draws_a_derived_seed_and_never_answers(
         self, run_id: str, draw: int

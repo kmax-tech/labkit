@@ -351,9 +351,10 @@ result is only a plan.
   outside git on purpose, by an ignore rule or outside the repository
   (a model directory on scratch), and name here the source, the
   access route and the version — prose, no checksum: the run records the
-  sha256 of every `data=` input, and at `repeat_cost = low` `finalize`
-  holds each source to it (at `high` that comparison is skipped and the
-  agent audit covers provenance; the counts above are held at both). A
+  sha256 of every `data=` input, and `finalize` holds each recorded
+  source to it at both repeat costs (at `high` it does not ask for every
+  input in `data=` nor check git — the agent audit covers that; the
+  counts above are held at both). A
   directory's checksum covers every visible file under it: a file added
   after the run (a README, a cache) blocks as a change, unnamed. Look
   at the prepared file before the run. Otherwise a format bug and a model
