@@ -104,3 +104,22 @@ Not examined: other test files whose stand-in commands write a record straight t
 ## The two tiers timed (2026-11-25)
 
 One run each on 11 cores, on `2153095c`, 27 test files carrying the mark `slow`: the fast tier (`.githooks/checks fast`: ruff, format, pyright and the suite without the scenario files) 124 s; the whole suite alone (`pytest -n auto`, after the git answers were kept) 525 s. `AGENTS.md` and `.githooks/checks` cite these two numbers; they cited 81 s and 383 s from 2026-11-10, when 13 files carried the mark. Sequential runs drift by about 15 %, so neither number is more than an order of size.
+
+## Which files carry the time, and two decisions (2026-11-27)
+
+One run of `pytest -n auto --durations=30 --junitxml`, alone on the machine under `caffeinate`, on `dee33245`: exit 0, 4828 passed, 1 skipped, 642 s. The per-test times in the JUnit file (setup, call and teardown) sum to 5338 seconds over all workers, in 244 test files. Raw outputs, the per-file table and a profile: internal evidence repository, `2026-11-27-suite-runtime/`.
+
+| Share of the 5338 seconds  | Value |
+|----------------------------|-------|
+| the 10 longest files       | 56 %  |
+| the 12 longest files       | 62 %  |
+| the 20 longest files       | 76 %  |
+| the 27 files marked `slow` | 74 %  |
+
+The longest are `test_repair_paths.py` (577 s), `test_end_to_end.py` (562 s), `test_next_step.py` (318 s), `test_handovers.py` (306 s) and `test_exploration_link_scenario.py` (250 s). Of the ten longest, one carries no mark `slow`: `test_explored_in.py` (177 s), which runs before every commit.
+
+The rule set beforehand was: if about ten files carry more than 60 % of the time, rebuild those; else only print `--durations=20` in the whole run of `.githooks/checks`. Ten files carry 56 %, twelve 62 % — just under the line; the decision stays with the author.
+
+**A selection of the tests that reach the changed code** (`just touched`, not built). For the commit `6dfd2963` the table of which tests reach which finding site (`docs/checks-reach.tsv`) maps the five changed finding sites to 44 test files. These hold both tests that went red on that day (`tests/test_report_check.py`, `tests/test_preflight_stations.py`), but they take 3608 of the 5338 seconds, 68 %; under 11 workers that would be around 430 s if they run as efficiently as the whole suite (estimated, not run), against 131 s for the selection guessed by hand. The finding site `provenance_findings` alone reaches 18 scenario files. Without the files marked `slow` the selection shrinks to 25 files and 394 seconds, but then `tests/test_report_check.py` is missing. By the criterion set beforehand — both red tests and faster than 131 s — the selection is not worth building. The table only names finding sites; a change to a function that tells no finding (as `evidence.told` in the same commit) selects nothing.
+
+**`just overview`**, two runs each: `check_overview` 4.1 and 5.3 s, `gate_stations` 6.5 and 6.6 s, `rules_map` 13.1 and 10.2 s, together 22 to 24 s. Importing every module of the package takes 0.3 to 0.75 s, so reading the package three times is not the cost. A profile of `rules_map` (38.6 s under the profiler) puts 25 s in `ast.walk` and 18 s in two calls of `check_inventory.unit_references`, about 9 s each; the three generated pages did not change. Rule set beforehand: build only if reading the package takes over half — it does not.
