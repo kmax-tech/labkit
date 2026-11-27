@@ -6,7 +6,8 @@
 #
 #   .githooks/checks fast   before each commit: pytest without the end-to-end
 #                           scenario files (`pytestmark = pytest.mark.slow`)
-#   .githooks/checks full   before a push and a release: the whole suite
+#   .githooks/checks full   before a push and a release: the whole suite,
+#                           its 20 slowest tests shown after a green run
 #
 # Why two tiers: the scenario files hold most of the suite's time — timed
 # on 2026-11-25, when 27 files carried the mark, one run each on 11 cores:
@@ -90,10 +91,17 @@ run "pyright" "$venv/pyright"
 if [ "$tier" = fast ]; then
     run "pytest ($tier)" "$venv/python" -m pytest -q -p no:warnings -n auto -m "not slow"
 else
-    run "pytest ($tier)" "$venv/python" -m pytest -q -p no:warnings -n auto
+    # the 20 slowest tests, shown after a green run: where the suite's time
+    # goes, read off each push instead of guessed (measured on 2026-11-27:
+    # ten files carried 56 % of the summed test time —
+    # docs/notes/2026-11-25-suite-runtime.md)
+    run "pytest ($tier)" "$venv/python" -m pytest -q -p no:warnings -n auto --durations=20
 fi
 [ "$fail" -eq 0 ] || exit 1
 echo "checks ($tier): ruff, format, pyright, pytest green"
+if [ "$tier" = full ]; then
+    sed -n '/slowest 20 durations/,/^$/p' "$log"
+fi
 if [ "$tier" = full ] && [ -n "$key" ]; then
     if [ "$(state_key)" = "$key" ]; then
         printf '%s\n' "$key" > "$record"
