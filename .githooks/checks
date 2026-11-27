@@ -100,7 +100,7 @@ fi
 [ "$fail" -eq 0 ] || exit 1
 echo "checks ($tier): ruff, format, pyright, pytest green"
 if [ "$tier" = full ]; then
-    sed -n '/slowest 20 durations/,/^$/p' "$log"
+    sed -n '/slowest 20 durations/,/^$/{/^exit [0-9]/d;p;}' "$log"
 fi
 if [ "$tier" = full ] && [ -n "$key" ]; then
     if [ "$(state_key)" = "$key" ]; then
