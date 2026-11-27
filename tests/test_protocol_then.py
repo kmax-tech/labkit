@@ -10,6 +10,7 @@ from pathlib import Path
 from repo_fixture import git
 
 from labkit.formats.protocol_then import protocol_path_at
+from labkit.formats.repo import GitError
 
 
 def _protocol(pid: str, note: str) -> str:
@@ -45,6 +46,11 @@ class ProtocolPathAt(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").rename(self.area / "PROTOCOL-a.md")
         found = protocol_path_at(self.root, self.commit(), "p-1")
         self.assertEqual(found, self.area / "PROTOCOL-a.md")
+
+    def test_a_revision_the_repository_lacks_is_refused(self) -> None:
+        self.commit()
+        with self.assertRaisesRegex(GitError, "names no state"):
+            protocol_path_at(self.root, "0" * 40, "p-1")
 
 
 if __name__ == "__main__":

@@ -336,6 +336,22 @@ def repo_protocols(root: Path) -> list[Path]:
     )
 
 
+def protocols_at(root: Path, rev: str) -> list[Path]:
+    """Every protocol the revision REV of the repository ROOT holds, outside
+    SKIP_DIRS — the committed form of `repo_protocols` —, sorted by its
+    path relative to ROOT. Raises GitError when REV names no state of ROOT
+    (`files_at` None) or git fails."""
+    names = files_at(root, root, rev)
+    if names is None:
+        raise GitError(f"{rev[:12]} names no state of the repository {root}")
+    return [
+        root / n
+        for n in sorted(names)
+        if is_protocol_name(PurePosixPath(n).name)
+        and not SKIP_DIRS & set(PurePosixPath(n).parts[:-1])
+    ]
+
+
 #: the lab's model file at its repository root: aliases, endpoints, slots
 MODELS_TOML = "models.toml"
 

@@ -23,13 +23,12 @@ from labkit.formats.area_state import last_committed
 from labkit.formats.repo import (
     PROTOCOL_FILE,
     SKIP_DIRS,
-    is_protocol_name,
     protocol_file_name,
     GitError,
     blob_text,
     blobs_then,
-    git_run,
     rel_posix,
+    protocols_at,
     repo_protocols,
     text_at,
 )
@@ -53,28 +52,18 @@ def bound_protocol_file(area: Path, pid: str, recorded: str | None) -> Path:
 def protocol_path_at(root: Path, commit: str, pid: str) -> Path | None:
     """Where the protocol carrying id PID stood in COMMIT of the repository
     ROOT — the `PROTOCOL-*.md` whose head names PID, outside SKIP_DIRS
-    (`runs/`, `data/`, `.venv/` …), as `repo.repo_protocols` reads —, or
+    (`runs/`, `data/`, `.venv/` …), as `repo.protocols_at` lists them —, or
     None when no file there does. The id is the binding and survives a
     rename or a move (docs/protocol-run-binding.md); the head is read as
     TOML only, since an
     older commit holds an older standard `protocol_block.head` refuses.
     Raises GitError when git cannot run."""
-    listed = git_run(["ls-tree", "-r", "-z", "--name-only", commit], root)
-    if listed.returncode != 0:
-        raise GitError(f"git ls-tree {commit[:12]} in {root}: {listed.stderr.strip()}")
-    names = [n for n in listed.stdout.split("\0") if n]
-    # the files a repo-wide scan reads (`repo.repo_protocols`): a copy such
-    # as PROTOCOL-a.txt or one under runs/ with the same id would sort
-    # first and be read as the protocol
-    candidates = (
-        n
-        for n in names
-        if is_protocol_name(Path(n).name) and not SKIP_DIRS & set(Path(n).parts[:-1])
-    )
-    for rel in sorted(candidates):
-        text = text_at(root, root / rel, commit)
+    # the files a repo-wide scan reads: a copy such as PROTOCOL-a.txt or one
+    # under runs/ with the same id would sort first and be read as the protocol
+    for path in protocols_at(root, commit):
+        text = text_at(root, path, commit)
         if text is not None and _id_then(text) == pid:
-            return root / rel
+            return path
     return None
 
 
