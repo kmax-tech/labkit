@@ -29,7 +29,7 @@ from labkit.gates import hook_post_change
 from labkit.gates import hook_session
 from datetime import datetime, timezone  # noqa: E402
 
-from labkit.formats import audit_records, evidence, run_starts  # noqa: E402
+from labkit.formats import audit_records, evidence, gate, run_starts  # noqa: E402
 from labkit.formats.area_state import INDEX, state_of  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
@@ -390,6 +390,8 @@ class CommittedStartFile(unittest.TestCase):
         self.assertIn(f"`git checkout HEAD -- {self.rel}`", line)
         (hold,) = evidence.change_blockers(evidence.change_findings(self.area))
         self.assertEqual(hold.grade, "BLOCKER")
+        # LAB-043: "once a commit holds it, it is neither changed nor deleted"
+        self.assertEqual(hold.rule, gate.LAB_043)
         _git(self.root, "checkout", "HEAD", "--", self.rel)
         self.assertEqual(self.found(), [])
 
@@ -449,6 +451,8 @@ class TheCommitCarriesTheStartFile(unittest.TestCase):
             evidence.change_findings(self.area, staged=True)
         )
         self.assertEqual(hold.grade, "BLOCKER")
+        # LAB-043: "A commit that takes a run in holds that run's start file"
+        self.assertEqual(hold.rule, gate.LAB_043)
         # the area state of the commit does not count the file either
         self.assertEqual(state_of(self.area, file_state=INDEX).starts, {})
         # the tree's own check is not asked this

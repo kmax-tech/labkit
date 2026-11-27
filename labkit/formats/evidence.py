@@ -77,10 +77,11 @@ from labkit.formats import (
 )
 from labkit.formats.attempts import evidence_gaps
 from labkit.formats.audit_files import JOURNAL
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import LAB_043, OPEN_RULE, TECHNICAL_RULE
 from labkit.formats.gate import (
     NOT_EXECUTABLE,
     GateFinding,
+    RuleAssignment,
     blocker,
     with_way_out,
 )
@@ -357,8 +358,10 @@ def told(
     runs: dict[str, list[tuple[str, str]]],
     where: str,
     restore: str,
-) -> list[tuple[str, str]]:
-    """`broken`'s findings in AREA (under ROOT) as (sentence, way out): WHERE
+) -> list[EvidenceChange]:
+    """`broken`'s findings in AREA (under ROOT), each an `EvidenceChange`
+    with its cause's rule (a start file LAB-043 Runs go through `runlog`,
+    any other change open): WHERE
     says between which states ("in the tree since HEAD", "by commit …"),
     RESTORE the commit the way out restores from."""
     base = rel_posix(area, root)
@@ -366,65 +369,71 @@ def told(
     def checkout(rel: str) -> str:
         return f"`{checkout_command(f'{base}/{rel}', restore)}`"
 
-    out: list[tuple[str, str]] = []
+    out: list[EvidenceChange] = []
     for rel, what in audits:
         if what == "record":
             out.append(
-                (
+                EvidenceChange(
                     f"{rel}: changed beyond its findings' decision lines {where} — "
                     "an audit record keeps what the auditor wrote; only a "
                     "decision changes it",
                     f"restore it ({checkout(rel)}), then decide with the "
                     f"`--decide` command `{audit_command(area, '--findings')}` prints",
+                    OPEN_RULE,
                 )
             )
         elif what == DECISION_LOST:
             out.append(
-                (
+                EvidenceChange(
                     f"{rel}: a decision on a finding was lost {where} — a "
                     "decision another one replaces stays in the record "
                     f"(`{decision_history.KEY}`), and an entry a commit holds "
                     "never changes",
                     f"restore it ({checkout(rel)}), then decide with the "
                     f"`--decide` command `{audit_command(area, '--findings')}` prints",
+                    OPEN_RULE,
                 )
             )
         elif what == "report review":
             out.append(
-                (
+                EvidenceChange(
                     f"{rel}: changed beyond its claims' decision lines {where} — "
                     "a report review keeps what the reader wrote; only a "
                     "decision on a claim changes it",
                     f"restore it ({checkout(rel)}), then decide the claim with "
                     f"`{audit_command(area)} --report-review <REPORT> --decide N "
                     f'false-positive --why "<why>" --record {Path(rel).name}`',
+                    OPEN_RULE,
                 )
             )
         elif what.startswith(START_FILE):
             out.append(
-                (
+                EvidenceChange(
                     f"{rel}: the {what} {where} — a start file stays as the "
                     "run's start wrote it: it says which protocol the run was "
                     "bound to and when it started, also when the run's directory "
                     "is gone",
                     f"restore it ({checkout(rel)})",
+                    LAB_043,
                 )
             )
         else:
             out.append(
-                (
+                EvidenceChange(
                     f"{rel}: {what} {where} — labkit writes it once, and a record "
                     "of an audit is evidence",
                     f"restore it ({checkout(rel)})",
+                    OPEN_RULE,
                 )
             )
     for run, files in runs.items():
         named = ", ".join(f"{name} ({how})" for name, how in files)
         out.append(
-            (
+            EvidenceChange(
                 f"{RUNS_DIR}/{run}: the closed run's {named} {where} — "
                 "a run's record stays as it ran; a new measurement is a new run",
                 f"restore it ({checkout(f'{RUNS_DIR}/{run}')})",
+                OPEN_RULE,
             )
         )
     return out
@@ -573,13 +582,26 @@ def _undone_in(
 @dataclass(frozen=True)
 class EvidenceChange:
     """One finding of `change_findings`: WHY the sentence, FIX its way out,
-    COMPARED whether git could run the comparison — False for the one
-    finding that says it could not (`unread_finding`), where nothing says
-    the evidence changed."""
+    RULE the assignment of its cause — a start file changed, deleted or
+    left out of the commit LAB-043 Runs go through `runlog`, a comparison
+    git could not run the technical contract, any other change of the
+    evidence open —, COMPARED whether git could run the comparison — False
+    for the one finding that says it could not (`unread_finding`), where
+    nothing says the evidence changed. Raises ValueError on a comparison not
+    run whose rule is not the technical contract: the two fields name one
+    case."""
 
     why: str
     fix: str
+    rule: RuleAssignment
     compared: bool = True
+
+    def __post_init__(self) -> None:
+        if not self.compared and self.rule != TECHNICAL_RULE:
+            raise ValueError(
+                f"EvidenceChange: compared=False is a comparison git could not "
+                f"run, whose rule is the technical contract, not {self.rule}"
+            )
 
 
 def change_sentences(found: Sequence[EvidenceChange]) -> list[str]:
@@ -594,20 +616,19 @@ def change_blockers(found: Sequence[EvidenceChange]) -> list[GateFinding]:
     report-check (its first station, and so `labkit-next`), a replacement
     for its predecessor's area, an exploration's registered report. A
     comparison git could not run (`unread_finding`, its `compared` False)
-    is a check not executed: nothing says the evidence changed."""
+    is a check not executed: nothing says the evidence changed. Each
+    blocker records its cause's rule (`EvidenceChange.rule`)."""
     return [
-        blocker(c.why, fix=c.fix, rule=OPEN_RULE)
+        blocker(c.why, fix=c.fix, rule=c.rule)
         if c.compared
-        else blocker(
-            c.why, fix=c.fix, stated_outcome=NOT_EXECUTABLE, rule=TECHNICAL_RULE
-        )
+        else blocker(c.why, fix=c.fix, stated_outcome=NOT_EXECUTABLE, rule=c.rule)
         for c in found
     ]
 
 
 def change_findings(area: Path, *, staged: bool = False) -> list[EvidenceChange]:
     """Every change of AREA's evidence against HEAD that breaks its rule, each
-    an `EvidenceChange` (sentence, way out) — in the working tree, or STAGED in the index (what
+    an `EvidenceChange` (sentence, way out, rule) — in the working tree, or STAGED in the index (what
     a commit now would carry): a record changed beyond its decision lines,
     another audit file changed, a run HEAD holds closed whose files changed
     or went, a start file changed or deleted; and, STAGED only, a run the
@@ -623,10 +644,7 @@ def change_findings(area: Path, *, staged: bool = False) -> list[EvidenceChange]
         return []
     where = f"in the {'index' if staged else 'tree'} since HEAD"
     try:
-        return [
-            EvidenceChange(why, fix)
-            for why, fix in _change_findings(area, root, where, staged=staged)
-        ]
+        return _change_findings(area, root, where, staged=staged)
     except GitError as exc:
         return [unread_finding(f"the {'index' if staged else 'tree'}", "HEAD", exc)]
 
@@ -639,13 +657,14 @@ def unread_finding(state: str, against: str, exc: GitError) -> EvidenceChange:
         f"the area's evidence in {state} cannot be compared with {against}: "
         f"{' '.join(str(exc).split())} — whether it was changed cannot be told",
         UNREAD_OBJECTS_WAY,
+        TECHNICAL_RULE,
         compared=False,
     )
 
 
 def _change_findings(
     area: Path, root: Path, where: str, *, staged: bool
-) -> list[tuple[str, str]]:
+) -> list[EvidenceChange]:
     """`change_findings` in the repository ROOT. Raises GitError when git
     fails."""
     entries = _in_area(
@@ -671,8 +690,10 @@ def _change_findings(
     return told(area, root, audits, runs, where, "HEAD") + unstaged
 
 
-def unstaged_start_files(area: Path, root: Path) -> list[tuple[str, str]]:
-    """(sentence, way out) per run of AREA whose record in the index says a
+def unstaged_start_files(area: Path, root: Path) -> list[EvidenceChange]:
+    """One `EvidenceChange` (LAB-043 Runs go through `runlog`: "A commit
+    that takes a run in holds
+    that run's start file") per run of AREA whose record in the index says a
     start file was written for it (`run_starts.START_MARK` in the run's
     directory — staged now, or committed earlier) while the index does not
     hold that start file and the working tree does: the commit's state
@@ -700,13 +721,14 @@ def unstaged_start_files(area: Path, root: Path) -> list[tuple[str, str]]:
         )
     staged = files_at(root, area / START_FILES_DIR) or set()
     return [
-        (
+        EvidenceChange(
             f"{START_FILES_DIR}/{path.name}: the start file of run {run} stands in "
             f"the working tree and is neither staged nor committed, while the "
             f"index holds the run's record — the commit's state would document "
             f"the run without the file that says which protocol it started with "
             f"and when",
             f"stage it (`{stage_command(path)}`)",
+            LAB_043,
         )
         for run in marked
         if (path := start_path(area, run)).name not in staged and path.is_file()
@@ -794,8 +816,8 @@ def _commit_broke(
     audits, runs = broken(left, closed, texts_now, undone_now, deletions=True)
     where = f"by commit {commit[:12]} and not undone in the tree"
     return [
-        with_way_out(why, fix)
-        for why, fix in told(area, root, audits, runs, where, parent[:12])
+        with_way_out(c.why, c.fix)
+        for c in told(area, root, audits, runs, where, parent[:12])
     ]
 
 

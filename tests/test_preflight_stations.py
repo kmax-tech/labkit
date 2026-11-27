@@ -20,7 +20,6 @@ from labkit.formats import audit_files
 from labkit.formats import protocol_block, protocol_check
 from labkit.formats.gate import (
     BLOCKER,
-    OPEN_RULE,
     WARNING,
     Findings,
     TECHNICAL_RULE,
@@ -81,12 +80,14 @@ class PreflightStations(unittest.TestCase):
         preflight.station_protocol_fields(found, protocol, text, report, parsed)
         return found
 
-    def test_a_field_not_owed_as_a_must_warns_as_an_open_assignment(self):
+    def test_a_field_not_owed_as_a_must_warns_as_a_format_convention(self):
+        """The template's should level is a format convention, not a
+        method duty: LAB-011 names only the required fields."""
         found = self._field_findings(
             missing_should=["Problem in one sentence"], soft_holes=[(7, "Unit")]
         )
         self.assertEqual(
-            [(f.grade, f.rule) for f in found.found], [(WARNING, OPEN_RULE)] * 2
+            [(f.grade, f.rule) for f in found.found], [(WARNING, TECHNICAL_RULE)] * 2
         )
 
     def test_a_should_field_under_its_earlier_label_is_renamed_not_added(self):

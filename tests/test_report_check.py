@@ -59,7 +59,7 @@ from labkit.formats import (
 from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
 from labkit.checks import report_blocks
-from labkit.formats.gate import OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import LAB_104, OPEN_RULE, TECHNICAL_RULE
 from repo_fixture import git as _git
 from command_fixture import run_main
 from repo_fixture import init_repo
@@ -814,7 +814,10 @@ class RegisteredReport(unittest.TestCase):
             "available history contains it)",
             gap.text,
         )
-        self.assertEqual(gap.rule, OPEN_RULE)
+        # LAB-104 A number leaves the area only through its adoption: "a
+        # registered report never written after a measurement is an
+        # incomplete delivery"
+        self.assertEqual(gap.rule, LAB_104)
         self.assertIn("labkit-adopt", gap.fix or "")
         self.assertIn("--handover", gap.fix or "")
         # the stop holds on that finding and prints `labkit-next`'s step for

@@ -457,11 +457,16 @@ class EvidenceComparison(unittest.TestCase):
         unread, changed = evidence.change_blockers(
             [
                 evidence.EvidenceChange(
-                    "git could not compare", repo.UNREAD_OBJECTS_WAY, compared=False
+                    "git could not compare",
+                    repo.UNREAD_OBJECTS_WAY,
+                    gate.TECHNICAL_RULE,
+                    compared=False,
                 ),
                 # the same way out on a comparison that ran: the words of
                 # the way out decide nothing
-                evidence.EvidenceChange("a record changed", repo.UNREAD_OBJECTS_WAY),
+                evidence.EvidenceChange(
+                    "a record changed", repo.UNREAD_OBJECTS_WAY, gate.OPEN_RULE
+                ),
             ]
         )
         self.assertEqual(unread.outcome, gate.NOT_EXECUTABLE)
@@ -470,6 +475,15 @@ class EvidenceComparison(unittest.TestCase):
         self.assertEqual(
             (unread.rule, changed.rule), (gate.TECHNICAL_RULE, gate.OPEN_RULE)
         )
+
+    def test_a_comparison_not_run_under_another_rule_is_refused(self) -> None:
+        with self.assertRaisesRegex(ValueError, "compared=False"):
+            evidence.EvidenceChange(
+                "git could not compare",
+                repo.UNREAD_OBJECTS_WAY,
+                gate.OPEN_RULE,
+                compared=False,
+            )
 
 
 class NoteConventions(unittest.TestCase):

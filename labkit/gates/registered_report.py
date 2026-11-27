@@ -34,6 +34,7 @@ from labkit.formats.area_state import (
     unread_start_warning,
 )
 from labkit.formats.gate import NOT_EXECUTABLE, OPEN_RULE, TECHNICAL_RULE
+from labkit.formats.gate import LAB_104
 from labkit.formats.gate import GateFinding, RuleAssignment, blocker
 from labkit.gates.registration_hold import later_record_warning, without_record_of
 from labkit.formats import (
@@ -716,9 +717,13 @@ def missing_report(
     the adoption (its result block) and the handover (an end without a
     result). The finding says what was checked: the report is missing, and
     whether a commit of the available history contains it
-    (`repo.ever_committed`). It records the open assignment either way: the
-    standard names a report "never written", which no history shows, and
-    states no duty for one written and removed. None when nothing is registered, the report is there, or
+    (`repo.ever_committed`), and that decides its rule: no commit holds it
+    — LAB-104 A number leaves the area only through its adoption, "a
+    registered report never written after a measurement is an incomplete
+    delivery", read as no commit of the available history holding it, which
+    a report written and deleted before any commit also shows; a commit
+    holds it — the open assignment, since the standard states no duty for a
+    report written and removed. None when nothing is registered, the report is there, or
     nothing was measured — before a measurement a report owes nothing. At
     the commit (STAGED) a report not yet written is held only where the
     commit removes one HEAD holds or the head has adopted a result
@@ -741,11 +746,13 @@ def missing_report(
         return None
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
+    committed = ever_committed(repo, report)
     history = (
         "a commit contains it"
-        if ever_committed(repo, report)
+        if committed
         else "no commit in the available history contains it"
     )
+    rule = OPEN_RULE if committed else LAB_104
     what = (
         f"{name_p} registers {name_r} as its report; the report is missing "
         f"({history}), and its area holds a measurement of it — without its "
@@ -759,7 +766,7 @@ def missing_report(
             f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
             step=into,
-            rule=OPEN_RULE,
+            rule=rule,
         )
     discuss = report_blocks.discuss_command(
         name_p, "<run_id>", name_r, report_blocks.WHY_PROGRESS
@@ -773,7 +780,7 @@ def missing_report(
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",
         step=discuss,
-        rule=OPEN_RULE,
+        rule=rule,
     )
 
 

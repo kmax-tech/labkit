@@ -29,8 +29,8 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 
 ### finalize.finalize_area · 1. answering run — the run every later step examines
 
@@ -231,7 +231,7 @@ Calls:
 |---|---|---|---|---|---|
 | `run_record_check.provenance_findings` | WARNING | GUARANTEED | technical contract | no outputs.json — the run registered no output file (run.output) | — |
 | `run_record_check.provenance_findings` | WARNING | GUARANTEED | technical contract | not a git repository — cannot tell whether source and output are committed | — |
-| `run_record_check.provenance_findings` | WARNING | GUARANTEED | open assignment | output {…} is not yet tracked — `{…}` before the commit that cites the number | — |
+| `run_record_check.provenance_findings` | WARNING | GUARANTEED | LAB-017 The number of audits follows the cost tier | output {…} is not yet tracked — `{…}` before the commit that cites the number | — |
 | `run_record_check._recorded_sources` | BLOCKER | GUARANTEED | technical contract | {…} | pass every source in `data=` to runlog.run, then {…} |
 | `run_record_check._recorded_sources` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | source not frozen — the run carries no `data=` | pass data={name: path} to runlog.run so sha and rows are recorded, or data=runlog.NO_INPUTS for a run that reads no input file, then {…} |
 | `run_record_check.source_finding` | BLOCKER | GUARANTEED | LAB-017 The number of audits follows the cost tier | source {…} is not the bytes the run read: {…}, the run recorded sha256 {…} | restore the bytes the run read (from git where it tracks them, else from the source or access route Data / scope names), or {…} |
@@ -348,9 +348,9 @@ Calls:
 | `preflight.station_protocol_fields` | BLOCKER | GUARANTEED | variable | {…} | {…} in {…}; {…} |
 | `preflight.station_protocol_fields` | BLOCKER | GUARANTEED | technical contract | REPEATED (must): {…} | {…}; then `{…}` |
 | `preflight.station_protocol_fields` | BLOCKER | GUARANTEED | LAB-011 Required-field check | {…}:{…}: PLACEHOLDER (must): {…} | replace the placeholder with this protocol's own text; {…} |
-| `preflight.station_protocol_fields` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
-| `preflight.station_protocol_fields` | WARNING | GUARANTEED | open assignment | missing (should): {…} | `rename_way(text, label)` |
-| `preflight.station_protocol_fields` | WARNING | GUARANTEED | open assignment | {…}:{…}: placeholder (should): {…} | — |
+| `preflight.station_protocol_fields` | WARNING | STATIC_EVIDENCE | LAB-015 Preflight audit before freezing | {…} | — |
+| `preflight.station_protocol_fields` | WARNING | GUARANTEED | technical contract | missing (should): {…} | `rename_way(text, label)` |
+| `preflight.station_protocol_fields` | WARNING | GUARANTEED | technical contract | {…}:{…}: placeholder (should): {…} | — |
 | `preflight.station_promise_sentences` | WARNING | GUARANTEED | LAB-004 Identifiers make the intent addressable | [[promise]] {…} still carries the stamp's `<…>` sentence — frozen = true refuses it | state each promise explicitly in one sentence in its table (`{…}`); {…} |
 
 **Further down (static estimate):**
@@ -385,8 +385,8 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 | `preflight._owed` | BLOCKER | GUARANTEED | variable | {…} | `fix` |
 | `preflight._owed` | WARNING | GUARANTEED | variable | {…} | `fix` |
 
@@ -495,8 +495,8 @@ Calls:
 |---|---|---|---|---|---|
 | `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
 | `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 | `registered_report._undetermined_duty` | BLOCKER | GUARANTEED | technical contract | {…}: whether it owes a report cannot be told — {…} | `way_out` |
 | `registered_report.orphaned_report_duties` | BLOCKER | GUARANTEED | open assignment | {…}: no protocol of the area carries the id {…}, under which it measured ({…}); that prot… | `back.format(pid=pid)` |
 
@@ -531,8 +531,8 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 
 ### report_check.chain_gaps · 1. declaration
 
@@ -573,8 +573,8 @@ Calls:
 | `area_state.unread_start_warning` | WARNING | GUARANTEED | technical contract | {…} — nothing is taken from a start file that does not read | restore the file from the commit that holds it (`git log --all -- <area>/run-starts/<run_id>.json` names it); where no commit holds it, leave it as it is: no value is written into a start file by hand, the protocol and the kind are read from the run's own record where that reads, and the start stays unknown |
 | `area_state.missing_start_warning` | WARNING | GUARANTEED | technical contract | {…} | `START_FILE_BACK` |
 | `area_state.unassigned_record_warning` | WARNING | GUARANTEED | technical contract | the record of run {…} does not read, and neither a start file nor the run index names it:… | `RECORD_BACK` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 | `registered_report._undetermined_duty` | BLOCKER | GUARANTEED | technical contract | {…}: whether it owes a report cannot be told — {…} | `way_out` |
 | `registered_report.report_binding_gap` | BLOCKER | GUARANTEED | open assignment | {…} registered {…} as its report {…}, and its head now registers none — the report a meas… | restore `report = "{…}"` in the head of {…}, or name another file there (the duty moves with the entry), then `{…}`; or end the protocol with `{…}` and register anew — its earlier runs, results and findings stay |
 | `registered_report.orphaned_report_duties` | BLOCKER | GUARANTEED | open assignment | {…}: no protocol of the area carries the id {…}, under which it measured ({…}); that prot… | `back.format(pid=pid)` |
@@ -630,8 +630,8 @@ Calls:
 | `result_render.render_gaps` | BLOCKER | GUARANTEED | LAB-015 Preflight audit before freezing | no "{…}" line — the limit's line belongs in the protocol | `{…}` writes it from the record |
 | `result_render.render_gaps` | BLOCKER | GUARANTEED | technical contract | "{…}" differs from the record and its decision reviews — a line written before the decisi… | `{…}` writes the record's line |
 | `result_render.render_gaps` | BLOCKER | GUARANTEED | LAB-015 Preflight audit before freezing | "{…}" names a limit no covering record decides — written by hand or from an older record | `{…}` drops it |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 | `report_check.analysis_audit_gap` | BLOCKER | GUARANTEED | technical contract | no answering run to hold it to — {…} | measure: `{…}`, then audit that run |
 | `report_check.analysis_audit_gap` | BLOCKER | GUARANTEED | technical contract | the analysis audit cannot be held to the run: {…} | `exc.fix or audit` |
 | `report_check.analysis_audit_gap` | BLOCKER | GUARANTEED | technical contract | the analysis audit cannot be held to the area: {…} | repair what the sentence names (a refused file: make it readable), then {…} |
@@ -694,11 +694,11 @@ Calls:
 |---|---|---|---|---|---|
 | `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | variable | {…} | `self.way_out` |
 | `answering_run.AnsweringRun.explain` | BLOCKER | GUARANTEED | LAB-004 Identifiers make the intent addressable | {…} {…} — no answer: a probe or producer run, or a script that reports no registered key | `way_out` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 | `registered_report.result_owed` | BLOCKER | GUARANTEED | variable | {…} registers {…} as its report, and {…} carries neither {…} nor the protocol's handover … | {…}; `{…}` writes the progress account of the run the gates hold it to — the commit takes it, it releases nothing and the result or the handover stays owed; `{…}` ends the protocol without a result{…} |
-| `registered_report.missing_report` | BLOCKER | GUARANTEED | open assignment | {…} registers {…} as its report; the report is missing ({…}), and its area holds a measur… | restore it (`{…}` where the last commit holds it), or `{…}` writes its result block of {…} again; then the report review it owes |
-| `registered_report.missing_report` | BLOCKER | GUARANTEED | open assignment | {…} registers {…} as its report; the report is missing ({…}), and its area holds a measur… | `{…}` writes the progress account (the commit takes it, it releases nothing); `{…}` adopts a run and writes its result block into {…}; `{…}` ends the protocol without a result and writes that into it; then the report review it owes |
+| `registered_report.missing_report` | BLOCKER | GUARANTEED | variable | {…} registers {…} as its report; the report is missing ({…}), and its area holds a measur… | restore it (`{…}` where the last commit holds it), or `{…}` writes its result block of {…} again; then the report review it owes |
+| `registered_report.missing_report` | BLOCKER | GUARANTEED | variable | {…} registers {…} as its report; the report is missing ({…}), and its area holds a measur… | `{…}` writes the progress account (the commit takes it, it releases nothing); `{…}` adopts a run and writes its result block into {…}; `{…}` ends the protocol without a result and writes that into it; then the report review it owes |
 | `registered_report.registered_review` | BLOCKER | GUARANTEED | technical contract | {…}: its discussion blocks do not read — {…} | `report_blocks.DISCUSSION_RESTORE_WAY` |
 | `report_hold.staged_area_gap` | BLOCKER | GUARANTEED | technical contract | {…}: the working tree differs from the index ({…}) — {…} the tree, the commit holds the i… | `{…}` stages the whole area{…} ({…} file(s), listed above); stash what the commit must not hold |
 | `report_hold.through_gap` | BLOCKER | GUARANTEED | LAB-104 A number leaves the area only through its adoption | {…}: {…} | remove the block, or repair what the sentence names and write it again: `{…}` |
@@ -787,8 +787,8 @@ Calls:
 |---|---|---|---|---|---|
 | `area_state.unread_start_warning` | WARNING | GUARANTEED | technical contract | {…} — nothing is taken from a start file that does not read | restore the file from the commit that holds it (`git log --all -- <area>/run-starts/<run_id>.json` names it); where no commit holds it, leave it as it is: no value is written into a start file by hand, the protocol and the kind are read from the run's own record where that reads, and the start stays unknown |
 | `area_state.missing_start_warning` | WARNING | GUARANTEED | technical contract | {…} | `START_FILE_BACK` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | open assignment | {…} | `c.fix` |
-| `evidence.change_blockers` | BLOCKER | GUARANTEED | technical contract | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
+| `evidence.change_blockers` | BLOCKER | GUARANTEED | variable | {…} | `c.fix` |
 | `start_check._undecided_findings` | exit | none | not recorded | runlog: {…} | `audit_records.record_way(base_dir)` |
 | `start_check._audit_unavailable` | exit | none | not recorded | runlog: LABKIT_UNFROZEN=1 — the area cannot be stamped ({…}), so no failed audit attempt … | repair what the sentence names, then start the run again |
 | `start_check._audit_unavailable` | exit | none | not recorded | runlog: promise block: {…} | `PROMISE_BLOCK_WAY` |

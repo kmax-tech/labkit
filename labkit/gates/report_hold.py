@@ -22,7 +22,6 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats.commands import repair_head_way
 from labkit.checks.report_blocks import WHY_DOCUMENTS, block_protocol, discuss_command
-from labkit.formats.gate import OPEN_RULE
 from labkit.formats.gate import TECHNICAL_RULE
 from labkit.formats.gate import LAB_003, LAB_015, LAB_104
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -1485,7 +1484,10 @@ def undeclared_findings(
                     f"reported, but {named} has adopted it as its result",
                     fix="remove the discussion block — the generated result block "
                     f"shows the number —, then `{reported_check_command(path)}`",
-                    rule=OPEN_RULE,
+                    # LAB-104 A number leaves the area only through its
+                    # adoption: a discussion block is for "a run only looked
+                    # at"; an adopted run is shown as the protocol's result
+                    rule=LAB_104,
                 )
             )
     said_so = {d.run_id for d in discussed}

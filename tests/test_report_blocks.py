@@ -744,7 +744,8 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(
             f"run {self.RUN} is discussed as not reported, but "
-            f"experiments/01-x/PROTOCOL-x.md has adopted it as its result",
+            f"experiments/01-x/PROTOCOL-x.md has adopted it as its result "
+            f"(LAB-104 A number leaves the area only through its adoption)",
             out,
         )
 

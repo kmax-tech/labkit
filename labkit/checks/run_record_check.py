@@ -874,7 +874,10 @@ def provenance_findings(
         return blockers, warnings, outside
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
-    # blocker that sends the agent round the loop.
+    # blocker that sends the agent round the loop. LAB-017 The number of
+    # audits follows the cost tier names the case ("`finalize` refuses a run … with an output … outside git") and asks
+    # for a refusal; this warning holds less than that sentence — a known
+    # gap between text and code, its own step in TODO.md.
     # An output that is gone is `output_record_findings`' blocker, on every lane.
     for f in outputs:
         if path_kind(f) is not None and not tracked(repo, f):
@@ -883,7 +886,7 @@ def provenance_findings(
                     WARNING,
                     f"output {f.name} is not yet tracked — `{stage_command(f)}` before "
                     f"the commit that cites the number",
-                    rule=OPEN_RULE,
+                    rule=LAB_017,
                     evidence_kind=GUARANTEED,
                 )
             )

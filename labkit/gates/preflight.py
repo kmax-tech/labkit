@@ -86,7 +86,6 @@ from labkit.formats.repo import area_parser, resolve_area
 from labkit.formats.gate import (
     GUARANTEED,
     NOT_EXECUTABLE,
-    OPEN_RULE,
     STATIC_EVIDENCE,
     TECHNICAL_RULE,
     RuleAssignment,
@@ -361,9 +360,12 @@ def station_protocol_fields(
     fields by cut, the graduation at frozen = true), the stamped id against
     the repo's others and the bound annotation evidence
     (`check_annotation_validity`), a repeat cost lowered since the first commit. A must
-    gap or a must placeholder blocks; a should gap, a should placeholder
-    and a lowered tier warn, each as an open assignment; an id finding
-    carries its grade (a changed id warns, a doubled one blocks)."""
+    gap or a must placeholder blocks; a should gap and a should placeholder
+    warn as the technical contract of the template's field levels
+    (`protocol_check.Field`), a lowered tier warns under LAB-015 Preflight
+    audit before freezing ("a tier lowered after the protocol's first
+    commit is reported"); an id finding carries its grade (a changed id
+    warns, a doubled one blocks)."""
     ids = repo_protocol_ids(protocol)
     id_findings = check_protocol_id(protocol, head, ids) + check_annotation_validity(
         protocol, text, ids
@@ -392,21 +394,22 @@ def station_protocol_fields(
     for finding in id_findings:
         findings.take(finding)
     if lowered:
-        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=OPEN_RULE)
-    # LAB_011 names the required fields; no decided rule states that a
-    # field not owed as a must is written
+        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE, rule=LAB_015)
+    # a format convention, not a method duty: LAB_011 names only the
+    # required fields; the template's should level (`protocol_check.Field`)
+    # is what a reportable run owes on top, a must once frozen
     for label in report.missing_should:
         findings.warn(
             f"missing (should): {label}",
             evidence_kind=GUARANTEED,
             fix=rename_way(text, label),
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     for n, label in report.soft_holes:
         findings.warn(
             f"{protocol.name}:{n}: placeholder (should): {label}",
             evidence_kind=GUARANTEED,
-            rule=OPEN_RULE,
+            rule=TECHNICAL_RULE,
         )
     if not (
         report.missing_must
