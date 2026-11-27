@@ -20,6 +20,8 @@ from labkit.formats import audit_files
 from labkit.formats import protocol_block, protocol_check
 from labkit.formats.gate import (
     BLOCKER,
+    STATIC_EVIDENCE,
+    SUSPECTED,
     WARNING,
     Findings,
     TECHNICAL_RULE,
@@ -79,6 +81,19 @@ class PreflightStations(unittest.TestCase):
         found = Findings(tell=None)
         preflight.station_protocol_fields(found, protocol, text, report, parsed)
         return found
+
+    def test_a_lowered_tier_warns_as_a_suspicion_under_lab_015(self):
+        """LAB-015 Preflight audit before freezing: "a tier lowered after
+        the protocol's first commit is reported" — reported, not refused:
+        static evidence, outcome suspected."""
+        with mock.patch.object(
+            preflight, "repeat_cost_lowered", return_value="P.md: WARNING: lowered"
+        ):
+            (f,) = self._field_findings().found
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.rule, f.outcome),
+            (WARNING, STATIC_EVIDENCE, preflight.LAB_015, SUSPECTED),
+        )
 
     def test_a_field_not_owed_as_a_must_warns_as_a_format_convention(self):
         """The template's should level is a format convention, not a

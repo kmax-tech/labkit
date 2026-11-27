@@ -22,6 +22,7 @@ from labkit.gates import audit
 from labkit.run import start_check
 from labkit.formats.gate import (
     GUARANTEED,
+    LAB_017,
     NOT_EXECUTABLE,
     TECHNICAL_RULE,
     VIOLATED,
@@ -199,6 +200,41 @@ class ADataEntryThatDoesNotRead(unittest.TestCase):
         (f,) = blockers
         self.assertIn("data['broken'] in the run's record names no path", f.text)
         self.assertEqual(f.rule, TECHNICAL_RULE)
+
+
+class AnOutputNotYetTracked(unittest.TestCase):
+    """`run_record_check.provenance_findings`: an output the run registered
+    that git does not track warns and records LAB-017 The number of audits
+    follows the cost tier. A warning, not the refusal LAB-017's text names
+    — that gap is open (TODO.md); the assignment says the rule concerns the
+    case, not that the code holds all of it."""
+
+    def test_it_warns_under_lab_017_and_does_not_block(self):
+        from types import SimpleNamespace
+
+        from repo_fixture import init_repo
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            init_repo(root)
+            run = root / "runs" / "r1"
+            run.mkdir(parents=True)
+            (run / "config.json").write_text(json.dumps(run_record()))
+            out = root / "rows.jsonl"
+            out.write_text("{}\n")
+            with mock.patch.object(
+                run_record_check,
+                "read_outputs",
+                return_value=[SimpleNamespace(path=out)],
+            ):
+                blockers, warnings, _ = run_record_check.provenance_findings(root, run)
+        # the record's missing data= blocks on its own; none blocks the output
+        self.assertFalse([b for b in blockers if "rows.jsonl" in b.text])
+        (f,) = [w for w in warnings if "is not yet tracked" in w.text]
+        self.assertEqual(
+            (f.grade, f.evidence_kind, f.rule, f.outcome),
+            (WARNING, GUARANTEED, LAB_017, VIOLATED),
+        )
 
 
 class TheRunStartCitesTheRuleOfTheGap(unittest.TestCase):
