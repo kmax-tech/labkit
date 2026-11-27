@@ -182,6 +182,9 @@ class FindingSite:
 
 #: a site that records no rule assignment as data
 NOT_RECORDED = "not recorded"
+#: what the scan records where a call passes a value it cannot follow — a
+#: grade, an evidence kind, a rule assignment or an outcome
+VARIABLE = "variable"
 #: the outcome of a gate finding whose call sets no rule: none, the
 #: constructor refuses the call (`gate.GateFinding.rule`)
 REFUSED = "refused"
@@ -450,7 +453,7 @@ def _grade_name(node: ast.AST | None) -> str:
         else None
     )
     known = {"BLOCKER", "WARNING", "GUARANTEED", "STATIC_EVIDENCE"}
-    return name if name in known else "variable"
+    return name if name in known else VARIABLE
 
 
 def _call_rules(
@@ -538,7 +541,7 @@ def _call_assignment(
             imports.get(expr.id, ""), []
         )
     ids = sorted({r for t in texts for r in RULE_ID.findall(t)})
-    return ids[0] if len(ids) == 1 else "variable"
+    return ids[0] if len(ids) == 1 else VARIABLE
 
 
 def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
@@ -578,13 +581,13 @@ def site_outcome(call: ast.Call, evidence_kind: str, assignment: str) -> str:
     if assignment == NOT_RECORDED:
         return REFUSED
     if evidence_kind not in _EVIDENCE_CONSTANTS:
-        return "variable"
+        return VARIABLE
     kind = _EVIDENCE_CONSTANTS[evidence_kind]
     if kind == gate.STATIC_EVIDENCE:
         # whatever the rule (`gate.derived_outcome`), also one passed in
         return gate.SUSPECTED
-    if assignment == "variable":
-        return "variable"
+    if assignment == VARIABLE:
+        return VARIABLE
     basis = KNOWN_RULE if RULE_ID.fullmatch(assignment) else assignment
     return gate.derived_outcome(kind, basis)
 
@@ -1063,7 +1066,7 @@ def render_inventory(
     by_outcome = Counter(s.outcome for s in sites if s.channel == "finding")
     outcomes = ", ".join(
         f"{by_outcome[o]} {o}"
-        for o in (*gate.OUTCOMES, COMPUTED, "variable", REFUSED)
+        for o in (*gate.OUTCOMES, COMPUTED, VARIABLE, REFUSED)
         if by_outcome[o]
     )
     lines = [
@@ -1124,22 +1127,35 @@ def render_inventory(
     return "\n".join(lines) + "\n"
 
 
+def active_rules(package_dir: Path) -> list[tuple[str, str]]:
+    """(id, title) of every active rule in the ledger of the package at
+    PACKAGE_DIR, in ledger order. Raises OSError when the ledger does not
+    read."""
+    return [
+        (r.id, r.title)
+        for r in load_ledger(package_dir / LEDGER_NAME)
+        if r.status == "active"
+    ]
+
+
+def shipped_texts(package_dir: Path) -> dict[str, str]:
+    """The texts the package at PACKAGE_DIR ships for agents and authors
+    (SHIPPED_TEXT_GLOBS), path relative to the package → text."""
+    return {
+        str(p.relative_to(package_dir)): p.read_text(encoding="utf-8")
+        for pattern in SHIPPED_TEXT_GLOBS
+        for p in sorted(package_dir.glob(pattern))
+    }
+
+
 def inventory(package_dir: Path) -> str:
     """The inventory of the package at PACKAGE_DIR, as markdown: reads its
     sources, its ledger, its shipped texts and the `pyproject.toml` beside
     it."""
     modules = read_modules(package_dir)
     sites = finding_sites(modules)
-    ledger = [
-        (r.id, r.title)
-        for r in load_ledger(package_dir / LEDGER_NAME)
-        if r.status == "active"
-    ]
-    shipped = {
-        str(p.relative_to(package_dir)): p.read_text(encoding="utf-8")
-        for pattern in SHIPPED_TEXT_GLOBS
-        for p in sorted(package_dir.glob(pattern))
-    }
+    ledger = active_rules(package_dir)
+    shipped = shipped_texts(package_dir)
     pyproject = (package_dir.parent / "pyproject.toml").read_text(encoding="utf-8")
     commands = reaching_commands(call_graph(modules), entry_points(pyproject))
     return render_inventory(

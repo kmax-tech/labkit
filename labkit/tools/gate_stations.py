@@ -364,7 +364,7 @@ def render_stations(
             t = told[(g.unit, st.line)]
             out += [
                 "",
-                f"### {_short_unit(g.unit)} · {st.number}. {one_line(st.title)}",
+                f"### {station_label(g, st)}. {one_line(st.title)}",
             ]
             if t.gates:
                 names = ", ".join(f"`{_short_unit(u)}`" for u in t.gates)
@@ -390,20 +390,24 @@ def render_stations(
     return "\n".join(out) + "\n"
 
 
-def stations_page(package_dir: Path) -> str:
-    """The page for the package at PACKAGE_DIR, read from its sources, its
-    ledger, and the `pyproject.toml` and the code standard beside it."""
-    modules = read_modules(package_dir)
-    root = package_dir.parent
+def stations_told(
+    modules: list[Module],
+    root: Path,
+    sites: list[FindingSite],
+    graph: dict[str, set[str]],
+) -> tuple[list[Gate], dict[tuple[str, int], StationSites]]:
+    """The gates of MODULES (their files read under ROOT, the package's
+    parent, for the comments) and what each station can tell: TOLD maps a
+    gate's unit and a station's line to its `StationSites`. SITES and GRAPH
+    are the package's (`finding_sites`, `call_graph`)."""
     comments = {
         m.path: comment_lines((root / m.path).read_text(encoding="utf-8"))
         for m in modules
     }
     found = gates(modules, comments)
     references = unit_references(modules)
-    graph = call_graph(modules)
     sites_in: dict[str, list[FindingSite]] = defaultdict(list)
-    for s in finding_sites(modules):
+    for s in sites:
         sites_in[s.unit].append(s)
     gate_units = {g.unit for g in found}
     told = {
@@ -411,6 +415,22 @@ def stations_page(package_dir: Path) -> str:
         for g in found
         for st in g.stations
     }
+    return found, told
+
+
+def station_label(gate: Gate, station: Station) -> str:
+    """How a page names STATION of GATE: `finalize.finalize_area · 6`."""
+    return f"{_short_unit(gate.unit)} · {station.number}"
+
+
+def stations_page(package_dir: Path) -> str:
+    """The page for the package at PACKAGE_DIR, read from its sources, its
+    ledger, and the `pyproject.toml` and the code standard beside it."""
+    modules = read_modules(package_dir)
+    root = package_dir.parent
+    graph = call_graph(modules)
+    found, told = stations_told(modules, root, finding_sites(modules), graph)
+    gate_units = {g.unit for g in found}
     nodes: dict[str, ast.AST] = {}
     for m in modules:
         nodes.update(units(m))
