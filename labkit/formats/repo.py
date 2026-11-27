@@ -1259,7 +1259,10 @@ def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
     r = git_run(args, repo)
     if r.returncode != 0:
         raise GitError(f"git {' '.join(args[:2])} failed in {repo}: {r.stderr.strip()}")
-    return {p[len(rel) + 1 :] for p in r.stdout.split("\0") if p.startswith(rel + "/")}
+    names = [p for p in r.stdout.split("\0") if p]
+    if rel == ".":  # FOLDER is REPO itself: git names its files without a prefix
+        return set(names)
+    return {p[len(rel) + 1 :] for p in names if p.startswith(rel + "/")}
 
 
 def branch_refs(repo: Path) -> list[str]:

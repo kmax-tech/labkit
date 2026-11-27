@@ -881,6 +881,15 @@ class GitHomes(unittest.TestCase):
         self.assertEqual(
             repo.files_at(d, d / "audits", "HEAD"), {"r.toml", "sub/s.toml"}
         )
+        # the repository itself as the folder: every file, named from its root
+        self.assertEqual(
+            repo.files_at(d, d),
+            {"f.txt", "other.toml", "audits/r.toml", "audits/sub/s.toml"},
+        )
+        self.assertEqual(
+            repo.files_at(d, d, "HEAD"),
+            {"f.txt", "other.toml", "audits/r.toml", "audits/sub/s.toml"},
+        )
 
     def test_text_at_reads_a_paths_own_entry_and_indexed_links_names_links(self):
         """A link in the tree is not followed to another entry, and a link
