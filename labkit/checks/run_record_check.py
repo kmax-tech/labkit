@@ -1,8 +1,7 @@
 """run_record_check — what a finished run's record must show before its number counts.
 
 The code that produced the number unchanged since the run
-(`code_since_run`), a criterion's denominator against a recorded input
-count (`criterion_n_input_mismatches`), each source's bytes equal to the
+(`code_since_run`), each source's bytes equal to the
 sha256 the run recorded, and the source tracked in git or ignored by a
 rule (`provenance_findings`), a model that answered named in
 the record (`call_log_model_findings`, `model_provenance_findings`), answers
@@ -10,9 +9,9 @@ that are stand-ins, not a model's, named (`stand_in_findings`), a single draw wh
 asked (`single_draw`), every JSONL row held to the runs that wrote it
 (`row_provenance_findings`), every arm the protocol names present
 (`arm_findings`), a null lane that moved in the kept rows
-(`null_lane_findings`), the kept number held as the head's `[kept] key`
-names it (`kept_number_gaps`). Each returns findings graded where they are
-made (`gate.blocker`, a `GateFinding` warning); only where a check returns
+(`null_lane_findings`). The numbers the run reports are held in
+`kept_number_check`. Each returns findings graded where they are made
+(`gate.blocker`, a `GateFinding` warning); only where a check returns
 plain sentences (the warnings of `code_since_run`) the finalize station that
 takes them gives the grade. Read-only.
 """
@@ -26,7 +25,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from labkit.formats.commands import checkout_command, handover_command
-from labkit.formats.commands import register_anew
 from labkit.formats.runs import (
     COMPLETED,
     MEASUREMENT,
@@ -58,7 +56,7 @@ from labkit.formats.scope_sha import (
 )
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
-from labkit.formats import promises, protocol_block
+from labkit.formats import protocol_block
 from labkit.formats.gate import LAB_034
 from labkit.formats.gate import (
     GUARANTEED,
@@ -86,7 +84,6 @@ from labkit.formats.runs import (
     LLM_CALLS_FILE,
     ModelCall,
     ArtefactError,
-    DataEntry,
     KeptRows,
     OutputEntry,
     OutputNow,
@@ -121,8 +118,6 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import gate_command, measure_anew, stage_command
 
-
-CRITERION_N = promises.CRITERION_N_KEY
 
 #: the way out of a code change since the run, the fix first: restoring the
 #: old code removes the difference, not a fault the change corrected
@@ -752,62 +747,6 @@ def null_lane_findings(kept: Sequence[KeptRows], area: Path) -> NullLanes:
                 )
             )
     return NullLanes(out, examined)
-
-
-def criterion_ns(metrics: Mapping[str, object]) -> dict[str, int]:
-    """The criterion denominators of METRICS, a run's metrics.json: every
-    `criterion_<i>_n` key that holds an integer — a bool is no count."""
-    return {
-        k: v
-        for k, v in metrics.items()
-        if CRITERION_N.match(k) and isinstance(v, int) and not isinstance(v, bool)
-    }
-
-
-def criterion_n_input_mismatches(
-    ns: Mapping[str, int],
-    inputs: Sequence[DataEntry],
-    outputs: Sequence[OutputEntry],
-) -> list[GateFinding]:
-    """A static-evidence WARNING per criterion denominator of NS
-    (`criterion_ns`) that matches no input count the run recorded — the rows
-    of its INPUTS (`data=`) and the lines of its OUTPUTS: the size of what
-    was counted, not a promised constant (that is
-    `intent_check.promised_constant_mismatches`). One WARNING when NS holds
-    denominators and the run recorded no count at all; [] when NS is empty
-    or every denominator matches. A warning, never a blocker, until its
-    false alarm rate is known; the rule is not decided yet (OPEN_RULE)."""
-    if not ns:
-        return []
-    counts: dict[str, int] = {}
-    for d in inputs:
-        if d.rows is not None:
-            counts[f"data[{d.key}].rows"] = d.rows
-    for o in outputs:
-        if o.lines is not None:
-            counts[f"{o.path.name} lines"] = o.lines
-    if not counts:
-        return [
-            _criterion_n_warning(
-                f"{', '.join(sorted(ns))} present, but the run recorded no input "
-                f"count (no data= rows, no output lines) to hold them to"
-            )
-        ]
-    return [
-        _criterion_n_warning(
-            f"{k} = {n} matches no recorded count "
-            f"({', '.join(f'{a} = {b}' for a, b in sorted(counts.items()))}) — "
-            f"a denominator that is not the input is the audits' most "
-            f"frequent real finding"
-        )
-        for k, n in sorted(ns.items())
-        if n not in counts.values()
-    ]
-
-
-def _criterion_n_warning(text: str) -> GateFinding:
-    """The static-evidence WARNING `criterion_n_input_mismatches` gives."""
-    return GateFinding(WARNING, text, rule=OPEN_RULE, evidence_kind=STATIC_EVIDENCE)
 
 
 def provenance_findings(
@@ -1953,46 +1892,3 @@ def arm_findings(text: str, area: Path, answering_run: Path) -> list[GateFinding
                 )
             )
     return out
-
-
-#: how many of the run's other metrics a kept-number blocker names
-_HELD_SHOWN = 6
-
-
-def kept_number_gaps(
-    key: str, metrics: dict, run: str, area: Path, kind: str
-) -> list[GateFinding]:
-    """A guaranteed blocker when METRICS, the metrics.json of the run RUN of
-    AREA, does not hold KEY — the head's `[kept] key`, at every kind — as a
-    finite number (`protocol_block.finite_number`: a bool, a text, None, NaN
-    or an infinity is none), naming the key, the run and what it holds
-    instead, its way out a new protocol of the head's KIND after the first
-    measurement; [] when it does. The skeleton's own check sits in an
-    agent-editable script; this one reads the head and the run's record. It
-    binds the key, not its meaning: a wrong computation stored under KEY
-    passes — the area's tests and the analysis audit judge that
-    (docs/notes/2026-11-01-kept-key-in-the-head.md)."""
-    if key in metrics and protocol_block.finite_number(metrics[key]):
-        return []
-    others = [(k, v) for k, v in metrics.items() if k != key]
-    held = ", ".join(f"{k} = {v!r}"[:60] for k, v in others[:_HELD_SHOWN]) + (
-        f", … ({len(others) - _HELD_SHOWN} more)" if len(others) > _HELD_SHOWN else ""
-    )
-    what = (
-        f"holds `{key}` = {metrics[key]!r}, which is no finite number"
-        if key in metrics
-        else f"holds no `{key}`"
-    )
-    return [
-        blocker(
-            f"the kept number: metrics.json of {run} {what} — the head's [kept] "
-            f"names `{key}` as the number this protocol reports"
-            + (f"; it holds {held}" if held else "; it holds nothing else"),
-            fix=f"write `{key}` as a finite number from evaluate_rows() (the "
-            f"skeleton reads the key from the head's [kept]), then "
-            f"{measure_anew(area)}; when [kept] names the wrong number, set it "
-            f"before the first measurement — after it, "
-            + register_anew(per="per change, the [kept] among them", kind=kind),
-            rule=LAB_041,
-        )
-    ]

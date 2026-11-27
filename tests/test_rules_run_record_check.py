@@ -1,7 +1,8 @@
 """Rule tests of `run_record_check`'s pure checks: each condition from typed
 data in memory, its violation and its valid twin (docs/architecture.md,
 "Checks and their tests"). The gate that composes them is finalize
-(`tests/test_finalize_steps.py` for its stations).
+(`tests/test_finalize_steps.py` for its stations); the denominator's cases
+stand in `tests/test_rules_kept_number_check.py`.
 """
 
 from __future__ import annotations
@@ -14,21 +15,19 @@ import pytest
 
 from check_guards import pure_call
 from labkit.checks.run_record_check import (
-    LAB_027,
-    LAB_041,
-    LAB_067,
     answer_reading_gaps,
     StoringRun,
     call_log_model_findings,
-    criterion_n_input_mismatches,
     stand_in_findings,
-    criterion_ns,
     null_lane_findings,
     output_record_findings,
     SourceNow,
     source_finding,
 )
 from labkit.formats.gate import (
+    LAB_027,
+    LAB_041,
+    LAB_067,
     BLOCKER,
     DEVIATION,
     GUARANTEED,
@@ -42,7 +41,6 @@ from labkit.formats.gate import (
     RuleAssignment,
 )
 from labkit.formats.runs import (
-    DataEntry,
     KeptRows,
     ModelCall,
     OutputEntry,
@@ -51,55 +49,7 @@ from labkit.formats.runs import (
 
 pytestmark = pytest.mark.rule
 
-ITEMS = DataEntry("items", "data/items.jsonl", "ab", 12, None, False, ())
-ROWS = OutputEntry(Path("out.jsonl"), "cd", 12)
-
 LAB_017 = cited_rule("LAB-017 The number of audits follows the cost tier")
-
-
-class ACriterionDenominatorIsAnInputCount(unittest.TestCase):
-    """A `criterion_<i>_n` that matches no input count the run recorded is a
-    warning, never a blocker (`criterion_n_input_mismatches`)."""
-
-    def _held(self, metrics: dict[str, object], inputs=(ITEMS,), outputs=(ROWS,)):
-        return pure_call(
-            criterion_n_input_mismatches,
-            pure_call(criterion_ns, metrics),
-            list(inputs),
-            list(outputs),
-        )
-
-    def test_a_shrunk_denominator_warns_naming_the_counts(self):
-        # criterion_1_n = 7 against 12 recorded rows: the denominator shrank
-        (f,) = self._held({"criterion_1_pass": True, "criterion_1_n": 7})
-        self.assertEqual(
-            (f.grade, f.evidence_kind, f.rule), (WARNING, STATIC_EVIDENCE, OPEN_RULE)
-        )
-        self.assertIn("criterion_1_n = 7", f.text)
-        self.assertIn("data[items].rows = 12", f.text)
-        self.assertIn("out.jsonl lines = 12", f.text)
-
-    def test_a_denominator_without_any_recorded_count_warns(self):
-        (f,) = self._held({"criterion_1_n": 12}, inputs=(), outputs=())
-        self.assertIn(
-            "criterion_1_n present, but the run recorded no input count", f.text
-        )
-
-    def test_the_twin_a_matching_denominator_passes(self):
-        self.assertEqual(
-            self._held({"criterion_1_pass": True, "criterion_1_n": 12}), []
-        )
-
-    def test_no_denominator_nothing_to_hold(self):
-        self.assertEqual(self._held({"criterion_1_pass": True}), [])
-        # an admissibility count is no criterion denominator
-        self.assertEqual(self._held({"quality_check_1_n": 3}), [])
-
-    def test_a_bool_is_no_count(self):
-        self.assertEqual(pure_call(criterion_ns, {"criterion_1_n": True}), {})
-        self.assertEqual(
-            pure_call(criterion_ns, {"criterion_1_n": 12}), {"criterion_1_n": 12}
-        )
 
 
 def _lanes(null_pred) -> list[dict[str, object]]:

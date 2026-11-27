@@ -3,7 +3,7 @@
 metrics key and its unit, read in one place (`protocol_block.kept`), owed
 in one (`protocol_check.kept_gaps`), filled by
 `protocol-fill kept.key=… kept.unit=…`, held to the answering run by
-finalize (`run_record_check.kept_number_gaps`, a guaranteed blocker) and
+finalize (`kept_number_check.kept_number_gaps`, a guaranteed blocker) and
 rendered first in the Recorded results line. Each blocking check has its
 twin: the correct variant passes.
 """
@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import result_render
-from labkit.checks.run_record_check import kept_number_gaps
+from labkit.checks.kept_number_check import kept_number_gaps
 from labkit.formats import gate, protocol_block, protocol_check
 from labkit.gates import finalize
 from labkit.tools import protocol_edit

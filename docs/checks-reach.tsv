@@ -136,7 +136,7 @@ labkit.checks.run_record_check.arm_findings	finding	1	arm `{…}`: the protocol 
 labkit.checks.run_record_check.arm_findings	finding	1	arm `{…}`: the protocol names {…}, no such file under {…}	direct	1	0	tests/test_arm_lines.py
 labkit.checks.run_record_check.code_since_run	finding	1	{…}: its runs cannot be followed ({…})	direct	2	0	tests/test_registration_committed.py tests/test_run_code.py
 labkit.checks.run_record_check.code_since_run	finding	1	{…}: {…}	direct	1	0	tests/test_run_code.py
-labkit.checks.run_record_check.kept_number_gaps	finding	1	the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th…	direct	7	0	tests/test_audit.py tests/test_end_to_end.py tests/test_kept.py tests/test_promises.py tests/test_protocol_fill.py tests/test_reference_end_to_end.py
+labkit.checks.kept_number_check.kept_number_gaps	finding	1	the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th…	direct	7	0	tests/test_audit.py tests/test_end_to_end.py tests/test_kept.py tests/test_promises.py tests/test_protocol_fill.py tests/test_reference_end_to_end.py
 labkit.checks.run_record_check.model_provenance_findings	finding	1	model provenance: the call log of {…} does not read — {…}	direct	1	0	tests/test_finalize_steps.py
 labkit.checks.run_record_check.model_provenance_findings	finding	1	model provenance: the stand-ins behind {…} cannot be counted — {…}; the result line canno…	direct	9	0	tests/test_finalize_provenance.py tests/test_finalize_steps.py tests/test_origin_scenario.py tests/test_registration_committed.py
 labkit.checks.run_record_check.model_provenance_findings	finding	1	model provenance: {…} has no config.json — which model it recorded cannot be read	direct	1	0	tests/test_finalize_steps.py

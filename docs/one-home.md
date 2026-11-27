@@ -22,7 +22,7 @@ A second answer to any of these questions is drift: move the caller to the home,
 
 ## Which number does a computation report, and does its run hold it?
 
-`protocol_block.kept` (the table, `kept_toml` its writer, `kept_key` the key), `protocol_check.kept_gaps` (owed or refused by kind), `run_record_check.kept_number_gaps` (the run holds it)
+`protocol_block.kept` (the table, `kept_toml` its writer, `kept_key` the key), `protocol_check.kept_gaps` (owed or refused by kind), `kept_number_check.kept_number_gaps` (the run holds it)
 
 ## What stated value does a computation compare with, and did the run meet it?
 

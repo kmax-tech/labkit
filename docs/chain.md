@@ -537,7 +537,7 @@ Every model call of `labkit-audit` is an attempt journaled in `audits/attempts.j
 
 denominator `criterion_<i>_n` matches a recorded input count
 
-- **Where:** `run_record_check.criterion_n_input_mismatches`
+- **Where:** `kept_number_check.criterion_n_input_mismatches`
 - **Command:** `finalize`
 - **Tier:** static evidence
 - **When:** after the run
@@ -566,12 +566,12 @@ Every head names its kept number (`[kept]`: key, unit — `protocol_block.kept`)
 
 * It is owed at every decided kind (`protocol_check.kept_gaps`) and stands in the registration stamp. A fit's or an apply's criterion judges that number.
 * Every measure skeleton reads the key (`metric_key`, `KEPT_KEY`).
-* finalize blocks an answering run whose metrics.json does not hold it as a finite number, naming what it holds instead (`run_record_check.kept_number_gaps`). The adoption's check runs finalize on the proposal.
+* finalize blocks an answering run whose metrics.json does not hold it as a finite number, naming what it holds instead (`kept_number_check.kept_number_gaps`). The adoption's check runs finalize on the proposal.
 * The Recorded results line names it first with its unit (`result_render.kept_phrase`).
 
 The key is bound by name, not by meaning.
 
-- **Where:** `protocol_block.kept`, `protocol_check.kept_gaps`, `run_record_check.kept_number_gaps`, `finalize.station_kept_number`, `result_render`
+- **Where:** `protocol_block.kept`, `protocol_check.kept_gaps`, `kept_number_check.kept_number_gaps`, `finalize.station_kept_number`, `result_render`
 - **Command:** `labkit-init exp --kept --unit`, `protocol-fill kept.key=… kept.unit=…`, `finalize`, `labkit-adopt`
 - **Tier:** guaranteed
 - **When:** registering, before reporting

@@ -243,13 +243,15 @@ from labkit.checks.origin_check import (
     origin_state,
 )
 from labkit.checks.result_render import kept_phrase
+from labkit.checks.kept_number_check import (
+    criterion_n_input_mismatches,
+    criterion_ns,
+    kept_number_gaps,
+)
 from labkit.checks.run_record_check import (
     answer_reading_gaps,
     arm_findings,
     code_since_run,
-    criterion_n_input_mismatches,
-    criterion_ns,
-    kept_number_gaps,
     null_lane_findings,
     model_provenance_findings,
     output_record_findings,
@@ -1081,7 +1083,7 @@ def station_kept_number(
 ) -> None:
     """Station 9: the kept number — the key the head's `[kept]` names, at
     every kind — held as a finite number in the answering run's
-    metrics.json (`run_record_check.kept_number_gaps`, a guaranteed
+    metrics.json (`kept_number_check.kept_number_gaps`, a guaranteed
     blocker): the check the agent cannot edit away, where the skeleton's
     own check sits in its script. A `[kept]` table missing, unfilled or
     malformed (`protocol_check.kept_gaps`) blocks too; an undecided kind is
@@ -1138,7 +1140,7 @@ def runs_metrics(answering_run: Path) -> dict:
 
 def station_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 9: a criterion's denominator that matches no recorded input
-    count (`run_record_check.criterion_n_input_mismatches`). The run's
+    count (`kept_number_check.criterion_n_input_mismatches`). The run's
     inputs and outputs are read only when metrics.json holds a denominator;
     a record that does not read then blocks — at repeat cost high no other
     station reads the inputs (`runs.read_data`). No metrics.json: nothing

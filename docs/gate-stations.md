@@ -279,9 +279,9 @@ Calls:
 Calls:
 
 - `finalize.station_registered_outputs` — Station 9: every output the run registered is the file the run recorded (`output_record_findings`) — the number's rows and the deliverable of an external task, held by path and sha256 from outputs.json, on every lane.
-- `finalize.station_criterion_n` — Station 9: a criterion's denominator that matches no recorded input count (`run_record_check.criterion_n_input_mismatches`).
+- `finalize.station_criterion_n` — Station 9: a criterion's denominator that matches no recorded input count (`kept_number_check.criterion_n_input_mismatches`).
 - `finalize.station_null_lane` — Station 9: the kept rows' null lane moved (`null_lane_findings`) — a gate over the run's own output, not the editable script's guard.
-- `finalize.station_kept_number` — Station 9: the kept number — the key the head's `[kept]` names, at every kind — held as a finite number in the answering run's metrics.json (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check the agent cannot edit away, where the skeleton's own check sits in its script.
+- `finalize.station_kept_number` — Station 9: the kept number — the key the head's `[kept]` names, at every kind — held as a finite number in the answering run's metrics.json (`kept_number_check.kept_number_gaps`, a guaranteed blocker): the check the agent cannot edit away, where the skeleton's own check sits in its script.
 - `finalize.station_reference` — Station 9: the comparison with the stated value the head registers (`[reference]`, a computation's), held to the answering run's metrics.json (`reference.comparison_gaps`, each a guaranteed blocker): a table that does not read, or one on a kind with a bar (`reference_gap`), blocks too; metrics that do not read block as the other stations' do.
 
 **At this station:**
@@ -296,10 +296,10 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
+| `kept_number_check._criterion_n_warning` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
+| `kept_number_check.kept_number_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th… | write `{…}` as a finite number from evaluate_rows() (the skeleton reads the key from the head's [kept]), then {…}; when [kept] names the wrong number, set it before the first measurement — after it, {…} |
 | `run_record_check.null_lane_findings` | WARNING | STATIC_EVIDENCE | LAB-034 Null condition in the same run | {…}: the null lane's answer and gold equal the registered lane's on every item — if the n… | if the null should differ, give the instrument a null of its own, e.g. its predictions against permuted gold, then {…} |
-| `run_record_check._criterion_n_warning` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
 | `run_record_check.output_record_findings` | BLOCKER | GUARANTEED | variable | {…}: not the file run {…} recorded — {…} | `_output_way_out(o, drift, area)` |
-| `run_record_check.kept_number_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th… | write `{…}` as a finite number from evaluate_rows() (the skeleton reads the key from the head's [kept]), then {…}; when [kept] names the wrong number, set it before the first measurement — after it, {…} |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | LAB-035 Thresholds belong to the run, not to the measure | metrics.json carries {…} and the head registers no [reference] — a comparison is register… | register the stated value in the head's [reference] table (value, tolerance, relation, source), or drop the keys from evaluate_rows(); then `{…}` |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | technical contract | the head registers [reference] on `{…}`, and the run recorded no verdict (no `{…}` in met… | write the verdict from the head after evaluate_rows() — the compute skeleton's `metrics_of()` does (`reference.with_verdict`) — then measure anew and audit that run |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | `{…}` {…}, so the registered reference ({…}) cannot be compared and no verdict can be rep… | write `{…}` as a finite number from evaluate_rows() (the key the head's [kept] names, which the compute skeleton reads), measure anew and audit that run; a [kept] key that names the wrong number is a new registration |
