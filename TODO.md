@@ -130,7 +130,14 @@ Befunde: [Audit 25.11.](docs/notes/2026-11-25-repo-audit.md), [Audit 26.11.](doc
 11. Jede gedruckte Kommandozeile ohne aktive Laborumgebung ausführbar machen (alle Auswege mit `.venv/bin/…`): nur der Umfang geschätzt (33 Erzeuger in `commands.py`, rund 240 Stellen im Fließtext, rund 100 Testdateien). Eigener Bedienungsumbau, erst auf einen Anlass.
 12. Nach der Suchprobe: Ein Leser vermutete die Ablehnung einer Wirkungsangabe an einer NOTE im Einstieg `gates/audit_decisions.py`; sie steht in `audit_records._hold_effect`. Die drei Berichte der Suchprobe liegen nur im Scratchpad der Sitzung und sind nicht gesichert.
 
-### Regel → Prüfung → Funktion: Aufwand geschätzt am 27.11., nicht geplant
+### Regel → Prüfung → Funktion: beauftragt am 27.11. — Reihenfolge 1, 2, 3
+
+**Auftrag des Autors (27.11.), in dieser Reihenfolge; die Schätzung darunter ist der Stand vor dem Auftrag:**
+
+1. **Die 17 offenen Zuordnungen untersuchen** ([Notiz](docs/notes/2026-11-11-open-assignments.md), `python -m labkit.tools.check_inventory`, Spalte „Rule (data)“ = open assignment). Je Prüfstelle: was sie prüft, welche Regel des Standards in Frage kommt, oder ob ein technischer Vertrag richtig ist (lesbare Datei, laufendes git — keine Laborregel nötig). Was eindeutig ist, mit Beleg vorschlagen; echte fachliche Entscheidungen einzeln und nummeriert dem Autor vorlegen, nicht selbst entscheiden.
+2. **Danach die erzeugte Seite `docs/rules-map.md`**: je aktive Regel ihre Prüfstellen (Funktion, `pfad:zeile`, aufrufende Station, erreichende Tests), ihre Zuordnung wie sie dokumentiert ist (Standardtext `labkit/docs/standard.md`, `docs/chain.md`, Audit-Anleitung `labkit/agents/`), und wo keine Prüfstelle steht: „keine mechanische Prüfstelle belegt“ — nie daraus „vom Agenten geprüft“ oder „durch das Werkzeug ausgeschlossen“ folgern; das steht nur, wo eine Quelle es sagt. Technische Verträge als eigene Gruppe. Generator unter `labkit/tools/`, Test hält die Seite gleich der Quelle (wie `check_overview`).
+3. **Dann `checks/run_record_check.py` in Gruppen schneiden** (siehe Punkt 2 der Schätzung), ein Commit je abgetrenntem Modul.
+
 
 Ziel des Autors: genau beschreibbar, klare Zuständigkeit, eine Heimat je Logik, und für jede Regel sagen können, welche Prüfstellen sie umsetzen und wo sie auftreten.
 
