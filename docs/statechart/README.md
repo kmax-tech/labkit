@@ -35,16 +35,16 @@ The model is not the code. A path that breaks a rule here counts as a finding on
 
 Each data rule states the requirement at every repeat cost: an adopted number stays bound to the inputs it was measured on. The protection is a separate matter. finalize's byte comparison (provenance) runs at low only (`labkit/gates/finalize.py:1338`, "the agent audit covers provenance there"), and the model keeps that guard as the code has it.
 
-| Config                                | Rule or rules                      | States     | Result                                |
-|---------------------------------------|------------------------------------|------------|---------------------------------------|
-| `low-overview.cfg` (1 run, no edits)  | all 14                             | 743        | hold; chart `out-low/chart.mmd`       |
-| `high-overview.cfg` (1 run, no edits) | all 14                             | 4 649      | hold; chart `out-high/chart.mmd`      |
-| `low-full.cfg` (2 runs, 1 edit each)  | `CommittedNumberFromDataAsRun`     | —          | breaks (`out-before/low-bug/`)               |
-| `low-full.cfg`                        | `CommittedNumberFromAreaDataAsRun` | 3 050 849  | holds (`out-low/tlc-area-low.log`)    |
-| `low-full.cfg`                        | the other 12                       | 3 050 849  | hold (`out-low/tlc-rest-low.log`)     |
-| `high-full.cfg` (2 runs, 1 edit each) | `CommittedNumberFromDataAsRun`     | —          | breaks (`out-before/high-bug/`)              |
+| Config                                | Rule or rules                      | States     | Result                                  |
+|---------------------------------------|------------------------------------|------------|-----------------------------------------|
+| `low-overview.cfg` (1 run, no edits)  | all 14                             | 743        | hold; chart `out-low/chart.mmd`         |
+| `high-overview.cfg` (1 run, no edits) | all 14                             | 4 649      | hold; chart `out-high/chart.mmd`        |
+| `low-full.cfg` (2 runs, 1 edit each)  | `CommittedNumberFromDataAsRun`     | —          | breaks (`out-before/low-bug/`)          |
+| `low-full.cfg`                        | `CommittedNumberFromAreaDataAsRun` | 3 050 849  | holds (`out-low/tlc-area-low.log`)      |
+| `low-full.cfg`                        | the other 12                       | 3 050 849  | hold (`out-low/tlc-rest-low.log`)       |
+| `high-full.cfg` (2 runs, 1 edit each) | `CommittedNumberFromDataAsRun`     | —          | breaks (`out-before/high-bug/`)         |
 | `high-full.cfg`                       | `CommittedNumberFromAreaDataAsRun` | —          | breaks (`out-before/tlc-area-high.log`) |
-| `high-full.cfg`                       | the other 12                       | 28 232 777 | hold (`out-high/tlc-rest-high.log`)   |
+| `high-full.cfg`                       | the other 12                       | 28 232 777 | hold (`out-high/tlc-rest-high.log`)     |
 
 Two gaps, each replayed against the real commands:
 
@@ -55,14 +55,14 @@ Two gaps, each replayed against the real commands:
 
 Both gaps are entered in `TODO.md`, under "Bekannte Grenzen" 17 and "Offene Entscheidungen" 10. The model checks recorded inputs only. That a run recorded every input it read is not shown by it.
 
-## After the repair (branch `input-gaps`)
+## After the repair
 
 The author approved both changes on 2026-11-27. With the two guards in the model, all 14 rules hold on both lanes: 3 035 489 states at `low` and 27 752 137 at `high` (`out-after/`). The tables above show the model before the repair, and `out-before/` keeps its counterexamples. The guards are:
 
 - finalize compares each recorded input's bytes on every repeat cost (`file_record_check.recorded_bytes_findings`);
 - the stop and the commit reach an area through the inputs its adopted run recorded (`scope_sha.adopted_inputs`).
 
-Both replays are scenario tests in that branch: `Count.test_06_…` and `Estimator._a_changed_input_holds_the_adopted_number`. Both fail on the code before the change.
+Both replays are scenario tests: `Count.test_06_…` and `Estimator._a_changed_input_holds_the_adopted_number`. Both fail on the code before the change.
 
 Mutation check: four guards were weakened, and TLC reported a broken rule each time:
 
