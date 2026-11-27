@@ -2,7 +2,25 @@
 
 labkit does not carry legacy paths: a format or API change is a break, announced here with the last version that still has the old behaviour. Reproduce an old run with the repo's own commit and the labkit version it pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
+## 0.117.0 — 2026-11-27
+
+### In short
+
+Eight changes break; 0.116.0 is the last version with the old behaviour of each. The standard stays 0.33 and the run record schema 5, so no protocol and no run is migrated.
+
+What changes in use:
+
+- **A run over vLLM says which server configuration answered.** For an `openai` alias behind a [vllm-swap](https://github.com/kmax-tech/vllm-swap) proxy (v0.1.0), the run records the configuration digest at its start, the vLLM version after the first answer, and both again at its end; a run whose instrument changed stays unfinalized. The cache and the two-lane judge's resume no longer mix configurations. `instrument_digest` in `models.toml` pins an alias. Plain vLLM and sglang record `not reported` and work as before.
+- **A run's start is read strictly.** A patch beside a record of a clean tree, a patch in another form than a run writes, and a changed tree whose patch is gone are refused by every reader instead of being read as far as possible.
+- **Two generated pages:** `docs/rules-map.md` (each rule of the standard and the code that holds it) and `docs/gate-stations.md` (each gate's stations, findings and ways out). A protocol can declare files the audit reads in full (`[[evidence_file]]`); `recheck.rows_of` is public API.
+
+What to do when a lab moves to this release:
+
+1. **Pin the new version in every checkout of the repo.**
+2. **A lab that holds runs of 0.103.0 or earlier with a changed tree:** their start no longer reads (`A run's patch is read as a run writes it` below); check and reproduce those runs with the labkit version the lab pins now.
+3. **A lab with vllm-swap aliases:** cached answers of those aliases miss once (they stay on disk), an unfinished output of such an alias is measured into a new output file, and a repeat of a run 0.116.0 recorded with an `openai` alias is refused. Pin each alias whose answers are kept with `instrument_digest` (the digest its proxy's `/health` names).
+4. **Code that imports internal names of `labkit.formats.findings` or `labkit.checks.run_record_check`:** follow the tables below; none is public API.
+
 
 ### Breaking
 
