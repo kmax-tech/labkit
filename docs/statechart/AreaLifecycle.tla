@@ -80,8 +80,8 @@ FinalizeClean ==
     /\ run = "completed"          \* 1. answering run
     /\ runAt.reg = regVer         \* 2. the registration as the first measurement recorded it
     /\ runAt.code = code          \* 4. the run's code and the declared scopes
-    /\ (Lane = "low" => runAt.data = data /\ runAt.areaData = areaData)
-                                  \* 6. provenance, at low only (finalize.py:1338)
+    /\ runAt.data = data          \* 6. provenance: each recorded input's bytes,
+    /\ runAt.areaData = areaData  \*    on every repeat cost (recorded_bytes_findings)
 
 \* report_check.chain_gaps for a declared run D (labkit/gates/report_check.py)
 ChainClean(D, withReport) ==
@@ -99,9 +99,12 @@ ChainClean(D, withReport) ==
 
 \* report_check.hold_changed_paths: the stop and the commit. It runs only for
 \* areas the changed paths reach (scope_sha.areas_touched): files in the
-\* area, a promise's scope, bound validation, lib/ or src/ modules the code
-\* imports, and a report that registers or cites the protocol.
-AreaTouched == [cm EXCEPT !.data = data] /= Snap
+\* area, a promise's scope, bound validation, an input the adopted run
+\* recorded (adopted_inputs), lib/ or src/ modules the code imports, and a
+\* report that registers or cites the protocol.
+AreaTouched ==
+    \/ [cm EXCEPT !.data = data] /= Snap
+    \/ adopted /= 0 /\ data /= cm.data
 
 \* hold_declared_result: a declared result is held to the whole chain; an
 \* undeclared protocol only to its registered report (hold_registered_report)
