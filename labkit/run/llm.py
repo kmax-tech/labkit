@@ -253,6 +253,30 @@ def identity(alias: str) -> JsonObject:
     return {"backend": used.backend, "model": _answering_model(used)}
 
 
+def served_configuration(alias: str) -> str | None:
+    """The vllm-swap configuration digest that answers under ALIAS, or None
+    when none is known — the one answer for the cache key
+    (`llm_cache.key_inputs`) and the resume check of the two-lane judge
+    (`lanes.Lanes.instrument`), so an answer of another configuration is
+    neither a cache hit nor a resumable row. `llm.identity` leaves it out:
+    identity is public API and unchanged.
+
+    The pin `instrument_digest` when models.toml sets one (resolution has
+    refused the alias unless the endpoints report exactly it); else the
+    `served_digest` the endpoints reported, MISMATCH included; None for a
+    server that reported none (plain vLLM, sglang) and for every other
+    backend — without a pin, a proxy that stops answering /health is not
+    told from a plain server."""
+    used = spec(alias)
+    if not isinstance(used, OpenAISpec):
+        return None
+    if used.instrument_digest is not None:
+        return used.instrument_digest
+    if used.served_digest == served_instrument.NOT_REPORTED:
+        return None
+    return used.served_digest
+
+
 def _answering_model(used: BackendSpec) -> str:
     """The model name, with the weights' digest for ollama — one spelling
     for the row stamp (`provenance`) and the resume check (`identity`)."""

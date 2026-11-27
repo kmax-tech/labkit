@@ -13,7 +13,10 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from labkit.run import llm, llm_backends, runlog
+from types import SimpleNamespace
+from typing import cast
+
+from labkit.run import batch, lanes, llm, llm_backends, llm_cache, runlog
 from labkit.run.served_instrument import (
     NOT_REPORTED,
     NOTHING_REPORTED,
@@ -337,6 +340,105 @@ class EndOfRun(_WithServer):
             self.fake.health = None
 
         self.assert_unfinalized(gone, "the end reports no digest")
+
+
+def key_of(alias: str = "v") -> dict:
+    """The cache key's inputs of one fixed call of ALIAS."""
+    return llm_cache.key_inputs(
+        alias, "hi", system=None, temperature=0.0, max_tokens=None, raw=False, stop=None
+    )
+
+
+def lane_instrument(alias: str = "v") -> dict:
+    """What the two-lane judge stamps on every row for ALIAS (the method reads only its config)."""
+    cfg = SimpleNamespace(prompt_sha="p", model=alias)
+    return lanes.Lanes.instrument(cast(lanes.Lanes, None), cfg)
+
+
+class _Restart(_WithServer):
+    """`restart` stands for a new process: the frozen specs go, the next resolution reads the server anew."""
+
+    def restart(self, health) -> None:
+        self.fake.health = health
+        llm._FROZEN.clear()
+
+
+class CacheAndResumeBehindTheProxy(_Restart):
+    HEALTH = proxy_health(running=False)
+
+    def test_the_cache_key_and_the_row_stamp_name_the_served_configuration(self):
+        self.models_toml()
+        self.assertEqual(
+            key_of()["spec"], {"reasoning": None, "served_configuration": DIGEST_A}
+        )
+        self.assertEqual(lane_instrument()["served_configuration"], DIGEST_A)
+
+    def test_another_configuration_under_the_same_alias_is_another_key_and_stamp(self):
+        self.models_toml()
+        before_key, before_stamp = llm_cache.cache_key(key_of()), lane_instrument()
+        self.restart(proxy_health(digest=DIGEST_B, running=False))
+        self.assertNotEqual(llm_cache.cache_key(key_of()), before_key)
+        self.assertNotEqual(lane_instrument(), before_stamp)
+
+    def test_the_same_configuration_after_a_restart_keeps_key_and_stamp(self):
+        # twin: a new session of the same configuration is no new instrument
+        self.models_toml()
+        before_key, before_stamp = llm_cache.cache_key(key_of()), lane_instrument()
+        self.restart(proxy_health(running=True, version="0.12.0"))
+        self.assertEqual(llm_cache.cache_key(key_of()), before_key)
+        self.assertEqual(lane_instrument(), before_stamp)
+
+    def test_a_pinned_alias_keys_on_its_pin(self):
+        self.models_toml(f'instrument_digest = "{DIGEST_A}"\n')
+        self.assertEqual(llm.served_configuration("v"), DIGEST_A)
+
+    def test_a_pinned_alias_whose_proxy_falls_silent_has_no_key_at_all(self):
+        # no fallback to an entry without digest: resolution refuses before any key is built
+        self.models_toml(f'instrument_digest = "{DIGEST_A}"\n')
+        self.restart(None)
+        with self.assertRaises(ValueError):
+            key_of()
+
+    def test_a_resume_into_rows_of_another_configuration_is_refused_naming_it(self):
+        self.models_toml()
+        out = self.tmp / "out.jsonl"
+        with batch.Store(out, instrument=lane_instrument()) as store:
+            store.append({"id": "x1"})
+        self.restart(proxy_health(digest=DIGEST_B, running=False))
+        with batch.Store(out, instrument=lane_instrument()) as store:
+            with self.assertRaises(batch.InstrumentError) as ctx:
+                list(store.pending([{"id": "x2"}]))
+        said = str(ctx.exception)
+        self.assertIn(f"served_configuration '{DIGEST_A}' → '{DIGEST_B}'", said)
+        self.assertIn("measure into a new output file", said)
+
+
+class CacheAndResumeOnAPlainServer(_Restart):
+    HEALTH = None  # plain vLLM, or the demo's closed port: nothing reported
+
+    def test_key_and_stamp_keep_the_shape_they_had(self):
+        # twin: a server that reports nothing keeps every cached answer and every resumable row
+        self.models_toml()
+        self.assertEqual(key_of()["spec"], {"reasoning": None})
+        self.assertNotIn("served_configuration", lane_instrument())
+        self.assertIsNone(llm_cache.uncacheable("v"))
+
+
+class TwoEndpointsTwoConfigurations(_WithServer):
+    HEALTH = proxy_health(running=False)
+
+    def test_an_alias_served_by_two_configurations_is_not_cached(self):
+        other = FakeServer(proxy_health(digest=DIGEST_B, running=False))
+        self.addCleanup(other.close)
+        path = self.tmp / "models.toml"
+        path.write_text(
+            f'[models.v]\nbackend = "openai"\nmodel = "judge"\nendpoints = ["{self.fake.url}", "{other.url}"]\n',
+            encoding="utf-8",
+        )
+        llm.find_models_toml = lambda: path
+        why = llm_cache.uncacheable("v")
+        self.assertIsNotNone(why)
+        self.assertIn("different configurations", str(why))
 
 
 if __name__ == "__main__":

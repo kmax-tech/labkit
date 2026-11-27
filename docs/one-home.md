@@ -130,7 +130,7 @@ A second answer to any of these questions is drift: move the caller to the home,
 
 ## Which configuration served an openai alias, and did it change during the run?
 
-`served_instrument.read_instrument` (each endpoint's vllm-swap `GET /health`: at resolution in `llm._load_spec`, after the first answer, at the end in `llm.served_readings`); `served_instrument.instrument_changes` decides the end of a run (`runlog`); `served_instrument.agreed_value` is the one rule for several endpoints, also for ollama's weights digest
+`served_instrument.read_instrument` (each endpoint's vllm-swap `GET /health`: at resolution in `llm._load_spec`, after the first answer, at the end in `llm.served_readings`); `served_instrument.instrument_changes` decides the end of a run (`runlog`); `served_instrument.agreed_value` is the one rule for several endpoints, also for ollama's weights digest; `llm.served_configuration` is the one answer to which configuration a cache key and a resumable row are bound to
 
 ## Where do a protocol's `## ` sections begin and end?
 

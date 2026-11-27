@@ -11,7 +11,10 @@ The key (`key_inputs`) is built from:
     elsewhere, and not the endpoint, since a host can change while serving
     the same weights;
   * the spec fields that change the answer and `identity` leaves out:
-    claude-cli `input`, openai `reasoning`, ollama `num_ctx`;
+    claude-cli `input`, openai `reasoning` and, when one is known, the
+    vllm-swap configuration that serves it (`served_configuration`: the
+    pin, else the reported digest, `llm.served_configuration`; a server that reports none keeps the key it
+    had), ollama `num_ctx`;
   * the system prompt and the prompt, `raw`, `stop`, the temperature and
     the token cap as sent (none given: `llm.DEFAULT_MAX_TOKENS` for a
     served backend);
@@ -36,8 +39,9 @@ Three modes, fixed when a run opens the cache (`Cache`):
 
 Not cacheable: an ollama model whose weights digest is unknown
 (`unavailable`) or differs across endpoints (`MISMATCH:…`) — the key would
-name no weights. Such a call goes to the model in normal and repeat mode
-and says why on stderr; a replay refuses it.
+name no weights —, and an openai alias whose endpoints report different
+vllm-swap configurations. Such a call goes to the model in normal and
+repeat mode and says why on stderr; a replay refuses it.
 
 Stand-in answers: `store_stand_in` writes a fixed answer, not a model's,
 under the key a call with the same arguments gets — for a trial without a
@@ -82,7 +86,7 @@ from labkit.formats.runs import (
     now_stamp,
     read_model_calls,
 )
-from labkit.run import llm
+from labkit.run import llm, served_instrument
 from labkit.run.llm_backends import NO_USAGE, Response, Usage
 from labkit.run.llm_specs import ClaudeCliSpec, OllamaSpec, OpenAISpec
 from labkit.run.runlog import Run
@@ -132,8 +136,18 @@ class Answer:
 
 def uncacheable(alias: str) -> str | None:
     """Why ALIAS's answers cannot be cached, or None: an ollama model whose
-    weights digest is unknown or differs across endpoints."""
+    weights digest is unknown or differs across endpoints, an openai alias
+    whose endpoints report different vllm-swap configurations."""
     used = llm.spec(alias)
+    # the REPORTED digest: a pinned alias whose endpoints disagree was
+    # refused at resolution already
+    if isinstance(used, OpenAISpec) and used.served_digest.startswith(
+        served_instrument.MISMATCH
+    ):
+        return (
+            f"{alias}: the endpoints serve different configurations "
+            f"({used.served_digest}) — a key would name no single instrument"
+        )
     if isinstance(used, OllamaSpec) and not _DIGEST.fullmatch(used.model_digest):
         return (
             f"{alias}: ollama reports no single weights digest "
@@ -160,6 +174,9 @@ def key_inputs(
         answer_changing: JsonObject = {"input": used.input}
     elif isinstance(used, OpenAISpec):
         answer_changing = {"reasoning": used.reasoning}
+        served = llm.served_configuration(alias)
+        if served is not None:  # absent, not null: a plain server's key stays as it was
+            answer_changing["served_configuration"] = served  # pin, else reported
     else:
         answer_changing = {"num_ctx": used.num_ctx}
     if max_tokens is None and not isinstance(used, ClaudeCliSpec):

@@ -165,14 +165,24 @@ class Lanes:
 
     def instrument(self, cfg: Any) -> dict:
         """What makes two answers comparable — both prompts' digest, the
-        model alias and the model it resolves to now (`llm.identity`).
-        Every row carries it; a resume refuses rows of another, so an
-        edited models.toml cannot mix two models into one file."""
-        return {
+        model alias, the model it resolves to now (`llm.identity`) and, when
+        one is known, the vllm-swap configuration serving it
+        (`served_configuration`: the pin, else the reported digest,
+        `llm.served_configuration`; absent for a server that reports none).
+        Every row carries it; a resume refuses rows of another, so an edited
+        models.toml or swap-models.toml cannot mix two instruments into one
+        file. A `MISMATCH:…` of endpoints that disagree is stamped and
+        resumed like any value, as ollama's digest is: the disagreement
+        stands in the run's record, and only a pin refuses it."""
+        out = {
             "prompt_sha": cfg.prompt_sha,
             "model": cfg.model,
             "model_identity": llm.identity(cfg.model),
         }
+        served = llm.served_configuration(cfg.model)
+        if served is not None:
+            out["served_configuration"] = served
+        return out
 
     def measure(
         self, cfg: Any, jobs: list[dict], out: Path, prov: dict | None = None
