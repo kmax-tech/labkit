@@ -108,6 +108,7 @@ from labkit.formats.area_state import state_of
 from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_edit import fill, fill_head
 from labkit.formats.repo import (
+    OUTPUT_DIR,
     EXPERIMENTS,
     MODELS_TOML,
     protocol_file_name,
@@ -718,7 +719,7 @@ def stamp_area(
         nn = next_experiment_number(here, elsewhere)
         area = experiments / f"{nn}-{slug}"
         log = numbers_taken_elsewhere(here, elsewhere)
-    for d in ("data/raw", "data/prepared", "output"):
+    for d in ("data/raw", "data/prepared", OUTPUT_DIR):
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
         area / "README.md",

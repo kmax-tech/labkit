@@ -320,10 +320,13 @@ SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "
 #: an area's audit evidence directory (`audit_files.DIR` reads it): records,
 #: the attempt journal, reviews — no report stands there
 EVIDENCE_DIR = "audits"
+#: an area's folder for what its scripts write outside a run directory
+#: (a start log, rows a later stage reads)
+OUTPUT_DIR = "output"
 #: directories that hold no code of the lab: SKIP_DIRS and an area's
-#: `output/` — what a search for an area's scripts and the copy of a run's
+#: OUTPUT_DIR — what a search for an area's scripts and the copy of a run's
 #: untracked code pass over
-SKIP_DIRS_AND_OUTPUT = SKIP_DIRS | {"output"}
+SKIP_DIRS_AND_OUTPUT = SKIP_DIRS | {OUTPUT_DIR}
 
 
 def repo_protocols(root: Path) -> list[Path]:

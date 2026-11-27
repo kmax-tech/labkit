@@ -111,6 +111,8 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"/ \"(config|completion|outputs)\.json\"",
         {"runs"},
     ),
+    # an area's output folder is `repo.OUTPUT_DIR`
+    ("the output folder spelled by hand", r"[\"']output[/\"']", {"repo"}),
     # a kind is a constant, never compared as a word;
     # `standard_contract.*_KIND`
     (
@@ -818,6 +820,7 @@ class OneHome(unittest.TestCase):
             "a command cut at -- by hand": "cut = argv.index('--')",
             "an adopt command spelled by hand": 'print(f"protocol-fill {PROTOCOL.name} --from-run {rid}")',
             "a run record file spelled by hand": 'cfg = run_dir / "config.json"',
+            "the output folder spelled by hand": 'log = area / "output" / "x.log"',
             "a data= entry read by key": 'n = entry.get("rows")',
             "a kind compared as a word": 'if kind == "apply":',
             "a protocol type named by hand": 'if head.type != "confirmatory":',

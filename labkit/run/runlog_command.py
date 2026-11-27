@@ -51,7 +51,7 @@ from labkit.run.runlog import (
 def _newest_output(area: Path) -> str:
     """One line about the freshest file in <area>/output/ — the improvised
     `tail`/`wc` poll, done once and correctly."""
-    out_dir = area / "output"
+    out_dir = area / repo.OUTPUT_DIR
     if not out_dir.is_dir():
         return ""
     files = [p for p in out_dir.iterdir() if p.is_file()]
@@ -494,7 +494,7 @@ def _start(argv: list[str]) -> int:
     log = (
         Path(args.log)
         if args.log
-        else area / "output" / f"start-{time.strftime(RUN_ID_TIME)}.log"
+        else area / repo.OUTPUT_DIR / f"start-{time.strftime(RUN_ID_TIME)}.log"
     )
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}

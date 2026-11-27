@@ -67,6 +67,7 @@ from labkit.formats.exploration_state import ClosureRun, named_state
 from pathlib import Path
 
 from labkit.formats.repo import (
+    OUTPUT_DIR,
     SKIP_DIRS_AND_OUTPUT,
     area_protocols,
     areas_of,
@@ -1235,8 +1236,8 @@ def data_keys(area: Path) -> tuple[set[str], list[str]]:
     for pattern in (
         "data/**/*.jsonl",
         "data/**/*.json",
-        "output/**/*.jsonl",
-        "output/**/*.json",
+        f"{OUTPUT_DIR}/**/*.jsonl",
+        f"{OUTPUT_DIR}/**/*.json",
     ):
         for f in sorted(area.glob(pattern)):
             before = len(keys)
