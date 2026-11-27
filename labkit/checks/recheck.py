@@ -644,13 +644,6 @@ def plain_numbers(metrics: dict) -> list[str]:
     ]
 
 
-#: a run id, or a date or a time of day: digit runs a note carries that
-#: are never one of its numbers — masked before a number is looked for
-_NOT_A_NUMBER = re.compile(
-    rf"{runs.RUN_ID.pattern}|\b\d{{4}}-\d{{2}}-\d{{2}}(?:T\d{{2}}:\d{{2}}(?::\d{{2}})?)?\b"
-)
-
-
 #: one number as the note writes it: a sign only where it cannot be a
 #: hyphen (`3-5` is 3 and 5, `x=-0.5` is -0.5), a decimal part, an exponent
 _NUMBER_TOKEN = re.compile(
@@ -676,7 +669,7 @@ def _present(number: str, text: str) -> bool:
     case, its sign included: the write-back and this check share one
     spelling, so a NaN the run recorded can be cited and proven."""
     n = number.replace("−", "-").replace(",", ".").lstrip("+")
-    text = _NOT_A_NUMBER.sub(" ", text.replace("−", "-").replace(",", "."))
+    text = runs.RUN_ID_OR_DATE.sub(" ", text.replace("−", "-").replace(",", "."))
     if _NONFINITE_TOKEN.fullmatch(n):
         return any(
             t.group().lower() == n.lower() for t in _NONFINITE_TOKEN.finditer(text)

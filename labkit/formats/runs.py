@@ -517,6 +517,12 @@ RUN_ID = re.compile(
 #: a gate that sees only RUN_ID sees no citation in `…T12-48-00_final` and
 #: lets it through
 RUN_ID_LIKE = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[\w-]+")
+#: a run id (RUN_ID_LIKE) or a date, with a time of day where one follows:
+#: digit runs prose carries that are never one of its numbers — the report
+#: checks and recheck mask them before they look for a number
+RUN_ID_OR_DATE = re.compile(
+    rf"{RUN_ID_LIKE.pattern}|\b\d{{4}}-\d{{2}}-\d{{2}}(?:T[\d:-]+)?\b"
+)
 
 
 def run_started(run_id: str) -> datetime | None:

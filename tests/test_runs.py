@@ -182,6 +182,19 @@ class RunIdShape(unittest.TestCase):
             ["2026-10-07T10-00-00_aa11", "2026-10-07T11-00-00_bb22"],
         )
 
+    def test_run_id_or_date_masks_the_digit_runs_that_are_no_number(self):
+        def left(text: str) -> list[str]:
+            return runs.RUN_ID_OR_DATE.sub(" ", text).split()
+
+        self.assertEqual(left("n=12 in 2026-10-07T10-00-00_aa11"), ["n=12", "in"])
+        # a run-id shape runlog did not write is masked too
+        self.assertEqual(left("2026-10-07T10-00-00_final 7"), ["7"])
+        self.assertEqual(
+            left("on 2026-10-07, at 2026-10-07T12:30:05 0.5"), ["on", ",", "at", "0.5"]
+        )
+        # a year, a number and a digit run that only starts like a date stay
+        self.assertEqual(left("2026 and 2026-10-071"), ["2026", "and", "2026-10-071"])
+
 
 if __name__ == "__main__":
     unittest.main()

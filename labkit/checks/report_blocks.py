@@ -1003,8 +1003,7 @@ def generated_lines(text: str) -> set[int]:
 _NOT_A_NUMBER = re.compile(
     r"<!--.*?-->"
     r"|`[^`]*`"
-    rf"|{runs.RUN_ID_LIKE.pattern}"
-    r"|\b\d{4}-\d{2}-\d{2}(?:T[\d:-]+)?"
+    rf"|{runs.RUN_ID_OR_DATE.pattern}"
     r"|\bv?\d+\.\d+\.\d+\b"
     r"|https?://\S+"
     r"|\b\d+(?:-\d+){2,}\b"
