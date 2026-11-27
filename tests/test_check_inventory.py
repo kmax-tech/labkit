@@ -18,7 +18,7 @@ def module(name: str, source: str) -> inv.Module:
     """A parsed synthetic module NAME."""
     src = textwrap.dedent(source)
     path = name.replace(".", "/") + ".py"
-    return inv.Module(name, path, ast.parse(src))
+    return inv.Module(name, path, ast.parse(src), src)
 
 
 CHECKS = module(
@@ -144,7 +144,9 @@ class FindingSites(unittest.TestCase):
 
     def test_a_way_out_without_a_word_of_its_own_names_its_expression(self) -> None:
         def text(expression: str) -> str:
-            return inv.way_out_text(ast.parse(expression, mode="eval").body, {})
+            return inv.way_out_text(
+                ast.parse(expression, mode="eval").body, {}, expression
+            )
 
         self.assertEqual(
             text("f'restore {path} | then `{again}`'"), "restore {…} \\| then `{…}`"
@@ -152,6 +154,10 @@ class FindingSites(unittest.TestCase):
         self.assertEqual(text("measure_anew(area)"), "`measure_anew(area)`")
         self.assertEqual(text("f'{restore}; {again}'"), "`f'{restore}; {again}'`")
         self.assertEqual(text("None"), "")
+        # as the source writes it, under every interpreter: `ast.unparse`
+        # rewrote these quotes between Python 3.12 and 3.15
+        nested = 'f"`{run(f"x.{y.removeprefix(\'[k] \')}=<v>")}`" if a else b'
+        self.assertEqual(text(nested), f"`{nested}`")
 
     def test_a_gate_finding_built_by_position_gives_its_way_out_there(self) -> None:
         import dataclasses
@@ -165,9 +171,14 @@ class FindingSites(unittest.TestCase):
         call = ast.parse("GateFinding(BLOCKER, 'no', PREFIXED, None, 'do it')").body[0]
         assert isinstance(call, ast.Expr)
         self.assertEqual(
-            inv.way_out_text(inv._way_out_argument(call.value, "finding"), {}), "do it"
+            inv.way_out_text(
+                inv._way_out_argument(call.value, "finding"),
+                {},
+                "GateFinding(BLOCKER, 'no', PREFIXED, None, 'do it')",
+            ),
+            "do it",
         )
-        self.assertEqual(inv.way_out_text(None, {}), "")
+        self.assertEqual(inv.way_out_text(None, {}, ""), "")
 
     def test_a_warning_reads_its_local_message_and_the_module_constant(self) -> None:
         s = self.sites[("labkit.checks.demo.drift", "finding")]

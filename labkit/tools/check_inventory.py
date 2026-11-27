@@ -240,11 +240,12 @@ class RuleUse:
 
 @dataclass(frozen=True)
 class Module:
-    """One parsed source module of the package."""
+    """One parsed source module of the package: TREE is SOURCE parsed."""
 
     name: str
     path: str
     tree: ast.Module
+    source: str
 
 
 def read_modules(package_dir: Path) -> list[Module]:
@@ -256,8 +257,8 @@ def read_modules(package_dir: Path) -> list[Module]:
         rel = path.relative_to(root)
         parts = rel.with_suffix("").parts
         name = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(rel))
-        out.append(Module(name, str(rel), tree))
+        source = path.read_text(encoding="utf-8")
+        out.append(Module(name, str(rel), ast.parse(source, filename=str(rel)), source))
     return out
 
 
@@ -318,18 +319,27 @@ def short(text: str) -> str:
     return one if len(one) <= WORDING_WIDTH else one[: WORDING_WIDTH - 1] + "…"
 
 
-def way_out_text(node: ast.AST | None, assigned: dict[str, list[ast.AST]]) -> str:
+def way_out_text(
+    node: ast.AST | None, assigned: dict[str, list[ast.AST]], source: str
+) -> str:
     """The way out a site names, for a table cell: the constant text of the
     expression NODE as `wording` reads it; the expression itself in
     backticks where that text holds no word (a constant or a function of
     another module builds the sentence — the cell then names its home);
-    empty for None, a site that names no way out."""
+    empty for None, a site that names no way out. SOURCE is the text NODE
+    was parsed from. Raises ValueError when NODE carries no position in it."""
     if node is None or (isinstance(node, ast.Constant) and node.value is None):
         return ""
     text = one_line(wording(node, assigned))
     if any(c.isalpha() for c in text):
         return text
-    return f"`{one_line(ast.unparse(node))}`"
+    # the expression as the source writes it: `ast.unparse` picks the quotes
+    # of a nested f-string by the interpreter's version, so a page built
+    # from it differed between Python 3.12 and 3.15
+    segment = ast.get_source_segment(source, node)
+    if segment is None:
+        raise ValueError(f"the way out at {ast.dump(node)[:60]} has no source position")
+    return f"`{one_line(segment)}`"
 
 
 def module_constants(modules: list[Module]) -> dict[str, list[str]]:
@@ -738,7 +748,9 @@ def finding_sites(modules: list[Module]) -> list[FindingSite]:
                         wording=short(wording(msg, assigned)),
                         assignment=assignment,
                         outcome=outcome,
-                        way_out=way_out_text(_way_out_argument(n, channel), assigned),
+                        way_out=way_out_text(
+                            _way_out_argument(n, channel), assigned, m.source
+                        ),
                     )
                 )
     return out

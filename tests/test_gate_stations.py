@@ -79,7 +79,9 @@ SOURCE = textwrap.dedent(
 
 def scan() -> tuple[list[inv.Module], dict[str, dict[int, str]]]:
     """The synthetic module `labkit.gates.g`, parsed, and its comments by path."""
-    module = inv.Module("labkit.gates.g", "labkit/gates/g.py", ast.parse(SOURCE))
+    module = inv.Module(
+        "labkit.gates.g", "labkit/gates/g.py", ast.parse(SOURCE), SOURCE
+    )
     return [module], {module.path: gs.comment_lines(SOURCE)}
 
 

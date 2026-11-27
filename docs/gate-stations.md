@@ -47,7 +47,7 @@ Calls:
 | `run_record_check._own_record_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` ({…}), but its models_resolved does not name `{…}… | `_name_alias_fix(alias)` |
 | `run_record_check._derived_run_calls` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…} — yet its call log holds {…} call{…} of alias `{…}` that asked the model | `_fresh_run_fix(alias, parent)` |
 | `run_record_check._derived_run_calls` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…} — yet its call log holds {…} of alias `{…}` stored outside any run{…}, which no recor… | `_fresh_run_fix(alias, parent)` |
-| `run_record_check._stored_answer_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` stored by run {…}, but {…} — no record says which… | `repair + (_fresh_run_fix(alias, None) if derived_from is not None else _name_alias_fix(alias))` |
+| `run_record_check._stored_answer_unbacked` | BLOCKER | GUARANTEED | LAB-027 Model discipline | {…}'s call log holds {…} of alias `{…}` stored by run {…}, but {…} — no record says which… | `repair + ( _fresh_run_fix(alias, None) if derived_from is not None else _name_alias_fix(alias) )` |
 | `run_record_check.stand_in_findings` | WARNING | GUARANTEED | LAB-027 Model discipline | {…}: fixed answers stored with `llm_cache.store_stand_in`, not answers of a model — its n… | — |
 | `run_record_check.model_provenance_findings` | BLOCKER | GUARANTEED | technical contract | model provenance: the call log of {…} does not read — {…} | restore the file as the cache wrote it (`{…}` where git holds it), or {…} |
 | `run_record_check.model_provenance_findings` | BLOCKER | GUARANTEED | technical contract | model provenance: {…} has no config.json — which model it recorded cannot be read | restore the run record as runlog wrote it (`{…}` where git holds it), or {…} |
@@ -93,7 +93,7 @@ Calls:
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-010 Commit before the run | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started from a tree with changes ({…}), and its uncommitted.patch is gone: the commit… | restore {…} from git or a backup, or {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f'{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}'` |
+| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}"` |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started at commit {…}, which this clone does not hold | fetch it (`git fetch --unshallow` in a shallow clone) or {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
@@ -109,7 +109,7 @@ Calls:
 | `registration_hold.registration_changes` | BLOCKER | GUARANTEED | variable | the registration changed after the first measurement {…}{…}: {…} (recorded by the answeri… | restore the [[promise]] tables as {…} registered them ({…}){…}, and measure again, then audit that run (the earlier runs stay); or, when the registration cannot be answered as written, {…} — the earlier protocol, its runs and their verdict stay |
 | `registration_hold.types_split_hold` | BLOCKER | GUARANTEED | LAB-003 No run without an intent paragraph | the first measurements registered different types: {…} — which workflow binds the runs ca… | either {…}; or {…} |
 | `registration_hold.type_hold` | BLOCKER | GUARANTEED | LAB-003 No run without an intent paragraph | the type changed after the first measurement {…}: "{…}" → "{…}" ({…}) — the workflow that… | put `type = "{…}"` back as {…} registered it{…} — and measure again where a run measured under the change —; or, for the other workflow, {…} — the earlier protocol, its runs and their findings stay |
-| `registration_hold.release_unchecked` | BLOCKER | GUARANTEED | technical contract | whether a correction in place releases what the number is about cannot be checked: {…} | `exc.fix or f'repair what the sentence names, then `{gate_command('finalize', area)}`'` |
+| `registration_hold.release_unchecked` | BLOCKER | GUARANTEED | technical contract | whether a correction in place releases what the number is about cannot be checked: {…} | `exc.fix or f"repair what the sentence names, then `{gate_command('finalize', area)}`"` |
 | `registration_hold.seen_hold` | BLOCKER | GUARANTEED | variable | what the number is about changed after the first measurement {…}{…}: {…} (as the answerin… | `fix` |
 | `registration_hold.split_hold` | BLOCKER | GUARANTEED | variable | the first measurements saw different texts of what the number is about: {…} — {…} — which… | either {…}; or {…} |
 | `registration_hold.now_hold` | BLOCKER | GUARANTEED | variable | what the number is about changed after the first measurement {…}{…}: {…} (as the protocol… | `fix` |
@@ -184,7 +184,7 @@ Calls:
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | LAB-010 Commit before the run | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…}, so the helpers its script imports ({…}) cannot be compared | in the repository, {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started from a tree with changes ({…}), and its uncommitted.patch is gone: the commit… | restore {…} from git or a backup, or {…} |
-| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f'{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}'` |
+| `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} {…}, so the helpers its script imports ({…}) cannot be compared | `f"{PATCH_CONTRADICTION_WAY}: {measure_anew(run_dir.parent.parent)}"` |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} started at commit {…}, which this clone does not hold | fetch it (`git fetch --unshallow` in a shallow clone) or {…} |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | the tree {…} started from cannot be read for {…}: {…} | `measure_anew(run_dir.parent.parent)` |
 | `run_record_check._helpers_since_run` | BLOCKER | GUARANTEED | technical contract | {…} is in neither {…}'s commit nor its uncommitted.patch, so it cannot be compared with w… | commit {…}, then {…} |
@@ -290,7 +290,7 @@ Calls:
 |---|---|---|---|---|---|
 | `finalize.check_reference` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | repair the head as the sentence says, then `{…}` |
 | `finalize.check_reference` | BLOCKER | GUARANTEED | technical contract | {…}: {…} | repair the [reference] and [kept] tables as the sentence says; `{…}` shows them |
-| `finalize.check_kept_number` | BLOCKER | GUARANTEED | variable | {…}: {…}{…} | `f'`{fill_command(protocol, f'kept.{gap.label.removeprefix('[kept] ')}=<value>')}`' if unfilled else f'repair the head as the sentence says, then `{gate_command('finalize', protocol.parent)}`'` |
+| `finalize.check_kept_number` | BLOCKER | GUARANTEED | variable | {…}: {…}{…} | `f"`{fill_command(protocol, f'kept.{gap.label.removeprefix("[kept] ")}=<value>')}`" if unfilled else f"repair the head as the sentence says, then " f"`{gate_command('finalize', protocol.parent)}`"` |
 
 **Further down (static estimate):**
 
@@ -561,7 +561,7 @@ Calls:
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
 | `report_check.freeze_gaps` | BLOCKER | GUARANTEED | LAB-104 A number leaves the area only through its adoption | {…}: not `frozen = true` — a reported number owes the freeze | freeze it: `{…}` clean, the preflight audit run and decided (`{…}`), then `{…}` |
-| `report_check.freeze_gaps` | BLOCKER | GUARANTEED | variable | {…}: {…} | `f'{gap.repair}; {fields}'` |
+| `report_check.freeze_gaps` | BLOCKER | GUARANTEED | variable | {…}: {…} | `f"{gap.repair}; {fields}"` |
 | `report_check.freeze_gaps` | BLOCKER | GUARANTEED | LAB-011 Required-field check | {…}: line {…}: {…} still a placeholder | replace it with this protocol's own text; {…} |
 | `report_check.registration_gaps` | WARNING | GUARANTEED | technical contract | not a git repository — the registration cannot be held to the commit of the first measure… | — |
 | `report_replacement.replacement_gaps` | BLOCKER | GUARANTEED | variable | {…}: {…} | write `[replaces]` as the head reads it: `protocol = "<id>"` and one `[[replaces.change]]` (what, from, to, why) per change |
