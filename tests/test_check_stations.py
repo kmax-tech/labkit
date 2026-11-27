@@ -15,7 +15,7 @@ from unittest import mock
 
 import json
 
-from labkit.checks import code_check, notes_check, protocol_report, run_record_check
+from labkit.checks import code_check, notes_check, protocol_report, file_record_check
 from labkit.formats import audit_gaps, promises, protocol_block, protocol_history
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 from labkit.gates import audit
@@ -187,7 +187,7 @@ class AnAuditBeforeTheTierAsksForIt(unittest.TestCase):
 
 
 class ADataEntryThatDoesNotRead(unittest.TestCase):
-    """`run_record_check.provenance_findings`: a `data=` entry of the run's
+    """`file_record_check.provenance_findings`: a `data=` entry of the run's
     record that names no path blocks where the record is read."""
 
     def test_an_entry_naming_no_path_blocks(self):
@@ -196,14 +196,14 @@ class ADataEntryThatDoesNotRead(unittest.TestCase):
             run.mkdir(parents=True)
             cfg = run_record(data={"broken": {"sha256": "ab", "rows": 1}})
             (run / "config.json").write_text(json.dumps(cfg))
-            blockers, _, _ = run_record_check.provenance_findings(Path(d), run)
+            blockers, _, _ = file_record_check.provenance_findings(Path(d), run)
         (f,) = blockers
         self.assertIn("data['broken'] in the run's record names no path", f.text)
         self.assertEqual(f.rule, TECHNICAL_RULE)
 
 
 class AnOutputNotYetTracked(unittest.TestCase):
-    """`run_record_check.provenance_findings`: an output the run registered
+    """`file_record_check.provenance_findings`: an output the run registered
     that git does not track warns and records LAB-017 The number of audits
     follows the cost tier. A warning, not the refusal LAB-017's text names
     — that gap is open (TODO.md); the assignment says the rule concerns the
@@ -223,11 +223,11 @@ class AnOutputNotYetTracked(unittest.TestCase):
             out = root / "rows.jsonl"
             out.write_text("{}\n")
             with mock.patch.object(
-                run_record_check,
+                file_record_check,
                 "read_outputs",
                 return_value=[SimpleNamespace(path=out)],
             ):
-                blockers, warnings, _ = run_record_check.provenance_findings(root, run)
+                blockers, warnings, _ = file_record_check.provenance_findings(root, run)
         # the record's missing data= blocks on its own; none blocks the output
         self.assertFalse([b for b in blockers if "rows.jsonl" in b.text])
         (f,) = [w for w in warnings if "is not yet tracked" in w.text]

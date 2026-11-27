@@ -288,7 +288,7 @@ class CountDelivers(unittest.TestCase):
             self.assertEqual(rc, 1, out)
             entry = self._entry()  # the path as the record resolves it
             # an exact comparison whose rule is not assigned yet
-            # (`run_record_check.output_record_findings`, OPEN_RULE)
+            # (`file_record_check.output_record_findings`, OPEN_RULE)
             held = (
                 f"BLOCKER (deviation, basis not settled): {entry.path}: "
                 f"not the file run {self.run_id} recorded"

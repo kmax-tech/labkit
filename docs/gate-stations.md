@@ -229,14 +229,14 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
-| `run_record_check.provenance_findings` | WARNING | GUARANTEED | technical contract | no outputs.json — the run registered no output file (run.output) | — |
-| `run_record_check.provenance_findings` | WARNING | GUARANTEED | technical contract | not a git repository — cannot tell whether source and output are committed | — |
-| `run_record_check.provenance_findings` | WARNING | GUARANTEED | LAB-017 The number of audits follows the cost tier | output {…} is not yet tracked — `{…}` before the commit that cites the number | — |
-| `run_record_check._recorded_sources` | BLOCKER | GUARANTEED | technical contract | {…} | pass every source in `data=` to runlog.run, then {…} |
-| `run_record_check._recorded_sources` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | source not frozen — the run carries no `data=` | pass data={name: path} to runlog.run so sha and rows are recorded, or data=runlog.NO_INPUTS for a run that reads no input file, then {…} |
-| `run_record_check.source_finding` | BLOCKER | GUARANTEED | LAB-017 The number of audits follows the cost tier | source {…} is not the bytes the run read: {…}, the run recorded sha256 {…} | restore the bytes the run read (from git where it tracks them, else from the source or access route Data / scope names), or {…} |
-| `run_record_check._untracked_source` | BLOCKER | GUARANTEED | LAB-017 The number of audits follows the cost tier | {…} — whether it belongs to the project is left open | if it is small and may legally be shared, commit it (`{…}`); large or protected data stay out of git on purpose: an ignore rule for it (a `.gitignore` or `.git/info/exclude`) and its source or access route and version in the protocol's Data / scope — finalize then holds it to the checksum this run recorded, `sha256 {…}` |
-| `run_record_check._gone` | BLOCKER | GUARANTEED | technical contract | {…} is not at its recorded path on this machine — deleted, moved or held elsewhere; the r… | restore it (`{…}` where git holds it; else get it again from the source or access route Data / scope names), or {…} |
+| `file_record_check.provenance_findings` | WARNING | GUARANTEED | technical contract | no outputs.json — the run registered no output file (run.output) | — |
+| `file_record_check.provenance_findings` | WARNING | GUARANTEED | technical contract | not a git repository — cannot tell whether source and output are committed | — |
+| `file_record_check.provenance_findings` | WARNING | GUARANTEED | LAB-017 The number of audits follows the cost tier | output {…} is not yet tracked — `{…}` before the commit that cites the number | — |
+| `file_record_check._recorded_sources` | BLOCKER | GUARANTEED | technical contract | {…} | pass every source in `data=` to runlog.run, then {…} |
+| `file_record_check._recorded_sources` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | source not frozen — the run carries no `data=` | pass data={name: path} to runlog.run so sha and rows are recorded, or data=runlog.NO_INPUTS for a run that reads no input file, then {…} |
+| `file_record_check.source_finding` | BLOCKER | GUARANTEED | LAB-017 The number of audits follows the cost tier | source {…} is not the bytes the run read: {…}, the run recorded sha256 {…} | restore the bytes the run read (from git where it tracks them, else from the source or access route Data / scope names), or {…} |
+| `file_record_check._untracked_source` | BLOCKER | GUARANTEED | LAB-017 The number of audits follows the cost tier | {…} — whether it belongs to the project is left open | if it is small and may legally be shared, commit it (`{…}`); large or protected data stay out of git on purpose: an ignore rule for it (a `.gitignore` or `.git/info/exclude`) and its source or access route and version in the protocol's Data / scope — finalize then holds it to the checksum this run recorded, `sha256 {…}` |
+| `file_record_check._gone` | BLOCKER | GUARANTEED | technical contract | {…} is not at its recorded path on this machine — deleted, moved or held elsewhere; the r… | restore it (`{…}` where git holds it; else get it again from the source or access route Data / scope names), or {…} |
 
 ### finalize.finalize_area · 7. input origins — on every repeat cost, only with a run
 
@@ -296,10 +296,10 @@ Calls:
 
 | Function | Grade | Evidence kind | Rule | Tells | Next |
 |---|---|---|---|---|---|
+| `file_record_check.output_record_findings` | BLOCKER | GUARANTEED | variable | {…}: not the file run {…} recorded — {…} | `_output_way_out(o, drift, area)` |
 | `kept_number_check._criterion_n_warning` | WARNING | STATIC_EVIDENCE | open assignment | {…} | — |
 | `kept_number_check.kept_number_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | the kept number: metrics.json of {…} {…} — the head's [kept] names `{…}` as the number th… | write `{…}` as a finite number from evaluate_rows() (the skeleton reads the key from the head's [kept]), then {…}; when [kept] names the wrong number, set it before the first measurement — after it, {…} |
 | `row_check.null_lane_findings` | WARNING | STATIC_EVIDENCE | LAB-034 Null condition in the same run | {…}: the null lane's answer and gold equal the registered lane's on every item — if the n… | if the null should differ, give the instrument a null of its own, e.g. its predictions against permuted gold, then {…} |
-| `run_record_check.output_record_findings` | BLOCKER | GUARANTEED | variable | {…}: not the file run {…} recorded — {…} | `_output_way_out(o, drift, area)` |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | LAB-035 Thresholds belong to the run, not to the measure | metrics.json carries {…} and the head registers no [reference] — a comparison is register… | register the stated value in the head's [reference] table (value, tolerance, relation, source), or drop the keys from evaluate_rows(); then `{…}` |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | technical contract | the head registers [reference] on `{…}`, and the run recorded no verdict (no `{…}` in met… | write the verdict from the head after evaluate_rows() — the compute skeleton's `metrics_of()` does (`reference.with_verdict`) — then measure anew and audit that run |
 | `reference.comparison_gaps` | BLOCKER | GUARANTEED | LAB-041 Generate numbers, don't retype them | `{…}` {…}, so the registered reference ({…}) cannot be compared and no verdict can be rep… | write `{…}` as a finite number from evaluate_rows() (the key the head's [kept] names, which the compute skeleton reads), measure anew and audit that run; a [kept] key that names the wrong number is a new registration |

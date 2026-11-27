@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import digests, runs
 from labkit import PACKAGE_DIR  # noqa: E402
-from labkit.checks import run_record_check  # noqa: E402
+from labkit.checks import file_record_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from labkit.formats.gate import TECHNICAL_RULE  # noqa: E402
@@ -213,17 +213,17 @@ class Provenance(unittest.TestCase):
             record = run_record({"data": {"cases": self._entry(src)}})
             (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
             (run / "outputs.json").write_text("[]", encoding="utf-8")
-            b, w, _ = run_record_check.provenance_findings(area, run)
+            b, w, _ = file_record_check.provenance_findings(area, run)
             self.assertEqual(b, [])  # the twin: the bytes as recorded
             self.assertIn("not a git repository", w[0].text)
             self.assertEqual(w[0].rule, TECHNICAL_RULE)
             src.write_text('{"id": 2}\n', encoding="utf-8")
-            b, _, _ = run_record_check.provenance_findings(area, run)
+            b, _, _ = file_record_check.provenance_findings(area, run)
             self.assertEqual(len(b), 1)
             self.assertIn("is not the bytes the run read", b[0].text)
             # a run that registered no output: the checks on outputs have no basis
             (run / "outputs.json").unlink()
-            _, w, _ = run_record_check.provenance_findings(area, run)
+            _, w, _ = file_record_check.provenance_findings(area, run)
             self.assertIn("no outputs.json", w[0].text)
             self.assertEqual(w[0].rule, TECHNICAL_RULE)
 
@@ -420,7 +420,7 @@ class Provenance(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn(
-            " ".join(run_record_check.HANDOVER_COMMAND.split()),
+            " ".join(file_record_check.HANDOVER_COMMAND.split()),
             " ".join(agents.split()),
         )
 

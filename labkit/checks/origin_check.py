@@ -43,7 +43,7 @@ from labkit.formats.runs import (
     runs_path,
 )
 from labkit.run.input_origins import AreaRun, grouped_by_cause, read_area_run
-from labkit.checks.run_record_check import source_drift
+from labkit.checks.file_record_check import source_drift
 
 #: the parts of the origin promise, in the order `origin_gap` checks them
 #: (`OriginGap.part`); GONE: no run of that id under runs/ — no directory,
@@ -83,7 +83,7 @@ class OriginNow:
             None when no run of that id stands under the area's runs/ — no
             directory, or one without config.json.
         drift: Why the file's bytes are not the input's record
-            (`run_record_check.source_drift`), None when they are — and
+            (`file_record_check.source_drift`), None when they are — and
             None, not computed, when a part of the origin's record already
             fails (`record_gap`), which `origin_gap` then names.
     """

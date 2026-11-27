@@ -272,7 +272,7 @@ an output the run kept with a registered and a null lane: the null answers other
 
 every output the run registered (`run.output`: its rows, and the deliverable of an external task the stamped script writes from the kept rows, `formats/deliverable`) is the file the run recorded — path and sha256 from outputs.json, never from the tree; gone or changed is a blocker
 
-- **Where:** `run_record_check.output_record_findings`
+- **Where:** `file_record_check.output_record_findings`
 - **Command:** `finalize`
 - **Tier:** guaranteed
 - **When:** after the run

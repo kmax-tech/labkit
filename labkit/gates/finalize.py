@@ -255,7 +255,7 @@ from labkit.checks.model_check import (
 )
 from labkit.checks.row_check import null_lane_findings, row_provenance_findings
 from labkit.checks.run_code_check import answer_reading_gaps, code_since_run
-from labkit.checks.run_record_check import (
+from labkit.checks.file_record_check import (
     output_record_findings,
     provenance_findings,
 )

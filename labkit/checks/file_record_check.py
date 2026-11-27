@@ -1,4 +1,4 @@
-"""run_record_check — the files a finished run read and wrote, held to its record.
+"""file_record_check — the files a finished run read and wrote, held to its record.
 
 Each source's bytes equal to the sha256 the run recorded, and the source
 tracked in git or ignored by a rule (`provenance_findings`, `source_drift`);

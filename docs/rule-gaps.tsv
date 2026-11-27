@@ -1,2 +1,2 @@
 rule	function	the rule's text	the code	recorded
-LAB-017	checks.run_record_check.provenance_findings	"`finalize` refuses a run … with an output … outside git"	warns: on every first pass the output is untracked by construction	TODO.md, "Regel → Prüfung → Funktion", point 1
+LAB-017	checks.file_record_check.provenance_findings	"`finalize` refuses a run … with an output … outside git"	warns: on every first pass the output is untracked by construction	TODO.md, "Regel → Prüfung → Funktion", point 1

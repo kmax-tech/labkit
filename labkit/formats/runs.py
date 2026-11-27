@@ -1026,7 +1026,7 @@ def kept_jsonl_rows(run_dir: Path) -> list[KeptRows]:
     """Every `.jsonl` output RUN_DIR registered (`read_outputs`) that stands
     in the tree (`output_file`), with its data rows (`jsonl.data_rows_of`),
     in the order outputs.json names them; [] when the run registered none.
-    A gone output is left out — `run_record_check.output_record_findings`
+    A gone output is left out — `file_record_check.output_record_findings`
     names it. Raises ArtefactError when outputs.json does not read, OSError
     or ValueError when a kept file does not."""
     return [

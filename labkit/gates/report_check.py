@@ -333,7 +333,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
     (`start_check._committed_registration`), so this station catches what
     got past it — a commit rewritten after the run, a run started outside
     runlog; what stood before the number is what the commit holds. Outside a repository
-    a warning, as the provenance station's (`run_record_check.provenance_findings`).
+    a warning, as the provenance station's (`file_record_check.provenance_findings`).
     Empty without a measurement (finalize names the missing run) and
     without a stamped id."""
     if ctx.head.id is None:

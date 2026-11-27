@@ -112,7 +112,7 @@ from labkit.formats.repo import (
     the_protocol,
 )
 from labkit.formats.commands import adopt_command
-from labkit.checks import run_code_check, run_record_check
+from labkit.checks import run_code_check, file_record_check
 from labkit.checks.origin_check import origin_gap, origin_now
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
@@ -313,7 +313,7 @@ def pin(run: Path, out: Path) -> None:
     """Refuse rows the chosen run did not write: OUT must be an output RUN
     registered (`registered_output`) and still the file it recorded."""
     recorded = registered_output(run, out)
-    drift = run_record_check.output_drift(runs.output_now(recorded))
+    drift = file_record_check.output_drift(runs.output_now(recorded))
     if drift is not None:
         raise SystemExit(
             f"recheck: {out.name} is not the file run {run.name} recorded — "
@@ -358,7 +358,7 @@ def output_as_recorded(run: Path, out: Path, area: Path) -> Iterator[RecordedOut
     their place. Raises RuntimeError when git fails."""
     recorded = registered_output(run, out)
     now = runs.output_now(recorded)
-    drift = run_record_check.output_drift(now)
+    drift = file_record_check.output_drift(now)
     if drift is None:
         yield RecordedOutput(out, None)
         return
@@ -973,7 +973,7 @@ def inputs_pinned(run: Path, area: Path) -> dict[str, Path]:
     whose record names an origin run is still that run's registered output
     with those bytes (`origin_check.origin_gap`, the condition finalize's
     input-origins station holds), a plain input still has the sha256 the
-    run recorded (`run_record_check.source_drift`). The paths resolved
+    run recorded (`file_record_check.source_drift`). The paths resolved
     against the area, as the run's start resolved them. Raises SystemExit
     naming the input and the part that fails, and for a record without
     inputs or one that does not read."""
@@ -997,7 +997,7 @@ def inputs_pinned(run: Path, area: Path) -> dict[str, Path]:
                     f"from inputs that are not the ones it read"
                 )
         else:
-            drift = run_record_check.source_drift(path, entry.sha256)
+            drift = file_record_check.source_drift(path, entry.sha256)
             if drift is not None:
                 raise SystemExit(
                     f"recheck: run {run.name}: data[{entry.key!r}] = "

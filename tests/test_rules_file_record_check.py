@@ -1,4 +1,4 @@
-"""Rule tests of `run_record_check`'s pure checks: each condition from typed
+"""Rule tests of `file_record_check`'s pure checks: each condition from typed
 data in memory, its violation and its valid twin (docs/architecture.md,
 "Checks and their tests"). The gate that composes them is finalize
 (`tests/test_finalize_steps.py` for its stations). The other checks of a
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from check_guards import pure_call
-from labkit.checks.run_record_check import (
+from labkit.checks.file_record_check import (
     output_record_findings,
     SourceNow,
     source_finding,

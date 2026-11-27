@@ -5,7 +5,7 @@ that file, not by the metrics in the area. The stamped measurement script
 names it in `DELIVERABLES`, writes it from the kept rows through
 `write_csv` and registers it with `run.output(...)` before the run closes,
 so outputs.json pins it by path and sha256 and `finalize` holds the file
-in the tree to that record (`run_record_check.output_record_findings`):
+in the tree to that record (`file_record_check.output_record_findings`):
 without the record, a deliverable swapped after the run passes every gate.
 """
 

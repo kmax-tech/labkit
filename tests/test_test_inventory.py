@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.checks import run_record_check
+from labkit.checks import file_record_check
 from labkit.formats import console
 from labkit.formats.gate import GateFinding
 from labkit.run import start_check
@@ -269,12 +269,12 @@ class Trace(unittest.TestCase):
             ):
                 ti.install_trace()
                 self.addCleanup(end_exit_trace)
-                run_record_check._gone(source, Path(d))
+                file_record_check._gone(source, Path(d))
             opened[1].close()
             (line,) = Path(d, f"{os.getpid()}.jsonl").read_text().splitlines()
         record = json.loads(line)
-        self.assertEqual(record["path"], "labkit/checks/run_record_check.py")
-        self.assertEqual(record["entry"], "labkit.checks.run_record_check._gone")
+        self.assertEqual(record["path"], "labkit/checks/file_record_check.py")
+        self.assertEqual(record["entry"], "labkit.checks.file_record_check._gone")
         self.assertIn(
             "Trace::test_a_finding_built_by_a_check_is_recorded", record["test"]
         )
