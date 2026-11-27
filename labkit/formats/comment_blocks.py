@@ -12,8 +12,9 @@ KIND -->`:
     Run 2026-10-27T10-00-00_ab12 — discussed, not reported: …
     <!-- /labkit discussed -->
 
-The discussion block (`checks.report_blocks`) and the handover block
-(`handovers`) are its kinds; each reads and checks its own head. One
+The discussion and reported-through blocks (`checks.report_blocks`) and
+the handover block (`handovers`) are its kinds; `head_table` reads a head's
+TOML, and each kind checks its own keys. One
 scanner and one in-place writer for both, so the two kinds cannot drift
 apart. A block inside a closed fenced code block outside every block
 (`example_lines`) is an example the document shows and is not read; a
@@ -23,7 +24,9 @@ fence no closing line follows hides nothing.
 from __future__ import annotations
 
 import re
+import tomllib
 from collections.abc import Callable
+from typing import Any
 from dataclasses import dataclass
 
 from labkit.formats.markdown import fence_end
@@ -37,6 +40,18 @@ BLOCK_OPEN = re.compile(r"^<!-- labkit (?P<kind>[\w-]+)")
 
 class CommentBlockError(ValueError):
     """A block of a report that does not read; the message names the line."""
+
+
+def head_table(head: list[str], at: int, name: str) -> dict[str, Any]:
+    """The TOML HEAD of the NAME opened at line AT, as `tomllib` reads it; which keys
+    it must hold is the kind's own check. Raises CommentBlockError naming
+    the line when the head is not TOML."""
+    try:
+        return tomllib.loads("\n".join(head))
+    except tomllib.TOMLDecodeError as exc:
+        raise CommentBlockError(
+            f"line {at}: the {name}'s head is not TOML: {exc}"
+        ) from exc
 
 
 def opener(kind: str) -> str:

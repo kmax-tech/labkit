@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import json
 import secrets
-import tomllib
 from collections.abc import Iterable, Sequence
 from typing import Protocol
 from dataclasses import asdict, dataclass
@@ -60,6 +59,7 @@ from labkit.formats.comment_blocks import (
     CommentBlockError,
     closer,
     comment_blocks,
+    head_table,
     opener,
     with_comment_block,
 )
@@ -549,14 +549,9 @@ def handover_blocks(text: str) -> list[HandoverBlock]:
 
 def _block_head(head: list[str], at: int) -> tuple[str, str]:
     """(protocol, record) of the TOML HEAD of the block opened at line AT.
-    Raises HandoverError on TOML that does not read or other keys than
-    protocol and record, each a string."""
-    try:
-        data = tomllib.loads("\n".join(head))
-    except tomllib.TOMLDecodeError as exc:
-        raise HandoverError(
-            f"line {at}: the handover block's head is not TOML: {exc}"
-        ) from exc
+    Raises CommentBlockError on TOML that does not read (`head_table`),
+    HandoverError on other keys than protocol and record, each a string."""
+    data = head_table(head, at, "handover block")
     if sorted(data) != sorted(HEAD_KEYS) or not all(
         isinstance(data[k], str) for k in HEAD_KEYS
     ):

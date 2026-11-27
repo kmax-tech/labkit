@@ -711,3 +711,23 @@ class AdoptionReplacesTheAccount(unittest.TestCase):
         new = report_blocks.with_block(text, self.P, self.RUN, "the result")
         self.assertTrue(new.startswith(text.rstrip("\n")))
         self.assertEqual(report_blocks.blocks(new)[0].run_id, self.RUN)
+
+
+class HeadsThatAreNotToml(unittest.TestCase):
+    """One reader of a block's TOML head (`comment_blocks.head_table`);
+    each kind refuses with its own error and names the line."""
+
+    def test_each_kind_refuses_a_head_that_is_not_toml(self):
+        for kind, read, error in (
+            ("discussed", report_blocks.discussions, report_blocks.ReportBlockError),
+            (
+                "reported-through",
+                report_blocks.through_blocks,
+                report_blocks.ReportBlockError,
+            ),
+            ("handover", handovers.handover_blocks, handovers.HandoverError),
+        ):
+            with self.subTest(kind):
+                text = f"# R\n\n<!-- labkit {kind}\nprotocol = \n{HEAD_END}\nbody\n<!-- /labkit {kind} -->\n"
+                with self.assertRaisesRegex(error, r"^line 3: the .* head is not TOML"):
+                    read(text)

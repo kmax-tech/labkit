@@ -80,7 +80,6 @@ that file.
 from __future__ import annotations
 
 import re
-import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,6 +98,7 @@ from labkit.formats.comment_blocks import (
     block_end,
     closer,
     comment_blocks,
+    head_table,
     example_fences,
     example_lines,
     opener,
@@ -653,14 +653,10 @@ def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
 
 def _discussion_head(head: list[str], at: int) -> tuple[str, str, str]:
     """(protocol, run, why) of the TOML HEAD of the block opened at line AT.
-    Raises ReportBlockError on TOML that does not read, a missing or
+    Raises CommentBlockError on TOML that does not read (`head_table`),
+    ReportBlockError on a missing or
     unknown key, or a value that is not a string."""
-    try:
-        data = tomllib.loads("\n".join(head))
-    except tomllib.TOMLDecodeError as exc:
-        raise ReportBlockError(
-            f"line {at}: the discussion block's head is not TOML: {exc}"
-        ) from exc
+    data = head_table(head, at, "discussion block")
     missing = [k for k in DISCUSS_KEYS if k not in data]
     unknown = sorted(set(data) - set(DISCUSS_KEYS))
     if missing or unknown:
@@ -881,15 +877,10 @@ def through_lines(stated: Through) -> list[str]:
 
 def _through_head(head: list[str], at: int) -> tuple[str, str, str, tuple[str, ...]]:
     """(protocol, through, run, sources) of the TOML HEAD of the block
-    opened at line AT. Raises ReportBlockError on TOML that does not read,
-    on other keys than the four, on a protocol, through or run that is not
+    opened at line AT. Raises CommentBlockError on TOML that does not read
+    (`head_table`), ReportBlockError on other keys than the four, on a protocol, through or run that is not
     a string, and on sources that are not a list of strings."""
-    try:
-        data = tomllib.loads("\n".join(head))
-    except tomllib.TOMLDecodeError as exc:
-        raise ReportBlockError(
-            f"line {at}: the reported-through block's head is not TOML: {exc}"
-        ) from exc
+    data = head_table(head, at, "reported-through block")
     sources = data.get(SOURCES_KEY)
     if (
         sorted(data) != sorted(THROUGH_KEYS)
