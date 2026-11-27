@@ -139,6 +139,24 @@ def provenance_findings(
     return blockers, warnings, outside
 
 
+def recorded_bytes_findings(area: Path, answering_run: Path) -> list[GateFinding]:
+    """A blocker per input ANSWERING_RUN recorded in `data=` that is gone
+    or whose bytes are no longer the ones the record names: the byte half
+    of `provenance_findings`, for a lane that owes no more
+    (`source_finding` on `source_now` without a repository — git is not
+    asked). A run that recorded no input gives none; whether it should
+    have, and whether git holds the inputs, is `provenance_findings`'.
+    Reads the record and the inputs, writes nothing. Raises ArtefactError
+    when the record's `data=` does not read (`runs.read_data`)."""
+    out: list[GateFinding] = []
+    for entry in read_data(answering_run) or []:
+        path = resolve_recorded(entry.recorded, answering_run)
+        found, _ = source_finding(source_now(None, path, entry.sha256), area)
+        if found is not None:
+            out.append(found)
+    return out
+
+
 def _recorded_sources(
     area: Path, answering_run: Path
 ) -> tuple[list[tuple[Path, str]], list[GateFinding]]:

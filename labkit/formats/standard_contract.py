@@ -114,11 +114,12 @@ class Lane:
         foreground: A full run may start in an agent's foreground shell:
             it ends within the harness's limit. Elsewhere the detach gate
             refuses it (`runlog.Run`).
-        provenance: `finalize` holds each source to the record's checksum
-            and requires it tracked in git or kept outside by an ignore rule;
+        provenance: `finalize` requires every source recorded (`data=`)
+            and tracked in git or kept outside by an ignore rule;
             untracked outputs warn — at low repeat cost the machine
             checks what the audit would otherwise ask every time
-            (LAB-017 The number of audits follows the cost tier).
+            (LAB-017 The number of audits follows the cost tier). Each
+            recorded source's bytes are held on every lane.
     """
 
     repeat_cost: str
@@ -447,7 +448,7 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
             ", every source frozen in the run, its bytes as the run recorded them, "
             "tracked in git or kept outside by an ignore rule"
             if ln.provenance
-            else ""
+            else ", each input the run recorded with the bytes it recorded"
         ),
         "at the release (`protocol-fill --from-run`, the stop, the commit): "
         + (

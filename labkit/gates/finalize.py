@@ -258,6 +258,7 @@ from labkit.checks.run_code_check import answer_reading_gaps, code_since_run
 from labkit.checks.file_record_check import (
     output_record_findings,
     provenance_findings,
+    recorded_bytes_findings,
 )
 from labkit.checks.audit_binding import (
     UNDECIDED,
@@ -788,12 +789,39 @@ def station_provenance(findings: Findings, area: Path, answering_run: Path) -> N
         )
 
 
+def station_recorded_bytes(findings: Findings, area: Path, answering_run: Path) -> None:
+    """Station 6 where the lane owes no provenance record (repeat_cost =
+    high): each input the run recorded in `data=` is still at its path
+    with the bytes the record names (`recorded_bytes_findings`). Whether
+    the run recorded every input, and whether git holds them, are owed at
+    low repeat cost only (`station_provenance`). A record whose `data=`
+    does not read is station 7's blocker at this lane."""
+    try:
+        recorded = read_data(answering_run) or []
+        found = recorded_bytes_findings(area, answering_run)
+    except ArtefactError:
+        findings.note("  not read — the input-origins station names the record")
+        return
+    if not recorded:
+        findings.note(
+            "  n/a — the run recorded no input file, so no bytes were compared"
+        )
+        return
+    findings.take_all(found)
+    if not found:
+        findings.note(
+            "  each input the run recorded holds the bytes it recorded "
+            "(whether every input is recorded, and git's half, are owed at "
+            "low repeat cost only)"
+        )
+
+
 def station_input_origins(
     findings: Findings,
     area: Path,
     answering_run: Path,
     *,
-    provenance_holds_bytes: bool,
+    provenance_holds_record: bool,
 ) -> None:
     """Station 7: each input of the answering run whose record names an
     origin run is that run's registered output, its bytes as both records
@@ -807,14 +835,15 @@ def station_input_origins(
     blocker (`source_protocol_finding`) — the audit of this run cannot be
     shown the text its source was bound to; a run bound to no protocol
     owes none and is a note (`station_source_protocols` holds a bound one to
-    its text's promises, a preparation to none). PROVENANCE_HOLDS_BYTES:
-    station 6 ran and holds every input's bytes, so changed bytes and a
-    record that does not read are its blockers, told here as a note — one
-    cause, one blocker."""
+    its text's promises, a preparation to none). Station 6 holds every
+    recorded input's bytes on every repeat cost, so changed bytes are its
+    blocker, told here as a note — one cause, one blocker; so is a record
+    that does not read where PROVENANCE_HOLDS_RECORD (station 6 holds the
+    whole `data=` record, at repeat_cost = low)."""
     try:
         entries = read_data(answering_run) or []
     except ArtefactError as exc:
-        if provenance_holds_bytes:
+        if provenance_holds_record:
             findings.note("  not read — the provenance station names the record")
             return
         findings.take(
@@ -842,7 +871,7 @@ def station_input_origins(
             assert entry.origin_run is not None  # state.now is set
             # only an origin that holds has its protocol read
             origins_ok.append(entry.origin_run)
-        elif state.gap.part == BYTES_CHANGED and provenance_holds_bytes:
+        elif state.gap.part == BYTES_CHANGED:
             findings.note(f"  {state.gap.told} — the provenance station names it")
         else:
             findings.take(origin_finding(state.gap, area))
@@ -1255,12 +1284,15 @@ def finalize_area(
     5. open fields — always: protocol placeholders and stamped `<…>`
        placeholders left in the area's README warn; a bound field written
        twice and data counts typed by hand or stale block.
-    6. provenance — only for repeat_cost = low, and only with a run.
+    6. provenance — only with a run: on every repeat cost each input the
+       run recorded is still at its path with the recorded bytes; at
+       repeat_cost = low also every input recorded (`data=`) and held by
+       git, tracked or kept out by an ignore rule.
     7. input origins — on every repeat cost, only with a run: an input
        that is no longer the recorded output of its origin run blocks, and
        so does an origin run bound to a protocol whose text as it started
-       cannot be read back; at repeat_cost = low changed bytes are step 6's
-       blocker and a note here.
+       cannot be read back; changed bytes are step 6's blocker and a note
+       here, and so is, at repeat_cost = low, a record that does not read.
     8. area tests — always.
     9. registered outputs, criterion n, the null lane, the kept number and
        the reference comparison — only with a run; an output that is not
@@ -1335,16 +1367,17 @@ def finalize_area(
     findings.header(f"open fields: {chosen.name}")
     station_open_fields(findings, chosen, text, head, state)
 
-    # 6. provenance — at low repeat cost, and only with a run
+    # 6. provenance — only with a run: the recorded bytes on every repeat
+    #    cost, the whole record and git's half at low repeat cost
     findings.header("provenance")
-    if not lane(head.repeat_cost).provenance:
-        findings.note(
-            f"  n/a — protocol repeat cost is {head.repeat_cost!r} (the agent audit covers provenance there)"
-        )
-    elif answering_run is None:
+    if answering_run is None:
         findings.note(NO_RUN)
-    else:
+    elif lane(head.repeat_cost).provenance:
+        # low: every input recorded, its bytes, and git's half
         station_provenance(findings, area, answering_run)
+    else:
+        # high: the bytes of each input the run recorded, nothing more
+        station_recorded_bytes(findings, area, answering_run)
 
     # 7. input origins — on every repeat cost, only with a run
     findings.header("input origins")
@@ -1352,14 +1385,14 @@ def finalize_area(
         findings.note(NO_RUN)
     else:
         # an input that is no longer its origin's recorded output blocks;
-        # at repeat_cost = low station 6 holds every input's bytes and the
-        # `data=` record, so changed bytes and an unreadable record are
-        # notes here (`station_input_origins`)
+        # station 6 holds every recorded input's bytes, and at
+        # repeat_cost = low the `data=` record too, so changed bytes and
+        # there an unreadable record are notes here (`station_input_origins`)
         station_input_origins(
             findings,
             area,
             answering_run,
-            provenance_holds_bytes=lane(head.repeat_cost).provenance,
+            provenance_holds_record=lane(head.repeat_cost).provenance,
         )
 
     # 8. area tests — always

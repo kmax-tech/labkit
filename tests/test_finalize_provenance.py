@@ -1,7 +1,7 @@
 """finalize's provenance station: at repeat_cost = "low" the run must have
 frozen its sources, each source's bytes must be the ones the record names,
 and each must be tracked in git or ignored by a rule; the outputs tracked.
-Elsewhere the station is n/a."""
+Elsewhere only the bytes of each source the run recorded are held."""
 
 from __future__ import annotations
 
@@ -438,11 +438,38 @@ class Provenance(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("git add", out)
 
-    def test_hours_is_not_the_stations_business(self):
+    def test_at_high_a_run_without_a_record_owes_none(self):
+        """Every input in `data=` is owed at low repeat cost only."""
         self._run(HIGH, None, commit=True)
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-        self.assertIn("n/a — protocol repeat cost is 'high'", out)
+        self.assertIn("n/a — the run recorded no input file", out)
+
+    def test_at_high_a_recorded_source_changed_since_the_run_blocks(self):
+        self._run(HIGH, self._frozen(), commit=True)
+        self.src.write_text('{"id": 2}\n', encoding="utf-8")
+        _git(self.repo, "commit", "-qam", "regenerated")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"source {self.src} is not the bytes the run read", out)
+
+    def test_at_high_a_recorded_source_that_is_gone_blocks(self):
+        self._run(HIGH, self._frozen(), commit=True)
+        _git(self.repo, "rm", "-q", str(self.src))
+        _git(self.repo, "commit", "-qm", "gone")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("is not at its recorded path on this machine", out)
+
+    def test_the_twin_at_high_an_untracked_source_with_its_bytes_passes(self):
+        """git's half is the low lane's: at high an untracked source with
+        the recorded bytes is no finding."""
+        self._run(HIGH, self._frozen(), commit=True)
+        _git(self.repo, "rm", "-q", "--cached", str(self.src))
+        _git(self.repo, "commit", "-qm", "untracked")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("each input the run recorded holds the bytes it recorded", out)
 
 
 if __name__ == "__main__":

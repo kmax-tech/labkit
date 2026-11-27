@@ -244,7 +244,7 @@ class _Area(unittest.TestCase):
         return r.dir
 
     def station(
-        self, run_dir: Path | None = None, *, provenance_holds_bytes: bool = False
+        self, run_dir: Path | None = None, *, provenance_holds_record: bool = False
     ) -> tuple[list[str], str]:
         """(blockers, told) of the input-origins station on RUN_DIR (the reader)."""
         told: list[str] = []
@@ -253,7 +253,7 @@ class _Area(unittest.TestCase):
             findings,
             self.area,
             run_dir or self.reader,
-            provenance_holds_bytes=provenance_holds_bytes,
+            provenance_holds_record=provenance_holds_record,
         )
         return findings.blocked, "\n".join(told)
 
@@ -270,21 +270,21 @@ class Station(_Area):
         self.assertIn("bound to no protocol", told)
         self.assertIn("none is owed", told)
 
-    def test_a_changed_file_blocks_where_no_other_station_holds_its_bytes(self) -> None:
+    def test_a_changed_file_is_the_provenance_stations_blocker(self) -> None:
+        """Station 6 holds every recorded input's bytes on every repeat
+        cost: one cause, one blocker — here a note, at both lanes."""
         self.out.write_text('{"id": 2}\n', encoding="utf-8")
-        blocked, _ = self.station()
-        (line,) = blocked
-        self.assertIn(
-            f"not the output of its origin run {self.writer.run_id} any more", line
-        )
-        # at low repeat cost station 6 holds the same bytes: one cause, one blocker
-        blocked, told = self.station(provenance_holds_bytes=True)
-        self.assertEqual(blocked, [])
-        self.assertIn("the provenance station names it", told)
+        for holds_record in (False, True):
+            blocked, told = self.station(provenance_holds_record=holds_record)
+            self.assertEqual(blocked, [])
+            self.assertIn(
+                f"not the output of its origin run {self.writer.run_id} any more", told
+            )
+            self.assertIn("the provenance station names it", told)
 
     def test_an_origin_moved_away_blocks_and_restored_passes(self) -> None:
         shutil.move(self.writer.dir, self.aside)
-        (line,) = self.station(provenance_holds_bytes=True)[0]
+        (line,) = self.station(provenance_holds_record=True)[0]
         self.assertIn(f"its origin run {self.writer.run_id} is gone", line)
         shutil.move(self.aside, self.writer.dir)
         self.assertEqual(self.station()[0], [])
@@ -323,7 +323,7 @@ class Station(_Area):
         cfg.write_text(json.dumps(record), encoding="utf-8")
         (line,) = self.station()[0]
         self.assertIn("has no origin_run", line)
-        blocked, told = self.station(provenance_holds_bytes=True)
+        blocked, told = self.station(provenance_holds_record=True)
         self.assertEqual(blocked, [])
         self.assertIn("the provenance station names the record", told)
 
